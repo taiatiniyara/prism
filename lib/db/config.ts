@@ -7,7 +7,7 @@ if (!connString) {
 
 export default defineConfig({
     out: './lib/db/migrations',
-    schema: './src/db/schema/*.ts',
+    schema: './lib/db/schema/*.ts',
     dialect: 'postgresql',
     dbCredentials: {
         url: connString,
