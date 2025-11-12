@@ -1,4 +1,4 @@
-import { boolean, pgTable, uuid, varchar } from "drizzle-orm/pg-core";
+import { boolean, json, pgTable, uuid, varchar } from "drizzle-orm/pg-core";
 import { managedLists } from "./managedLists";
 
 export const countries = pgTable('countries', {
@@ -11,6 +11,12 @@ export const countries = pgTable('countries', {
 export type Country = typeof countries.$inferSelect;
 export type NewCountry = typeof countries.$inferInsert;
 
+interface Consultants {
+    id: string;
+    name: string;
+    email: string;
+}
+
 export const organisations = pgTable('organisations', {
     id: uuid('id').primaryKey().defaultRandom(),
     name: varchar('name').notNull(),
@@ -18,6 +24,7 @@ export const organisations = pgTable('organisations', {
     country_id: uuid('country_id').notNull().references(() => countries.id),
     is_utility: boolean('is_utility').notNull().default(true),
     is_active: boolean('is_active').notNull().default(true),
+    consultants: json('consultants').$type<Consultants[]>(),
 });
 export type Organisation = typeof organisations.$inferSelect;
 export type NewOrganisation = typeof organisations.$inferInsert;

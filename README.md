@@ -1,36 +1,256 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# PRISM - Performance Reporting & Information System Management
 
-## Getting Started
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/MIT)
+[![Next.js](https://img.shields.io/badge/Next.js-16.0-black)](https://nextjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue)](https://www.typescriptlang.org/)
 
-First, run the development server:
+A comprehensive benchmarking and performance monitoring platform for utility organizations across regions. PRISM enables utilities to enter operational data, track KPIs, and generate insights through integrated Power BI dashboards.
+
+---
+
+## 🌟 Features
+
+- **🔐 Magic Link Authentication** - Passwordless login via Better Auth
+- **📊 Power BI Integration** - Embedded dashboards for real-time insights
+- **📝 Flexible Data Entry** - Dynamic forms and Excel bulk uploads
+- **✅ Approval Workflow** - Multi-level data validation and approval
+- **👥 Role-Based Access Control** - 10 distinct roles with granular permissions
+- **🏢 Multi-Tenant Architecture** - Support for multiple utilities with data isolation
+- **📈 KPI Calculation Engine** - Automated performance metric calculations
+- **🔍 Comprehensive Audit Logs** - Track all system activities
+- **⚡ Modern Tech Stack** - Built with Next.js 16, TypeScript, and Tailwind CSS
+
+---
+
+## 🚀 Quick Start
+
+### Prerequisites
+
+- Node.js 20+
+- npm 10+
+- PostgreSQL database (via Supabase)
+
+### Installation
 
 ```bash
+# Clone the repository
+git clone https://github.com/taiatiniyara/prism.git
+cd prism
+
+# Install dependencies
+npm install
+
+# Set up environment variables
+cp .env.example .env.local
+# Edit .env.local with your credentials
+
+# Push database schema
+npm run db-push
+
+# Run development server
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Visit [http://localhost:3000](http://localhost:3000) to see the application.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+---
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## 📚 Documentation
 
-## Learn More
+- **[Architecture Overview](docs/ARCHITECTURE.md)** - System design and technical architecture
+- **[Database Schema](docs/DATABASE_SCHEMA.md)** - Complete database documentation
+- **[API Documentation](docs/API_DOCUMENTATION.md)** - REST API endpoints and usage
+- **[Development Roadmap](docs/ROADMAP.md)** - Project timeline and milestones
+- **[Contributing Guide](CONTRIBUTING.md)** - How to contribute to the project
 
-To learn more about Next.js, take a look at the following resources:
+---
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## 🏗️ Tech Stack
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+### Frontend
+- **Framework**: Next.js 16 (App Router)
+- **Language**: TypeScript 5
+- **Styling**: Tailwind CSS 4
+- **UI Components**: Radix UI
+- **Icons**: Lucide React
 
-## Deploy on Vercel
+### Backend
+- **Runtime**: Node.js 20+
+- **API**: Next.js API Routes
+- **Authentication**: Better Auth
+- **ORM**: Drizzle ORM
+- **Database**: PostgreSQL (Supabase)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### External Services
+- **Power BI**: Embedded dashboards
+- **Email**: Nodemailer (SMTP)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+---
+
+## 🎯 User Roles
+
+| Role | Abbreviation | Description |
+|------|--------------|-------------|
+| Super Admin | SA | System-wide administrator |
+| Benchmarking Officer | BMO | Global admin for all utilities |
+| Benchmarking Liaison Officer | BLO | Utility administrator |
+| Data Acquisition Officer | DAO | Data entry by category |
+| Chief Executive Officer | CEO | Approves data entries |
+| Consultant | CON | External consultants |
+| Affiliate | AFF | View-only dashboard access |
+| Ally | ALL | View-only dashboard access |
+| Manager | MGR | Read-only utility access |
+| Executive | EXE | Read-only utility access |
+
+---
+
+## 📁 Project Structure
+
+```
+prism/
+├── app/                    # Next.js App Router
+│   ├── (auth)/            # Authentication pages
+│   ├── (dashboard)/       # Protected routes
+│   └── api/               # API endpoints
+├── components/            # React components
+│   ├── ui/               # UI primitives
+│   └── features/         # Feature components
+├── lib/                   # Shared utilities
+│   ├── db/               # Database layer
+│   ├── auth/             # Auth configuration
+│   └── rbac/             # Access control
+├── docs/                  # Documentation
+└── public/                # Static assets
+```
+
+---
+
+## 🔒 Security
+
+- **Authentication**: Magic link-based authentication
+- **Authorization**: Role-based access control (RBAC)
+- **Data Protection**: Row-level security and encryption
+- **Audit Trail**: Comprehensive activity logging
+- **Input Validation**: Type-safe validation with Zod
+
+---
+
+## 🧪 Testing
+
+```bash
+# Run tests
+npm test
+
+# Run tests in watch mode
+npm test -- --watch
+
+# Generate coverage report
+npm test -- --coverage
+```
+
+---
+
+## 📈 Development Workflow
+
+1. **Create a branch** from `main`
+   ```bash
+   git checkout -b feature/your-feature-name
+   ```
+
+2. **Make changes** following our [coding standards](CONTRIBUTING.md#coding-standards)
+
+3. **Commit** using conventional commits
+   ```bash
+   git commit -m "feat(scope): description"
+   ```
+
+4. **Push** and create a Pull Request
+   ```bash
+   git push origin feature/your-feature-name
+   ```
+
+---
+
+## 🗺️ Roadmap
+
+### Phase 1: Foundation (Weeks 1-3) ✅
+- [x] Database schema design
+- [x] Authentication setup
+- [x] RBAC implementation
+
+### Phase 2: Core Features (Weeks 4-8) 🚧
+- [ ] User management
+- [ ] Organization structure
+- [ ] KPI & Data Label management
+
+### Phase 3: Data Entry (Weeks 9-12) 📋
+- [ ] Manual data entry forms
+- [ ] Excel upload feature
+- [ ] Approval workflow
+
+### Phase 4: Dashboard (Weeks 13-16) 📊
+- [ ] Power BI integration
+- [ ] Internal analytics
+- [ ] Report generation
+
+See the [full roadmap](docs/ROADMAP.md) for details.
+
+---
+
+## 🤝 Contributing
+
+We welcome contributions! Please read our [Contributing Guide](CONTRIBUTING.md) to learn about:
+
+- Development setup
+- Coding standards
+- Git workflow
+- Pull request process
+
+---
+
+## 📝 License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
+
+---
+
+## 👥 Team
+
+- **Project Lead**: [Your Name]
+- **Backend**: [Developer Names]
+- **Frontend**: [Developer Names]
+- **Database**: [Developer Names]
+
+---
+
+## 📧 Contact
+
+For questions or support:
+
+- **Email**: support@prism.example.com
+- **GitHub Issues**: [Create an issue](https://github.com/taiatiniyara/prism/issues)
+- **Documentation**: [View docs](docs/)
+
+---
+
+## 🙏 Acknowledgments
+
+- [Next.js](https://nextjs.org/) - React framework
+- [Supabase](https://supabase.com/) - Backend platform
+- [Drizzle ORM](https://orm.drizzle.team/) - TypeScript ORM
+- [Better Auth](https://www.better-auth.com/) - Authentication
+- [Shadcn/ui](https://ui.shadcn.com/) - UI components
+- [Tailwind CSS](https://tailwindcss.com/) - Styling
+
+---
+
+## 📊 Status
+
+![GitHub commit activity](https://img.shields.io/github/commit-activity/m/taiatiniyara/prism)
+![GitHub last commit](https://img.shields.io/github/last-commit/taiatiniyara/prism)
+![GitHub issues](https://img.shields.io/github/issues/taiatiniyara/prism)
+![GitHub pull requests](https://img.shields.io/github/issues-pr/taiatiniyara/prism)
+
+---
+
+*Built with ❤️ for utility benchmarking excellence*

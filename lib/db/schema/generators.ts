@@ -16,7 +16,7 @@ export type NewServiceArea = typeof serviceAreas.$inferInsert;
 export const generators = pgTable('generators', {
     gen_id: uuid('gen_id').primaryKey().defaultRandom(),
     id: integer('id').notNull(),
-    report_period_id: integer('report_period_id').notNull().references(() => reportPeriods.id),
+    report_period_id: uuid('report_period_id').notNull().references(() => reportPeriods.id),
     utility_id: uuid('utility_id').notNull().references(() => organisations.id),
     service_area_id: uuid('service_area_id').notNull().references(() => serviceAreas.id),
     energy_source_id: uuid('energy_source_id').notNull().references(() => managedLists.id),
