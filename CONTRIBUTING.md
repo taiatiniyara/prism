@@ -67,15 +67,16 @@ Create a `.env.local` file in the root directory:
 # Database
 DATABASE_URL=postgresql://[USER]:[PASSWORD]@[HOST]:[PORT]/[DATABASE]
 
-# Authentication
-BETTER_AUTH_SECRET=your_secret_key_here
-BETTER_AUTH_URL=http://localhost:3000
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
-# Email (Development)
-SMTP_HOST=smtp.mailtrap.io
-SMTP_PORT=2525
-SMTP_USER=your_mailtrap_user
-SMTP_PASS=your_mailtrap_pass
+# Email (Optional - Supabase handles auth emails by default)
+# Only needed for custom transactional emails
+SMTP_HOST=smtp.sendgrid.net
+SMTP_PORT=587
+SMTP_USER=apikey
+SMTP_PASS=your_smtp_pass
 SMTP_FROM=noreply@prism.local
 
 # Power BI (if testing dashboard)
@@ -524,7 +525,7 @@ Closes #123
 
 - [Next.js Documentation](https://nextjs.org/docs)
 - [Drizzle ORM Docs](https://orm.drizzle.team/)
-- [Better Auth Docs](https://www.better-auth.com/docs)
+- [Supabase Auth Docs](https://supabase.com/docs/guides/auth)
 - [Tailwind CSS Docs](https://tailwindcss.com/docs)
 - [TypeScript Handbook](https://www.typescriptlang.org/docs/)
 

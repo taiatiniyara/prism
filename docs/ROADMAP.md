@@ -9,7 +9,7 @@ PRISM is a comprehensive benchmarking and performance monitoring system for util
 
 ### 1.1 Database Schema Completion
 - [ ] Complete remaining schema definitions
-  - [ ] Users table with Better Auth integration
+  - [ ] Users table with Supabase Auth integration
   - [ ] Service Areas schema
   - [ ] Generators schema (expand current implementation)
   - [ ] Data Entry transactions schema
@@ -18,8 +18,8 @@ PRISM is a comprehensive benchmarking and performance monitoring system for util
 - [ ] Create seed data scripts for development
 
 ### 1.2 Authentication System
-- [ ] Implement Better Auth with Magic Links
-- [ ] Configure email provider (Nodemailer setup)
+- [ ] Implement Supabase Auth with Magic Links
+- [ ] Configure email provider (Supabase Email)
 - [ ] Create authentication middleware
 - [ ] Build login/logout flows
 - [ ] Implement session management
@@ -156,7 +156,7 @@ PRISM is a comprehensive benchmarking and performance monitoring system for util
 
 ### 7.1 Testing
 - [ ] Unit tests for core functions
-- [ ] Integration tests for API endpoints
+- [ ] Integration tests for Server Actions
 - [ ] E2E tests for critical workflows
 - [ ] Load testing
 - [ ] Security testing
@@ -167,10 +167,10 @@ PRISM is a comprehensive benchmarking and performance monitoring system for util
 - [ ] Frontend bundle optimization
 - [ ] Image and asset optimization
 - [ ] Caching strategy implementation
-- [ ] API response time optimization
+- [ ] Server Action performance optimization
 
 ### 7.3 Documentation
-- [ ] API documentation
+- [ ] Server Actions documentation
 - [ ] User guides per role
 - [ ] Admin documentation
 - [ ] Deployment documentation
@@ -219,7 +219,7 @@ PRISM is a comprehensive benchmarking and performance monitoring system for util
 
 ### Integration Capabilities
 - Third-party API integrations
-- Data export/import APIs
+- Data export/import Server Actions
 - Webhook support
 - SSO integration
 
@@ -235,7 +235,7 @@ PRISM is a comprehensive benchmarking and performance monitoring system for util
 
 ### Technical Metrics
 - Page load time < 2 seconds
-- API response time < 500ms
+- Server Action response time < 500ms
 - 99.9% uptime
 - Zero critical security vulnerabilities
 

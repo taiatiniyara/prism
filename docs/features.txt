@@ -1,7 +1,7 @@
 PRISM Features:
 
 1. Authentication
-    - Use Better Auth Magic Links
+    - Use Supabase Auth Magic Links
 2. Dashboard
     - Power BI Embedded
 3. Data entry

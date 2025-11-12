@@ -24,7 +24,7 @@ PRISM (Performance Reporting & Information System Management) is a comprehensive
 
 ### Key Features
 
-- **Magic Link Authentication** - Secure, passwordless login
+- **Magic Link Authentication** - Secure, passwordless login via Supabase Auth
 - **Role-Based Access** - Each user sees only what they need
 - **Data Entry** - Manual forms and Excel bulk upload
 - **Approval Workflow** - Multi-level data validation
@@ -580,12 +580,12 @@ View:
 
 ### Changing Your Password
 
-PRISM uses magic link authentication - no password needed!
+PRISM uses Supabase Auth with magic link authentication - no password needed!
 
 To access your account:
 1. Enter your email on the login page
-2. Check your email for the magic link
-3. Click the link to log in
+2. Check your email for the magic link (sent by Supabase)
+3. Click the link to log in securely
 
 ### Updating Profile Information
 
@@ -649,8 +649,9 @@ Filter by:
 
 **A**: Check your spam/junk folder. If still not found:
 - Verify your email address is correct
+- Wait a few minutes and check again
 - Contact your BLO or system administrator
-- Check if your email domain is allowed in the system
+- Check if your email domain is allowed in Supabase Auth settings
 
 ### Q: Can I access PRISM from mobile?
 

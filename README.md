@@ -10,12 +10,13 @@ A comprehensive benchmarking and performance monitoring platform for utility org
 
 ## 🌟 Features
 
-- **🔐 Magic Link Authentication** - Passwordless login via Better Auth
+- **🔐 Magic Link Authentication** - Passwordless login via Supabase Auth
 - **📊 Power BI Integration** - Embedded dashboards for real-time insights
 - **📝 Flexible Data Entry** - Dynamic forms and Excel bulk uploads
 - **✅ Approval Workflow** - Multi-level data validation and approval
 - **👥 Role-Based Access Control** - 10 distinct roles with granular permissions
-- **🏢 Multi-Tenant Architecture** - Support for multiple utilities with data isolation
+## 🏢 Multi-Tenant Architecture** - Support for multiple utilities with data isolation
+- **💻 Server Actions** - Type-safe server-side mutations with automatic caching
 - **📈 KPI Calculation Engine** - Automated performance metric calculations
 - **🔍 Comprehensive Audit Logs** - Track all system activities
 - **⚡ Modern Tech Stack** - Built with Next.js 16, TypeScript, and Tailwind CSS
@@ -83,7 +84,7 @@ Visit [http://localhost:3000](http://localhost:3000) to see the application.
 
 ### External Services
 - **Power BI**: Embedded dashboards
-- **Email**: Nodemailer (SMTP)
+- **Supabase**: Database, Authentication, Email delivery
 
 ---
 
@@ -111,7 +112,7 @@ prism/
 ├── app/                    # Next.js App Router
 │   ├── (auth)/            # Authentication pages
 │   ├── (dashboard)/       # Protected routes
-│   └── api/               # API endpoints
+│   └── actions/           # Server Actions
 ├── components/            # React components
 │   ├── ui/               # UI primitives
 │   └── features/         # Feature components
@@ -127,7 +128,7 @@ prism/
 
 ## 🔒 Security
 
-- **Authentication**: Magic link-based authentication
+- **Authentication**: Supabase Auth with magic links
 - **Authorization**: Role-based access control (RBAC)
 - **Data Protection**: Row-level security and encryption
 - **Audit Trail**: Comprehensive activity logging
@@ -236,9 +237,8 @@ For questions or support:
 ## 🙏 Acknowledgments
 
 - [Next.js](https://nextjs.org/) - React framework
-- [Supabase](https://supabase.com/) - Backend platform
+- [Supabase](https://supabase.com/) - Backend platform & Authentication
 - [Drizzle ORM](https://orm.drizzle.team/) - TypeScript ORM
-- [Better Auth](https://www.better-auth.com/) - Authentication
 - [Shadcn/ui](https://ui.shadcn.com/) - UI components
 - [Tailwind CSS](https://tailwindcss.com/) - Styling
 

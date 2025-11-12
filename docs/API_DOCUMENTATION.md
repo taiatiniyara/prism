@@ -1,128 +1,112 @@
-# PRISM API Documentation
+# PRISM Server Actions Documentation
 
-## Base URL
+## Overview
 
-```
-Development: http://localhost:3000/api
-Production: https://prism.yourdomain.com/api
-```
+PRISM uses Next.js Server Actions for all server-side operations instead of traditional REST API routes. This provides better type safety, automatic request deduplication, and seamless integration with React Server Components.
 
 ---
 
 ## Authentication
 
-All API requests (except auth endpoints) require authentication via session cookie or Bearer token.
+All Server Actions automatically use Supabase Auth session cookies. No need for explicit Authorization headers.
 
-### Headers
-
-```http
-Authorization: Bearer <session_token>
-Content-Type: application/json
+```typescript
+// Authentication is handled automatically
+const session = await getSession();
+if (!session) throw new Error('Unauthorized');
 ```
 
 ---
 
 ## Response Format
 
-### Success Response
+### Return Values
 
-```json
-{
-  "success": true,
-  "data": { ... },
-  "meta": {
-    "timestamp": "2025-11-12T10:00:00Z",
-    "requestId": "req_abc123"
-  }
+Server Actions return data directly or throw errors:
+
+```typescript
+// Success - returns data
+const orgs = await getOrganisations();
+// orgs: Organisation[]
+
+// Error - throws exception
+try {
+  await createOrganisation(formData);
+} catch (error) {
+  console.error(error.message); // "Unauthorized", "Forbidden", etc.
 }
 ```
 
-### Error Response
+### Error Handling
 
-```json
-{
-  "success": false,
-  "error": {
-    "code": "UNAUTHORIZED",
-    "message": "You don't have permission to access this resource",
-    "details": {
-      "requiredRole": "BLO",
-      "currentRole": "DAO"
+Server Actions throw errors with descriptive messages:
+
+| Error Message | Description |
+|---------------|-------------|
+| `Unauthorized` | Not authenticated |
+| `Forbidden` | Insufficient permissions |
+| `Not Found` | Resource not found |
+| `Validation Error` | Invalid input data |
+| `Duplicate Entry` | Resource conflict |
+| `Internal Server Error` | Server error |
+
+```typescript
+// Client-side error handling
+'use client';
+
+export function MyForm() {
+  const [error, setError] = useState<string>();
+  
+  async function handleSubmit(formData: FormData) {
+    try {
+      await createOrganisation(formData);
+      // Success!
+    } catch (err) {
+      setError(err.message);
     }
-  },
-  "meta": {
-    "timestamp": "2025-11-12T10:00:00Z",
-    "requestId": "req_abc123"
   }
+  
+  return <form action={handleSubmit}>...</form>;
 }
 ```
-
-### Error Codes
-
-| Code | HTTP Status | Description |
-|------|-------------|-------------|
-| `UNAUTHORIZED` | 401 | Not authenticated |
-| `FORBIDDEN` | 403 | Insufficient permissions |
-| `NOT_FOUND` | 404 | Resource not found |
-| `VALIDATION_ERROR` | 400 | Invalid input data |
-| `CONFLICT` | 409 | Resource conflict (duplicate) |
-| `INTERNAL_ERROR` | 500 | Server error |
 
 ---
 
-## Authentication Endpoints
+## Authentication Actions
+
+**File**: `app/actions/auth.ts`
 
 ### Send Magic Link
 
-**POST** `/api/auth/magic-link`
+```typescript
+'use server';
 
-Send a magic link to user's email for authentication.
+import { createClient } from '@/lib/supabase/server';
 
-**Request Body**:
-```json
-{
-  "email": "user@example.com"
-}
-```
-
-**Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "message": "Magic link sent to user@example.com"
-  }
-}
-```
-
----
-
-### Verify Magic Link
-
-**GET** `/api/auth/verify?token=<token>`
-
-Verify magic link token and create session.
-
-**Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "user": {
-      "id": "user_123",
-      "email": "user@example.com",
-      "name": "John Doe",
-      "role": "BLO",
-      "organisation": {
-        "id": "org_456",
-        "name": "Utility Company"
-      }
+export async function sendMagicLink(email: string) {
+  const supabase = createClient();
+  
+  const { error } = await supabase.auth.signInWithOtp({
+    email,
+    options: {
+      emailRedirectTo: `${process.env.NEXT_PUBLIC_APP_URL}/auth/callback`,
     },
-    "session": {
-      "token": "sess_789",
-      "expiresAt": "2025-11-13T10:00:00Z"
-    }
-  }
+  });
+  
+  if (error) throw new Error(error.message);
+  
+  return { message: `Magic link sent to ${email}` };
+}
+```
+
+**Usage**:
+```typescript
+'use client';
+
+async function handleLogin(formData: FormData) {
+  const email = formData.get('email') as string;
+  await sendMagicLink(email);
+  // Show success message
 }
 ```
 
@@ -130,90 +114,129 @@ Verify magic link token and create session.
 
 ### Logout
 
-**POST** `/api/auth/logout`
+```typescript
+'use server';
 
-Invalidate current session.
+import { createClient } from '@/lib/supabase/server';
+import { redirect } from 'next/navigation';
 
-**Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "message": "Logged out successfully"
-  }
+export async function logout() {
+  const supabase = createClient();
+  await supabase.auth.signOut();
+  redirect('/login');
 }
+```
+
+**Usage**:
+```typescript
+<form action={logout}>
+  <button type="submit">Logout</button>
+</form>
 ```
 
 ---
 
 ### Get Current User
 
-**GET** `/api/auth/me`
+```typescript
+'use server';
 
-Get authenticated user details.
+import { createClient } from '@/lib/supabase/server';
+import { db } from '@/lib/db/connection';
 
-**Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "id": "user_123",
-    "email": "user@example.com",
-    "name": "John Doe",
-    "role": "BLO",
-    "organisation": {
-      "id": "org_456",
-      "name": "Utility Company",
-      "country": "Kenya"
+export async function getCurrentUser() {
+  const supabase = createClient();
+  const { data: { user }, error } = await supabase.auth.getUser();
+  
+  if (error || !user) throw new Error('Unauthorized');
+  
+  // Get additional user data from database
+  const userData = await db.query.users.findFirst({
+    where: eq(users.email, user.email),
+    with: {
+      organisation: true,
     },
-    "permissions": ["data_entry", "approve", "manage_users"]
-  }
+  });
+  
+  return userData;
+}
+```
+
+**Usage in Server Component**:
+```typescript
+export default async function DashboardPage() {
+  const user = await getCurrentUser();
+  return <div>Welcome, {user.name}!</div>;
 }
 ```
 
 ---
 
-## Organisation Endpoints
+## Organisation Actions
+
+**File**: `app/actions/organisations.ts`
 
 ### List Organisations
 
-**GET** `/api/organisations`
+```typescript
+'use server';
 
-**Query Parameters**:
-- `page` (number): Page number (default: 1)
-- `limit` (number): Items per page (default: 20)
-- `country_id` (uuid): Filter by country
-- `is_utility` (boolean): Filter by utility status
+import { db } from '@/lib/db/connection';
+import { requireRole } from '@/lib/rbac/guards';
 
-**Required Role**: SA, BMO
-
-**Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "organisations": [
-      {
-        "id": "org_123",
-        "name": "Kenya Power",
-        "acronym": "KPLC",
-        "country": {
-          "id": "country_456",
-          "name": "Kenya",
-          "iso_alpha_2": "KE"
-        },
-        "is_utility": true,
-        "is_active": true,
-        "created_at": "2025-01-01T00:00:00Z"
-      }
-    ],
-    "pagination": {
-      "page": 1,
-      "limit": 20,
-      "total": 45,
-      "totalPages": 3
-    }
+export async function getOrganisations(filters?: {
+  country_id?: string;
+  is_utility?: boolean;
+  page?: number;
+  limit?: number;
+}) {
+  await requireRole('SA', 'BMO');
+  
+  const { page = 1, limit = 20, country_id, is_utility } = filters || {};
+  const offset = (page - 1) * limit;
+  
+  let query = db.query.organisations.findMany({
+    with: {
+      country: true,
+    },
+    limit,
+    offset,
+  });
+  
+  if (country_id) {
+    query = query.where(eq(organisations.country_id, country_id));
   }
+  
+  if (is_utility !== undefined) {
+    query = query.where(eq(organisations.is_utility, is_utility));
+  }
+  
+  const orgs = await query;
+  const total = await db.select({ count: count() })
+    .from(organisations)
+    .where(/* same filters */);
+  
+  return {
+    organisations: orgs,
+    pagination: {
+      page,
+      limit,
+      total: total[0].count,
+      totalPages: Math.ceil(total[0].count / limit),
+    },
+  };
+}
+```
+
+**Usage in Server Component**:
+```typescript
+export default async function OrganisationsPage({ searchParams }) {
+  const data = await getOrganisations({
+    page: Number(searchParams.page) || 1,
+    country_id: searchParams.country,
+  });
+  
+  return <OrganisationsList organisations={data.organisations} />;
 }
 ```
 
@@ -221,40 +244,43 @@ Get authenticated user details.
 
 ### Get Organisation
 
-**GET** `/api/organisations/:id`
+```typescript
+'use server';
 
-**Required Role**: SA, BMO, or member of organisation
-
-**Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "id": "org_123",
-    "name": "Kenya Power",
-    "acronym": "KPLC",
-    "country": {
-      "id": "country_456",
-      "name": "Kenya",
-      "iso_alpha_2": "KE"
-    },
-    "is_utility": true,
-    "is_active": true,
-    "consultants": [
-      {
-        "id": "cons_789",
-        "name": "Jane Smith",
-        "email": "jane@consulting.com",
-        "assigned_date": "2025-01-15"
-      }
-    ],
-    "stats": {
-      "users": 12,
-      "service_areas": 5,
-      "generators": 8
-    },
-    "created_at": "2025-01-01T00:00:00Z"
+export async function getOrganisation(id: string) {
+  const session = await requireAuth();
+  
+  // Check if user has access to this organisation
+  if (session.user.role !== 'SA' && session.user.role !== 'BMO') {
+    if (session.user.organisation_id !== id) {
+      throw new Error('Forbidden');
+    }
   }
+  
+  const org = await db.query.organisations.findFirst({
+    where: eq(organisations.id, id),
+    with: {
+      country: true,
+    },
+  });
+  
+  if (!org) throw new Error('Not Found');
+  
+  // Get stats
+  const [userCount, serviceAreaCount, generatorCount] = await Promise.all([
+    db.select({ count: count() }).from(users).where(eq(users.organisation_id, id)),
+    db.select({ count: count() }).from(serviceAreas).where(eq(serviceAreas.organisation_id, id)),
+    db.select({ count: count() }).from(generators).where(eq(generators.organisation_id, id)),
+  ]);
+  
+  return {
+    ...org,
+    stats: {
+      users: userCount[0].count,
+      service_areas: serviceAreaCount[0].count,
+      generators: generatorCount[0].count,
+    },
+  };
 }
 ```
 
@@ -262,33 +288,51 @@ Get authenticated user details.
 
 ### Create Organisation
 
-**POST** `/api/organisations`
+```typescript
+'use server';
 
-**Required Role**: SA, BMO
+import { revalidatePath } from 'next/cache';
 
-**Request Body**:
-```json
-{
-  "name": "Uganda Electricity",
-  "acronym": "UE",
-  "country_id": "country_789",
-  "is_utility": true
+export async function createOrganisation(formData: FormData) {
+  await requireRole('SA', 'BMO');
+  
+  const name = formData.get('name') as string;
+  const acronym = formData.get('acronym') as string;
+  const country_id = formData.get('country_id') as string;
+  const is_utility = formData.get('is_utility') === 'true';
+  
+  // Validation
+  if (!name || !country_id) {
+    throw new Error('Validation Error: name and country_id are required');
+  }
+  
+  const org = await db.insert(organisations).values({
+    name,
+    acronym,
+    country_id,
+    is_utility,
+  }).returning();
+  
+  revalidatePath('/organisations');
+  return org[0];
 }
 ```
 
-**Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "id": "org_new123",
-    "name": "Uganda Electricity",
-    "acronym": "UE",
-    "country_id": "country_789",
-    "is_utility": true,
-    "is_active": true,
-    "created_at": "2025-11-12T10:00:00Z"
+**Usage**:
+```typescript
+'use client';
+
+export function CreateOrgForm() {
+  async function handleSubmit(formData: FormData) {
+    try {
+      const org = await createOrganisation(formData);
+      // Success! Redirect or show message
+    } catch (error) {
+      // Handle error
+    }
   }
+  
+  return <form action={handleSubmit}>...</form>;
 }
 ```
 
@@ -296,15 +340,33 @@ Get authenticated user details.
 
 ### Update Organisation
 
-**PUT** `/api/organisations/:id`
+```typescript
+'use server';
 
-**Required Role**: SA, BMO, BLO (own org only)
-
-**Request Body**:
-```json
-{
-  "name": "Kenya Power & Lighting",
-  "is_active": true
+export async function updateOrganisation(id: string, formData: FormData) {
+  const session = await requireAuth();
+  
+  // Check permissions
+  if (!['SA', 'BMO'].includes(session.user.role)) {
+    if (session.user.role !== 'BLO' || session.user.organisation_id !== id) {
+      throw new Error('Forbidden');
+    }
+  }
+  
+  const updates: Partial<Organisation> = {};
+  
+  if (formData.has('name')) updates.name = formData.get('name') as string;
+  if (formData.has('acronym')) updates.acronym = formData.get('acronym') as string;
+  if (formData.has('is_active')) updates.is_active = formData.get('is_active') === 'true';
+  
+  const org = await db.update(organisations)
+    .set(updates)
+    .where(eq(organisations.id, id))
+    .returning();
+  
+  revalidatePath('/organisations');
+  revalidatePath(`/organisations/${id}`);
+  return org[0];
 }
 ```
 
@@ -312,48 +374,60 @@ Get authenticated user details.
 
 ### Delete Organisation
 
-**DELETE** `/api/organisations/:id`
+```typescript
+'use server';
 
-**Required Role**: SA, BMO
-
-**Note**: Soft delete (sets `is_active` to false)
+export async function deleteOrganisation(id: string) {
+  await requireRole('SA', 'BMO');
+  
+  // Soft delete
+  await db.update(organisations)
+    .set({ is_active: false })
+    .where(eq(organisations.id, id));
+  
+  revalidatePath('/organisations');
+}
+```
 
 ---
 
-## User Management Endpoints
+## User Management Actions
+
+**File**: `app/actions/users.ts`
 
 ### List Users
 
-**GET** `/api/users`
+```typescript
+'use server';
 
-**Query Parameters**:
-- `organisation_id` (uuid): Filter by organisation
-- `role` (string): Filter by role
-- `page`, `limit`: Pagination
-
-**Required Role**: SA, BMO, BLO (own org only)
-
-**Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "users": [
-      {
-        "id": "user_123",
-        "email": "john@kplc.co.ke",
-        "name": "John Doe",
-        "role": "DAO",
-        "organisation": {
-          "id": "org_456",
-          "name": "Kenya Power"
-        },
-        "is_active": true,
-        "last_login": "2025-11-11T15:30:00Z"
-      }
-    ],
-    "pagination": { ... }
+export async function getUsers(filters?: {
+  organisation_id?: string;
+  role?: string;
+  page?: number;
+  limit?: number;
+}) {
+  const session = await requireAuth();
+  
+  // Permission check
+  if (!['SA', 'BMO'].includes(session.user.role)) {
+    if (session.user.role === 'BLO' && filters?.organisation_id !== session.user.organisation_id) {
+      throw new Error('Forbidden');
+    }
   }
+  
+  const { page = 1, limit = 20 } = filters || {};
+  
+  const users = await db.query.users.findMany({
+    where: and(
+      filters?.organisation_id ? eq(users.organisation_id, filters.organisation_id) : undefined,
+      filters?.role ? eq(users.role, filters.role) : undefined
+    ),
+    with: { organisation: true },
+    limit,
+    offset: (page - 1) * limit,
+  });
+  
+  return users;
 }
 ```
 
@@ -361,18 +435,38 @@ Get authenticated user details.
 
 ### Create User
 
-**POST** `/api/users`
+```typescript
+'use server';
 
-**Required Role**: SA, BMO, BLO (own org only)
-
-**Request Body**:
-```json
-{
-  "email": "newuser@example.com",
-  "name": "New User",
-  "role": "DAO",
-  "organisation_id": "org_456",
-  "data_label_categories": ["FIN", "OPS"]
+export async function createUser(formData: FormData) {
+  const session = await requireAuth();
+  
+  const email = formData.get('email') as string;
+  const name = formData.get('name') as string;
+  const role = formData.get('role') as string;
+  const organisation_id = formData.get('organisation_id') as string;
+  
+  // Permission check
+  if (!['SA', 'BMO'].includes(session.user.role)) {
+    if (session.user.role !== 'BLO' || session.user.organisation_id !== organisation_id) {
+      throw new Error('Forbidden');
+    }
+  }
+  
+  // Validation
+  if (!email || !name || !role || !organisation_id) {
+    throw new Error('Validation Error: All fields are required');
+  }
+  
+  const user = await db.insert(users).values({
+    email,
+    name,
+    role,
+    organisation_id,
+  }).returning();
+  
+  revalidatePath('/users');
+  return user[0];
 }
 ```
 
@@ -380,14 +474,37 @@ Get authenticated user details.
 
 ### Update User
 
-**PUT** `/api/users/:id`
+```typescript
+'use server';
 
-**Request Body**:
-```json
-{
-  "name": "Updated Name",
-  "role": "BLO",
-  "is_active": true
+export async function updateUser(id: string, formData: FormData) {
+  const session = await requireAuth();
+  
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, id),
+  });
+  
+  if (!user) throw new Error('Not Found');
+  
+  // Permission check
+  if (!['SA', 'BMO'].includes(session.user.role)) {
+    if (session.user.role !== 'BLO' || session.user.organisation_id !== user.organisation_id) {
+      throw new Error('Forbidden');
+    }
+  }
+  
+  const updates: Partial<User> = {};
+  if (formData.has('name')) updates.name = formData.get('name') as string;
+  if (formData.has('role')) updates.role = formData.get('role') as string;
+  if (formData.has('is_active')) updates.is_active = formData.get('is_active') === 'true';
+  
+  const updated = await db.update(users)
+    .set(updates)
+    .where(eq(users.id, id))
+    .returning();
+  
+  revalidatePath('/users');
+  return updated[0];
 }
 ```
 
@@ -395,63 +512,79 @@ Get authenticated user details.
 
 ### Deactivate User
 
-**DELETE** `/api/users/:id`
+```typescript
+'use server';
 
-**Note**: Soft delete (sets `is_active` to false)
+export async function deactivateUser(id: string) {
+  const session = await requireAuth();
+  
+  const user = await db.query.users.findFirst({
+    where: eq(users.id, id),
+  });
+  
+  if (!user) throw new Error('Not Found');
+  
+  // Permission check
+  if (!['SA', 'BMO'].includes(session.user.role)) {
+    throw new Error('Forbidden');
+  }
+  
+  await db.update(users)
+    .set({ is_active: false })
+    .where(eq(users.id, id));
+  
+  revalidatePath('/users');
+}
+```
 
 ---
 
-## Data Entry Endpoints
+## Data Entry Actions
+
+**File**: `app/actions/data-entries.ts`
 
 ### List Data Entries
 
-**GET** `/api/data-entries`
+```typescript
+'use server';
 
-**Query Parameters**:
-- `organisation_id` (uuid): Required for non-SA/BMO roles
-- `year` (number): Filter by year
-- `month` (number): Filter by month
-- `status` (string): Filter by status
-- `data_label_id` (uuid): Filter by data label
-- `page`, `limit`: Pagination
-
-**Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "entries": [
-      {
-        "id": "entry_123",
-        "organisation": {
-          "id": "org_456",
-          "name": "Kenya Power"
-        },
-        "data_label": {
-          "id": "dl_789",
-          "name": "Total Revenue",
-          "category": "Financial"
-        },
-        "period": {
-          "year": 2025,
-          "month": 10
-        },
-        "value": 15000000,
-        "status": "approved",
-        "submitted_by": {
-          "id": "user_123",
-          "name": "John Doe"
-        },
-        "submitted_at": "2025-11-01T10:00:00Z",
-        "approved_by": {
-          "id": "user_456",
-          "name": "CEO Name"
-        },
-        "approved_at": "2025-11-05T14:30:00Z"
-      }
-    ],
-    "pagination": { ... }
-  }
+export async function getDataEntries(filters?: {
+  organisation_id?: string;
+  year?: number;
+  month?: number;
+  status?: string;
+  data_label_id?: string;
+  page?: number;
+  limit?: number;
+}) {
+  const session = await requireAuth();
+  
+  const { page = 1, limit = 20 } = filters || {};
+  
+  const entries = await db.query.dataEntries.findMany({
+    where: and(
+      // Filter by organisation if not SA/BMO
+      !['SA', 'BMO'].includes(session.user.role) 
+        ? eq(dataEntries.organisation_id, session.user.organisation_id)
+        : filters?.organisation_id 
+          ? eq(dataEntries.organisation_id, filters.organisation_id)
+          : undefined,
+      filters?.year ? eq(dataEntries.period_year, filters.year) : undefined,
+      filters?.month ? eq(dataEntries.period_month, filters.month) : undefined,
+      filters?.status ? eq(dataEntries.status, filters.status) : undefined,
+      filters?.data_label_id ? eq(dataEntries.data_label_id, filters.data_label_id) : undefined
+    ),
+    with: {
+      organisation: true,
+      dataLabel: true,
+      submittedBy: true,
+      approvedBy: true,
+    },
+    limit,
+    offset: (page - 1) * limit,
+  });
+  
+  return entries;
 }
 ```
 
@@ -459,45 +592,81 @@ Get authenticated user details.
 
 ### Get Data Entry
 
-**GET** `/api/data-entries/:id`
+```typescript
+'use server';
+
+export async function getDataEntry(id: string) {
+  const session = await requireAuth();
+  
+  const entry = await db.query.dataEntries.findFirst({
+    where: eq(dataEntries.id, id),
+    with: {
+      organisation: true,
+      dataLabel: true,
+      submittedBy: true,
+      approvedBy: true,
+    },
+  });
+  
+  if (!entry) throw new Error('Not Found');
+  
+  // Check access
+  if (!['SA', 'BMO'].includes(session.user.role)) {
+    if (entry.organisation_id !== session.user.organisation_id) {
+      throw new Error('Forbidden');
+    }
+  }
+  
+  return entry;
+}
+```
 
 ---
 
 ### Create Data Entry
 
-**POST** `/api/data-entries`
+```typescript
+'use server';
 
-**Required Role**: BLO, DAO (for assigned categories only), CON
-
-**Request Body**:
-```json
-{
-  "organisation_id": "org_456",
-  "data_label_id": "dl_789",
-  "period_year": 2025,
-  "period_month": 10,
-  "value": 15000000,
-  "service_area_id": "sa_123",  // Optional
-  "generator_id": "gen_456",    // Optional
-  "notes": "October revenue figures",
-  "status": "draft"  // or "submitted"
-}
-```
-
-**Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "id": "entry_new123",
-    "organisation_id": "org_456",
-    "data_label_id": "dl_789",
-    "period_year": 2025,
-    "period_month": 10,
-    "value": 15000000,
-    "status": "draft",
-    "created_at": "2025-11-12T10:00:00Z"
+export async function createDataEntry(formData: FormData) {
+  const session = await requireAuth();
+  
+  const organisation_id = formData.get('organisation_id') as string;
+  const data_label_id = formData.get('data_label_id') as string;
+  const period_year = Number(formData.get('period_year'));
+  const period_month = Number(formData.get('period_month'));
+  const value = Number(formData.get('value'));
+  const status = (formData.get('status') as string) || 'draft';
+  const notes = formData.get('notes') as string;
+  
+  // Permission check
+  if (!['BLO', 'DAO', 'CON'].includes(session.user.role)) {
+    throw new Error('Forbidden');
   }
+  
+  // Validate organisation access
+  if (session.user.organisation_id !== organisation_id && session.user.role !== 'CON') {
+    throw new Error('Forbidden');
+  }
+  
+  // Validation
+  if (!data_label_id || !period_year || !period_month || value === undefined) {
+    throw new Error('Validation Error: Required fields missing');
+  }
+  
+  const entry = await db.insert(dataEntries).values({
+    organisation_id,
+    data_label_id,
+    period_year,
+    period_month,
+    value,
+    status,
+    notes,
+    submitted_by: session.user.id,
+  }).returning();
+  
+  revalidatePath('/data-entry');
+  return entry[0];
 }
 ```
 
@@ -505,15 +674,39 @@ Get authenticated user details.
 
 ### Update Data Entry
 
-**PUT** `/api/data-entries/:id`
+```typescript
+'use server';
 
-**Note**: Can only update entries in "draft" status
-
-**Request Body**:
-```json
-{
-  "value": 16000000,
-  "notes": "Revised figures"
+export async function updateDataEntry(id: string, formData: FormData) {
+  const session = await requireAuth();
+  
+  const entry = await db.query.dataEntries.findFirst({
+    where: eq(dataEntries.id, id),
+  });
+  
+  if (!entry) throw new Error('Not Found');
+  
+  // Can only update draft entries
+  if (entry.status !== 'draft') {
+    throw new Error('Cannot update non-draft entries');
+  }
+  
+  // Permission check
+  if (entry.submitted_by !== session.user.id && !['BLO', 'CON'].includes(session.user.role)) {
+    throw new Error('Forbidden');
+  }
+  
+  const updates: Partial<DataEntry> = {};
+  if (formData.has('value')) updates.value = Number(formData.get('value'));
+  if (formData.has('notes')) updates.notes = formData.get('notes') as string;
+  
+  const updated = await db.update(dataEntries)
+    .set(updates)
+    .where(eq(dataEntries.id, id))
+    .returning();
+  
+  revalidatePath('/data-entry');
+  return updated[0];
 }
 ```
 
@@ -521,19 +714,36 @@ Get authenticated user details.
 
 ### Submit Data Entry
 
-**POST** `/api/data-entries/:id/submit`
+```typescript
+'use server';
 
-**Description**: Change status from "draft" to "submitted" and notify CEO
-
-**Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "id": "entry_123",
-    "status": "submitted",
-    "submitted_at": "2025-11-12T10:00:00Z"
+export async function submitDataEntry(id: string) {
+  const session = await requireAuth();
+  
+  const entry = await db.query.dataEntries.findFirst({
+    where: eq(dataEntries.id, id),
+  });
+  
+  if (!entry) throw new Error('Not Found');
+  if (entry.status !== 'draft') throw new Error('Entry already submitted');
+  
+  // Permission check
+  if (entry.submitted_by !== session.user.id && !['BLO', 'CON'].includes(session.user.role)) {
+    throw new Error('Forbidden');
   }
+  
+  const updated = await db.update(dataEntries)
+    .set({
+      status: 'submitted',
+      submitted_at: new Date(),
+    })
+    .where(eq(dataEntries.id, id))
+    .returning();
+  
+  // TODO: Notify CEO for approval
+  
+  revalidatePath('/data-entry');
+  return updated[0];
 }
 ```
 
@@ -541,27 +751,40 @@ Get authenticated user details.
 
 ### Approve Data Entry
 
-**POST** `/api/data-entries/:id/approve`
+```typescript
+'use server';
 
-**Required Role**: CEO
-
-**Request Body**:
-```json
-{
-  "notes": "Approved for Q4 reporting"
-}
-```
-
-**Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "id": "entry_123",
-    "status": "approved",
-    "approved_by": "user_ceo",
-    "approved_at": "2025-11-12T10:00:00Z"
+export async function approveDataEntry(id: string, notes?: string) {
+  const session = await requireRole('CEO');
+  
+  const entry = await db.query.dataEntries.findFirst({
+    where: eq(dataEntries.id, id),
+  });
+  
+  if (!entry) throw new Error('Not Found');
+  if (entry.status !== 'submitted') throw new Error('Entry not submitted for approval');
+  
+  // CEO can only approve for their organisation
+  if (entry.organisation_id !== session.user.organisation_id) {
+    throw new Error('Forbidden');
   }
+  
+  const updated = await db.update(dataEntries)
+    .set({
+      status: 'approved',
+      approved_by: session.user.id,
+      approved_at: new Date(),
+      approval_notes: notes,
+    })
+    .where(eq(dataEntries.id, id))
+    .returning();
+  
+  // Trigger KPI calculations
+  await calculateKPIs(entry.organisation_id, entry.period_year, entry.period_month);
+  
+  revalidatePath('/data-entry');
+  revalidatePath('/approvals');
+  return updated[0];
 }
 ```
 
@@ -569,14 +792,39 @@ Get authenticated user details.
 
 ### Reject Data Entry
 
-**POST** `/api/data-entries/:id/reject`
+```typescript
+'use server';
 
-**Required Role**: CEO
-
-**Request Body**:
-```json
-{
-  "rejection_reason": "Values seem incorrect, please verify source data"
+export async function rejectDataEntry(id: string, rejection_reason: string) {
+  const session = await requireRole('CEO');
+  
+  const entry = await db.query.dataEntries.findFirst({
+    where: eq(dataEntries.id, id),
+  });
+  
+  if (!entry) throw new Error('Not Found');
+  if (entry.status !== 'submitted') throw new Error('Entry not submitted for approval');
+  
+  // CEO can only reject for their organisation
+  if (entry.organisation_id !== session.user.organisation_id) {
+    throw new Error('Forbidden');
+  }
+  
+  const updated = await db.update(dataEntries)
+    .set({
+      status: 'rejected',
+      rejection_reason,
+      rejected_by: session.user.id,
+      rejected_at: new Date(),
+    })
+    .where(eq(dataEntries.id, id))
+    .returning();
+  
+  // TODO: Notify submitter
+  
+  revalidatePath('/data-entry');
+  revalidatePath('/approvals');
+  return updated[0];
 }
 ```
 
@@ -584,64 +832,102 @@ Get authenticated user details.
 
 ### Bulk Data Entry
 
-**POST** `/api/data-entries/bulk`
+```typescript
+'use server';
 
-**Request Body**:
-```json
-{
-  "organisation_id": "org_456",
-  "period_year": 2025,
-  "period_month": 10,
-  "entries": [
-    {
-      "data_label_id": "dl_001",
-      "value": 1000000
-    },
-    {
-      "data_label_id": "dl_002",
-      "value": 50000
-    }
-  ]
-}
-```
-
-**Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "created": 2,
-    "failed": 0,
-    "entries": [ ... ]
+export async function bulkCreateDataEntries(formData: FormData) {
+  const session = await requireAuth();
+  
+  const organisation_id = formData.get('organisation_id') as string;
+  const period_year = Number(formData.get('period_year'));
+  const period_month = Number(formData.get('period_month'));
+  const entriesJson = formData.get('entries') as string;
+  const entries = JSON.parse(entriesJson);
+  
+  // Permission check
+  if (!['BLO', 'DAO', 'CON'].includes(session.user.role)) {
+    throw new Error('Forbidden');
   }
+  
+  const results = [];
+  const errors = [];
+  
+  for (const entry of entries) {
+    try {
+      const created = await db.insert(dataEntries).values({
+        organisation_id,
+        data_label_id: entry.data_label_id,
+        period_year,
+        period_month,
+        value: entry.value,
+        status: 'draft',
+        submitted_by: session.user.id,
+      }).returning();
+      
+      results.push(created[0]);
+    } catch (error) {
+      errors.push({
+        data_label_id: entry.data_label_id,
+        error: error.message,
+      });
+    }
+  }
+  
+  revalidatePath('/data-entry');
+  
+  return {
+    created: results.length,
+    failed: errors.length,
+    entries: results,
+    errors,
+  };
 }
 ```
 
 ---
 
-## Excel Import Endpoints
+## Excel Import Actions
+
+**File**: `app/actions/excel.ts`
 
 ### Upload Excel File
 
-**POST** `/api/excel/upload`
+```typescript
+'use server';
 
-**Content-Type**: `multipart/form-data`
+import { parseExcelFile } from '@/lib/excel/parser';
 
-**Form Data**:
-- `file`: Excel file
-- `organisation_id`: Organisation UUID
-- `period_year`: Year
-- `period_month`: Month
-
-**Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "import_id": "import_123",
-    "status": "processing",
-    "file_name": "october_data.xlsx"
+export async function uploadExcelFile(formData: FormData) {
+  const session = await requireAuth();
+  
+  const file = formData.get('file') as File;
+  const organisation_id = formData.get('organisation_id') as string;
+  const period_year = Number(formData.get('period_year'));
+  const period_month = Number(formData.get('period_month'));
+  
+  if (!file || !organisation_id || !period_year || !period_month) {
+    throw new Error('Validation Error: All fields required');
   }
+  
+  // Create import record
+  const importRecord = await db.insert(excelImports).values({
+    file_name: file.name,
+    organisation_id,
+    period_year,
+    period_month,
+    uploaded_by: session.user.id,
+    status: 'processing',
+  }).returning();
+  
+  // Process file in background
+  processExcelFile(importRecord[0].id, file, organisation_id, period_year, period_month)
+    .catch(console.error);
+  
+  return {
+    import_id: importRecord[0].id,
+    status: 'processing',
+    file_name: file.name,
+  };
 }
 ```
 
@@ -649,30 +935,26 @@ Get authenticated user details.
 
 ### Get Import Status
 
-**GET** `/api/excel/imports/:id`
+```typescript
+'use server';
 
-**Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "id": "import_123",
-    "status": "completed",
-    "total_rows": 100,
-    "successful_rows": 95,
-    "failed_rows": 5,
-    "error_report": {
-      "errors": [
-        {
-          "row": 5,
-          "column": "Total Revenue",
-          "error": "Value must be numeric"
-        }
-      ]
-    },
-    "created_at": "2025-11-12T09:00:00Z",
-    "completed_at": "2025-11-12T09:05:00Z"
+export async function getImportStatus(id: string) {
+  const session = await requireAuth();
+  
+  const importRecord = await db.query.excelImports.findFirst({
+    where: eq(excelImports.id, id),
+  });
+  
+  if (!importRecord) throw new Error('Not Found');
+  
+  // Check access
+  if (!['SA', 'BMO'].includes(session.user.role)) {
+    if (importRecord.organisation_id !== session.user.organisation_id) {
+      throw new Error('Forbidden');
+    }
   }
+  
+  return importRecord;
 }
 ```
 
@@ -680,55 +962,60 @@ Get authenticated user details.
 
 ### Download Template
 
-**GET** `/api/excel/template`
+```typescript
+'use server';
 
-**Query Parameters**:
-- `category_id` (uuid): Data label category
-- `organisation_id` (uuid): For organization-specific labels
+import { generateExcelTemplate } from '@/lib/excel/generator';
 
-**Response**: Excel file download
+export async function downloadExcelTemplate(category_id?: string, organisation_id?: string) {
+  const session = await requireAuth();
+  
+  // Get data labels
+  const labels = await db.query.dataLabelDefinitions.findMany({
+    where: category_id ? eq(dataLabelDefinitions.category_id, category_id) : undefined,
+  });
+  
+  // Generate Excel file
+  const buffer = await generateExcelTemplate(labels, organisation_id);
+  
+  return buffer;
+}
+```
 
 ---
 
-## KPI Endpoints
+## KPI Actions
+
+**File**: `app/actions/kpis.ts`
 
 ### List KPIs
 
-**GET** `/api/kpis`
+```typescript
+'use server';
 
-**Query Parameters**:
-- `category_id` (uuid): Filter by category
-- `subcategory_id` (uuid): Filter by subcategory
-
-**Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "kpis": [
-      {
-        "id": "kpi_123",
-        "name": "Revenue per Customer",
-        "description": "Average revenue generated per customer",
-        "category": "Financial Health",
-        "subcategory": "Revenue",
-        "formula": "revenue / customers",
-        "unit": "USD",
-        "inputs": [
-          {
-            "id": "dl_001",
-            "name": "Total Revenue",
-            "variable": "revenue"
-          },
-          {
-            "id": "dl_002",
-            "name": "Total Customers",
-            "variable": "customers"
-          }
-        ]
-      }
-    ]
-  }
+export async function getKPIs(filters?: {
+  category_id?: string;
+  subcategory_id?: string;
+}) {
+  const session = await requireAuth();
+  
+  const kpis = await db.query.kpiDefinitions.findMany({
+    where: and(
+      filters?.category_id ? eq(kpiDefinitions.category_id, filters.category_id) : undefined,
+      filters?.subcategory_id ? eq(kpiDefinitions.subcategory_id, filters.subcategory_id) : undefined
+    ),
+    with: {
+      category: true,
+      subcategory: true,
+      inputs: {
+        with: {
+          dataLabel: true,
+        },
+      },
+    },
+  });
+  
+  return kpis;
 }
 ```
 
@@ -736,39 +1023,56 @@ Get authenticated user details.
 
 ### Get KPI Calculations
 
-**GET** `/api/kpis/:id/calculations`
+```typescript
+'use server';
 
-**Query Parameters**:
-- `organisation_id` (uuid): Required
-- `year` (number): Required
-- `month` (number): Optional (returns all months if omitted)
-
-**Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "kpi": {
-      "id": "kpi_123",
-      "name": "Revenue per Customer"
-    },
-    "calculations": [
-      {
-        "period": {
-          "year": 2025,
-          "month": 10
-        },
-        "value": 20.50,
-        "metadata": {
-          "inputs": {
-            "revenue": 1000000,
-            "customers": 48780
-          },
-          "calculated_at": "2025-11-05T15:00:00Z"
-        }
-      }
-    ]
+export async function getKPICalculations(
+  kpi_id: string,
+  organisation_id: string,
+  year: number,
+  month?: number
+) {
+  const session = await requireAuth();
+  
+  // Check access
+  if (!['SA', 'BMO'].includes(session.user.role)) {
+    if (session.user.organisation_id !== organisation_id) {
+      throw new Error('Forbidden');
+    }
   }
+  
+  const kpi = await db.query.kpiDefinitions.findFirst({
+    where: eq(kpiDefinitions.id, kpi_id),
+  });
+  
+  if (!kpi) throw new Error('Not Found');
+  
+  const calculations = await db.query.kpiCalculations.findMany({
+    where: and(
+      eq(kpiCalculations.kpi_id, kpi_id),
+      eq(kpiCalculations.organisation_id, organisation_id),
+      eq(kpiCalculations.year, year),
+      month ? eq(kpiCalculations.month, month) : undefined
+    ),
+    orderBy: [desc(kpiCalculations.year), desc(kpiCalculations.month)],
+  });
+  
+  return {
+    kpi: {
+      id: kpi.id,
+      name: kpi.name,
+      description: kpi.description,
+      unit: kpi.unit,
+    },
+    calculations: calculations.map(calc => ({
+      period: {
+        year: calc.year,
+        month: calc.month,
+      },
+      value: calc.value,
+      metadata: calc.metadata,
+    })),
+  };
 }
 ```
 
@@ -776,67 +1080,78 @@ Get authenticated user details.
 
 ### Create KPI Definition
 
-**POST** `/api/kpis`
+```typescript
+'use server';
 
-**Required Role**: SA, BMO
-
-**Request Body**:
-```json
-{
-  "name": "System Efficiency",
-  "description": "Percentage of energy delivered vs generated",
-  "category_id": "cat_123",
-  "subcategory_id": "subcat_456",
-  "formula": "((generated - losses) / generated) * 100",
-  "inputs": [
-    {
-      "data_label_id": "dl_energy_generated",
-      "variable": "generated"
-    },
-    {
-      "data_label_id": "dl_system_losses",
-      "variable": "losses"
-    }
-  ],
-  "unit": "%",
-  "display_format": "percentage"
+export async function createKPI(formData: FormData) {
+  await requireRole('SA', 'BMO');
+  
+  const name = formData.get('name') as string;
+  const description = formData.get('description') as string;
+  const category_id = formData.get('category_id') as string;
+  const subcategory_id = formData.get('subcategory_id') as string;
+  const formula = formData.get('formula') as string;
+  const unit = formData.get('unit') as string;
+  const inputsJson = formData.get('inputs') as string;
+  const inputs = JSON.parse(inputsJson);
+  
+  // Validation
+  if (!name || !formula || !inputs.length) {
+    throw new Error('Validation Error: Required fields missing');
+  }
+  
+  const kpi = await db.insert(kpiDefinitions).values({
+    name,
+    description,
+    category_id,
+    subcategory_id,
+    formula,
+    unit,
+  }).returning();
+  
+  // Insert inputs
+  for (const input of inputs) {
+    await db.insert(kpiInputs).values({
+      kpi_id: kpi[0].id,
+      data_label_id: input.data_label_id,
+      variable: input.variable,
+    });
+  }
+  
+  revalidatePath('/kpis');
+  return kpi[0];
 }
 ```
 
 ---
 
-## Data Label Endpoints
+## Data Label Actions
+
+**File**: `app/actions/data-labels.ts`
 
 ### List Data Labels
 
-**GET** `/api/data-labels`
+```typescript
+'use server';
 
-**Query Parameters**:
-- `category_id` (uuid): Filter by category
-- `subcategory_id` (uuid): Filter by subcategory
-
-**Response**:
-```json
-{
-  "success": true,
-  "data": {
-    "data_labels": [
-      {
-        "id": "dl_123",
-        "name": "Total Revenue",
-        "description": "Total revenue for the period",
-        "category": "Financial",
-        "subcategory": "Income",
-        "data_type": "currency",
-        "unit": "USD",
-        "validation_rules": {
-          "min": 0,
-          "decimal_places": 2
-        },
-        "is_required": true
-      }
-    ]
-  }
+export async function getDataLabels(filters?: {
+  category_id?: string;
+  subcategory_id?: string;
+}) {
+  const session = await requireAuth();
+  
+  const labels = await db.query.dataLabelDefinitions.findMany({
+    where: and(
+      filters?.category_id ? eq(dataLabelDefinitions.category_id, filters.category_id) : undefined,
+      filters?.subcategory_id ? eq(dataLabelDefinitions.subcategory_id, filters.subcategory_id) : undefined
+    ),
+    with: {
+      category: true,
+      subcategory: true,
+    },
+  });
+  
+  return labels;
 }
 ```
 
@@ -844,22 +1159,70 @@ Get authenticated user details.
 
 ### Create Data Label
 
-**POST** `/api/data-labels`
+```typescript
+'use server';
 
-**Required Role**: SA, BMO
+export async function createDataLabel(formData: FormData) {
+  await requireRole('SA', 'BMO');
+  
+  const name = formData.get('name') as string;
+  const description = formData.get('description') as string;
+  const category_id = formData.get('category_id') as string;
+  const subcategory_id = formData.get('subcategory_id') as string;
+  const data_type = formData.get('data_type') as string;
+  const unit = formData.get('unit') as string;
+  const is_required = formData.get('is_required') === 'true';
+  
+  const label = await db.insert(dataLabelDefinitions).values({
+    name,
+    description,
+    category_id,
+    subcategory_id,
+    data_type,
+    unit,
+    is_required,
+  }).returning();
+  
+  revalidatePath('/data-labels');
+  return label[0];
+}
+```
 
 ---
 
-## Dashboard Endpoints
+## Dashboard Data
 
-### Get Dashboard Data
+**File**: `app/(dashboard)/overview/page.tsx`
 
-**GET** `/api/dashboard`
+### Get Dashboard Data (Server Component)
 
-**Query Parameters**:
-- `organisation_id` (uuid): Required (auto-filled for non-SA/BMO)
-
-**Response**:
+```typescript
+// Server Component - no need for Server Action
+export default async function DashboardPage() {
+  const session = await requireAuth();
+  
+  const organisation_id = ['SA', 'BMO'].includes(session.user.role)
+    ? null // Show aggregated data
+    : session.user.organisation_id;
+  
+  // Fetch all dashboard data directly
+  const [recentEntries, pendingApprovals, kpiSummary, stats] = await Promise.all([
+    getRecentDataEntries(organisation_id),
+    getPendingApprovals(organisation_id, session.user.role),
+    getKPISummary(organisation_id),
+    getOrganisationStats(organisation_id),
+  ]);
+  
+  return (
+    <DashboardView
+      recentEntries={recentEntries}
+      pendingApprovals={pendingApprovals}
+      kpiSummary={kpiSummary}
+      stats={stats}
+    />
+  );
+}
+```
 ```json
 {
   "success": true,

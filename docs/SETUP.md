@@ -102,15 +102,16 @@ Add the following to `.env.local`:
 # Database
 DATABASE_URL=postgresql://postgres:[PASSWORD]@db.xxxxx.supabase.co:5432/postgres
 
-# Authentication
-BETTER_AUTH_SECRET=your_random_secret_key_here_minimum_32_characters
-BETTER_AUTH_URL=http://localhost:3000
+# Supabase
+NEXT_PUBLIC_SUPABASE_URL=https://xxxxx.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 
-# Email Configuration (Development - using Mailtrap)
-SMTP_HOST=sandbox.smtp.mailtrap.io
-SMTP_PORT=2525
-SMTP_USER=your_mailtrap_username
-SMTP_PASS=your_mailtrap_password
+# Email Configuration (Optional - Supabase handles auth emails)
+# Only configure if you need custom transactional emails
+SMTP_HOST=smtp.sendgrid.net
+SMTP_PORT=587
+SMTP_USER=apikey
+SMTP_PASS=your_smtp_password
 SMTP_FROM=noreply@prism.local
 
 # Power BI (Optional - only if testing dashboard)
@@ -119,29 +120,25 @@ POWER_BI_CLIENT_SECRET=
 POWER_BI_TENANT_ID=
 ```
 
-#### Generate BETTER_AUTH_SECRET
+#### Get Supabase Keys
 
-```bash
-# On Linux/Mac
-openssl rand -base64 32
+1. In your Supabase project, go to **Settings** → **API**
+2. Find **Project URL** - this is your `NEXT_PUBLIC_SUPABASE_URL`
+3. Find **Project API keys** → **anon public** - this is your `NEXT_PUBLIC_SUPABASE_ANON_KEY`
 
-# On Windows (PowerShell)
--join ((48..57) + (65..90) + (97..122) | Get-Random -Count 32 | ForEach-Object {[char]$_})
-```
+### 5. Configure Supabase Auth
 
-### 5. Set Up Email Testing (Mailtrap)
+Enable magic link authentication in Supabase:
 
-For development, we use [Mailtrap](https://mailtrap.io/) to test emails without sending real ones:
-
-1. Go to [mailtrap.io](https://mailtrap.io/) and sign up (free)
-2. Create a new inbox called "PRISM Development"
-3. Go to **SMTP Settings**
-4. Copy the credentials:
-   - Host: `sandbox.smtp.mailtrap.io`
-   - Port: `2525`
-   - Username: Your Mailtrap username
-   - Password: Your Mailtrap password
-5. Add these to your `.env.local` file
+1. In your Supabase project, go to **Authentication** → **Providers**
+2. Enable **Email** provider
+3. Configure **Email Templates** (optional):
+   - Go to **Authentication** → **Email Templates**
+   - Customize the magic link email template
+4. Configure **Site URL**:
+   - Go to **Authentication** → **URL Configuration**
+   - Set Site URL to `http://localhost:3000` for development
+   - Add redirect URLs as needed
 
 ### 6. Initialize Database Schema
 
@@ -354,7 +351,7 @@ If you encounter issues:
 - [Next.js Documentation](https://nextjs.org/docs)
 - [Supabase Docs](https://supabase.com/docs)
 - [Drizzle ORM Docs](https://orm.drizzle.team/)
-- [Better Auth Docs](https://www.better-auth.com/docs)
+- [Supabase Auth Docs](https://supabase.com/docs/guides/auth)
 - [Tailwind CSS Docs](https://tailwindcss.com/docs)
 
 ---

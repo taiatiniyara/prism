@@ -43,14 +43,14 @@ PRISM (Performance Reporting & Information System Management) is a multi-tenant 
 │                      APPLICATION LAYER                           │
 │  ┌──────────────────────────────────────────────────────────┐  │
 │  │                  Next.js 16 App Router                    │  │
-│  │  ┌────────────┐  ┌────────────┐  ┌────────────┐         │  │
-│  │  │  UI Pages  │  │ API Routes │  │ Server     │         │  │
-│  │  │            │  │            │  │ Components │         │  │
-│  │  └────────────┘  └────────────┘  └────────────┘         │  │
+│  │  ┌────────────┐  ┌──────────────┐  ┌────────────┐       │  │
+│  │  │  UI Pages  │  │    Server    │  │ Server     │       │  │
+│  │  │  (Client)  │  │   Actions    │  │ Components │       │  │
+│  │  └────────────┘  └──────────────┘  └────────────┘       │  │
 │  └──────────────────────────────────────────────────────────┘  │
 │                                                                  │
 │  ┌────────────────────┐         ┌──────────────────────────┐  │
-│  │   Better Auth      │         │    Middleware Layer      │  │
+│  │  Supabase Auth     │         │    Middleware Layer      │  │
 │  │   (Magic Links)    │         │   - RBAC Guards          │  │
 │  │                    │         │   - Logging              │  │
 │  └────────────────────┘         │   - Validation           │  │
@@ -108,22 +108,21 @@ PRISM (Performance Reporting & Information System Management) is a multi-tenant 
 ### Backend
 | Technology | Version | Purpose |
 |------------|---------|---------|
-| Next.js API Routes | 16.0 | Serverless API endpoints |
-| Better Auth | Latest | Authentication with magic links |
+| Next.js Server Actions | 16.0 | Server-side mutations and data fetching |
+| Supabase Auth | Latest | Authentication with magic links |
 | Drizzle ORM | 0.44.7 | Type-safe SQL query builder |
-| Nodemailer | 7.0 | Email delivery |
 
 ### Database
 | Technology | Version | Purpose |
 |------------|---------|---------|
 | PostgreSQL | 14+ | Primary database (via Supabase) |
-| Supabase | Latest | Backend-as-a-Service |
+| Supabase | Latest | Backend-as-a-Service (Database, Auth, Storage) |
 
 ### External Services
 | Service | Purpose |
 |---------|---------|
 | Power BI Embedded | Dashboard and reporting |
-| SendGrid/AWS SES | Transactional emails (future) |
+| Supabase | Authentication, email delivery, database hosting |
 
 ### Development Tools
 | Tool | Purpose |
@@ -234,12 +233,12 @@ app/
 │   ├── data-entry/      # Data entry workflows
 │   ├── reports/         # Power BI embedded
 │   └── settings/
-└── api/                 # API routes
-    ├── auth/
-    ├── organisations/
-    ├── data-entries/
-    ├── kpis/
-    └── admin/
+└── actions/             # Server Actions
+    ├── auth.ts
+    ├── organisations.ts
+    ├── data-entries.ts
+    ├── kpis.ts
+    └── admin.ts
 
 lib/
 ├── db/
@@ -247,7 +246,7 @@ lib/
 │   ├── schema/          # Drizzle schema definitions
 │   └── migrations/      # Database migrations
 ├── auth/
-│   ├── config.ts        # Better Auth configuration
+│   ├── config.ts        # Supabase Auth configuration
 │   └── middleware.ts    # Auth guards
 ├── rbac/
 │   ├── permissions.ts   # Permission definitions
@@ -283,32 +282,56 @@ export default async function DashboardPage() {
 }
 ```
 
-#### 2. API Route Handlers
+#### 2. Server Actions (Primary Pattern)
 ```typescript
-// app/api/organisations/route.ts
-import { NextRequest } from 'next/server';
+// app/actions/organisations.ts
+'use server';
 
-export async function GET(request: NextRequest) {
+import { revalidatePath } from 'next/cache';
+import { db } from '@/lib/db/connection';
+import { getSession } from '@/lib/auth/session';
+
+export async function getOrganisations() {
   const session = await getSession();
-  if (!session) return unauthorized();
+  if (!session) throw new Error('Unauthorized');
   
   const orgs = await db.query.organisations.findMany({
     where: hasAccess(session.user),
   });
   
-  return Response.json(orgs);
+  return orgs;
+}
+
+export async function createOrganisation(formData: FormData) {
+  const session = await getSession();
+  if (!session || !['SA', 'BMO'].includes(session.user.role)) {
+    throw new Error('Forbidden');
+  }
+  
+  const name = formData.get('name') as string;
+  const acronym = formData.get('acronym') as string;
+  
+  const org = await db.insert(organisations).values({
+    name,
+    acronym,
+    // ...
+  }).returning();
+  
+  revalidatePath('/organisations');
+  return org[0];
 }
 ```
 
-#### 3. RBAC Middleware
+#### 3. RBAC Guards
 ```typescript
 // lib/rbac/guards.ts
 export function requireRole(...roles: Role[]) {
-  return async (request: NextRequest) => {
+  return async () => {
     const session = await getSession();
-    if (!roles.includes(session.user.role)) {
-      return forbidden();
+    if (!session || !roles.includes(session.user.role)) {
+      throw new Error('Forbidden');
     }
+    return session;
   };
 }
 ```
@@ -318,12 +341,25 @@ export function requireRole(...roles: Role[]) {
 // app/data-entry/actions.ts
 'use server';
 
+import { revalidatePath } from 'next/cache';
+
 export async function submitDataEntry(formData: FormData) {
   const session = await getSession();
+  if (!session) throw new Error('Unauthorized');
+  
   // Validation
+  const validated = validateDataEntry(formData);
+  
   // Business logic
-  // Database insert
+  const entry = await db.insert(dataEntries).values({
+    ...validated,
+    submitted_by: session.user.id,
+  }).returning();
+  
+  // Revalidate cache
   revalidatePath('/data-entry');
+  
+  return entry[0];
 }
 ```
 
@@ -386,7 +422,7 @@ export async function submitDataEntry(formData: FormData) {
 
 ## Data Flow
 
-### Data Entry Flow
+### Data Entry Flow (Using Server Actions)
 
 ```
 ┌─────────┐
@@ -394,26 +430,29 @@ export async function submitDataEntry(formData: FormData) {
 │ (DAO)   │
 └────┬────┘
      │
-     │ 1. Navigate to Data Entry
+     │ 1. Navigate to Data Entry (Server Component)
      ▼
 ┌──────────────────┐
 │  Data Entry UI   │
 │  - Select Period │
 │  - Select Category
+│  - Data fetched via Server Component
 └────┬─────────────┘
      │
-     │ 2. Load Data Labels
+     │ 2. Load Data Labels (Direct DB Query)
      ▼
 ┌──────────────────┐
 │  Dynamic Form    │
 │  Generated based │
 │  on Data Labels  │
+│  (Client Component)
 └────┬─────────────┘
      │
-     │ 3. Submit Data
+     │ 3. Submit Data (Server Action)
      ▼
 ┌──────────────────┐
-│  Validation      │
+│  Server Action   │
+│  - Validation    │
 │  - Type check    │
 │  - Range check   │
 │  - Required fields
@@ -427,19 +466,21 @@ export async function submitDataEntry(formData: FormData) {
 │   status: draft  │
 └────┬─────────────┘
      │
-     │ 5. Request Approval
+     │ 5. Request Approval (Server Action)
      ▼
 ┌──────────────────┐
 │   CEO Notified   │
 │   Approval Queue │
+│   (revalidatePath)
 └────┬─────────────┘
      │
-     │ 6. Approve/Reject
+     │ 6. Approve/Reject (Server Action)
      ▼
 ┌──────────────────┐
 │   KPI Engine     │
 │   Calculate KPIs │
 │   Update Dashboard
+│   (revalidatePath)
 └──────────────────┘
 ```
 
@@ -472,52 +513,90 @@ User uploads Excel → File validation → Parse spreadsheet
 
 ---
 
-## API Design
+## Server Actions Design
 
-### RESTful Conventions
+### Action Organization
 
 ```
-GET    /api/organisations          # List organisations
-GET    /api/organisations/:id      # Get single organisation
-POST   /api/organisations          # Create organisation
-PUT    /api/organisations/:id      # Update organisation
-DELETE /api/organisations/:id      # Delete organisation
-
-# Nested resources
-GET    /api/organisations/:id/users           # Organisation users
-POST   /api/organisations/:id/generators      # Add generator
-GET    /api/data-entries?org_id=:id&month=:m  # Query data entries
+app/actions/
+├── auth.ts              # Authentication actions
+├── organisations.ts     # Organisation CRUD
+├── users.ts            # User management
+├── data-entries.ts     # Data entry operations
+├── kpis.ts             # KPI operations
+├── approvals.ts        # Approval workflow
+└── settings.ts         # Settings management
 ```
 
-### Response Format
+### Server Action Patterns
 
 ```typescript
-// Success
-{
-  success: true,
-  data: { ... },
-  meta: {
-    timestamp: "2025-11-12T10:00:00Z",
-    requestId: "req_123"
-  }
+// Read Operation
+'use server';
+
+export async function getOrganisations() {
+  const session = await requireAuth();
+  
+  const orgs = await db.query.organisations.findMany({
+    where: hasAccess(session.user),
+  });
+  
+  return orgs;
 }
 
-// Error
-{
-  success: false,
-  error: {
-    code: "UNAUTHORIZED",
-    message: "You don't have permission to access this resource",
-    details: { ... }
+// Create Operation
+'use server';
+
+export async function createOrganisation(formData: FormData) {
+  const session = await requireRole('SA', 'BMO');
+  
+  const validated = validateOrganisation(formData);
+  
+  const org = await db.insert(organisations)
+    .values(validated)
+    .returning();
+  
+  revalidatePath('/organisations');
+  return org[0];
+}
+
+// Update Operation
+'use server';
+
+export async function updateOrganisation(id: string, formData: FormData) {
+  const session = await requireAuth();
+  await checkAccess(session.user, id);
+  
+  const validated = validateOrganisation(formData);
+  
+  const org = await db.update(organisations)
+    .set(validated)
+    .where(eq(organisations.id, id))
+    .returning();
+  
+  revalidatePath('/organisations');
+  revalidatePath(`/organisations/${id}`);
+  return org[0];
+}
+```
+
+### Error Handling
+
+```typescript
+// Server Actions throw errors which are caught by Error Boundaries
+try {
+  await createOrganisation(formData);
+} catch (error) {
+  if (error.message === 'Unauthorized') {
+    redirect('/login');
   }
+  // Handle other errors
 }
 ```
 
 ### Authentication
 
-```
-Authorization: Bearer <session_token>
-```
+Server Actions use session cookies automatically via Supabase Auth. No need for explicit Authorization headers.
 
 ---
 
@@ -542,9 +621,10 @@ Authorization: Bearer <session_token>
 
 Environment Variables:
 - DATABASE_URL
-- BETTER_AUTH_SECRET
+- NEXT_PUBLIC_SUPABASE_URL
+- NEXT_PUBLIC_SUPABASE_ANON_KEY
 - POWER_BI_CLIENT_ID
-- SMTP_HOST, SMTP_USER, SMTP_PASS
+- SMTP_HOST, SMTP_USER, SMTP_PASS (optional - Supabase handles emails)
 ```
 
 ### Monitoring & Observability
