@@ -1,23 +1,31 @@
 import nodemailer from "nodemailer";
 
-const host = process.env.SMTPHOST || "smtp.example.com";
-const port = Number(process.env.SMTPPORT) || 587;
-const user = process.env.SMTPUSER || "user@example.com";
-const pass = process.env.SMTPPASS || "password";
+let transporter: nodemailer.Transporter | null = null;
 
-if (!host || !port || !user || !pass) {
-    throw new Error("SMTP configuration is incomplete.");
+function getTransporter() {
+    const host = process.env.SMTP_HOST;
+    const port = Number(process.env.SMTP_PORT);
+    const user = process.env.SMTP_USER;
+    const pass = process.env.SMTP_PASS;
+
+    if (!host || !port || !user || !pass) {
+        throw new Error("SMTP configuration is incomplete.");
+    }
+
+    if (!transporter) {
+        transporter = nodemailer.createTransport({
+            host,
+            port,
+            secure: port === 465, // true for 465, false for other ports
+            auth: {
+                user,
+                pass,
+            },
+        });
+    }
+
+    return { transporter, user } as const;
 }
-
-const transporter = nodemailer.createTransport({
-    host,
-    port,
-    secure: port === 465, // true for 465, false for other ports
-    auth: {
-        user,
-        pass,
-    },
-});
 
 interface EmailOptions {
     to: string;
@@ -26,6 +34,7 @@ interface EmailOptions {
 }
 
 export async function sendEmail(options: EmailOptions): Promise<void> {
+    const { transporter, user } = getTransporter();
     const mailOptions = {
         from: `"PRISM - PPA Benchmarking Platform" <${user}>`,
         to: options.to,

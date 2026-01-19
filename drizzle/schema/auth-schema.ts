@@ -15,11 +15,17 @@ export const roles = pgTable("roles", {
   name: text("name").notNull().unique(),
   description: text("description"),
 });
+export type Role = typeof roles.$inferSelect;
+export type NewRole = typeof roles.$inferInsert;
+
+export type UserStatus = "active" | "pending" | "deactivated";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
   organisation_id: integer("organisation_id").references(() => organisations.id),
   role_id: integer("role_id").references(() => roles.id),
+  status: text("status").default("pending").notNull().$type<UserStatus>(),
+  dataset_required: text("dataset_required"),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").default(false).notNull(),
@@ -30,6 +36,8 @@ export const user = pgTable("user", {
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
 });
+export type User = typeof user.$inferSelect;
+export type NewUser = typeof user.$inferInsert;
 
 export const session = pgTable(
   "session",
