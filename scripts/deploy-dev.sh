@@ -9,6 +9,10 @@ ssh root@156.67.221.57 << 'EOF'
   git pull origin main
   echo "Server updated with the latest code!"
 
+  # Load NVM and Node environment
+    export NVM_DIR="$HOME/.nvm"
+    [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
   npx drizzle-kit push
   npm run build
   pm2 reload prism-dev
