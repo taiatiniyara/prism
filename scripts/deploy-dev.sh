@@ -16,6 +16,6 @@ ssh root@156.67.221.57 << 'EOF'
   npm install
   npm run db-push
   npm run build
-  pm2 reload prism-dev --update-env
+  pm2 restart prism-dev --update-env
   pm2 status
 EOF
