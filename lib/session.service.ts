@@ -1,23 +1,29 @@
-import { cache } from "react";
-import { cacheTag } from "next/cache";
+import { unstable_noStore as noStore } from "next/cache";
 import { headers } from "next/headers";
 import { eq } from "drizzle-orm";
 import { db } from "@/drizzle/connection";
 import { roles, user } from "@/drizzle/schema/auth-schema";
 import { auth } from "./auth";
+export async function getSession() {
+    // Opt-out of static caching so we always read fresh cookies per request
+    noStore();
 
-type HeaderEntries = [string, string][];
+    const requestHeaders = await headers();
+    const headerEntries = Array.from(requestHeaders.entries());
 
-const getSessionCached = cache(async (headerEntries: HeaderEntries) => {
-    "use cache";
-    cacheTag("session");
-
-    const data = await auth.api.getSession({
-        headers: new Headers(headerEntries),
-    });
+    let data = null;
+    try {
+        data = await auth.api.getSession({
+            headers: new Headers(headerEntries),
+        });
+    } catch (err) {
+        console.error("getSession: error calling better-auth", err);
+        return null;
+    }
 
     const session = data?.session || null;
     if (!session) {
+        console.log("getSession: better-auth returned null session");
         return null;
     }
 
@@ -26,30 +32,26 @@ const getSessionCached = cache(async (headerEntries: HeaderEntries) => {
         .from(user)
         .where(eq(user.id, session.userId));
 
-    if (!currentUser || !currentUser.role_id) {
+    if (!currentUser) {
+        console.log("No current user found for session userId:", session.userId);
         return null;
     }
 
-    const [role] = await db
-        .select()
-        .from(roles)
-        .where(eq(roles.id, currentUser.role_id))
-        .limit(1);
+    const [role] = currentUser.role_id
+        ? await db
+              .select()
+              .from(roles)
+              .where(eq(roles.id, currentUser.role_id))
+              .limit(1)
+        : [null];
 
-    if (!role) {
-        return null;
+    if (currentUser.role_id && !role) {
+        console.log("No role found for role ID:", currentUser.role_id);
     }
 
     return {
         session,
         user: currentUser,
-        role: role,
+        role: role ?? null,
     };
-});
-
-export async function getSession() {
-    // Capture dynamic headers outside the cached scope; pass them into the cached function.
-    const requestHeaders = await headers();
-    const headerEntries = Array.from(requestHeaders.entries());
-    return getSessionCached(headerEntries);
 }

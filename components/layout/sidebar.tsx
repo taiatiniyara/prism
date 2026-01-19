@@ -1,8 +1,8 @@
 import { Role, User } from "@/drizzle/schema/auth-schema";
 
 export default function Sidebar(props: {
-  user: User | null;
-  role: Role | null;
+  user: User;
+  role: Role;
 }) {
   if (!props.user) {
     return null;

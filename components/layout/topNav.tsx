@@ -11,7 +11,6 @@ interface NavItem {
 export default async function TopNav(props: {
   session?: Session;
 }) {
-
   const navList: NavItem[] = [
     { label: "Home", href: "/" },
     {
@@ -39,7 +38,7 @@ export default async function TopNav(props: {
       <NavList navList={navList} />
 
       {props.session ? (
-        "Logged in as " + props.session.userId
+        "Logged in"
       ) : (
         <a
           href="/auth"

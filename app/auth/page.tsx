@@ -1,9 +1,8 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Mail } from "lucide-react";
 import { sendMagicLink } from "./service";
+import SubmitBtn from "@/components/submitBtn";
 
 export default function SignInPage() {
   return (
@@ -26,9 +25,7 @@ export default function SignInPage() {
           placeholder="Enter your email"
         />
 
-        <Button>
-          <Mail /> Send link
-        </Button>
+        <SubmitBtn text="Send Magic Link" />
       </form>
     </div>
   );
