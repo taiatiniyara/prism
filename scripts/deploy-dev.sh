@@ -17,4 +17,5 @@ ssh root@156.67.221.57 << 'EOF'
   npm run db-push
   npm run build
   pm2 restart prism-dev --update-env
+  git stash
 EOF
