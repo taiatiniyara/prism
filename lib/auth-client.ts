@@ -1,7 +1,7 @@
 import { createAuthClient } from "better-auth/client";
 import { magicLinkClient } from "better-auth/client/plugins";
 
-const baseUrl = process.env.BETTER_AUTH_URL;
+const baseUrl = process.env.NEXT_PUBLIC_BETTER_AUTH_URL;
 
 if (!baseUrl) {
     throw new Error("BETTER_AUTH_URL is not set.");

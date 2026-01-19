@@ -2,6 +2,7 @@ import { LogIn } from "lucide-react";
 import Image from "next/image";
 import NavList from "./navList";
 import { Session } from "better-auth";
+import LogoutBtn from "./logoutBtn";
 
 interface NavItem {
   label: string;
@@ -38,7 +39,7 @@ export default async function TopNav(props: {
       <NavList navList={navList} />
 
       {props.session ? (
-        "Logged in"
+        <LogoutBtn />
       ) : (
         <a
           href="/auth"
