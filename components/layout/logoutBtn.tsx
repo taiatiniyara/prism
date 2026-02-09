@@ -8,7 +8,7 @@ import { toast } from "sonner";
 export default function LogoutBtn() {
   return (
     <Button
-      className="cursor-pointer hover:border hover:border-amber-400"
+      className="cursor-pointer text-xs hover:border hover:border-amber-400"
       onClick={() => {
         authClient.signOut().then(() => {
           toast.success("Successfully signed out");

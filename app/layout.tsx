@@ -29,8 +29,6 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const sessionPromise = getSession();
-
   return (
     <html
       lang="en"
@@ -40,7 +38,7 @@ export default async function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <Suspense fallback={<div>Loading...</div>}>
-          <SessionNav sessionPromise={sessionPromise} />
+          <SessionNav />
         </Suspense>
 
         {children}
@@ -54,12 +52,8 @@ export default async function RootLayout({
   );
 }
 
-async function SessionNav({
-  sessionPromise,
-}: {
-  sessionPromise: ReturnType<typeof getSession>;
-}) {
-  const session = await sessionPromise;
+async function SessionNav() {
+  const session = await getSession();
   return (
     <>
       <TopNav session={session?.session ?? undefined} />

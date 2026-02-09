@@ -5,5 +5,6 @@ export default function DashboardLayoutpage({
 }: {
   children: React.ReactNode;
 }) {
+  // dashboard layout does not need user data; keep it static to avoid blocking
   return <div>{children}</div>;
 }

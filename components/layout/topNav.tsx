@@ -2,31 +2,32 @@ import { LogIn } from "lucide-react";
 import Image from "next/image";
 import NavList from "./navList";
 import { Session } from "better-auth";
-import LogoutBtn from "./logoutBtn";
+import UserDropdown from "./userDropdown";
 
 interface NavItem {
   label: string;
   href: string;
 }
 
-export default async function TopNav(props: {
-  session?: Session;
-}) {
+export default async function TopNav(props: { session?: Session }) {
   const navList: NavItem[] = [
     { label: "Home", href: "/" },
     {
       label: "Dashboard",
       href: "/dashboard",
-    },{
-      label: "Data Entry", href: "/data-entry"
     },
     {
-      label: "Settings", href: "/settings"
+      label: "Data Entry",
+      href: "/data-entry",
+    },
+    {
+      label: "Settings",
+      href: "/settings",
     },
     { label: "Docs", href: "/docs" },
   ];
   return (
-    <nav className="bg-gray-800 text-sm flex justify-between text-white p-3">
+    <nav className="bg-gray-800 items-center text-sm flex justify-between text-white p-3">
       <a href="/">
         <Image
           src="/logo.png"
@@ -39,7 +40,7 @@ export default async function TopNav(props: {
       <NavList navList={navList} />
 
       {props.session ? (
-        <LogoutBtn />
+        <UserDropdown />
       ) : (
         <a
           href="/auth"

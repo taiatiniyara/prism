@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/drizzle/connection";
 import { roles, user } from "@/drizzle/schema/auth-schema";
 import { auth } from "./auth";
+
 export async function getSession() {
     // Opt-out of static caching so we always read fresh cookies per request
     noStore();
@@ -54,4 +55,9 @@ export async function getSession() {
         user: currentUser,
         role: role ?? null,
     };
+}
+
+export async function getUser(){
+    const sessionData = await getSession();
+    return sessionData?.user || null;
 }
