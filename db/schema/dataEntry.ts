@@ -41,6 +41,12 @@ export const inputDefinitions = pgTable("input_definitions", {
   energy_source_id: integer("energy_source_id").references(
     () => managedListItems.id,
   ),
+  customer_type_id: integer("customer_type_id")
+    .notNull()
+    .references(() => managedListItems.id),
+  payment_mode_id: integer("payment_mode_id")
+    .notNull()
+    .references(() => managedListItems.id),
   unit_id: integer("unit_id")
     .notNull()
     .references(() => managedListItems.id),
@@ -52,6 +58,7 @@ export const inputDefinitions = pgTable("input_definitions", {
   is_aggregated: boolean("is_aggregated").default(false).notNull(),
   agg_level_id: integer("agg_level_id").references(() => managedListItems.id),
   is_active: boolean("is_active").default(true).notNull(),
+  is_mandatory: boolean("is_mandatory").default(false).notNull(),
 });
 
 export const dataEntries = pgTable(
@@ -89,6 +96,8 @@ export const dataEntries = pgTable(
     ),
   ],
 );
+export type DataEntry = typeof dataEntries.$inferSelect;
+export type NewDataEntry = typeof dataEntries.$inferInsert;
 
 export const dataEntryFeedbacks = pgTable("data_entry_feedbacks", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),

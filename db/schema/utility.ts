@@ -1,0 +1,138 @@
+import {
+  boolean,
+  index,
+  integer,
+  pgTable,
+  serial,
+  text,
+  timestamp,
+  varchar,
+} from "drizzle-orm/pg-core";
+import { countries } from "./country";
+import { managedListItems } from "./managedLists";
+import { reportPeriods } from "./reportPeriods";
+import { user } from "./auth-schema";
+
+export const organisations = pgTable(
+  "organisations",
+  {
+    id: serial("id").primaryKey().notNull(),
+    name: varchar("name", { length: 255 }).notNull(),
+    acronym: varchar("acronym", { length: 255 }),
+    country_id: integer("country_id")
+      .notNull()
+      .references(() => countries.id),
+    is_utility: boolean("is_utility").notNull().default(false),
+    powequality_standard_id: integer("powerquality_standard_id").references(
+      () => managedListItems.id,
+    ),
+    electricity_regulation_id: integer("electricity_regulation_id").references(
+      () => managedListItems.id,
+    ),
+    accounting_standard_id: integer("accounting_standard_id").references(
+      () => managedListItems.id,
+    ),
+    entity_type_id: integer("entity_type_id").references(
+      () => managedListItems.id,
+    ),
+    utility_type_id: integer("utility_type_id").references(
+      () => managedListItems.id,
+    ),
+    operating_basis_id: integer("operating_basis_id").references(
+      () => managedListItems.id,
+    ),
+    ppa_membership_type_id: integer("ppa_membership_type_id").references(
+      () => managedListItems.id,
+    ),
+    utility_size_id: integer("utility_size_id").references(
+      () => managedListItems.id,
+    ),
+    services_provided_id: integer("services_provided_id").references(
+      () => managedListItems.id,
+    ),
+    financial_year_end: varchar("financial_year_end", { length: 255 }),
+    is_mth_reports_relevant: boolean("is_mth_report_relevant")
+      .notNull()
+      .default(false),
+    is_active: boolean("is_active").notNull().default(true),
+    updated_date: varchar("updated_date", { length: 255 }),
+  },
+  (table) => [
+    index("organisation_idx").on(table.country_id, table.id, table.name),
+  ],
+);
+export type Organisation = typeof organisations.$inferSelect;
+export type NewOrganisation = typeof organisations.$inferInsert;
+
+export const serviceAreas = pgTable("service_areas", {
+  id: serial("id").primaryKey().notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  utility_id: integer("utility_id")
+    .notNull()
+    .references(() => organisations.id),
+  services_provided_id: integer("services_provided_id")
+    .notNull()
+    .references(() => managedListItems.id),
+  operations_only: boolean("operations_only").default(false),
+  is_active: boolean("is_active").notNull().default(true),
+  is_virutal: boolean("is_vitural").notNull().default(false),
+  agg_level_id: integer("agg_level_id")
+    .notNull()
+    .references(() => managedListItems.id),
+});
+export type ServiceArea = typeof serviceAreas.$inferSelect;
+export type NewServiceArea = typeof serviceAreas.$inferInsert;
+
+export const powerStations = pgTable("power_stations", {
+  id: serial("id").primaryKey().notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  service_area_id: integer("service_area_id")
+    .notNull()
+    .references(() => serviceAreas.id),
+  utility_id: integer("utility_id")
+    .notNull()
+    .references(() => organisations.id),
+});
+export type PowerStation = typeof powerStations.$inferSelect;
+export type NewPowerStation = typeof powerStations.$inferInsert;
+
+export const generators = pgTable(
+  "generators",
+  {
+    id: serial("id").primaryKey().notNull(),
+    report_period_id: integer("report_period_id")
+      .notNull()
+      .references(() => reportPeriods.id),
+    name: varchar("name", { length: 255 }).notNull(),
+    power_station_id: integer("power_station_id").references(
+      () => powerStations.id,
+    ),
+    service_area_id: integer("service_area_id")
+      .notNull()
+      .references(() => serviceAreas.id),
+    utility_id: integer("utility_id")
+      .notNull()
+      .references(() => organisations.id),
+    capacity_mw: integer("capacity_mw").notNull(),
+    energy_provider_id: integer("energy_provider_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    energy_type_id: integer("energy_type_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    energy_source_id: integer("energy_source_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    is_vitual: boolean("is_virtual").default(false).notNull(),
+    agg_level_id: integer("agg_level_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    updated_at: timestamp("updated_at").notNull().defaultNow(),
+    updated_by_id: text("updated_by_id").references(() => user.id),
+  },
+  (table) => [
+    index("gen_idx").on(table.name, table.report_period_id, table.utility_id),
+  ],
+);
+export type Generator = typeof generators.$inferSelect;
+export type NewGenerator = typeof generators.$inferInsert;

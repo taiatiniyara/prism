@@ -22,10 +22,14 @@ export type UserStatus = "active" | "pending" | "deactivated";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
-  organisation_id: integer("organisation_id").references(() => organisations.id),
+  organisation_id: integer("organisation_id").references(
+    () => organisations.id,
+  ),
   role_id: integer("role_id").references(() => roles.id),
   status: text("status").default("pending").notNull().$type<UserStatus>(),
+  date_approved: timestamp("date_approved"),
   dataset_required: text("dataset_required"),
+  data_access_reason: text("data_access_reason"),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").default(false).notNull(),

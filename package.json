@@ -7,7 +7,7 @@
     "build": "next build",
     "start": "next start -p 3555",
     "lint": "eslint",
-    "db-push": "drizzle-kit push --config ./drizzle/config.ts",
+    "db-push": "drizzle-kit push --config ./db/config.ts",
     "deploy-dev": "bash ./scripts/deploy-dev.sh",
     "push": "git add . && git commit -m 'chore:update' && git push"
   },

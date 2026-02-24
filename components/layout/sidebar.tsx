@@ -1,4 +1,4 @@
-import { Role, User } from "@/drizzle/schema/auth-schema";
+import { Role, User } from "@/db/schema/auth-schema";
 
 export default function Sidebar(props: { user: User; role: Role }) {
   if (!props.user) {
