@@ -41,7 +41,7 @@ export default async function RootLayout({
           <SessionNav />
         </Suspense>
 
-        {children}
+        <main className="p-4">{children}</main>
 
         <Toaster
           richColors
@@ -56,9 +56,10 @@ async function SessionNav() {
   const session = await getSession();
   return (
     <>
-      <TopNav session={session?.session ?? undefined} role={
-        session?.role?.name
-      } />
+      <TopNav
+        session={session?.session ?? undefined}
+        role={session?.role?.name}
+      />
       <Sidebar
         user={session?.user!}
         role={session?.role!}
