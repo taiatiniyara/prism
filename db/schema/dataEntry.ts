@@ -11,7 +11,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { managedListItems } from "./managedLists";
 import { reportPeriods } from "./reportPeriods";
-import { generators, serviceAreas } from "./utility";
+import { energyResources, serviceAreas } from "./utility";
 import { user } from "./auth-schema";
 
 export interface FormulaInput {
@@ -68,7 +68,9 @@ export const dataEntries = pgTable(
     report_period_id: integer("report_period_id")
       .notNull()
       .references(() => reportPeriods.id),
-    generator_id: integer("generator_id").references(() => generators.id),
+    energy_resource_id: integer("energy_resource_id").references(
+      () => energyResources.id,
+    ),
     service_area_id: integer("service_area_id").references(
       () => serviceAreas.id,
     ),
@@ -86,13 +88,25 @@ export const dataEntries = pgTable(
     is_blo_reviewed: boolean("is_blo_reviewed").default(false).notNull(),
     is_ceo_approved: boolean("is_ceo_approved").default(false).notNull(),
     is_bmo_endorsed: boolean("is_bmo_endorsed").default(false).notNull(),
+    energy_provider_id: integer("energy_provider_id").references(
+      () => managedListItems.id,
+    ),
+    energy_source_id: integer("energy_source_id").references(
+      () => managedListItems.id,
+    ),
+    customer_type_id: integer("customer_type_id").references(
+      () => managedListItems.id,
+    ),
+    payment_mode_id: integer("payment_mode_id").references(
+      () => managedListItems.id,
+    ),
   },
   (table) => [
     index("uniq_entry").on(
       table.report_period_id,
       table.input_def_id,
       table.service_area_id,
-      table.generator_id,
+      table.energy_resource_id,
     ),
   ],
 );

@@ -96,8 +96,8 @@ export const powerStations = pgTable("power_stations", {
 export type PowerStation = typeof powerStations.$inferSelect;
 export type NewPowerStation = typeof powerStations.$inferInsert;
 
-export const generators = pgTable(
-  "generators",
+export const energyResources = pgTable(
+  "energy_resources",
   {
     id: serial("id").primaryKey().notNull(),
     report_period_id: integer("report_period_id")
@@ -113,7 +113,7 @@ export const generators = pgTable(
     utility_id: integer("utility_id")
       .notNull()
       .references(() => organisations.id),
-    capacity_mw: integer("capacity_mw").notNull(),
+    capacity_mw: integer("capacity_mw"),
     energy_provider_id: integer("energy_provider_id")
       .notNull()
       .references(() => managedListItems.id),
@@ -134,5 +134,5 @@ export const generators = pgTable(
     index("gen_idx").on(table.name, table.report_period_id, table.utility_id),
   ],
 );
-export type Generator = typeof generators.$inferSelect;
-export type NewGenerator = typeof generators.$inferInsert;
+export type EnergyResource = typeof energyResources.$inferSelect;
+export type NewEnergyResource = typeof energyResources.$inferInsert;

@@ -24,7 +24,7 @@ export const metadata: Metadata = {
     "A platform for benchmarking and analyzing the performance of various PPA (Pacific Power Association) metrics and data from energy utilities.",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
@@ -37,33 +37,47 @@ export default async function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Suspense fallback={<div>Loading...</div>}>
-          <SessionNav />
+        <Suspense fallback={<div className="p-6 bg-slate-800"></div>}>
+          <AppNavigation />
         </Suspense>
 
         <main className="p-4">{children}</main>
 
         <Toaster
-          richColors
-          position="bottom-center"
+          duration={7000}
+          position="top-center"
+          toastOptions={{
+            unstyled: true,
+            classNames: {
+              success: "bg-lime-600",
+              error: "bg-red-600",
+              warning: "bg-amber-600",
+              info: "bg-blue-600",
+            },
+            className:
+              "rounded-md shadow-sm p-4 flex items-center gap-2 text-white",
+          }}
         />
       </body>
     </html>
   );
 }
 
-async function SessionNav() {
+async function AppNavigation() {
   const session = await getSession();
+
   return (
     <>
       <TopNav
         session={session?.session ?? undefined}
         role={session?.role?.name}
       />
-      <Sidebar
-        user={session?.user!}
-        role={session?.role!}
-      />
+      {session?.user && session?.role && (
+        <Sidebar
+          user={session.user}
+          role={session.role}
+        />
+      )}
     </>
   );
 }

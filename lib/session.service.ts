@@ -18,13 +18,11 @@ export async function getSession() {
       headers: new Headers(headerEntries),
     });
   } catch (err) {
-    console.error("getSession: error calling better-auth", err);
     return null;
   }
 
   const session = data?.session || null;
   if (!session) {
-    console.log("getSession: better-auth returned null session");
     return null;
   }
 

@@ -34,3 +34,5 @@ export const countries = pgTable("countries", {
     .references(() => subRegions.id),
   updated_date: timestamp("updated_date").defaultNow().notNull(),
 });
+export type Country = typeof countries.$inferSelect;
+export type NewCountry = typeof countries.$inferInsert;

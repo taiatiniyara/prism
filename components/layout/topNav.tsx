@@ -1,18 +1,20 @@
-import { LogIn } from "lucide-react";
+"use client";
+
+import { LogIn, Menu, X } from "lucide-react";
 import Image from "next/image";
 import NavList from "./navList";
 import { Session } from "better-auth";
 import UserDropdown from "./userDropdown";
+import { useState } from "react";
 
 interface NavItem {
   label: string;
   href: string;
 }
 
-export default async function TopNav(props: {
-  session?: Session;
-  role?: string;
-}) {
+export default function TopNav(props: { session?: Session; role?: string }) {
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
   const navList: NavItem[] = [
     { label: "Home", href: "/" },
     {
@@ -29,31 +31,95 @@ export default async function TopNav(props: {
     },
     { label: "Docs", href: "/docs" },
   ];
+
+  const handleToggleMenu = () => {
+    setIsMobileMenuOpen(!isMobileMenuOpen);
+  };
+
   return (
-    <nav className="bg-gray-800 items-center text-sm flex justify-between text-white p-3">
-      <a href="/">
-        <Image
-          src="/logo.png"
-          alt="Logo"
-          width={100}
-          height={50}
-        />
-      </a>
-
-      <NavList navList={navList} />
-
-      {props.session ? (
-        <div className="flex">
-          <span className="bg-amber-400">{props.role}</span>
-          <UserDropdown />
+    <nav className="sticky top-0 z-50 bg-gray-800 text-sm text-white">
+      {/* Main Top Bar */}
+      <div className="max-w-7xl mx-auto flex justify-between items-center p-3 relative z-20 bg-gray-800">
+        <div className="flex items-center gap-4">
+          <a href="/">
+            <Image
+              src="/logo.png"
+              alt="Logo"
+              width={100}
+              height={50}
+            />
+          </a>
         </div>
-      ) : (
-        <a
-          href="/auth"
-          className="gap-2 flex items-center hover:text-amber-400"
-        >
-          <LogIn size={18} /> Sign In
-        </a>
+
+        {/* Desktop Navigation */}
+        <div className="hidden md:block">
+          <NavList
+            navList={navList}
+            className="flex-row gap-8 items-center"
+          />
+        </div>
+
+        <div className="flex items-center gap-4">
+          {/* Auth / Profile Area */}
+          <div className="hidden md:flex">
+            {props.session ? (
+              <div className="flex items-center gap-2">
+                <span className="bg-amber-400 text-gray-900 px-2 py-1 rounded font-medium text-xs">
+                  {props.role}
+                </span>
+                <UserDropdown />
+              </div>
+            ) : (
+              <a
+                href="/auth"
+                className="gap-2 flex items-center hover:text-slate-400"
+              >
+                <LogIn size={18} /> Sign In
+              </a>
+            )}
+          </div>
+
+          {/* Mobile Menu Toggle Button */}
+          <button
+            className="md:hidden p-2 text-gray-300 hover:text-white focus:outline-none"
+            onClick={handleToggleMenu}
+            aria-label="Toggle mobile menu"
+          >
+            {isMobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
+      </div>
+
+      {/* Mobile Slide-down Menu */}
+      {isMobileMenuOpen && (
+        <div className="md:hidden bg-gray-700 border-t border-gray-600 animate-in slide-in-from-top-2 duration-200">
+          <div className="max-w-7xl mx-auto px-4 pt-2 pb-4 space-y-4">
+            <NavList
+              navList={navList}
+              className="flex-col gap-4 text-base"
+            />
+
+            <div className="pt-4 border-t border-gray-600">
+              {props.session ? (
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <UserDropdown />
+                    <span className="bg-amber-400 text-gray-900 px-2 py-1 rounded font-medium text-xs">
+                      {props.role}
+                    </span>
+                  </div>
+                </div>
+              ) : (
+                <a
+                  href="/auth"
+                  className="flex items-center gap-2 hover:text-slate-400 py-2"
+                >
+                  <LogIn size={20} /> Sign In
+                </a>
+              )}
+            </div>
+          </div>
+        </div>
       )}
     </nav>
   );
