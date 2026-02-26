@@ -74,6 +74,7 @@ export default function AuthForms(props: {
             });
             if (res) {
               toast.success("User registered successfully");
+              window.location.href = "/auth/success";
             } else {
               toast.error("Failed to register user");
             }
@@ -83,6 +84,7 @@ export default function AuthForms(props: {
               toast.error(sendLink.message);
             } else {
               toast.success("Magic link sent successfully");
+              window.location.href = "/auth/success";
             }
           }
         }}
