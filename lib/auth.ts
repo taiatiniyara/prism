@@ -65,12 +65,63 @@ export const auth = betterAuth({
     nextCookies(),
     magicLink({
       sendMagicLink: async ({ email, url }) => {
-        console.log(`Sending magic link to ${email}: ${url}`);
-
         await sendEmail({
           to: email,
           subject: "Your Magic Login Link",
-          html: `Click <a style="color: blue; text-decoration: underline;" href="${url}">here</a> to log in. This link will expire in 15 minutes.`,
+          html: `
+          <div style="font-family: sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
+  <div style="text-align: center; margin-bottom: 30px;">
+    <h1 style="color: #334155; margin: 0;">PRISM</h1>
+    <p style="color: #6b7280; margin: 5px 0 0;">PPA Benchmarking Platform</p>
+  </div>
+
+  <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">
+    <h2 style="color: #1f2937; margin-top: 0;">Welcome to PRISM</h2>
+    
+    <p style="color: #4b5563; line-height: 1.6;">
+      Hello,
+    </p>
+    
+    <p style="color: #4b5563; line-height: 1.6;">
+      Thank you for registering with PRISM. To complete your registration and 
+      gain access to the platform, please click the button below to verify 
+      your email address.
+    </p>
+
+    <div style="text-align: center; margin: 30px 0;">
+      <a href="${url}" 
+         style="display: inline-block; background: #1e293b; color: white; 
+                padding: 12px 24px; text-decoration: none; 
+                border-radius: 6px; font-weight: bold; font-size: 16px;">
+        Verify My Email
+      </a>
+    </div>
+
+    <p style="color: #4b5563; line-height: 1.6;">
+      This link will expire in <strong>15 minutes</strong> for security reasons.
+    </p>
+
+    <p style="color: #4b5563; line-height: 1.6;">
+      If you did not create this account, please ignore this email.
+    </p>
+
+    <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+      <p style="color: #6b7280; font-size: 14px; margin: 0;">
+        Best regards,
+      </p>
+      <p style="color: #1f2937; font-weight: bold; margin: 5px 0 0;">
+        The PRISM Team
+      </p>
+    </div>
+  </div>
+
+  <div style="text-align: center; margin-top: 20px;">
+    <p style="color: #9ca3af; font-size: 12px;">
+      This is an automated email. Please do not reply to this message.
+    </p>
+  </div>
+</div>
+          `,
         });
       },
     }),

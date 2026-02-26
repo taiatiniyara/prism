@@ -37,7 +37,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <Suspense fallback={<div className="p-6 bg-slate-800"></div>}>
+        <Suspense fallback={<div className="p-6 bg-slate-900"></div>}>
           <AppNavigation />
         </Suspense>
 

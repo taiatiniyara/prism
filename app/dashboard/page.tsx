@@ -1,5 +1,15 @@
-export default function DashboardPage() {
+"use cache";
+
+import { powerBiDetails } from "@/services/powerbi.service";
+import PowerBiDashboard from "./pbi";
+
+export default async function DashboardPage() {
+  const credentials = await powerBiDetails();
   return (
-    <div>DashboardPage</div>
-  )
+    <PowerBiDashboard
+      token={credentials.token}
+      embedUrl={credentials.embedUrl}
+      reportId={credentials.reportId}
+    />
+  );
 }
