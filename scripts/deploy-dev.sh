@@ -2,7 +2,6 @@ npm run build
 git add .
 git commit -m "Deploying the latest updates"
 git push origin main
-echo "Deployment complete!"
 
 ssh root@156.67.221.57 << 'EOF'
   cd /root/prism
@@ -14,8 +13,11 @@ ssh root@156.67.221.57 << 'EOF'
     [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
   npm install
+  psql -U postgres -c "DROP DATABASE IF EXISTS prism;"
+  psql -U postgres -c "CREATE DATABASE prism;"
   npm run db-push
   npm run build
   pm2 restart prism-dev --update-env
   git stash
+  echo "Deployment complete!"
 EOF
