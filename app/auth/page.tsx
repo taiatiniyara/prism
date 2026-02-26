@@ -1,15 +1,14 @@
 "use cache";
 
-import { AllOrganisations } from "@/services/orgs.service";
 import AuthForms from "./form";
-import { AllRoles } from "@/services/roles.service";
+import { retrieveRoles, retrieveUtilityData } from "../migration/service";
 
 export default async function AuthPage() {
-  const orgs = await AllOrganisations();
-  const roles = await AllRoles();
+  const orgs = await retrieveUtilityData();
+  const roles = await retrieveRoles();
   return (
     <AuthForms
-      orgs={orgs}
+      orgs={orgs.organisations}
       roles={roles}
     />
   );

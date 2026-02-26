@@ -7,11 +7,12 @@ import {
   boolean,
   integer,
   index,
+  serial,
 } from "drizzle-orm/pg-core";
 import { organisations } from "./utility";
 
 export const roles = pgTable("roles", {
-  id: integer("id").primaryKey(),
+  id: serial("id").primaryKey(),
   name: text("name").notNull().unique(),
   description: text("description"),
 });

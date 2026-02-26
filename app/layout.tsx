@@ -44,7 +44,7 @@ export default function RootLayout({
         <main className="p-4">{children}</main>
 
         <Toaster
-          duration={7000}
+          duration={4000}
           position="top-center"
           toastOptions={{
             unstyled: true,
@@ -55,7 +55,7 @@ export default function RootLayout({
               info: "bg-blue-600",
             },
             className:
-              "rounded-md shadow-sm p-4 flex items-center gap-2 text-white",
+              "rounded-md shadow-sm p-4 flex items-center gap-2 text-white font-medium font-sans",
           }}
         />
       </body>

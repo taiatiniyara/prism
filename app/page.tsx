@@ -1,6 +1,12 @@
 import { Heading } from "@/components/heading";
 import Image from "next/image";
-import { FaChartLine, FaCheckCircle, FaFile, FaLock } from "react-icons/fa";
+import {
+  FaArrowRight,
+  FaChartLine,
+  FaCheckCircle,
+  FaFile,
+  FaLock,
+} from "react-icons/fa";
 
 const features: {
   title: string;
@@ -70,14 +76,14 @@ export default function Page() {
 
           <a
             href="/auth"
-            className="group relative inline-flex items-center justify-center gap-2 rounded-full bg-slate-600 px-8 py-3.5 text-base font-semibold text-white shadow-sm hover:bg-slate-500 hover:shadow-md transition-all duration-200 focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-slate-600"
+            className="group relative inline-flex items-center justify-center gap-2 rounded-lg bg-slate-600 px-8 py-3.5 text-base font-semibold text-white shadow-sm hover:bg-slate-500 hover:shadow-md transition-all duration-200 focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-slate-600"
           >
             Sign In to Dashboard
             <span
               aria-hidden="true"
               className="group-hover:translate-x-1 transition-transform duration-200"
             >
-              →
+              <FaArrowRight />
             </span>
           </a>
         </div>

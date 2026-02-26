@@ -8,7 +8,10 @@ import { eq } from "drizzle-orm";
 export async function sendMagicLink(email: string) {
   const checkUser = await db.select().from(user).where(eq(user.email, email));
   if (checkUser.length === 0) {
-    return { success: false, message: "User not found" };
+    return {
+      success: false,
+      message: "You don't have an account yet. Please register first.",
+    };
   }
 
   await authClient.signIn.magicLink({

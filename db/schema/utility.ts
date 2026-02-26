@@ -51,7 +51,7 @@ export const organisations = pgTable(
       () => managedListItems.id,
     ),
     financial_year_end: varchar("financial_year_end", { length: 255 }),
-    is_mth_reports_relevant: boolean("is_mth_report_relevant")
+    is_mth_reports_relevant_month: boolean("is_mth_report_relevant")
       .notNull()
       .default(false),
     is_active: boolean("is_active").notNull().default(true),

@@ -4,7 +4,7 @@ import { Input } from "@/components/ui/input";
 import { registerUser, sendMagicLink } from "./service";
 import SubmitBtn from "@/components/submitBtn";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Home, LogIn, User } from "lucide-react";
+import { LogIn, UserPlus } from "lucide-react";
 import { Organisation } from "@/db/schema/utility";
 import { useState } from "react";
 import { Label } from "@/components/ui/label";
@@ -20,17 +20,28 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
 import { Role } from "@/db/schema/auth-schema";
+import { FaBuilding, FaEnvelope, FaUser, FaUserPlus } from "react-icons/fa";
 
 const rolesFilter = (roles: Role[], nonUtilityUser: boolean | string) => {
   const filters = {
-    utitilityRoles: ["BMO", "BLO", "DAOO", "DAOF", "DAOH", "MGR", "EXE"],
-    nonUtilityRoles: ["CON", "ALM", "AFM"],
+    utitilityRoles: ["BLO", "DAOO", "DAOF", "DAOH", "MGR", "EXE", "CEO"],
+    nonUtilityRoles: [
+      "CON",
+      "ALM",
+      "AFM",
+      "DON",
+      "DASH_UTL",
+      "DASH_COU",
+      "DASH_REG",
+      "DASH_PAC",
+    ],
   };
 
   if (nonUtilityUser) {
     return roles.filter((role) => filters.nonUtilityRoles.includes(role.name));
+  } else {
+    return roles.filter((role) => filters.utitilityRoles.includes(role.name));
   }
-  return roles.filter((role) => !filters.utitilityRoles.includes(role.name));
 };
 
 export default function AuthForms(props: {
@@ -41,7 +52,7 @@ export default function AuthForms(props: {
   const [signUp, setSignUp] = useState<boolean>(false);
 
   return (
-    <div className="w-full h-screen flex flex-col gap-4 items-center">
+    <div className="w-full py-8 h-screen flex flex-col gap-4 items-center">
       <form
         action={async (formData) => {
           const email = formData.get("email") as string;
@@ -86,29 +97,35 @@ export default function AuthForms(props: {
               onClick={() => setSignUp(true)}
               value="Register"
             >
-              <User /> Register
+              <UserPlus /> Register
             </TabsTrigger>
           </TabsList>
           <TabsContent
             className="space-y-4 px-2"
             value="Login"
           >
-            <p>
+            <p className="text-blue-600 font-medium p-2 rounded bg-blue-50">
               If you have an existing account, please enter your email to
-              receive a sign-in link.
+              receive a login link.
             </p>
             <Input
               required
               name="email"
               placeholder="Enter your email"
             />
-            <SubmitBtn text="Send Magic Link" />
+            <SubmitBtn
+              text={
+                <>
+                  <FaEnvelope /> Send Link
+                </>
+              }
+            />
           </TabsContent>
           <TabsContent
             value="Register"
             className="space-y-4"
           >
-            <p>
+            <p className="text-blue-600 bg-blue-50 p-2 rounded font-medium">
               Fill in the form below to register an account. Note that your
               account will be subject to approval by the PRISM team.
             </p>
@@ -143,14 +160,22 @@ export default function AuthForms(props: {
                 <SelectValue placeholder="Organisation" />
               </SelectTrigger>
               <SelectContent>
-                {props.orgs.map((org) => (
-                  <SelectItem
-                    key={org.id}
-                    value={org.id.toString()}
-                  >
-                    {org.name}
-                  </SelectItem>
-                ))}
+                {props.orgs
+                  .filter((org) => {
+                    if (nonUtilityUser) {
+                      return org.is_utility === false;
+                    } else {
+                      return org.is_utility === true;
+                    }
+                  })
+                  .map((org) => (
+                    <SelectItem
+                      key={org.id}
+                      value={org.id.toString()}
+                    >
+                      <FaBuilding /> {org.name}
+                    </SelectItem>
+                  ))}
               </SelectContent>
             </Select>
 
@@ -164,7 +189,7 @@ export default function AuthForms(props: {
                     key={role.id}
                     value={role.id.toString()}
                   >
-                    {role.name}
+                    <FaUser /> {role.description}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -182,17 +207,16 @@ export default function AuthForms(props: {
               placeholder="State the reason(s) for accessing data"
             />
 
-            <SubmitBtn text="Register" />
+            <SubmitBtn
+              text={
+                <>
+                  <FaUserPlus /> Submit
+                </>
+              }
+            />
           </TabsContent>
         </Tabs>
       </form>
-
-      <a
-        href="/"
-        className="flex items-center hover:text-blue-400 gap-1 cursor-pointer underline font-medium text-sm"
-      >
-        <Home size={16} /> Home
-      </a>
     </div>
   );
 }
