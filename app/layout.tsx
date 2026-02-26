@@ -71,7 +71,7 @@ async function AppNavigation() {
       <TopNav
         session={session?.session ?? undefined}
         role={session?.role?.name}
-        orgAcronym={session?.orgAcronym}
+        orgAcronym={session?.orgAcronym || ""}
       />
       {session?.user && session?.role && (
         <Sidebar
