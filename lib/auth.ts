@@ -35,10 +35,19 @@ const appUrl = (() => {
 })();
 
 export const auth = betterAuth({
+  emailAndPassword: {
+    enabled: true,
+  },
+  trustedOrigins: [
+    appUrl,
+    "http://localhost:3554",
+    "http://localhost:3000",
+    "http://localhost:3001",
+  ],
   secret: authSecret,
   url: appUrl,
   database: drizzleAdapter(db, {
-    provider: "pg", // or "pg" or "mysql"
+    provider: "pg",
     schema: {
       user,
       verification,

@@ -12,7 +12,11 @@ interface NavItem {
   href: string;
 }
 
-export default function TopNav(props: { session?: Session; role?: string }) {
+export default function TopNav(props: {
+  session?: Session;
+  role?: string;
+  orgAcronym?: string;
+}) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
   const navList: NavItem[] = [
@@ -37,9 +41,9 @@ export default function TopNav(props: { session?: Session; role?: string }) {
   };
 
   return (
-    <nav className="sticky top-0 z-50 bg-gray-800 text-sm text-white">
+    <nav className="sticky top-0 z-50 bg-gray-900 text-sm text-white">
       {/* Main Top Bar */}
-      <div className="max-w-7xl mx-auto flex justify-between items-center p-3 relative z-20 bg-gray-800">
+      <div className="max-w-7xl mx-auto flex justify-between items-center p-3 relative z-20 bg-gray-900">
         <div className="flex items-center gap-4">
           <a href="/">
             <Image
@@ -63,12 +67,10 @@ export default function TopNav(props: { session?: Session; role?: string }) {
           {/* Auth / Profile Area */}
           <div className="hidden md:flex">
             {props.session ? (
-              <div className="flex items-center gap-2">
-                <span className="bg-amber-400 text-gray-900 px-2 py-1 rounded font-medium text-xs">
-                  {props.role}
-                </span>
-                <UserDropdown />
-              </div>
+              <UserDropdown
+                orgAcronym={props.orgAcronym}
+                role={props.role}
+              />
             ) : (
               <a
                 href="/auth"

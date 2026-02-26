@@ -4,6 +4,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/connection";
 import { roles, user } from "@/db/schema/auth-schema";
 import { auth } from "./auth";
+import { organisations } from "@/db/schema/utility";
 
 export async function getSession() {
   // Opt-out of static caching so we always read fresh cookies per request
@@ -48,10 +49,19 @@ export async function getSession() {
     console.log("No role found for role ID:", currentUser.role_id);
   }
 
+  const [org] = currentUser.organisation_id
+    ? await db
+        .select()
+        .from(organisations)
+        .where(eq(organisations.id, currentUser.organisation_id))
+        .limit(1)
+    : [null];
+
   return {
     session,
     user: currentUser,
     role: role ?? null,
+    orgAcronym: org?.acronym,
   };
 }
 

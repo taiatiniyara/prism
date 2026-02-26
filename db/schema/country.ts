@@ -23,8 +23,8 @@ export const countries = pgTable("countries", {
   id: serial("id").primaryKey().notNull(),
   name: varchar("name", { length: 255 }).notNull(),
   dial_code: varchar("dial_code", { length: 10 }).notNull(),
-  iso_code_alpha2: varchar("iso_code_alpha2", { length: 2 }).notNull(),
-  iso_code_alpha3: varchar("iso_code_alpha3", { length: 3 }).notNull(),
+  iso_code_alpha2: varchar("iso_code_alpha2").notNull(),
+  iso_code_alpha3: varchar("iso_code_alpha3").notNull(),
   currency_id: integer("currency_id")
     .notNull()
     .references(() => managedListItems.id),

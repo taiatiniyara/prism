@@ -62,15 +62,21 @@ export default function AuthForms(props: {
             const organisation_id = formData.get("organisation_id") as string;
             const datasetsRequired = formData.get("datasetsRequired") as string;
             const dataAccessReason = formData.get("dataAccessReason") as string;
-            await registerUser({
+            const role_id = formData.get("role_id") as string;
+            const res = await registerUser({
               dataAccessReason,
               datasetsRequired,
               email,
               firstName,
               lastName,
               organisationId: Number(organisation_id),
+              roleId: Number(role_id),
             });
-            toast.success("User registered successfully");
+            if (res) {
+              toast.success("User registered successfully");
+            } else {
+              toast.error("Failed to register user");
+            }
           } else {
             const sendLink = await sendMagicLink(email);
             if (!sendLink.success) {
@@ -165,7 +171,11 @@ export default function AuthForms(props: {
                     if (nonUtilityUser) {
                       return org.is_utility === false;
                     } else {
-                      return org.is_utility === true;
+                      return (
+                        org.is_utility === true &&
+                        org.is_active === true &&
+                        !org.name.includes("All")
+                      );
                     }
                   })
                   .map((org) => (
@@ -195,17 +205,21 @@ export default function AuthForms(props: {
               </SelectContent>
             </Select>
 
-            <Textarea
-              required
-              name="datasetsRequired"
-              placeholder="Write down the datasets you require"
-            />
+            {nonUtilityUser && (
+              <>
+                <Textarea
+                  required
+                  name="datasetsRequired"
+                  placeholder="Write down the datasets you require"
+                />
 
-            <Textarea
-              required
-              name="dataAccessReason"
-              placeholder="State the reason(s) for accessing data"
-            />
+                <Textarea
+                  required
+                  name="dataAccessReason"
+                  placeholder="State the reason(s) for accessing data"
+                />
+              </>
+            )}
 
             <SubmitBtn
               text={

@@ -44,7 +44,7 @@ export default function RootLayout({
         <main className="p-4">{children}</main>
 
         <Toaster
-          duration={4000}
+          duration={6000}
           position="top-center"
           toastOptions={{
             unstyled: true,
@@ -71,6 +71,7 @@ async function AppNavigation() {
       <TopNav
         session={session?.session ?? undefined}
         role={session?.role?.name}
+        orgAcronym={session?.orgAcronym}
       />
       {session?.user && session?.role && (
         <Sidebar
