@@ -83,9 +83,7 @@ export const auth = betterAuth({
     </p>
     
     <p style="color: #4b5563; line-height: 1.6;">
-      Thank you for registering with PRISM. To complete your registration and 
-      gain access to the platform, please click the button below to verify 
-      your email address.
+      To complete your login and gain access to the platform, please click the button below to verify your email address.
     </p>
 
     <div style="text-align: center; margin: 30px 0;">

@@ -1,10 +1,11 @@
 import { unstable_noStore as noStore } from "next/cache";
 import { headers } from "next/headers";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { db } from "@/db/connection";
 import { roles, user } from "@/db/schema/auth-schema";
 import { auth } from "./auth";
 import { organisations } from "@/db/schema/utility";
+import { sidebarAccess } from "@/db/schema/rls";
 
 export async function getSession() {
   // Opt-out of static caching so we always read fresh cookies per request
@@ -47,7 +48,13 @@ export async function getSession() {
 
   if (currentUser.role_id && !role) {
     console.log("No role found for role ID:", currentUser.role_id);
+    throw new Error("No role found for role ID: " + currentUser.role_id);
   }
+
+  const sidebarList = await db
+    .select()
+    .from(sidebarAccess)
+    .orderBy(asc(sidebarAccess.order));
 
   const [org] = currentUser.organisation_id
     ? await db
@@ -62,6 +69,15 @@ export async function getSession() {
     user: currentUser,
     role: role ?? null,
     orgAcronym: org?.acronym,
+    sidebarList: sidebarList
+      .filter((item) => item.roles.split(",").includes(role!.name))
+      .map((item) => {
+        return {
+          name: item.name,
+          page: item.page,
+        };
+      }),
+    fullName: currentUser.name,
   };
 }
 

@@ -28,7 +28,7 @@ export default function PowerBiDashboard(props: {
   return (
     <PowerBIEmbed
       embedConfig={embedConfig}
-      cssClassName="h-[100vh] w-[100vw]"
+      cssClassName="h-[100vh] w-[100%]"
     />
   );
 }

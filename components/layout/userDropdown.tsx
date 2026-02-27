@@ -14,16 +14,17 @@ import { User } from "lucide-react";
 export default function UserDropdown(props: {
   orgAcronym?: string;
   role?: string;
+  fullName?: string;
 }) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex font-bold items-center gap-2 hover:bg-slate-800 px-3 py-2 rounded-md cursor-pointer">
+      <DropdownMenuTrigger className="flex font-extrabold text-xs items-center gap-1 hover:bg-slate-800 px-3 py-2 rounded-md cursor-pointer hover:outline transition-all">
         <User />
         <span className="text-slate-300">{props.orgAcronym}</span>
         <span className="text-amber-400">{props.role}</span>
       </DropdownMenuTrigger>
       <DropdownMenuContent>
-        <DropdownMenuLabel>My Account</DropdownMenuLabel>
+        <DropdownMenuLabel>{props.fullName || "My Account"}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={() => {
@@ -34,7 +35,7 @@ export default function UserDropdown(props: {
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={async () => {
-            await authClient.signOut();
+            authClient.signOut();
             window.location.href = "/";
           }}
         >

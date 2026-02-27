@@ -1,12 +1,6 @@
 import { Heading } from "@/components/heading";
 import Image from "next/image";
-import {
-  FaArrowRight,
-  FaChartLine,
-  FaCheckCircle,
-  FaFile,
-  FaLock,
-} from "react-icons/fa";
+import { FaChartLine, FaCheckCircle, FaFile, FaLock } from "react-icons/fa";
 
 const features: {
   title: string;
@@ -28,7 +22,7 @@ const features: {
   {
     title: "Interactive Analysis",
     description:
-      "Compare your utility’s performance against peers with interactive charts, customizable views, and downloadable reports.",
+      "Compare your utility's performance against peers with interactive charts, customizable views, and downloadable reports.",
     icon: <FaChartLine />,
   },
   {
@@ -39,7 +33,7 @@ const features: {
   },
 ];
 
-export default function Page() {
+export default async function Page() {
   return (
     <main className="min-h-screen bg-slate-50 selection:bg-slate-200">
       {/* Hero Section */}
@@ -75,29 +69,23 @@ export default function Page() {
           </p>
 
           <a
-            href="/auth"
+            href={"/dashboard"}
             className="group relative inline-flex items-center justify-center gap-2 rounded-lg bg-slate-600 px-8 py-3.5 text-base font-semibold text-white shadow-sm hover:bg-slate-500 hover:shadow-md transition-all duration-200 focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-slate-600"
           >
-            Sign In to Dashboard
-            <span
-              aria-hidden="true"
-              className="group-hover:translate-x-1 transition-transform duration-200"
-            >
-              <FaArrowRight />
-            </span>
+            Go to Dashboard
           </a>
         </div>
       </section>
 
       {/* Features Grid Section */}
-      <section className="px-6 py-16 max-w-7xl mx-auto -mt-16 relative z-20">
+      <section className="px-6 py-16 max-w-7xl mx-auto relative z-20">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           {features.map((feature) => (
             <div
-              className="group bg-white border border-slate-100 p-8 rounded-2xl shadow-sm hover:shadow-xl transition-all duration-300 hover:-translate-y-1"
+              className="group bg-white border border-slate-100 p-8 rounded-2xl shadow-sm"
               key={feature.title}
             >
-              <div className="w-14 h-14 rounded-xl bg-slate-50 text-slate-600 flex items-center justify-center text-2xl mb-6 group-hover:scale-110 group-hover:bg-slate-600 group-hover:text-white transition-all duration-300">
+              <div className="w-14 h-14 text-amber-400 flex items-center justify-center text-2xl">
                 {feature.icon}
               </div>
               <Heading

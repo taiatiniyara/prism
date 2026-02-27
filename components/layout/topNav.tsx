@@ -16,6 +16,7 @@ export default function TopNav(props: {
   session?: Session;
   role?: string;
   orgAcronym?: string;
+  fullName?: string;
 }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -41,7 +42,7 @@ export default function TopNav(props: {
   };
 
   return (
-    <nav className="sticky top-0 z-50 bg-gray-900 text-sm text-white">
+    <nav className="sticky top-0 z-50 bg-gray-900 text-white">
       {/* Main Top Bar */}
       <div className="max-w-7xl mx-auto flex justify-between items-center p-3 relative z-20 bg-gray-900">
         <div className="flex items-center gap-4">
@@ -70,13 +71,14 @@ export default function TopNav(props: {
               <UserDropdown
                 orgAcronym={props.orgAcronym}
                 role={props.role}
+                fullName={props.fullName}
               />
             ) : (
               <a
                 href="/auth"
                 className="gap-2 flex items-center hover:text-slate-400"
               >
-                <LogIn size={18} /> Sign In
+                <LogIn size={18} /> Login
               </a>
             )}
           </div>
@@ -116,7 +118,7 @@ export default function TopNav(props: {
                   href="/auth"
                   className="flex items-center gap-2 hover:text-slate-400 py-2"
                 >
-                  <LogIn size={20} /> Sign In
+                  <LogIn size={20} /> Login
                 </a>
               )}
             </div>
