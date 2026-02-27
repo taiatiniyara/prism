@@ -3,7 +3,14 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const noSidebarPages = ["/", "/dashboard", "/login", "/register", "/profile"];
+const noSidebarPages = [
+  "/",
+  "/dashboard",
+  "/login",
+  "/register",
+  "/profile",
+  "/docs",
+];
 
 export default function Sidebar(props: {
   list: {

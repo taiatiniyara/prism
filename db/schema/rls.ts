@@ -8,4 +8,4 @@ export const sidebarAccess = pgTable("sidebar_access", {
   order: integer("order").notNull().default(0),
 });
 export type SidebarAccess = typeof sidebarAccess.$inferSelect;
-export type SidebarAccessInsert = typeof sidebarAccess.$inferInsert;
+export type NewSidebarAccess = typeof sidebarAccess.$inferInsert;

@@ -3,17 +3,22 @@
 import { useState, useMemo } from "react";
 import { Heading } from "../heading";
 import { cn } from "@/lib/utils";
+import {
+  DataTableCreateForm,
+  DataTableCreateFormProps,
+} from "./data-table-create-form";
 
 interface DataTableProps<T> {
   columns: (keyof T)[];
   title: string;
   data: T[];
+  createFormProps?: DataTableCreateFormProps<T>;
 }
 
 type SortDirection = "asc" | "desc" | null;
 
 export default function DataTable<T>(props: DataTableProps<T>) {
-  const { columns, title, data } = props;
+  const { columns, title, data, createFormProps } = props;
 
   const [search, setSearch] = useState("");
   const [sortColumn, setSortColumn] = useState<keyof T | null>(null);
@@ -103,38 +108,46 @@ export default function DataTable<T>(props: DataTableProps<T>) {
     <div className="rounded-xl border border-border bg-card text-card-foreground shadow-sm">
       {/* Header */}
       <div className="flex flex-col gap-3 px-5 pt-5 pb-4 sm:flex-row sm:items-center sm:justify-between">
-        <Heading level={5}>{title}</Heading>
+        <Heading
+          className="font-bold"
+          level={5}
+        >
+          {title}
+        </Heading>
 
-        {/* Search */}
-        <div className="relative w-full sm:w-64">
-          <svg
-            className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            viewBox="0 0 24 24"
-          >
-            <circle
-              cx="11"
-              cy="11"
-              r="8"
+        {createFormProps && <DataTableCreateForm {...createFormProps} />}
+        <div className="flex items-center gap-2">
+          {/* Search */}
+          <div className="relative w-full sm:w-64">
+            <svg
+              className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              viewBox="0 0 24 24"
+            >
+              <circle
+                cx="11"
+                cy="11"
+                r="8"
+              />
+              <path
+                d="M21 21l-4.35-4.35"
+                strokeLinecap="round"
+              />
+            </svg>
+            <input
+              type="text"
+              placeholder="Search..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className={cn(
+                "w-full rounded-lg border border-input bg-background py-1.5 pl-8 pr-3",
+                "text-sm text-foreground placeholder:text-muted-foreground",
+                "transition-shadow focus:outline-none focus:ring-2 focus:ring-ring",
+              )}
             />
-            <path
-              d="M21 21l-4.35-4.35"
-              strokeLinecap="round"
-            />
-          </svg>
-          <input
-            type="text"
-            placeholder="Search..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className={cn(
-              "w-full rounded-lg border border-input bg-background py-1.5 pl-8 pr-3",
-              "text-sm text-foreground placeholder:text-muted-foreground",
-              "transition-shadow focus:outline-none focus:ring-2 focus:ring-ring",
-            )}
-          />
+          </div>
         </div>
       </div>
 
@@ -193,21 +206,23 @@ export default function DataTable<T>(props: DataTableProps<T>) {
                 </td>
               </tr>
             ) : (
-              processedData.map((row, i) => (
-                <tr
-                  key={i}
-                  className="group transition-colors hover:bg-muted/40"
-                >
-                  {columns.map((column) => (
-                    <td
-                      key={column as string}
-                      className="whitespace-nowrap px-4 py-2.5 text-sm text-foreground"
-                    >
-                      {String(row[column] ?? "")}
-                    </td>
-                  ))}
-                </tr>
-              ))
+              processedData.map((row: T, i) => {
+                return (
+                  <tr
+                    key={i}
+                    className="group transition-colors hover:bg-muted/40"
+                  >
+                    {columns.map((column) => (
+                      <td
+                        key={column as string}
+                        className="whitespace-nowrap px-4 py-2.5 text-sm text-foreground"
+                      >
+                        {String(row[column] ?? "")}
+                      </td>
+                    ))}
+                  </tr>
+                );
+              })
             )}
           </tbody>
         </table>
