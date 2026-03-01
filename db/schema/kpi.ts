@@ -23,7 +23,9 @@ export const kpiDefinitions = pgTable("kpi_definitions", {
     .notNull()
     .references(() => managedListItems.id),
 });
-export type KpiDefinition = typeof kpiDefinitions.$inferSelect;
+export type KpiDefinition = typeof kpiDefinitions.$inferSelect & {
+  type?: string | null;
+};
 export type NewKpiDefinition = typeof kpiDefinitions.$inferInsert;
 
 export enum PerspectiveLevel {
@@ -47,7 +49,10 @@ export const kpi = pgTable("kpi", {
   is_relevant: boolean("is_relevant").default(true).notNull(),
   is_favourite: boolean("is_favourite").default(false).notNull(),
 });
-export type Kpi = typeof kpi.$inferSelect;
+export type Kpi = typeof kpi.$inferSelect & {
+  report_period?: string | null;
+  kpi_def?: string | null;
+};
 export type NewKpi = typeof kpi.$inferInsert;
 
 export interface BscRelationship {

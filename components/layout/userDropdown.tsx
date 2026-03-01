@@ -35,7 +35,7 @@ export default function UserDropdown(props: {
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={async () => {
-            authClient.signOut();
+            await authClient.signOut();
             window.location.href = "/";
           }}
         >

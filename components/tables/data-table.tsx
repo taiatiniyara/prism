@@ -105,17 +105,19 @@ export default function DataTable<T>(props: DataTableProps<T>) {
   }
 
   return (
-    <div className="rounded-xl border border-border bg-card text-card-foreground shadow-sm">
+    <div>
       {/* Header */}
       <div className="flex flex-col gap-3 px-5 pt-5 pb-4 sm:flex-row sm:items-center sm:justify-between">
-        <Heading
-          className="font-bold"
-          level={5}
-        >
-          {title}
-        </Heading>
+        <div className="flex items-center gap-4">
+          <Heading
+            className="font-bold"
+            level={5}
+          >
+            {title}
+          </Heading>
+          {createFormProps && <DataTableCreateForm {...createFormProps} />}
+        </div>
 
-        {createFormProps && <DataTableCreateForm {...createFormProps} />}
         <div className="flex items-center gap-2">
           {/* Search */}
           <div className="relative w-full sm:w-64">

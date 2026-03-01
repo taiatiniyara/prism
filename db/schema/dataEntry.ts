@@ -60,6 +60,19 @@ export const inputDefinitions = pgTable("input_definitions", {
   is_active: boolean("is_active").default(true).notNull(),
   is_mandatory: boolean("is_mandatory").default(false).notNull(),
 });
+export type InputDefinition = typeof inputDefinitions.$inferSelect & {
+  category?: string | null;
+  subcategory?: string | null;
+  energy_provider?: string | null;
+  energy_type?: string | null;
+  energy_source?: string | null;
+  customer_type?: string | null;
+  payment_mode?: string | null;
+  unit?: string | null;
+  data_type?: string | null;
+  agg_level?: string | null;
+};
+export type NewInputDefinition = typeof inputDefinitions.$inferInsert;
 
 export const dataEntries = pgTable(
   "data_entries",
@@ -110,7 +123,18 @@ export const dataEntries = pgTable(
     ),
   ],
 );
-export type DataEntry = typeof dataEntries.$inferSelect;
+export type DataEntry = typeof dataEntries.$inferSelect & {
+  report_period?: string | null;
+  energy_resource?: string | null;
+  service_area?: string | null;
+  input_def?: string | null;
+  update_medium?: string | null;
+  status?: string | null;
+  energy_provider?: string | null;
+  energy_source?: string | null;
+  customer_type?: string | null;
+  payment_mode?: string | null;
+};
 export type NewDataEntry = typeof dataEntries.$inferInsert;
 
 export const dataEntryFeedbacks = pgTable("data_entry_feedbacks", {

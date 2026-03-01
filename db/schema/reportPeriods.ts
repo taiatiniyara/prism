@@ -20,5 +20,10 @@ export const reportPeriods = pgTable("report_periods", {
     .references(() => managedListItems.id),
   updated_at: timestamp("updated_at").notNull().defaultNow(),
 });
-export type ReportPeriod = typeof reportPeriods.$inferSelect;
+export type ReportPeriod = typeof reportPeriods.$inferSelect & {
+  utility?: string | null;
+  report_type?: string | null;
+  status?: string | null;
+  who?: string | null;
+};
 export type NewReportPeriod = typeof reportPeriods.$inferInsert;

@@ -61,7 +61,18 @@ export const organisations = pgTable(
     index("organisation_idx").on(table.country_id, table.id, table.name),
   ],
 );
-export type Organisation = typeof organisations.$inferSelect;
+export type Organisation = typeof organisations.$inferSelect & {
+  country?: string | null;
+  powequality_standard?: string | null;
+  electricity_regulation?: string | null;
+  accounting_standard?: string | null;
+  entity_type?: string | null;
+  utility_type?: string | null;
+  operating_basis?: string | null;
+  ppa_membership_type?: string | null;
+  utility_size?: string | null;
+  services_provided?: string | null;
+};
 export type NewOrganisation = typeof organisations.$inferInsert;
 
 export const serviceAreas = pgTable("service_areas", {
@@ -80,7 +91,11 @@ export const serviceAreas = pgTable("service_areas", {
     .notNull()
     .references(() => managedListItems.id),
 });
-export type ServiceArea = typeof serviceAreas.$inferSelect;
+export type ServiceArea = typeof serviceAreas.$inferSelect & {
+  utility?: string | null;
+  services_provided?: string | null;
+  agg_level?: string | null;
+};
 export type NewServiceArea = typeof serviceAreas.$inferInsert;
 
 export const powerStations = pgTable("power_stations", {
@@ -134,5 +149,14 @@ export const energyResources = pgTable(
     index("gen_idx").on(table.name, table.report_period_id, table.utility_id),
   ],
 );
-export type EnergyResource = typeof energyResources.$inferSelect;
+export type EnergyResource = typeof energyResources.$inferSelect & {
+  report_period?: string | null;
+  power_station?: string | null;
+  service_area?: string | null;
+  utility?: string | null;
+  energy_provider?: string | null;
+  energy_type?: string | null;
+  energy_source?: string | null;
+  agg_level?: string | null;
+};
 export type NewEnergyResource = typeof energyResources.$inferInsert;

@@ -2,7 +2,7 @@
 
 export default function Footer() {
   return (
-    <div className="bg-slate-200 p-4 text-sm font-medium text-slate-600">
+    <div className="p-3 text-xs font-medium border-t text-slate-600">
       <p className="w-full text-center">
         Copyright &copy; 2026{" "}
         <a

@@ -1,8 +1,8 @@
 "use cache";
 
-import { AllOrganisations } from "@/services/orgs.service";
+import { AllOrganisations } from "../settings/organisations/orgs.service";
 import AuthForms from "./form";
-import { AllRoles } from "@/services/roles.service";
+import { AllRoles } from "@/app/settings/roles/roles.service";
 
 export default async function AuthPage() {
   const orgs = await AllOrganisations();

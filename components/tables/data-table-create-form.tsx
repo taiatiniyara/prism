@@ -2,15 +2,27 @@
 
 import { formatLabel } from "@/lib/formatters";
 import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetTrigger,
+} from "@/components/ui/sheet";
 import SubmitBtn from "../submitBtn";
 import { FaPlus } from "react-icons/fa";
+import { Label } from "../ui/label";
+import { Textarea } from "../ui/textarea";
+import { Input } from "../ui/input";
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Checkbox } from "../ui/checkbox";
+import { toast } from "sonner";
 
 type FieldType =
   | "text"
@@ -18,11 +30,14 @@ type FieldType =
   | "select"
   | "checkbox"
   | "radio"
-  | "textarea";
+  | "textarea"
+  | "email"
+  | "boolean";
 
-interface DataTableCreateFormResponse {
+export interface DataTableFormResponse<T> {
   success: boolean;
   message: string;
+  data?: T;
 }
 
 interface DataTableCreateFormField<T> {
@@ -30,24 +45,21 @@ interface DataTableCreateFormField<T> {
   type: FieldType;
   selectList?: {
     label: string;
-    value: string;
+    value: string | number;
   }[];
 }
 
 export interface DataTableCreateFormProps<T> {
   fields: DataTableCreateFormField<T>[];
-  buttonText: string;
-  formAction: (
-    data: Partial<T>,
-    id?: string | number,
-  ) => Promise<DataTableCreateFormResponse>;
+  buttonText?: string;
+  formAction: (data: T) => Promise<DataTableFormResponse<T>>;
 }
 
 function formDataToObject<T>(
   formData: FormData,
   fields: DataTableCreateFormField<T>[],
-): Partial<T> {
-  const obj: Partial<T> = {};
+): T {
+  const obj: T = {} as T;
   for (const field of fields) {
     const value = formData.get(field.key as string);
     if (value !== null) {
@@ -60,95 +72,96 @@ function formDataToObject<T>(
 function field<T>(field: DataTableCreateFormField<T>) {
   if (field.type === "select") {
     return (
-      <div key={field.key as string}>
-        <label htmlFor={field.key as string}>
-          {formatLabel(field.key.toString())}
-        </label>
-        <select name={field.key as string}>
+      <Select>
+        <SelectTrigger className="w-full">
+          <SelectValue
+            placeholder={`Select ${formatLabel(field.key.toString())}`}
+          />
+        </SelectTrigger>
+        <SelectContent>
           {field.selectList?.map((option) => (
-            <option
+            <SelectItem
               key={option.value}
-              value={option.value}
+              value={option.value.toString()}
             >
               {option.label}
-            </option>
+            </SelectItem>
           ))}
-        </select>
-      </div>
+        </SelectContent>
+      </Select>
     );
   }
   if (field.type === "checkbox") {
     return (
-      <div key={field.key as string}>
-        <label htmlFor={field.key as string}>
-          {formatLabel(field.key.toString())}
-        </label>
-        <input
-          type={field.type}
+      <Label className="flex justify-start border p-3 shadow rounded-lg">
+        <Checkbox
+          required
           name={field.key as string}
         />
-      </div>
+        Yes
+      </Label>
     );
   }
   if (field.type === "radio") {
     return (
-      <div key={field.key as string}>
-        <label htmlFor={field.key as string}>
-          {formatLabel(field.key.toString())}
-        </label>
-        <input
-          type={field.type}
-          name={field.key as string}
-        />
-      </div>
+      <Input
+        required
+        type={field.type}
+        name={field.key as string}
+      />
     );
   }
   if (field.type === "textarea") {
     return (
-      <div key={field.key as string}>
-        <label htmlFor={field.key as string}>
-          {formatLabel(field.key.toString())}
-        </label>
-        <textarea name={field.key as string}></textarea>
-      </div>
+      <Textarea
+        required
+        name={field.key as string}
+      ></Textarea>
     );
   }
   return (
-    <div key={field.key as string}>
-      <label htmlFor={field.key as string}>
-        {formatLabel(field.key.toString())}
-      </label>
-      <input
-        type={field.type}
-        name={field.key as string}
-      />
-    </div>
+    <Input
+      required
+      type={field.type}
+      name={field.key as string}
+    />
   );
 }
 
 export function DataTableCreateForm<T>(props: DataTableCreateFormProps<T>) {
   return (
-    <Dialog>
-      <DialogTrigger className="flex gap-1 items-center bg-slate-200 text-black px-2 py-1 cursor-pointer hover:bg-slate-400 transition-colors rounded text-xs font-bold">
+    <Sheet>
+      <SheetTrigger className="flex gap-1 items-center bg-slate-200 text-black px-2 py-1 cursor-pointer hover:bg-slate-300 transition-colors rounded text-xs font-bold">
         <FaPlus className="h-3 w-3" /> Add
-      </DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Add</DialogTitle>
-          <DialogDescription>{props.buttonText}</DialogDescription>
-        </DialogHeader>
+      </SheetTrigger>
+      <SheetContent side="left">
+        <SheetHeader>
+          <SheetTitle className="text-xl font-bold">New Record</SheetTitle>
+        </SheetHeader>
         <form
+          className="space-y-4 p-4"
           action={async (formData) => {
-            const data: Partial<T> = formDataToObject(formData, props.fields);
+            const data: T = formDataToObject(formData, props.fields);
             const response = await props.formAction(data);
             if (response.success) {
+              toast.success(response.message);
+            } else {
+              toast.error(response.message);
             }
           }}
         >
-          {props.fields.map((f) => field(f))}
+          {props.fields.map((f) => (
+            <div
+              className="space-y-1"
+              key={f.key as string}
+            >
+              <Label>{formatLabel(f.key.toString())}</Label>
+              {field(f)}
+            </div>
+          ))}
           <SubmitBtn text={props.buttonText} />
         </form>
-      </DialogContent>
-    </Dialog>
+      </SheetContent>
+    </Sheet>
   );
 }
