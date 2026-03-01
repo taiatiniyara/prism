@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "../ui/checkbox";
 import { toast } from "sonner";
+import ManagedListInput from "./managed-list-input";
 
 type FieldType =
   | "text"
@@ -32,7 +33,8 @@ type FieldType =
   | "radio"
   | "textarea"
   | "email"
-  | "boolean";
+  | "boolean"
+  | "managed-list";
 
 export interface DataTableFormResponse<T> {
   success: boolean;
@@ -47,6 +49,7 @@ interface DataTableCreateFormField<T> {
     label: string;
     value: string | number;
   }[];
+  managedListName?: string;
 }
 
 export interface DataTableCreateFormProps<T> {
@@ -102,6 +105,7 @@ function field<T>(field: DataTableCreateFormField<T>) {
       </Label>
     );
   }
+
   if (field.type === "radio") {
     return (
       <Input
@@ -111,6 +115,7 @@ function field<T>(field: DataTableCreateFormField<T>) {
       />
     );
   }
+
   if (field.type === "textarea") {
     return (
       <Textarea
@@ -119,6 +124,16 @@ function field<T>(field: DataTableCreateFormField<T>) {
       ></Textarea>
     );
   }
+
+  if (field.type === "managed-list") {
+    return (
+      <ManagedListInput
+        managedListName={field.managedListName!}
+        inputName={field.key as string}
+      />
+    );
+  }
+
   return (
     <Input
       required

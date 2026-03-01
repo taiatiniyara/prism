@@ -13,6 +13,7 @@ import { managedListItems } from "./managedLists";
 import { reportPeriods } from "./reportPeriods";
 import { energyResources, serviceAreas } from "./utility";
 import { user } from "./auth-schema";
+import { relations } from "drizzle-orm";
 
 export interface FormulaInput {
   input_def_id: number;
@@ -73,6 +74,52 @@ export type InputDefinition = typeof inputDefinitions.$inferSelect & {
   agg_level?: string | null;
 };
 export type NewInputDefinition = typeof inputDefinitions.$inferInsert;
+
+export const inputDefinitionRelations = relations(
+  inputDefinitions,
+  ({ one }) => ({
+    category: one(managedListItems, {
+      fields: [inputDefinitions.category_id],
+      references: [managedListItems.id],
+    }),
+    subcategory: one(managedListItems, {
+      fields: [inputDefinitions.subcategory_id],
+      references: [managedListItems.id],
+    }),
+    energy_provider: one(managedListItems, {
+      fields: [inputDefinitions.energy_provider_id],
+      references: [managedListItems.id],
+    }),
+    energy_type: one(managedListItems, {
+      fields: [inputDefinitions.energy_type_id],
+      references: [managedListItems.id],
+    }),
+    energy_source: one(managedListItems, {
+      fields: [inputDefinitions.energy_source_id],
+      references: [managedListItems.id],
+    }),
+    customer_type: one(managedListItems, {
+      fields: [inputDefinitions.customer_type_id],
+      references: [managedListItems.id],
+    }),
+    payment_mode: one(managedListItems, {
+      fields: [inputDefinitions.payment_mode_id],
+      references: [managedListItems.id],
+    }),
+    unit: one(managedListItems, {
+      fields: [inputDefinitions.unit_id],
+      references: [managedListItems.id],
+    }),
+    data_type: one(managedListItems, {
+      fields: [inputDefinitions.data_type_id],
+      references: [managedListItems.id],
+    }),
+    agg_level: one(managedListItems, {
+      fields: [inputDefinitions.agg_level_id],
+      references: [managedListItems.id],
+    }),
+  }),
+);
 
 export const dataEntries = pgTable(
   "data_entries",

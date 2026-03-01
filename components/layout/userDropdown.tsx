@@ -18,7 +18,7 @@ export default function UserDropdown(props: {
 }) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex font-extrabold text-xs items-center gap-1 hover:bg-slate-800 px-3 py-2 rounded-md cursor-pointer hover:outline transition-all">
+      <DropdownMenuTrigger className="flex font-extrabold text-xs items-center gap-1 hover:opacity-50 rounded-md cursor-pointer transition-all">
         <User />
         <span className="text-slate-300">{props.orgAcronym}</span>
         <span className="text-amber-400">{props.role}</span>

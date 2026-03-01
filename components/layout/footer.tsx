@@ -1,10 +1,11 @@
-"use client";
+"use cache";
 
-export default function Footer() {
+export default async function Footer() {
+  const year = new Date().getFullYear();
   return (
     <div className="p-3 text-xs font-medium border-t text-slate-600">
       <p className="w-full text-center">
-        Copyright &copy; 2026{" "}
+        Copyright &copy; {year}{" "}
         <a
           href="https://www.ppa.org.fj/"
           target="_blank"

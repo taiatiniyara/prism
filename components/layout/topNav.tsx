@@ -44,8 +44,8 @@ export default function TopNav(props: {
   return (
     <nav className="sticky text-sm font-medium top-0 z-50 bg-gray-900 text-white">
       {/* Main Top Bar */}
-      <div className="max-w-7xl mx-auto flex justify-between items-center p-3 relative z-20 bg-gray-900">
-        <div className="flex items-center gap-4">
+      <div className="flex justify-between items-center p-3 relative z-20 bg-gray-900">
+        <div className="flex items-center gap-16">
           <a href="/">
             <Image
               src="/logo.png"
@@ -54,10 +54,6 @@ export default function TopNav(props: {
               height={50}
             />
           </a>
-        </div>
-
-        {/* Desktop Navigation */}
-        <div className="hidden md:block">
           <NavList
             navList={navList}
             className="flex-row gap-8 items-center"

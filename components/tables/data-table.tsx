@@ -7,6 +7,7 @@ import {
   DataTableCreateForm,
   DataTableCreateFormProps,
 } from "./data-table-create-form";
+import { ScrollArea } from "../ui/scroll-area";
 
 interface DataTableProps<T> {
   columns: (keyof T)[];
@@ -154,10 +155,10 @@ export default function DataTable<T>(props: DataTableProps<T>) {
       </div>
 
       {/* Table */}
-      <div className="overflow-auto">
+      <ScrollArea className="h-125">
         <table className="w-full text-sm">
-          <thead>
-            <tr className="border-t border-border bg-muted/50">
+          <thead className="sticky top-0 bg-muted">
+            <tr>
               {columns.map((column) => (
                 <th
                   key={column as string}
@@ -228,7 +229,7 @@ export default function DataTable<T>(props: DataTableProps<T>) {
             )}
           </tbody>
         </table>
-      </div>
+      </ScrollArea>
 
       {/* Footer count */}
       {data.length > 0 && (

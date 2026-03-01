@@ -3,6 +3,7 @@
 import { db } from "@/db/connection";
 import { Role, roles } from "@/db/schema/auth-schema";
 import { countries, Country, SubRegion, subRegions } from "@/db/schema/country";
+import { InputDefinition, inputDefinitions } from "@/db/schema/dataEntry";
 import {
   ManagedList,
   ManagedListItem,
@@ -15,12 +16,14 @@ import {
   ServiceArea,
   serviceAreas,
 } from "@/db/schema/utility";
+import { gt } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 const prismOneURL = "https://prismdashboard.org/api/migration";
 
 export async function retrieveRoles() {
   let res = false;
+  await db.delete(roles).where(gt(roles.id, 0));
   const call = await fetch(prismOneURL + "/roles", {
     method: "GET",
     headers: {
@@ -47,6 +50,8 @@ export async function retrieveRoles() {
 
 export async function retrieveUtilityData() {
   let res = false;
+  await db.delete(organisations).where(gt(organisations.id, 0));
+  await db.delete(serviceAreas).where(gt(serviceAreas.id, 0));
   const call = await fetch(prismOneURL + "/organisation", {
     method: "GET",
     headers: {
@@ -80,6 +85,8 @@ export async function retrieveUtilityData() {
 
 export async function retrieveCountries() {
   let res = false;
+  await db.delete(subRegions).where(gt(subRegions.id, 0));
+  await db.delete(countries).where(gt(countries.id, 0));
   const call = await fetch(prismOneURL + "/country", {
     method: "GET",
     headers: {
@@ -123,6 +130,8 @@ export async function retrieveCountries() {
 
 export async function retrieveManagedLists() {
   let res = false;
+  await db.delete(managedLists).where(gt(managedLists.id, 0));
+  await db.delete(managedListItems).where(gt(managedListItems.id, 0));
   const call = await fetch(prismOneURL + "/managedList", {
     method: "GET",
     headers: {
@@ -146,6 +155,35 @@ export async function retrieveManagedLists() {
     }
     if (nonExistingManagedListItems.length > 0) {
       await db.insert(managedListItems).values(nonExistingManagedListItems);
+    }
+    res = true;
+  } catch (error: Error | any) {
+    console.log(error);
+  }
+
+  revalidatePath("/migration");
+
+  return res;
+}
+
+export async function retrieveInputDefinitions() {
+  let res = false;
+  await db.delete(inputDefinitions).where(gt(inputDefinitions.id, 0));
+  const call = await fetch(prismOneURL + "/inputDefinitions", {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+  const list = await call.json();
+  const inputDefinitionsList: InputDefinition[] = list.inputDefinitions;
+  const existingInputDefinitions = await db.select().from(inputDefinitions);
+  const nonExistingInputDefinitions = inputDefinitionsList.filter(
+    (inputDefinition) => !existingInputDefinitions.includes(inputDefinition),
+  );
+  try {
+    if (nonExistingInputDefinitions.length > 0) {
+      await db.insert(inputDefinitions).values(nonExistingInputDefinitions);
     }
     res = true;
   } catch (error: Error | any) {
