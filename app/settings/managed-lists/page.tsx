@@ -1,3 +1,91 @@
-export default function ManagedListSettingsPage() {
-  return <div>ManagedListSettingsPage</div>;
+import DataTable from "@/components/tables/data-table";
+import {
+  CreateManagedList,
+  CreateManagedListItem,
+  GetAllManagedListItems,
+  GetAllManagedLists,
+  UpdateManagedList,
+} from "./service";
+import { ManagedList, ManagedListItem } from "@/db/schema/managedLists";
+
+export default async function ManagedListSettingsPage() {
+  const ml = await GetAllManagedLists();
+  const mlItems = await GetAllManagedListItems();
+  return (
+    <div>
+      <DataTable<ManagedList>
+        title="Managed Lists"
+        columns={["name", "description", "is_active"]}
+        data={ml}
+        createFormProps={{
+          formAction: CreateManagedList,
+          fields: [
+            {
+              key: "name",
+              type: "text",
+            },
+            {
+              key: "description",
+              type: "text",
+            },
+          ],
+        }}
+        updateFormProps={{
+          formAction: UpdateManagedList,
+          fields: [
+            {
+              key: "name",
+              type: "text",
+            },
+            {
+              key: "description",
+              type: "text",
+            },
+            {
+              key: "is_active",
+              type: "boolean",
+            },
+          ],
+        }}
+      />
+      <DataTable<ManagedListItem>
+        title="Managed List Items"
+        columns={["name", "description", "is_active"]}
+        data={mlItems}
+        createFormProps={{
+          formAction: CreateManagedListItem,
+          fields: [
+            {
+              key: "name",
+              type: "text",
+            },
+            {
+              key: "description",
+              type: "text",
+            },
+            {
+              key: "list_id",
+              type: "select",
+              selectList: ml.map((m) => ({
+                label: m.name,
+                value: m.id,
+              })),
+            },
+            {
+              key: "parent_id",
+              type: "select",
+              selectList: mlItems.map((m) => ({
+                label: m.name,
+                value: m.id,
+              })),
+            },
+            {
+              key: "color",
+              type: "color",
+            },
+          ],
+        }}
+      />
+    </div>
+  );
 }

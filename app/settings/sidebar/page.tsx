@@ -1,7 +1,11 @@
 import { Suspense } from "react";
 import DataTable from "@/components/tables/data-table";
 import { SidebarAccess } from "@/db/schema/rls";
-import { addSidebarAccess, getSidebarAccessList } from "./service";
+import {
+  addSidebarAccess,
+  getSidebarAccessList,
+  updateSidebarAccess,
+} from "./service";
 
 async function SidebarTable() {
   const data = await getSidebarAccessList();
@@ -31,6 +35,27 @@ async function SidebarTable() {
         ],
         buttonText: "Add Sidebar Access",
         formAction: addSidebarAccess,
+      }}
+      updateFormProps={{
+        fields: [
+          {
+            key: "name",
+            type: "text",
+          },
+          {
+            key: "page",
+            type: "text",
+          },
+          {
+            key: "order",
+            type: "number",
+          },
+          {
+            key: "roles",
+            type: "text",
+          },
+        ],
+        formAction: updateSidebarAccess,
       }}
     />
   );

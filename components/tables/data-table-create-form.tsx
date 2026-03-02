@@ -25,7 +25,7 @@ import { Checkbox } from "../ui/checkbox";
 import { toast } from "sonner";
 import ManagedListInput from "./managed-list-input";
 
-type FieldType =
+export type FieldType =
   | "text"
   | "number"
   | "select"
@@ -34,7 +34,8 @@ type FieldType =
   | "textarea"
   | "email"
   | "boolean"
-  | "managed-list";
+  | "managed-list"
+  | "color";
 
 export interface DataTableFormResponse<T> {
   success: boolean;
@@ -58,7 +59,7 @@ export interface DataTableCreateFormProps<T> {
   formAction: (data: T) => Promise<DataTableFormResponse<T>>;
 }
 
-function formDataToObject<T>(
+export function formDataToObject<T>(
   formData: FormData,
   fields: DataTableCreateFormField<T>[],
 ): T {
@@ -75,7 +76,7 @@ function formDataToObject<T>(
 function field<T>(field: DataTableCreateFormField<T>) {
   if (field.type === "select") {
     return (
-      <Select>
+      <Select name={field.key as string}>
         <SelectTrigger className="w-full">
           <SelectValue
             placeholder={`Select ${formatLabel(field.key.toString())}`}
@@ -103,6 +104,17 @@ function field<T>(field: DataTableCreateFormField<T>) {
         />
         Yes
       </Label>
+    );
+  }
+
+  if (field.type === "color") {
+    return (
+      <Input
+        className="h-10 p-0 border-0 shadow-none w-24"
+        required
+        type={field.type}
+        name={field.key as string}
+      />
     );
   }
 
@@ -147,7 +159,7 @@ export function DataTableCreateForm<T>(props: DataTableCreateFormProps<T>) {
   return (
     <Sheet>
       <SheetTrigger className="flex gap-1 items-center bg-slate-200 text-black px-2 py-1 cursor-pointer hover:bg-slate-300 transition-colors rounded text-xs font-bold">
-        <FaPlus className="h-3 w-3" /> Add
+        <FaPlus size={12} /> Add
       </SheetTrigger>
       <SheetContent side="left">
         <SheetHeader>

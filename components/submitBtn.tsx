@@ -7,7 +7,7 @@ export default function SubmitBtn(props: { text?: string | React.ReactNode }) {
   const { pending } = useFormStatus();
   return (
     <Button
-      className="min-w-24 gap-2"
+      className="min-w-24 gap-2 cursor-pointer"
       disabled={pending}
     >
       {pending ? (

@@ -6,20 +6,35 @@ import { cn } from "@/lib/utils";
 import {
   DataTableCreateForm,
   DataTableCreateFormProps,
+  DataTableFormResponse,
+  FieldType,
 } from "./data-table-create-form";
 import { ScrollArea } from "../ui/scroll-area";
+import DataTableUpdateForm from "./data-table-update-form";
 
 interface DataTableProps<T> {
   columns: (keyof T)[];
   title: string;
   data: T[];
   createFormProps?: DataTableCreateFormProps<T>;
+  updateFormProps?: {
+    formAction: (body: Partial<T>) => Promise<DataTableFormResponse<T>>;
+    fields: {
+      key: keyof T;
+      type: FieldType;
+      selectList?: {
+        label: string;
+        value: string | number;
+      }[];
+      managedListName?: string;
+    }[];
+  };
 }
 
 type SortDirection = "asc" | "desc" | null;
 
 export default function DataTable<T>(props: DataTableProps<T>) {
-  const { columns, title, data, createFormProps } = props;
+  const { columns, title, data, createFormProps, updateFormProps } = props;
 
   const [search, setSearch] = useState("");
   const [sortColumn, setSortColumn] = useState<keyof T | null>(null);
@@ -156,7 +171,7 @@ export default function DataTable<T>(props: DataTableProps<T>) {
 
       {/* Table */}
       <ScrollArea className="h-125">
-        <table className="w-full text-sm">
+        <table className="text-sm w-full">
           <thead className="sticky top-0 bg-muted">
             <tr>
               {columns.map((column) => (
@@ -176,6 +191,11 @@ export default function DataTable<T>(props: DataTableProps<T>) {
                   </span>
                 </th>
               ))}
+              {updateFormProps && (
+                <th className="whitespace-nowrap text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground px-2">
+                  Actions
+                </th>
+              )}
             </tr>
           </thead>
           <tbody className="divide-y divide-border">
@@ -209,7 +229,7 @@ export default function DataTable<T>(props: DataTableProps<T>) {
                 </td>
               </tr>
             ) : (
-              processedData.map((row: T, i) => {
+              processedData.map((record: T, i) => {
                 return (
                   <tr
                     key={i}
@@ -220,9 +240,17 @@ export default function DataTable<T>(props: DataTableProps<T>) {
                         key={column as string}
                         className="whitespace-nowrap px-4 py-2.5 text-sm text-foreground"
                       >
-                        {String(row[column] ?? "")}
+                        {String(record[column] ?? "")}
                       </td>
                     ))}
+                    <td className="px-2">
+                      {updateFormProps && (
+                        <DataTableUpdateForm
+                          {...updateFormProps}
+                          record={record}
+                        />
+                      )}
+                    </td>
                   </tr>
                 );
               })

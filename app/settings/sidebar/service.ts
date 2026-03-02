@@ -8,6 +8,7 @@ import {
   sidebarAccess,
 } from "@/db/schema/rls";
 import { createUUID } from "@/lib/utils";
+import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 export async function getSidebarAccessList() {
   const sideBarList = await db.select().from(sidebarAccess);
@@ -30,5 +31,22 @@ export async function addSidebarAccess(
     success: true,
     message: "Sidebar Access added successfully",
     data: newSA,
+  };
+}
+
+export async function updateSidebarAccess(
+  data: Partial<SidebarAccess>,
+): Promise<DataTableFormResponse<SidebarAccess>> {
+  const query = db
+    .update(sidebarAccess)
+    .set(data)
+    .where(eq(sidebarAccess.id, data.id!));
+
+  const [result] = await query.returning();
+  revalidatePath("/settings/sidebar");
+  return {
+    message: "Sidebar Access updated successfully",
+    data: result,
+    success: true,
   };
 }

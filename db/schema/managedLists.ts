@@ -12,7 +12,9 @@ export const managedLists = pgTable("managed_lists", {
   description: varchar("description", { length: 255 }).notNull(),
   is_active: boolean("is_active").default(true).notNull(),
 });
-export type ManagedList = typeof managedLists.$inferSelect;
+export type ManagedList = typeof managedLists.$inferSelect & {
+  items?: ManagedListItem[];
+};
 export type NewManagedList = typeof managedLists.$inferInsert;
 
 export const managedListItems = pgTable("managed_list_items", {
