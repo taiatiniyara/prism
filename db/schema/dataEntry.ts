@@ -14,7 +14,6 @@ import { reportPeriods } from "./reportPeriods";
 import { energyResources, serviceAreas } from "./utility";
 import { user } from "./auth-schema";
 import { relations } from "drizzle-orm";
-
 export interface FormulaInput {
   input_def_id: number;
   variable_name: string;
@@ -145,9 +144,6 @@ export const dataEntries = pgTable(
     status_id: integer("status_id").references(() => managedListItems.id),
     is_relevant: boolean("is_relevant").default(true).notNull(),
     is_deleted: boolean("is_deleted").default(false).notNull(),
-    is_blo_reviewed: boolean("is_blo_reviewed").default(false).notNull(),
-    is_ceo_approved: boolean("is_ceo_approved").default(false).notNull(),
-    is_bmo_endorsed: boolean("is_bmo_endorsed").default(false).notNull(),
     energy_provider_id: integer("energy_provider_id").references(
       () => managedListItems.id,
     ),

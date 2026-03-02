@@ -1,6 +1,7 @@
 import { integer, pgTable, serial, timestamp } from "drizzle-orm/pg-core";
 import { organisations } from "./utility";
 import { managedListItems } from "./managedLists";
+import { roles } from "./auth-schema";
 
 export const reportPeriods = pgTable("report_periods", {
   id: serial("id").primaryKey().notNull(),
@@ -12,12 +13,8 @@ export const reportPeriods = pgTable("report_periods", {
     .references(() => managedListItems.id),
   report_date: timestamp("report_date").notNull(),
   request_date: timestamp("request_date").notNull(),
-  status_id: integer("status_id")
-    .notNull()
-    .references(() => managedListItems.id),
-  who_id: integer("who_id")
-    .notNull()
-    .references(() => managedListItems.id),
+  status_id: integer("status_id").references(() => managedListItems.id),
+  who_id: integer("who_id").references(() => roles.id),
   updated_at: timestamp("updated_at").notNull().defaultNow(),
 });
 export type ReportPeriod = typeof reportPeriods.$inferSelect & {

@@ -4,15 +4,15 @@ import { DataTableFormResponse } from "@/components/tables/data-table-create-for
 import { db } from "@/db/connection";
 import { NewServiceArea, ServiceArea, serviceAreas } from "@/db/schema/utility";
 import { generateRandomNumber } from "@/lib/utils";
-import { getCurrentUser } from "@/services/user.service";
+import { getCurrentUser } from "@/lib/user.service";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-export async function AllServiceAreas() {
+export async function AllServiceAreas(filters?: { all: boolean }) {
   const list: ServiceArea[] = [];
-  const user = await getCurrentUser();
   let query = db.select().from(serviceAreas);
-  if (user.role === "BLO") {
+  if (!filters?.all) {
+    const user = await getCurrentUser();
     query.where(eq(serviceAreas.utility_id, user.org_id!));
   }
   const res = await query;

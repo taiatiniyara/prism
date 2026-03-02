@@ -1,8 +1,8 @@
-import { BeatLoader as Loader } from "react-spinners";
+import { PuffLoader as Loader } from "react-spinners";
 export default function LoadingPage() {
   return (
     <div className="flex items-center justify-center h-screen">
-      <Loader color="#36d7b7" />
+      <Loader color="#fbbf24" />
     </div>
   );
 }

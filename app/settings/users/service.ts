@@ -5,7 +5,7 @@ import { DataTableFormResponse } from "@/components/tables/data-table-create-for
 import { db } from "@/db/connection";
 import { NewUser, roles, User, user } from "@/db/schema/auth-schema";
 import { organisations } from "@/db/schema/utility";
-import { getCurrentUser } from "@/services/user.service";
+import { getCurrentUser } from "@/lib/user.service";
 import { eq } from "drizzle-orm";
 
 export async function AllUsers() {

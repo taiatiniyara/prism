@@ -1,6 +1,6 @@
 "use cache";
 
-import { powerBiDetails } from "@/services/powerbi.service";
+import { powerBiDetails } from "@/lib/powerbi.service";
 import PowerBiDashboard from "./pbi";
 
 export default async function DashboardPage() {

@@ -36,7 +36,8 @@ export async function retrieveRoles() {
   const list: Role[] = await call.json();
 
   const existingRoles = await db.select().from(roles);
-  const nonExistingRoles = list.filter((role) => !existingRoles.includes(role));
+  const existingIds = new Set(existingRoles.map((r) => r.id));
+  const nonExistingRoles = list.filter((role) => !existingIds.has(role.id));
   try {
     if (nonExistingRoles.length > 0) {
       await db.insert(roles).values(nonExistingRoles);
@@ -54,7 +55,6 @@ export async function retrieveRoles() {
 export async function retrieveUtilityData() {
   let res = false;
   await db.delete(serviceAreas).where(gt(serviceAreas.id, 0));
-  await db.delete(energyResources).where(gt(energyResources.id, 0));
   await db.delete(reportPeriods).where(gt(reportPeriods.id, 0));
   await db.delete(organisations).where(gt(organisations.id, 0));
   const call = await fetch(prismOneURL + "/organisation", {
@@ -64,19 +64,24 @@ export async function retrieveUtilityData() {
     },
   });
   const list = await call.json();
-  const energyResourcesList: EnergyResource[] = list.generators;
   const serviceAreaList: ServiceArea[] = list.serviceAreas;
   const reportPeriodsList: ReportPeriod[] = list.reportPeriods;
   const orgList: Organisation[] = list.organisations;
-  const orgs = await db.select().from(organisations);
-  const nonExistingOrgs = orgList.filter((org) => !orgs.includes(org));
-  const saList = await db.select().from(serviceAreas);
-  const nonExistingSAs = serviceAreaList.filter((sa) => !saList.includes(sa));
-  const rpList = await db.select().from(reportPeriods);
-  const nonExistingRPs = reportPeriodsList.filter((rp) => !rpList.includes(rp));
-  const erList = await db.select().from(energyResources);
-  const nonExistingERs = energyResourcesList.filter(
-    (er) => !erList.includes(er),
+
+  const existingOrgs = await db.select().from(organisations);
+  const existingOrgIds = new Set(existingOrgs.map((o) => o.id));
+  const nonExistingOrgs = orgList.filter((org) => !existingOrgIds.has(org.id));
+
+  const existingSAs = await db.select().from(serviceAreas);
+  const existingSAIds = new Set(existingSAs.map((sa) => sa.id));
+  const nonExistingSAs = serviceAreaList.filter(
+    (sa) => !existingSAIds.has(sa.id),
+  );
+
+  const existingRPs = await db.select().from(reportPeriods);
+  const existingRPIds = new Set(existingRPs.map((rp) => rp.id));
+  const nonExistingRPs = reportPeriodsList.filter(
+    (rp) => !existingRPIds.has(rp.id),
   );
 
   try {
@@ -87,10 +92,14 @@ export async function retrieveUtilityData() {
       await db.insert(serviceAreas).values(nonExistingSAs);
     }
     if (nonExistingRPs.length > 0) {
-      await db.insert(reportPeriods).values(nonExistingRPs);
-    }
-    if (nonExistingERs.length > 0) {
-      await db.insert(energyResources).values(nonExistingERs);
+      await db.insert(reportPeriods).values(
+        nonExistingRPs.map((rp) => ({
+          ...rp,
+          report_date: new Date(rp.report_date),
+          request_date: new Date(rp.request_date),
+          updated_at: rp.updated_at ? new Date(rp.updated_at) : new Date(),
+        })),
+      );
     }
     res = true;
   } catch (error: Error | any) {
@@ -115,14 +124,18 @@ export async function retrieveCountries() {
   const list = await call.json();
   const subRegionList: SubRegion[] = list.subregions;
   const existingSubRegions = await db.select().from(subRegions);
+  const existingSubRegionIds = new Set(existingSubRegions.map((sr) => sr.id));
   const nonExistingSubRegions = subRegionList.filter(
-    (subRegion) => !existingSubRegions.includes(subRegion),
+    (sr) => !existingSubRegionIds.has(sr.id),
   );
+
   const countryList: Country[] = list.countries;
   const existingCountries = await db.select().from(countries);
+  const existingCountryIds = new Set(existingCountries.map((c) => c.id));
   const nonExistingCountries = countryList.filter(
-    (country) => !existingCountries.includes(country),
+    (c) => !existingCountryIds.has(c.id),
   );
+
   try {
     if (nonExistingSubRegions.length > 0) {
       await db.insert(subRegions).values(nonExistingSubRegions);
@@ -160,14 +173,21 @@ export async function retrieveManagedLists() {
   const list = await call.json();
   const managedListItemsList: ManagedListItem[] = list.managedListItems;
   const managedListsList: ManagedList[] = list.managedLists;
+
   const existingManagedLists = await db.select().from(managedLists);
+  const existingManagedListIds = new Set(existingManagedLists.map((l) => l.id));
   const nonExistingManagedLists = managedListsList.filter(
-    (managedList) => !existingManagedLists.includes(managedList),
+    (l) => !existingManagedListIds.has(l.id),
   );
+
   const existingManagedListItems = await db.select().from(managedListItems);
-  const nonExistingManagedListItems = managedListItemsList.filter(
-    (managedListItem) => !existingManagedListItems.includes(managedListItem),
+  const existingManagedListItemIds = new Set(
+    existingManagedListItems.map((li) => li.id),
   );
+  const nonExistingManagedListItems = managedListItemsList.filter(
+    (li) => !existingManagedListItemIds.has(li.id),
+  );
+
   try {
     if (nonExistingManagedLists.length > 0) {
       await db.insert(managedLists).values(nonExistingManagedLists);
@@ -197,12 +217,99 @@ export async function retrieveInputDefinitions() {
   const list = await call.json();
   const inputDefinitionsList: InputDefinition[] = list.inputDefinitions;
   const existingInputDefinitions = await db.select().from(inputDefinitions);
-  const nonExistingInputDefinitions = inputDefinitionsList.filter(
-    (inputDefinition) => !existingInputDefinitions.includes(inputDefinition),
+  const existingInputDefinitionIds = new Set(
+    existingInputDefinitions.map((id) => id.id),
   );
+  const nonExistingInputDefinitions = inputDefinitionsList.filter(
+    (def) => !existingInputDefinitionIds.has(def.id),
+  );
+
   try {
     if (nonExistingInputDefinitions.length > 0) {
       await db.insert(inputDefinitions).values(nonExistingInputDefinitions);
+    }
+    res = true;
+  } catch (error: Error | any) {
+    console.log(error);
+  }
+
+  revalidatePath("/migration");
+
+  return res;
+}
+
+export async function retrieveReportPeriods() {
+  let res = false;
+  await db.delete(reportPeriods).where(gt(reportPeriods.id, 0));
+  const call = await fetch(prismOneURL + "/reportPeriods", {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+  const list = await call.json();
+  const reportPeriodsList: ReportPeriod[] = list;
+  const existingReportPeriods = await db.select().from(reportPeriods);
+  const existingIds = new Set(existingReportPeriods.map((rp) => rp.id));
+  const nonExistingReportPeriods = reportPeriodsList.filter(
+    (rp) => !existingIds.has(rp.id),
+  );
+
+  console.log(nonExistingReportPeriods.length);
+  try {
+    if (nonExistingReportPeriods.length > 0) {
+      await db.insert(reportPeriods).values(
+        nonExistingReportPeriods.map((rp) => {
+          return {
+            ...rp,
+            report_date: new Date(rp.report_date),
+            request_date: new Date(rp.request_date),
+            updated_at: rp.updated_at ? new Date(rp.updated_at) : new Date(),
+          };
+        }),
+      );
+    }
+    res = true;
+  } catch (error: Error | any) {
+    console.log(error);
+  }
+
+  revalidatePath("/migration");
+
+  return res;
+}
+
+export async function retrieveEnergyResources() {
+  let res = false;
+  await db.delete(energyResources).where(gt(energyResources.id, 0));
+  const call = await fetch(prismOneURL + "/generators", {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+  const list = await call.json();
+  console.log(list);
+  const energyResourcesList: EnergyResource[] = list;
+  const existingEnergyResources = await db.select().from(energyResources);
+  const existingIds = new Set(existingEnergyResources.map((er) => er.id));
+  const nonExistingEnergyResources = energyResourcesList.filter(
+    (er) => !existingIds.has(er.id),
+  );
+
+  console.log(nonExistingEnergyResources.length);
+  try {
+    if (nonExistingEnergyResources.length > 0) {
+      await db.insert(energyResources).values(
+        nonExistingEnergyResources.map((er) => {
+          return {
+            ...er,
+            capacity_mw: er.capacity_mw ? Number(er.capacity_mw) : null,
+            updated_at: er.updated_at ? new Date(er.updated_at) : new Date(),
+            updated_by_id: null,
+          };
+        }),
+      );
     }
     res = true;
   } catch (error: Error | any) {

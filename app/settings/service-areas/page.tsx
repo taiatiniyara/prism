@@ -2,7 +2,9 @@ import DataTable from "@/components/tables/data-table";
 import { AddServiceArea, AllServiceAreas, UpdateServiceArea } from "./service";
 
 export default async function ServiceAreasSettingsPage() {
-  const serviceAreas = await AllServiceAreas();
+  const serviceAreas = await AllServiceAreas({
+    all: false,
+  });
   return (
     <DataTable
       data={serviceAreas}

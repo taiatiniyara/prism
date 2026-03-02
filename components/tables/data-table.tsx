@@ -171,7 +171,7 @@ export default function DataTable<T>(props: DataTableProps<T>) {
       </div>
 
       {/* Table */}
-      <ScrollArea className="h-125">
+      <ScrollArea className="h-[calc(100vh-200px)]">
         <table className="text-sm w-full">
           <thead className="sticky top-0 bg-muted">
             <tr>

@@ -3,7 +3,9 @@
 import { Button } from "@/components/ui/button";
 import {
   retrieveCountries,
+  retrieveEnergyResources,
   retrieveManagedLists,
+  retrieveReportPeriods,
   retrieveRoles,
   retrieveUtilityData,
 } from "./service";
@@ -29,11 +31,19 @@ const buttonList: {
     label: "Migrate Utility Data",
     fn: retrieveUtilityData,
   },
+  {
+    label: "Migrate Report Periods",
+    fn: retrieveReportPeriods,
+  },
+  {
+    label: "Migrate Energy Resources",
+    fn: retrieveEnergyResources,
+  },
 ];
 
 export default function MigrationButtons() {
   return (
-    <div className="grid grid-cols-5 gap-4">
+    <div className="grid grid-cols-4 gap-4">
       {buttonList.map((btn) => (
         <Button
           key={btn.label}

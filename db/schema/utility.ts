@@ -3,6 +3,7 @@ import {
   index,
   integer,
   pgTable,
+  real,
   serial,
   text,
   timestamp,
@@ -118,9 +119,9 @@ export const energyResources = pgTable(
   "energy_resources",
   {
     id: serial("id").primaryKey().notNull(),
-    report_period_id: integer("report_period_id")
-      .notNull()
-      .references(() => reportPeriods.id),
+    report_period_id: integer("report_period_id").references(
+      () => reportPeriods.id,
+    ),
     name: varchar("name", { length: 255 }).notNull(),
     power_station_id: integer("power_station_id").references(
       () => powerStations.id,
@@ -131,7 +132,7 @@ export const energyResources = pgTable(
     utility_id: integer("utility_id")
       .notNull()
       .references(() => organisations.id),
-    capacity_mw: integer("capacity_mw"),
+    capacity_mw: real("capacity_mw"),
     energy_provider_id: integer("energy_provider_id")
       .notNull()
       .references(() => managedListItems.id),

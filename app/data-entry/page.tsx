@@ -1,9 +1,14 @@
-import { getCurrentUser } from "@/services/user.service";
+import { getCurrentUser } from "@/lib/user.service";
 import { GetReportPeriods } from "./service";
+import ReportPeriodTable from "./reportPeriodTable";
 
 export default async function DataEntryHomePage() {
   const user = await getCurrentUser();
   const reportPeriods = await GetReportPeriods(user);
-  console.log(reportPeriods);
-  return <div>DataEntryHomePage</div>;
+  return (
+    <ReportPeriodTable
+      role={user.role}
+      list={reportPeriods}
+    />
+  );
 }
