@@ -105,6 +105,7 @@ function updateField<T>(field: DataTableUpdateFormField<T>) {
       required
       name={field.key as string}
       defaultValue={String(field.value)}
+      type={field.type}
     />
   );
 }

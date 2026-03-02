@@ -2,8 +2,9 @@
 
 import { db } from "@/db/connection";
 import { countries } from "@/db/schema/country";
-import { organisations } from "@/db/schema/utility";
+import { Organisation, organisations } from "@/db/schema/utility";
 import { and, eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 
 export async function AllOrganisations(filters?: {
   utilitiesOnly?: boolean;
@@ -34,4 +35,27 @@ export async function AllOrganisations(filters?: {
     ...item.organisations,
     country: item.countries?.name,
   }));
+}
+
+export async function GetOrganisationById(id: number) {
+  const [org] = await db
+    .select()
+    .from(organisations)
+    .where(eq(organisations.id, id));
+  return org;
+}
+
+export async function UpdateOrganisation(data: Partial<Organisation>) {
+  const [upd] = await db
+    .update(organisations)
+    .set(data)
+    .where(eq(organisations.id, data.id!))
+    .returning();
+
+  revalidatePath("/settings/reporting");
+  return {
+    success: true,
+    message: "Data updated successfully",
+    data: upd,
+  };
 }

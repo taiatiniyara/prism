@@ -11,6 +11,7 @@ import {
 } from "./data-table-create-form";
 import { ScrollArea } from "../ui/scroll-area";
 import DataTableUpdateForm from "./data-table-update-form";
+import { formatLabel } from "@/lib/formatters";
 
 interface DataTableProps<T> {
   columns: (keyof T)[];
@@ -186,7 +187,7 @@ export default function DataTable<T>(props: DataTableProps<T>) {
                   )}
                 >
                   <span className="inline-flex items-center">
-                    {column as string}
+                    {formatLabel(column as string)}
                     <SortIcon column={column} />
                   </span>
                 </th>

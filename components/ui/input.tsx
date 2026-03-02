@@ -13,7 +13,9 @@ function Input({ className, type, ...props }: React.ComponentProps<"input">) {
         className,
       )}
       {...props}
-      placeholder={`Enter ${formatLabel(props.name || "")}`}
+      placeholder={
+        props.placeholder || `Enter ${formatLabel(props.name || "")}`
+      }
     />
   );
 }
