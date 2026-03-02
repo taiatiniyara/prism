@@ -37,6 +37,9 @@ export const organisations = pgTable(
     ),
     utility_type_id: integer("utility_type_id").references(
       () => managedListItems.id,
+      {
+        onDelete: "cascade",
+      },
     ),
     operating_basis_id: integer("operating_basis_id").references(
       () => managedListItems.id,

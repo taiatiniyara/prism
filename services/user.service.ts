@@ -4,7 +4,16 @@ import { auth } from "@/lib/auth";
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 
-export const getCurrentUser = async () => {
+export interface CurrentUser {
+  name: string;
+  role: string;
+  email: string;
+  id: string;
+  role_id: number | null;
+  org_id: number | null;
+}
+
+export const getCurrentUser = async (): Promise<CurrentUser> => {
   const session = await auth.api.getSession({
     headers: await headers(),
   });

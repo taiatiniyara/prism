@@ -12,7 +12,7 @@ export const reportPeriods = pgTable("report_periods", {
     .references(() => managedListItems.id),
   report_date: timestamp("report_date").notNull(),
   request_date: timestamp("request_date").notNull(),
-  status: integer("status")
+  status_id: integer("status_id")
     .notNull()
     .references(() => managedListItems.id),
   who_id: integer("who_id")

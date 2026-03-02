@@ -10,7 +10,10 @@ import {
   managedListItems,
   managedLists,
 } from "@/db/schema/managedLists";
+import { ReportPeriod, reportPeriods } from "@/db/schema/reportPeriods";
 import {
+  EnergyResource,
+  energyResources,
   Organisation,
   organisations,
   ServiceArea,
@@ -50,8 +53,10 @@ export async function retrieveRoles() {
 
 export async function retrieveUtilityData() {
   let res = false;
-  await db.delete(organisations).where(gt(organisations.id, 0));
   await db.delete(serviceAreas).where(gt(serviceAreas.id, 0));
+  await db.delete(energyResources).where(gt(energyResources.id, 0));
+  await db.delete(reportPeriods).where(gt(reportPeriods.id, 0));
+  await db.delete(organisations).where(gt(organisations.id, 0));
   const call = await fetch(prismOneURL + "/organisation", {
     method: "GET",
     headers: {
@@ -59,12 +64,20 @@ export async function retrieveUtilityData() {
     },
   });
   const list = await call.json();
-  const orgList: Organisation[] = list.organisations;
+  const energyResourcesList: EnergyResource[] = list.generators;
   const serviceAreaList: ServiceArea[] = list.serviceAreas;
+  const reportPeriodsList: ReportPeriod[] = list.reportPeriods;
+  const orgList: Organisation[] = list.organisations;
   const orgs = await db.select().from(organisations);
   const nonExistingOrgs = orgList.filter((org) => !orgs.includes(org));
   const saList = await db.select().from(serviceAreas);
   const nonExistingSAs = serviceAreaList.filter((sa) => !saList.includes(sa));
+  const rpList = await db.select().from(reportPeriods);
+  const nonExistingRPs = reportPeriodsList.filter((rp) => !rpList.includes(rp));
+  const erList = await db.select().from(energyResources);
+  const nonExistingERs = energyResourcesList.filter(
+    (er) => !erList.includes(er),
+  );
 
   try {
     if (nonExistingOrgs.length > 0) {
@@ -72,6 +85,12 @@ export async function retrieveUtilityData() {
     }
     if (nonExistingSAs.length > 0) {
       await db.insert(serviceAreas).values(nonExistingSAs);
+    }
+    if (nonExistingRPs.length > 0) {
+      await db.insert(reportPeriods).values(nonExistingRPs);
+    }
+    if (nonExistingERs.length > 0) {
+      await db.insert(energyResources).values(nonExistingERs);
     }
     res = true;
   } catch (error: Error | any) {
