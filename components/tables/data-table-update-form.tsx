@@ -25,7 +25,8 @@ import {
   SelectValue,
 } from "../ui/select";
 import { toast } from "sonner";
-import { FaEdit } from "react-icons/fa";
+import { FaEdit, FaSave } from "react-icons/fa";
+import ManagedListInput from "./managed-list-input";
 
 export interface DataTableUpdateFormField<T> {
   key: keyof T;
@@ -60,7 +61,7 @@ function updateField<T>(field: DataTableUpdateFormField<T>) {
     return (
       <Select
         name={field.key as string}
-        defaultValue={String(field.value)}
+        value={String(field.value)}
       >
         <SelectTrigger>
           <SelectValue placeholder="Select a value" />
@@ -80,24 +81,11 @@ function updateField<T>(field: DataTableUpdateFormField<T>) {
   }
   if (field.type === "managed-list") {
     return (
-      <Select
-        name={field.key as string}
-        defaultValue={String(field.value)}
-      >
-        <SelectTrigger>
-          <SelectValue placeholder="Select a value" />
-        </SelectTrigger>
-        <SelectContent>
-          {field.selectList?.map((option) => (
-            <SelectItem
-              key={option.value}
-              value={String(option.value)}
-            >
-              {option.label}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+      <ManagedListInput
+        inputName={field.key as string}
+        managedListName={field.managedListName || ""}
+        value={field.value as number}
+      />
     );
   }
   return (
@@ -154,7 +142,13 @@ export default function DataTableUpdateForm<T>(
               {updateField({ ...field, value: props.record[field.key] })}
             </div>
           ))}
-          <SubmitBtn text="Update" />
+          <SubmitBtn
+            text={
+              <>
+                <FaSave /> Update
+              </>
+            }
+          />
         </form>
       </SheetContent>
     </Sheet>

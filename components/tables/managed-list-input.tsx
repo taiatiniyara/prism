@@ -11,10 +11,12 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { formatLabel } from "@/lib/formatters";
+import { Skeleton } from "../ui/skeleton";
 
 export default function ManagedListInput(props: {
   managedListName: string;
   inputName: string;
+  value?: number;
 }) {
   const [list, setList] = useState<ManagedListItem[]>([]);
 
@@ -27,11 +29,14 @@ export default function ManagedListInput(props: {
   }, []);
 
   if (list.length === 0) {
-    return <div>Loading...</div>;
+    return <Skeleton className="w-full h-10 rounded-md" />;
   }
 
   return (
-    <Select name={props.inputName}>
+    <Select
+      defaultValue={props.value?.toString()}
+      name={props.inputName}
+    >
       <SelectTrigger className="w-full shadow">
         <SelectValue placeholder={`Select ${formatLabel(props.inputName)}`} />
       </SelectTrigger>

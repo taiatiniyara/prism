@@ -5,6 +5,7 @@ export function formatLabel(input: string): string {
       .replace(/_/g, " ")
       // Remove standalone "id" words (case-insensitive)
       .replace(/\bid\b/gi, "")
+      .replace(/\bis\b/gi, "")
       // Split into words, filter out empties
       .split(" ")
       .filter(Boolean)

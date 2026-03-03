@@ -5,6 +5,7 @@ import {
   GetAllManagedListItems,
   GetAllManagedLists,
   UpdateManagedList,
+  UpdateManagedListItem,
 } from "./service";
 import { ManagedList, ManagedListItem } from "@/db/schema/managedLists";
 
@@ -50,10 +51,50 @@ export default async function ManagedListSettingsPage() {
       />
       <DataTable<ManagedListItem>
         title="Managed List Items"
-        columns={["name", "description", "is_active"]}
+        columns={[
+          "name",
+          "description",
+          "list",
+          "parent",
+          "color",
+          "is_active",
+        ]}
         data={mlItems}
         createFormProps={{
           formAction: CreateManagedListItem,
+          fields: [
+            {
+              key: "name",
+              type: "text",
+            },
+            {
+              key: "description",
+              type: "text",
+            },
+            {
+              key: "list_id",
+              type: "select",
+              selectList: ml.map((m) => ({
+                label: m.name,
+                value: m.id,
+              })),
+            },
+            {
+              key: "parent_id",
+              type: "select",
+              selectList: mlItems.map((m) => ({
+                label: m.name,
+                value: m.id,
+              })),
+            },
+            {
+              key: "color",
+              type: "color",
+            },
+          ],
+        }}
+        updateFormProps={{
+          formAction: UpdateManagedListItem,
           fields: [
             {
               key: "name",

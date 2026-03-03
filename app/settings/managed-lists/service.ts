@@ -46,7 +46,21 @@ export async function CreateManagedListItem(
 }
 
 export async function GetAllManagedListItems(): Promise<ManagedListItem[]> {
-  return await db.select().from(managedListItems);
+  const list = await db
+    .select()
+    .from(managedListItems)
+    .orderBy(managedListItems.list_id, managedListItems.name)
+    .leftJoin(managedLists, eq(managedListItems.list_id, managedLists.id));
+  return list.map((item) => {
+    const parent = list.find(
+      (l) => l.managed_list_items.id === item.managed_list_items.parent_id,
+    )?.managed_list_items;
+    return {
+      ...item.managed_list_items,
+      list: item.managed_lists?.name!,
+      parent: parent?.name!,
+    };
+  });
 }
 
 export async function CreateManagedList(

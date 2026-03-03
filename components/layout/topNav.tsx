@@ -42,9 +42,9 @@ export default function TopNav(props: {
   };
 
   return (
-    <nav className="sticky text-sm font-medium top-0 z-50 bg-gray-900 text-white">
+    <nav className="sticky text-sm font-medium top-0 z-50 bg-slate-900 text-white">
       {/* Main Top Bar */}
-      <div className="flex justify-between items-center p-3 relative z-20 bg-gray-900">
+      <div className="flex justify-between items-center p-3 relative z-20 bg-slate-900">
         <div className="flex items-center gap-16">
           <a href="/">
             <Image
@@ -81,7 +81,7 @@ export default function TopNav(props: {
 
           {/* Mobile Menu Toggle Button */}
           <button
-            className="md:hidden p-2 text-gray-300 hover:text-white focus:outline-none"
+            className="md:hidden p-2 text-slate-300 hover:text-white focus:outline-none"
             onClick={handleToggleMenu}
             aria-label="Toggle mobile menu"
           >
@@ -92,19 +92,19 @@ export default function TopNav(props: {
 
       {/* Mobile Slide-down Menu */}
       {isMobileMenuOpen && (
-        <div className="md:hidden bg-gray-700 border-t border-gray-600 animate-in slide-in-from-top-2 duration-200">
+        <div className="md:hidden bg-slate-700 border-t border-slate-600 animate-in slide-in-from-top-2 duration-200">
           <div className="max-w-7xl mx-auto px-4 pt-2 pb-4 space-y-4">
             <NavList
               navList={navList}
               className="flex-col gap-4 text-base"
             />
 
-            <div className="pt-4 border-t border-gray-600">
+            <div className="pt-4 border-t border-slate-600">
               {props.session ? (
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <UserDropdown />
-                    <span className="bg-amber-400 text-gray-900 px-2 py-1 rounded font-medium text-xs">
+                    <span className="bg-amber-400 text-slate-900 px-2 py-1 rounded font-medium text-xs">
                       {props.role}
                     </span>
                   </div>

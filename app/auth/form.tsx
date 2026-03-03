@@ -153,7 +153,7 @@ export default function AuthForms(props: {
               placeholder="Enter your email"
             />
 
-            <Label className="border p-3 rounded-md shadow-sm bg-white hover:bg-gray-100 cursor-pointer">
+            <Label className="border p-3 rounded-md shadow-sm bg-white hover:bg-slate-100 cursor-pointer">
               <Checkbox
                 checked={nonUtilityUser}
                 onCheckedChange={setNonUtilityUser}

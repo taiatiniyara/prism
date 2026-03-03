@@ -7,19 +7,33 @@ import { generateRandomNumber } from "@/lib/utils";
 import { getCurrentUser } from "@/lib/user.service";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { managedListItems } from "@/db/schema/managedLists";
 
-export async function AllServiceAreas(filters?: { all: boolean }) {
-  const list: ServiceArea[] = [];
-  let query = db.select().from(serviceAreas);
+export async function AllServiceAreas(filters?: {
+  all: boolean;
+}): Promise<ServiceArea[]> {
+  let query = db
+    .select()
+    .from(serviceAreas)
+    .leftJoin(
+      managedListItems,
+      eq(serviceAreas.services_provided_id, managedListItems.id),
+    );
+
   if (!filters?.all) {
     const user = await getCurrentUser();
-    query.where(eq(serviceAreas.utility_id, user.org_id!));
+    if (user.role !== "DEV" && user.role !== "BMO") {
+      query.where(eq(serviceAreas.utility_id, user.org_id!));
+    } else {
+      query.where(eq(serviceAreas.utility_id, user.org_id!));
+    }
   }
+
   const res = await query;
-  res.forEach((item) => {
-    list.push(item);
-  });
-  return list;
+  return res.map((item) => ({
+    ...item.service_areas,
+    services_provided: item.managed_list_items?.name,
+  }));
 }
 
 export async function AddServiceArea(

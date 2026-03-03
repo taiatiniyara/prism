@@ -28,5 +28,8 @@ export const managedListItems = pgTable("managed_list_items", {
   is_active: boolean("is_active").default(true).notNull(),
   color: varchar("color").notNull().default("#EE32DD"),
 });
-export type ManagedListItem = typeof managedListItems.$inferSelect;
+export type ManagedListItem = typeof managedListItems.$inferSelect & {
+  list?: string;
+  parent?: string | null;
+};
 export type NewManagedListItem = typeof managedListItems.$inferInsert;

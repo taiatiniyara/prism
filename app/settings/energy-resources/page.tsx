@@ -1,5 +1,9 @@
 import DataTable from "@/components/tables/data-table";
-import { CreateEnergyResource, GetAllEnergyResources } from "./service";
+import {
+  CreateEnergyResource,
+  GetAllEnergyResources,
+  UpdateEnergyResource,
+} from "./service";
 import { EnergyResource } from "@/db/schema/utility";
 
 export default async function EnergyResourcesSettingsPage() {
@@ -17,6 +21,34 @@ export default async function EnergyResourcesSettingsPage() {
       data={await GetAllEnergyResources()}
       createFormProps={{
         formAction: CreateEnergyResource,
+        fields: [
+          {
+            key: "name",
+            type: "text",
+          },
+          {
+            key: "capacity_mw",
+            type: "number",
+          },
+          {
+            key: "energy_provider_id",
+            type: "managed-list",
+            managedListName: "Energy Provider",
+          },
+          {
+            key: "energy_type_id",
+            type: "managed-list",
+            managedListName: "Energy Type",
+          },
+          {
+            key: "energy_source_id",
+            type: "managed-list",
+            managedListName: "Energy Source",
+          },
+        ],
+      }}
+      updateFormProps={{
+        formAction: UpdateEnergyResource,
         fields: [
           {
             key: "name",

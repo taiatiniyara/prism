@@ -44,10 +44,10 @@ export default function RootLayout({
           toastOptions={{
             unstyled: true,
             classNames: {
-              success: "bg-lime-600",
-              error: "bg-red-600",
-              warning: "bg-amber-600",
-              info: "bg-blue-600",
+              success: "bg-lime-500",
+              error: "bg-red-500",
+              warning: "bg-amber-500",
+              info: "bg-blue-500",
             },
             className:
               "rounded-md shadow-sm p-4 flex items-center gap-2 text-white font-medium font-sans",

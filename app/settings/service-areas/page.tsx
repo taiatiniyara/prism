@@ -1,14 +1,15 @@
 import DataTable from "@/components/tables/data-table";
 import { AddServiceArea, AllServiceAreas, UpdateServiceArea } from "./service";
+import { ServiceArea } from "@/db/schema/utility";
 
 export default async function ServiceAreasSettingsPage() {
   const serviceAreas = await AllServiceAreas({
     all: false,
   });
   return (
-    <DataTable
+    <DataTable<ServiceArea>
       data={serviceAreas}
-      columns={["name", "services_provided_id"]}
+      columns={["name", "services_provided", "is_active"]}
       title="Service Areas"
       createFormProps={{
         formAction: AddServiceArea,

@@ -12,6 +12,7 @@ import {
 import { ScrollArea } from "../ui/scroll-area";
 import DataTableUpdateForm from "./data-table-update-form";
 import { formatLabel } from "@/lib/formatters";
+import BooleanToggle from "./booleanToggle";
 
 interface DataTableProps<T> {
   columns: (keyof T)[];
@@ -121,6 +122,26 @@ export default function DataTable<T>(props: DataTableProps<T>) {
     );
   }
 
+  function cell(col: keyof T, row: T) {
+    if (typeof row[col] === "boolean") {
+      if (updateFormProps?.formAction) {
+        return (
+          <BooleanToggle
+            data={row}
+            column={col}
+            onCheckChange={updateFormProps.formAction}
+          />
+        );
+      }
+      return row[col] ? (
+        <span className="text-lime-500">{"Yes"}</span>
+      ) : (
+        <span className="text-slate-600">{"No"}</span>
+      );
+    }
+    return String(row[col] ?? "");
+  }
+
   return (
     <div>
       {/* Header */}
@@ -172,15 +193,15 @@ export default function DataTable<T>(props: DataTableProps<T>) {
 
       {/* Table */}
       <ScrollArea className="h-[calc(100vh-200px)]">
-        <table className="text-sm w-full">
-          <thead className="sticky top-0 bg-muted">
+        <table className="text-xs w-full">
+          <thead className="sticky top-0 bg-muted z-50">
             <tr>
               {columns.map((column) => (
                 <th
                   key={column as string}
                   onClick={() => handleSort(column)}
                   className={cn(
-                    "whitespace-nowrap px-4 py-2.5 text-left text-xs font-semibold uppercase tracking-wider",
+                    "whitespace-nowrap px-4 py-2.5 text-left font-semibold uppercase tracking-wider",
                     "text-muted-foreground select-none cursor-pointer",
                     "transition-colors hover:text-foreground hover:bg-muted",
                     sortColumn === column && "text-foreground bg-muted",
@@ -239,19 +260,19 @@ export default function DataTable<T>(props: DataTableProps<T>) {
                     {columns.map((column) => (
                       <td
                         key={column as string}
-                        className="whitespace-nowrap px-4 py-2.5 text-sm text-foreground"
+                        className="whitespace-nowrap px-4 py-2.5 text-foreground"
                       >
-                        {String(record[column] ?? "")}
+                        {cell(column, record)}
                       </td>
                     ))}
-                    <td className="px-2">
-                      {updateFormProps && (
+                    {updateFormProps && (
+                      <td className="px-2">
                         <DataTableUpdateForm
                           {...updateFormProps}
                           record={record}
                         />
-                      )}
-                    </td>
+                      </td>
+                    )}
                   </tr>
                 );
               })

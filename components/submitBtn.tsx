@@ -2,12 +2,13 @@ import React from "react";
 import { Button } from "./ui/button";
 import { useFormStatus } from "react-dom";
 import Loader from "react-spinners/ClipLoader";
+import { FaUpload } from "react-icons/fa";
 
 export default function SubmitBtn(props: { text?: string | React.ReactNode }) {
   const { pending } = useFormStatus();
   return (
     <Button
-      className="min-w-24 gap-2 cursor-pointer"
+      className="min-w-24 px-4 gap-2 cursor-pointer"
       disabled={pending}
     >
       {pending ? (
@@ -16,7 +17,9 @@ export default function SubmitBtn(props: { text?: string | React.ReactNode }) {
           size={15}
         />
       ) : (
-        props.text || "Submit"
+        <>
+          <FaUpload /> Submit
+        </>
       )}
     </Button>
   );
