@@ -2,7 +2,6 @@ import React from "react";
 import { Button } from "./ui/button";
 import { useFormStatus } from "react-dom";
 import Loader from "react-spinners/ClipLoader";
-import { FaUpload } from "react-icons/fa";
 
 export default function SubmitBtn(props: { text?: string | React.ReactNode }) {
   const { pending } = useFormStatus();
@@ -17,9 +16,7 @@ export default function SubmitBtn(props: { text?: string | React.ReactNode }) {
           size={15}
         />
       ) : (
-        <>
-          <FaUpload /> Submit
-        </>
+        <>{props.text}</>
       )}
     </Button>
   );

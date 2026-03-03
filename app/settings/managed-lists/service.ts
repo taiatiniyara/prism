@@ -32,6 +32,7 @@ export async function CreateManagedListItem(
 ): Promise<DataTableFormResponse<ManagedListItem>> {
   const query = db.insert(managedListItems).values({
     ...data,
+    parent_id: data.parent_id || null,
     is_active: true,
     id: generateRandomNumber(5),
   });

@@ -113,14 +113,6 @@ export default async function ManagedListSettingsPage() {
               })),
             },
             {
-              key: "parent_id",
-              type: "select",
-              selectList: mlItems.map((m) => ({
-                label: m.name,
-                value: m.id,
-              })),
-            },
-            {
               key: "color",
               type: "color",
             },

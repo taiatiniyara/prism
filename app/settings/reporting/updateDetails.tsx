@@ -1,7 +1,6 @@
 "use client";
 
 import { Heading } from "@/components/heading";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useState } from "react";
@@ -9,6 +8,7 @@ import { FaSave } from "react-icons/fa";
 import { UpdateOrganisation } from "../organisations/orgs.service";
 import { toast } from "sonner";
 import SubmitBtn from "@/components/submitBtn";
+import { Switch } from "@/components/ui/switch";
 
 export default function UpdateReportingDetailsForm(props: {
   financial_year_end: string | null;
@@ -74,8 +74,10 @@ export default function UpdateReportingDetailsForm(props: {
           Specify whether your organisation prepares monthly reports.
         </p>
 
-        <div className="flex items-center space-x-2 border w-fit p-4.5 rounded-lg shadow-md">
-          <Checkbox
+        <div className="flex items-center space-x-8 border w-fit p-4.5 rounded-lg shadow-md">
+          <Label htmlFor="monthly-reporting">Submit Monthly Reports</Label>
+
+          <Switch
             id="monthly-reporting"
             defaultChecked={props.is_mth_report_relevant}
             onCheckedChange={async (checked) => {
@@ -90,7 +92,6 @@ export default function UpdateReportingDetailsForm(props: {
               }
             }}
           />
-          <Label htmlFor="monthly-reporting">Submit Monthly Reports?</Label>
         </div>
       </div>
     </div>

@@ -13,6 +13,7 @@ import { ScrollArea } from "../ui/scroll-area";
 import DataTableUpdateForm from "./data-table-update-form";
 import { formatLabel } from "@/lib/formatters";
 import BooleanToggle from "./booleanToggle";
+import { FaSquare } from "react-icons/fa";
 
 interface DataTableProps<T> {
   columns: (keyof T)[];
@@ -137,6 +138,14 @@ export default function DataTable<T>(props: DataTableProps<T>) {
         <span className="text-lime-500">{"Yes"}</span>
       ) : (
         <span className="text-slate-600">{"No"}</span>
+      );
+    }
+    if (col === "color") {
+      return (
+        <FaSquare
+          size={18}
+          color={String(row[col])}
+        />
       );
     }
     return String(row[col] ?? "");

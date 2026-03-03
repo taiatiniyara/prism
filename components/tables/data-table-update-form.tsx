@@ -61,10 +61,12 @@ function updateField<T>(field: DataTableUpdateFormField<T>) {
     return (
       <Select
         name={field.key as string}
-        value={String(field.value)}
+        defaultValue={field.value ? String(field.value) : undefined}
       >
-        <SelectTrigger>
-          <SelectValue placeholder="Select a value" />
+        <SelectTrigger className="w-full shadow">
+          <SelectValue
+            placeholder={field.value ? String(field.value) : undefined}
+          />
         </SelectTrigger>
         <SelectContent>
           {field.selectList?.map((option) => (
@@ -85,6 +87,17 @@ function updateField<T>(field: DataTableUpdateFormField<T>) {
         inputName={field.key as string}
         managedListName={field.managedListName || ""}
         value={field.value as number}
+      />
+    );
+  }
+  if (field.type === "color") {
+    return (
+      <Input
+        className="border-0 shadow-none h-12 w-24 p-0"
+        required
+        name={field.key as string}
+        defaultValue={String(field.value)}
+        type="color"
       />
     );
   }

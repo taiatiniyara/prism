@@ -120,6 +120,39 @@ export const inputDefinitionRelations = relations(
   }),
 );
 
+export enum DataEntryStatusId {
+  Requested = 1,
+  Pending = 2,
+  Entered = 3,
+  Reviewed = 4,
+  Approved = 5,
+  Live = 6,
+}
+
+export const DataEntryStatus = {
+  Requested: DataEntryStatusId.Requested,
+  Pending: DataEntryStatusId.Pending,
+  Entered: DataEntryStatusId.Entered,
+  Reviewed: DataEntryStatusId.Reviewed,
+  Approved: DataEntryStatusId.Approved,
+  Live: DataEntryStatusId.Live,
+};
+
+export const dataEntryStatusColors = {
+  Requested: "#fb923c",
+  Pending: "#facc15",
+  Entered: "#a3e635",
+  Reviewed: "#34d399",
+  Approved: "#38bdf8",
+  Live: "#a78bfa",
+};
+
+export const DataEntryStatusList = Object.keys(DataEntryStatus).map((key) => ({
+  id: DataEntryStatus[key as keyof typeof DataEntryStatus],
+  name: key,
+  color: dataEntryStatusColors[key as keyof typeof dataEntryStatusColors],
+}));
+
 export const dataEntries = pgTable(
   "data_entries",
   {
@@ -141,7 +174,7 @@ export const dataEntries = pgTable(
     update_medium_id: integer("update_medium_id").references(
       () => managedListItems.id,
     ),
-    status_id: integer("status_id").references(() => managedListItems.id),
+    status_id: integer("status_id").$type<DataEntryStatusId>(),
     is_relevant: boolean("is_relevant").default(true).notNull(),
     is_deleted: boolean("is_deleted").default(false).notNull(),
     energy_provider_id: integer("energy_provider_id").references(
