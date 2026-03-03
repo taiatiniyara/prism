@@ -1,3 +1,5 @@
+"use server";
+
 import { DataTableFormResponse } from "@/components/tables/data-table-create-form";
 import { db } from "@/db/connection";
 import {

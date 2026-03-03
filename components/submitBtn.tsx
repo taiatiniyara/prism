@@ -16,7 +16,7 @@ export default function SubmitBtn(props: { text?: string | React.ReactNode }) {
           size={15}
         />
       ) : (
-        <>{props.text}</>
+        props.text || "Submit"
       )}
     </Button>
   );

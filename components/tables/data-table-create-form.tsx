@@ -24,6 +24,7 @@ import {
 import { Checkbox } from "../ui/checkbox";
 import { toast } from "sonner";
 import ManagedListInput from "./managed-list-input";
+import { ScrollArea } from "../ui/scroll-area";
 
 export type FieldType =
   | "text"
@@ -165,29 +166,31 @@ export function DataTableCreateForm<T>(props: DataTableCreateFormProps<T>) {
         <SheetHeader>
           <SheetTitle className="text-xl font-bold">New Record</SheetTitle>
         </SheetHeader>
-        <form
-          className="space-y-4 p-4"
-          action={async (formData) => {
-            const data: T = formDataToObject(formData, props.fields);
-            const response = await props.formAction(data);
-            if (response.success) {
-              toast.success(response.message);
-            } else {
-              toast.error(response.message);
-            }
-          }}
-        >
-          {props.fields.map((f) => (
-            <div
-              className="space-y-1"
-              key={f.key as string}
-            >
-              <Label>{formatLabel(f.key.toString())}</Label>
-              {field(f)}
-            </div>
-          ))}
-          <SubmitBtn text={props.buttonText} />
-        </form>
+        <ScrollArea className="h-[calc(100vh-100px)]">
+          <form
+            className="space-y-4 p-4"
+            action={async (formData) => {
+              const data: T = formDataToObject(formData, props.fields);
+              const response = await props.formAction(data);
+              if (response.success) {
+                toast.success(response.message);
+              } else {
+                toast.error(response.message);
+              }
+            }}
+          >
+            {props.fields.map((f) => (
+              <div
+                className="space-y-1"
+                key={f.key as string}
+              >
+                <Label>{formatLabel(f.key.toString())}</Label>
+                {field(f)}
+              </div>
+            ))}
+            <SubmitBtn text={props.buttonText} />
+          </form>
+        </ScrollArea>
       </SheetContent>
     </Sheet>
   );

@@ -3,6 +3,7 @@
 import { db } from "@/db/connection";
 import { countries } from "@/db/schema/country";
 import { Organisation, organisations } from "@/db/schema/utility";
+import { generateRandomNumber } from "@/lib/utils";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -35,6 +36,23 @@ export async function AllOrganisations(filters?: {
     ...item.organisations,
     country: item.countries?.name,
   }));
+}
+
+export async function CreateOrganisation(data: Organisation) {
+  const [org] = await db
+    .insert(organisations)
+    .values({
+      ...data,
+      id: generateRandomNumber(5),
+      is_active: true,
+      updated_date: null,
+    })
+    .returning();
+  return {
+    success: true,
+    message: "Data created successfully",
+    data: org,
+  };
 }
 
 export async function GetOrganisationById(id: number) {
