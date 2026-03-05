@@ -226,7 +226,13 @@ export async function retrieveInputDefinitions() {
 
   try {
     if (nonExistingInputDefinitions.length > 0) {
-      await db.insert(inputDefinitions).values(nonExistingInputDefinitions);
+      await db.insert(inputDefinitions).values(
+        nonExistingInputDefinitions.map((def) => ({
+          ...def,
+          energy_provider_id: 20,
+          energy_source_id: 41,
+        })),
+      );
     }
     res = true;
   } catch (error: Error | any) {

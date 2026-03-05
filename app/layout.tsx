@@ -35,12 +35,12 @@ export default function RootLayout({
           <Suspense fallback={null}>
             <SidebarWrapper />
           </Suspense>
-          <main className="flex-1 p-2">{children}</main>
+          <main className="flex-1 min-w-0 overflow-hidden p-2">{children}</main>
         </div>
 
         <Toaster
           duration={6000}
-          position="top-center"
+          position="bottom-right"
           toastOptions={{
             unstyled: true,
             classNames: {

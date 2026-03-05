@@ -1,5 +1,3 @@
-"use cache";
-
 import { AllOrganisations } from "../settings/organisations/orgs.service";
 import AuthForms from "./form";
 import { AllRoles } from "@/app/settings/roles/roles.service";

@@ -49,6 +49,7 @@ export async function registerUser(data: {
 }) {
   let sent = false;
   try {
+    console.log(data);
     const headersList = await headers();
 
     const s = await authClient.signUp.email(
@@ -67,20 +68,22 @@ export async function registerUser(data: {
         },
       },
     );
-    console.log(s);
 
     const u = s.data?.user;
     console.log(u);
 
     if (u) {
-      await db.update(user).set({
-        name: `${data.firstName} ${data.lastName}`,
-        organisation_id: data.organisationId,
-        data_access_reason: data.dataAccessReason,
-        dataset_required: data.datasetsRequired,
-        status: "pending",
-        role_id: data.roleId,
-      });
+      await db
+        .update(user)
+        .set({
+          name: `${data.firstName} ${data.lastName}`,
+          organisation_id: data.organisationId,
+          data_access_reason: data.dataAccessReason,
+          dataset_required: data.datasetsRequired,
+          status: "pending",
+          role_id: data.roleId,
+        })
+        .where(eq(user.id, u.id));
     }
 
     await authClient.signIn.magicLink(

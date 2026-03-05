@@ -16,7 +16,7 @@ export default async function ManagedListSettingsPage() {
     <div>
       <DataTable<ManagedList>
         title="Managed Lists"
-        columns={["name", "description", "is_active"]}
+        columns={["id", "name", "description", "is_active"]}
         data={ml}
         createFormProps={{
           formAction: CreateManagedList,
@@ -52,6 +52,7 @@ export default async function ManagedListSettingsPage() {
       <DataTable<ManagedListItem>
         title="Managed List Items"
         columns={[
+          "id",
           "name",
           "description",
           "list",

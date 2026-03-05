@@ -9,7 +9,7 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import SubmitBtn from "../submitBtn";
-import { FaPlus } from "react-icons/fa";
+import { FaPlus, FaUpload } from "react-icons/fa";
 import { Label } from "../ui/label";
 import { Textarea } from "../ui/textarea";
 import { Input } from "../ui/input";
@@ -78,7 +78,7 @@ function field<T>(field: DataTableCreateFormField<T>) {
   if (field.type === "select") {
     return (
       <Select name={field.key as string}>
-        <SelectTrigger className="w-full">
+        <SelectTrigger className="w-full shadow">
           <SelectValue
             placeholder={`Select ${formatLabel(field.key.toString())}`}
           />
@@ -188,7 +188,13 @@ export function DataTableCreateForm<T>(props: DataTableCreateFormProps<T>) {
                 {field(f)}
               </div>
             ))}
-            <SubmitBtn text={props.buttonText} />
+            <SubmitBtn
+              text={
+                <>
+                  <FaUpload /> Submit
+                </>
+              }
+            />
           </form>
         </ScrollArea>
       </SheetContent>

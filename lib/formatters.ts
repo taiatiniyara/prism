@@ -5,7 +5,6 @@ export function formatLabel(input: string): string {
       .replace(/_/g, " ")
       // Remove standalone "id" words (case-insensitive)
       .replace(/\bid\b/gi, "")
-      .replace(/\bis\b/gi, "")
       // Split into words, filter out empties
       .split(" ")
       .filter(Boolean)
@@ -14,4 +13,12 @@ export function formatLabel(input: string): string {
       // Join back with spaces
       .join(" ")
   );
+}
+
+export function createVariableName(str: string): string {
+  // Convert to lowercase, replace spaces with underscores, and remove non-alphanumeric characters
+  return str
+    .toLowerCase()
+    .replace(/\s+/g, "_")
+    .replace(/[^a-z0-9_]/g, "");
 }

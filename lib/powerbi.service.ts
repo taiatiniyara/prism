@@ -1,3 +1,5 @@
+import { getCurrentUser } from "./user.service";
+
 export const powerBiCLientID = process.env.POWERBI_CLIENT_ID as string;
 export const powerBiClientSecret = process.env.POWERBI_CLIENT_SECRET as string;
 export const powerBiTenantID = process.env.POWERBI_TENANT_ID as string;
@@ -53,7 +55,7 @@ export async function getAzureToken() {
 
 export async function powerBiDetails() {
   const azureResponse = await getAzureToken();
-
+  const user = await getCurrentUser();
   const pbiUrl = "https://api.powerbi.com/v1.0/myorg/GenerateToken";
 
   const body = {
@@ -74,8 +76,8 @@ export async function powerBiDetails() {
     ],
     identities: [
       {
-        username: "taiatiniyara@gmail.com",
-        roles: ["BLO", "ALL"],
+        username: user.email,
+        roles: [user.role, "ALL"],
         datasets: [datasetID],
       },
     ],

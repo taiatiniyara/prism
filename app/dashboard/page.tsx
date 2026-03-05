@@ -1,5 +1,3 @@
-"use cache";
-
 import { powerBiDetails } from "@/lib/powerbi.service";
 import PowerBiDashboard from "./pbi";
 

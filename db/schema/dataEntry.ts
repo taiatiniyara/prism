@@ -14,6 +14,7 @@ import { reportPeriods } from "./reportPeriods";
 import { energyResources, serviceAreas } from "./utility";
 import { user } from "./auth-schema";
 import { relations } from "drizzle-orm";
+import { generateRandomNumber } from "@/lib/utils";
 export interface FormulaInput {
   input_def_id: number;
   variable_name: string;
@@ -32,33 +33,36 @@ export const inputDefinitions = pgTable("input_definitions", {
   subcategory_id: integer("subcategory_id")
     .notNull()
     .references(() => managedListItems.id),
-  energy_provider_id: integer("energy_provider_id").references(
+  service_relevance_group_id: integer("service_group_id").references(
     () => managedListItems.id,
   ),
-  energy_type_id: integer("energy_type_id").references(
-    () => managedListItems.id,
-  ),
-  energy_source_id: integer("energy_source_id").references(
-    () => managedListItems.id,
-  ),
-  customer_type_id: integer("customer_type_id")
-    .notNull()
-    .references(() => managedListItems.id),
-  payment_mode_id: integer("payment_mode_id")
-    .notNull()
-    .references(() => managedListItems.id),
   unit_id: integer("unit_id")
     .notNull()
     .references(() => managedListItems.id),
   data_type_id: integer("data_type_id")
     .notNull()
     .references(() => managedListItems.id),
+  valid_polarity_id: integer("value_polarity_id").references(
+    () => managedListItems.id,
+  ),
+  valid_trend_id: integer("value_trend_id").references(
+    () => managedListItems.id,
+  ),
+  valid_range_min: integer("value_range_min"),
+  valid_range_max: integer("value_range_max"),
   is_descriptive: boolean("is_descriptive").default(false).notNull(),
+  utility_service_id: integer("utility_service_id")
+    .notNull()
+    .references(() => managedListItems.id),
   is_currency: boolean("is_currency").default(false).notNull(),
   is_aggregated: boolean("is_aggregated").default(false).notNull(),
   agg_level_id: integer("agg_level_id").references(() => managedListItems.id),
   is_active: boolean("is_active").default(true).notNull(),
   is_mandatory: boolean("is_mandatory").default(false).notNull(),
+  is_system_generated: boolean("is_system_generated").default(false).notNull(),
+  is_calculated: boolean("is_calculated").default(false).notNull(),
+  is_kpi: boolean("is_kpi").default(false).notNull(),
+  is_kpi_input: boolean("is_kpi_input").default(false).notNull(),
 });
 export type InputDefinition = typeof inputDefinitions.$inferSelect & {
   category?: string | null;
@@ -74,6 +78,25 @@ export type InputDefinition = typeof inputDefinitions.$inferSelect & {
 };
 export type NewInputDefinition = typeof inputDefinitions.$inferInsert;
 
+export const inputRelevance = pgTable("input_relevance", {
+  id: serial("id")
+    .primaryKey()
+    .notNull()
+    .$default(() => generateRandomNumber(5)),
+  input_def_id: integer("input_def_id")
+    .notNull()
+    .references(() => inputDefinitions.id),
+  dimension_id: integer("dimension_id")
+    .notNull()
+    .references(() => managedListItems.id),
+  is_relevant: boolean("is_relevant").default(true).notNull(),
+});
+export type InputRelevance = typeof inputRelevance.$inferSelect & {
+  dimension?: string | null;
+  input_def?: string | null;
+};
+export type NewInputRelevance = typeof inputRelevance.$inferInsert;
+
 export const inputDefinitionRelations = relations(
   inputDefinitions,
   ({ one }) => ({
@@ -83,26 +106,6 @@ export const inputDefinitionRelations = relations(
     }),
     subcategory: one(managedListItems, {
       fields: [inputDefinitions.subcategory_id],
-      references: [managedListItems.id],
-    }),
-    energy_provider: one(managedListItems, {
-      fields: [inputDefinitions.energy_provider_id],
-      references: [managedListItems.id],
-    }),
-    energy_type: one(managedListItems, {
-      fields: [inputDefinitions.energy_type_id],
-      references: [managedListItems.id],
-    }),
-    energy_source: one(managedListItems, {
-      fields: [inputDefinitions.energy_source_id],
-      references: [managedListItems.id],
-    }),
-    customer_type: one(managedListItems, {
-      fields: [inputDefinitions.customer_type_id],
-      references: [managedListItems.id],
-    }),
-    payment_mode: one(managedListItems, {
-      fields: [inputDefinitions.payment_mode_id],
       references: [managedListItems.id],
     }),
     unit: one(managedListItems, {
@@ -126,7 +129,7 @@ export enum DataEntryStatusId {
   Entered = 3,
   Reviewed = 4,
   Approved = 5,
-  Live = 6,
+  Endorsed = 6,
 }
 
 export const DataEntryStatus = {
@@ -135,7 +138,7 @@ export const DataEntryStatus = {
   Entered: DataEntryStatusId.Entered,
   Reviewed: DataEntryStatusId.Reviewed,
   Approved: DataEntryStatusId.Approved,
-  Live: DataEntryStatusId.Live,
+  Endorsed: DataEntryStatusId.Endorsed,
 };
 
 export const dataEntryStatusColors = {
@@ -144,7 +147,7 @@ export const dataEntryStatusColors = {
   Entered: "#a3e635",
   Reviewed: "#34d399",
   Approved: "#38bdf8",
-  Live: "#a78bfa",
+  Endorsed: "#a78bfa",
 };
 
 export const DataEntryStatusList = Object.keys(DataEntryStatus).map((key) => ({

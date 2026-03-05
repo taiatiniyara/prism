@@ -7,6 +7,7 @@ import { NewUser, roles, User, user } from "@/db/schema/auth-schema";
 import { organisations } from "@/db/schema/utility";
 import { getCurrentUser } from "@/lib/user.service";
 import { eq } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
 
 export async function AllUsers() {
   let list = db
@@ -30,14 +31,19 @@ export async function AllUsers() {
 export async function CreateUser(
   data: NewUser,
 ): Promise<DataTableFormResponse<User>> {
+  const currentUser = await getCurrentUser();
+  console.log(data);
+  if (currentUser.role !== "DEV" && currentUser.role !== "BMO") {
+    data.organisation_id = currentUser.org_id!;
+  }
   registerUser({
     email: data.email,
-    firstName: data.name,
-    lastName: data.name,
+    firstName: data.name.split(" ")[0],
+    lastName: data.name.split(" ").pop() || "",
     datasetsRequired: data.dataset_required || "",
     dataAccessReason: data.data_access_reason || "",
     organisationId: data.organisation_id || 1,
-    roleId: data.role_id || 1,
+    roleId: Number(data.role_id) || 1,
   }).then(async () => {
     await db
       .update(user)
@@ -47,7 +53,7 @@ export async function CreateUser(
       .where(eq(user.email, data.email))
       .returning();
   });
-
+  revalidatePath("/settings/users");
   return {
     success: true,
     message: "User created successfully",

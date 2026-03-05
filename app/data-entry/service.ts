@@ -19,7 +19,7 @@ export interface ReportPeriodDTO {
   Entered: number;
   Reviewed: number;
   Approved: number;
-  Live: number;
+  Endorsed: number;
   Pending_With: string;
   Updated: string;
 }
@@ -64,7 +64,8 @@ export async function GetReportPeriods(
         .length,
       Approved: deList.filter((x) => x.status_id === DataEntryStatusId.Approved)
         .length,
-      Live: deList.filter((x) => x.status_id === DataEntryStatusId.Live).length,
+      Endorsed: deList.filter((x) => x.status_id === DataEntryStatusId.Endorsed)
+        .length,
     };
   });
 }

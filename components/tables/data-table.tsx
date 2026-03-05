@@ -9,7 +9,7 @@ import {
   DataTableFormResponse,
   FieldType,
 } from "./data-table-create-form";
-import { ScrollArea } from "../ui/scroll-area";
+
 import DataTableUpdateForm from "./data-table-update-form";
 import { formatLabel } from "@/lib/formatters";
 import BooleanToggle from "./booleanToggle";
@@ -152,10 +152,10 @@ export default function DataTable<T>(props: DataTableProps<T>) {
   }
 
   return (
-    <div>
+    <div className="w-full">
       {/* Header */}
-      <div className="flex flex-col gap-3 px-5 pt-5 pb-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-4">
+      <div className="flex flex-col gap-3 px-3 pt-5 pb-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
           <Heading
             className="font-bold"
             level={5}
@@ -165,7 +165,7 @@ export default function DataTable<T>(props: DataTableProps<T>) {
           {createFormProps && <DataTableCreateForm {...createFormProps} />}
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex w-full items-center gap-2 sm:w-auto">
           {/* Search */}
           <div className="relative w-full sm:w-64">
             <svg
@@ -201,8 +201,8 @@ export default function DataTable<T>(props: DataTableProps<T>) {
       </div>
 
       {/* Table */}
-      <ScrollArea className="h-[calc(100vh-200px)]">
-        <table className="text-xs w-full">
+      <div className="max-h-[calc(100vh-220px)] overflow-auto sm:max-h-[calc(100vh-200px)]">
+        <table className="w-full min-w-max text-xs">
           <thead className="sticky top-0 bg-muted z-50">
             <tr>
               {columns.map((column) => (
@@ -233,7 +233,7 @@ export default function DataTable<T>(props: DataTableProps<T>) {
             {processedData.length === 0 ? (
               <tr>
                 <td
-                  colSpan={columns.length}
+                  colSpan={columns.length + (updateFormProps ? 1 : 0)}
                   className="py-12 text-center text-sm text-muted-foreground"
                 >
                   <div className="flex flex-col items-center gap-1">
@@ -288,7 +288,7 @@ export default function DataTable<T>(props: DataTableProps<T>) {
             )}
           </tbody>
         </table>
-      </ScrollArea>
+      </div>
 
       {/* Footer count */}
       {data.length > 0 && (
