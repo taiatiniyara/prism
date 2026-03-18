@@ -8,6 +8,7 @@ import {
   varchar,
   json,
   index,
+  timestamp,
 } from "drizzle-orm/pg-core";
 import { managedListItems } from "./managedLists";
 import { reportPeriods } from "./reportPeriods";
@@ -225,10 +226,10 @@ export const dataEntryFeedbacks = pgTable("data_entry_feedbacks", {
   feedback_by_id: text("feedback_by_id")
     .notNull()
     .references(() => user.id),
-  feedback_date: uuid("feedback_date").notNull(),
+  feedback_date: timestamp("feedback_date").notNull(),
   reply: varchar("reply", { length: 255 }),
   reply_by_id: text("reply_by_id").references(() => user.id),
-  reply_date: uuid("reply_date"),
+  reply_date: timestamp("reply_date"),
   done: boolean("done").default(false).notNull(),
 });
 
@@ -242,5 +243,5 @@ export const dataEntryLogs = pgTable("data_entry_logs", {
   updated_by_id: text("updated_by_id")
     .notNull()
     .references(() => user.id),
-  updated_at: uuid("updated_at").notNull(),
+  updated_at: timestamp("updated_at").notNull(),
 });
