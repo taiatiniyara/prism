@@ -1,9 +1,17 @@
 import DataTable from "@/components/tables/data-table";
 import { InputDefinition } from "@/db/schema/dataEntry";
-import { CreateInputDefinition, GetAllInputDefinitions } from "./service";
+import InputFormulaBuilder from "./formulaBuilder";
+import {
+  CreateInputDefinition,
+  GetAllInputDefinitions,
+  GetInputFormulaBuilderData,
+} from "./service";
 import UploadInputsFromExcel from "./uploadFromExcel";
 
 export default async function InputsSettingsPage() {
+  const inputDefinitions = await GetAllInputDefinitions();
+  const formulaBuilderData = await GetInputFormulaBuilderData();
+
   return (
     <div>
       <DataTable<InputDefinition>
@@ -16,7 +24,7 @@ export default async function InputsSettingsPage() {
           "is_active",
         ]}
         title="Inputs"
-        data={await GetAllInputDefinitions()}
+        data={inputDefinitions}
         createFormProps={{
           formAction: CreateInputDefinition,
           fields: [
@@ -43,6 +51,12 @@ export default async function InputsSettingsPage() {
           ],
         }}
       />
+
+      <p className="text-muted-foreground mt-4 mb-2 text-sm">
+        Choose an input definition, then build its formula using other input
+        definitions.
+      </p>
+      <InputFormulaBuilder inputs={formulaBuilderData.inputs} />
 
       <UploadInputsFromExcel />
     </div>

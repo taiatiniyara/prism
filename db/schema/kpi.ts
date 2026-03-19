@@ -19,12 +19,28 @@ export const kpiDefinitions = pgTable("kpi_definitions", {
   formula_inputs: json("formula_inputs").notNull().$type<FormulaInput[]>(),
   limit_lower: varchar("limit_lower", { length: 255 }),
   limit_upper: varchar("limit_upper", { length: 255 }),
+  category_id: integer("category_id")
+    .notNull()
+    .references(() => managedListItems.id)
+    .default(515),
+  subcategory_id: integer("subcategory_id")
+    .references(() => managedListItems.id)
+    .default(600),
   type_id: integer("type_id")
     .notNull()
     .references(() => managedListItems.id),
+  agg_level_id: integer("agg_level_id")
+    .notNull()
+    .references(() => managedListItems.id)
+    .default(1),
+  is_aggregated: boolean("is_aggregated").default(false).notNull(),
+  is_active: boolean("is_active").default(true).notNull(),
 });
 export type KpiDefinition = typeof kpiDefinitions.$inferSelect & {
   type?: string | null;
+  agg_level?: string | null;
+  category?: string | null;
+  subcategory?: string | null;
 };
 export type NewKpiDefinition = typeof kpiDefinitions.$inferInsert;
 

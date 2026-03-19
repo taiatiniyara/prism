@@ -69,7 +69,7 @@ export async function CreateEnergyResource(
     utility_id: user.org_id!,
     updated_by_id: user.id,
     is_active: true,
-    is_vitual: false,
+    is_virtual: false,
     agg_level_id: 1,
     updated_at: new Date(),
   });
