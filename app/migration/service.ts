@@ -271,6 +271,7 @@ export async function retrieveReportPeriods() {
             report_date: new Date(rp.report_date),
             request_date: new Date(rp.request_date),
             updated_at: rp.updated_at ? new Date(rp.updated_at) : new Date(),
+            status_id: 12,
           };
         }),
       );
