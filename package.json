@@ -7,9 +7,15 @@
     "build": "next build",
     "start": "next start -p 3555",
     "lint": "eslint",
+    "test": "vitest run",
+    "test:unit": "vitest run test/unit",
+    "test:integration": "vitest run test/integration",
+    "test:watch": "vitest",
+    "db-fix-uuid-timestamps": "tsx ./db/scripts/fix-uuid-to-timestamp.ts",
     "db-push": "drizzle-kit push --config ./db/config.ts",
+    "db-push-safe": "npm run db-fix-uuid-timestamps && npm run db-push",
     "deploy-dev": "bash ./scripts/deploy-dev.sh",
-    "push": "git add . && git commit -m 'chore:update' && git push"
+    "git-push": "git add . && git commit -m 'chore:update' && git push"
   },
   "dependencies": {
     "@base-ui/react": "^1.0.0",
@@ -44,6 +50,8 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
     "@types/node": "^20",
     "@types/nodemailer": "^7.0.5",
     "@types/pg": "^8.16.0",
@@ -52,8 +60,10 @@
     "drizzle-kit": "^0.31.8",
     "eslint": "^9",
     "eslint-config-next": "16.1.1",
+    "jsdom": "^29.0.0",
     "tailwindcss": "^4",
     "tsx": "^4.21.0",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^4.1.0"
   }
 }

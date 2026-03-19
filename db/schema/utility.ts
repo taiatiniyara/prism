@@ -142,7 +142,7 @@ export const energyResources = pgTable(
     energy_source_id: integer("energy_source_id")
       .notNull()
       .references(() => managedListItems.id),
-    is_vitual: boolean("is_virtual").default(false).notNull(),
+    is_virtual: boolean("is_virtual").default(false).notNull(),
     is_active: boolean("is_active").default(true).notNull(),
     agg_level_id: integer("agg_level_id")
       .notNull()
@@ -156,6 +156,7 @@ export const energyResources = pgTable(
 );
 export type EnergyResource = typeof energyResources.$inferSelect & {
   report_period?: string | null;
+  report_period_type?: string | null;
   power_station?: string | null;
   service_area?: string | null;
   utility?: string | null;

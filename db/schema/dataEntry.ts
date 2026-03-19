@@ -16,6 +16,7 @@ import { energyResources, serviceAreas } from "./utility";
 import { user } from "./auth-schema";
 import { relations } from "drizzle-orm";
 import { generateRandomNumber } from "@/lib/utils";
+
 export interface FormulaInput {
   input_def_id: number;
   variable_name: string;
@@ -26,7 +27,7 @@ export const inputDefinitions = pgTable("input_definitions", {
   name: varchar("name", { length: 255 }).notNull(),
   description: varchar("description", { length: 255 }),
   variable_name: varchar("variable_name", { length: 255 }),
-  formula: varchar("formula", { length: 255 }),
+  formula: text("formula"),
   formula_inputs: json("formula_inputs").$type<FormulaInput[]>(),
   category_id: integer("category_id")
     .notNull()
@@ -43,14 +44,14 @@ export const inputDefinitions = pgTable("input_definitions", {
   data_type_id: integer("data_type_id")
     .notNull()
     .references(() => managedListItems.id),
-  valid_polarity_id: integer("value_polarity_id").references(
+  valid_polarity_id: integer("valid_polarity_id").references(
     () => managedListItems.id,
   ),
-  valid_trend_id: integer("value_trend_id").references(
+  valid_trend_id: integer("valid_trend_id").references(
     () => managedListItems.id,
   ),
-  valid_range_min: integer("value_range_min"),
-  valid_range_max: integer("value_range_max"),
+  valid_range_min: integer("valid_range_min"),
+  valid_range_max: integer("valid_range_max"),
   is_descriptive: boolean("is_descriptive").default(false).notNull(),
   utility_service_id: integer("utility_service_id")
     .notNull()
@@ -193,6 +194,7 @@ export const dataEntries = pgTable(
     payment_mode_id: integer("payment_mode_id").references(
       () => managedListItems.id,
     ),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [
     index("uniq_entry").on(

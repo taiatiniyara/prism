@@ -1,3 +1,3 @@
 export default function ReviewKPIPage() {
-  return <div>ReviewKPIPage</div>;
+  return <div className="space-y-4"></div>;
 }

@@ -3,13 +3,35 @@
 import { DataTableFormResponse } from "@/components/tables/data-table-create-form";
 import { db } from "@/db/connection";
 import {
+  FormulaInput,
   InputDefinition,
   inputDefinitions,
   NewInputDefinition,
 } from "@/db/schema/dataEntry";
 import { createVariableName } from "@/lib/formatters";
+import { asc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { GetAllManagedListItems } from "../managed-lists/service";
+
+export interface InputFormulaOption {
+  id: number;
+  name: string;
+  description: string | null;
+  variable_name: string | null;
+  formula: string | null;
+  formula_inputs: FormulaInput[] | null;
+  is_active: boolean;
+}
+
+export interface InputFormulaBuilderData {
+  inputs: InputFormulaOption[];
+}
+
+export interface SaveInputFormulaPayload {
+  inputId: number;
+  formula: string;
+  formulaInputs: FormulaInput[];
+}
 
 export async function GetAllInputDefinitions(): Promise<InputDefinition[]> {
   const ml = await GetAllManagedListItems();
@@ -122,4 +144,66 @@ export async function UpdateInputDefinitionFromExcel(
   }
 
   revalidatePath("/settings/inputs");
+}
+
+export async function GetInputFormulaBuilderData(): Promise<InputFormulaBuilderData> {
+  const inputs = await db
+    .select({
+      id: inputDefinitions.id,
+      name: inputDefinitions.name,
+      description: inputDefinitions.description,
+      variable_name: inputDefinitions.variable_name,
+      formula: inputDefinitions.formula,
+      formula_inputs: inputDefinitions.formula_inputs,
+      is_active: inputDefinitions.is_active,
+    })
+    .from(inputDefinitions)
+    .orderBy(asc(inputDefinitions.name));
+
+  return { inputs };
+}
+
+export async function SaveInputFormula(payload: SaveInputFormulaPayload) {
+  const formula = payload.formula.trim();
+
+  if (!payload.inputId || Number.isNaN(payload.inputId)) {
+    return {
+      success: false,
+      message: "Please choose an input definition first.",
+    };
+  }
+  if (!formula) {
+    return { success: false, message: "Formula is required." };
+  }
+
+  const containsSelfReference = payload.formulaInputs.some(
+    (item) => item.input_def_id === payload.inputId,
+  );
+  if (containsSelfReference) {
+    return {
+      success: false,
+      message: "An input formula cannot reference itself.",
+    };
+  }
+
+  try {
+    await db
+      .update(inputDefinitions)
+      .set({
+        formula,
+        formula_inputs: payload.formulaInputs,
+        is_calculated: true,
+      })
+      .where(eq(inputDefinitions.id, payload.inputId));
+  } catch (error) {
+    console.error("Failed to save input formula:", error);
+    return {
+      success: false,
+      message:
+        "Unable to save formula. It may exceed current database limits. Please shorten it and try again.",
+    };
+  }
+
+  revalidatePath("/settings/inputs");
+  return { success: true, message: "Input formula saved successfully." };
 }
