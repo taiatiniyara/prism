@@ -4,6 +4,7 @@ import { db } from "@/db/connection";
 import { Role, roles } from "@/db/schema/auth-schema";
 import { countries, Country, SubRegion, subRegions } from "@/db/schema/country";
 import { InputDefinition, inputDefinitions } from "@/db/schema/dataEntry";
+import { KpiDefinition, kpiDefinitions } from "@/db/schema/kpi";
 import {
   ManagedList,
   ManagedListItem,
@@ -321,6 +322,39 @@ export async function retrieveEnergyResources() {
     res = true;
   } catch (error: Error | any) {
     console.log(error);
+  }
+
+  revalidatePath("/migration");
+
+  return res;
+}
+
+export async function retrieveKpiDefinitions() {
+  let res = false;
+  const call = await fetch(prismOneURL + "/kpi", {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+    },
+  });
+  const list = await call.json();
+  const kpiDefinitionsList: KpiDefinition[] = list;
+  const existingKpiDefinitions = await db.select().from(kpiDefinitions);
+  const existingIds = new Set(existingKpiDefinitions.map((kd) => kd.id));
+  const nonExistingKpiDefinitions = kpiDefinitionsList.filter(
+    (kd) => !existingIds.has(kd.id),
+  );
+
+  await db.delete(kpiDefinitions).where(gt(kpiDefinitions.id, 0));
+
+  if (nonExistingKpiDefinitions.length > 0) {
+    await db.insert(kpiDefinitions).values(
+      nonExistingKpiDefinitions.map((kd, i) => {
+        kd.id = i + 1;
+        return kd;
+      }),
+    );
+    res = true;
   }
 
   revalidatePath("/migration");

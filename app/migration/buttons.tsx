@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import {
   retrieveCountries,
   retrieveEnergyResources,
+  retrieveKpiDefinitions,
   retrieveManagedLists,
   retrieveReportPeriods,
   retrieveRoles,
@@ -38,6 +39,10 @@ const buttonList: {
   {
     label: "Migrate Energy Resources",
     fn: retrieveEnergyResources,
+  },
+  {
+    label: "Migrate KPI Definitions",
+    fn: retrieveKpiDefinitions,
   },
 ];
 
