@@ -15,7 +15,7 @@
     "db-push": "drizzle-kit push --config ./db/config.ts",
     "db-push-safe": "npm run db-fix-uuid-timestamps && npm run db-push",
     "deploy-dev": "bash ./scripts/deploy-dev.sh",
-    "push": "git add . && git commit -m 'chore:update' && git push"
+    "git-push": "git add . && git commit -m 'chore:update' && git push"
   },
   "dependencies": {
     "@base-ui/react": "^1.0.0",

@@ -4,7 +4,6 @@ import DataEntryFiltersClient from "@/app/data-entry/enter-data/filters.client";
 import GeneratorGroups from "@/app/data-entry/enter-data/generatorGroups";
 import InputRows from "@/app/data-entry/enter-data/inputRows";
 import { getDataEntryFilterViewModel } from "@/app/data-entry/enter-data/service";
-import { AggregatedProcessingStatus } from "@/components/data-entry/aggregated-processing-status";
 
 export default async function EnterDataPage() {
   const model = await getDataEntryFilterViewModel();
@@ -48,10 +47,6 @@ export default async function EnterDataPage() {
             </p>
           </div>
         </section>
-        <AggregatedProcessingStatus
-          reportPeriodId={model.context.reportPeriodId}
-          serviceAreaId={model.context.serviceAreaId}
-        />
         {model.inputs.mode === "grouped-by-generator" ? (
           <GeneratorGroups groups={model.inputs.groups} />
         ) : (

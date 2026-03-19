@@ -194,6 +194,7 @@ export const dataEntries = pgTable(
     payment_mode_id: integer("payment_mode_id").references(
       () => managedListItems.id,
     ),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
   },
   (table) => [
     index("uniq_entry").on(
