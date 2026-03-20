@@ -346,6 +346,15 @@ export default function KpiFormulaBuilder(props: {
                 >
                   Clear
                 </Button>
+                <Button
+                  type="button"
+                  disabled={isSaving || !selectedKpiId}
+                  onClick={handleSave}
+                  className="ml-auto h-7 w-full text-xs sm:h-8 sm:w-auto sm:text-sm"
+                >
+                  <FaSave />
+                  {isSaving ? "Saving..." : "Save Formula"}
+                </Button>
               </div>
             </div>
 
@@ -417,55 +426,42 @@ export default function KpiFormulaBuilder(props: {
                 placeholder="Formula preview"
               />
             </div>
-          </div>
-        </div>
 
-        <div className="grid gap-2">
-          <Label className="text-xs sm:text-sm">Selected Inputs</Label>
-          <div className="flex min-h-9 flex-wrap gap-1.5 rounded-md border border-dashed bg-muted/20 p-2 sm:min-h-10 sm:gap-2 sm:p-2.5">
-            {selectedInputs.length === 0 && (
-              <p className="text-muted-foreground text-xs sm:text-sm">
-                No inputs selected yet.
-              </p>
-            )}
-            {selectedInputs.map((input) => (
-              <Badge
-                key={input.id}
-                variant="secondary"
-                className="gap-1.5 px-2 py-0.5 text-xs sm:gap-2 sm:py-1"
-              >
-                <button
-                  type="button"
-                  className="hover:underline"
-                  onClick={() => appendToken(input.variable_name || input.name)}
-                >
-                  {input.variable_name || input.name}
-                </button>
-                <button
-                  type="button"
-                  className="text-xs"
-                  onClick={() => removeInputFromSelection(input.id)}
-                >
-                  x
-                </button>
-              </Badge>
-            ))}
+            <div className="grid gap-2">
+              <Label className="text-xs sm:text-sm">Selected Inputs</Label>
+              <div className="flex min-h-9 flex-wrap gap-1.5 rounded-md border border-dashed bg-muted/20 p-2 sm:min-h-10 sm:gap-2 sm:p-2.5">
+                {selectedInputs.length === 0 && (
+                  <p className="text-muted-foreground text-xs sm:text-sm">
+                    No inputs selected yet.
+                  </p>
+                )}
+                {selectedInputs.map((input) => (
+                  <Badge
+                    key={input.id}
+                    variant="secondary"
+                    className="gap-1.5 px-2 py-0.5 text-xs sm:gap-2 sm:py-1"
+                  >
+                    <button
+                      type="button"
+                      className="hover:underline"
+                      onClick={() =>
+                        appendToken(input.variable_name || input.name)
+                      }
+                    >
+                      {input.variable_name || input.name}
+                    </button>
+                    <button
+                      type="button"
+                      className="text-xs"
+                      onClick={() => removeInputFromSelection(input.id)}
+                    >
+                      x
+                    </button>
+                  </Badge>
+                ))}
+              </div>
+            </div>
           </div>
-        </div>
-
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-          <p className="text-muted-foreground text-[11px] sm:mr-auto sm:text-xs">
-            Save after verifying selected inputs and formula syntax.
-          </p>
-          <Button
-            type="button"
-            disabled={isSaving || !selectedKpiId}
-            onClick={handleSave}
-            className="h-8 w-full text-xs sm:h-9 sm:w-auto sm:text-sm"
-          >
-            <FaSave />
-            {isSaving ? "Saving..." : "Save Formula"}
-          </Button>
         </div>
       </CardContent>
     </Card>
