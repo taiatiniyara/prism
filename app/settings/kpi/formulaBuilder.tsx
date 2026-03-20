@@ -65,6 +65,7 @@ export default function KpiFormulaBuilder(props: {
 }) {
   const [isSaving, startTransition] = useTransition();
   const [selectedKpiId, setSelectedKpiId] = useState<string>("");
+  const [kpiSearch, setKpiSearch] = useState<string>("");
   const [search, setSearch] = useState<string>("");
   const [selectedInputIds, setSelectedInputIds] = useState<number[]>([]);
   const [formula, setFormula] = useState<string>("");
@@ -80,6 +81,12 @@ export default function KpiFormulaBuilder(props: {
     const selectedSet = new Set(selectedInputIds);
     return props.inputs.filter((item) => selectedSet.has(item.id));
   }, [props.inputs, selectedInputIds]);
+
+  const filteredKpis = useMemo(() => {
+    if (!kpiSearch.trim()) return props.kpis;
+    const term = kpiSearch.toLowerCase();
+    return props.kpis.filter((kpi) => kpi.name.toLowerCase().includes(term));
+  }, [kpiSearch, props.kpis]);
 
   const filteredInputs = useMemo(() => {
     if (!search.trim()) return props.inputs;
@@ -114,6 +121,7 @@ export default function KpiFormulaBuilder(props: {
     setSelectedInputIds(
       kpi?.formula_inputs?.map((item) => item.input_def_id) ?? [],
     );
+    setKpiSearch("");
     setSearch("");
   };
 
@@ -215,7 +223,20 @@ export default function KpiFormulaBuilder(props: {
               <SelectValue placeholder="Select KPI definition" />
             </SelectTrigger>
             <SelectContent>
-              {props.kpis.map((kpi) => (
+              <div className="sticky top-0 z-10 border-b bg-popover p-2">
+                <Input
+                  value={kpiSearch}
+                  onChange={(event) => setKpiSearch(event.target.value)}
+                  onKeyDown={(event) => event.stopPropagation()}
+                  placeholder="Search KPI..."
+                />
+              </div>
+              {filteredKpis.length === 0 && (
+                <p className="text-muted-foreground px-2 py-2 text-sm">
+                  No KPI found.
+                </p>
+              )}
+              {filteredKpis.map((kpi) => (
                 <SelectItem
                   key={kpi.id}
                   value={kpi.id.toString()}

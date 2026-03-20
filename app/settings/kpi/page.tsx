@@ -1,4 +1,3 @@
-import { Heading } from "@/components/heading";
 import DataTable from "@/components/tables/data-table";
 import { KpiDefinition } from "@/db/schema/kpi";
 import KpiFormulaBuilder from "./formulaBuilder";
@@ -9,6 +8,7 @@ import {
   GetKpiTypeOptions,
   UpdateKpiDefinition,
 } from "./service";
+import UploadKpiFromExcel from "./uploadFromExcel";
 
 export default async function KpiSettingsPage() {
   const kpiDefinitions = await GetAllKpiDefinitions();
@@ -16,12 +16,13 @@ export default async function KpiSettingsPage() {
   const kpiTypes = await GetKpiTypeOptions();
 
   return (
-    <div className="space-y-4">
-      <Heading level={3}>KPI Settings</Heading>
+    <div>
+      <UploadKpiFromExcel />
       <DataTable<KpiDefinition>
         title="KPI Definitions"
         data={kpiDefinitions}
         columns={[
+          "id",
           "name",
           "description",
           "type",

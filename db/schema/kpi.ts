@@ -13,12 +13,16 @@ import { managedListItems } from "./managedLists";
 
 export const kpiDefinitions = pgTable("kpi_definitions", {
   id: serial("id").primaryKey().notNull(),
+  unit_id: integer("unit_id")
+    .notNull()
+    .references(() => managedListItems.id)
+    .default(91),
   name: varchar("name", { length: 255 }).notNull(),
   description: varchar("description", { length: 255 }),
-  formula: varchar("formula").notNull(),
-  formula_inputs: json("formula_inputs").notNull().$type<FormulaInput[]>(),
-  limit_lower: varchar("limit_lower", { length: 255 }),
-  limit_upper: varchar("limit_upper", { length: 255 }),
+  formula: varchar("formula"),
+  formula_inputs: json("formula_inputs").$type<FormulaInput[]>(),
+  limit_lower: varchar("limit_lower").default("0"),
+  limit_upper: varchar("limit_upper").default("100"),
   category_id: integer("category_id")
     .notNull()
     .references(() => managedListItems.id)
@@ -29,11 +33,14 @@ export const kpiDefinitions = pgTable("kpi_definitions", {
   type_id: integer("type_id")
     .notNull()
     .references(() => managedListItems.id),
+  block: integer("block").default(60),
   agg_level_id: integer("agg_level_id")
     .notNull()
     .references(() => managedListItems.id)
     .default(1),
   is_aggregated: boolean("is_aggregated").default(false).notNull(),
+  is_currency: boolean("is_currency").default(false).notNull(),
+  is_descriptive: boolean("is_descriptive").default(false).notNull(),
   is_active: boolean("is_active").default(true).notNull(),
 });
 export type KpiDefinition = typeof kpiDefinitions.$inferSelect & {

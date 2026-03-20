@@ -5,7 +5,7 @@ import { db } from "@/db/connection";
 import { FormulaInput, inputDefinitions } from "@/db/schema/dataEntry";
 import { KpiDefinition, kpiDefinitions } from "@/db/schema/kpi";
 import { managedListItems, managedLists } from "@/db/schema/managedLists";
-import { and, asc, eq, ilike } from "drizzle-orm";
+import { and, asc, eq, gt, ilike } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export interface KpiFormulaInputOption {
@@ -170,4 +170,55 @@ export async function SaveKpiFormula(payload: SaveKpiFormulaPayload) {
 
   revalidatePath("/settings/kpi");
   return { success: true, message: "KPI formula saved successfully." };
+}
+
+interface ExcelKpiDefinition {
+  source_id: number;
+  formula: string;
+  kpi_category_id: number;
+  kpi_subcategory_id: number;
+  kpi_name: string;
+  kpi_unit_id: number;
+  kpi_block: number;
+  kpi_agglevel_id: number;
+  is_kpi_input: boolean;
+  kpi_type_id: number;
+  is_currency: boolean;
+  is_descriptive: boolean;
+  is_active: boolean;
+}
+
+export async function UpdateInputDefinitionFromExcel(
+  data: ExcelKpiDefinition[],
+) {
+  db.delete(kpiDefinitions)
+    .where(gt(kpiDefinitions.id, 0))
+    .then(async () => {
+      const list: KpiDefinition[] = data.map((item) => {
+        return {
+          id: item.source_id,
+          name: item.kpi_name,
+          description: item.kpi_name,
+          unit_id: item.kpi_unit_id,
+          agg_level_id: item.kpi_agglevel_id,
+          is_kpi_input: item.is_kpi_input,
+          type_id: item.kpi_type_id,
+          is_currency: item.is_currency,
+          is_descriptive: item.is_descriptive,
+          is_active: item.is_active,
+          formula: null,
+          category_id: item.kpi_category_id,
+          subcategory_id: item.kpi_subcategory_id,
+          limit_upper: "100",
+          limit_lower: "0",
+          block: item.kpi_block || null,
+          formula_inputs: null,
+          is_aggregated: false,
+        };
+      });
+
+      await db.insert(kpiDefinitions).values(list);
+    });
+
+  revalidatePath("/settings/kpi");
 }
