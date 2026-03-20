@@ -125,6 +125,7 @@ const getInputDefinitionsForContext = async (
     and(
       eq(inputDefinitions.is_active, true),
       eq(inputDefinitions.is_aggregated, false),
+      eq(inputDefinitions.is_system_generated, false),
     ),
   ];
 
@@ -146,12 +147,14 @@ const getInputDefinitionsForContext = async (
       subcategoryId: inputDefinitions.subcategory_id,
       dataTypeId: inputDefinitions.data_type_id,
       dataTypeName: managedListItems.name,
+      unitName: managedLists.name,
     })
     .from(inputDefinitions)
     .leftJoin(
       managedListItems,
       eq(inputDefinitions.data_type_id, managedListItems.id),
     )
+    .leftJoin(managedLists, eq(inputDefinitions.unit_id, managedLists.id))
     .where(and(...conditions))
     .orderBy(asc(inputDefinitions.name));
 
@@ -162,6 +165,7 @@ const getInputDefinitionsForContext = async (
     subcategoryId: row.subcategoryId,
     dataTypeName: row.dataTypeName,
     dataTypeId: row.dataTypeId,
+    unitName: row.unitName,
   }));
 };
 

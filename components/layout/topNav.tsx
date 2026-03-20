@@ -42,7 +42,7 @@ export default function TopNav(props: {
   };
 
   return (
-    <nav className="sticky text-sm font-medium top-0 z-100 bg-slate-900 text-white">
+    <nav className="sticky text-sm font-medium top-0 z-50 bg-slate-900 text-white">
       {/* Main Top Bar */}
       <div className="flex justify-between items-center p-3 relative z-20 bg-slate-900">
         <div className="flex items-center gap-16">

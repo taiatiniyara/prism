@@ -142,6 +142,10 @@ export const energyResources = pgTable(
     energy_source_id: integer("energy_source_id")
       .notNull()
       .references(() => managedListItems.id),
+    type_id: integer("type_id")
+      .notNull()
+      .references(() => managedListItems.id)
+      .default(1),
     is_virtual: boolean("is_virtual").default(false).notNull(),
     is_active: boolean("is_active").default(true).notNull(),
     agg_level_id: integer("agg_level_id")

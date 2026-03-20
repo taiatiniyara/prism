@@ -18,12 +18,12 @@ export default function UserDropdown(props: {
 }) {
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex font-extrabold text-xs items-center gap-1 hover:opacity-50 rounded-md cursor-pointer transition-all">
+      <DropdownMenuTrigger className="flex font-extrabold text-xs items-center gap-1 hover:opacity-50 rounded-md cursor-pointer transition-all z-50">
         <User />
         <span className="text-slate-300">{props.orgAcronym}</span>
         <span className="text-amber-400">{props.role}</span>
       </DropdownMenuTrigger>
-      <DropdownMenuContent>
+      <DropdownMenuContent className="z-50">
         <DropdownMenuLabel>{props.fullName || "My Account"}</DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuItem

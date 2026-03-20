@@ -17,6 +17,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
+import { FaSave, FaTimes } from "react-icons/fa";
 
 export interface KpiFormulaInputOption {
   id: number;
@@ -71,11 +72,6 @@ export default function KpiFormulaBuilder(props: {
   const [formula, setFormula] = useState<string>("");
   const [customToken, setCustomToken] = useState<string>("");
   const [isDraggingOverFormula, setIsDraggingOverFormula] = useState(false);
-
-  const selectedKpi = useMemo(
-    () => props.kpis.find((kpi) => kpi.id.toString() === selectedKpiId),
-    [props.kpis, selectedKpiId],
-  );
 
   const selectedInputs = useMemo(() => {
     const selectedSet = new Set(selectedInputIds);
@@ -180,6 +176,16 @@ export default function KpiFormulaBuilder(props: {
     setCustomToken("");
   };
 
+  const resetFormulaBuilder = () => {
+    setSelectedKpiId("");
+    setKpiSearch("");
+    setSearch("");
+    setSelectedInputIds([]);
+    setFormula("");
+    setCustomToken("");
+    setIsDraggingOverFormula(false);
+  };
+
   const handleSave = () => {
     startTransition(async () => {
       if (!selectedKpiId) {
@@ -204,30 +210,34 @@ export default function KpiFormulaBuilder(props: {
       }
 
       toast.success(response.message);
+      resetFormulaBuilder();
     });
   };
 
   return (
     <Card className="w-full border-border/60 shadow-sm">
-      <CardHeader className="pb-2">
-        <CardTitle>KPI Formula Builder</CardTitle>
+      <CardHeader>
+        <CardTitle className="text-lg font-bold sm:text-xl">
+          KPI Formula Builder
+        </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-8">
-        <div className="grid gap-3 md:gap-4">
-          <Label>Choose KPI</Label>
+      <CardContent className="space-y-5 sm:space-y-8">
+        <div>
+          <Label className="text-xs sm:text-sm">Select KPI</Label>
           <Select
             value={selectedKpiId}
             onValueChange={handleKpiChange}
           >
-            <SelectTrigger className="w-full">
+            <SelectTrigger className="w-full p-2 text-xs">
               <SelectValue placeholder="Select KPI definition" />
             </SelectTrigger>
             <SelectContent>
-              <div className="sticky top-0 z-10 border-b bg-popover p-2">
+              <div className="sticky top-0 z-10 border-b bg-popover p-1.5 sm:p-2">
                 <Input
                   value={kpiSearch}
                   onChange={(event) => setKpiSearch(event.target.value)}
                   onKeyDown={(event) => event.stopPropagation()}
+                  className="h-8 text-xs sm:h-9 sm:text-sm"
                   placeholder="Search KPI..."
                 />
               </div>
@@ -240,36 +250,33 @@ export default function KpiFormulaBuilder(props: {
                 <SelectItem
                   key={kpi.id}
                   value={kpi.id.toString()}
+                  className="text-xs sm:text-sm"
                 >
-                  {kpi.name}
+                  <span className="block max-w-full truncate">{kpi.name}</span>
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
-          {selectedKpi?.description && (
-            <p className="text-muted-foreground text-sm">
-              {selectedKpi.description}
-            </p>
-          )}
         </div>
 
-        <div className="grid gap-4 xl:grid-cols-[340px_minmax(0,1fr)] xl:gap-6">
-          <div className="space-y-3 rounded-lg border border-border/70 bg-muted/20 p-4">
-            <Label>Search and Drag Inputs</Label>
+        <div className="grid gap-3 sm:gap-4 xl:grid-cols-[340px_minmax(0,1fr)] xl:gap-6">
+          <div className="rounded-lg border border-border/70 bg-muted/20 p-2.5 sm:p-4 max-[420px]:p-2">
+            <Label className="text-xs sm:text-sm">Search and Drag Inputs</Label>
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
+              className="my-1.5 h-7 text-xs sm:my-2 sm:h-9 sm:text-sm"
               placeholder="Search by input name or variable"
             />
 
-            <div className="max-h-112 min-h-60 overflow-y-auto rounded-md border bg-background p-2.5">
+            <div className="max-h-72 min-h-36 overflow-y-auto rounded-md border bg-background p-1.5 sm:max-h-112 sm:min-h-60 sm:p-2.5 max-[420px]:max-h-64 max-[420px]:min-h-32">
               {filteredInputs.length === 0 && (
-                <p className="text-muted-foreground text-sm">
+                <p className="text-muted-foreground text-xs sm:text-sm">
                   No inputs match your search.
                 </p>
               )}
 
-              <div className="space-y-2">
+              <div className="space-y-1.5 sm:space-y-2">
                 {filteredInputs.map((input) => {
                   const token = input.variable_name || input.name;
                   return (
@@ -277,7 +284,7 @@ export default function KpiFormulaBuilder(props: {
                       key={input.id}
                       type="button"
                       variant="outline"
-                      className="h-auto w-full justify-start whitespace-normal py-2 text-left"
+                      className="h-auto w-full justify-start whitespace-normal px-1.5 py-1 text-left text-xs sm:px-2.5 sm:py-2"
                       draggable
                       onDragStart={(event) => handleDragStart(event, input)}
                       onClick={() => {
@@ -292,37 +299,39 @@ export default function KpiFormulaBuilder(props: {
                 })}
               </div>
             </div>
-            <p className="text-muted-foreground text-xs">
+            <p className="text-muted-foreground text-[11px] sm:text-xs">
               Tip: drag a variable into the formula box, or click to append.
             </p>
           </div>
 
-          <div className="space-y-4 rounded-lg border border-border/70 bg-card p-4">
-            <div className="grid gap-3">
-              <Label>Formula Tools</Label>
-              <div className="flex flex-wrap gap-2">
+          <div className="space-y-2.5 rounded-lg border border-border/70 bg-card p-2.5 sm:space-y-4 sm:p-4 max-[420px]:p-2">
+            <div className="grid gap-2.5 sm:gap-3">
+              <Label className="text-xs sm:text-sm">Formula Tools</Label>
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 {operators.map((operator) => (
                   <Button
                     key={operator}
                     type="button"
                     variant="outline"
                     size="sm"
+                    className="h-6 px-1.5 text-xs sm:h-8 sm:px-3 sm:text-sm"
                     onClick={() => appendToken(operator)}
                   >
                     {operator}
                   </Button>
                 ))}
-                <div className="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+                <div className="flex w-full flex-col gap-1.5 sm:w-auto sm:flex-row sm:gap-2">
                   <Input
                     value={customToken}
                     onChange={(event) => setCustomToken(event.target.value)}
                     placeholder="Add constant/token (e.g. 100)"
-                    className="sm:w-56"
+                    className="h-7 text-xs sm:h-9 sm:w-56 sm:text-sm"
                   />
                   <Button
                     type="button"
                     variant="secondary"
                     size="sm"
+                    className="h-7 px-2 text-xs sm:h-9 sm:px-3 sm:text-sm"
                     onClick={addCustomToken}
                   >
                     Add Token
@@ -332,6 +341,7 @@ export default function KpiFormulaBuilder(props: {
                   type="button"
                   variant="ghost"
                   size="sm"
+                  className="h-6 px-1.5 text-xs sm:h-8 sm:px-3 sm:text-sm"
                   onClick={() => setFormula("")}
                 >
                   Clear
@@ -339,8 +349,8 @@ export default function KpiFormulaBuilder(props: {
               </div>
             </div>
 
-            <div className="grid gap-3">
-              <Label>Formula</Label>
+            <div className="grid gap-2.5 sm:gap-3">
+              <Label className="text-xs sm:text-sm">Formula</Label>
               <div
                 onDragOver={(event) => {
                   event.preventDefault();
@@ -351,13 +361,13 @@ export default function KpiFormulaBuilder(props: {
                 onDrop={handleDropOnFormula}
                 className={
                   isDraggingOverFormula
-                    ? "min-h-56 rounded-md border bg-background p-3 ring-2 ring-primary/50"
-                    : "min-h-56 rounded-md border bg-background p-3"
+                    ? "min-h-40 rounded-md border bg-background p-2 ring-2 ring-primary/50 sm:min-h-56 sm:p-3"
+                    : "min-h-40 rounded-md border bg-background p-2 sm:min-h-56 sm:p-3"
                 }
               >
-                <div className="flex min-h-48 flex-wrap items-start gap-2">
+                <div className="flex min-h-32 flex-wrap items-start gap-1.5 sm:min-h-48 sm:gap-2">
                   {formulaTokens.length === 0 && (
-                    <p className="text-muted-foreground text-sm">
+                    <p className="text-muted-foreground text-xs sm:text-sm">
                       Drag inputs here. Inputs appear as boxes with x to remove.
                     </p>
                   )}
@@ -376,23 +386,22 @@ export default function KpiFormulaBuilder(props: {
                           : "border-violet-200 bg-violet-100 text-violet-900 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-300";
 
                     return (
-                      <Badge
+                      <span
                         key={`${token}-${index}`}
-                        variant={isInputToken ? "secondary" : "outline"}
-                        className={`gap-2 ${tokenClass}`}
+                        className={`flex items-center text-xs rounded border ${tokenClass}`}
                       >
-                        <span className={!isInputToken ? "font-mono" : ""}>
+                        <span
+                          className={`p-1 font-black ${!isInputToken ? "font-mono" : ""}`}
+                        >
                           {token}
                         </span>
-                        <button
-                          type="button"
-                          className="text-xs"
+                        <span
                           onClick={() => removeTokenAtIndex(index)}
-                          aria-label={`Remove ${token}`}
+                          className="cursor-pointer p-1 text-red-500"
                         >
-                          x
-                        </button>
-                      </Badge>
+                          <FaTimes />
+                        </span>
+                      </span>
                     );
                   })}
                 </div>
@@ -400,10 +409,11 @@ export default function KpiFormulaBuilder(props: {
             </div>
 
             <div className="grid gap-2">
-              <Label>Preview</Label>
+              <Label className="text-xs sm:text-sm">Preview</Label>
               <Input
                 readOnly
                 value={formula}
+                className="h-8 text-xs sm:h-9 sm:text-sm"
                 placeholder="Formula preview"
               />
             </div>
@@ -411,10 +421,10 @@ export default function KpiFormulaBuilder(props: {
         </div>
 
         <div className="grid gap-2">
-          <Label>Selected Inputs</Label>
-          <div className="flex min-h-10 flex-wrap gap-2 rounded-md border border-dashed bg-muted/20 p-2.5">
+          <Label className="text-xs sm:text-sm">Selected Inputs</Label>
+          <div className="flex min-h-9 flex-wrap gap-1.5 rounded-md border border-dashed bg-muted/20 p-2 sm:min-h-10 sm:gap-2 sm:p-2.5">
             {selectedInputs.length === 0 && (
-              <p className="text-muted-foreground text-sm">
+              <p className="text-muted-foreground text-xs sm:text-sm">
                 No inputs selected yet.
               </p>
             )}
@@ -422,7 +432,7 @@ export default function KpiFormulaBuilder(props: {
               <Badge
                 key={input.id}
                 variant="secondary"
-                className="gap-2"
+                className="gap-1.5 px-2 py-0.5 text-xs sm:gap-2 sm:py-1"
               >
                 <button
                   type="button"
@@ -444,15 +454,16 @@ export default function KpiFormulaBuilder(props: {
         </div>
 
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-end">
-          <p className="text-muted-foreground text-xs sm:mr-auto">
+          <p className="text-muted-foreground text-[11px] sm:mr-auto sm:text-xs">
             Save after verifying selected inputs and formula syntax.
           </p>
           <Button
             type="button"
             disabled={isSaving || !selectedKpiId}
             onClick={handleSave}
-            className="w-full sm:w-auto"
+            className="h-8 w-full text-xs sm:h-9 sm:w-auto sm:text-sm"
           >
+            <FaSave />
             {isSaving ? "Saving..." : "Save Formula"}
           </Button>
         </div>
