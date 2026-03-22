@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 
 import { AggregatedOutcomeBadge } from "@/components/data-entry/aggregated-outcome-badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import type { KpiWorkerStatusSummary } from "@/app/data-entry/types";
 
 interface AggregatedRunSummary {
   runId: string;
@@ -14,18 +15,32 @@ interface AggregatedRunSummary {
   skipped: number;
 }
 
+interface KpiRunSummary {
+  id: string;
+  status: KpiWorkerStatusSummary["status"];
+  retryCount: number;
+  failureReason: string | null;
+  startedAt: string | null;
+  completedAt: string | null;
+}
+
 interface AggregatedProcessingStatusProps {
   reportPeriodId: number | null;
   serviceAreaId: number | null;
+  energyResourceId?: number | null;
+  mode?: "aggregated" | "kpi";
 }
-
-const POLL_INTERVAL_MS = 6000;
 
 export function AggregatedProcessingStatus({
   reportPeriodId,
   serviceAreaId,
+  energyResourceId,
+  mode = "aggregated",
 }: AggregatedProcessingStatusProps) {
+  const [isLoading, setIsLoading] = useState(false);
   const [latestRun, setLatestRun] = useState<AggregatedRunSummary | null>(null);
+  const [latestKpiAttempt, setLatestKpiAttempt] =
+    useState<KpiRunSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const query = useMemo(() => {
@@ -41,12 +56,19 @@ export function AggregatedProcessingStatus({
       params.set("serviceAreaId", String(serviceAreaId));
     }
 
+    if (energyResourceId != null) {
+      params.set("energyResourceId", String(energyResourceId));
+    }
+
     return params.toString();
-  }, [reportPeriodId, serviceAreaId]);
+  }, [reportPeriodId, serviceAreaId, energyResourceId]);
 
   useEffect(() => {
     if (!query) {
       setLatestRun(null);
+      setLatestKpiAttempt(null);
+      setError(null);
+      setIsLoading(false);
       return;
     }
 
@@ -54,23 +76,48 @@ export function AggregatedProcessingStatus({
 
     const load = async () => {
       try {
+        setIsLoading(true);
         const response = await fetch(
-          `/api/data-entry/aggregated-runs?${query}`,
+          mode === "kpi"
+            ? `/api/data-entry/kpi-worker/status?${query}`
+            : `/api/data-entry/aggregated-runs?${query}`,
           {
             cache: "no-store",
           },
         );
 
         if (!response.ok) {
-          throw new Error("Unable to load aggregated run status.");
+          let errorMessage: string | null = null;
+
+          try {
+            const payload = (await response.json()) as { message?: string };
+            errorMessage = payload.message ?? null;
+          } catch {
+            // Ignore parsing error and fall back to default text.
+          }
+
+          throw new Error(
+            errorMessage ??
+              (mode === "kpi"
+                ? "Unable to load KPI run status."
+                : "Unable to load aggregated run status."),
+          );
         }
 
-        const runs = (await response.json()) as AggregatedRunSummary[];
+        const runs = (await response.json()) as
+          | AggregatedRunSummary[]
+          | KpiRunSummary[];
         if (!active) {
           return;
         }
 
-        setLatestRun(runs[0] ?? null);
+        if (mode === "kpi") {
+          setLatestKpiAttempt((runs as KpiRunSummary[])[0] ?? null);
+          setLatestRun(null);
+        } else {
+          setLatestRun((runs as AggregatedRunSummary[])[0] ?? null);
+          setLatestKpiAttempt(null);
+        }
         setError(null);
       } catch (fetchError) {
         if (!active) {
@@ -80,21 +127,23 @@ export function AggregatedProcessingStatus({
         setError(
           fetchError instanceof Error
             ? fetchError.message
-            : "Unable to load aggregated run status.",
+            : mode === "kpi"
+              ? "Unable to load KPI run status."
+              : "Unable to load aggregated run status.",
         );
+      } finally {
+        if (active) {
+          setIsLoading(false);
+        }
       }
     };
 
     void load();
-    const interval = setInterval(() => {
-      void load();
-    }, POLL_INTERVAL_MS);
 
     return () => {
       active = false;
-      clearInterval(interval);
     };
-  }, [query]);
+  }, [mode, query]);
 
   if (reportPeriodId == null) {
     return null;
@@ -103,15 +152,25 @@ export function AggregatedProcessingStatus({
   return (
     <Card aria-live="polite">
       <CardHeader>
-        <CardTitle className="text-sm">Aggregated Formula Processing</CardTitle>
+        <CardTitle className="text-sm">
+          {mode === "kpi"
+            ? "KPI Calculation Processing"
+            : "Aggregated Formula Processing"}
+        </CardTitle>
       </CardHeader>
       <CardContent className="space-y-2 text-sm">
+        {isLoading ? (
+          <p className="text-muted-foreground">Loading latest status...</p>
+        ) : null}
         {error ? <p className="text-red-600">{error}</p> : null}
-        {!latestRun ? (
+
+        {mode === "aggregated" && !latestRun && !error && !isLoading ? (
           <p className="text-muted-foreground">
             No processing runs found for this filter context.
           </p>
-        ) : (
+        ) : null}
+
+        {mode === "aggregated" && latestRun ? (
           <>
             <p>
               Latest run: <strong>{latestRun.status}</strong>
@@ -128,7 +187,34 @@ export function AggregatedProcessingStatus({
                 : `Started at ${new Date(latestRun.startedAt).toLocaleTimeString()}`}
             </p>
           </>
-        )}
+        ) : null}
+
+        {mode === "kpi" && !latestKpiAttempt && !error && !isLoading ? (
+          <p className="text-muted-foreground">
+            No KPI calculation attempts found for this filter context.
+          </p>
+        ) : null}
+
+        {mode === "kpi" && latestKpiAttempt ? (
+          <>
+            <p>
+              Latest attempt: <strong>{latestKpiAttempt.status}</strong>
+            </p>
+            <p className="text-muted-foreground text-xs">
+              Retries: {latestKpiAttempt.retryCount}
+            </p>
+            {latestKpiAttempt.failureReason ? (
+              <p className="text-red-600">{latestKpiAttempt.failureReason}</p>
+            ) : null}
+            <p className="text-muted-foreground text-xs">
+              {latestKpiAttempt.completedAt
+                ? `Completed at ${new Date(latestKpiAttempt.completedAt).toLocaleTimeString()}`
+                : latestKpiAttempt.startedAt
+                  ? `Started at ${new Date(latestKpiAttempt.startedAt).toLocaleTimeString()}`
+                  : "Awaiting processing start."}
+            </p>
+          </>
+        ) : null}
       </CardContent>
     </Card>
   );

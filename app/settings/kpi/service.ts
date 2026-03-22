@@ -5,7 +5,7 @@ import { db } from "@/db/connection";
 import { FormulaInput, inputDefinitions } from "@/db/schema/dataEntry";
 import { KpiDefinition, kpiDefinitions } from "@/db/schema/kpi";
 import { managedListItems, managedLists } from "@/db/schema/managedLists";
-import { and, asc, eq, gt, ilike } from "drizzle-orm";
+import { and, asc, eq, gt, ilike, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export interface KpiFormulaInputOption {
@@ -17,6 +17,14 @@ export interface KpiFormulaInputOption {
 export interface KpiFormulaBuilderData {
   kpis: KpiDefinition[];
   inputs: KpiFormulaInputOption[];
+  energyProviderOptions: ManagedDimensionOption[];
+  energyTypeOptions: ManagedDimensionOption[];
+  energySourceOptions: ManagedDimensionOption[];
+}
+
+export interface ManagedDimensionOption {
+  id: number;
+  name: string;
 }
 
 export interface KpiTypeOption {
@@ -148,7 +156,67 @@ export async function GetKpiFormulaBuilderData(): Promise<KpiFormulaBuilderData>
     )
     .orderBy(asc(inputDefinitions.name));
 
-  return { kpis, inputs };
+  const energyProviderRows = await db
+    .select({
+      id: managedListItems.id,
+      name: managedListItems.name,
+    })
+    .from(managedListItems)
+    .leftJoin(managedLists, eq(managedListItems.list_id, managedLists.id))
+    .where(
+      and(
+        eq(managedListItems.is_active, true),
+        or(
+          ilike(managedLists.name, "%energy provider%"),
+          ilike(managedLists.name, "%energy providers%"),
+        ),
+      ),
+    )
+    .orderBy(asc(managedListItems.name));
+
+  const energySourceRows = await db
+    .select({
+      id: managedListItems.id,
+      name: managedListItems.name,
+    })
+    .from(managedListItems)
+    .leftJoin(managedLists, eq(managedListItems.list_id, managedLists.id))
+    .where(
+      and(
+        eq(managedListItems.is_active, true),
+        or(
+          ilike(managedLists.name, "%energy source%"),
+          ilike(managedLists.name, "%energy sources%"),
+        ),
+      ),
+    )
+    .orderBy(asc(managedListItems.name));
+
+  const energyTypeRows = await db
+    .select({
+      id: managedListItems.id,
+      name: managedListItems.name,
+    })
+    .from(managedListItems)
+    .leftJoin(managedLists, eq(managedListItems.list_id, managedLists.id))
+    .where(
+      and(
+        eq(managedListItems.is_active, true),
+        or(
+          ilike(managedLists.name, "%energy type%"),
+          ilike(managedLists.name, "%energy types%"),
+        ),
+      ),
+    )
+    .orderBy(asc(managedListItems.name));
+
+  return {
+    kpis,
+    inputs,
+    energyProviderOptions: energyProviderRows,
+    energyTypeOptions: energyTypeRows,
+    energySourceOptions: energySourceRows,
+  };
 }
 
 export async function SaveKpiFormula(payload: SaveKpiFormulaPayload) {

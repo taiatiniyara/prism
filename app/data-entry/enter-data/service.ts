@@ -42,6 +42,7 @@ import {
   isOperationalContext,
 } from "@/app/data-entry/enter-data/services/us3.conditionalViews.service";
 import { runAggregatedWorkerAsync } from "@/app/data-entry/enter-data/services/aggregated-worker/orchestrator";
+import { triggerKpiWorkerAsync } from "@/app/data-entry/kpi-worker";
 
 const isGlobalRole = (role: string) => role === "DEV" || role === "BMO";
 
@@ -125,7 +126,6 @@ const getInputDefinitionsForContext = async (
     and(
       eq(inputDefinitions.is_active, true),
       eq(inputDefinitions.is_aggregated, false),
-      eq(inputDefinitions.is_system_generated, false),
     ),
   ];
 
@@ -749,7 +749,10 @@ export const updateDataEntryValueAction = async (
     customer_type_id: payload.customerTypeId,
     payment_mode_id: payload.paymentModeId,
     is_deleted: false,
+    updated_at: new Date(),
   };
+
+  let sourceDataEntryId = existing?.id ?? null;
 
   if (existing) {
     await db
@@ -757,7 +760,11 @@ export const updateDataEntryValueAction = async (
       .set(values)
       .where(eq(dataEntries.id, existing.id));
   } else {
-    await db.insert(dataEntries).values(values);
+    const [inserted] = await db
+      .insert(dataEntries)
+      .values(values)
+      .returning({ id: dataEntries.id });
+    sourceDataEntryId = inserted?.id ?? null;
   }
 
   runAggregatedWorkerAsync(user, {
@@ -765,6 +772,28 @@ export const updateDataEntryValueAction = async (
     serviceAreaId: context.serviceAreaId,
     energyResourceId,
   });
+
+  if (sourceDataEntryId) {
+    triggerKpiWorkerAsync(
+      {
+        sourceDataEntryId,
+        inputDefId: payload.inputDefId,
+        triggeredByUserId: user.id,
+        scope: {
+          reportPeriodId: context.reportPeriodId,
+          organizationId: user.org_id,
+          serviceAreaId: context.serviceAreaId,
+          energyResourceId,
+          energyProviderId: energyMetadata?.energyProviderId ?? null,
+          energyTypeId: energyMetadata?.energyTypeId ?? null,
+          energySourceId: energyMetadata?.energySourceId ?? null,
+          customerTypeId: payload.customerTypeId ?? null,
+          paymentModeId: payload.paymentModeId ?? null,
+        },
+      },
+      user,
+    );
+  }
 
   revalidatePath("/data-entry/enter-data");
 };
