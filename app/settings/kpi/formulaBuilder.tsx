@@ -14,10 +14,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { FaSave, FaTimes } from "react-icons/fa";
+import type { ManagedDimensionOption } from "./service";
 
 export interface KpiFormulaInputOption {
   id: number;
@@ -28,10 +30,33 @@ export interface KpiFormulaInputOption {
 const operators = ["+", "-", "*", "/", "(", ")"];
 const DND_TOKEN_KEY = "application/x-prism-formula-token";
 
+interface FormulaInputFilters {
+  energyProviderId?: number | null;
+  energyTypeId?: number | null;
+  energySourceId?: number | null;
+}
+
+const NONE_OPTION_VALUE = "__none__";
+
+const toNullableNumber = (value: string): number | null | undefined => {
+  if (value === NONE_OPTION_VALUE) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return null;
+  }
+
+  const parsed = Number(trimmed);
+  return Number.isFinite(parsed) ? parsed : undefined;
+};
+
 function getFormulaInputs(
   formula: string,
   inputs: KpiFormulaInputOption[],
   selectedInputIds: number[],
+  selectedInputFilters: Record<number, FormulaInputFilters>,
 ): FormulaInput[] {
   const tokenMatches = formula.match(/[A-Za-z_][A-Za-z0-9_]*/g) ?? [];
   const tokenSet = new Set(tokenMatches);
@@ -43,7 +68,7 @@ function getFormulaInputs(
       variable_name: item.variable_name as string,
     }));
 
-  const selectedSet = new Set(selectedInputIds);
+  const selectedSet = new Set(selectedInputIds.map((id) => Number(id)));
   const fromSelection = inputs
     .filter((item) => selectedSet.has(item.id) && !!item.variable_name)
     .map((item) => ({
@@ -54,7 +79,13 @@ function getFormulaInputs(
   const merged = [...fromFormula, ...fromSelection];
   const dedup = new Map<number, FormulaInput>();
   for (const item of merged) {
-    dedup.set(item.input_def_id, item);
+    const filters = selectedInputFilters[item.input_def_id];
+    dedup.set(item.input_def_id, {
+      ...item,
+      energy_provider_id: filters?.energyProviderId ?? null,
+      energy_type_id: filters?.energyTypeId ?? null,
+      energy_source_id: filters?.energySourceId ?? null,
+    });
   }
 
   return [...dedup.values()];
@@ -63,26 +94,34 @@ function getFormulaInputs(
 export default function KpiFormulaBuilder(props: {
   kpis: KpiDefinition[];
   inputs: KpiFormulaInputOption[];
+  energyProviderOptions: ManagedDimensionOption[];
+  energyTypeOptions: ManagedDimensionOption[];
+  energySourceOptions: ManagedDimensionOption[];
 }) {
   const [isSaving, startTransition] = useTransition();
   const [selectedKpiId, setSelectedKpiId] = useState<string>("");
   const [kpiSearch, setKpiSearch] = useState<string>("");
+  const [showNoFormulaOnly, setShowNoFormulaOnly] = useState(false);
   const [search, setSearch] = useState<string>("");
   const [selectedInputIds, setSelectedInputIds] = useState<number[]>([]);
+  const [selectedInputFilters, setSelectedInputFilters] = useState<
+    Record<number, FormulaInputFilters>
+  >({});
   const [formula, setFormula] = useState<string>("");
   const [customToken, setCustomToken] = useState<string>("");
   const [isDraggingOverFormula, setIsDraggingOverFormula] = useState(false);
 
-  const selectedInputs = useMemo(() => {
-    const selectedSet = new Set(selectedInputIds);
-    return props.inputs.filter((item) => selectedSet.has(item.id));
-  }, [props.inputs, selectedInputIds]);
+  const normalizeInputId = (id: number) => Number(id);
 
   const filteredKpis = useMemo(() => {
-    if (!kpiSearch.trim()) return props.kpis;
-    const term = kpiSearch.toLowerCase();
-    return props.kpis.filter((kpi) => kpi.name.toLowerCase().includes(term));
-  }, [kpiSearch, props.kpis]);
+    const term = kpiSearch.trim().toLowerCase();
+
+    return props.kpis.filter((kpi) => {
+      const matchesSearch = !term || kpi.name.toLowerCase().includes(term);
+      const hasNoFormula = !(kpi.formula ?? "").trim();
+      return matchesSearch && (!showNoFormulaOnly || hasNoFormula);
+    });
+  }, [kpiSearch, props.kpis, showNoFormulaOnly]);
 
   const filteredInputs = useMemo(() => {
     if (!search.trim()) return props.inputs;
@@ -110,23 +149,85 @@ export default function KpiFormulaBuilder(props: {
     [formula],
   );
 
+  const formulaVariableSet = useMemo(() => {
+    return new Set(formula.match(/[A-Za-z_][A-Za-z0-9_]*/g) ?? []);
+  }, [formula]);
+
+  const visibleFilterInputs = useMemo(() => {
+    const selectedIdSet = new Set(
+      selectedInputIds.map((id) => normalizeInputId(id)),
+    );
+
+    return props.inputs.filter(
+      (item) =>
+        selectedIdSet.has(item.id) ||
+        (!!item.variable_name && formulaVariableSet.has(item.variable_name)),
+    );
+  }, [formulaVariableSet, props.inputs, selectedInputIds]);
+
   const handleKpiChange = (value: string) => {
     setSelectedKpiId(value);
     const kpi = props.kpis.find((item) => item.id.toString() === value);
     setFormula(kpi?.formula ?? "");
+    const formulaInputs = kpi?.formula_inputs ?? [];
     setSelectedInputIds(
-      kpi?.formula_inputs?.map((item) => item.input_def_id) ?? [],
+      formulaInputs.map((item) => normalizeInputId(item.input_def_id)),
     );
+    const filterMap: Record<number, FormulaInputFilters> = {};
+    for (const formulaInput of formulaInputs) {
+      filterMap[normalizeInputId(formulaInput.input_def_id)] = {
+        energyProviderId: formulaInput.energy_provider_id ?? null,
+        energyTypeId: formulaInput.energy_type_id ?? null,
+        energySourceId: formulaInput.energy_source_id ?? null,
+      };
+    }
+    setSelectedInputFilters(filterMap);
     setKpiSearch("");
     setSearch("");
   };
 
   const addInputToSelection = (id: number) => {
-    setSelectedInputIds((prev) => (prev.includes(id) ? prev : [...prev, id]));
+    const normalizedId = normalizeInputId(id);
+    setSelectedInputIds((prev) => {
+      const normalizedPrev = prev.map((item) => normalizeInputId(item));
+      return normalizedPrev.includes(normalizedId)
+        ? normalizedPrev
+        : [...normalizedPrev, normalizedId];
+    });
   };
 
   const removeInputFromSelection = (id: number) => {
-    setSelectedInputIds((prev) => prev.filter((item) => item !== id));
+    const normalizedId = normalizeInputId(id);
+    setSelectedInputIds((prev) =>
+      prev
+        .map((item) => normalizeInputId(item))
+        .filter((item) => item !== normalizedId),
+    );
+    setSelectedInputFilters((prev) => {
+      const next = { ...prev };
+      delete next[normalizedId];
+      return next;
+    });
+  };
+
+  const updateInputFilter = (
+    id: number,
+    key: keyof FormulaInputFilters,
+    value: string,
+  ) => {
+    const normalizedId = normalizeInputId(id);
+    const parsed = toNullableNumber(value);
+    if (parsed === undefined) {
+      return;
+    }
+
+    setSelectedInputFilters((prev) => ({
+      ...prev,
+      [normalizedId]: {
+        ...prev[normalizedId],
+        [key]: parsed,
+      },
+    }));
   };
 
   const appendToken = (token: string) => {
@@ -181,6 +282,7 @@ export default function KpiFormulaBuilder(props: {
     setKpiSearch("");
     setSearch("");
     setSelectedInputIds([]);
+    setSelectedInputFilters({});
     setFormula("");
     setCustomToken("");
     setIsDraggingOverFormula(false);
@@ -197,6 +299,7 @@ export default function KpiFormulaBuilder(props: {
         formula,
         props.inputs,
         selectedInputIds,
+        selectedInputFilters,
       );
       const response = await SaveKpiFormula({
         kpiId: Number(selectedKpiId),
@@ -223,7 +326,25 @@ export default function KpiFormulaBuilder(props: {
       </CardHeader>
       <CardContent className="space-y-5 sm:space-y-8">
         <div>
-          <Label className="text-xs sm:text-sm">Select KPI</Label>
+          <div>
+            <Label className="text-xs sm:text-sm">Select KPI</Label>
+            <div className="my-1.5 flex items-center gap-2">
+              <Label
+                htmlFor="kpi-no-formula-filter"
+                className="text-muted-foreground text-xs sm:text-sm"
+              >
+                <Checkbox
+                  id="kpi-no-formula-filter"
+                  checked={showNoFormulaOnly}
+                  onCheckedChange={(checked) =>
+                    setShowNoFormulaOnly(checked === true)
+                  }
+                />
+                Show only KPIs with no formula
+              </Label>
+            </div>
+          </div>
+
           <Select
             value={selectedKpiId}
             onValueChange={handleKpiChange}
@@ -387,11 +508,11 @@ export default function KpiFormulaBuilder(props: {
                     const isNumericConstant = /^-?\d+(\.\d+)?$/.test(token);
 
                     const tokenClass = isInputToken
-                      ? "border-emerald-200 bg-emerald-100 text-emerald-900 dark:border-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-300"
+                      ? "border-sky-200 bg-sky-100 text-sky-900 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-300"
                       : isOperatorToken
-                        ? "border-sky-200 bg-sky-100 text-sky-900 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-300"
+                        ? "border-amber-200 bg-amber-100 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300"
                         : isNumericConstant
-                          ? "border-amber-200 bg-amber-100 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300"
+                          ? "border-green-200 bg-green-100 text-green-900 dark:border-green-900 dark:bg-green-950/40 dark:text-green-300"
                           : "border-violet-200 bg-violet-100 text-violet-900 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-300";
 
                     return (
@@ -428,36 +549,153 @@ export default function KpiFormulaBuilder(props: {
             </div>
 
             <div className="grid gap-2">
-              <Label className="text-xs sm:text-sm">Selected Inputs</Label>
+              <Label>Selected Inputs</Label>
               <div className="flex min-h-9 flex-wrap gap-1.5 rounded-md border border-dashed bg-muted/20 p-2 sm:min-h-10 sm:gap-2 sm:p-2.5">
-                {selectedInputs.length === 0 && (
+                {visibleFilterInputs.length === 0 && (
                   <p className="text-muted-foreground text-xs sm:text-sm">
-                    No inputs selected yet.
+                    No inputs selected yet. Add inputs from the left list or
+                    reference their variable names in the formula to configure
+                    provider/source filters.
                   </p>
                 )}
-                {selectedInputs.map((input) => (
-                  <Badge
+                {visibleFilterInputs.map((input) => (
+                  <div
                     key={input.id}
-                    variant="secondary"
-                    className="gap-1.5 px-2 py-0.5 text-xs sm:gap-2 sm:py-1"
+                    className="w-full rounded-md border bg-white shadow-md p-3"
                   >
-                    <button
-                      type="button"
-                      className="hover:underline"
-                      onClick={() =>
-                        appendToken(input.variable_name || input.name)
-                      }
-                    >
-                      {input.variable_name || input.name}
-                    </button>
-                    <button
-                      type="button"
-                      className="text-xs"
-                      onClick={() => removeInputFromSelection(input.id)}
-                    >
-                      x
-                    </button>
-                  </Badge>
+                    <div className="mb-2 flex items-center gap-2">
+                      <Badge
+                        variant="secondary"
+                        className="gap-1.5 px-2 py-0.5 text-xs sm:gap-2 sm:py-1"
+                      >
+                        <button
+                          type="button"
+                          className="hover:underline"
+                          onClick={() =>
+                            appendToken(input.variable_name || input.name)
+                          }
+                        >
+                          {input.name}
+                        </button>
+                        <button
+                          type="button"
+                          className="text-xs"
+                          onClick={() => removeInputFromSelection(input.id)}
+                        >
+                          x
+                        </button>
+                      </Badge>
+                    </div>
+
+                    <div className="flex flex-wrap gap-4 border-t pt-2">
+                      <div className="space-y-1">
+                        <Label className="text-xs">Energy Provider</Label>
+                        <Select
+                          value={
+                            selectedInputFilters[input.id]?.energyProviderId !=
+                            null
+                              ? String(
+                                  selectedInputFilters[input.id]
+                                    ?.energyProviderId,
+                                )
+                              : NONE_OPTION_VALUE
+                          }
+                          onValueChange={(value) =>
+                            updateInputFilter(
+                              input.id,
+                              "energyProviderId",
+                              value,
+                            )
+                          }
+                        >
+                          <SelectTrigger className="text-xs p-1 shadow">
+                            <SelectValue placeholder="Energy provider (optional)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={NONE_OPTION_VALUE}>
+                              -- All --
+                            </SelectItem>
+                            {props.energyProviderOptions.map((option) => (
+                              <SelectItem
+                                key={option.id}
+                                value={String(option.id)}
+                              >
+                                {option.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs">Energy Type</Label>
+                        <Select
+                          value={
+                            selectedInputFilters[input.id]?.energyTypeId != null
+                              ? String(
+                                  selectedInputFilters[input.id]?.energyTypeId,
+                                )
+                              : NONE_OPTION_VALUE
+                          }
+                          onValueChange={(value) =>
+                            updateInputFilter(input.id, "energyTypeId", value)
+                          }
+                        >
+                          <SelectTrigger className="text-xs p-1 shadow">
+                            <SelectValue placeholder="Energy type (optional)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={NONE_OPTION_VALUE}>
+                              -- All --
+                            </SelectItem>
+                            {props.energyTypeOptions.map((option) => (
+                              <SelectItem
+                                key={option.id}
+                                value={String(option.id)}
+                              >
+                                {option.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+
+                      <div className="space-y-1">
+                        <Label className="text-xs">Energy Source</Label>
+                        <Select
+                          value={
+                            selectedInputFilters[input.id]?.energySourceId !=
+                            null
+                              ? String(
+                                  selectedInputFilters[input.id]
+                                    ?.energySourceId,
+                                )
+                              : NONE_OPTION_VALUE
+                          }
+                          onValueChange={(value) =>
+                            updateInputFilter(input.id, "energySourceId", value)
+                          }
+                        >
+                          <SelectTrigger className="text-xs p-1 shadow">
+                            <SelectValue placeholder="Energy source (optional)" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value={NONE_OPTION_VALUE}>
+                              -- All --
+                            </SelectItem>
+                            {props.energySourceOptions.map((option) => (
+                              <SelectItem
+                                key={option.id}
+                                value={String(option.id)}
+                              >
+                                {option.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>

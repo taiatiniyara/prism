@@ -1,15 +1,29 @@
 import {
   boolean,
+  index,
   integer,
   json,
   pgTable,
   serial,
+  text,
+  timestamp,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
-import { FormulaInput } from "./dataEntry";
+import { dataEntries, FormulaInput } from "./dataEntry";
 import { reportPeriods } from "./reportPeriods";
 import { managedListItems } from "./managedLists";
+
+export interface KpiCalculationScopeSnapshot {
+  reportPeriodId: number;
+  organizationId?: number | null;
+  serviceAreaId?: number | null;
+  energyResourceId?: number | null;
+  energyProviderId?: number | null;
+  energySourceId?: number | null;
+  customerTypeId?: number | null;
+  paymentModeId?: number | null;
+}
 
 export const kpiDefinitions = pgTable("kpi_definitions", {
   id: serial("id").primaryKey().notNull(),
@@ -71,12 +85,57 @@ export const kpi = pgTable("kpi", {
   comments: varchar("comments", { length: 255 }),
   is_relevant: boolean("is_relevant").default(true).notNull(),
   is_favourite: boolean("is_favourite").default(false).notNull(),
+  calculated_at: timestamp("calculated_at").notNull().defaultNow(),
+  calculation_formula_version: varchar("calculation_formula_version", {
+    length: 255,
+  }),
+  updated_at: timestamp("updated_at").notNull().defaultNow(),
 });
 export type Kpi = typeof kpi.$inferSelect & {
   report_period?: string | null;
   kpi_def?: string | null;
 };
 export type NewKpi = typeof kpi.$inferInsert;
+
+export const kpiCalculationAttempts = pgTable(
+  "kpi_calculation_attempts",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    trigger_id: uuid("trigger_id").notNull(),
+    source_data_entry_id: uuid("source_data_entry_id")
+      .notNull()
+      .references(() => dataEntries.id),
+    kpi_def_id: integer("kpi_def_id").references(() => kpiDefinitions.id),
+    report_period_id: integer("report_period_id")
+      .notNull()
+      .references(() => reportPeriods.id),
+    scope: json("scope").$type<KpiCalculationScopeSnapshot>().notNull(),
+    status: varchar("status", { length: 32 }).notNull().default("pending"),
+    formula_version: varchar("formula_version", { length: 255 })
+      .notNull()
+      .default("unspecified"),
+    retry_count: integer("retry_count").notNull().default(0),
+    max_retries: integer("max_retries").notNull().default(3),
+    failure_reason: text("failure_reason"),
+    failure_type: varchar("failure_type", { length: 32 }),
+    deferred_follow_up: boolean("deferred_follow_up").notNull().default(false),
+    started_at: timestamp("started_at"),
+    completed_at: timestamp("completed_at"),
+    created_at: timestamp("created_at").notNull().defaultNow(),
+    updated_at: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("kpi_calc_attempt_trigger_idx").on(table.trigger_id),
+    index("kpi_calc_attempt_scope_status_idx").on(
+      table.report_period_id,
+      table.kpi_def_id,
+      table.status,
+    ),
+  ],
+);
+export type KpiCalculationAttempt = typeof kpiCalculationAttempts.$inferSelect;
+export type NewKpiCalculationAttempt =
+  typeof kpiCalculationAttempts.$inferInsert;
 
 export interface BscRelationship {
   bsc_id: string;

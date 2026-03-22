@@ -20,6 +20,9 @@ import { generateRandomNumber } from "@/lib/utils";
 export interface FormulaInput {
   input_def_id: number;
   variable_name: string;
+  energy_provider_id?: number | null;
+  energy_type_id?: number | null;
+  energy_source_id?: number | null;
 }
 
 export const inputDefinitions = pgTable("input_definitions", {
@@ -201,6 +204,8 @@ export const dataEntries = pgTable(
       table.report_period_id,
       table.input_def_id,
       table.service_area_id,
+      table.energy_resource_id,
+      table.energy_provider_id,
       table.energy_resource_id,
     ),
   ],

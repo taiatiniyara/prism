@@ -92,3 +92,23 @@ export interface AggregatedWorkerRunSummary {
   skipped: number;
   scope: AggregatedWorkerScope;
 }
+
+export interface KpiWorkerStatusSummary {
+  id: string;
+  triggerId: string;
+  kpiDefId: number | null;
+  status: "pending" | "processing" | "completed" | "failed";
+  retryCount: number;
+  formulaVersion: string;
+  failureReason: string | null;
+  failureType:
+    | "missing-input"
+    | "formula-invalid"
+    | "evaluation-error"
+    | "transient-infra"
+    | "unexpected"
+    | null;
+  startedAt: string | null;
+  completedAt: string | null;
+  updatedAt: string;
+}

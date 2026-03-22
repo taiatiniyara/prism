@@ -67,6 +67,9 @@ export default async function KpiSettingsPage() {
       <KpiFormulaBuilder
         kpis={data.kpis}
         inputs={data.inputs}
+        energyProviderOptions={data.energyProviderOptions}
+        energyTypeOptions={data.energyTypeOptions}
+        energySourceOptions={data.energySourceOptions}
       />
     </div>
   );
