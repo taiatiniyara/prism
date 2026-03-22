@@ -15,7 +15,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import { FaSave, FaTimes } from "react-icons/fa";
@@ -27,7 +26,7 @@ export interface KpiFormulaInputOption {
   variable_name: string | null;
 }
 
-const operators = ["+", "-", "*", "/", "(", ")"];
+const operators = ["+", "-", "*", "/", "(", ")", "WHERE", "AND"];
 const DND_TOKEN_KEY = "application/x-prism-formula-token";
 
 interface FormulaInputFilters {
@@ -36,21 +35,17 @@ interface FormulaInputFilters {
   energySourceId?: number | null;
 }
 
-const NONE_OPTION_VALUE = "__none__";
+const MATH_OPERATORS = new Set(["+", "-", "*", "/", "(", ")"]);
+const isIdentifierToken = (token: string): boolean =>
+  /^[A-Za-z_][A-Za-z0-9_]*$/.test(token);
+const tokenizeFormula = (text: string): string[] =>
+  text.match(/"[^"]*"|'[^']*'|\S+/g) ?? [];
 
-const toNullableNumber = (value: string): number | null | undefined => {
-  if (value === NONE_OPTION_VALUE) {
-    return null;
-  }
-
-  const trimmed = value.trim();
-  if (trimmed.length === 0) {
-    return null;
-  }
-
-  const parsed = Number(trimmed);
-  return Number.isFinite(parsed) ? parsed : undefined;
-};
+interface ParsedInlineFormulaResult {
+  cleanedFormula: string;
+  filtersByToken: Record<string, FormulaInputFilters>;
+  errors: string[];
+}
 
 function getFormulaInputs(
   formula: string,
@@ -91,6 +86,72 @@ function getFormulaInputs(
   return [...dedup.values()];
 }
 
+function buildFormulaWithWhereClauses(
+  formula: string,
+  formulaInputs: FormulaInput[],
+  energyProviderNameById: Map<number, string>,
+  energyTypeNameById: Map<number, string>,
+  energySourceNameById: Map<number, string>,
+): string {
+  const tokens = tokenizeFormula(formula);
+  if (tokens.length === 0) {
+    return formula;
+  }
+
+  const clausesByVariable = new Map<string, string>();
+  for (const input of formulaInputs) {
+    const parts: string[] = [];
+
+    if (input.energy_provider_id != null) {
+      const providerLabel = energyProviderNameById.get(
+        input.energy_provider_id,
+      );
+      parts.push(
+        providerLabel
+          ? `provider=${JSON.stringify(providerLabel)}`
+          : `provider=${input.energy_provider_id}`,
+      );
+    }
+
+    if (input.energy_type_id != null) {
+      const typeLabel = energyTypeNameById.get(input.energy_type_id);
+      parts.push(
+        typeLabel
+          ? `type=${JSON.stringify(typeLabel)}`
+          : `type=${input.energy_type_id}`,
+      );
+    }
+
+    if (input.energy_source_id != null) {
+      const sourceLabel = energySourceNameById.get(input.energy_source_id);
+      parts.push(
+        sourceLabel
+          ? `source=${JSON.stringify(sourceLabel)}`
+          : `source=${input.energy_source_id}`,
+      );
+    }
+
+    if (parts.length > 0) {
+      clausesByVariable.set(input.variable_name, parts.join(" AND "));
+    }
+  }
+
+  if (clausesByVariable.size === 0) {
+    return formula;
+  }
+
+  const outputTokens: string[] = [];
+  for (const token of tokens) {
+    outputTokens.push(token);
+    const clause = clausesByVariable.get(token);
+    if (clause) {
+      outputTokens.push("WHERE", clause);
+    }
+  }
+
+  return outputTokens.join(" ");
+}
+
 export default function KpiFormulaBuilder(props: {
   kpis: KpiDefinition[];
   inputs: KpiFormulaInputOption[];
@@ -104,9 +165,6 @@ export default function KpiFormulaBuilder(props: {
   const [showNoFormulaOnly, setShowNoFormulaOnly] = useState(false);
   const [search, setSearch] = useState<string>("");
   const [selectedInputIds, setSelectedInputIds] = useState<number[]>([]);
-  const [selectedInputFilters, setSelectedInputFilters] = useState<
-    Record<number, FormulaInputFilters>
-  >({});
   const [formula, setFormula] = useState<string>("");
   const [customToken, setCustomToken] = useState<string>("");
   const [isDraggingOverFormula, setIsDraggingOverFormula] = useState(false);
@@ -144,10 +202,283 @@ export default function KpiFormulaBuilder(props: {
 
   const operatorTokenSet = useMemo(() => new Set(operators), []);
 
-  const formulaTokens = useMemo(
-    () => formula.split(/\s+/).filter((token) => token.trim().length > 0),
-    [formula],
+  const inputByToken = useMemo(() => {
+    const map = new Map<string, KpiFormulaInputOption>();
+    for (const input of props.inputs) {
+      map.set(input.name, input);
+      if (input.variable_name) {
+        map.set(input.variable_name, input);
+      }
+    }
+    return map;
+  }, [props.inputs]);
+
+  const energyProviderNameById = useMemo(() => {
+    return new Map(
+      props.energyProviderOptions.map((option) => [option.id, option.name]),
+    );
+  }, [props.energyProviderOptions]);
+
+  const energyTypeNameById = useMemo(() => {
+    return new Map(
+      props.energyTypeOptions.map((option) => [option.id, option.name]),
+    );
+  }, [props.energyTypeOptions]);
+
+  const energySourceNameById = useMemo(() => {
+    return new Map(
+      props.energySourceOptions.map((option) => [option.id, option.name]),
+    );
+  }, [props.energySourceOptions]);
+
+  const energyProviderIdByName = useMemo(() => {
+    return new Map(
+      props.energyProviderOptions.map((option) => [
+        option.name.toLowerCase(),
+        option.id,
+      ]),
+    );
+  }, [props.energyProviderOptions]);
+
+  const energyTypeIdByName = useMemo(() => {
+    return new Map(
+      props.energyTypeOptions.map((option) => [
+        option.name.toLowerCase(),
+        option.id,
+      ]),
+    );
+  }, [props.energyTypeOptions]);
+
+  const energySourceIdByName = useMemo(() => {
+    return new Map(
+      props.energySourceOptions.map((option) => [
+        option.name.toLowerCase(),
+        option.id,
+      ]),
+    );
+  }, [props.energySourceOptions]);
+
+  const formulaTokens = useMemo(() => tokenizeFormula(formula), [formula]);
+
+  const parseInlineFormula = (text: string): ParsedInlineFormulaResult => {
+    const tokens = tokenizeFormula(text);
+    const outputTokens: string[] = [];
+    const filtersByToken: Record<string, FormulaInputFilters> = {};
+    const errors: string[] = [];
+
+    const resolveFilterValue = (
+      rawValue: string,
+      dimension: "provider" | "type" | "source",
+    ): number | null | undefined => {
+      const unquoted = rawValue.replace(/^['\"]|['\"]$/g, "").trim();
+      const normalized = unquoted.toLowerCase();
+
+      if (normalized === "all" || normalized === "none" || normalized === "*") {
+        return null;
+      }
+
+      const asNumeric = Number(unquoted);
+      if (Number.isFinite(asNumeric)) {
+        return asNumeric;
+      }
+
+      if (dimension === "provider") {
+        return energyProviderIdByName.get(normalized);
+      }
+
+      if (dimension === "type") {
+        return energyTypeIdByName.get(normalized);
+      }
+
+      return energySourceIdByName.get(normalized);
+    };
+
+    let i = 0;
+    while (i < tokens.length) {
+      const token = tokens[i];
+      const next = tokens[i + 1];
+
+      if (
+        isIdentifierToken(token) &&
+        typeof next === "string" &&
+        next.toUpperCase() === "WHERE"
+      ) {
+        outputTokens.push(token);
+        i += 2;
+
+        const currentFilters: FormulaInputFilters = {};
+        let parsedAtLeastOneFilter = false;
+
+        while (i < tokens.length) {
+          const current = tokens[i];
+          const currentUpper = current.toUpperCase();
+
+          if (currentUpper === "AND" || current === ",") {
+            i += 1;
+            continue;
+          }
+
+          if (MATH_OPERATORS.has(current)) {
+            break;
+          }
+
+          if (
+            isIdentifierToken(current) &&
+            typeof tokens[i + 1] === "string" &&
+            tokens[i + 1].toUpperCase() === "WHERE"
+          ) {
+            break;
+          }
+
+          let assignmentKey: string | null = null;
+          let assignmentValue: string | null = null;
+          let consumedTokens = 1;
+
+          const compactAssignment = current.match(
+            /^([A-Za-z_][A-Za-z0-9_-]*)=(.+)$/,
+          );
+
+          if (compactAssignment) {
+            assignmentKey = compactAssignment[1];
+            assignmentValue = compactAssignment[2];
+          } else if (
+            /^[A-Za-z_][A-Za-z0-9_-]*$/.test(current) &&
+            tokens[i + 1] === "=" &&
+            typeof tokens[i + 2] === "string"
+          ) {
+            assignmentKey = current;
+            assignmentValue = tokens[i + 2];
+            consumedTokens = 3;
+          }
+
+          if (!assignmentKey || assignmentValue == null) {
+            errors.push(
+              `Invalid WHERE token '${current}' for '${token}'. Use provider=..., type=..., or source=... (spaces around '=' are allowed).`,
+            );
+            i += 1;
+            continue;
+          }
+
+          const rawKey = assignmentKey.toLowerCase().replace(/[-_]/g, "");
+          const rawValue = assignmentValue;
+
+          if (rawKey === "provider" || rawKey === "energyprovider") {
+            const resolved = resolveFilterValue(rawValue, "provider");
+            if (typeof resolved === "undefined") {
+              errors.push(
+                `Unknown energy provider '${rawValue}' for '${token}'. Use a valid provider name or id.`,
+              );
+            } else {
+              currentFilters.energyProviderId = resolved;
+              parsedAtLeastOneFilter = true;
+            }
+          } else if (rawKey === "type" || rawKey === "energytype") {
+            const resolved = resolveFilterValue(rawValue, "type");
+            if (typeof resolved === "undefined") {
+              errors.push(
+                `Unknown energy type '${rawValue}' for '${token}'. Use a valid type name or id.`,
+              );
+            } else {
+              currentFilters.energyTypeId = resolved;
+              parsedAtLeastOneFilter = true;
+            }
+          } else if (rawKey === "source" || rawKey === "energysource") {
+            const resolved = resolveFilterValue(rawValue, "source");
+            if (typeof resolved === "undefined") {
+              errors.push(
+                `Unknown energy source '${rawValue}' for '${token}'. Use a valid source name or id.`,
+              );
+            } else {
+              currentFilters.energySourceId = resolved;
+              parsedAtLeastOneFilter = true;
+            }
+          } else {
+            errors.push(
+              `Unknown WHERE key '${assignmentKey}' for '${token}'. Allowed keys: provider, type, source.`,
+            );
+          }
+
+          i += consumedTokens;
+        }
+
+        if (!parsedAtLeastOneFilter) {
+          errors.push(`WHERE clause for '${token}' has no valid filters.`);
+        } else {
+          filtersByToken[token] = currentFilters;
+        }
+
+        continue;
+      }
+
+      outputTokens.push(token);
+      i += 1;
+    }
+
+    return {
+      cleanedFormula: outputTokens.join(" "),
+      filtersByToken,
+      errors,
+    };
+  };
+
+  const parsedInlineFormula = useMemo(
+    () => parseInlineFormula(formula),
+    [formula, energyProviderIdByName, energyTypeIdByName, energySourceIdByName],
   );
+
+  const effectiveInputFilters = useMemo(() => {
+    const merged: Record<number, FormulaInputFilters> = {};
+
+    for (const [token, filters] of Object.entries(
+      parsedInlineFormula.filtersByToken,
+    )) {
+      const input = inputByToken.get(token);
+      if (!input) {
+        continue;
+      }
+
+      merged[input.id] = {
+        ...merged[input.id],
+        ...filters,
+      };
+    }
+
+    return merged;
+  }, [inputByToken, parsedInlineFormula.filtersByToken]);
+
+  const getFilterSummaryForToken = (token: string): string | null => {
+    const input = inputByToken.get(token);
+    if (!input) {
+      return null;
+    }
+
+    const filters = effectiveInputFilters[input.id];
+    if (!filters) {
+      return "All filters";
+    }
+
+    const parts: string[] = [];
+
+    if (filters.energyProviderId != null) {
+      parts.push(
+        `Provider: ${energyProviderNameById.get(filters.energyProviderId) ?? "Unknown"}`,
+      );
+    }
+
+    if (filters.energyTypeId != null) {
+      parts.push(
+        `Type: ${energyTypeNameById.get(filters.energyTypeId) ?? "Unknown"}`,
+      );
+    }
+
+    if (filters.energySourceId != null) {
+      parts.push(
+        `Source: ${energySourceNameById.get(filters.energySourceId) ?? "Unknown"}`,
+      );
+    }
+
+    return parts.length > 0 ? parts.join(" | ") : "All filters";
+  };
 
   const formulaVariableSet = useMemo(() => {
     return new Set(formula.match(/[A-Za-z_][A-Za-z0-9_]*/g) ?? []);
@@ -168,20 +499,19 @@ export default function KpiFormulaBuilder(props: {
   const handleKpiChange = (value: string) => {
     setSelectedKpiId(value);
     const kpi = props.kpis.find((item) => item.id.toString() === value);
-    setFormula(kpi?.formula ?? "");
     const formulaInputs = kpi?.formula_inputs ?? [];
+    setFormula(
+      buildFormulaWithWhereClauses(
+        kpi?.formula ?? "",
+        formulaInputs,
+        energyProviderNameById,
+        energyTypeNameById,
+        energySourceNameById,
+      ),
+    );
     setSelectedInputIds(
       formulaInputs.map((item) => normalizeInputId(item.input_def_id)),
     );
-    const filterMap: Record<number, FormulaInputFilters> = {};
-    for (const formulaInput of formulaInputs) {
-      filterMap[normalizeInputId(formulaInput.input_def_id)] = {
-        energyProviderId: formulaInput.energy_provider_id ?? null,
-        energyTypeId: formulaInput.energy_type_id ?? null,
-        energySourceId: formulaInput.energy_source_id ?? null,
-      };
-    }
-    setSelectedInputFilters(filterMap);
     setKpiSearch("");
     setSearch("");
   };
@@ -194,40 +524,6 @@ export default function KpiFormulaBuilder(props: {
         ? normalizedPrev
         : [...normalizedPrev, normalizedId];
     });
-  };
-
-  const removeInputFromSelection = (id: number) => {
-    const normalizedId = normalizeInputId(id);
-    setSelectedInputIds((prev) =>
-      prev
-        .map((item) => normalizeInputId(item))
-        .filter((item) => item !== normalizedId),
-    );
-    setSelectedInputFilters((prev) => {
-      const next = { ...prev };
-      delete next[normalizedId];
-      return next;
-    });
-  };
-
-  const updateInputFilter = (
-    id: number,
-    key: keyof FormulaInputFilters,
-    value: string,
-  ) => {
-    const normalizedId = normalizeInputId(id);
-    const parsed = toNullableNumber(value);
-    if (parsed === undefined) {
-      return;
-    }
-
-    setSelectedInputFilters((prev) => ({
-      ...prev,
-      [normalizedId]: {
-        ...prev[normalizedId],
-        [key]: parsed,
-      },
-    }));
   };
 
   const appendToken = (token: string) => {
@@ -282,7 +578,6 @@ export default function KpiFormulaBuilder(props: {
     setKpiSearch("");
     setSearch("");
     setSelectedInputIds([]);
-    setSelectedInputFilters({});
     setFormula("");
     setCustomToken("");
     setIsDraggingOverFormula(false);
@@ -296,14 +591,20 @@ export default function KpiFormulaBuilder(props: {
       }
 
       const formulaInputs = getFormulaInputs(
-        formula,
+        parsedInlineFormula.cleanedFormula,
         props.inputs,
         selectedInputIds,
-        selectedInputFilters,
+        effectiveInputFilters,
       );
+
+      if (parsedInlineFormula.errors.length > 0) {
+        toast.error(parsedInlineFormula.errors[0]);
+        return;
+      }
+
       const response = await SaveKpiFormula({
         kpiId: Number(selectedKpiId),
-        formula,
+        formula: parsedInlineFormula.cleanedFormula,
         formulaInputs,
       });
 
@@ -428,54 +729,81 @@ export default function KpiFormulaBuilder(props: {
           <div className="space-y-2.5 rounded-lg border border-border/70 bg-card p-2.5 sm:space-y-4 sm:p-4 max-[420px]:p-2">
             <div className="grid gap-2.5 sm:gap-3">
               <Label className="text-xs sm:text-sm">Formula Tools</Label>
-              <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                {operators.map((operator) => (
+              <div className="grid gap-2.5 sm:gap-3">
+                <div className="flex flex-wrap gap-1.5 sm:gap-2">
+                  {operators.map((operator) => (
+                    <Button
+                      key={operator}
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-6 px-1.5 text-xs sm:h-8 sm:px-3 sm:text-sm"
+                      onClick={() => appendToken(operator)}
+                    >
+                      {operator}
+                    </Button>
+                  ))}
+                  <div className="flex w-full flex-col gap-1.5 sm:w-auto sm:flex-row sm:gap-2">
+                    <Input
+                      value={customToken}
+                      onChange={(event) => setCustomToken(event.target.value)}
+                      placeholder="Add constant/token (e.g. 100)"
+                      className="h-7 text-xs sm:h-9 sm:w-56 sm:text-sm"
+                    />
+                    <Button
+                      type="button"
+                      variant="secondary"
+                      size="sm"
+                      className="h-7 px-2 text-xs sm:h-9 sm:px-3 sm:text-sm"
+                      onClick={addCustomToken}
+                    >
+                      Add Token
+                    </Button>
+                  </div>
                   <Button
-                    key={operator}
                     type="button"
-                    variant="outline"
+                    variant="ghost"
                     size="sm"
                     className="h-6 px-1.5 text-xs sm:h-8 sm:px-3 sm:text-sm"
-                    onClick={() => appendToken(operator)}
+                    onClick={() => setFormula("")}
                   >
-                    {operator}
+                    Clear
                   </Button>
-                ))}
-                <div className="flex w-full flex-col gap-1.5 sm:w-auto sm:flex-row sm:gap-2">
-                  <Input
-                    value={customToken}
-                    onChange={(event) => setCustomToken(event.target.value)}
-                    placeholder="Add constant/token (e.g. 100)"
-                    className="h-7 text-xs sm:h-9 sm:w-56 sm:text-sm"
-                  />
                   <Button
                     type="button"
-                    variant="secondary"
-                    size="sm"
-                    className="h-7 px-2 text-xs sm:h-9 sm:px-3 sm:text-sm"
-                    onClick={addCustomToken}
+                    disabled={isSaving || !selectedKpiId}
+                    onClick={handleSave}
+                    className="ml-auto h-7 w-full text-xs sm:h-8 sm:w-auto sm:text-sm"
                   >
-                    Add Token
+                    <FaSave />
+                    {isSaving ? "Saving..." : "Save Formula"}
                   </Button>
                 </div>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-6 px-1.5 text-xs sm:h-8 sm:px-3 sm:text-sm"
-                  onClick={() => setFormula("")}
-                >
-                  Clear
-                </Button>
-                <Button
-                  type="button"
-                  disabled={isSaving || !selectedKpiId}
-                  onClick={handleSave}
-                  className="ml-auto h-7 w-full text-xs sm:h-8 sm:w-auto sm:text-sm"
-                >
-                  <FaSave />
-                  {isSaving ? "Saving..." : "Save Formula"}
-                </Button>
+
+                <div className="grid gap-2">
+                  <Label className="text-xs sm:text-sm">Input Filters</Label>
+                  <div className="space-y-1 rounded-md border border-dashed bg-muted/20 p-2 text-[11px] sm:p-2.5 sm:text-xs">
+                    <p className="text-muted-foreground">
+                      Use inline WHERE in your formula: variable WHERE
+                      provider=Name AND type=Name AND source=Name
+                    </p>
+                    <p className="text-muted-foreground">
+                      Example: kwh_sold WHERE provider="ABC Power" AND
+                      source="Grid" + kwh_generated
+                    </p>
+                    {parsedInlineFormula.errors.length > 0 && (
+                      <p className="text-red-600">
+                        {parsedInlineFormula.errors[0]}
+                      </p>
+                    )}
+                    {visibleFilterInputs.length > 0 && (
+                      <p className="text-muted-foreground">
+                        Filters detected for {visibleFilterInputs.length} input
+                        {visibleFilterInputs.length > 1 ? "s" : ""}.
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -520,10 +848,17 @@ export default function KpiFormulaBuilder(props: {
                         key={`${token}-${index}`}
                         className={`flex items-center text-xs rounded border ${tokenClass}`}
                       >
-                        <span
-                          className={`p-1 font-black ${!isInputToken ? "font-mono" : ""}`}
-                        >
-                          {token}
+                        <span className="flex flex-col px-1 py-0.5">
+                          <span
+                            className={`font-black ${!isInputToken ? "font-mono" : ""}`}
+                          >
+                            {token}
+                          </span>
+                          {isInputToken && (
+                            <span className="text-[10px] leading-tight opacity-80">
+                              {getFilterSummaryForToken(token)}
+                            </span>
+                          )}
                         </span>
                         <span
                           onClick={() => removeTokenAtIndex(index)}
@@ -546,158 +881,6 @@ export default function KpiFormulaBuilder(props: {
                 className="h-8 text-xs sm:h-9 sm:text-sm"
                 placeholder="Formula preview"
               />
-            </div>
-
-            <div className="grid gap-2">
-              <Label>Selected Inputs</Label>
-              <div className="flex min-h-9 flex-wrap gap-1.5 rounded-md border border-dashed bg-muted/20 p-2 sm:min-h-10 sm:gap-2 sm:p-2.5">
-                {visibleFilterInputs.length === 0 && (
-                  <p className="text-muted-foreground text-xs sm:text-sm">
-                    No inputs selected yet. Add inputs from the left list or
-                    reference their variable names in the formula to configure
-                    provider/source filters.
-                  </p>
-                )}
-                {visibleFilterInputs.map((input) => (
-                  <div
-                    key={input.id}
-                    className="w-full rounded-md border bg-white shadow-md p-3"
-                  >
-                    <div className="mb-2 flex items-center gap-2">
-                      <Badge
-                        variant="secondary"
-                        className="gap-1.5 px-2 py-0.5 text-xs sm:gap-2 sm:py-1"
-                      >
-                        <button
-                          type="button"
-                          className="hover:underline"
-                          onClick={() =>
-                            appendToken(input.variable_name || input.name)
-                          }
-                        >
-                          {input.name}
-                        </button>
-                        <button
-                          type="button"
-                          className="text-xs"
-                          onClick={() => removeInputFromSelection(input.id)}
-                        >
-                          x
-                        </button>
-                      </Badge>
-                    </div>
-
-                    <div className="flex flex-wrap gap-4 border-t pt-2">
-                      <div className="space-y-1">
-                        <Label className="text-xs">Energy Provider</Label>
-                        <Select
-                          value={
-                            selectedInputFilters[input.id]?.energyProviderId !=
-                            null
-                              ? String(
-                                  selectedInputFilters[input.id]
-                                    ?.energyProviderId,
-                                )
-                              : NONE_OPTION_VALUE
-                          }
-                          onValueChange={(value) =>
-                            updateInputFilter(
-                              input.id,
-                              "energyProviderId",
-                              value,
-                            )
-                          }
-                        >
-                          <SelectTrigger className="text-xs p-1 shadow">
-                            <SelectValue placeholder="Energy provider (optional)" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value={NONE_OPTION_VALUE}>
-                              -- All --
-                            </SelectItem>
-                            {props.energyProviderOptions.map((option) => (
-                              <SelectItem
-                                key={option.id}
-                                value={String(option.id)}
-                              >
-                                {option.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-1">
-                        <Label className="text-xs">Energy Type</Label>
-                        <Select
-                          value={
-                            selectedInputFilters[input.id]?.energyTypeId != null
-                              ? String(
-                                  selectedInputFilters[input.id]?.energyTypeId,
-                                )
-                              : NONE_OPTION_VALUE
-                          }
-                          onValueChange={(value) =>
-                            updateInputFilter(input.id, "energyTypeId", value)
-                          }
-                        >
-                          <SelectTrigger className="text-xs p-1 shadow">
-                            <SelectValue placeholder="Energy type (optional)" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value={NONE_OPTION_VALUE}>
-                              -- All --
-                            </SelectItem>
-                            {props.energyTypeOptions.map((option) => (
-                              <SelectItem
-                                key={option.id}
-                                value={String(option.id)}
-                              >
-                                {option.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      <div className="space-y-1">
-                        <Label className="text-xs">Energy Source</Label>
-                        <Select
-                          value={
-                            selectedInputFilters[input.id]?.energySourceId !=
-                            null
-                              ? String(
-                                  selectedInputFilters[input.id]
-                                    ?.energySourceId,
-                                )
-                              : NONE_OPTION_VALUE
-                          }
-                          onValueChange={(value) =>
-                            updateInputFilter(input.id, "energySourceId", value)
-                          }
-                        >
-                          <SelectTrigger className="text-xs p-1 shadow">
-                            <SelectValue placeholder="Energy source (optional)" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value={NONE_OPTION_VALUE}>
-                              -- All --
-                            </SelectItem>
-                            {props.energySourceOptions.map((option) => (
-                              <SelectItem
-                                key={option.id}
-                                value={String(option.id)}
-                              >
-                                {option.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         </div>
