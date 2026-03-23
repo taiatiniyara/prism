@@ -161,6 +161,15 @@ export const DataEntryStatusList = Object.keys(DataEntryStatus).map((key) => ({
   color: dataEntryStatusColors[key as keyof typeof dataEntryStatusColors],
 }));
 
+export type DataEntryComment = {
+  comment: string;
+  commenterId: string;
+  commenterRole: string;
+  date: Date;
+  resolved?: boolean;
+  replies?: DataEntryComment[];
+};
+
 export const dataEntries = pgTable(
   "data_entries",
   {
@@ -178,7 +187,7 @@ export const dataEntries = pgTable(
       .notNull()
       .references(() => inputDefinitions.id),
     value: varchar("value", { length: 255 }),
-    comments: varchar("comments", { length: 255 }),
+    comments: json("comments").$type<DataEntryComment[]>(),
     update_medium_id: integer("update_medium_id").references(
       () => managedListItems.id,
     ),
@@ -224,22 +233,6 @@ export type DataEntry = typeof dataEntries.$inferSelect & {
   payment_mode?: string | null;
 };
 export type NewDataEntry = typeof dataEntries.$inferInsert;
-
-export const dataEntryFeedbacks = pgTable("data_entry_feedbacks", {
-  id: uuid("id").primaryKey().notNull().defaultRandom(),
-  data_entry_id: uuid("data_entry_id")
-    .notNull()
-    .references(() => dataEntries.id),
-  feedback: varchar("feedback", { length: 255 }).notNull(),
-  feedback_by_id: text("feedback_by_id")
-    .notNull()
-    .references(() => user.id),
-  feedback_date: timestamp("feedback_date").notNull(),
-  reply: varchar("reply", { length: 255 }),
-  reply_by_id: text("reply_by_id").references(() => user.id),
-  reply_date: timestamp("reply_date"),
-  done: boolean("done").default(false).notNull(),
-});
 
 export const dataEntryLogs = pgTable("data_entry_logs", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),

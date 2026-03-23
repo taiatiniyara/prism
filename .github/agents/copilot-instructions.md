@@ -1,8 +1,10 @@
 ﻿# prism Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-03-23
+Auto-generated from all feature plans. Last updated: 2026-03-24
 
 ## Active Technologies
+- TypeScript (strict), React 19.2.3, Next.js 16.1.1 + Next App Router, Drizzle ORM, `pg`, Tailwind CSS, (005-review-kpi-values)
+- PostgreSQL via Drizzle schema (`data_entries`, `input_definitions`, (005-review-kpi-values)
 
 - TypeScript 5.x (strict), React 19.2.3, Next.js 16.1.1 App Router + Next.js
   server actions/API routes, Drizzle ORM, pg, better-auth, Tailwind CSS,
@@ -41,6 +43,7 @@ TypeScript 5.x (strict), React 19.2.3, Next.js 16.1.1 App: Follow standard
 conventions
 
 ## Recent Changes
+- 005-review-kpi-values: Added TypeScript (strict), React 19.2.3, Next.js 16.1.1 + Next App Router, Drizzle ORM, `pg`, Tailwind CSS,
 
 - 004-review-kpi-ui: Added TypeScript 5.x (strict), React 19.2.3, Next.js 16.1.1
   App Router + Next.js route handlers/server components, Drizzle ORM, pg,

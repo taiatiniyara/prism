@@ -4,6 +4,7 @@ import {
   DataEntryGeneratorGroupView,
   DataEntryInputRowView,
 } from "@/app/data-entry/types";
+import { DataEntryComment } from "@/db/schema/dataEntry";
 
 export const isOperationalContext = (
   context: DataEntryFilterContext,
@@ -38,8 +39,16 @@ export interface GeneratorEntryCandidate {
   inputDefId: number;
   energyResourceId: number | null;
   value: string | null;
-  comments: string | null;
+  comments: DataEntryComment[] | null;
 }
+
+const serializeComments = (comments: DataEntryComment[] | null): string | null => {
+  if (!comments || comments.length === 0) {
+    return null;
+  }
+
+  return JSON.stringify(comments);
+};
 
 export const buildGenerationGroups = (
   generators: GeneratorCandidate[],
@@ -59,7 +68,7 @@ export const buildGenerationGroups = (
         dataEntryId: entry?.id,
         energyResourceId: generator.id,
         value: entry?.value ?? null,
-        comments: entry?.comments ?? null,
+        comments: serializeComments(entry?.comments ?? null),
       };
     });
 

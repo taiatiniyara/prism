@@ -42,7 +42,7 @@ import {
   isOperationalContext,
 } from "@/app/data-entry/enter-data/services/us3.conditionalViews.service";
 import { runAggregatedWorkerAsync } from "@/app/data-entry/enter-data/services/aggregated-worker/orchestrator";
-import { triggerKpiWorkerAsync } from "@/app/data-entry/kpi-worker";
+import { triggerKpiWorker } from "@/app/data-entry/kpi-worker";
 
 const isGlobalRole = (role: string) => role === "DEV" || role === "BMO";
 
@@ -780,7 +780,7 @@ export const updateDataEntryValueAction = async (
   });
 
   if (sourceDataEntryId) {
-    triggerKpiWorkerAsync(
+    await triggerKpiWorker(
       {
         sourceDataEntryId,
         inputDefId: payload.inputDefId,
