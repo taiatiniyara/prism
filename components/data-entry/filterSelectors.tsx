@@ -18,6 +18,8 @@ interface FilterSelectProps {
   placeholder: string;
   onChange: (value: number | null) => void;
   disabled?: boolean;
+  showLabel?: boolean;
+  compact?: boolean;
 }
 
 export function FilterSelect({
@@ -28,15 +30,21 @@ export function FilterSelect({
   placeholder,
   onChange,
   disabled,
+  showLabel = true,
+  compact = false,
 }: FilterSelectProps) {
   return (
-    <div className="grid gap-1 w-50">
-      <Label
-        className="text-xs"
-        htmlFor={id}
-      >
-        {label}
-      </Label>
+    <div
+      className={`grid ${showLabel ? "gap-1" : "gap-0"} ${compact ? "w-34" : "w-50"}`}
+    >
+      {showLabel ? (
+        <Label
+          className="text-xs"
+          htmlFor={id}
+        >
+          {label}
+        </Label>
+      ) : null}
       <Select
         value={value == null ? "all" : String(value)}
         onValueChange={(next) => onChange(next === "all" ? null : Number(next))}
@@ -44,7 +52,7 @@ export function FilterSelect({
       >
         <SelectTrigger
           id={id}
-          className="w-full text-xs p-2 shadow"
+          className={`w-full ${compact ? "h-7 text-[11px] py-0 px-2" : "text-xs py-1"} shadow`}
           aria-label={label}
         >
           <SelectValue placeholder={placeholder} />
@@ -105,6 +113,28 @@ export const InputSubcategorySelect = (
     id="input-subcategory-select"
     label="Input Subcategory"
     placeholder="Select input subcategory"
+    {...props}
+  />
+);
+
+export const KpiCategorySelect = (
+  props: Omit<FilterSelectProps, "id" | "label" | "placeholder">,
+) => (
+  <FilterSelect
+    id="kpi-category-select"
+    label="KPI Category"
+    placeholder="Select KPI category"
+    {...props}
+  />
+);
+
+export const KpiSubcategorySelect = (
+  props: Omit<FilterSelectProps, "id" | "label" | "placeholder">,
+) => (
+  <FilterSelect
+    id="kpi-subcategory-select"
+    label="KPI Subcategory"
+    placeholder="Select KPI subcategory"
     {...props}
   />
 );
