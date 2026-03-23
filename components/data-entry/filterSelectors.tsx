@@ -34,12 +34,10 @@ export function FilterSelect({
   compact = false,
 }: FilterSelectProps) {
   return (
-    <div
-      className={`grid ${showLabel ? "gap-1" : "gap-0"} ${compact ? "w-34" : "w-50"}`}
-    >
+    <div className="space-y-1 w-38">
       {showLabel ? (
         <Label
-          className="text-xs"
+          className={compact ? "text-[12px] leading-none" : "text-xs"}
           htmlFor={id}
         >
           {label}
@@ -52,7 +50,7 @@ export function FilterSelect({
       >
         <SelectTrigger
           id={id}
-          className={`w-full ${compact ? "h-7 text-[11px] py-0 px-2" : "text-xs py-1"} shadow`}
+          className={`w-full min-w-0 ${compact ? "h-7 px-1.5 py-0 text-[11px]" : "h-8 px-2 text-xs"} shadow`}
           aria-label={label}
         >
           <SelectValue placeholder={placeholder} />

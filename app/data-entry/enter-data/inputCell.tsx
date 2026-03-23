@@ -27,13 +27,26 @@ export default function InputCell({ row }: InputCellProps) {
     }
 
     startTransition(async () => {
-      await updateDataEntryValueAction({
-        inputDefId: row.inputDefId,
-        energyResourceId: row.energyResourceId ?? null,
-        value: nextValue,
-      });
-      router.refresh();
-      toast.success("Value updated successfully");
+      const loadingToastId = toast.loading(
+        "Saving value and recalculating KPI...",
+      );
+
+      try {
+        await updateDataEntryValueAction({
+          inputDefId: row.inputDefId,
+          energyResourceId: row.energyResourceId ?? null,
+          value: nextValue,
+        });
+
+        router.refresh();
+        toast.success("Value saved and KPI recalculated.", {
+          id: loadingToastId,
+        });
+      } catch {
+        toast.error("Failed to save value or recalculate KPI.", {
+          id: loadingToastId,
+        });
+      }
     });
   };
 

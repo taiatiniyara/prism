@@ -6,6 +6,7 @@ import {
   DataEntryInputRowView,
 } from "@/app/data-entry/types";
 import { mapDataTypeToControlType } from "@/app/data-entry/inputControlType.mapper";
+import { DataEntryComment } from "@/db/schema/dataEntry";
 
 export interface InputDefinitionCandidate {
   id: number;
@@ -22,8 +23,16 @@ export interface DataEntryValueCandidate {
   inputDefId: number;
   serviceAreaId: number | null;
   value: string | null;
-  comments: string | null;
+  comments: DataEntryComment[] | null;
 }
+
+const serializeComments = (comments: DataEntryComment[] | null): string | null => {
+  if (!comments || comments.length === 0) {
+    return null;
+  }
+
+  return JSON.stringify(comments);
+};
 
 const hasOption = (
   value: number | null,
@@ -124,7 +133,7 @@ export const buildInputRowsFromDefinitions = (
       dataTypeId: 0,
       controlType: mapDataTypeToControlType(definition.dataTypeName),
       value: entry?.value ?? null,
-      comments: entry?.comments ?? null,
+      comments: serializeComments(entry?.comments ?? null),
     };
   });
 };

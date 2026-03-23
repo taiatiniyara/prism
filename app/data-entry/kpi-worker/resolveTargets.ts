@@ -22,6 +22,41 @@ interface KpiDefinitionLike {
   formula_inputs: FormulaInput[] | null;
 }
 
+const toNullableNumber = (value: unknown): number | null => {
+  if (value == null) {
+    return null;
+  }
+
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+};
+
+const normalizeFormulaInput = (
+  input: FormulaInput,
+): FormulaInput | null => {
+  const inputDefId = toNullableNumber(
+    (input as FormulaInput & { input_def_id?: unknown }).input_def_id,
+  );
+
+  if (inputDefId == null) {
+    return null;
+  }
+
+  const energyProviderId = toNullableNumber(input.energy_provider_id);
+  const energyTypeId = toNullableNumber(input.energy_type_id);
+  const energySourceId = toNullableNumber(input.energy_source_id);
+
+  return {
+    ...input,
+    input_def_id: inputDefId,
+    ...(energyProviderId != null
+      ? { energy_provider_id: energyProviderId }
+      : {}),
+    ...(energyTypeId != null ? { energy_type_id: energyTypeId } : {}),
+    ...(energySourceId != null ? { energy_source_id: energySourceId } : {}),
+  };
+};
+
 export const filterAffectedKpiTargets = (
   definitions: KpiDefinitionLike[],
   inputDefId: number,
@@ -32,7 +67,9 @@ export const filterAffectedKpiTargets = (
         return false;
       }
 
-      const formulaInputs = definition.formula_inputs ?? [];
+      const formulaInputs = (definition.formula_inputs ?? [])
+        .map(normalizeFormulaInput)
+        .filter((input): input is FormulaInput => input != null);
       if (formulaInputs.length === 0) {
         return false;
       }
@@ -40,7 +77,9 @@ export const filterAffectedKpiTargets = (
       return formulaInputs.some((input) => input.input_def_id === inputDefId);
     })
     .map((definition) => {
-      const formulaInputs = definition.formula_inputs ?? [];
+      const formulaInputs = (definition.formula_inputs ?? [])
+        .map(normalizeFormulaInput)
+        .filter((input): input is FormulaInput => input != null);
 
       return {
         kpiDefId: definition.id,

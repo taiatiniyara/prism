@@ -27,6 +27,39 @@ export interface ResolvedFormulaInputs {
   missingVariables: string[];
 }
 
+const toNullableNumber = (value: unknown): number | null => {
+  if (value == null) {
+    return null;
+  }
+
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+};
+
+const normalizeFormulaInput = (input: FormulaInput): FormulaInput | null => {
+  const inputDefId = toNullableNumber(
+    (input as FormulaInput & { input_def_id?: unknown }).input_def_id,
+  );
+
+  if (inputDefId == null) {
+    return null;
+  }
+
+  const energyProviderId = toNullableNumber(input.energy_provider_id);
+  const energyTypeId = toNullableNumber(input.energy_type_id);
+  const energySourceId = toNullableNumber(input.energy_source_id);
+
+  return {
+    ...input,
+    input_def_id: inputDefId,
+    ...(energyProviderId != null
+      ? { energy_provider_id: energyProviderId }
+      : {}),
+    ...(energyTypeId != null ? { energy_type_id: energyTypeId } : {}),
+    ...(energySourceId != null ? { energy_source_id: energySourceId } : {}),
+  };
+};
+
 const matchesNullableDimension = (
   actual: number | null,
   expected: number | null,
@@ -84,16 +117,18 @@ const shouldRollup = (
 export const resolveFormulaInputValues = async (
   request: ResolveInputsRequest,
 ): Promise<ResolvedFormulaInputs> => {
-  if (request.formulaInputs.length === 0) {
+  const formulaInputs = request.formulaInputs
+    .map(normalizeFormulaInput)
+    .filter((input): input is FormulaInput => input != null);
+
+  if (formulaInputs.length === 0) {
     return {
       variables: {},
       missingVariables: [],
     };
   }
 
-  const inputDefIds = [
-    ...new Set(request.formulaInputs.map((item) => item.input_def_id)),
-  ];
+  const inputDefIds = [...new Set(formulaInputs.map((item) => item.input_def_id))];
 
   const inputDefs = await db
     .select({
@@ -199,7 +234,7 @@ export const resolveFormulaInputValues = async (
   const variables: Record<string, number> = {};
   const missingVariables: string[] = [];
 
-  for (const formulaInput of request.formulaInputs) {
+  for (const formulaInput of formulaInputs) {
     const sourceRows = byInputDef.get(formulaInput.input_def_id) ?? [];
     const effectiveEnergyProviderId =
       formulaInput.energy_provider_id ?? request.scope.energyProviderId ?? null;
