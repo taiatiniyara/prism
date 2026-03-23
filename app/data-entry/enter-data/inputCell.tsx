@@ -54,7 +54,7 @@ export default function InputCell({ row }: InputCellProps) {
     case "boolean":
       return (
         <select
-          className={`border-l-8 p-2.5 w-full rounded-lg ${
+          className={`border shadow border-l-8 p-2.5 w-full rounded-lg ${
             row.value ? "border-l-lime-200" : "border-l-red-200"
           }`}
           defaultValue={displayValue}

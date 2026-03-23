@@ -22,10 +22,15 @@ export default function InputRows({ rows }: InputRowsProps) {
   }
 
   return (
-    <div className="grid lg:grid-cols-3 gap-4 sm:grid-cols-1 md:grid-cols-2">
+    <div className="grid lg:grid-cols-3 gap-6 sm:grid-cols-1 md:grid-cols-2">
       {rows.map((row) => (
         <div key={row.inputDefId}>
-          <div className="text-sm ml-3 font-medium">{row.inputName}</div>
+          <div className="flex justify-between items-end">
+            <span className="font-semibold text-sm">{row.inputName}</span>
+            {row.unitName ? (
+              <span className="text-xs text-slate-500">{row.unitName}</span>
+            ) : null}
+          </div>
           <InputCell row={row} />
         </div>
       ))}

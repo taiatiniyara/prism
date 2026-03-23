@@ -198,13 +198,14 @@ export const dataEntries = pgTable(
       () => managedListItems.id,
     ),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedById: text("updated_by_id").references(() => user.id),
   },
   (table) => [
     index("uniq_entry").on(
       table.report_period_id,
       table.input_def_id,
       table.service_area_id,
-      table.energy_resource_id,
+      table.energy_source_id,
       table.energy_provider_id,
       table.energy_resource_id,
     ),

@@ -14,6 +14,7 @@ export interface InputDefinitionCandidate {
   subcategoryId: number;
   dataTypeId: number;
   dataTypeName: string | null;
+  unitName: string | null;
 }
 
 export interface DataEntryValueCandidate {
@@ -119,6 +120,7 @@ export const buildInputRowsFromDefinitions = (
       inputDefId: definition.id,
       energyResourceId: null,
       inputName: definition.name,
+      unitName: definition.unitName,
       dataTypeId: 0,
       controlType: mapDataTypeToControlType(definition.dataTypeName),
       value: entry?.value ?? null,

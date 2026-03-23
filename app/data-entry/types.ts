@@ -27,6 +27,7 @@ export interface DataEntryInputRowView {
   inputDefId: number;
   energyResourceId?: number | null;
   inputName: string;
+  unitName: string | null;
   dataTypeId: number;
   controlType: DataEntryControlType;
   value: string | null;

@@ -147,14 +147,18 @@ const getInputDefinitionsForContext = async (
       subcategoryId: inputDefinitions.subcategory_id,
       dataTypeId: inputDefinitions.data_type_id,
       dataTypeName: managedListItems.name,
-      unitName: managedLists.name,
+      unitName: sql<string | null>`(
+        select mli.name
+        from managed_list_items mli
+        where mli.id = ${inputDefinitions.unit_id}
+        limit 1
+      )`,
     })
     .from(inputDefinitions)
     .leftJoin(
       managedListItems,
       eq(inputDefinitions.data_type_id, managedListItems.id),
     )
-    .leftJoin(managedLists, eq(inputDefinitions.unit_id, managedLists.id))
     .where(and(...conditions))
     .orderBy(asc(inputDefinitions.name));
 
@@ -216,6 +220,7 @@ const getInputRowsForContext = async (
 
     return {
       ...row,
+      unitName: definition?.unitName ?? null,
       dataTypeId: definition?.dataTypeId ?? 0,
       controlType: mapDataTypeToControlType(definition?.dataTypeName),
     };
@@ -233,6 +238,7 @@ const getInputDefinitionRowsForContext = async (
   return definitions.map((definition) => ({
     inputDefId: definition.id,
     inputName: definition.name,
+    unitName: definition.unitName,
     dataTypeId: definition.dataTypeId,
     controlType: mapDataTypeToControlType(definition.dataTypeName),
     value: null,

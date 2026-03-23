@@ -17,6 +17,7 @@ const eslintConfig = defineConfig([
     "dist/**",
     "node_modules/**",
     ".vitest/**",
+    "**/*.min.js",
   ]),
 ]);
 
