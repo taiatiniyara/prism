@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, or } from "drizzle-orm";
 
 import { db } from "@/db/connection";
 import { dataEntries, inputDefinitions } from "@/db/schema/dataEntry";
@@ -21,12 +21,23 @@ export interface SourceSnapshot {
 
 export const resolveVariableMappings = async (
   variableNames: string[],
+  inputDefIds: number[],
 ): Promise<VariableMapping> => {
-  if (variableNames.length === 0) {
+  if (variableNames.length === 0 && inputDefIds.length === 0) {
     return {
       variableToInputDefId: new Map(),
       inputDefIds: [],
     };
+  }
+
+  const conditions = [];
+
+  if (variableNames.length > 0) {
+    conditions.push(inArray(inputDefinitions.variable_name, variableNames));
+  }
+
+  if (inputDefIds.length > 0) {
+    conditions.push(inArray(inputDefinitions.id, inputDefIds));
   }
 
   const rows = await db
@@ -35,10 +46,14 @@ export const resolveVariableMappings = async (
       variableName: inputDefinitions.variable_name,
     })
     .from(inputDefinitions)
-    .where(inArray(inputDefinitions.variable_name, variableNames));
+    .where(conditions.length > 1 ? or(...conditions) : conditions[0]);
+
+  const resolvedInputDefIds = new Set<number>(inputDefIds);
 
   const variableToInputDefId = new Map<string, number>();
   for (const row of rows) {
+    resolvedInputDefIds.add(row.inputDefId);
+
     if (row.variableName) {
       variableToInputDefId.set(row.variableName, row.inputDefId);
     }
@@ -46,15 +61,16 @@ export const resolveVariableMappings = async (
 
   return {
     variableToInputDefId,
-    inputDefIds: rows.map((row) => row.inputDefId),
+    inputDefIds: [...resolvedInputDefIds],
   };
 };
 
 export const readSourceSnapshot = async (
   scope: AggregatedWorkerScope,
   variableNames: string[],
+  inputDefIds: number[],
 ): Promise<SourceSnapshot> => {
-  const mapping = await resolveVariableMappings(variableNames);
+  const mapping = await resolveVariableMappings(variableNames, inputDefIds);
 
   if (mapping.inputDefIds.length === 0) {
     return {

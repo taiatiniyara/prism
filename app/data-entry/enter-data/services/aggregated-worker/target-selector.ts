@@ -5,9 +5,68 @@ import { inputDefinitions } from "@/db/schema/dataEntry";
 
 export interface AggregatedFormulaTarget {
   inputDefId: number;
+  variableName?: string | null;
   formula: string;
   formulaInputs: Array<{ input_def_id: number; variable_name: string }>;
 }
+
+interface FormulaInputCandidate {
+  inputDefId: number;
+  variableName: string;
+}
+
+const escapeRegExp = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+const isIdentifier = (value: string): boolean =>
+  /^[A-Za-z_][A-Za-z0-9_]*$/.test(value);
+
+export const inferFormulaInputs = (
+  formula: string,
+  candidates: FormulaInputCandidate[],
+): Array<{ input_def_id: number; variable_name: string }> => {
+  if (!formula.trim() || candidates.length === 0) {
+    return [];
+  }
+
+  const occupiedRanges: Array<[number, number]> = [];
+  const inferred: Array<{ input_def_id: number; variable_name: string }> = [];
+
+  const orderedCandidates = [...candidates].sort(
+    (left, right) => right.variableName.length - left.variableName.length,
+  );
+
+  const overlaps = (start: number, end: number): boolean =>
+    occupiedRanges.some(
+      ([existingStart, existingEnd]) =>
+        start < existingEnd && existingStart < end,
+    );
+
+  for (const candidate of orderedCandidates) {
+    const pattern = isIdentifier(candidate.variableName)
+      ? new RegExp(`\\b${escapeRegExp(candidate.variableName)}\\b`, "g")
+      : new RegExp(escapeRegExp(candidate.variableName), "g");
+
+    let match = pattern.exec(formula);
+    while (match) {
+      const start = match.index;
+      const end = start + candidate.variableName.length;
+
+      if (!overlaps(start, end)) {
+        occupiedRanges.push([start, end]);
+        inferred.push({
+          input_def_id: candidate.inputDefId,
+          variable_name: candidate.variableName,
+        });
+        break;
+      }
+
+      match = pattern.exec(formula);
+    }
+  }
+
+  return inferred;
+};
 
 export const isEligibleAggregatedTarget = (target: {
   aggregated?: boolean;
@@ -26,6 +85,7 @@ export const selectAggregatedFormulaTargets = async (): Promise<
   const rows = await db
     .select({
       inputDefId: inputDefinitions.id,
+      variableName: inputDefinitions.variable_name,
       formula: inputDefinitions.formula,
       formulaInputs: inputDefinitions.formula_inputs,
     })
@@ -39,9 +99,32 @@ export const selectAggregatedFormulaTargets = async (): Promise<
       ),
     );
 
+  const variableRows = await db
+    .select({
+      inputDefId: inputDefinitions.id,
+      variableName: inputDefinitions.variable_name,
+    })
+    .from(inputDefinitions)
+    .where(
+      and(
+        eq(inputDefinitions.is_active, true),
+        isNotNull(inputDefinitions.variable_name),
+        ne(sql`trim(${inputDefinitions.variable_name})`, ""),
+      ),
+    );
+
+  const candidates: FormulaInputCandidate[] = variableRows.map((row) => ({
+    inputDefId: row.inputDefId,
+    variableName: row.variableName ?? "",
+  }));
+
   return rows.map((row) => ({
     inputDefId: row.inputDefId,
+    variableName: row.variableName,
     formula: row.formula ?? "",
-    formulaInputs: row.formulaInputs ?? [],
+    formulaInputs:
+      row.formulaInputs && row.formulaInputs.length > 0
+        ? row.formulaInputs
+        : inferFormulaInputs(row.formula ?? "", candidates),
   }));
 };

@@ -38,16 +38,126 @@ const collectAllVariables = (
   return [...variables];
 };
 
-const buildVariableValueMap = (
+const collectAllInputDefIds = (
+  targets: Awaited<ReturnType<typeof selectAggregatedFormulaTargets>>,
+): number[] => {
+  const inputDefIds = new Set<number>();
+
+  targets.forEach((target) => {
+    inputDefIds.add(target.inputDefId);
+    target.formulaInputs.forEach((formulaInput) => {
+      inputDefIds.add(formulaInput.input_def_id);
+    });
+  });
+
+  return [...inputDefIds];
+};
+
+const buildTargetValueMap = (
   snapshot: WorkerSnapshot,
+  target: Awaited<ReturnType<typeof selectAggregatedFormulaTargets>>[number],
   variables: string[],
 ): Record<string, string | null | undefined> => {
   const map: Record<string, string | null | undefined> = {};
+
+  if (target.formulaInputs.length > 0) {
+    target.formulaInputs.forEach((formulaInput) => {
+      map[formulaInput.variable_name] =
+        snapshot.values.byInputDefId[formulaInput.input_def_id] ??
+        snapshot.values.byVariable[formulaInput.variable_name];
+    });
+
+    return map;
+  }
+
   variables.forEach((name) => {
     map[name] = snapshot.values.byVariable[name];
   });
 
   return map;
+};
+
+const buildInputDefVariableAliases = (
+  targets: Awaited<ReturnType<typeof selectAggregatedFormulaTargets>>,
+): Map<number, Set<string>> => {
+  const aliases = new Map<number, Set<string>>();
+
+  const addAlias = (inputDefId: number, variableName?: string | null) => {
+    if (!variableName) {
+      return;
+    }
+
+    const bucket = aliases.get(inputDefId) ?? new Set<string>();
+    bucket.add(variableName);
+    aliases.set(inputDefId, bucket);
+  };
+
+  for (const target of targets) {
+    addAlias(target.inputDefId, target.variableName);
+    for (const formulaInput of target.formulaInputs) {
+      addAlias(formulaInput.input_def_id, formulaInput.variable_name);
+    }
+  }
+
+  return aliases;
+};
+
+const upsertVariableValues = (
+  snapshot: WorkerSnapshot,
+  aliases: Map<number, Set<string>>,
+  inputDefId: number,
+  value: string,
+): void => {
+  const variableNames = aliases.get(inputDefId);
+  if (!variableNames) {
+    return;
+  }
+
+  for (const variableName of variableNames) {
+    snapshot.values.byVariable[variableName] = value;
+  }
+
+  snapshot.values.byInputDefId[inputDefId] = value;
+};
+
+const evaluateTargetWithSnapshot = (
+  snapshot: WorkerSnapshot,
+  target: Awaited<ReturnType<typeof selectAggregatedFormulaTargets>>[number],
+):
+  | {
+      status: "calculated";
+      value: string;
+    }
+  | {
+      status: "skipped";
+      reason: "missing-value" | "unknown-variable" | "evaluation-error";
+    } => {
+  const variables = extractFormulaVariables(
+    target.formula,
+    target.formulaInputs,
+  );
+  const valueMap = buildTargetValueMap(snapshot, target, variables);
+  const classification = classifyDependencies(variables, valueMap);
+
+  if (classification.status === "skipped") {
+    return {
+      status: "skipped",
+      reason: classification.reason!,
+    };
+  }
+
+  const result = evaluateFormula(target.formula, classification.variables);
+  if (result.status === "skipped") {
+    return {
+      status: "skipped",
+      reason: result.reason!,
+    };
+  }
+
+  return {
+    status: "calculated",
+    value: result.value!,
+  };
 };
 
 export const runAggregatedWorker = async (
@@ -58,6 +168,13 @@ export const runAggregatedWorker = async (
 
   const runId = randomUUID();
   const startedAt = new Date().toISOString();
+
+  console.info("[Aggregated worker] run started", {
+    runId,
+    reportPeriodId: scope.reportPeriodId,
+    serviceAreaId: scope.serviceAreaId ?? null,
+    energyResourceId: scope.energyResourceId ?? null,
+  });
 
   storeRunStart({
     runId,
@@ -71,44 +188,100 @@ export const runAggregatedWorker = async (
   const snapshot = await buildSourceSnapshot(
     scope,
     collectAllVariables(targets),
+    collectAllInputDefIds(targets),
   );
+  const inputDefVariableAliases = buildInputDefVariableAliases(targets);
   const outcomes: AggregatedTargetOutcome[] = [];
+  const pendingTargets = [...targets];
+  let passIndex = 0;
 
-  for (const target of targets) {
-    const variables = extractFormulaVariables(
-      target.formula,
-      target.formulaInputs,
-    );
-    const valueMap = buildVariableValueMap(snapshot, variables);
-    const classification = classifyDependencies(variables, valueMap);
+  while (pendingTargets.length > 0) {
+    passIndex += 1;
+    let calculatedInPass = false;
+    const pendingBeforePass = pendingTargets.length;
 
-    if (classification.status === "skipped") {
+    for (let index = 0; index < pendingTargets.length; ) {
+      const target = pendingTargets[index];
+      const evaluation = evaluateTargetWithSnapshot(snapshot, target);
+
+      if (evaluation.status === "skipped") {
+        index += 1;
+        continue;
+      }
+
+      await writeCalculatedTargetValue({
+        inputDefId: target.inputDefId,
+        value: evaluation.value,
+        scope,
+      });
+
       outcomes.push(
-        buildSkippedOutcome(runId, target.inputDefId, classification.reason!),
+        buildCalculatedOutcome(runId, target.inputDefId, evaluation.value),
       );
-      continue;
+
+      upsertVariableValues(
+        snapshot,
+        inputDefVariableAliases,
+        target.inputDefId,
+        evaluation.value,
+      );
+      pendingTargets.splice(index, 1);
+      calculatedInPass = true;
     }
 
-    const result = evaluateFormula(target.formula, classification.variables);
-    if (result.status === "skipped") {
-      outcomes.push(
-        buildSkippedOutcome(runId, target.inputDefId, result.reason!),
-      );
-      continue;
+    if (!calculatedInPass) {
+      console.info("[Aggregated worker] pass stalled", {
+        runId,
+        passIndex,
+        pendingCount: pendingTargets.length,
+      });
+      break;
     }
 
-    await writeCalculatedTargetValue({
-      inputDefId: target.inputDefId,
-      value: result.value!,
-      scope,
+    console.info("[Aggregated worker] pass completed", {
+      runId,
+      passIndex,
+      pendingBeforePass,
+      pendingAfterPass: pendingTargets.length,
+      calculatedInPass: pendingBeforePass - pendingTargets.length,
     });
+  }
+
+  for (const target of pendingTargets) {
+    const evaluation = evaluateTargetWithSnapshot(snapshot, target);
+    if (evaluation.status !== "skipped") {
+      continue;
+    }
 
     outcomes.push(
-      buildCalculatedOutcome(runId, target.inputDefId, result.value!),
+      buildSkippedOutcome(runId, target.inputDefId, evaluation.reason),
     );
+
+    console.warn("[Aggregated worker] target skipped", {
+      runId,
+      inputDefId: target.inputDefId,
+      reason: evaluation.reason,
+      formula: target.formula,
+      dependencyCount: target.formulaInputs.length,
+    });
   }
 
   storeRunOutcomes(runId, outcomes);
+
+  const calculatedCount = outcomes.filter(
+    (outcome) => outcome.status === "calculated",
+  ).length;
+  const skippedCount = outcomes.filter(
+    (outcome) => outcome.status === "skipped",
+  ).length;
+
+  console.info("[Aggregated worker] run finished", {
+    runId,
+    status: "completed",
+    targetCount: targets.length,
+    calculatedCount,
+    skippedCount,
+  });
 
   return {
     runId,
@@ -122,7 +295,12 @@ export const runAggregatedWorkerAsync = (
 ): void => {
   queueMicrotask(() => {
     void runAggregatedWorker(user, scope).catch((error) => {
-      console.error("Aggregated worker run failed", error);
+      console.error("[Aggregated worker] run failed", {
+        reportPeriodId: scope.reportPeriodId,
+        serviceAreaId: scope.serviceAreaId ?? null,
+        energyResourceId: scope.energyResourceId ?? null,
+        error,
+      });
     });
   });
 };

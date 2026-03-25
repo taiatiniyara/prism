@@ -3,6 +3,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import type { AggregatedWorkerScope } from "@/app/data-entry/enter-data/services/aggregated-worker/source-reader";
 import { db } from "@/db/connection";
 import { dataEntries, DataEntryStatusId } from "@/db/schema/dataEntry";
+import { getCurrentUser } from "@/lib/user.service";
 
 interface WriteTargetValueInput {
   inputDefId: number;
@@ -15,6 +16,7 @@ export const writeCalculatedTargetValue = async ({
   value,
   scope,
 }: WriteTargetValueInput): Promise<void> => {
+  const user = await getCurrentUser();
   const existingConditions = [
     eq(dataEntries.report_period_id, scope.reportPeriodId),
     eq(dataEntries.input_def_id, inputDefId),
@@ -50,6 +52,8 @@ export const writeCalculatedTargetValue = async ({
     value,
     status_id: DataEntryStatusId.Entered,
     is_deleted: false,
+    updated_at: new Date().toISOString(),
+    updated_by_id: user.id,
   };
 
   if (existing) {

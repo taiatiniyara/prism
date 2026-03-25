@@ -13,8 +13,9 @@ export interface WorkerSnapshot {
 export const buildSourceSnapshot = async (
   scope: AggregatedWorkerScope,
   variableNames: string[],
+  inputDefIds: number[],
 ): Promise<WorkerSnapshot> => {
-  const values = await readSourceSnapshot(scope, variableNames);
+  const values = await readSourceSnapshot(scope, variableNames, inputDefIds);
 
   return {
     capturedAt: new Date().toISOString(),

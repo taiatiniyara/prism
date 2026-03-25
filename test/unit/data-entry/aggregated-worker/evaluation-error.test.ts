@@ -16,4 +16,18 @@ describe("evaluation error classification", () => {
     expect(result.status).toBe("calculated");
     expect(result.value).toBe("15");
   });
+
+  it("calculates values when variable names include spaces", () => {
+    const result = evaluateFormula(
+      "Operating Income + Other Income - Total Expenses",
+      {
+        "Operating Income": 100,
+        "Other Income": 20,
+        "Total Expenses": 60,
+      },
+    );
+
+    expect(result.status).toBe("calculated");
+    expect(result.value).toBe("60");
+  });
 });

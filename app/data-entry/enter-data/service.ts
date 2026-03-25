@@ -756,6 +756,7 @@ export const updateDataEntryValueAction = async (
     payment_mode_id: payload.paymentModeId,
     is_deleted: false,
     updated_at: new Date(),
+    updated_by_id: user.id,
   };
 
   let sourceDataEntryId = existing?.id ?? null;
