@@ -1,0 +1,274 @@
+openapi: 3.1.0
+info:
+  title: KPI Balanced Scorecard API
+  version: 0.1.0
+  description: Read-only scorecard endpoint for KPI review dashboards.
+paths:
+  /api/data-entry/balanced-scorecard:
+    get:
+      summary: Get balanced scorecard snapshot
+      description:
+        Returns weighted perspective and overall scorecard values for a filter
+        context.
+      parameters:
+        - name: reportPeriodId
+          in: query
+          required: true
+          schema:
+            type: integer
+            minimum: 1
+        - name: reportTypeId
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: serviceAreaId
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: kpiCategoryId
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+        - name: kpiSubcategoryId
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+      responses:
+        "200":
+          description: Scorecard snapshot returned
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ScorecardResponse"
+        "400":
+          description: Validation error for request context
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthenticated request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated but not authorized
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected scorecard retrieval error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      summary: Create or update KPI scorecard configuration
+      description:
+        Updates KPI perspective, objective, and target using a yearly scope or a
+        year plus month scope.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ScorecardUpdatePayload"
+      responses:
+        "200":
+          description: KPI scorecard configuration updated
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [message, updated]
+                properties:
+                  message:
+                    type: string
+                  updated:
+                    type: object
+        "400":
+          description: Validation error for update payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "401":
+          description: Unauthenticated request
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "403":
+          description: Authenticated but not authorized for update
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          description: Unexpected scorecard update error
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  schemas:
+    ErrorResponse:
+      type: object
+      required: [message]
+      properties:
+        message:
+          type: string
+    ScorecardResponse:
+      type: object
+      required:
+        - context
+        - snapshot
+      properties:
+        context:
+          $ref: "#/components/schemas/FilterContext"
+        snapshot:
+          $ref: "#/components/schemas/ScorecardSnapshot"
+    ScorecardUpdatePayload:
+      type: object
+      required: [kpiId, perspectiveLevel, objective, target]
+      properties:
+        kpiId:
+          type: string
+          format: uuid
+        perspectiveLevel:
+          type: integer
+          enum: [1, 2, 3, 4]
+        objective:
+          type: string
+          minLength: 1
+          maxLength: 100
+        target:
+          type: object
+          required: [year, targetValue]
+          properties:
+            year:
+              type: integer
+              minimum: 1900
+              maximum: 3000
+            month:
+              type: integer
+              minimum: 1
+              maximum: 12
+              nullable: true
+            targetValue:
+              type: string
+              minLength: 1
+    FilterContext:
+      type: object
+      required: [reportPeriodId]
+      properties:
+        reportPeriodId:
+          type: integer
+        reportTypeId:
+          type: integer
+          nullable: true
+        serviceAreaId:
+          type: integer
+          nullable: true
+        kpiCategoryId:
+          type: integer
+          nullable: true
+        kpiSubcategoryId:
+          type: integer
+          nullable: true
+    ScorecardSnapshot:
+      type: object
+      required:
+        - generatedAt
+        - perspectiveScores
+        - excludedSummary
+      properties:
+        generatedAt:
+          type: string
+          format: date-time
+        overallScore:
+          type: number
+          nullable: true
+        perspectiveScores:
+          type: array
+          items:
+            $ref: "#/components/schemas/PerspectiveScore"
+        excludedSummary:
+          type: object
+          required: [totalExcluded, byReason]
+          properties:
+            totalExcluded:
+              type: integer
+              minimum: 0
+            byReason:
+              type: object
+              additionalProperties:
+                type: integer
+                minimum: 0
+    PerspectiveScore:
+      type: object
+      required:
+        - perspectiveLevel
+        - perspectiveLabel
+        - includedCount
+        - excludedCount
+        - statusBreakdown
+      properties:
+        perspectiveLevel:
+          type: integer
+          enum: [1, 2, 3, 4]
+        perspectiveLabel:
+          type: string
+        weightedScore:
+          type: number
+          nullable: true
+        includedCount:
+          type: integer
+          minimum: 0
+        excludedCount:
+          type: integer
+          minimum: 0
+        statusBreakdown:
+          type: object
+          required: [onTrack, atRisk, offTrack]
+          properties:
+            onTrack:
+              type: integer
+              minimum: 0
+            atRisk:
+              type: integer
+              minimum: 0
+            offTrack:
+              type: integer
+              minimum: 0
+        exclusions:
+          type: array
+          items:
+            $ref: "#/components/schemas/ExcludedRow"
+    ExcludedRow:
+      type: object
+      required: [kpiId, reasonCode, reasonMessage]
+      properties:
+        kpiId:
+          type: string
+          format: uuid
+        reasonCode:
+          type: string
+          enum:
+            - MISSING_TARGET
+            - MISSING_ACTUAL
+            - INVALID_RANGE
+            - NOT_APPROVED
+            - DUPLICATE_SUPERSEDED
+        reasonMessage:
+          type: string

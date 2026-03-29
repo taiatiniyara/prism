@@ -191,17 +191,37 @@ export const getReviewKpiFilterOptions = async (
     sql`${kpiDefinitions.subcategory_id} is not null`,
   ];
 
-  if (context.kpiCategoryId != null) {
-    kpiSubcategoryConditions.push(
-      eq(kpiDefinitions.category_id, context.kpiCategoryId),
-    );
-  }
-
   const subcategoryRows = await db
     .select({ id: kpiDefinitions.subcategory_id })
     .from(kpiDefinitions)
     .where(and(...kpiSubcategoryConditions))
     .groupBy(kpiDefinitions.subcategory_id);
+
+  const subcategoryParentRows = await db
+    .select({
+      subcategoryId: kpiDefinitions.subcategory_id,
+      categoryId: kpiDefinitions.category_id,
+    })
+    .from(kpiDefinitions)
+    .where(
+      and(
+        eq(kpiDefinitions.is_active, true),
+        sql`${kpiDefinitions.subcategory_id} is not null`,
+        sql`${kpiDefinitions.category_id} is not null`,
+      ),
+    )
+    .groupBy(kpiDefinitions.subcategory_id, kpiDefinitions.category_id);
+
+  const subcategoryParentById = new Map<number, number>();
+  for (const row of subcategoryParentRows) {
+    if (
+      row.subcategoryId != null &&
+      row.categoryId != null &&
+      !subcategoryParentById.has(row.subcategoryId)
+    ) {
+      subcategoryParentById.set(row.subcategoryId, row.categoryId);
+    }
+  }
 
   const kpiCategoryIds = [
     ...new Set(
@@ -214,7 +234,11 @@ export const getReviewKpiFilterOptions = async (
     kpiCategoryIds.length === 0
       ? []
       : await db
-          .select({ id: managedListItems.id, name: managedListItems.name })
+          .select({
+            id: managedListItems.id,
+            name: managedListItems.name,
+            parentId: managedListItems.parent_id,
+          })
           .from(managedListItems)
           .where(inArray(managedListItems.id, kpiCategoryIds))
           .orderBy(asc(managedListItems.name));
@@ -230,7 +254,11 @@ export const getReviewKpiFilterOptions = async (
     kpiSubcategoryIds.length === 0
       ? []
       : await db
-          .select({ id: managedListItems.id, name: managedListItems.name })
+          .select({
+            id: managedListItems.id,
+            name: managedListItems.name,
+            parentId: managedListItems.parent_id,
+          })
           .from(managedListItems)
           .where(inArray(managedListItems.id, kpiSubcategoryIds))
           .orderBy(asc(managedListItems.name));
@@ -238,12 +266,16 @@ export const getReviewKpiFilterOptions = async (
   return {
     reportTypes: reportTypeRows.map((row) => mapOption(row.id, row.name)),
     reportPeriods: reportPeriodRows.map((row) => mapOption(row.id, row.name)),
-    kpiCategories: filteredKpiCategoryRows.map((row) =>
-      mapOption(row.id, row.name),
-    ),
-    kpiSubcategories: filteredKpiSubcategoryRows.map((row) =>
-      mapOption(row.id, row.name),
-    ),
+    kpiCategories: filteredKpiCategoryRows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      parent_id: row.parentId,
+    })),
+    kpiSubcategories: filteredKpiSubcategoryRows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      parent_id: row.parentId ?? subcategoryParentById.get(row.id) ?? null,
+    })),
     serviceAreas: serviceAreaRows.map((row) => mapOption(row.id, row.name)),
   };
 };

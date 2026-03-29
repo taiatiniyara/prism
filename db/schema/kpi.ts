@@ -13,6 +13,8 @@ import {
 import { dataEntries, FormulaInput } from "./dataEntry";
 import { reportPeriods } from "./reportPeriods";
 import { managedListItems } from "./managedLists";
+import { organisations } from "./utility";
+import { user } from "./auth-schema";
 
 export interface KpiCalculationScopeSnapshot {
   reportPeriodId: number;
@@ -47,6 +49,10 @@ export const kpiDefinitions = pgTable("kpi_definitions", {
   type_id: integer("type_id")
     .notNull()
     .references(() => managedListItems.id),
+  utilities: json("utility_ids").$type<number[]>(),
+  owner_utility_id: integer("owner_utility_id").references(
+    () => organisations.id,
+  ),
   block: integer("block").default(60),
   agg_level_id: integer("agg_level_id")
     .notNull()
@@ -62,15 +68,9 @@ export type KpiDefinition = typeof kpiDefinitions.$inferSelect & {
   agg_level?: string | null;
   category?: string | null;
   subcategory?: string | null;
+  unit?: string | null;
 };
 export type NewKpiDefinition = typeof kpiDefinitions.$inferInsert;
-
-export enum PerspectiveLevel {
-  Financial = 1,
-  Customer = 2,
-  Operation = 3,
-  Development = 4,
-}
 
 export const kpi = pgTable("kpi", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
@@ -142,8 +142,24 @@ export interface BscRelationship {
   relationship_type: "influences" | "is_influenced_by";
 }
 
+export enum PerspectiveLevel {
+  Financial = 1,
+  Customer = 2,
+  Operation = 3,
+  Development = 4,
+}
+
+// Balanced Scorecard (BSC) table to link KPIs to strategic objectives and their relationships
+interface KpiTarget {
+  year: number;
+  month?: number;
+  target_value: string;
+}
 export const bsc = pgTable("bsc", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
+  utility_id: integer("utility_id")
+    .notNull()
+    .references(() => organisations.id),
   kpi_id: uuid("kpi_id")
     .notNull()
     .references(() => kpi.id),
@@ -151,7 +167,10 @@ export const bsc = pgTable("bsc", {
     .notNull()
     .$type<PerspectiveLevel>(),
   objective: varchar("objective", { length: 100 }).notNull(),
+  targets: json("targets").$type<KpiTarget[]>(),
   relationships: json("relationships").$type<BscRelationship[]>(),
+  updated_by_id: text("updated_by_id").references(() => user.id),
+  updated_at: timestamp("updated_at").notNull().defaultNow(),
 });
 export type Bsc = typeof bsc.$inferSelect;
 export type NewBsc = typeof bsc.$inferInsert;
