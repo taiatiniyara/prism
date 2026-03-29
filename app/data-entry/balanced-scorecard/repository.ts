@@ -95,10 +95,7 @@ export const listScorecardInputRows = async (
     .innerJoin(reportPeriods, eq(kpi.report_period_id, reportPeriods.id))
     .leftJoin(
       bsc,
-      and(
-        eq(kpi.id, bsc.kpi_id),
-        eq(bsc.utility_id, reportPeriods.utility_id),
-      ),
+      and(eq(kpi.id, bsc.kpi_id), eq(bsc.utility_id, reportPeriods.utility_id)),
     )
     .where(and(...predicates));
 
@@ -293,12 +290,7 @@ export const upsertScorecardConfiguration = async (
       targets: bsc.targets,
     })
     .from(bsc)
-    .where(
-      and(
-        eq(bsc.kpi_id, resolvedKpiId),
-        eq(bsc.utility_id, utilityId),
-      ),
-    )
+    .where(and(eq(bsc.kpi_id, resolvedKpiId), eq(bsc.utility_id, utilityId)))
     .limit(1);
 
   const normalizedTargets = normalizeTargetRows(existingBsc?.targets);
