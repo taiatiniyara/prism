@@ -57,6 +57,7 @@ export interface ReviewKpiRow {
 export interface ReviewKpiFilterOption {
   id: number;
   name: string;
+  parent_id?: number | null;
 }
 
 export interface ReviewKpiFilterOptions {

@@ -26,16 +26,18 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${notoSans.className} text-slate-900`}>
+      <body
+        className={`${notoSans.className} flex h-screen flex-col overflow-hidden text-slate-900`}
+      >
         <Suspense fallback={<div className="p-6 bg-slate-900"></div>}>
           <AppNavigation />
         </Suspense>
 
-        <div className="flex min-h-screen">
+        <div className="flex min-h-0 flex-1 overflow-hidden">
           <Suspense fallback={null}>
             <SidebarWrapper />
           </Suspense>
-          <main className="flex-1 min-w-0 overflow-hidden p-2">{children}</main>
+          <main className="flex-1 min-w-0 overflow-y-auto p-2">{children}</main>
         </div>
 
         <Toaster

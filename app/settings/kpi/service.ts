@@ -3,7 +3,11 @@
 import { DataTableFormResponse } from "@/components/tables/data-table-create-form";
 import { db } from "@/db/connection";
 import { FormulaInput, inputDefinitions } from "@/db/schema/dataEntry";
-import { KpiDefinition, kpiDefinitions } from "@/db/schema/kpi";
+import {
+  KpiDefinition,
+  kpiDefinitions,
+  NewKpiDefinition,
+} from "@/db/schema/kpi";
 import { managedListItems, managedLists } from "@/db/schema/managedLists";
 import { and, asc, eq, gt, ilike, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -39,16 +43,27 @@ export interface SaveKpiFormulaPayload {
 }
 
 export async function GetAllKpiDefinitions(): Promise<KpiDefinition[]> {
+  const managedListsItems = await db.select().from(managedListItems);
   const list = await db
     .select()
     .from(kpiDefinitions)
-    .leftJoin(managedListItems, eq(kpiDefinitions.type_id, managedListItems.id))
     .orderBy(asc(kpiDefinitions.name));
 
-  return list.map((item) => ({
-    ...item.kpi_definitions,
-    type: item.managed_list_items?.name || "Unknown",
-  }));
+  return list.map((item) => {
+    const i: KpiDefinition = {
+      ...item,
+      type: managedListsItems.find((m) => m.id === item.type_id)?.name || null,
+      agg_level:
+        managedListsItems.find((m) => m.id === item.agg_level_id)?.name || null,
+      category:
+        managedListsItems.find((m) => m.id === item.category_id)?.name || null,
+      subcategory:
+        managedListsItems.find((m) => m.id === item.subcategory_id)?.name ||
+        null,
+      unit: managedListsItems.find((m) => m.id === item.unit_id)?.name || null,
+    };
+    return i;
+  });
 }
 
 export async function GetKpiTypeOptions(): Promise<KpiTypeOption[]> {
@@ -136,10 +151,23 @@ export async function UpdateKpiDefinition(
 }
 
 export async function GetKpiFormulaBuilderData(): Promise<KpiFormulaBuilderData> {
-  const kpis = await db
-    .select()
-    .from(kpiDefinitions)
-    .orderBy(asc(kpiDefinitions.name));
+  const managedListsItems = await db.select().from(managedListItems);
+  const kpis = (
+    await db.select().from(kpiDefinitions).orderBy(asc(kpiDefinitions.name))
+  ).map((i) => {
+    const kpi: KpiDefinition = {
+      ...i,
+      type: managedListsItems.find((m) => m.id === i.type_id)?.name || null,
+      agg_level:
+        managedListsItems.find((m) => m.id === i.agg_level_id)?.name || null,
+      category:
+        managedListsItems.find((m) => m.id === i.category_id)?.name || null,
+      subcategory:
+        managedListsItems.find((m) => m.id === i.subcategory_id)?.name || null,
+      unit: managedListsItems.find((m) => m.id === i.unit_id)?.name || null,
+    };
+    return kpi;
+  });
 
   const inputs = await db
     .select({
@@ -256,13 +284,11 @@ interface ExcelKpiDefinition {
   is_active: boolean;
 }
 
-export async function UpdateInputDefinitionFromExcel(
-  data: ExcelKpiDefinition[],
-) {
+export async function UpdateKpiDefinitionFromExcel(data: ExcelKpiDefinition[]) {
   db.delete(kpiDefinitions)
     .where(gt(kpiDefinitions.id, 0))
     .then(async () => {
-      const list: KpiDefinition[] = data.map((item) => {
+      const list: NewKpiDefinition[] = data.map((item) => {
         return {
           id: item.source_id,
           name: item.kpi_name,
@@ -282,6 +308,8 @@ export async function UpdateInputDefinitionFromExcel(
           block: item.kpi_block || null,
           formula_inputs: null,
           is_aggregated: false,
+          utilities: null,
+          owner_utility_id: null,
         };
       });
 

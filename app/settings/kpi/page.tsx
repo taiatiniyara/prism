@@ -21,15 +21,7 @@ export default async function KpiSettingsPage() {
       <DataTable<KpiDefinition>
         title="KPI Definitions"
         data={kpiDefinitions}
-        columns={[
-          "id",
-          "name",
-          "description",
-          "type",
-          "limit_lower",
-          "limit_upper",
-          "formula",
-        ]}
+        columns={["name", "category", "subcategory", "formula", "unit", "type"]}
         createFormProps={{
           formAction: CreateKpiDefinition,
           fields: [
