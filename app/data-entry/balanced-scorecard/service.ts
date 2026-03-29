@@ -26,7 +26,7 @@ export const getScorecardResponse = async (
   const context = sanitizeScorecardFilterContext(inputContext);
   const rows = await listScorecardInputRows(context);
   const snapshot = buildScorecardSnapshot(rows);
-  return toScorecardResponse(context, snapshot);
+  return toScorecardResponse(context, snapshot, rows);
 };
 
 export const getScorecardKpiOptions = async (

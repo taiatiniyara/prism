@@ -152,4 +152,38 @@ describe("balanced scorecard route contract", () => {
 
     expect(response.status).toBe(400);
   });
+
+  it("returns 400 when multiple FY periods exist and month is omitted", async () => {
+    mocks.saveScorecardConfiguration.mockRejectedValue(
+      new Error(
+        "VALIDATION:Multiple financial-year periods found for target year. Provide month to select a monthly period.",
+      ),
+    );
+
+    const { POST } =
+      await import("@/app/api/data-entry/balanced-scorecard/route");
+    const response = await POST(
+      new Request("http://localhost/api/data-entry/balanced-scorecard", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          kpiId: null,
+          kpiDefinitionId: 10,
+          perspectiveLevel: 2,
+          objective: "Improve customer outcomes",
+          target: {
+            year: 2026,
+            month: null,
+            targetValue: "91.5",
+          },
+        }),
+      }),
+    );
+
+    expect(response.status).toBe(400);
+    const payload = await response.json();
+    expect(payload.message).toBe(
+      "Multiple financial-year periods found for target year. Provide month to select a monthly period.",
+    );
+  });
 });

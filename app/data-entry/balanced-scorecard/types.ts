@@ -48,6 +48,7 @@ export type ScorecardSnapshot = {
 export type ScorecardResponse = {
   context: ScorecardFilterContext;
   snapshot: ScorecardSnapshot;
+  rows?: ScorecardInputRow[];
 };
 
 export type ScorecardTargetInput = {
@@ -69,11 +70,14 @@ export type ScorecardKpiOption = {
   kpiDefinitionId: number;
   reportPeriodId: number;
   kpiName: string;
+  targetValue: string | null;
 };
 
 export type ScorecardInputRow = {
   kpiId: string;
   kpiDefinitionId: number;
+  kpiName?: string | null;
+  objective?: string | null;
   perspectiveLevel: number;
   perspectiveLabel: string;
   perspectiveWeight: number;

@@ -1,12 +1,8 @@
 import ScorecardPageClient from "./page.client";
-import type {
-  ScorecardFilterContext,
-  ScorecardKpiOption,
-} from "@/app/data-entry/balanced-scorecard/types";
-import {
-  bootstrapReviewKpiContextAndOptions,
-  listReviewKpiRows,
-} from "@/app/data-entry/review-kpi/service";
+import type { ScorecardFilterContext } from "@/app/data-entry/balanced-scorecard/types";
+import { bootstrapReviewKpiContextAndOptions } from "@/app/data-entry/review-kpi/service";
+import { getScorecardKpiOptions } from "@/app/data-entry/balanced-scorecard/service";
+import { getCurrentUser } from "@/lib/user.service";
 
 const toScorecardContext = (
   context: {
@@ -27,19 +23,18 @@ const toScorecardContext = (
 
 export default async function BalancedScorecardPage() {
   try {
+    const user = await getCurrentUser();
     const { context, options } = await bootstrapReviewKpiContextAndOptions();
     const fallbackReportPeriodId = options.reportPeriods[0]?.id ?? 1;
-    const reviewRows = await listReviewKpiRows(context);
-    const kpiOptions: ScorecardKpiOption[] = reviewRows.map((row) => ({
-      kpiId: row.result.kpiId,
-      kpiDefinitionId: row.kpiDefId,
-      reportPeriodId: row.reportPeriodId,
-      kpiName: row.kpiName,
-    }));
+    const scorecardContext = toScorecardContext(
+      context,
+      fallbackReportPeriodId,
+    );
+    const kpiOptions = await getScorecardKpiOptions(user, scorecardContext);
 
     return (
       <ScorecardPageClient
-        initialContext={toScorecardContext(context, fallbackReportPeriodId)}
+        initialContext={scorecardContext}
         options={options}
         kpiOptions={kpiOptions}
       />

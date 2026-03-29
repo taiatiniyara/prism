@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import ScorecardSummary from "@/components/data-entry/scorecard-summary";
 import ScorecardDetailPanel from "@/components/data-entry/scorecard-detail-panel";
 import ScorecardEmptyState from "@/components/data-entry/scorecard-empty-state";
+import ScorecardTree from "@/components/data-entry/scorecard-tree";
 import ScorecardFiltersClient from "@/app/data-entry/balanced-scorecard/filters.client";
 import {
   fetchScorecard,
@@ -13,6 +14,7 @@ import {
 } from "@/app/data-entry/balanced-scorecard/client";
 import type {
   ScorecardFilterContext,
+  ScorecardInputRow,
   ScorecardKpiOption,
   ScorecardSnapshot,
 } from "@/app/data-entry/balanced-scorecard/types";
@@ -39,6 +41,7 @@ export default function ScorecardPageClient({
   const [context, setContext] =
     useState<ScorecardFilterContext>(initialContext);
   const [snapshot, setSnapshot] = useState<ScorecardSnapshot | null>(null);
+  const [scorecardRows, setScorecardRows] = useState<ScorecardInputRow[]>([]);
   const [error, setError] = useState<string | null>(null);
   const [selectedPerspective, setSelectedPerspective] = useState<number | null>(
     null,
@@ -67,6 +70,7 @@ export default function ScorecardPageClient({
           return;
         }
         setSnapshot(payload.snapshot);
+        setScorecardRows(payload.rows ?? []);
         setError(null);
       })
       .catch((err: unknown) => {
@@ -74,6 +78,7 @@ export default function ScorecardPageClient({
           return;
         }
         setSnapshot(null);
+        setScorecardRows([]);
         setError(
           err instanceof Error ? err.message : "Unable to load scorecard.",
         );
@@ -138,7 +143,7 @@ export default function ScorecardPageClient({
   );
 
   return (
-    <div className="space-y-3 p-2 sm:p-3">
+    <div className="space-y-2 p-1.5 sm:p-2">
       <ScorecardFiltersClient
         context={context}
         options={options}
@@ -150,26 +155,26 @@ export default function ScorecardPageClient({
       />
 
       {!snapshot && !error ? (
-        <div className="text-sm text-muted-foreground">
+        <div className="text-xs text-muted-foreground">
           Loading scorecard...
         </div>
       ) : null}
       {error ? (
-        <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+        <div className="rounded-md border border-rose-200 bg-rose-50 p-2 text-xs text-rose-800">
           {error}
         </div>
       ) : null}
 
-      <section className="rounded-md border bg-card p-3">
-        <h2 className="text-sm font-semibold">Enter or Update KPI Target</h2>
-        <p className="text-xs text-muted-foreground">
+      <section className="rounded-md border bg-card p-2">
+        <h2 className="text-xs font-semibold">Enter or Update KPI Target</h2>
+        <p className="text-[11px] text-muted-foreground">
           Update KPI perspective, objective, and target by year, or by year and
           month.
         </p>
 
-        <div className="mt-3 grid gap-2 md:grid-cols-2">
-          <div className="space-y-1">
-            <label className="text-xs font-medium">KPI</label>
+        <div className="mt-2 grid gap-1.5 md:grid-cols-2">
+          <div className="space-y-0.5">
+            <label className="text-[11px] font-medium">KPI</label>
             <Select
               value={
                 kpiDefinitionId == null ? undefined : String(kpiDefinitionId)
@@ -177,7 +182,7 @@ export default function ScorecardPageClient({
               onValueChange={(value) => setKpiDefinitionId(Number(value))}
               disabled={availableKpiOptions.length === 0 || isSaving}
             >
-              <SelectTrigger>
+              <SelectTrigger className="h-8 text-xs">
                 <SelectValue placeholder="Select KPI" />
               </SelectTrigger>
               <SelectContent>
@@ -193,8 +198,8 @@ export default function ScorecardPageClient({
             </Select>
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-medium">Perspective</label>
+          <div className="space-y-0.5">
+            <label className="text-[11px] font-medium">Perspective</label>
             <Select
               value={String(perspectiveLevel)}
               onValueChange={(value) =>
@@ -202,7 +207,7 @@ export default function ScorecardPageClient({
               }
               disabled={isSaving}
             >
-              <SelectTrigger>
+              <SelectTrigger className="h-8 text-xs">
                 <SelectValue placeholder="Select perspective" />
               </SelectTrigger>
               <SelectContent>
@@ -214,28 +219,30 @@ export default function ScorecardPageClient({
             </Select>
           </div>
 
-          <div className="space-y-1 md:col-span-2">
-            <label className="text-xs font-medium">Objective</label>
+          <div className="space-y-0.5 md:col-span-2">
+            <label className="text-[11px] font-medium">Objective</label>
             <Input
               name="objective"
               value={objective}
               onChange={(event) => setObjective(event.target.value)}
+              className="h-8 text-xs"
               disabled={isSaving}
             />
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-medium">Target Value</label>
+          <div className="space-y-0.5">
+            <label className="text-[11px] font-medium">Target Value</label>
             <Input
               name="targetValue"
               value={targetValue}
               onChange={(event) => setTargetValue(event.target.value)}
+              className="h-8 text-xs"
               disabled={isSaving}
             />
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-medium">Year</label>
+          <div className="space-y-0.5">
+            <label className="text-[11px] font-medium">Year</label>
             <Input
               name="targetYear"
               type="number"
@@ -245,12 +252,13 @@ export default function ScorecardPageClient({
               onChange={(event) =>
                 setTargetYear(Number(event.target.value || "0"))
               }
+              className="h-8 text-xs"
               disabled={isSaving}
             />
           </div>
 
-          <div className="space-y-1">
-            <label className="text-xs font-medium">Month (optional)</label>
+          <div className="space-y-0.5">
+            <label className="text-[11px] font-medium">Month (optional)</label>
             <Input
               name="targetMonth"
               type="number"
@@ -258,14 +266,17 @@ export default function ScorecardPageClient({
               max={12}
               value={targetMonth}
               onChange={(event) => setTargetMonth(event.target.value)}
+              className="h-8 text-xs"
               disabled={isSaving}
             />
           </div>
         </div>
 
-        <div className="mt-3 flex items-center gap-2">
+        <div className="mt-2 flex items-center gap-1.5">
           <Button
             type="button"
+            size="sm"
+            className="h-8 px-2 text-xs"
             disabled={
               isSaving ||
               availableKpiOptions.length === 0 ||
@@ -311,7 +322,7 @@ export default function ScorecardPageClient({
             {isSaving ? "Saving..." : "Save KPI Target"}
           </Button>
           {saveMessage ? (
-            <span className="text-xs text-muted-foreground">{saveMessage}</span>
+            <span className="text-[11px] text-muted-foreground">{saveMessage}</span>
           ) : null}
         </div>
 
@@ -324,6 +335,7 @@ export default function ScorecardPageClient({
 
       {snapshot && snapshot.perspectiveScores.length > 0 ? (
         <>
+          <ScorecardTree rows={scorecardRows} />
           <ScorecardSummary
             overallScore={snapshot.overallScore}
             perspectiveScores={snapshot.perspectiveScores}

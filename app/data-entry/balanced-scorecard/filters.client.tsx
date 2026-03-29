@@ -35,9 +35,10 @@ export default function ScorecardFiltersClient({
   }, [context.kpiCategoryId, options.kpiSubcategories]);
 
   return (
-    <div className="flex flex-wrap items-end gap-2">
+    <div className="flex flex-wrap items-end gap-1.5">
       <KpiCategorySelect
         value={context.kpiCategoryId}
+        compact
         options={options.kpiCategories}
         onChange={(value) =>
           onChange({
@@ -49,6 +50,7 @@ export default function ScorecardFiltersClient({
       />
       <KpiSubcategorySelect
         value={context.kpiSubcategoryId}
+        compact
         options={visibleSubcategories}
         onChange={(value) => setField("kpiSubcategoryId", value)}
       />

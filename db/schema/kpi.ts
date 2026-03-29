@@ -148,13 +148,7 @@ export enum PerspectiveLevel {
   Operation = 3,
   Development = 4,
 }
-
-// Balanced Scorecard (BSC) table to link KPIs to strategic objectives and their relationships
-interface KpiTarget {
-  year: number;
-  month?: number;
-  target_value: string;
-}
+// Balanced Scorecard (BSC) table to link KPIs to strategic perspectives and objectives.
 export const bsc = pgTable("bsc", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
   utility_id: integer("utility_id")
@@ -167,7 +161,9 @@ export const bsc = pgTable("bsc", {
     .notNull()
     .$type<PerspectiveLevel>(),
   objective: varchar("objective", { length: 100 }).notNull(),
-  targets: json("targets").$type<KpiTarget[]>(),
+  target: varchar("target", { length: 100 }),
+  year: integer("year").notNull(),
+  month: integer("month"),
   relationships: json("relationships").$type<BscRelationship[]>(),
   updated_by_id: text("updated_by_id").references(() => user.id),
   updated_at: timestamp("updated_at").notNull().defaultNow(),

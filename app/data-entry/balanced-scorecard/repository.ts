@@ -10,12 +10,6 @@ import { managedListItems } from "@/db/schema/managedLists";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { and, eq } from "drizzle-orm";
 
-type KpiTargetRecord = {
-  year: number;
-  month?: number;
-  target_value: string;
-};
-
 const MONTHLY_TYPE_PATTERN = /month/i;
 const FY_TYPE_PATTERN = /(financial|fiscal|fy|annual|year)/i;
 
@@ -85,7 +79,9 @@ export const listScorecardInputRows = async (
     .select({
       kpiId: kpi.id,
       kpiDefinitionId: kpi.kpi_def_id,
+      kpiName: kpiDefinitions.name,
       perspectiveLevel: bsc.perspective_level,
+      objective: bsc.objective,
       targetValue: kpi.target_value,
       actualValue: kpi.actual_value,
       calculatedAt: kpi.calculated_at,
@@ -106,6 +102,8 @@ export const listScorecardInputRows = async (
     return {
       kpiId: row.kpiId,
       kpiDefinitionId: row.kpiDefinitionId,
+      kpiName: row.kpiName,
+      objective: row.objective,
       perspectiveLevel: row.perspectiveLevel ?? 4,
       perspectiveLabel: perspectiveLabel(row.perspectiveLevel),
       perspectiveWeight: 1,
@@ -140,6 +138,7 @@ export const listScorecardKpiOptions = async (
       kpiDefinitionId: kpiDefinitions.id,
       kpiName: kpiDefinitions.name,
       kpiId: kpi.id,
+      targetValue: kpi.target_value,
       reportPeriodId: reportPeriods.id,
     })
     .from(kpiDefinitions)
@@ -159,30 +158,9 @@ export const listScorecardKpiOptions = async (
       kpiDefinitionId: row.kpiDefinitionId,
       reportPeriodId: row.reportPeriodId,
       kpiName: row.kpiName,
+      targetValue: row.targetValue,
     }))
     .sort((a, b) => a.kpiName.localeCompare(b.kpiName));
-};
-
-const normalizeTargetRows = (value: unknown): KpiTargetRecord[] => {
-  if (!Array.isArray(value)) {
-    return [];
-  }
-
-  return value
-    .filter(
-      (item): item is KpiTargetRecord =>
-        typeof item === "object" &&
-        item != null &&
-        Number.isInteger((item as KpiTargetRecord).year) &&
-        (typeof (item as KpiTargetRecord).month === "undefined" ||
-          Number.isInteger((item as KpiTargetRecord).month)) &&
-        typeof (item as KpiTargetRecord).target_value === "string",
-    )
-    .map((item) => ({
-      year: item.year,
-      month: item.month,
-      target_value: item.target_value,
-    }));
 };
 
 export const upsertScorecardConfiguration = async (
@@ -230,11 +208,14 @@ export const upsertScorecardConfiguration = async (
       FY_TYPE_PATTERN.test(row.reportTypeName ?? ""),
     );
 
-    if (fyMatches.length > 0) {
-      return fyMatches.sort(
-        (a, b) =>
-          new Date(b.reportDate).getTime() - new Date(a.reportDate).getTime(),
-      )[0];
+    if (fyMatches.length > 1) {
+      throw new Error(
+        "VALIDATION:Multiple financial-year periods found for target year. Provide month to select a monthly period.",
+      );
+    }
+
+    if (fyMatches.length === 1) {
+      return fyMatches[0];
     }
 
     if (yearMatches.length === 1) {
@@ -287,26 +268,10 @@ export const upsertScorecardConfiguration = async (
   const [existingBsc] = await db
     .select({
       id: bsc.id,
-      targets: bsc.targets,
     })
     .from(bsc)
     .where(and(eq(bsc.kpi_id, resolvedKpiId), eq(bsc.utility_id, utilityId)))
     .limit(1);
-
-  const normalizedTargets = normalizeTargetRows(existingBsc?.targets);
-  const updatedTargets = normalizedTargets.filter(
-    (item) =>
-      !(
-        item.year === payload.target.year &&
-        (item.month ?? null) === (payload.target.month ?? null)
-      ),
-  );
-
-  updatedTargets.push({
-    year: payload.target.year,
-    month: payload.target.month ?? undefined,
-    target_value: payload.target.targetValue,
-  });
 
   if (existingBsc) {
     await db
@@ -315,7 +280,9 @@ export const upsertScorecardConfiguration = async (
         utility_id: utilityId,
         perspective_level: payload.perspectiveLevel,
         objective: payload.objective,
-        targets: updatedTargets,
+        target: payload.target.targetValue,
+        year: payload.target.year,
+        month: payload.target.month,
         updated_by_id: updatedById,
         updated_at: new Date(),
       })
@@ -326,7 +293,9 @@ export const upsertScorecardConfiguration = async (
       kpi_id: resolvedKpiId,
       perspective_level: payload.perspectiveLevel,
       objective: payload.objective,
-      targets: updatedTargets,
+      target: payload.target.targetValue,
+      year: payload.target.year,
+      month: payload.target.month,
       relationships: [],
       updated_by_id: updatedById,
       updated_at: new Date(),

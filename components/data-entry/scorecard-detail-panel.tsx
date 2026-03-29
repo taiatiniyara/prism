@@ -9,7 +9,7 @@ export default function ScorecardDetailPanel({
 }) {
   if (perspective == null) {
     return (
-      <div className="rounded-md border p-3 text-sm text-muted-foreground">
+      <div className="rounded-md border p-2 text-xs text-muted-foreground">
         Select a perspective to inspect score drivers.
       </div>
     );
@@ -17,24 +17,24 @@ export default function ScorecardDetailPanel({
 
   return (
     <Card>
-      <CardHeader>
-        <CardTitle className="text-base">
+      <CardHeader className="px-3 py-2">
+        <CardTitle className="text-sm">
           {perspective.perspectiveLabel} details (
           {formatScore(perspective.weightedScore)})
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-3 text-sm">
+      <CardContent className="space-y-2 px-3 pb-2 text-xs">
         <div>
           <p>Included rows: {perspective.includedCount}</p>
           <p>Excluded rows: {perspective.excludedCount}</p>
         </div>
 
         <div>
-          <h4 className="mb-1 font-medium">Excluded reasons</h4>
+          <h4 className="mb-1 font-medium text-xs">Excluded reasons</h4>
           {perspective.exclusions.length === 0 ? (
             <p className="text-muted-foreground">No exclusions.</p>
           ) : (
-            <ul className="list-disc pl-4">
+            <ul className="list-disc space-y-0.5 pl-4">
               {perspective.exclusions.map((item) => (
                 <li key={`${item.kpiId}:${item.reasonCode}`}>
                   {item.reasonCode}: {item.reasonMessage}

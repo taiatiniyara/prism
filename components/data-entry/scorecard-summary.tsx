@@ -12,17 +12,17 @@ export default function ScorecardSummary({
   onSelect: (level: number) => void;
 }) {
   return (
-    <div className="space-y-3">
+    <div className="space-y-2">
       <Card>
-        <CardHeader>
-          <CardTitle className="text-base">Overall score</CardTitle>
+        <CardHeader className="px-3 py-2">
+          <CardTitle className="text-sm">Overall score</CardTitle>
         </CardHeader>
-        <CardContent className="text-2xl font-semibold">
+        <CardContent className="px-3 pb-2 text-xl font-semibold">
           {formatScore(overallScore)}
         </CardContent>
       </Card>
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
         {perspectiveScores.map((score) => (
           <button
             key={score.perspectiveLevel}
@@ -32,16 +32,16 @@ export default function ScorecardSummary({
             aria-label={`Open ${score.perspectiveLabel} details`}
           >
             <Card className="h-full">
-              <CardHeader>
-                <CardTitle className="text-sm">
+              <CardHeader className="px-3 py-2">
+                <CardTitle className="text-xs">
                   {score.perspectiveLabel}
                 </CardTitle>
               </CardHeader>
-              <CardContent>
-                <div className="text-xl font-semibold">
+              <CardContent className="px-3 pb-2">
+                <div className="text-lg font-semibold">
                   {formatScore(score.weightedScore)}
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-[11px] text-muted-foreground">
                   Included {score.includedCount} • Excluded{" "}
                   {score.excludedCount}
                 </p>
