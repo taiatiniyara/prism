@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
   Controls,
@@ -183,6 +183,12 @@ const relationLabel = (
 
   return "Influences";
 };
+
+const isMovableNode = (nodeId: string): boolean =>
+  nodeId.startsWith("perspective:") ||
+  nodeId.startsWith("objective:") ||
+  nodeId.startsWith("initiative:") ||
+  nodeId.startsWith("kpi:");
 
 const groupRows = (rows: ScorecardInputRow[]): PerspectiveGroup[] => {
   const byLevel = new Map<
@@ -741,18 +747,44 @@ export default function ScorecardTree({
   relationships?: ScorecardRelationship[];
 }) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [manualPositions, setManualPositions] = useState<
+    Record<string, { x: number; y: number }>
+  >({});
 
   const model = useMemo(
     () => buildMapModel(rows, relationships),
     [rows, relationships],
   );
 
+  useEffect(() => {
+    // Reset manual placement when source data changes materially.
+    setManualPositions({});
+    setSelectedNodeId(null);
+  }, [rows, relationships]);
+
+  const interactiveModel = useMemo(() => {
+    const nodes = model.nodes.map((node) => {
+      const manualPosition = manualPositions[node.id];
+
+      return {
+        ...node,
+        position: manualPosition ?? node.position,
+        draggable: isMovableNode(node.id),
+      };
+    });
+
+    return {
+      nodes,
+      edges: model.edges,
+    };
+  }, [manualPositions, model.edges, model.nodes]);
+
   const highlightedModel = useMemo(() => {
     if (!selectedNodeId) {
-      return model;
+      return interactiveModel;
     }
 
-    const highlightableEdges = model.edges.filter((edge) => {
+    const highlightableEdges = interactiveModel.edges.filter((edge) => {
       const edgeData = edge.data as
         | {
             isRelationship?: boolean;
@@ -782,7 +814,7 @@ export default function ScorecardTree({
       connectedNodeIds.add(edge.target);
     }
 
-    const nodes = model.nodes.map((node) => {
+    const nodes = interactiveModel.nodes.map((node) => {
       const isConnected = connectedNodeIds.has(node.id);
       const isSelected = node.id === selectedNodeId;
 
@@ -800,7 +832,7 @@ export default function ScorecardTree({
       };
     });
 
-    const edges = model.edges.map((edge) => {
+    const edges = interactiveModel.edges.map((edge) => {
       const isConnectedEdge = connectedEdgeIds.has(edge.id);
       const edgeData = edge.data as
         | {
@@ -882,7 +914,7 @@ export default function ScorecardTree({
     });
 
     return { nodes, edges };
-  }, [model, selectedNodeId]);
+  }, [interactiveModel, selectedNodeId]);
 
   if (rows.length === 0) {
     return (
@@ -944,7 +976,7 @@ export default function ScorecardTree({
             fitViewOptions={{ padding: 0.08 }}
             minZoom={0.28}
             maxZoom={1.8}
-            nodesDraggable={false}
+            nodesDraggable
             nodesConnectable={false}
             elementsSelectable
             onNodeClick={(_, node) =>
@@ -952,6 +984,16 @@ export default function ScorecardTree({
                 current === node.id ? null : node.id,
               )
             }
+            onNodeDragStop={(_, node) => {
+              if (!isMovableNode(node.id)) {
+                return;
+              }
+
+              setManualPositions((current) => ({
+                ...current,
+                [node.id]: { x: node.position.x, y: node.position.y },
+              }));
+            }}
             onPaneClick={() => setSelectedNodeId(null)}
           >
             <Controls

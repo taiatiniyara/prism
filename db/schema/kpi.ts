@@ -46,9 +46,10 @@ export const kpiDefinitions = pgTable("kpi_definitions", {
   subcategory_id: integer("subcategory_id")
     .references(() => managedListItems.id)
     .default(600),
-  type_id: integer("type_id")
+  type: varchar("type")
+    .default("benchmarking")
     .notNull()
-    .references(() => managedListItems.id),
+    .$type<"benchmarking" | "custom">(),
   utilities: json("utility_ids").$type<number[]>(),
   owner_utility_id: integer("owner_utility_id").references(
     () => organisations.id,

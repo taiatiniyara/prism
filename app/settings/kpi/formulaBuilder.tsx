@@ -37,7 +37,7 @@ export interface KpiFormulaInputActualSample {
   value: number;
 }
 
-const operators = ["+", "-", "*", "/", "(", ")", "WHERE", "AND"];
+const operators = ["+", "-", "*", "/", "(", ")", "WHERE", "AND", "OR"];
 const DND_TOKEN_KEY = "application/x-prism-formula-token";
 
 interface FormulaInputFilters {
@@ -343,7 +343,11 @@ export default function KpiFormulaBuilder(props: {
           const current = tokens[i];
           const currentUpper = current.toUpperCase();
 
-          if (currentUpper === "AND" || current === ",") {
+          if (
+            currentUpper === "AND" ||
+            currentUpper === "OR" ||
+            current === ","
+          ) {
             i += 1;
             continue;
           }
@@ -951,8 +955,8 @@ export default function KpiFormulaBuilder(props: {
                   <Label className="text-xs sm:text-sm">Input Filters</Label>
                   <div className="space-y-1 rounded-md border border-dashed bg-muted/20 p-2 text-[11px] sm:text-xs">
                     <p className="text-muted-foreground">
-                      Inline filter format: variable WHERE provider=... AND
-                      type=... AND source=...
+                      Inline filter format: variable WHERE provider=... AND/OR
+                      type=... AND/OR source=...
                     </p>
                     {parsedInlineFormula.errors.length > 0 && (
                       <p className="text-red-600">

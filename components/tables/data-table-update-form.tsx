@@ -31,6 +31,7 @@ import ManagedListInput from "./managed-list-input";
 export interface DataTableUpdateFormField<T> {
   key: keyof T;
   type: FieldType;
+  disabled?: boolean;
   selectList?: {
     label: string;
     value: string | number;
@@ -51,6 +52,7 @@ function updateField<T>(field: DataTableUpdateFormField<T>) {
       <Label className="p-3 cursor-pointer shadow border rounded-md">
         <Checkbox
           name={field.key as string}
+          disabled={field.disabled}
           defaultChecked={Boolean(field.value)}
         />
         Click to toggle
@@ -61,6 +63,7 @@ function updateField<T>(field: DataTableUpdateFormField<T>) {
     return (
       <Select
         name={field.key as string}
+        disabled={field.disabled}
         defaultValue={field.value ? String(field.value) : undefined}
       >
         <SelectTrigger className="w-full shadow">
@@ -95,6 +98,7 @@ function updateField<T>(field: DataTableUpdateFormField<T>) {
       <Input
         className="border-0 shadow-none h-12 w-24 p-0"
         required
+        disabled={field.disabled}
         name={field.key as string}
         defaultValue={String(field.value)}
         type="color"
@@ -104,6 +108,7 @@ function updateField<T>(field: DataTableUpdateFormField<T>) {
   return (
     <Input
       required
+      disabled={field.disabled}
       name={field.key as string}
       defaultValue={String(field.value)}
       type={field.type}

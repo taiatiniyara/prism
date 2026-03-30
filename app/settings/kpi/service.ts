@@ -9,8 +9,9 @@ import {
   NewKpiDefinition,
 } from "@/db/schema/kpi";
 import { managedListItems, managedLists } from "@/db/schema/managedLists";
-import { and, asc, eq, gt, ilike, or } from "drizzle-orm";
+import { and, asc, eq, gt, ilike, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { CurrentUser, getCurrentUser } from "@/lib/user.service";
 
 export interface KpiFormulaInputOption {
   id: number;
@@ -44,7 +45,7 @@ export interface ManagedDimensionOption {
 
 export interface KpiTypeOption {
   label: string;
-  value: number;
+  value: "benchmarking" | "custom";
 }
 
 export interface SaveKpiFormulaPayload {
@@ -53,17 +54,57 @@ export interface SaveKpiFormulaPayload {
   formulaInputs: FormulaInput[];
 }
 
+const normalizeKpiType = (value: unknown): "benchmarking" | "custom" => {
+  return value === "custom" ? "custom" : "benchmarking";
+};
+
+const mapLegacyKpiTypeId = (
+  value: number | null | undefined,
+): "benchmarking" | "custom" => {
+  return value === 2 ? "custom" : "benchmarking";
+};
+
+const isGlobalRole = (role: string) => role === "DEV" || role === "BMO";
+
+const resolveCreateKpiType = (
+  user: CurrentUser,
+  value: unknown,
+): "benchmarking" | "custom" => {
+  if (!isGlobalRole(user.role)) {
+    return "custom";
+  }
+
+  return normalizeKpiType(value);
+};
+
+const getKpiVisibilityFilter = (user: CurrentUser) => {
+  if (isGlobalRole(user.role)) {
+    return null;
+  }
+
+  if (user.org_id == null) {
+    return sql`1 = 0`;
+  }
+
+  return or(
+    eq(kpiDefinitions.owner_utility_id, user.org_id),
+    sql`coalesce(${kpiDefinitions.utilities}::jsonb, '[]'::jsonb) @> ${JSON.stringify([user.org_id])}::jsonb`,
+  );
+};
+
 export async function GetAllKpiDefinitions(): Promise<KpiDefinition[]> {
+  const currentUser = await getCurrentUser();
+  const visibilityFilter = getKpiVisibilityFilter(currentUser);
   const managedListsItems = await db.select().from(managedListItems);
-  const list = await db
-    .select()
-    .from(kpiDefinitions)
-    .orderBy(asc(kpiDefinitions.name));
+  const list = await (
+    visibilityFilter
+      ? db.select().from(kpiDefinitions).where(visibilityFilter)
+      : db.select().from(kpiDefinitions)
+  ).orderBy(asc(kpiDefinitions.name));
 
   return list.map((item) => {
     const i: KpiDefinition = {
       ...item,
-      type: managedListsItems.find((m) => m.id === item.type_id)?.name || null,
       agg_level:
         managedListsItems.find((m) => m.id === item.agg_level_id)?.name || null,
       category:
@@ -78,32 +119,38 @@ export async function GetAllKpiDefinitions(): Promise<KpiDefinition[]> {
 }
 
 export async function GetKpiTypeOptions(): Promise<KpiTypeOption[]> {
-  const list = await db
-    .select({
-      id: managedListItems.id,
-      name: managedListItems.name,
-      list: managedLists.name,
-    })
-    .from(managedListItems)
-    .leftJoin(managedLists, eq(managedListItems.list_id, managedLists.id))
-    .where(ilike(managedLists.name, "%kpi%"))
-    .orderBy(asc(managedListItems.name));
-
-  return list.map((item) => ({
-    label: `${item.list || "KPI"}: ${item.name}`,
-    value: item.id,
-  }));
+  return [
+    { label: "Benchmarking", value: "benchmarking" },
+    { label: "Custom", value: "custom" },
+  ];
 }
 
 export async function CreateKpiDefinition(
   data: Partial<KpiDefinition>,
 ): Promise<DataTableFormResponse<KpiDefinition>> {
+  const currentUser = await getCurrentUser();
+
+  if (!isGlobalRole(currentUser.role) && currentUser.org_id == null) {
+    return {
+      success: false,
+      message: "Your account is not scoped to a utility.",
+    };
+  }
+
+  const utilityOwnershipFields =
+    !isGlobalRole(currentUser.role) && currentUser.org_id != null
+      ? {
+          owner_utility_id: currentUser.org_id,
+          utilities: [currentUser.org_id],
+        }
+      : {};
+
   const [created] = await db
     .insert(kpiDefinitions)
     .values({
       name: String(data.name || "").trim(),
       description: data.description ? String(data.description) : null,
-      type_id: Number(data.type_id),
+      type: resolveCreateKpiType(currentUser, data.type),
       limit_lower: data.limit_lower ? String(data.limit_lower) : null,
       limit_upper: data.limit_upper ? String(data.limit_upper) : null,
       formula: data.formula ? String(data.formula) : "0",
@@ -111,6 +158,7 @@ export async function CreateKpiDefinition(
         Array.isArray(data.formula_inputs) && data.formula_inputs.length > 0
           ? data.formula_inputs
           : [],
+      ...utilityOwnershipFields,
     })
     .returning();
 
@@ -135,8 +183,10 @@ export async function UpdateKpiDefinition(
           : data.description
             ? String(data.description)
             : null,
-      type_id:
-        typeof data.type_id === "undefined" ? undefined : Number(data.type_id),
+      type:
+        typeof data.type === "undefined"
+          ? undefined
+          : normalizeKpiType(data.type),
       limit_lower:
         typeof data.limit_lower === "undefined"
           ? undefined
@@ -168,7 +218,6 @@ export async function GetKpiFormulaBuilderData(): Promise<KpiFormulaBuilderData>
   ).map((i) => {
     const kpi: KpiDefinition = {
       ...i,
-      type: managedListsItems.find((m) => m.id === i.type_id)?.name || null,
       agg_level:
         managedListsItems.find((m) => m.id === i.agg_level_id)?.name || null,
       category:
@@ -319,7 +368,7 @@ export async function UpdateKpiDefinitionFromExcel(data: ExcelKpiDefinition[]) {
           unit_id: item.kpi_unit_id,
           agg_level_id: item.kpi_agglevel_id,
           is_kpi_input: item.is_kpi_input,
-          type_id: item.kpi_type_id,
+          type: mapLegacyKpiTypeId(item.kpi_type_id),
           is_currency: item.is_currency,
           is_descriptive: item.is_descriptive,
           is_active: item.is_active,

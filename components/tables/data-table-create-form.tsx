@@ -47,6 +47,7 @@ export interface DataTableFormResponse<T> {
 interface DataTableCreateFormField<T> {
   key: keyof T;
   type: FieldType;
+  disabled?: boolean;
   selectList?: {
     label: string;
     value: string | number;
@@ -77,7 +78,10 @@ export function formDataToObject<T>(
 function field<T>(field: DataTableCreateFormField<T>) {
   if (field.type === "select") {
     return (
-      <Select name={field.key as string}>
+      <Select
+        name={field.key as string}
+        disabled={field.disabled}
+      >
         <SelectTrigger className="w-full shadow">
           <SelectValue
             placeholder={`Select ${formatLabel(field.key.toString())}`}
@@ -101,6 +105,7 @@ function field<T>(field: DataTableCreateFormField<T>) {
       <Label className="flex justify-start border p-3 shadow rounded-lg">
         <Checkbox
           required
+          disabled={field.disabled}
           name={field.key as string}
         />
         Yes
@@ -113,6 +118,7 @@ function field<T>(field: DataTableCreateFormField<T>) {
       <Input
         className="h-10 p-0 border-0 shadow-none w-24"
         required
+        disabled={field.disabled}
         type={field.type}
         name={field.key as string}
       />
@@ -123,6 +129,7 @@ function field<T>(field: DataTableCreateFormField<T>) {
     return (
       <Input
         required
+        disabled={field.disabled}
         type={field.type}
         name={field.key as string}
       />
@@ -133,6 +140,7 @@ function field<T>(field: DataTableCreateFormField<T>) {
     return (
       <Textarea
         required
+        disabled={field.disabled}
         name={field.key as string}
       ></Textarea>
     );
@@ -150,6 +158,7 @@ function field<T>(field: DataTableCreateFormField<T>) {
   return (
     <Input
       required
+      disabled={field.disabled}
       type={field.type}
       name={field.key as string}
     />

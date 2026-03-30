@@ -1,5 +1,6 @@
 import DataTable from "@/components/tables/data-table";
 import { KpiDefinition } from "@/db/schema/kpi";
+import { getCurrentUser } from "@/lib/user.service";
 import KpiFormulaBuilder from "./formulaBuilder";
 import {
   CreateKpiDefinition,
@@ -11,6 +12,8 @@ import {
 import UploadKpiFromExcel from "./uploadFromExcel";
 
 export default async function KpiSettingsPage() {
+  const currentUser = await getCurrentUser();
+  const isGlobalRole = currentUser.role === "DEV" || currentUser.role === "BMO";
   const kpiDefinitions = await GetAllKpiDefinitions();
   const data = await GetKpiFormulaBuilderData();
   const kpiTypes = await GetKpiTypeOptions();
@@ -28,8 +31,9 @@ export default async function KpiSettingsPage() {
             { key: "name", type: "text" },
             { key: "description", type: "textarea" },
             {
-              key: "type_id",
+              key: "type",
               type: "select",
+              disabled: !isGlobalRole,
               selectList: kpiTypes,
             },
             { key: "limit_lower", type: "text" },
@@ -42,8 +46,9 @@ export default async function KpiSettingsPage() {
             { key: "name", type: "text" },
             { key: "description", type: "textarea" },
             {
-              key: "type_id",
+              key: "type",
               type: "select",
+              disabled: !isGlobalRole,
               selectList: kpiTypes,
             },
             { key: "limit_lower", type: "text" },
