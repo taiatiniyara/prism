@@ -11,7 +11,6 @@ import {
 import { useReviewKpiSync } from "@/app/data-entry/review-kpi/use-review-kpi-sync";
 import { ReviewKpiInputValueCard } from "@/components/data-entry/review-kpi-input-value";
 import { Badge } from "@/components/ui/badge";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface ReviewKpiRowProps {
   row: ReviewKpiRow;
@@ -213,20 +212,17 @@ export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
   };
 
   return (
-    <Card
-      size="sm"
-      className="gap-2 border-border/80 bg-card shadow-sm"
-    >
-      <CardHeader className="border-b bg-muted/30 pb-2 pt-3">
-        <CardTitle className="text-sm sm:text-base">{row.kpiName}</CardTitle>
-      </CardHeader>
+    <div className="gap-2 bg-card shadow border">
+      <div className="border-b bg-muted/30 p-3">
+        <h2 className="text-sm sm:text-base font-bold">{row.kpiName}</h2>
+      </div>
 
-      <CardContent className="grid gap-2 p-3 sm:grid-cols-2 xl:grid-cols-3">
+      <div className="grid gap-2 p-3 sm:grid-cols-2 xl:grid-cols-3">
         <section className="space-y-1.5 rounded-md border border-sky-200/80 border-l-4 bg-sky-50/30 p-2 dark:border-sky-900/60 dark:bg-sky-950/15">
           <h3 className="text-[11px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">
             Inputs
           </h3>
-          <ul className="space-y-1.5">
+          <ul className="space-y-3">
             {sortedInputs.map((input) => (
               <ReviewKpiInputValueCard
                 key={`${localRow.kpiDefId}-${input.dataEntryId}`}
@@ -318,7 +314,7 @@ export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
             ) : null}
           </div>
         </section>
-      </CardContent>
-    </Card>
+      </div>
+    </div>
   );
 }

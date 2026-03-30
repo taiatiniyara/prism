@@ -28,8 +28,8 @@ export function ReviewKpiInputValueCard({
   onCommentsUpdated,
 }: ReviewKpiInputValueProps) {
   return (
-    <li className="space-y-1.5 rounded-md border border-border/80 bg-card px-2 py-1.5 text-xs shadow-sm sm:text-sm">
-      <div className="rounded-sm bg-muted/40 px-1.5 py-1 text-sm font-semibold leading-tight text-foreground/90">
+    <li className="space-y-2 rounded-md border border-border/80 bg-card px-2 py-1.5 text-xs shadow-sm sm:text-sm">
+      <div className="rounded-sm px-1.5 py-1 font-semibold leading-tight text-foreground/90">
         {input.inputName}
         {input.unitName ? (
           <span className="ml-1 font-normal text-muted-foreground">
