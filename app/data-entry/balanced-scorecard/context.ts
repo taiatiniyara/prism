@@ -19,10 +19,6 @@ export const sanitizeScorecardFilterContext = (
     kpiSubcategoryId: toPositiveIntOrNull(context.kpiSubcategoryId),
   };
 
-  if (sanitized.reportPeriodId <= 0) {
-    throw new Error("VALIDATION:reportPeriodId is required.");
-  }
-
   if (sanitized.kpiCategoryId == null) {
     sanitized.kpiSubcategoryId = null;
   }

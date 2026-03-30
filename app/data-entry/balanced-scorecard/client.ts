@@ -8,7 +8,22 @@ import type {
 
 let latestRequestId = 0;
 
-const toQueryString = (context: ScorecardFilterContext): string => {
+const toScorecardQueryString = (context: ScorecardFilterContext): string => {
+  const params = new URLSearchParams();
+
+  if (context.reportTypeId != null)
+    params.set("reportTypeId", String(context.reportTypeId));
+  if (context.serviceAreaId != null)
+    params.set("serviceAreaId", String(context.serviceAreaId));
+  if (context.kpiCategoryId != null)
+    params.set("kpiCategoryId", String(context.kpiCategoryId));
+  if (context.kpiSubcategoryId != null)
+    params.set("kpiSubcategoryId", String(context.kpiSubcategoryId));
+
+  return params.toString();
+};
+
+const toKpiOptionsQueryString = (context: ScorecardFilterContext): string => {
   const params = new URLSearchParams();
   params.set("reportPeriodId", String(context.reportPeriodId));
 
@@ -28,7 +43,7 @@ export const fetchScorecard = async (
   context: ScorecardFilterContext,
 ): Promise<{ requestId: number; payload: ScorecardResponse }> => {
   const requestId = ++latestRequestId;
-  const query = toQueryString(context);
+  const query = toScorecardQueryString(context);
   const response = await fetch(`/api/data-entry/balanced-scorecard?${query}`, {
     method: "GET",
     cache: "no-store",
@@ -93,7 +108,7 @@ export const saveScorecardRelationships = async (
 export const fetchScorecardKpiOptions = async (
   context: ScorecardFilterContext,
 ): Promise<ScorecardKpiOption[]> => {
-  const query = toQueryString(context);
+  const query = toKpiOptionsQueryString(context);
   const response = await fetch(
     `/api/data-entry/balanced-scorecard/kpi-options?${query}`,
     {

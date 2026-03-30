@@ -35,6 +35,26 @@ const toDraftMap = (inputs: ReviewKpiInputValue[]) =>
     inputs.map((input) => [input.dataEntryId, input.value ?? ""]),
   );
 
+const formatResultValue = (
+  value: string | null,
+  unitName: string | null,
+): string => {
+  if (value == null) {
+    return "-";
+  }
+
+  if (unitName?.trim() !== "%") {
+    return value;
+  }
+
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) {
+    return value;
+  }
+
+  return String(parsed * 100);
+};
+
 export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
   const [localRow, setLocalRow] = useState(row);
   const [draftValues, setDraftValues] = useState<Record<string, string>>(
@@ -101,6 +121,11 @@ export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
     isSaving &&
     (localRow.result.status === "stale" ||
       localRow.result.status === "missing-input");
+
+  const formattedResultValue = formatResultValue(
+    localRow.result.value,
+    localRow.unitName,
+  );
 
   const sortedInputs = useMemo(
     () =>
@@ -238,11 +263,16 @@ export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
 
         <section className="space-y-1.5 rounded-md border border-emerald-200/80 border-l-4 bg-emerald-50/40 p-2 dark:border-emerald-900/60 dark:bg-emerald-950/20">
           <h3 className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
-            Result
+            KPI Result
           </h3>
           <div className="rounded-md border border-emerald-200/60 bg-background p-2 text-xs sm:text-sm dark:border-emerald-900/50">
             <div className="mb-1 text-sm font-semibold sm:text-base">
-              {localRow.result.value ?? "-"}
+              {formattedResultValue}
+              {localRow.unitName && localRow.result.value != null ? (
+                <span className="ml-1 text-xs font-normal text-muted-foreground sm:text-sm">
+                  {localRow.unitName}
+                </span>
+              ) : null}
             </div>
             <Badge variant={getResultBadgeVariant(localRow.result.status)}>
               {localRow.result.status}

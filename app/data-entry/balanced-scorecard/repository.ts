@@ -186,8 +186,17 @@ const flattenHierarchy = (
           perspectiveLabel: perspectiveLabel(perspective.perspective_level),
           strategicObjective: objective.description,
           keyInitiative: initiative.description,
-          targetValue: linkedKpi.target_value,
-          trackingFrequency: linkedKpi.tracking_frequency,
+          targetValue:
+            linkedKpi.targets
+              ?.slice()
+              .sort(
+                (a, b) => b.year - a.year || (b.month ?? 0) - (a.month ?? 0),
+              )
+              .find((target) => target.value.trim().length > 0)?.value ?? null,
+          trackingFrequency:
+            linkedKpi.tracking_frequency === "annually"
+              ? "annually"
+              : "monthly",
         });
       }
     }
@@ -199,7 +208,7 @@ const flattenHierarchy = (
 export const listScorecardInputRows = async (
   context: ScorecardFilterContext,
 ): Promise<ScorecardInputRow[]> => {
-  const predicates = [eq(kpi.report_period_id, context.reportPeriodId)];
+  const predicates = [];
 
   if (context.reportTypeId != null) {
     predicates.push(eq(reportPeriods.report_type_id, context.reportTypeId));
@@ -299,7 +308,10 @@ export const listScorecardInputRows = async (
       status: inferStatus(actualValue, targetValue),
       approvalStateId: 5,
       updatedAt: row.calculatedAt,
-      filterScopeKey: `period:${context.reportPeriodId}`,
+      filterScopeKey:
+        context.reportPeriodId > 0
+          ? `period:${context.reportPeriodId}`
+          : "period:all",
     } satisfies ScorecardInputRow;
   });
 };
@@ -352,6 +364,27 @@ export const listScorecardKpiOptions = async (
 export const listScorecardRelationships = async (
   context: ScorecardFilterContext,
 ): Promise<ScorecardRelationship[]> => {
+  if (context.reportPeriodId <= 0) {
+    const rows = await db
+      .select({ relationships: bsc.relationships })
+      .from(bsc)
+      .orderBy(desc(bsc.updated_at));
+
+    const relationshipById = new Map<string, ScorecardRelationship>();
+    for (const row of rows) {
+      for (const relationship of row.relationships ?? []) {
+        const parsed = toScorecardRelationship(relationship);
+        if (parsed == null || relationshipById.has(parsed.id)) {
+          continue;
+        }
+
+        relationshipById.set(parsed.id, parsed);
+      }
+    }
+
+    return [...relationshipById.values()];
+  }
+
   const [period] = await db
     .select({ utilityId: reportPeriods.utility_id })
     .from(reportPeriods)
@@ -559,18 +592,74 @@ export const upsertScorecardConfiguration = async (
     objective.key_initiatives.push(initiative);
   }
 
-  const existingLinkedKpi = initiative.kpis.find(
-    (item) => item.kpi_id === payload.kpiDefinitionId,
+  const reportDate = new Date(resolvedPeriod.reportDate);
+  const resolvedYear = payload.target.year ?? reportDate.getFullYear();
+  const resolvedMonth =
+    payload.trackingFrequency === "monthly"
+      ? (payload.target.month ?? reportDate.getMonth() + 1)
+      : null;
+
+  if (
+    !Number.isInteger(resolvedYear) ||
+    resolvedYear < 1900 ||
+    resolvedYear > 3000
+  ) {
+    throw new Error("VALIDATION:Unable to resolve target year.");
+  }
+
+  if (
+    resolvedMonth != null &&
+    (!Number.isInteger(resolvedMonth) ||
+      resolvedMonth < 1 ||
+      resolvedMonth > 12)
+  ) {
+    throw new Error("VALIDATION:Unable to resolve target month.");
+  }
+
+  if (!initiative) {
+    throw new Error("VALIDATION:Unable to resolve key initiative.");
+  }
+
+  const ensuredInitiative = initiative;
+
+  const existingLinkedKpi = ensuredInitiative.kpis.find(
+    (item) =>
+      item.kpi_id === payload.kpiDefinitionId &&
+      item.tracking_frequency === payload.trackingFrequency,
   );
 
+  const normalizedTargetValue = payload.target.targetValue.trim();
+
   if (existingLinkedKpi) {
-    existingLinkedKpi.target_value = payload.target.targetValue;
-    existingLinkedKpi.tracking_frequency = payload.trackingFrequency;
+    const existingTarget = (existingLinkedKpi.targets ?? []).find(
+      (target) =>
+        target.year === resolvedYear &&
+        (target.month ?? null) === resolvedMonth,
+    );
+
+    if (existingTarget) {
+      existingTarget.value = normalizedTargetValue;
+    } else {
+      existingLinkedKpi.targets = [
+        ...(existingLinkedKpi.targets ?? []),
+        {
+          year: resolvedYear,
+          month: resolvedMonth,
+          value: normalizedTargetValue,
+        },
+      ];
+    }
   } else {
-    initiative.kpis.push({
+    ensuredInitiative.kpis.push({
       kpi_id: payload.kpiDefinitionId,
-      target_value: payload.target.targetValue,
       tracking_frequency: payload.trackingFrequency,
+      targets: [
+        {
+          year: resolvedYear,
+          month: resolvedMonth,
+          value: normalizedTargetValue,
+        },
+      ],
     });
   }
 
@@ -606,7 +695,6 @@ export const upsertScorecardConfiguration = async (
     })
     .where(eq(kpi.id, resolvedKpiId));
 
-  const reportDate = new Date(resolvedPeriod.reportDate);
   return {
     kpiId: resolvedKpiId,
     reportPeriodId: resolvedReportPeriodId,

@@ -30,7 +30,7 @@ export const parseScorecardFilterContext = (
   params: URLSearchParams,
 ): ScorecardFilterContext => {
   const context: ScorecardFilterContext = {
-    reportPeriodId: parsePositiveInt(params, "reportPeriodId", true) as number,
+    reportPeriodId: parsePositiveInt(params, "reportPeriodId") ?? 0,
     reportTypeId: parsePositiveInt(params, "reportTypeId"),
     serviceAreaId: parsePositiveInt(params, "serviceAreaId"),
     kpiCategoryId: parsePositiveInt(params, "kpiCategoryId"),

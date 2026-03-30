@@ -52,6 +52,28 @@ const LANE_ACCENT: Record<1 | 2 | 3 | 4, string> = {
   4: "#dc2626",
 };
 
+const PERSPECTIVE_TITLE_BG: Record<1 | 2 | 3 | 4, string> = {
+  1: "#fff7ed",
+  2: "#ecfdf5",
+  3: "#eff6ff",
+  4: "#fef2f2",
+};
+
+const HIERARCHY_NODE_STYLE = {
+  objective: {
+    border: "#3b82f6",
+    background: "#eff6ff",
+  },
+  initiative: {
+    border: "#7c3aed",
+    background: "#f5f3ff",
+  },
+  kpi: {
+    border: "#0d9488",
+    background: "#f0fdfa",
+  },
+} as const;
+
 const slug = (value: string): string =>
   value
     .trim()
@@ -125,11 +147,11 @@ const actualValueClassName = (row: ScorecardInputRow): string => {
 };
 
 const kpiNodeLabel = (row: ScorecardInputRow): ReactNode => (
-  <div className="px-2 py-1 text-left">
+  <div className="px-2 py-1.5 text-left">
     <div className="text-[13px] font-semibold leading-tight">
       {toKpiName(row)}
     </div>
-    <div className="mt-1 text-[12px] leading-tight">
+    <div className="mt-0.5 text-[12px] leading-tight">
       Status:{" "}
       <span className={statusClassName(row.status)}>
         {statusLabel(row.status)}
@@ -189,6 +211,32 @@ const isMovableNode = (nodeId: string): boolean =>
   nodeId.startsWith("objective:") ||
   nodeId.startsWith("initiative:") ||
   nodeId.startsWith("kpi:");
+
+const perspectiveLevelFromNodeId = (nodeId: string): 1 | 2 | 3 | 4 | null => {
+  const [, rawLevel] = nodeId.split(":", 3);
+  const level = Number(rawLevel);
+
+  if (level === 1 || level === 2 || level === 3 || level === 4) {
+    return level;
+  }
+
+  return null;
+};
+
+const styleNumber = (value: unknown, fallback: number): number => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number.parseFloat(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  return fallback;
+};
 
 const groupRows = (rows: ScorecardInputRow[]): PerspectiveGroup[] => {
   const byLevel = new Map<
@@ -261,6 +309,9 @@ const groupRows = (rows: ScorecardInputRow[]): PerspectiveGroup[] => {
 const buildMapModel = (
   rows: ScorecardInputRow[],
   relationships: ScorecardRelationship[],
+  expandedPerspectives: Set<1 | 2 | 3 | 4>,
+  expandedObjectives: Set<string>,
+  expandedInitiatives: Set<string>,
 ): MapModel => {
   const perspectives = groupRows(rows);
 
@@ -296,25 +347,35 @@ const buildMapModel = (
     return startY + (count - 1) * stepY + nodeHeight;
   };
 
-  const cardWidth = 1060;
-  const cardGapX = 30;
+  const cardWidth = 1680;
   const cardGapY = 30;
 
   const perspectiveCardHeights = perspectives.map((perspective) => {
+    if (!expandedPerspectives.has(perspective.level)) {
+      return 150;
+    }
+
     const objectiveCount = perspective.objectives.length;
-    const initiativeCount = perspective.objectives.reduce(
-      (sum, item) => sum + item.initiatives.length,
-      0,
-    );
-    const kpiCount = perspective.objectives.reduce(
-      (sum, item) =>
-        sum +
-        item.initiatives.reduce(
-          (s, initiative) => s + initiative.kpis.length,
-          0,
-        ),
-      0,
-    );
+    let initiativeCount = 0;
+    let kpiCount = 0;
+
+    for (const objective of perspective.objectives) {
+      const objectiveId = `objective:${perspective.level}:${slug(objective.name)}`;
+      if (!expandedObjectives.has(objectiveId)) {
+        continue;
+      }
+
+      initiativeCount += objective.initiatives.length;
+
+      for (const initiative of objective.initiatives) {
+        const initiativeId = `initiative:${perspective.level}:${slug(objective.name)}:${slug(initiative.name)}`;
+        if (!expandedInitiatives.has(initiativeId)) {
+          continue;
+        }
+
+        kpiCount += initiative.kpis.length;
+      }
+    }
 
     const objectiveHeight = requiredHeight(
       objectiveCount,
@@ -345,23 +406,17 @@ const buildMapModel = (
     return contentHeight + bottomPadding;
   });
 
-  const firstRowHeight = Math.max(
-    perspectiveCardHeights[0] ?? 300,
-    perspectiveCardHeights[1] ?? 300,
-  );
+  let currentY = 0;
 
   for (const [index, perspective] of perspectives.entries()) {
-    const cardColumn = index % 2;
-    const cardRow = Math.floor(index / 2);
-
     const laneHeight = perspectiveCardHeights[index] ?? 300;
-    const laneTop = cardRow === 0 ? 0 : firstRowHeight + cardGapY;
-    const laneLeft = cardColumn * (cardWidth + cardGapX);
+    const laneTop = currentY;
+    const laneLeft = 0;
 
-    const xLane = laneLeft + 18;
-    const xObjective = laneLeft + 170;
-    const xInitiative = laneLeft + 460;
-    const xKpi = laneLeft + 740;
+    const xLane = laneLeft + 20;
+    const xObjective = laneLeft + 220;
+    const xInitiative = laneLeft + 660;
+    const xKpi = laneLeft + 1100;
 
     const perspectiveNodeId = `perspective:${perspective.level}`;
     perspectiveIdByLevel.set(perspective.level, perspectiveNodeId);
@@ -375,9 +430,9 @@ const buildMapModel = (
       style: {
         width: cardWidth,
         height: laneHeight,
-        border: "1px solid #b7bbc3",
-        borderRadius: 10,
-        background: "#e5e7eb",
+        border: "none",
+        borderRadius: 0,
+        background: "transparent",
       },
     });
 
@@ -389,10 +444,10 @@ const buildMapModel = (
       selectable: false,
       style: {
         width: cardWidth,
-        height: 10,
+        height: 0,
         border: "none",
-        borderRadius: "10px 10px 0 0",
-        background: LANE_ACCENT[perspective.level],
+        borderRadius: 0,
+        background: "transparent",
       },
     });
 
@@ -403,15 +458,29 @@ const buildMapModel = (
       draggable: false,
       selectable: false,
       style: {
-        width: 140,
-        border: "none",
-        background: "transparent",
+        width: "fit-content",
+        maxWidth: 320,
+        border: `2px solid ${LANE_ACCENT[perspective.level]}`,
+        borderRadius: 999,
+        background: PERSPECTIVE_TITLE_BG[perspective.level],
         fontWeight: 700,
-        fontSize: 26,
-        lineHeight: 1.08,
+        fontSize: 20,
+        lineHeight: 1.2,
         color: "#111827",
+        cursor: "pointer",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        textAlign: "center",
+        padding: "8px 16px",
+        whiteSpace: "normal",
       },
     });
+
+    if (!expandedPerspectives.has(perspective.level)) {
+      currentY += laneHeight + cardGapY;
+      continue;
+    }
 
     let objectiveIndex = 0;
     let initiativeIndex = 0;
@@ -434,19 +503,22 @@ const buildMapModel = (
         data: { label: objective.name },
         draggable: false,
         style: {
-          width: 250,
-          minHeight: objectiveNodeHeight,
+          width: "fit-content",
+          maxWidth: 430,
           borderRadius: 999,
-          border: `2px solid ${LANE_ACCENT[perspective.level]}`,
-          background: "#ffffff",
+          border: `2px solid ${HIERARCHY_NODE_STYLE.objective.border}`,
+          background: HIERARCHY_NODE_STYLE.objective.background,
           textAlign: "center",
           fontWeight: 600,
           fontSize: 16,
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          padding: "0 14px",
-          lineHeight: 1.2,
+          padding: "8px 14px",
+          lineHeight: 1.3,
+          whiteSpace: "normal",
+          wordBreak: "break-word",
+          cursor: "pointer",
         },
       });
 
@@ -478,6 +550,10 @@ const buildMapModel = (
         },
       });
 
+      if (!expandedObjectives.has(objectiveId)) {
+        continue;
+      }
+
       for (const initiative of objective.initiatives) {
         const initiativeId = `initiative:${perspective.level}:${slug(objective.name)}:${slug(initiative.name)}`;
         initiativeIdByKey.set(
@@ -495,19 +571,22 @@ const buildMapModel = (
           data: { label: initiative.name },
           draggable: false,
           style: {
-            width: 250,
-            minHeight: initiativeNodeHeight,
+            width: "fit-content",
+            maxWidth: 430,
             borderRadius: 999,
-            border: `2px solid ${LANE_ACCENT[perspective.level]}`,
-            background: "#ffffff",
+            border: `2px solid ${HIERARCHY_NODE_STYLE.initiative.border}`,
+            background: HIERARCHY_NODE_STYLE.initiative.background,
             textAlign: "center",
             fontWeight: 600,
             fontSize: 16,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            padding: "0 14px",
-            lineHeight: 1.2,
+            padding: "8px 14px",
+            lineHeight: 1.3,
+            whiteSpace: "normal",
+            wordBreak: "break-word",
+            cursor: "pointer",
           },
         });
 
@@ -539,8 +618,12 @@ const buildMapModel = (
           },
         });
 
+        if (!expandedInitiatives.has(initiativeId)) {
+          continue;
+        }
+
         for (const row of initiative.kpis) {
-          const kpiId = `kpi:${perspective.level}:${slug(objective.name)}:${slug(initiative.name)}:${row.kpiDefinitionId}`;
+          const kpiId = `kpi:${perspective.level}:${slug(objective.name)}:${slug(initiative.name)}:${row.kpiDefinitionId}:${row.kpiId}`;
           kpiIdByKey.set(
             `${perspective.level}|${slug(objective.name)}|${slug(initiative.name)}|${row.kpiDefinitionId}`,
             kpiId,
@@ -555,18 +638,18 @@ const buildMapModel = (
             data: { label: kpiNodeLabel(row) },
             draggable: false,
             style: {
-              width: 300,
-              minHeight: kpiNodeHeight,
+              width: "fit-content",
+              maxWidth: 560,
               borderRadius: 999,
-              border: `2px solid ${LANE_ACCENT[perspective.level]}`,
-              background: "#ffffff",
+              border: `2px solid ${HIERARCHY_NODE_STYLE.kpi.border}`,
+              background: HIERARCHY_NODE_STYLE.kpi.background,
               textAlign: "left",
               color: "#111827",
               fontWeight: 500,
               fontSize: 13,
               display: "flex",
               alignItems: "center",
-              padding: "0 12px",
+              padding: "8px 14px",
             },
           });
 
@@ -600,6 +683,8 @@ const buildMapModel = (
         }
       }
     }
+
+    currentY += laneHeight + cardGapY;
   }
 
   const hierarchyFlow: Array<[1 | 2 | 3 | 4, 1 | 2 | 3 | 4]> = [
@@ -747,29 +832,325 @@ export default function ScorecardTree({
   relationships?: ScorecardRelationship[];
 }) {
   const [selectedNodeId, setSelectedNodeId] = useState<string | null>(null);
+  const [expandedPerspectives, setExpandedPerspectives] = useState<
+    Set<1 | 2 | 3 | 4>
+  >(new Set());
+  const [expandedObjectives, setExpandedObjectives] = useState<Set<string>>(
+    new Set(),
+  );
+  const [expandedInitiatives, setExpandedInitiatives] = useState<Set<string>>(
+    new Set(),
+  );
   const [manualPositions, setManualPositions] = useState<
     Record<string, { x: number; y: number }>
   >({});
 
   const model = useMemo(
-    () => buildMapModel(rows, relationships),
-    [rows, relationships],
+    () =>
+      buildMapModel(
+        rows,
+        relationships,
+        expandedPerspectives,
+        expandedObjectives,
+        expandedInitiatives,
+      ),
+    [
+      rows,
+      relationships,
+      expandedPerspectives,
+      expandedObjectives,
+      expandedInitiatives,
+    ],
   );
 
   useEffect(() => {
     // Reset manual placement when source data changes materially.
     setManualPositions({});
     setSelectedNodeId(null);
+    setExpandedPerspectives(new Set());
+    setExpandedObjectives(new Set());
+    setExpandedInitiatives(new Set());
   }, [rows, relationships]);
 
+  const handleNodeClick = (nodeId: string) => {
+    if (nodeId.startsWith("perspective:")) {
+      const level = perspectiveLevelFromNodeId(nodeId);
+      if (level != null) {
+        setExpandedPerspectives((current) => {
+          const next = new Set(current);
+          if (next.has(level)) {
+            next.delete(level);
+
+            setExpandedObjectives((currentObjectives) => {
+              const filtered = new Set<string>();
+              for (const item of currentObjectives) {
+                if (!item.startsWith(`objective:${level}:`)) {
+                  filtered.add(item);
+                }
+              }
+              return filtered;
+            });
+
+            setExpandedInitiatives((currentInitiatives) => {
+              const filtered = new Set<string>();
+              for (const item of currentInitiatives) {
+                if (!item.startsWith(`initiative:${level}:`)) {
+                  filtered.add(item);
+                }
+              }
+              return filtered;
+            });
+          } else {
+            next.add(level);
+          }
+          return next;
+        });
+      }
+    } else if (nodeId.startsWith("objective:")) {
+      setExpandedObjectives((current) => {
+        const next = new Set(current);
+        if (next.has(nodeId)) {
+          next.delete(nodeId);
+
+          const initiativePrefix = `${nodeId.replace(/^objective:/, "initiative:")}:`;
+          setExpandedInitiatives((currentInitiatives) => {
+            const filtered = new Set<string>();
+            for (const item of currentInitiatives) {
+              if (!item.startsWith(initiativePrefix)) {
+                filtered.add(item);
+              }
+            }
+            return filtered;
+          });
+        } else {
+          next.add(nodeId);
+        }
+        return next;
+      });
+    } else if (nodeId.startsWith("initiative:")) {
+      setExpandedInitiatives((current) => {
+        const next = new Set(current);
+        if (next.has(nodeId)) {
+          next.delete(nodeId);
+        } else {
+          next.add(nodeId);
+        }
+        return next;
+      });
+    }
+
+    setSelectedNodeId((current) => (current === nodeId ? null : nodeId));
+  };
+
   const interactiveModel = useMemo(() => {
-    const nodes = model.nodes.map((node) => {
+    const baseNodes = model.nodes.map((node) => {
       const manualPosition = manualPositions[node.id];
 
       return {
         ...node,
         position: manualPosition ?? node.position,
         draggable: isMovableNode(node.id),
+      };
+    });
+
+    const laneRectsByLevel = new Map<
+      1 | 2 | 3 | 4,
+      { x: number; y: number; width: number; height: number }
+    >();
+
+    for (const node of baseNodes) {
+      if (!node.id.startsWith("lane:")) {
+        continue;
+      }
+
+      const level = perspectiveLevelFromNodeId(node.id);
+      if (level == null) {
+        continue;
+      }
+
+      laneRectsByLevel.set(level, {
+        x: node.position.x,
+        y: node.position.y,
+        width: styleNumber(node.style?.width, 0),
+        height: styleNumber(node.style?.height, 0),
+      });
+    }
+
+    const movableBoundsByLevel = new Map<
+      1 | 2 | 3 | 4,
+      { minX: number; minY: number; maxX: number; maxY: number }
+    >();
+
+    for (const node of baseNodes) {
+      if (!isMovableNode(node.id)) {
+        continue;
+      }
+
+      const level = perspectiveLevelFromNodeId(node.id);
+      if (level == null) {
+        continue;
+      }
+
+      const fallbackWidth = node.id.startsWith("kpi:")
+        ? 360
+        : node.id.startsWith("objective:") || node.id.startsWith("initiative:")
+          ? 240
+          : 180;
+
+      const fallbackHeight = node.id.startsWith("kpi:") ? 84 : 48;
+
+      const width = styleNumber(
+        node.measured?.width ?? node.style?.width,
+        fallbackWidth,
+      );
+      const height = styleNumber(
+        node.measured?.height ?? node.style?.minHeight ?? node.style?.height,
+        fallbackHeight,
+      );
+
+      const minX = node.position.x;
+      const minY = node.position.y;
+      const maxX = node.position.x + width;
+      const maxY = node.position.y + height;
+
+      const current = movableBoundsByLevel.get(level);
+      if (!current) {
+        movableBoundsByLevel.set(level, { minX, minY, maxX, maxY });
+        continue;
+      }
+
+      current.minX = Math.min(current.minX, minX);
+      current.minY = Math.min(current.minY, minY);
+      current.maxX = Math.max(current.maxX, maxX);
+      current.maxY = Math.max(current.maxY, maxY);
+    }
+
+    const expandedLaneRects = new Map<
+      1 | 2 | 3 | 4,
+      { x: number; y: number; width: number; height: number }
+    >();
+
+    for (const [level, laneRect] of laneRectsByLevel) {
+      const bounds = movableBoundsByLevel.get(level);
+      if (!bounds) {
+        expandedLaneRects.set(level, laneRect);
+        continue;
+      }
+
+      const minX = Math.min(laneRect.x, bounds.minX - 24);
+      const minY = Math.min(laneRect.y, bounds.minY - 18);
+      const maxX = Math.max(laneRect.x + laneRect.width, bounds.maxX + 24);
+      const maxY = Math.max(laneRect.y + laneRect.height, bounds.maxY + 24);
+
+      expandedLaneRects.set(level, {
+        x: minX,
+        y: minY,
+        width: maxX - minX,
+        height: maxY - minY,
+      });
+    }
+
+    const defaultRect = { x: 0, y: 0, width: 0, height: 0 };
+    const getExpandedRect = (level: 1 | 2 | 3 | 4) =>
+      expandedLaneRects.get(level) ??
+      laneRectsByLevel.get(level) ??
+      defaultRect;
+
+    const laneGapY = 30;
+
+    const levels = [1, 2, 3, 4] as const;
+    const leftEdge = Math.min(
+      ...levels.map((level) => getExpandedRect(level).x),
+    );
+    const fullWidth = Math.max(
+      ...levels.map(
+        (level) =>
+          getExpandedRect(level).x + getExpandedRect(level).width - leftEdge,
+      ),
+    );
+
+    let packedY = Math.min(...levels.map((level) => getExpandedRect(level).y));
+
+    const packedLaneRects = new Map<
+      1 | 2 | 3 | 4,
+      { x: number; y: number; width: number; height: number }
+    >();
+
+    for (const level of levels) {
+      const rect = getExpandedRect(level);
+      packedLaneRects.set(level, {
+        x: leftEdge,
+        y: packedY,
+        width: fullWidth,
+        height: rect.height,
+      });
+
+      packedY += rect.height + laneGapY;
+    }
+
+    const laneDeltaByLevel = new Map<
+      1 | 2 | 3 | 4,
+      { dx: number; dy: number }
+    >();
+    for (const level of levels) {
+      const from = getExpandedRect(level);
+      const to = packedLaneRects.get(level) ?? from;
+      laneDeltaByLevel.set(level, {
+        dx: to.x - from.x,
+        dy: to.y - from.y,
+      });
+    }
+
+    const nodes = baseNodes.map((node) => {
+      const level = perspectiveLevelFromNodeId(node.id);
+      if (level == null) {
+        return node;
+      }
+
+      const packedRect = packedLaneRects.get(level);
+      const laneDelta = laneDeltaByLevel.get(level) ?? { dx: 0, dy: 0 };
+
+      if (!packedRect) {
+        return node;
+      }
+
+      if (node.id.startsWith("lane-accent:")) {
+        return {
+          ...node,
+          position: { x: packedRect.x, y: packedRect.y },
+          style: {
+            ...node.style,
+            width: packedRect.width,
+            height: 0,
+          },
+        };
+      }
+
+      if (node.id.startsWith("lane:")) {
+        return {
+          ...node,
+          position: { x: packedRect.x, y: packedRect.y },
+          style: {
+            ...node.style,
+            width: packedRect.width,
+            height: packedRect.height,
+          },
+        };
+      }
+
+      if (isMovableNode(node.id)) {
+        return {
+          ...node,
+          position: {
+            x: node.position.x + laneDelta.dx,
+            y: node.position.y + laneDelta.dy,
+          },
+        };
+      }
+
+      return {
+        ...node,
+        position: node.position,
       };
     });
 
@@ -934,7 +1315,7 @@ export default function ScorecardTree({
       <CardHeader className="px-3 py-2">
         <CardTitle className="text-sm font-normal">Strategic Map</CardTitle>
       </CardHeader>
-      <CardContent className="px-2 pb-2">
+      <CardContent className="px-3 pb-3">
         <div className="rounded-md border bg-[#d7d9dd]">
           <div className="border-b border-[#666] bg-[#1f2125] px-3 py-2 text-center text-[15px] font-semibold text-white">
             Transforming strategy into measurable outcomes through an
@@ -944,8 +1325,11 @@ export default function ScorecardTree({
             Perspective flow: Financial {" -> "} Customer {" -> "} Internal
             Processes {" -> "} Organisational Capacity
           </div>
-          <div className="flex flex-wrap items-center gap-3 border-b border-[#666] bg-[#f3f4f6] px-3 py-1.5 text-[12px] text-slate-700">
+          <div className="flex flex-wrap items-center gap-3 border-b border-[#666] bg-[#f3f4f6] px-4 py-2 text-[12px] text-slate-700">
             <span className="font-semibold">Edge Legend</span>
+            <span className="rounded border border-slate-300 bg-white px-1.5 py-0.5 text-[11px]">
+              Click perspective/objective/initiative to expand or collapse
+            </span>
             <span className="inline-flex items-center gap-1">
               <span className="h-0.5 w-5 bg-blue-500" />
               Objective link
@@ -968,22 +1352,18 @@ export default function ScorecardTree({
             </span>
           </div>
         </div>
-        <div className="h-[min(72vh,68rem)] min-h-120 w-full overflow-hidden rounded-b-md border-x border-b border-[#b7bbc3] bg-[#d7d9dd]">
+        <div className="h-[min(72vh,68rem)] min-h-120 w-full overflow-hidden rounded-b-md border-x border-b border-[#b7bbc3] bg-[#d7d9dd] p-2">
           <ReactFlow
             nodes={highlightedModel.nodes}
             edges={highlightedModel.edges}
             fitView
-            fitViewOptions={{ padding: 0.08 }}
+            fitViewOptions={{ padding: 0.02 }}
             minZoom={0.28}
             maxZoom={1.8}
             nodesDraggable
             nodesConnectable={false}
             elementsSelectable
-            onNodeClick={(_, node) =>
-              setSelectedNodeId((current) =>
-                current === node.id ? null : node.id,
-              )
-            }
+            onNodeClick={(_, node) => handleNodeClick(node.id)}
             onNodeDragStop={(_, node) => {
               if (!isMovableNode(node.id)) {
                 return;

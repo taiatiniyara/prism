@@ -11,6 +11,7 @@ export interface ReviewKpiFilterContext {
 export interface InputComment {
   comment: string;
   commenterId: string;
+  commenterName?: string | null;
   commenterRole: string;
   date: string;
   resolved?: boolean;
@@ -21,6 +22,7 @@ export interface ReviewKpiInputValue {
   dataEntryId: string;
   inputDefId: number;
   inputName: string;
+  unitName: string | null;
   value: string | null;
   controlType: DataEntryControlType;
   comments: InputComment[];
@@ -45,6 +47,7 @@ export interface ReviewKpiResult {
 export interface ReviewKpiRow {
   kpiDefId: number;
   kpiName: string;
+  unitName: string | null;
   formulaText: string | null;
   categoryId: number | null;
   subcategoryId: number | null;

@@ -21,13 +21,19 @@ import { kpi } from "@/db/schema/kpi";
 import { managedListItems } from "@/db/schema/managedLists";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { serviceAreas } from "@/db/schema/utility";
+import { user as authUsers } from "@/db/schema/auth-schema";
 import { triggerKpiWorkerAsync } from "@/app/data-entry/kpi-worker";
 import { publishSyncEvent } from "@/app/data-entry/review-kpi/sync-store";
 import { CurrentUser, getCurrentUser } from "@/lib/user.service";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 
-const EDIT_ROLES = new Set(["DEV", "BMO"]);
-const GLOBAL_ROLES = new Set(["DEV", "BMO"]);
+const EDIT_ROLES = new Set(["DEV", "BMO", "BLO", "DAOO", "DAOF"]);
+const GLOBAL_ROLES = new Set(["DEV", "BMO", "BLO"]);
+
+const hasRoleAccess = (allowedRoles: Set<string>, role: string | null) => {
+  const normalizedRole = role?.trim().toUpperCase();
+  return normalizedRole != null && allowedRoles.has(normalizedRole);
+};
 
 export const assertReviewKpiReadAccess = (user: CurrentUser): void => {
   if (!user?.id) {
@@ -38,7 +44,7 @@ export const assertReviewKpiReadAccess = (user: CurrentUser): void => {
 export const assertReviewKpiWriteAccess = (user: CurrentUser): void => {
   assertReviewKpiReadAccess(user);
 
-  if (!EDIT_ROLES.has(user.role)) {
+  if (!hasRoleAccess(EDIT_ROLES, user.role)) {
     throw new Error("FORBIDDEN:You are not allowed to edit review KPI data.");
   }
 };
@@ -136,7 +142,7 @@ export const getReviewKpiFilterOptions = async (
   const reportTypeWhere = [eq(managedListItems.is_active, true)];
   const serviceAreaWhere = [eq(serviceAreas.is_active, true)];
 
-  if (!GLOBAL_ROLES.has(user.role)) {
+  if (!hasRoleAccess(GLOBAL_ROLES, user.role)) {
     if (user.org_id == null) {
       reportPeriodWhere.push(sql`1 = 0`);
       reportTypeWhere.push(sql`1 = 0`);
@@ -347,17 +353,41 @@ const buildKpiWhereConditions = (context: ReviewKpiFilterContext) => {
 
 const serializeComment = (
   comment: DataEntryComment,
+  commenterNameById?: Map<string, string>,
 ): ReviewKpiRow["inputs"][number]["comments"][number] => ({
   comment: comment.comment,
   commenterId: comment.commenterId,
+  commenterName:
+    comment.commenterName ??
+    commenterNameById?.get(comment.commenterId) ??
+    null,
   commenterRole: comment.commenterRole,
   date:
     comment.date instanceof Date
       ? comment.date.toISOString()
       : new Date(comment.date).toISOString(),
   resolved: comment.resolved,
-  replies: comment.replies?.map(serializeComment),
+  replies: comment.replies?.map((reply) =>
+    serializeComment(reply, commenterNameById),
+  ),
 });
+
+const collectCommenterIds = (
+  comments: DataEntryComment[] | null | undefined,
+  ids = new Set<string>(),
+): Set<string> => {
+  for (const comment of comments ?? []) {
+    if (comment.commenterId) {
+      ids.add(comment.commenterId);
+    }
+
+    if (comment.replies && comment.replies.length > 0) {
+      collectCommenterIds(comment.replies, ids);
+    }
+  }
+
+  return ids;
+};
 
 export const listReviewKpiRows = async (
   context: ReviewKpiFilterContext,
@@ -372,6 +402,12 @@ export const listReviewKpiRows = async (
     .select({
       id: kpiDefinitions.id,
       name: kpiDefinitions.name,
+      unitName: sql<string | null>`(
+        select ${managedListItems.name}
+        from ${managedListItems}
+        where ${managedListItems.id} = ${kpiDefinitions.unit_id}
+        limit 1
+      )`,
       formula: kpiDefinitions.formula,
       formulaInputs: kpiDefinitions.formula_inputs,
       categoryId: kpiDefinitions.category_id,
@@ -398,6 +434,12 @@ export const listReviewKpiRows = async (
         .select({
           id: inputDefinitions.id,
           name: inputDefinitions.name,
+          unitName: sql<string | null>`(
+            select ${managedListItems.name}
+            from ${managedListItems}
+            where ${managedListItems.id} = ${inputDefinitions.unit_id}
+            limit 1
+          )`,
           dataTypeName: managedListItems.name,
         })
         .from(inputDefinitions)
@@ -468,6 +510,25 @@ export const listReviewKpiRows = async (
     kpiResultRows.map((row) => [row.kpiDefId, row]),
   );
 
+  const commenterIds = [
+    ...dataEntryRows.reduce((ids, row) => {
+      collectCommenterIds(row.comments, ids);
+      return ids;
+    }, new Set<string>()),
+  ];
+
+  const commenterNameById =
+    commenterIds.length === 0
+      ? new Map<string, string>()
+      : new Map(
+          (
+            await db
+              .select({ id: authUsers.id, name: authUsers.name })
+              .from(authUsers)
+              .where(inArray(authUsers.id, commenterIds))
+          ).map((row) => [row.id, row.name]),
+        );
+
   return kpiDefinitionRows.map((kpiDefinition) => {
     const inputs: ReviewKpiInputValue[] = (
       kpiDefinition.formulaInputs ?? []
@@ -482,6 +543,7 @@ export const listReviewKpiRows = async (
             dataEntryId: `missing-${formulaInput.input_def_id}`,
             inputDefId: formulaInput.input_def_id,
             inputName: def?.name ?? `Input ${formulaInput.input_def_id}`,
+            unitName: def?.unitName ?? null,
             value: null,
             controlType: mapDataTypeToControlType(def?.dataTypeName),
             comments: [],
@@ -495,10 +557,11 @@ export const listReviewKpiRows = async (
         dataEntryId: row.id,
         inputDefId: row.inputDefId,
         inputName: def?.name ?? `Input ${row.inputDefId}`,
+        unitName: def?.unitName ?? null,
         value: row.value,
         controlType: mapDataTypeToControlType(def?.dataTypeName),
         comments: (row.comments ?? []).map((comment) =>
-          serializeComment(comment),
+          serializeComment(comment, commenterNameById),
         ),
         updatedAt: row.updatedAt.toISOString(),
         updatedById: row.updatedById,
@@ -510,6 +573,7 @@ export const listReviewKpiRows = async (
     return {
       kpiDefId: kpiDefinition.id,
       kpiName: kpiDefinition.name,
+      unitName: kpiDefinition.unitName,
       formulaText: kpiDefinition.formula,
       categoryId: kpiDefinition.categoryId,
       subcategoryId: kpiDefinition.subcategoryId,
@@ -549,11 +613,13 @@ const toReviewInputValue = (
     updatedById: string | null;
   },
   inputName: string,
+  unitName: string | null,
   dataTypeName?: string | null,
 ): ReviewKpiInputValue => ({
   dataEntryId: row.id,
   inputDefId: row.inputDefId,
   inputName,
+  unitName,
   value: row.value,
   controlType: mapDataTypeToControlType(dataTypeName),
   comments: (row.comments ?? []).map((comment) => serializeComment(comment)),
@@ -648,6 +714,12 @@ export const updateReviewKpiInputValue = async (
       updatedAt: dataEntries.updatedAt,
       updatedById: dataEntries.updatedById,
       inputName: inputDefinitions.name,
+      unitName: sql<string | null>`(
+        select ${managedListItems.name}
+        from ${managedListItems}
+        where ${managedListItems.id} = ${inputDefinitions.unit_id}
+        limit 1
+      )`,
       dataTypeName: managedListItems.name,
     })
     .from(dataEntries)
@@ -677,6 +749,7 @@ export const updateReviewKpiInputValue = async (
         updatedById: existing.updatedById,
       },
       existing.inputName,
+      existing.unitName,
       existing.dataTypeName,
     );
 
@@ -703,6 +776,12 @@ export const updateReviewKpiInputValue = async (
       updatedAt: dataEntries.updatedAt,
       updatedById: dataEntries.updatedById,
       inputName: inputDefinitions.name,
+      unitName: sql<string | null>`(
+        select ${managedListItems.name}
+        from ${managedListItems}
+        where ${managedListItems.id} = ${inputDefinitions.unit_id}
+        limit 1
+      )`,
       dataTypeName: managedListItems.name,
       reportPeriodId: dataEntries.report_period_id,
       serviceAreaId: dataEntries.service_area_id,
@@ -750,6 +829,7 @@ export const updateReviewKpiInputValue = async (
       updatedById: updated.updatedById,
     },
     updated.inputName,
+    updated.unitName,
     updated.dataTypeName,
   );
 
@@ -797,6 +877,7 @@ export const addReviewKpiInputComment = async (
   const nextComment: DataEntryComment = {
     comment,
     commenterId: user.id,
+    commenterName: user.name,
     commenterRole: user.role,
     date: new Date(),
     resolved: false,

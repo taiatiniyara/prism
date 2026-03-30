@@ -26,6 +26,21 @@ export function InputCommentThread({
     [comments],
   );
 
+  const formatCommentTimestamp = (rawDate: string): string => {
+    const parsed = new Date(rawDate);
+    if (Number.isNaN(parsed.getTime())) {
+      return rawDate;
+    }
+
+    return new Intl.DateTimeFormat(undefined, {
+      year: "numeric",
+      month: "short",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    }).format(parsed);
+  };
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     const trimmed = draft.trim();
@@ -52,7 +67,7 @@ export function InputCommentThread({
           const body = (await response.json().catch(() => null)) as {
             message?: string;
           } | null;
-          throw new Error(body?.message ?? "Failed to add comment.");
+          throw new Error(body?.message ?? "Failed to add note.");
         }
 
         const body = (await response.json()) as { comments: InputComment[] };
@@ -62,7 +77,7 @@ export function InputCommentThread({
         setError(
           submitError instanceof Error
             ? submitError.message
-            : "Failed to add comment.",
+            : "Failed to add note.",
         );
       }
     });
@@ -71,20 +86,30 @@ export function InputCommentThread({
   return (
     <div className="space-y-1.5 rounded-md border border-dashed border-border/80 bg-muted/10 p-2">
       <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
-        Comments
+        Notes
       </p>
 
-      <ul className="space-y-1 rounded-sm border border-border/50 bg-background px-1.5 py-1">
+      <ul className="space-y-4 rounded-sm border border-border/50 bg-background px-1.5 py-1.5">
         {orderedComments.length === 0 ? (
-          <li className="text-xs text-muted-foreground">No comments yet.</li>
+          <li className="text-xs text-muted-foreground">No notes yet.</li>
         ) : (
           orderedComments.map((comment, index) => (
             <li
               key={`${comment.commenterId}-${comment.date}-${index}`}
-              className="text-[11px] sm:text-xs"
+              className="border-l border-slate-400 bg-muted/20 px-1.5 text-[11px] sm:text-xs"
             >
-              <p className="font-medium">{comment.commenterRole}</p>
-              <p>{comment.comment}</p>
+              <div className="mb-1.5 border-b border-slate-300 pb-1 text-[10px] text-muted-foreground sm:text-[11px]">
+                <span className="font-semibold text-foreground/90">
+                  {comment.commenterName?.trim() || comment.commenterId}
+                </span>
+                <span className="mx-1">•</span>
+                <span>{comment.commenterRole}</span>
+                <span className="mx-1">•</span>
+                <span>{formatCommentTimestamp(comment.date)}</span>
+              </div>
+              <p className="rounded-sm bg-background px-1.5 leading-relaxed text-foreground">
+                {comment.comment}
+              </p>
             </li>
           ))
         )}
@@ -97,7 +122,7 @@ export function InputCommentThread({
         <Textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value)}
-          placeholder="Add a comment"
+          placeholder="Add a note..."
           disabled={isPending}
           className="min-h-14 text-xs"
         />
@@ -108,7 +133,7 @@ export function InputCommentThread({
             className="h-7 px-2 text-xs"
             disabled={isPending}
           >
-            {isPending ? "Saving..." : "Add comment"}
+            {isPending ? "Posting..." : "Post"}
           </Button>
           {error ? <p className="text-xs text-destructive">{error}</p> : null}
         </div>

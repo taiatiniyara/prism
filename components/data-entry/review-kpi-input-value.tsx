@@ -29,8 +29,13 @@ export function ReviewKpiInputValueCard({
 }: ReviewKpiInputValueProps) {
   return (
     <li className="space-y-1.5 rounded-md border border-border/80 bg-card px-2 py-1.5 text-xs shadow-sm sm:text-sm">
-      <div className="rounded-sm bg-muted/40 px-1.5 py-1 text-[11px] font-semibold leading-tight text-foreground/90">
+      <div className="rounded-sm bg-muted/40 px-1.5 py-1 text-sm font-semibold leading-tight text-foreground/90">
         {input.inputName}
+        {input.unitName ? (
+          <span className="ml-1 font-normal text-muted-foreground">
+            ({input.unitName})
+          </span>
+        ) : null}
       </div>
       <div className="grid grid-cols-[1fr_auto] items-center gap-1.5">
         <Input

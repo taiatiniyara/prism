@@ -164,6 +164,7 @@ export const DataEntryStatusList = Object.keys(DataEntryStatus).map((key) => ({
 export type DataEntryComment = {
   comment: string;
   commenterId: string;
+  commenterName?: string | null;
   commenterRole: string;
   date: Date;
   resolved?: boolean;

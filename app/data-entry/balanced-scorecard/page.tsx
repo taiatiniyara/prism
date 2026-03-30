@@ -14,7 +14,8 @@ const toScorecardContext = (
   },
   fallbackReportPeriodId: number,
 ): ScorecardFilterContext => ({
-  reportPeriodId: context.reportPeriodId ?? fallbackReportPeriodId,
+  // BSC display is period-agnostic; keep a fallback period only for write paths.
+  reportPeriodId: fallbackReportPeriodId,
   reportTypeId: context.reportTypeId,
   serviceAreaId: context.serviceAreaId,
   // BSC should always include all KPI categories/subcategories.

@@ -173,9 +173,14 @@ export type Perspective = {
       description: string;
       kpis: {
         kpi_id: number;
-        target_value: string;
+
         // if we want to track the KPI at different frequencies for the same initiative, we can add a tracking_frequency field to specify how often the KPI should be tracked (e.g., monthly, annually). The target value will be entered into report periods that align with the specified tracking frequency either monthly or financial year type report periods.
         tracking_frequency: "monthly" | "annually";
+        targets: {
+          year: number;
+          month?: number | null;
+          value: string;
+        }[];
       }[];
     }[];
   }[];
