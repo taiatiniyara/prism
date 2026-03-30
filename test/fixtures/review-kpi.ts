@@ -24,6 +24,7 @@ export const reviewKpiPageFixture: ReviewKpiPageViewModel = {
     {
       kpiDefId: 1001,
       kpiName: "First Pass Resolution",
+      unitName: null,
       formulaText: "resolved / total",
       categoryId: 515,
       subcategoryId: 600,
@@ -34,6 +35,7 @@ export const reviewKpiPageFixture: ReviewKpiPageViewModel = {
           dataEntryId: "7f57dbf7-85d8-40e7-adf1-8882f4f87142",
           inputDefId: 9001,
           inputName: "Resolved Requests",
+          unitName: null,
           value: "80",
           controlType: "number",
           comments: [],
