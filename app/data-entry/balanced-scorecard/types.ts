@@ -49,20 +49,54 @@ export type ScorecardResponse = {
   context: ScorecardFilterContext;
   snapshot: ScorecardSnapshot;
   rows?: ScorecardInputRow[];
+  relationships?: ScorecardRelationship[];
+};
+
+export type ScorecardNodeLevel =
+  | "perspective"
+  | "objective"
+  | "initiative"
+  | "kpi";
+
+export type ScorecardNodeRef = {
+  level: ScorecardNodeLevel;
+  perspectiveLevel: 1 | 2 | 3 | 4;
+  objectiveDescription?: string;
+  keyInitiativeDescription?: string;
+  kpiId?: number;
+};
+
+export type ScorecardRelationship = {
+  id: string;
+  source: ScorecardNodeRef;
+  target: ScorecardNodeRef;
+  relationshipType: "influences" | "depends_on" | "contributes_to" | "blocks";
+  weight?: number;
+  note?: string;
 };
 
 export type ScorecardTargetInput = {
-  year: number;
-  month: number | null;
+  year?: number;
+  month?: number | null;
   targetValue: string;
 };
 
 export type ScorecardUpdatePayload = {
+  reportPeriodId?: number;
   kpiId: string | null;
   kpiDefinitionId: number;
   perspectiveLevel: 1 | 2 | 3 | 4;
-  objective: string;
+  perspectiveDescription: string;
+  strategicObjective: string;
+  keyInitiative: string;
+  trackingFrequency: "monthly" | "annually";
   target: ScorecardTargetInput;
+  relationships?: ScorecardRelationship[];
+};
+
+export type ScorecardRelationshipsUpdatePayload = {
+  reportPeriodId: number;
+  relationships: ScorecardRelationship[];
 };
 
 export type ScorecardKpiOption = {
@@ -78,6 +112,8 @@ export type ScorecardInputRow = {
   kpiDefinitionId: number;
   kpiName?: string | null;
   objective?: string | null;
+  keyInitiative?: string | null;
+  trackingFrequency?: "monthly" | "annually" | null;
   perspectiveLevel: number;
   perspectiveLabel: string;
   perspectiveWeight: number;

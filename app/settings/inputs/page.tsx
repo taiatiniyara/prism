@@ -15,14 +15,7 @@ export default async function InputsSettingsPage() {
   return (
     <div>
       <DataTable<InputDefinition>
-        columns={[
-          "name",
-          "variable_name",
-          "description",
-          "data_type",
-          "unit",
-          "is_active",
-        ]}
+        columns={["name", "data_type", "unit", "formula", "is_active"]}
         title="Inputs"
         data={inputDefinitions}
         createFormProps={{
@@ -56,7 +49,13 @@ export default async function InputsSettingsPage() {
         Choose an input definition, then build its formula using other input
         definitions.
       </p>
-      <InputFormulaBuilder inputs={formulaBuilderData.inputs} />
+      <InputFormulaBuilder
+        inputs={formulaBuilderData.inputs}
+        energyProviderOptions={formulaBuilderData.energyProviderOptions}
+        energyTypeOptions={formulaBuilderData.energyTypeOptions}
+        energySourceOptions={formulaBuilderData.energySourceOptions}
+        previewContextLabel={formulaBuilderData.previewContextLabel}
+      />
 
       <UploadInputsFromExcel />
     </div>

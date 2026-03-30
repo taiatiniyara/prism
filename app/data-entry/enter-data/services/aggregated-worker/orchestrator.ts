@@ -20,7 +20,10 @@ import { type AggregatedWorkerScope } from "@/app/data-entry/enter-data/services
 import { selectAggregatedFormulaTargets } from "@/app/data-entry/enter-data/services/aggregated-worker/target-selector";
 import { writeCalculatedTargetValue } from "@/app/data-entry/enter-data/services/aggregated-worker/target-writer";
 import { extractFormulaVariables } from "@/app/data-entry/enter-data/services/aggregated-worker/variable-parser";
+import { triggerKpiWorker } from "@/app/data-entry/kpi-worker";
 import type { CurrentUser } from "@/lib/user.service";
+
+const MAX_PASS_MULTIPLIER = 2;
 
 const collectAllVariables = (
   targets: Awaited<ReturnType<typeof selectAggregatedFormulaTargets>>,
@@ -137,7 +140,11 @@ const evaluateTargetWithSnapshot = (
     target.formulaInputs,
   );
   const valueMap = buildTargetValueMap(snapshot, target, variables);
-  const classification = classifyDependencies(variables, valueMap);
+  const classification = classifyDependencies(
+    target.formula,
+    variables,
+    valueMap,
+  );
 
   if (classification.status === "skipped") {
     return {
@@ -192,10 +199,12 @@ export const runAggregatedWorker = async (
   );
   const inputDefVariableAliases = buildInputDefVariableAliases(targets);
   const outcomes: AggregatedTargetOutcome[] = [];
+  const kpiTriggerCandidates = new Map<number, string>();
   const pendingTargets = [...targets];
+  const maxPassCount = Math.max(1, targets.length * MAX_PASS_MULTIPLIER);
   let passIndex = 0;
 
-  while (pendingTargets.length > 0) {
+  while (pendingTargets.length > 0 && passIndex < maxPassCount) {
     passIndex += 1;
     let calculatedInPass = false;
     const pendingBeforePass = pendingTargets.length;
@@ -209,11 +218,12 @@ export const runAggregatedWorker = async (
         continue;
       }
 
-      await writeCalculatedTargetValue({
+      const sourceDataEntryId = await writeCalculatedTargetValue({
         inputDefId: target.inputDefId,
         value: evaluation.value,
         scope,
       });
+      kpiTriggerCandidates.set(target.inputDefId, sourceDataEntryId);
 
       outcomes.push(
         buildCalculatedOutcome(runId, target.inputDefId, evaluation.value),
@@ -234,6 +244,7 @@ export const runAggregatedWorker = async (
         runId,
         passIndex,
         pendingCount: pendingTargets.length,
+        pendingInputDefIds: pendingTargets.map((target) => target.inputDefId),
       });
       break;
     }
@@ -244,6 +255,15 @@ export const runAggregatedWorker = async (
       pendingBeforePass,
       pendingAfterPass: pendingTargets.length,
       calculatedInPass: pendingBeforePass - pendingTargets.length,
+    });
+  }
+
+  if (pendingTargets.length > 0 && passIndex >= maxPassCount) {
+    console.warn("[Aggregated worker] max pass count reached", {
+      runId,
+      maxPassCount,
+      pendingCount: pendingTargets.length,
+      pendingInputDefIds: pendingTargets.map((target) => target.inputDefId),
     });
   }
 
@@ -264,6 +284,26 @@ export const runAggregatedWorker = async (
       formula: target.formula,
       dependencyCount: target.formulaInputs.length,
     });
+  }
+
+  for (const [
+    inputDefId,
+    sourceDataEntryId,
+  ] of kpiTriggerCandidates.entries()) {
+    await triggerKpiWorker(
+      {
+        sourceDataEntryId,
+        inputDefId,
+        triggeredByUserId: user.id,
+        scope: {
+          reportPeriodId: scope.reportPeriodId,
+          organizationId: user.org_id,
+          serviceAreaId: scope.serviceAreaId,
+          energyResourceId: scope.energyResourceId,
+        },
+      },
+      user,
+    );
   }
 
   storeRunOutcomes(runId, outcomes);

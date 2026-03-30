@@ -4,7 +4,7 @@ import { classifyDependencies } from "@/app/data-entry/enter-data/services/aggre
 
 describe("unknown variable classification", () => {
   it("marks absent variables as unknown-variable", () => {
-    const result = classifyDependencies(["A", "B"], { A: "10" });
+    const result = classifyDependencies("A - B", ["A", "B"], { A: "10" });
 
     expect(result.status).toBe("skipped");
     expect(result.reason).toBe("unknown-variable");

@@ -24,6 +24,29 @@ import {
 } from "./lock";
 import type { KpiWorkerRunResult, KpiWorkerTrigger } from "./types";
 
+const isPureAdditionFormula = (formula: string): boolean => {
+  const compact = formula.replace(/\s+/g, "");
+  if (compact.length === 0) {
+    return false;
+  }
+
+  if (compact.includes("-") || compact.includes("*") || compact.includes("/")) {
+    return false;
+  }
+
+  const flattened = compact.replace(/[()]/g, "");
+  const terms = flattened.split("+").filter((term) => term.length > 0);
+
+  if (terms.length === 0) {
+    return false;
+  }
+
+  return terms.every(
+    (term) =>
+      /^[A-Za-z_][A-Za-z0-9_]*$/.test(term) || /^\d+(\.\d+)?$/.test(term),
+  );
+};
+
 const createScopeFollowUpTrigger = (
   trigger: KpiWorkerTrigger,
 ): KpiWorkerTrigger => ({
@@ -134,7 +157,28 @@ export async function runKpiWorker(
         scope: trigger.scope,
       });
 
-      if (resolvedInputs.missingVariables.length > 0) {
+      const variablesForEvaluation = {
+        ...resolvedInputs.variables,
+      } as Record<string, number>;
+
+      const zeroFillMissing = isPureAdditionFormula(target.formula);
+      if (zeroFillMissing && resolvedInputs.missingVariables.length > 0) {
+        for (const variableName of resolvedInputs.missingVariables) {
+          variablesForEvaluation[variableName] = 0;
+        }
+
+        console.info(
+          "[KPI worker] zero-filled missing inputs for additive formula",
+          {
+            runId,
+            attemptId: currentAttemptId,
+            kpiDefId: target.kpiDefId,
+            missingVariables: resolvedInputs.missingVariables,
+          },
+        );
+      }
+
+      if (!zeroFillMissing && resolvedInputs.missingVariables.length > 0) {
         failedKpiCount += 1;
         await markAttemptFailed(
           currentAttemptId,
@@ -154,7 +198,7 @@ export async function runKpiWorker(
 
       const evaluation = evaluateKpiFormula(
         target.formula,
-        resolvedInputs.variables,
+        variablesForEvaluation,
       );
       if (evaluation.status === "error") {
         failedKpiCount += 1;

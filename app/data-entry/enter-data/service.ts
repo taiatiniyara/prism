@@ -11,6 +11,7 @@ import {
   DataEntryGeneratorGroupView,
   DataEntryFilterOptions,
   DataEntryInputRowView,
+  DataEntryKpiWorkerSnapshot,
   DataEntryProgressSummary,
   DataEntryPageViewModel,
 } from "@/app/data-entry/types";
@@ -42,7 +43,11 @@ import {
   isOperationalContext,
 } from "@/app/data-entry/enter-data/services/us3.conditionalViews.service";
 import { runAggregatedWorkerAsync } from "@/app/data-entry/enter-data/services/aggregated-worker/orchestrator";
-import { triggerKpiWorker } from "@/app/data-entry/kpi-worker";
+import {
+  listKpiWorkerStatuses,
+  triggerKpiWorker,
+  type KpiWorkerRunResult,
+} from "@/app/data-entry/kpi-worker";
 
 const isGlobalRole = (role: string) => role === "DEV" || role === "BMO";
 
@@ -563,6 +568,7 @@ const toPageModel = (
   options: DataEntryFilterOptions,
   progress: DataEntryProgressSummary,
   inputs: DataEntryPageViewModel["inputs"],
+  kpiWorker: DataEntryKpiWorkerSnapshot,
 ): DataEntryPageViewModel => {
   const showServiceAreaSelector = isOperationalContext(
     context,
@@ -577,6 +583,7 @@ const toPageModel = (
     context,
     options,
     progress,
+    kpiWorker,
     ui: {
       showServiceAreaSelector,
       generationMode,
@@ -585,11 +592,48 @@ const toPageModel = (
   };
 };
 
+const getLatestKpiFailureForContext = async (
+  context: DataEntryFilterContext,
+): Promise<DataEntryKpiWorkerSnapshot> => {
+  if (context.reportPeriodId == null) {
+    return {
+      latestFailureReason: null,
+      latestFailureUpdatedAt: null,
+    };
+  }
+
+  try {
+    const attempts = await listKpiWorkerStatuses({
+      reportPeriodId: context.reportPeriodId,
+      serviceAreaId: context.serviceAreaId,
+      energyResourceId: null,
+    });
+
+    const latestFailure = attempts.find(
+      (attempt) =>
+        attempt.status === "failed" &&
+        typeof attempt.failureReason === "string" &&
+        attempt.failureReason.trim().length > 0,
+    );
+
+    return {
+      latestFailureReason: latestFailure?.failureReason ?? null,
+      latestFailureUpdatedAt: latestFailure?.updatedAt ?? null,
+    };
+  } catch {
+    return {
+      latestFailureReason: null,
+      latestFailureUpdatedAt: null,
+    };
+  }
+};
+
 export const getDataEntryFilterViewModel =
   async (): Promise<DataEntryPageViewModel> => {
     const user = await getCurrentUser();
     const { context, options } = await bootstrapDataEntryFilterContext(user);
     const progress = await getOverallProgressForContext(user, context);
+    const kpiWorker = await getLatestKpiFailureForContext(context);
 
     if (
       isGenerationContext(context, options.inputSubcategories) &&
@@ -597,18 +641,30 @@ export const getDataEntryFilterViewModel =
     ) {
       const groups = await getGenerationGroupsForContext(user, context);
 
-      return toPageModel(context, options, progress, {
-        mode: "grouped-by-generator",
-        groups,
-      });
+      return toPageModel(
+        context,
+        options,
+        progress,
+        {
+          mode: "grouped-by-generator",
+          groups,
+        },
+        kpiWorker,
+      );
     }
 
     const inputRows = await getInputRowsForContext(context);
 
-    return toPageModel(context, options, progress, {
-      mode: "flat",
-      rows: inputRows,
-    });
+    return toPageModel(
+      context,
+      options,
+      progress,
+      {
+        mode: "flat",
+        rows: inputRows,
+      },
+      kpiWorker,
+    );
   };
 
 export const updateFilterContextAction = async (
@@ -659,7 +715,7 @@ const normalizeDataEntryValue = (value: string | null): string | null => {
 
 export const updateDataEntryValueAction = async (
   payload: UpdateDataEntryValuePayload,
-) => {
+): Promise<{ kpiRunResult: KpiWorkerRunResult | null }> => {
   const user = await getCurrentUser();
   const { context, options } = await bootstrapDataEntryFilterContext(user);
 
@@ -780,8 +836,10 @@ export const updateDataEntryValueAction = async (
     energyResourceId,
   });
 
+  let kpiRunResult: KpiWorkerRunResult | null = null;
+
   if (sourceDataEntryId) {
-    await triggerKpiWorker(
+    kpiRunResult = await triggerKpiWorker(
       {
         sourceDataEntryId,
         inputDefId: payload.inputDefId,
@@ -803,4 +861,8 @@ export const updateDataEntryValueAction = async (
   }
 
   revalidatePath("/data-entry/enter-data");
+
+  return {
+    kpiRunResult,
+  };
 };

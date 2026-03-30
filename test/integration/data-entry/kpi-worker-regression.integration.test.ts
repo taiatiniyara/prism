@@ -7,8 +7,22 @@ import { sumRollupValues } from "@/app/data-entry/kpi-worker/resolveInputs";
 describe("kpi worker regression coverage", () => {
   it("preserves expected roll-up, evaluation, and failure message behaviors", () => {
     const rollup = sumRollupValues([
-      { value: "2", isDeleted: false, isRelevant: true },
-      { value: "3", isDeleted: false, isRelevant: true },
+      {
+        value: "2",
+        isDeleted: false,
+        isRelevant: true,
+        energyProviderId: null,
+        energyTypeId: null,
+        energySourceId: null,
+      },
+      {
+        value: "3",
+        isDeleted: false,
+        isRelevant: true,
+        energyProviderId: null,
+        energyTypeId: null,
+        energySourceId: null,
+      },
     ]);
     expect(rollup.sum).toBe(5);
 

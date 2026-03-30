@@ -15,7 +15,7 @@ export const writeCalculatedTargetValue = async ({
   inputDefId,
   value,
   scope,
-}: WriteTargetValueInput): Promise<void> => {
+}: WriteTargetValueInput): Promise<string> => {
   const user = await getCurrentUser();
   const existingConditions = [
     eq(dataEntries.report_period_id, scope.reportPeriodId),
@@ -62,8 +62,17 @@ export const writeCalculatedTargetValue = async ({
       .set(writeValues)
       .where(eq(dataEntries.id, existing.id));
 
-    return;
+    return existing.id;
   }
 
-  await db.insert(dataEntries).values(writeValues);
+  const [inserted] = await db
+    .insert(dataEntries)
+    .values(writeValues)
+    .returning({ id: dataEntries.id });
+
+  if (!inserted?.id) {
+    throw new Error("Unable to persist aggregated target value.");
+  }
+
+  return inserted.id;
 };

@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { KeyboardEvent, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import { updateDataEntryValueAction } from "@/app/data-entry/enter-data/service";
@@ -17,6 +17,16 @@ export default function InputCell({ row }: InputCellProps) {
   const router = useRouter();
   const [isSaving, startTransition] = useTransition();
   const displayValue = row.value ?? "";
+
+  const handleCommitOnEnter = (event: KeyboardEvent<HTMLInputElement>) => {
+    if (event.key !== "Enter") {
+      return;
+    }
+
+    event.preventDefault();
+    persistValue(event.currentTarget.value);
+    event.currentTarget.blur();
+  };
 
   const persistValue = (nextValue: string) => {
     const normalizedCurrent = (row.value ?? "").trim();
@@ -39,7 +49,8 @@ export default function InputCell({ row }: InputCellProps) {
         });
 
         router.refresh();
-        toast.success("Value saved and KPI recalculated.", {
+
+        toast.success("Data update was successful.", {
           id: loadingToastId,
         });
       } catch {
@@ -61,6 +72,7 @@ export default function InputCell({ row }: InputCellProps) {
           defaultValue={displayValue}
           disabled={isSaving}
           name={row.inputName}
+          onKeyDown={handleCommitOnEnter}
           onBlur={(event) => persistValue(event.target.value)}
         />
       );
@@ -88,6 +100,7 @@ export default function InputCell({ row }: InputCellProps) {
           type="date"
           defaultValue={displayValue}
           disabled={isSaving}
+          onKeyDown={handleCommitOnEnter}
           onBlur={(event) => persistValue(event.target.value)}
         />
       );
@@ -96,6 +109,7 @@ export default function InputCell({ row }: InputCellProps) {
         <Input
           defaultValue={displayValue}
           disabled={isSaving}
+          onKeyDown={handleCommitOnEnter}
           onBlur={(event) => persistValue(event.target.value)}
         />
       );
@@ -104,6 +118,7 @@ export default function InputCell({ row }: InputCellProps) {
         <Input
           defaultValue={displayValue}
           disabled={isSaving}
+          onKeyDown={handleCommitOnEnter}
           onBlur={(event) => persistValue(event.target.value)}
         />
       );

@@ -13,6 +13,7 @@ describe("generation grouping behavior", () => {
         {
           inputDefId: 1,
           inputName: "MWh",
+          unitName: "MWh",
           dataTypeId: 1,
           controlType: "number",
           value: null,

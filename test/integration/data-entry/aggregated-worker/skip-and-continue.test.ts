@@ -5,8 +5,14 @@ import { evaluateFormula } from "@/app/data-entry/enter-data/services/aggregated
 
 describe("skip and continue behavior", () => {
   it("skips missing dependency target and still evaluates ready target", () => {
-    const skipped = classifyDependencies(["A", "B"], { A: "10", B: null });
-    const ready = classifyDependencies(["X", "Y"], { X: "4", Y: "6" });
+    const skipped = classifyDependencies("A * B", ["A", "B"], {
+      A: "10",
+      B: null,
+    });
+    const ready = classifyDependencies("X + Y", ["X", "Y"], {
+      X: "4",
+      Y: "6",
+    });
 
     expect(skipped.status).toBe("skipped");
     expect(skipped.reason).toBe("missing-value");

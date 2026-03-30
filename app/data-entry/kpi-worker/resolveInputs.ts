@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull, or } from "drizzle-orm";
 
 import { db } from "@/db/connection";
 import type { FormulaInput } from "@/db/schema/dataEntry";
@@ -128,7 +128,9 @@ export const resolveFormulaInputValues = async (
     };
   }
 
-  const inputDefIds = [...new Set(formulaInputs.map((item) => item.input_def_id))];
+  const inputDefIds = [
+    ...new Set(formulaInputs.map((item) => item.input_def_id)),
+  ];
 
   const inputDefs = await db
     .select({
@@ -154,8 +156,12 @@ export const resolveFormulaInputValues = async (
   if (request.scope.serviceAreaId == null) {
     scopeConditions.push(isNull(dataEntries.service_area_id));
   } else {
+    // Include global rows (null service area) as fallback for utility-level inputs.
     scopeConditions.push(
-      eq(dataEntries.service_area_id, request.scope.serviceAreaId),
+      or(
+        eq(dataEntries.service_area_id, request.scope.serviceAreaId),
+        isNull(dataEntries.service_area_id),
+      )!,
     );
   }
 
@@ -171,7 +177,10 @@ export const resolveFormulaInputValues = async (
     scopeConditions.push(isNull(dataEntries.customer_type_id));
   } else {
     scopeConditions.push(
-      eq(dataEntries.customer_type_id, request.scope.customerTypeId),
+      or(
+        eq(dataEntries.customer_type_id, request.scope.customerTypeId),
+        isNull(dataEntries.customer_type_id),
+      )!,
     );
   }
 
@@ -179,7 +188,10 @@ export const resolveFormulaInputValues = async (
     scopeConditions.push(isNull(dataEntries.payment_mode_id));
   } else {
     scopeConditions.push(
-      eq(dataEntries.payment_mode_id, request.scope.paymentModeId),
+      or(
+        eq(dataEntries.payment_mode_id, request.scope.paymentModeId),
+        isNull(dataEntries.payment_mode_id),
+      )!,
     );
   }
 
@@ -236,12 +248,9 @@ export const resolveFormulaInputValues = async (
 
   for (const formulaInput of formulaInputs) {
     const sourceRows = byInputDef.get(formulaInput.input_def_id) ?? [];
-    const effectiveEnergyProviderId =
-      formulaInput.energy_provider_id ?? request.scope.energyProviderId ?? null;
-    const effectiveEnergyTypeId =
-      formulaInput.energy_type_id ?? request.scope.energyTypeId ?? null;
-    const effectiveEnergySourceId =
-      formulaInput.energy_source_id ?? request.scope.energySourceId ?? null;
+    const effectiveEnergyProviderId = formulaInput.energy_provider_id ?? null;
+    const effectiveEnergyTypeId = formulaInput.energy_type_id ?? null;
+    const effectiveEnergySourceId = formulaInput.energy_source_id ?? null;
     const candidates = sourceRows.filter(
       (candidate) =>
         matchesNullableDimension(

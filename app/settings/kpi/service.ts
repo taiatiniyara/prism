@@ -16,6 +16,16 @@ export interface KpiFormulaInputOption {
   id: number;
   name: string;
   variable_name: string | null;
+  unit: string | null;
+  actualSamples: KpiFormulaInputActualSample[];
+}
+
+export interface KpiFormulaInputActualSample {
+  inputDefId: number;
+  energyProviderId: number | null;
+  energyTypeId: number | null;
+  energySourceId: number | null;
+  value: number;
 }
 
 export interface KpiFormulaBuilderData {
@@ -24,6 +34,7 @@ export interface KpiFormulaBuilderData {
   energyProviderOptions: ManagedDimensionOption[];
   energyTypeOptions: ManagedDimensionOption[];
   energySourceOptions: ManagedDimensionOption[];
+  previewContextLabel: string | null;
 }
 
 export interface ManagedDimensionOption {
@@ -174,6 +185,7 @@ export async function GetKpiFormulaBuilderData(): Promise<KpiFormulaBuilderData>
       id: inputDefinitions.id,
       name: inputDefinitions.name,
       variable_name: inputDefinitions.variable_name,
+      unitId: inputDefinitions.unit_id,
     })
     .from(inputDefinitions)
     .where(
@@ -183,6 +195,16 @@ export async function GetKpiFormulaBuilderData(): Promise<KpiFormulaBuilderData>
       ),
     )
     .orderBy(asc(inputDefinitions.name));
+
+  const previewContextLabel = "Preview uses dummy values.";
+
+  const formulaInputs: KpiFormulaInputOption[] = inputs.map((item) => ({
+    id: item.id,
+    name: item.name,
+    variable_name: item.variable_name,
+    unit: managedListsItems.find((m) => m.id === item.unitId)?.name || null,
+    actualSamples: [],
+  }));
 
   const energyProviderRows = await db
     .select({
@@ -240,10 +262,11 @@ export async function GetKpiFormulaBuilderData(): Promise<KpiFormulaBuilderData>
 
   return {
     kpis,
-    inputs,
+    inputs: formulaInputs,
     energyProviderOptions: energyProviderRows,
     energyTypeOptions: energyTypeRows,
     energySourceOptions: energySourceRows,
+    previewContextLabel,
   };
 }
 

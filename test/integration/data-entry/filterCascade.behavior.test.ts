@@ -54,6 +54,7 @@ describe("filter cascade behavior", () => {
         subcategoryId: 600,
         dataTypeId: 1,
         dataTypeName: "number",
+        unitName: "MWh",
       },
       {
         id: 2,
@@ -62,6 +63,7 @@ describe("filter cascade behavior", () => {
         subcategoryId: 601,
         dataTypeId: 2,
         dataTypeName: "text",
+        unitName: null,
       },
       {
         id: 3,
@@ -70,6 +72,7 @@ describe("filter cascade behavior", () => {
         subcategoryId: 700,
         dataTypeId: 3,
         dataTypeName: "boolean",
+        unitName: null,
       },
     ];
 
@@ -84,7 +87,14 @@ describe("filter cascade behavior", () => {
           inputDefId: 1,
           serviceAreaId: 10,
           value: "123",
-          comments: "ok",
+          comments: [
+            {
+              comment: "ok",
+              commenterId: "u-1",
+              commenterRole: "DEV",
+              date: new Date("2026-01-01T00:00:00.000Z"),
+            },
+          ],
         },
       ],
       context,

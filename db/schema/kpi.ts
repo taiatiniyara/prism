@@ -137,9 +137,23 @@ export type KpiCalculationAttempt = typeof kpiCalculationAttempts.$inferSelect;
 export type NewKpiCalculationAttempt =
   typeof kpiCalculationAttempts.$inferInsert;
 
+export type BscNodeLevel = "perspective" | "objective" | "initiative" | "kpi";
+
+export interface BscNodeRef {
+  level: BscNodeLevel;
+  perspective_level: PerspectiveLevel;
+  objective_description?: string;
+  key_initiative_description?: string;
+  kpi_id?: number;
+}
+
 export interface BscRelationship {
-  bsc_id: string;
-  relationship_type: "influences" | "is_influenced_by";
+  id: string;
+  source: BscNodeRef;
+  target: BscNodeRef;
+  relationship_type: "influences" | "depends_on" | "contributes_to" | "blocks";
+  weight?: number;
+  note?: string;
 }
 
 export enum PerspectiveLevel {
@@ -148,22 +162,31 @@ export enum PerspectiveLevel {
   Operation = 3,
   Development = 4,
 }
+
+export type Perspective = {
+  perspective_level: PerspectiveLevel;
+  description: string;
+  strategic_objective: {
+    description: string;
+    key_initiatives: {
+      description: string;
+      kpis: {
+        kpi_id: number;
+        target_value: string;
+        // if we want to track the KPI at different frequencies for the same initiative, we can add a tracking_frequency field to specify how often the KPI should be tracked (e.g., monthly, annually). The target value will be entered into report periods that align with the specified tracking frequency either monthly or financial year type report periods.
+        tracking_frequency: "monthly" | "annually";
+      }[];
+    }[];
+  }[];
+};
+
 // Balanced Scorecard (BSC) table to link KPIs to strategic perspectives and objectives.
 export const bsc = pgTable("bsc", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
   utility_id: integer("utility_id")
     .notNull()
     .references(() => organisations.id),
-  kpi_id: uuid("kpi_id")
-    .notNull()
-    .references(() => kpi.id),
-  perspective_level: integer("perspective_level")
-    .notNull()
-    .$type<PerspectiveLevel>(),
-  objective: varchar("objective", { length: 100 }).notNull(),
-  target: varchar("target", { length: 100 }),
-  year: integer("year").notNull(),
-  month: integer("month"),
+  perspective: json("perspective").$type<Perspective>(),
   relationships: json("relationships").$type<BscRelationship[]>(),
   updated_by_id: text("updated_by_id").references(() => user.id),
   updated_at: timestamp("updated_at").notNull().defaultNow(),

@@ -6,13 +6,16 @@ import {
 import { sanitizeScorecardFilterContext } from "@/app/data-entry/balanced-scorecard/context";
 import { toScorecardResponse } from "@/app/data-entry/balanced-scorecard/mapper";
 import {
+  listScorecardRelationships,
   listScorecardKpiOptions,
   listScorecardInputRows,
   upsertScorecardConfiguration,
+  upsertScorecardRelationships,
 } from "@/app/data-entry/balanced-scorecard/repository";
 import type {
   ScorecardFilterContext,
   ScorecardKpiOption,
+  ScorecardRelationshipsUpdatePayload,
   ScorecardResponse,
   ScorecardUpdatePayload,
 } from "@/app/data-entry/balanced-scorecard/types";
@@ -25,8 +28,9 @@ export const getScorecardResponse = async (
   assertScorecardReadAccess(user);
   const context = sanitizeScorecardFilterContext(inputContext);
   const rows = await listScorecardInputRows(context);
+  const relationships = await listScorecardRelationships(context);
   const snapshot = buildScorecardSnapshot(rows);
-  return toScorecardResponse(context, snapshot, rows);
+  return toScorecardResponse(context, snapshot, rows, relationships);
 };
 
 export const getScorecardKpiOptions = async (
@@ -50,4 +54,18 @@ export const saveScorecardConfiguration = async (
   }
 
   return upsertScorecardConfiguration(user.org_id, user.id, payload);
+};
+
+export const saveScorecardRelationships = async (
+  user: CurrentUser,
+  payload: ScorecardRelationshipsUpdatePayload,
+) => {
+  assertScorecardWriteAccess(user);
+  if (user.org_id == null) {
+    throw new Error(
+      "VALIDATION:Your account is not scoped to a utility for scorecard updates.",
+    );
+  }
+
+  return upsertScorecardRelationships(user.org_id, user.id, payload);
 };

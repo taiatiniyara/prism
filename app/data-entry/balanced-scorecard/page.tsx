@@ -17,8 +17,9 @@ const toScorecardContext = (
   reportPeriodId: context.reportPeriodId ?? fallbackReportPeriodId,
   reportTypeId: context.reportTypeId,
   serviceAreaId: context.serviceAreaId,
-  kpiCategoryId: context.kpiCategoryId,
-  kpiSubcategoryId: context.kpiSubcategoryId,
+  // BSC should always include all KPI categories/subcategories.
+  kpiCategoryId: null,
+  kpiSubcategoryId: null,
 });
 
 export default async function BalancedScorecardPage() {
@@ -35,7 +36,6 @@ export default async function BalancedScorecardPage() {
     return (
       <ScorecardPageClient
         initialContext={scorecardContext}
-        options={options}
         kpiOptions={kpiOptions}
       />
     );
@@ -43,7 +43,7 @@ export default async function BalancedScorecardPage() {
     return (
       <div className="space-y-3 p-2 sm:p-3">
         <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
-          Unable to load scorecard filters.
+          Unable to load scorecard data. Please try again later.
         </div>
       </div>
     );

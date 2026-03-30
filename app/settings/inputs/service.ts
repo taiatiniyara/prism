@@ -8,8 +8,9 @@ import {
   inputDefinitions,
   NewInputDefinition,
 } from "@/db/schema/dataEntry";
+import { managedListItems, managedLists } from "@/db/schema/managedLists";
 import { createVariableName } from "@/lib/formatters";
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, ilike, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { GetAllManagedListItems } from "../managed-lists/service";
 
@@ -18,13 +19,23 @@ export interface InputFormulaOption {
   name: string;
   description: string | null;
   variable_name: string | null;
+  unit: string | null;
   formula: string | null;
   formula_inputs: FormulaInput[] | null;
   is_active: boolean;
 }
 
+export interface ManagedDimensionOption {
+  id: number;
+  name: string;
+}
+
 export interface InputFormulaBuilderData {
   inputs: InputFormulaOption[];
+  energyProviderOptions: ManagedDimensionOption[];
+  energyTypeOptions: ManagedDimensionOption[];
+  energySourceOptions: ManagedDimensionOption[];
+  previewContextLabel: string | null;
 }
 
 export interface SaveInputFormulaPayload {
@@ -147,12 +158,15 @@ export async function UpdateInputDefinitionFromExcel(
 }
 
 export async function GetInputFormulaBuilderData(): Promise<InputFormulaBuilderData> {
+  const managedListsItems = await db.select().from(managedListItems);
+
   const inputs = await db
     .select({
       id: inputDefinitions.id,
       name: inputDefinitions.name,
       description: inputDefinitions.description,
       variable_name: inputDefinitions.variable_name,
+      unitId: inputDefinitions.unit_id,
       formula: inputDefinitions.formula,
       formula_inputs: inputDefinitions.formula_inputs,
       is_active: inputDefinitions.is_active,
@@ -160,7 +174,78 @@ export async function GetInputFormulaBuilderData(): Promise<InputFormulaBuilderD
     .from(inputDefinitions)
     .orderBy(asc(inputDefinitions.name));
 
-  return { inputs };
+  const energyProviderRows = await db
+    .select({
+      id: managedListItems.id,
+      name: managedListItems.name,
+    })
+    .from(managedListItems)
+    .leftJoin(managedLists, eq(managedListItems.list_id, managedLists.id))
+    .where(
+      and(
+        eq(managedListItems.is_active, true),
+        or(
+          ilike(managedLists.name, "%energy provider%"),
+          ilike(managedLists.name, "%energy providers%"),
+        ),
+      ),
+    )
+    .orderBy(asc(managedListItems.name));
+
+  const energySourceRows = await db
+    .select({
+      id: managedListItems.id,
+      name: managedListItems.name,
+    })
+    .from(managedListItems)
+    .leftJoin(managedLists, eq(managedListItems.list_id, managedLists.id))
+    .where(
+      and(
+        eq(managedListItems.is_active, true),
+        or(
+          ilike(managedLists.name, "%energy source%"),
+          ilike(managedLists.name, "%energy sources%"),
+        ),
+      ),
+    )
+    .orderBy(asc(managedListItems.name));
+
+  const energyTypeRows = await db
+    .select({
+      id: managedListItems.id,
+      name: managedListItems.name,
+    })
+    .from(managedListItems)
+    .leftJoin(managedLists, eq(managedListItems.list_id, managedLists.id))
+    .where(
+      and(
+        eq(managedListItems.is_active, true),
+        or(
+          ilike(managedLists.name, "%energy type%"),
+          ilike(managedLists.name, "%energy types%"),
+        ),
+      ),
+    )
+    .orderBy(asc(managedListItems.name));
+
+  return {
+    inputs: inputs.map((item) => ({
+      id: item.id,
+      name: item.name,
+      description: item.description,
+      variable_name: item.variable_name,
+      unit:
+        managedListsItems.find((managedItem) => managedItem.id === item.unitId)
+          ?.name || null,
+      formula: item.formula,
+      formula_inputs: item.formula_inputs,
+      is_active: item.is_active,
+    })),
+    energyProviderOptions: energyProviderRows,
+    energyTypeOptions: energyTypeRows,
+    energySourceOptions: energySourceRows,
+    previewContextLabel: "Preview uses dummy values.",
+  };
 }
 
 export async function SaveInputFormula(payload: SaveInputFormulaPayload) {

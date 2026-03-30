@@ -45,7 +45,10 @@ describe("balanced scorecard route contract", () => {
     mocks.saveScorecardConfiguration.mockResolvedValue({
       kpiId: "11111111-1111-1111-1111-111111111111",
       perspectiveLevel: 1,
-      objective: "Improve reliability",
+      perspectiveDescription: "Financial outcomes",
+      strategicObjective: "Improve reliability",
+      keyInitiative: "Reduce outage response time",
+      trackingFrequency: "monthly",
       target: {
         year: 2026,
         month: 3,
@@ -119,7 +122,10 @@ describe("balanced scorecard route contract", () => {
           kpiId: "11111111-1111-1111-1111-111111111111",
           kpiDefinitionId: 10,
           perspectiveLevel: 2,
-          objective: "Improve customer outcomes",
+          perspectiveDescription: "Customer trust",
+          strategicObjective: "Improve customer outcomes",
+          keyInitiative: "First-contact resolution",
+          trackingFrequency: "monthly",
           target: {
             year: 2026,
             month: 4,
@@ -144,7 +150,8 @@ describe("balanced scorecard route contract", () => {
           kpiId: null,
           kpiDefinitionId: -2,
           perspectiveLevel: 8,
-          objective: "",
+          strategicObjective: "",
+          keyInitiative: "",
           target: { year: 20, targetValue: "" },
         }),
       }),
@@ -170,7 +177,8 @@ describe("balanced scorecard route contract", () => {
           kpiId: null,
           kpiDefinitionId: 10,
           perspectiveLevel: 2,
-          objective: "Improve customer outcomes",
+          strategicObjective: "Improve customer outcomes",
+          keyInitiative: "First-contact resolution",
           target: {
             year: 2026,
             month: null,

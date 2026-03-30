@@ -46,10 +46,16 @@ export interface DataEntryProgressSummary {
   totalInputs: number;
 }
 
+export interface DataEntryKpiWorkerSnapshot {
+  latestFailureReason: string | null;
+  latestFailureUpdatedAt: string | null;
+}
+
 export interface DataEntryPageViewModel {
   context: DataEntryFilterContext;
   options: DataEntryFilterOptions;
   progress: DataEntryProgressSummary;
+  kpiWorker: DataEntryKpiWorkerSnapshot;
   ui: {
     showServiceAreaSelector: boolean;
     generationMode: boolean;

@@ -62,6 +62,7 @@ export default async function KpiSettingsPage() {
         energyProviderOptions={data.energyProviderOptions}
         energyTypeOptions={data.energyTypeOptions}
         energySourceOptions={data.energySourceOptions}
+        previewContextLabel={data.previewContextLabel}
       />
     </div>
   );

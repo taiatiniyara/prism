@@ -1,6 +1,7 @@
 import type {
   ScorecardFilterContext,
   ScorecardKpiOption,
+  ScorecardRelationshipsUpdatePayload,
   ScorecardResponse,
   ScorecardUpdatePayload,
 } from "@/app/data-entry/balanced-scorecard/types";
@@ -63,6 +64,29 @@ export const saveScorecardConfig = async (
   const result = (await response.json()) as { message?: string };
   if (!response.ok) {
     throw new Error(result.message ?? "Unable to update scorecard.");
+  }
+};
+
+export const saveScorecardRelationships = async (
+  payload: ScorecardRelationshipsUpdatePayload,
+): Promise<void> => {
+  const response = await fetch(
+    `/api/data-entry/balanced-scorecard/relationships`,
+    {
+      method: "PUT",
+      cache: "no-store",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    },
+  );
+
+  const result = (await response.json()) as { message?: string };
+  if (!response.ok) {
+    throw new Error(
+      result.message ?? "Unable to update scorecard relationships.",
+    );
   }
 };
 

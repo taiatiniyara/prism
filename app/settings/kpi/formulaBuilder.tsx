@@ -4,6 +4,7 @@ import { DragEvent, useMemo, useState, useTransition } from "react";
 import { SaveKpiFormula } from "./service";
 import { FormulaInput } from "@/db/schema/dataEntry";
 import { KpiDefinition } from "@/db/schema/kpi";
+import { evaluateKpiFormula } from "@/app/data-entry/kpi-worker/evaluator";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -17,13 +18,23 @@ import {
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
-import { FaSave, FaTimes } from "react-icons/fa";
+import { FaDice, FaSave, FaTimes } from "react-icons/fa";
 import type { ManagedDimensionOption } from "./service";
 
 export interface KpiFormulaInputOption {
   id: number;
   name: string;
   variable_name: string | null;
+  unit: string | null;
+  actualSamples: KpiFormulaInputActualSample[];
+}
+
+export interface KpiFormulaInputActualSample {
+  inputDefId: number;
+  energyProviderId: number | null;
+  energyTypeId: number | null;
+  energySourceId: number | null;
+  value: number;
 }
 
 const operators = ["+", "-", "*", "/", "(", ")", "WHERE", "AND"];
@@ -46,6 +57,20 @@ interface ParsedInlineFormulaResult {
   filtersByToken: Record<string, FormulaInputFilters>;
   errors: string[];
 }
+
+interface TokenPreviewRow {
+  token: string;
+  inputName: string;
+  unit: string | null;
+  value: number;
+  filterSummary: string | null;
+}
+
+const formatPreviewNumber = (value: number): string => {
+  return new Intl.NumberFormat("en-US", {
+    maximumFractionDigits: 4,
+  }).format(value);
+};
 
 function getFormulaInputs(
   formula: string,
@@ -158,6 +183,7 @@ export default function KpiFormulaBuilder(props: {
   energyProviderOptions: ManagedDimensionOption[];
   energyTypeOptions: ManagedDimensionOption[];
   energySourceOptions: ManagedDimensionOption[];
+  previewContextLabel: string | null;
 }) {
   const [isSaving, startTransition] = useTransition();
   const [selectedKpiId, setSelectedKpiId] = useState<string>("");
@@ -166,8 +192,12 @@ export default function KpiFormulaBuilder(props: {
   const [search, setSearch] = useState<string>("");
   const [selectedInputIds, setSelectedInputIds] = useState<number[]>([]);
   const [formula, setFormula] = useState<string>("");
+  const [isFormulaTextMode, setIsFormulaTextMode] = useState(false);
+  const [formulaTextDraft, setFormulaTextDraft] = useState<string>("");
   const [customToken, setCustomToken] = useState<string>("");
   const [isDraggingOverFormula, setIsDraggingOverFormula] = useState(false);
+  const [dummyBaseValue, setDummyBaseValue] = useState<number>(10);
+  const [dummySeed, setDummySeed] = useState<number>(1);
 
   const normalizeInputId = (id: number) => Number(id);
 
@@ -496,6 +526,117 @@ export default function KpiFormulaBuilder(props: {
     );
   }, [formulaVariableSet, props.inputs, selectedInputIds]);
 
+  const selectedKpi = useMemo(() => {
+    return (
+      props.kpis.find((item) => item.id.toString() === selectedKpiId) ?? null
+    );
+  }, [props.kpis, selectedKpiId]);
+
+  const toTokenHash = (value: string): number => {
+    let hash = 0;
+    for (let i = 0; i < value.length; i += 1) {
+      hash = (hash * 31 + value.charCodeAt(i)) >>> 0;
+    }
+    return hash;
+  };
+
+  const resolveDummyValueForToken = (token: string): number => {
+    const input = inputByToken.get(token);
+    if (!input) {
+      return 0;
+    }
+
+    const filters = effectiveInputFilters[input.id];
+    const providerWeight = filters?.energyProviderId != null ? 3 : 0;
+    const typeWeight = filters?.energyTypeId != null ? 5 : 0;
+    const sourceWeight = filters?.energySourceId != null ? 7 : 0;
+    const tokenWeight = (toTokenHash(`${token}:${dummySeed}`) % 17) + 1;
+
+    // Deterministic per-token dummy value so preview stays stable while editing.
+    return Number(
+      (
+        dummyBaseValue +
+        input.id * 2 +
+        tokenWeight +
+        providerWeight +
+        typeWeight +
+        sourceWeight
+      ).toFixed(2),
+    );
+  };
+
+  const tokenPreviewRows = useMemo<TokenPreviewRow[]>(() => {
+    const identifiers =
+      parsedInlineFormula.cleanedFormula.match(/[A-Za-z_][A-Za-z0-9_]*/g) ?? [];
+    const seen = new Set<string>();
+    const rows: TokenPreviewRow[] = [];
+
+    for (const token of identifiers) {
+      if (seen.has(token)) {
+        continue;
+      }
+
+      seen.add(token);
+      const input = inputByToken.get(token);
+      if (!input) {
+        continue;
+      }
+
+      rows.push({
+        token,
+        inputName: input.name,
+        unit: input.unit,
+        value: resolveDummyValueForToken(token),
+        filterSummary: getFilterSummaryForToken(token),
+      });
+    }
+
+    return rows;
+  }, [
+    inputByToken,
+    parsedInlineFormula.cleanedFormula,
+    effectiveInputFilters,
+    dummyBaseValue,
+    dummySeed,
+  ]);
+
+  const formulaPreviewResult = useMemo(() => {
+    const cleanFormula = parsedInlineFormula.cleanedFormula.trim();
+    if (!cleanFormula) {
+      return {
+        status: "idle" as const,
+        message: "Build a formula to preview a computed result.",
+      };
+    }
+
+    if (parsedInlineFormula.errors.length > 0) {
+      return {
+        status: "error" as const,
+        message: parsedInlineFormula.errors[0],
+      };
+    }
+
+    const variables: Record<string, number> = {};
+    for (const row of tokenPreviewRows) {
+      variables[row.token] = row.value;
+    }
+
+    const evaluated = evaluateKpiFormula(cleanFormula, variables);
+    if (evaluated.status === "error") {
+      return {
+        status: "error" as const,
+        message:
+          evaluated.failureReason ?? "Unable to evaluate formula preview.",
+      };
+    }
+
+    return {
+      status: "ok" as const,
+      value: evaluated.value ?? null,
+      message: "Preview computed from dummy input values.",
+    };
+  }, [parsedInlineFormula, tokenPreviewRows]);
+
   const handleKpiChange = (value: string) => {
     setSelectedKpiId(value);
     const kpi = props.kpis.find((item) => item.id.toString() === value);
@@ -533,6 +674,21 @@ export default function KpiFormulaBuilder(props: {
   const removeTokenAtIndex = (index: number) => {
     const nextTokens = formulaTokens.filter((_, i) => i !== index);
     setFormula(nextTokens.join(" "));
+  };
+
+  const openFormulaTextMode = () => {
+    setFormulaTextDraft(formula);
+    setIsFormulaTextMode(true);
+  };
+
+  const commitFormulaTextMode = () => {
+    setFormula(formulaTextDraft.trim());
+    setIsFormulaTextMode(false);
+  };
+
+  const cancelFormulaTextMode = () => {
+    setFormulaTextDraft(formula);
+    setIsFormulaTextMode(false);
   };
 
   const handleDragStart = (
@@ -579,6 +735,8 @@ export default function KpiFormulaBuilder(props: {
     setSearch("");
     setSelectedInputIds([]);
     setFormula("");
+    setFormulaTextDraft("");
+    setIsFormulaTextMode(false);
     setCustomToken("");
     setIsDraggingOverFormula(false);
   };
@@ -621,11 +779,11 @@ export default function KpiFormulaBuilder(props: {
   return (
     <Card className="w-full border-border/60 shadow-sm">
       <CardHeader>
-        <CardTitle className="text-lg font-bold sm:text-xl">
+        <CardTitle className="text-base font-bold sm:text-lg">
           KPI Formula Builder
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-5 sm:space-y-8">
+      <CardContent className="space-y-3 sm:space-y-4">
         <div>
           <div>
             <Label className="text-xs sm:text-sm">Select KPI</Label>
@@ -679,19 +837,22 @@ export default function KpiFormulaBuilder(props: {
               ))}
             </SelectContent>
           </Select>
+          <p className="text-muted-foreground mt-1 text-xs sm:text-sm">
+            KPI Unit: {selectedKpi?.unit ?? "Not set"}
+          </p>
         </div>
 
-        <div className="grid gap-3 sm:gap-4 xl:grid-cols-[340px_minmax(0,1fr)] xl:gap-6">
-          <div className="rounded-lg border border-border/70 bg-muted/20 p-2.5 sm:p-4 max-[420px]:p-2">
+        <div className="grid gap-2.5 sm:gap-3 xl:grid-cols-[300px_minmax(0,1fr)] xl:gap-4">
+          <div className="rounded-lg border border-border/70 bg-muted/20 p-2 sm:p-3">
             <Label className="text-xs sm:text-sm">Search and Drag Inputs</Label>
             <Input
               value={search}
               onChange={(event) => setSearch(event.target.value)}
-              className="my-1.5 h-7 text-xs sm:my-2 sm:h-9 sm:text-sm"
+              className="my-1 h-7 text-xs sm:h-8 sm:text-sm"
               placeholder="Search by input name or variable"
             />
 
-            <div className="max-h-72 min-h-36 overflow-y-auto rounded-md border bg-background p-1.5 sm:max-h-112 sm:min-h-60 sm:p-2.5 max-[420px]:max-h-64 max-[420px]:min-h-32">
+            <div className="max-h-64 min-h-32 overflow-y-auto rounded-md border bg-background p-1.5 sm:max-h-80 sm:min-h-48 sm:p-2">
               {filteredInputs.length === 0 && (
                 <p className="text-muted-foreground text-xs sm:text-sm">
                   No inputs match your search.
@@ -706,7 +867,7 @@ export default function KpiFormulaBuilder(props: {
                       key={input.id}
                       type="button"
                       variant="outline"
-                      className="h-auto w-full justify-start whitespace-normal px-1.5 py-1 text-left text-xs sm:px-2.5 sm:py-2"
+                      className="h-auto w-full justify-start whitespace-normal px-1.5 py-1 text-left text-xs sm:px-2 sm:py-1.5"
                       draggable
                       onDragStart={(event) => handleDragStart(event, input)}
                       onClick={() => {
@@ -714,22 +875,28 @@ export default function KpiFormulaBuilder(props: {
                         addInputToSelection(input.id);
                       }}
                     >
-                      {input.name}
-                      {input.variable_name ? ` (${input.variable_name})` : ""}
+                      <span className="flex flex-col">
+                        <span>
+                          {input.name}
+                          {input.variable_name
+                            ? ` (${input.variable_name})`
+                            : ""}
+                        </span>
+                        <span className="text-muted-foreground text-[10px] sm:text-xs">
+                          Unit: {input.unit ?? "Not set"}
+                        </span>
+                      </span>
                     </Button>
                   );
                 })}
               </div>
             </div>
-            <p className="text-muted-foreground text-[11px] sm:text-xs">
-              Tip: drag a variable into the formula box, or click to append.
-            </p>
           </div>
 
-          <div className="space-y-2.5 rounded-lg border border-border/70 bg-card p-2.5 sm:space-y-4 sm:p-4 max-[420px]:p-2">
-            <div className="grid gap-2.5 sm:gap-3">
+          <div className="space-y-2 rounded-lg border border-border/70 bg-card p-2 sm:space-y-3 sm:p-3">
+            <div className="grid gap-2">
               <Label className="text-xs sm:text-sm">Formula Tools</Label>
-              <div className="grid gap-2.5 sm:gap-3">
+              <div className="grid gap-2">
                 <div className="flex flex-wrap gap-1.5 sm:gap-2">
                   {operators.map((operator) => (
                     <Button
@@ -782,14 +949,10 @@ export default function KpiFormulaBuilder(props: {
 
                 <div className="grid gap-2">
                   <Label className="text-xs sm:text-sm">Input Filters</Label>
-                  <div className="space-y-1 rounded-md border border-dashed bg-muted/20 p-2 text-[11px] sm:p-2.5 sm:text-xs">
+                  <div className="space-y-1 rounded-md border border-dashed bg-muted/20 p-2 text-[11px] sm:text-xs">
                     <p className="text-muted-foreground">
-                      Use inline WHERE in your formula: variable WHERE
-                      provider=Name AND type=Name AND source=Name
-                    </p>
-                    <p className="text-muted-foreground">
-                      Example: kwh_sold WHERE provider="ABC Power" AND
-                      source="Grid" + kwh_generated
+                      Inline filter format: variable WHERE provider=... AND
+                      type=... AND source=...
                     </p>
                     {parsedInlineFormula.errors.length > 0 && (
                       <p className="text-red-600">
@@ -807,80 +970,197 @@ export default function KpiFormulaBuilder(props: {
               </div>
             </div>
 
-            <div className="grid gap-2.5 sm:gap-3">
+            <div className="grid gap-2">
               <Label className="text-xs sm:text-sm">Formula</Label>
               <div
                 onDragOver={(event) => {
+                  if (isFormulaTextMode) {
+                    return;
+                  }
                   event.preventDefault();
                   setIsDraggingOverFormula(true);
                 }}
-                onDragEnter={() => setIsDraggingOverFormula(true)}
-                onDragLeave={() => setIsDraggingOverFormula(false)}
+                onDragEnter={() => {
+                  if (isFormulaTextMode) {
+                    return;
+                  }
+                  setIsDraggingOverFormula(true);
+                }}
+                onDragLeave={() => {
+                  if (isFormulaTextMode) {
+                    return;
+                  }
+                  setIsDraggingOverFormula(false);
+                }}
                 onDrop={handleDropOnFormula}
                 className={
                   isDraggingOverFormula
-                    ? "min-h-40 rounded-md border bg-background p-2 ring-2 ring-primary/50 sm:min-h-56 sm:p-3"
-                    : "min-h-40 rounded-md border bg-background p-2 sm:min-h-56 sm:p-3"
+                    ? "min-h-28 rounded-md border bg-background p-2 ring-2 ring-primary/50 sm:min-h-40"
+                    : "min-h-28 rounded-md border bg-background p-2 sm:min-h-40"
                 }
               >
-                <div className="flex min-h-32 flex-wrap items-start gap-1.5 sm:min-h-48 sm:gap-2">
-                  {formulaTokens.length === 0 && (
-                    <p className="text-muted-foreground text-xs sm:text-sm">
-                      Drag inputs here. Inputs appear as boxes with x to remove.
-                    </p>
-                  )}
+                {isFormulaTextMode ? (
+                  <Input
+                    autoFocus
+                    value={formulaTextDraft}
+                    onChange={(event) =>
+                      setFormulaTextDraft(event.target.value)
+                    }
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") {
+                        event.preventDefault();
+                        commitFormulaTextMode();
+                      }
+                      if (event.key === "Escape") {
+                        event.preventDefault();
+                        cancelFormulaTextMode();
+                      }
+                    }}
+                    className="h-8 text-xs sm:h-9 sm:text-sm"
+                    placeholder="Edit formula text and press Enter"
+                  />
+                ) : (
+                  <div className="flex min-h-24 flex-wrap items-start gap-1.5 sm:min-h-32 sm:gap-2">
+                    {formulaTokens.length === 0 && (
+                      <p className="text-muted-foreground text-xs sm:text-sm">
+                        Drag inputs here. Inputs appear as boxes with x to
+                        remove.
+                      </p>
+                    )}
 
-                  {formulaTokens.map((token, index) => {
-                    const isInputToken = inputTokenSet.has(token);
-                    const isOperatorToken = operatorTokenSet.has(token);
-                    const isNumericConstant = /^-?\d+(\.\d+)?$/.test(token);
+                    {formulaTokens.map((token, index) => {
+                      const isInputToken = inputTokenSet.has(token);
+                      const isOperatorToken = operatorTokenSet.has(token);
+                      const isNumericConstant = /^-?\d+(\.\d+)?$/.test(token);
 
-                    const tokenClass = isInputToken
-                      ? "border-sky-200 bg-sky-100 text-sky-900 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-300"
-                      : isOperatorToken
-                        ? "border-amber-200 bg-amber-100 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300"
-                        : isNumericConstant
-                          ? "border-green-200 bg-green-100 text-green-900 dark:border-green-900 dark:bg-green-950/40 dark:text-green-300"
-                          : "border-violet-200 bg-violet-100 text-violet-900 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-300";
+                      const tokenClass = isInputToken
+                        ? "border-sky-200 bg-sky-100 text-sky-900 dark:border-sky-900 dark:bg-sky-950/40 dark:text-sky-300"
+                        : isOperatorToken
+                          ? "border-amber-200 bg-amber-100 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300"
+                          : isNumericConstant
+                            ? "border-green-200 bg-green-100 text-green-900 dark:border-green-900 dark:bg-green-950/40 dark:text-green-300"
+                            : "border-violet-200 bg-violet-100 text-violet-900 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-300";
 
-                    return (
-                      <span
-                        key={`${token}-${index}`}
-                        className={`flex items-center text-xs rounded border ${tokenClass}`}
-                      >
-                        <span className="flex flex-col px-1 py-0.5">
-                          <span
-                            className={`font-black ${!isInputToken ? "font-mono" : ""}`}
-                          >
-                            {token}
-                          </span>
-                          {isInputToken && (
-                            <span className="text-[10px] leading-tight opacity-80">
-                              {getFilterSummaryForToken(token)}
-                            </span>
-                          )}
-                        </span>
+                      const filterSummary = getFilterSummaryForToken(token);
+                      return (
                         <span
-                          onClick={() => removeTokenAtIndex(index)}
-                          className="cursor-pointer p-1 text-red-500"
+                          key={`${token}-${index}`}
+                          className={`flex items-center text-xs rounded border ${tokenClass}`}
+                          onDoubleClick={openFormulaTextMode}
                         >
-                          <FaTimes />
+                          <span className="flex flex-col px-1 py-0.5">
+                            <span
+                              className={`font-black ${!isInputToken ? "font-mono" : ""}`}
+                              onDoubleClick={openFormulaTextMode}
+                            >
+                              {token}
+                            </span>
+                            {isInputToken && (
+                              <>
+                                <span className="text-[10px] leading-tight opacity-80">
+                                  {inputByToken.get(token)?.unit ?? "No unit"}
+                                  {filterSummary &&
+                                  filterSummary !== "All filters"
+                                    ? ` | ${filterSummary}`
+                                    : ""}
+                                </span>
+                              </>
+                            )}
+                          </span>
+                          <span
+                            onClick={() => removeTokenAtIndex(index)}
+                            className="cursor-pointer p-1 text-red-500"
+                          >
+                            <FaTimes />
+                          </span>
                         </span>
-                      </span>
-                    );
-                  })}
-                </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
+              {!isFormulaTextMode && (
+                <p className="text-muted-foreground text-[11px] sm:text-xs">
+                  Double-click any token to edit the full formula as text.
+                </p>
+              )}
             </div>
 
             <div className="grid gap-2">
               <Label className="text-xs sm:text-sm">Preview</Label>
-              <Input
-                readOnly
-                value={formula}
-                className="h-8 text-xs sm:h-9 sm:text-sm"
-                placeholder="Formula preview"
-              />
+              <div className="grid gap-1.5 rounded-md border border-dashed bg-muted/20 p-2">
+                <div className="flex items-center justify-between gap-2">
+                  <Label className="text-xs sm:text-sm">Dummy Base Value</Label>
+                  <span className="text-muted-foreground text-xs sm:text-sm">
+                    {dummyBaseValue}
+                  </span>
+                </div>
+                <Input
+                  type="range"
+                  min={1}
+                  max={100}
+                  step={1}
+                  value={dummyBaseValue}
+                  onChange={(event) =>
+                    setDummyBaseValue(Number(event.target.value))
+                  }
+                  className="h-8"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => setDummySeed((prev) => prev + 1)}
+                >
+                  <FaDice />
+                  Randomize Dummy Values
+                </Button>
+              </div>
+
+              <div className="grid gap-2 md:grid-cols-3">
+                <div className="space-y-1.5 rounded-md border border-dashed bg-muted/20 p-2">
+                  <p className="text-xs font-medium">Input Preview Values</p>
+                  {tokenPreviewRows.length === 0 ? (
+                    <p className="text-muted-foreground text-[11px] sm:text-xs">
+                      Add at least one input variable to see preview values.
+                    </p>
+                  ) : (
+                    <div className="max-h-40 space-y-1 overflow-y-auto">
+                      {tokenPreviewRows.map((row) => (
+                        <div
+                          key={row.token}
+                          className="flex items-center justify-between gap-2 rounded border bg-background px-2 py-1 text-xs"
+                        >
+                          <span className="truncate font-medium">
+                            {row.token}
+                          </span>
+                          <span>
+                            {formatPreviewNumber(row.value)}
+                            {row.unit ? ` ${row.unit}` : ""}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div className="rounded-md border border-dashed bg-muted/20 p-2">
+                  <p className="text-xs font-medium">Actual Formula Preview</p>
+                  <p className="mt-1 wrap-break-word font-mono text-[11px] text-muted-foreground sm:text-xs">
+                    {parsedInlineFormula.cleanedFormula || "--"}
+                  </p>
+                </div>
+
+                <div className="rounded-md border bg-background p-2">
+                  <p className="text-xs font-medium">KPI Result Preview</p>
+                  <p className="mt-1 text-sm font-semibold sm:text-base">
+                    {formulaPreviewResult.status === "ok"
+                      ? `${formatPreviewNumber(Number(formulaPreviewResult.value))}${selectedKpi?.unit ? ` ${selectedKpi.unit}` : ""}`
+                      : "--"}
+                  </p>
+                </div>
+              </div>
             </div>
           </div>
         </div>
