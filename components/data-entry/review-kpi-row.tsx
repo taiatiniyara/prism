@@ -52,7 +52,11 @@ const formatResultValue = (
     return value;
   }
 
-  return String(parsed * 100);
+  if (unitName?.trim() === "%") {
+    return (parsed * 100).toFixed(1);
+  }
+
+  return parsed.toFixed(1);
 };
 
 export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
@@ -281,7 +285,12 @@ export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
               className="mt-2 text-xs text-muted-foreground"
               aria-live="polite"
             >
-              Sync: {isConnected ? "Live" : "Reconnecting"}
+              Connection:{" "}
+              <span
+                className={`${isConnected ? "text-lime-500" : "text-yellow-500"} font-bold`}
+              >
+                {isConnected ? "Live" : "Reconnecting"}
+              </span>
             </p>
             {recalculationPending ? (
               <p
