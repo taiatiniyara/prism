@@ -54,6 +54,24 @@ export interface SaveKpiFormulaPayload {
   formulaInputs: FormulaInput[];
 }
 
+type KpiDefinitionWritePayload = Partial<KpiDefinition> & {
+  limit_lower?: string | number | null;
+  limit_upper?: string | number | null;
+  limits?: unknown;
+};
+
+interface KpiLimit {
+  lower: number | null;
+  upper: number | null;
+  year: number;
+  month?: number | null;
+}
+
+export interface SaveKpiLimitsPayload {
+  kpiId: number;
+  limits: KpiLimit[];
+}
+
 const normalizeKpiType = (value: unknown): "benchmarking" | "custom" => {
   return value === "custom" ? "custom" : "benchmarking";
 };
@@ -64,7 +82,88 @@ const mapLegacyKpiTypeId = (
   return value === 2 ? "custom" : "benchmarking";
 };
 
+const isDevRole = (role: string) => role === "DEV";
+
 const isGlobalRole = (role: string) => role === "DEV" || role === "BMO";
+
+const canSetKpiLimits = (role: string) => isDevRole(role);
+
+const hasLimitValuesInPayload = (data: KpiDefinitionWritePayload): boolean => {
+  return (
+    typeof data.limit_lower !== "undefined" ||
+    typeof data.limit_upper !== "undefined" ||
+    typeof data.limits !== "undefined"
+  );
+};
+
+const toNullableNumber = (value: unknown): number | null => {
+  if (value === null || typeof value === "undefined" || value === "") {
+    return null;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+};
+
+const isLimitEntry = (value: unknown): value is KpiLimit => {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Record<string, unknown>;
+  if (typeof candidate.year !== "number" || !Number.isFinite(candidate.year)) {
+    return false;
+  }
+
+  const lowerValid =
+    candidate.lower === null ||
+    typeof candidate.lower === "number" ||
+    typeof candidate.lower === "undefined";
+  const upperValid =
+    candidate.upper === null ||
+    typeof candidate.upper === "number" ||
+    typeof candidate.upper === "undefined";
+  const monthValid =
+    candidate.month === null ||
+    typeof candidate.month === "number" ||
+    typeof candidate.month === "undefined";
+
+  return lowerValid && upperValid && monthValid;
+};
+
+const resolveLimitsPayload = (
+  data: KpiDefinitionWritePayload,
+): KpiLimit[] | null | undefined => {
+  if (Array.isArray(data.limits)) {
+    const normalized = data.limits.filter(isLimitEntry).map((item) => ({
+      year: item.year,
+      month: typeof item.month === "number" ? item.month : null,
+      lower: toNullableNumber(item.lower),
+      upper: toNullableNumber(item.upper),
+    }));
+    return normalized;
+  }
+
+  if (typeof data.limits !== "undefined") {
+    return null;
+  }
+
+  if (
+    typeof data.limit_lower === "undefined" &&
+    typeof data.limit_upper === "undefined"
+  ) {
+    return undefined;
+  }
+
+  return [
+    {
+      year: new Date().getFullYear(),
+      month: null,
+      lower: toNullableNumber(data.limit_lower),
+      upper: toNullableNumber(data.limit_upper),
+    },
+  ];
+};
 
 const resolveCreateKpiType = (
   user: CurrentUser,
@@ -126,7 +225,7 @@ export async function GetKpiTypeOptions(): Promise<KpiTypeOption[]> {
 }
 
 export async function CreateKpiDefinition(
-  data: Partial<KpiDefinition>,
+  data: KpiDefinitionWritePayload,
 ): Promise<DataTableFormResponse<KpiDefinition>> {
   const currentUser = await getCurrentUser();
 
@@ -134,6 +233,14 @@ export async function CreateKpiDefinition(
     return {
       success: false,
       message: "Your account is not scoped to a utility.",
+    };
+  }
+
+  if (!canSetKpiLimits(currentUser.role) && hasLimitValuesInPayload(data)) {
+    return {
+      success: false,
+      message:
+        "Only DEV users can set KPI upper and lower limits for selected years or months.",
     };
   }
 
@@ -151,8 +258,9 @@ export async function CreateKpiDefinition(
       name: String(data.name || "").trim(),
       description: data.description ? String(data.description) : null,
       type: resolveCreateKpiType(currentUser, data.type),
-      limit_lower: data.limit_lower ? String(data.limit_lower) : null,
-      limit_upper: data.limit_upper ? String(data.limit_upper) : null,
+      limits: canSetKpiLimits(currentUser.role)
+        ? (resolveLimitsPayload(data) ?? null)
+        : null,
       formula: data.formula ? String(data.formula) : "0",
       formula_inputs:
         Array.isArray(data.formula_inputs) && data.formula_inputs.length > 0
@@ -171,8 +279,18 @@ export async function CreateKpiDefinition(
 }
 
 export async function UpdateKpiDefinition(
-  data: Partial<KpiDefinition>,
+  data: KpiDefinitionWritePayload,
 ): Promise<DataTableFormResponse<KpiDefinition>> {
+  const currentUser = await getCurrentUser();
+
+  if (!canSetKpiLimits(currentUser.role) && hasLimitValuesInPayload(data)) {
+    return {
+      success: false,
+      message:
+        "Only DEV users can set KPI upper and lower limits for selected years or months.",
+    };
+  }
+
   const [updated] = await db
     .update(kpiDefinitions)
     .set({
@@ -187,18 +305,9 @@ export async function UpdateKpiDefinition(
         typeof data.type === "undefined"
           ? undefined
           : normalizeKpiType(data.type),
-      limit_lower:
-        typeof data.limit_lower === "undefined"
-          ? undefined
-          : data.limit_lower
-            ? String(data.limit_lower)
-            : null,
-      limit_upper:
-        typeof data.limit_upper === "undefined"
-          ? undefined
-          : data.limit_upper
-            ? String(data.limit_upper)
-            : null,
+      limits: !canSetKpiLimits(currentUser.role)
+        ? undefined
+        : resolveLimitsPayload(data),
     })
     .where(eq(kpiDefinitions.id, Number(data.id)))
     .returning();
@@ -340,6 +449,65 @@ export async function SaveKpiFormula(payload: SaveKpiFormulaPayload) {
   return { success: true, message: "KPI formula saved successfully." };
 }
 
+export async function SaveKpiLimits(
+  payload: SaveKpiLimitsPayload,
+): Promise<DataTableFormResponse<KpiDefinition>> {
+  const currentUser = await getCurrentUser();
+
+  if (!canSetKpiLimits(currentUser.role)) {
+    return {
+      success: false,
+      message:
+        "Only DEV users can set KPI upper and lower limits for selected years or months.",
+    };
+  }
+
+  if (!payload.kpiId || Number.isNaN(payload.kpiId)) {
+    return {
+      success: false,
+      message: "Please select a KPI.",
+    };
+  }
+
+  const sanitizedLimits = (payload.limits ?? [])
+    .filter((item) => Number.isFinite(item.year))
+    .map((item) => ({
+      year: Number(item.year),
+      month:
+        item.month === null || typeof item.month === "undefined"
+          ? null
+          : Number(item.month),
+      lower: toNullableNumber(item.lower),
+      upper: toNullableNumber(item.upper),
+    }))
+    .sort((a, b) => {
+      if (a.year !== b.year) {
+        return a.year - b.year;
+      }
+      return (a.month ?? 0) - (b.month ?? 0);
+    });
+
+  await db
+    .update(kpiDefinitions)
+    .set({
+      limits: sanitizedLimits,
+    })
+    .where(eq(kpiDefinitions.id, Number(payload.kpiId)));
+
+  const [updated] = await db
+    .select()
+    .from(kpiDefinitions)
+    .where(eq(kpiDefinitions.id, Number(payload.kpiId)))
+    .limit(1);
+
+  revalidatePath("/settings/kpi");
+  return {
+    success: true,
+    message: "KPI limits saved successfully.",
+    data: updated,
+  };
+}
+
 interface ExcelKpiDefinition {
   source_id: number;
   formula: string;
@@ -356,7 +524,18 @@ interface ExcelKpiDefinition {
   is_active: boolean;
 }
 
-export async function UpdateKpiDefinitionFromExcel(data: ExcelKpiDefinition[]) {
+export async function UpdateKpiDefinitionFromExcel(
+  data: ExcelKpiDefinition[],
+): Promise<DataTableFormResponse<KpiDefinition>> {
+  const currentUser = await getCurrentUser();
+
+  if (!isDevRole(currentUser.role)) {
+    return {
+      success: false,
+      message: "Only DEV users can upload KPI definitions from Excel.",
+    };
+  }
+
   db.delete(kpiDefinitions)
     .where(gt(kpiDefinitions.id, 0))
     .then(async () => {
@@ -375,8 +554,14 @@ export async function UpdateKpiDefinitionFromExcel(data: ExcelKpiDefinition[]) {
           formula: null,
           category_id: item.kpi_category_id,
           subcategory_id: item.kpi_subcategory_id,
-          limit_upper: "100",
-          limit_lower: "0",
+          limits: [
+            {
+              year: new Date().getFullYear(),
+              month: null,
+              upper: 100,
+              lower: 0,
+            },
+          ],
           block: item.kpi_block || null,
           formula_inputs: null,
           is_aggregated: false,
@@ -389,4 +574,9 @@ export async function UpdateKpiDefinitionFromExcel(data: ExcelKpiDefinition[]) {
     });
 
   revalidatePath("/settings/kpi");
+
+  return {
+    success: true,
+    message: "KPI definitions uploaded successfully.",
+  };
 }

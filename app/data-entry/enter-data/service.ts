@@ -16,7 +16,12 @@ import {
   DataEntryPageViewModel,
 } from "@/app/data-entry/types";
 import { db } from "@/db/connection";
-import { dataEntries, inputDefinitions } from "@/db/schema/dataEntry";
+import {
+  dataEntries,
+  DataEntryComment,
+  DataEntryStatusId,
+  inputDefinitions,
+} from "@/db/schema/dataEntry";
 import { managedListItems, managedLists } from "@/db/schema/managedLists";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { energyResources, serviceAreas } from "@/db/schema/utility";
@@ -26,7 +31,6 @@ import {
   sanitizeDependentFilterContext,
   sanitizePrimaryFilterContext,
 } from "@/app/data-entry/enter-data/services/us1.contextPersistence.service";
-import { DataEntryStatusId } from "@/db/schema/dataEntry";
 import { and, asc, eq, ilike, inArray, isNull, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -704,6 +708,14 @@ interface UpdateDataEntryValuePayload {
   paymentModeId?: number | null;
 }
 
+interface UpdateDataEntryCommentPayload {
+  inputDefId: number;
+  comment: string;
+  energyResourceId?: number | null;
+  customerTypeId?: number | null;
+  paymentModeId?: number | null;
+}
+
 const normalizeDataEntryValue = (value: string | null): string | null => {
   if (value == null) {
     return null;
@@ -865,4 +877,140 @@ export const updateDataEntryValueAction = async (
   return {
     kpiRunResult,
   };
+};
+
+export const updateDataEntryCommentAction = async (
+  payload: UpdateDataEntryCommentPayload,
+): Promise<void> => {
+  const user = await getCurrentUser();
+  const { context, options } = await bootstrapDataEntryFilterContext(user);
+
+  if (context.reportPeriodId == null) {
+    throw new Error("A report period is required before saving comments.");
+  }
+
+  const normalizedComment = payload.comment.trim();
+  if (normalizedComment.length === 0) {
+    throw new Error("A comment is required.");
+  }
+
+  const definitions = filterInputDefinitionsByContext(
+    await getInputDefinitionsForContext(context),
+    context,
+  );
+  const validInputDefIds = new Set(
+    definitions.map((definition) => definition.id),
+  );
+
+  if (!validInputDefIds.has(payload.inputDefId)) {
+    throw new Error("The selected input is not valid for the active context.");
+  }
+
+  const generationMode = isGenerationContext(
+    context,
+    options.inputSubcategories,
+  );
+  const energyResourceId = generationMode
+    ? (payload.energyResourceId ?? null)
+    : null;
+
+  if (generationMode && energyResourceId == null) {
+    throw new Error("Generation mode requires a generator to save comments.");
+  }
+
+  const existingConditions = [
+    eq(dataEntries.report_period_id, context.reportPeriodId),
+    eq(dataEntries.input_def_id, payload.inputDefId),
+  ];
+
+  if (context.serviceAreaId == null) {
+    existingConditions.push(isNull(dataEntries.service_area_id));
+  } else {
+    existingConditions.push(
+      eq(dataEntries.service_area_id, context.serviceAreaId),
+    );
+  }
+
+  if (energyResourceId == null) {
+    existingConditions.push(isNull(dataEntries.energy_resource_id));
+  } else {
+    existingConditions.push(
+      eq(dataEntries.energy_resource_id, energyResourceId),
+    );
+  }
+
+  const [existing] = await db
+    .select({
+      id: dataEntries.id,
+      value: dataEntries.value,
+      comments: dataEntries.comments,
+    })
+    .from(dataEntries)
+    .where(and(...existingConditions))
+    .limit(1);
+
+  let energyMetadata: {
+    energySourceId: number;
+    energyTypeId: number;
+    energyProviderId: number;
+  } | null = null;
+
+  if (energyResourceId != null) {
+    const [resource] = await db
+      .select({
+        energySourceId: energyResources.energy_source_id,
+        energyTypeId: energyResources.energy_type_id,
+        energyProviderId: energyResources.energy_provider_id,
+      })
+      .from(energyResources)
+      .where(eq(energyResources.id, energyResourceId))
+      .limit(1);
+
+    if (!resource) {
+      throw new Error("Selected generator metadata could not be resolved.");
+    }
+
+    energyMetadata = resource;
+  }
+
+  const nextComments: DataEntryComment[] = [
+    ...((existing?.comments ?? []) as DataEntryComment[]),
+    {
+      comment: normalizedComment,
+      commenterId: user.id,
+      commenterName: user.name,
+      commenterRole: user.role,
+      date: new Date(),
+    },
+  ];
+
+  if (existing) {
+    await db
+      .update(dataEntries)
+      .set({
+        comments: nextComments,
+        updatedAt: new Date(),
+        updatedById: user.id,
+      })
+      .where(eq(dataEntries.id, existing.id));
+  } else {
+    await db.insert(dataEntries).values({
+      report_period_id: context.reportPeriodId,
+      input_def_id: payload.inputDefId,
+      service_area_id: context.serviceAreaId,
+      energy_resource_id: energyResourceId,
+      value: null,
+      comments: nextComments,
+      status_id: DataEntryStatusId.Entered,
+      energy_source_id: energyMetadata?.energySourceId,
+      energy_provider_id: energyMetadata?.energyProviderId,
+      customer_type_id: payload.customerTypeId,
+      payment_mode_id: payload.paymentModeId,
+      is_deleted: false,
+      updatedAt: new Date(),
+      updatedById: user.id,
+    });
+  }
+
+  revalidatePath("/data-entry/enter-data");
 };

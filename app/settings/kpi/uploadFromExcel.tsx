@@ -23,8 +23,12 @@ export default function UploadKpiFromExcel() {
                 });
                 return rowData;
               });
-              await UpdateKpiDefinitionFromExcel(data);
-              toast.success("KPI definitions updated successfully");
+              const response = await UpdateKpiDefinitionFromExcel(data);
+              if (response.success) {
+                toast.success(response.message);
+              } else {
+                toast.error(response.message);
+              }
             },
           );
         } else {

@@ -27,6 +27,13 @@ export interface KpiCalculationScopeSnapshot {
   paymentModeId?: number | null;
 }
 
+interface Limit {
+  lower: number | null;
+  upper: number | null;
+  year: number;
+  month?: number | null;
+}
+
 export const kpiDefinitions = pgTable("kpi_definitions", {
   id: serial("id").primaryKey().notNull(),
   unit_id: integer("unit_id")
@@ -37,8 +44,7 @@ export const kpiDefinitions = pgTable("kpi_definitions", {
   description: varchar("description", { length: 255 }),
   formula: varchar("formula"),
   formula_inputs: json("formula_inputs").$type<FormulaInput[]>(),
-  limit_lower: varchar("limit_lower").default("0"),
-  limit_upper: varchar("limit_upper").default("100"),
+  limits: json("limits").$type<Limit[]>(),
   category_id: integer("category_id")
     .notNull()
     .references(() => managedListItems.id)
