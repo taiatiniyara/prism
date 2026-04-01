@@ -5,6 +5,7 @@ import { AllRoles } from "../roles/roles.service";
 import { AllOrganisations } from "../organisations/orgs.service";
 import { getCurrentUser } from "@/lib/user.service";
 import { DataTableCreateFormProps } from "@/components/tables/data-table-create-form";
+import PendingUserDecisionPanel from "@/components/settings/pending-user-decision-panel";
 
 const utilityRoles = ["BLO", "CEO", "DAOF", "DAOH", "DAOO", "MGR", "EXE"];
 
@@ -61,14 +62,20 @@ export default async function UsersSettingsPage() {
   }
 
   return (
-    <DataTable<User>
-      data={users}
-      columns={columns}
-      title="Users"
-      createFormProps={{
-        formAction: CreateUser,
-        fields: createFields,
-      }}
-    />
+    <>
+      <DataTable<User>
+        data={users}
+        columns={columns}
+        title="Users"
+        createFormProps={{
+          formAction: CreateUser,
+          fields: createFields,
+        }}
+      />
+
+      {(currentUser.role === "DEV" || currentUser.role === "BMO") && (
+        <PendingUserDecisionPanel />
+      )}
+    </>
   );
 }

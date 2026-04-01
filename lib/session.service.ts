@@ -6,6 +6,7 @@ import { roles, user } from "@/db/schema/auth-schema";
 import { auth } from "./auth";
 import { organisations } from "@/db/schema/utility";
 import { sidebarAccess } from "@/db/schema/rls";
+import { getBlockedAccessState } from "@/lib/auth-status-guard";
 
 export async function getSession() {
   // Opt-out of static caching so we always read fresh cookies per request
@@ -64,6 +65,11 @@ export async function getSession() {
         .limit(1)
     : [null];
 
+  const blockedState = getBlockedAccessState(
+    currentUser.status,
+    currentUser.reject_reason,
+  );
+
   return {
     session,
     user: currentUser,
@@ -78,6 +84,7 @@ export async function getSession() {
         };
       }),
     fullName: currentUser.name,
+    blockedState,
   };
 }
 
