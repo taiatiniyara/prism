@@ -36,7 +36,9 @@ export default function ManagedListInput(props: {
         }
 
         const items = res?.[0]?.items ?? [];
-        setList(items.filter((i) => !i.name.includes("All")));
+        setList(
+          items.filter((i) => !i.name.includes("All") && i.is_active === true),
+        );
       })
       .catch(() => {
         if (!isCancelled) {
