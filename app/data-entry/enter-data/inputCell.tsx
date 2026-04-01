@@ -1,14 +1,23 @@
 "use client";
 
-import { KeyboardEvent, useMemo, useState, useTransition } from "react";
+import {
+  KeyboardEvent,
+  useEffect,
+  useMemo,
+  useState,
+  useTransition,
+} from "react";
 import { useRouter } from "next/navigation";
+import { CheckedState } from "@radix-ui/react-checkbox";
 
 import {
+  updateDataEntryAvailabilityAction,
   updateDataEntryCommentAction,
   updateDataEntryValueAction,
 } from "@/app/data-entry/enter-data/service";
 import { DataEntryInputRowView } from "@/app/data-entry/types";
 import ManagedListInput from "@/components/tables/managed-list-input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
@@ -21,7 +30,15 @@ export default function InputCell({ row }: InputCellProps) {
   const router = useRouter();
   const [isSaving, startTransition] = useTransition();
   const [commentDraft, setCommentDraft] = useState("");
+  const [isDataNotAvailable, setIsDataNotAvailable] = useState(
+    row.isDataNotAvailable ?? false,
+  );
   const displayValue = row.value ?? "";
+
+  useEffect(() => {
+    setIsDataNotAvailable(row.isDataNotAvailable ?? false);
+  }, [row.isDataNotAvailable]);
+
   const existingComments = useMemo(() => {
     if (!row.comments) {
       return [] as { comment: string }[];
@@ -80,6 +97,38 @@ export default function InputCell({ row }: InputCellProps) {
     });
   };
 
+  const persistDataNotAvailable = (checked: boolean) => {
+    if (isSaving || checked === isDataNotAvailable) {
+      return;
+    }
+
+    const previousValue = isDataNotAvailable;
+    setIsDataNotAvailable(checked);
+
+    startTransition(async () => {
+      const loadingToastId = toast.loading("Updating availability status...");
+
+      try {
+        await updateDataEntryAvailabilityAction({
+          inputDefId: row.inputDefId,
+          energyResourceId: row.energyResourceId ?? null,
+          isDataNotAvailable: checked,
+        });
+
+        router.refresh();
+
+        toast.success("Availability status updated.", {
+          id: loadingToastId,
+        });
+      } catch {
+        setIsDataNotAvailable(previousValue);
+        toast.error("Failed to update availability status.", {
+          id: loadingToastId,
+        });
+      }
+    });
+  };
+
   const persistComment = (
     nextComment?: string,
     options?: { showEmptyToast?: boolean },
@@ -131,17 +180,19 @@ export default function InputCell({ row }: InputCellProps) {
     event.currentTarget.blur();
   };
 
+  const inputDisabled = isSaving || isDataNotAvailable;
+
   const inputControl = (() => {
     switch (row.controlType) {
       case "number":
         return (
           <Input
             className={`${
-              row.value ? "bg-lime-100 border-lime-500" : "bg-slate-100"
-            } border w-full rounded-lg`}
+              row.value ? "border-l-lime-300" : "border-l-red-200"
+            } border border-l-4 w-full rounded-l-none`}
             type="number"
             defaultValue={displayValue}
-            disabled={isSaving}
+            disabled={inputDisabled}
             name={row.inputName}
             onKeyDown={handleCommitOnEnter}
             onBlur={(event) => persistValue(event.target.value)}
@@ -154,7 +205,7 @@ export default function InputCell({ row }: InputCellProps) {
               row.value ? "bg-lime-100 border-lime-500" : "bg-slate-100"
             }`}
             defaultValue={displayValue}
-            disabled={isSaving}
+            disabled={inputDisabled}
             onChange={(event) => {
               const nextValue = event.target.value;
               persistValue(nextValue);
@@ -170,7 +221,7 @@ export default function InputCell({ row }: InputCellProps) {
           <Input
             type="date"
             defaultValue={displayValue}
-            disabled={isSaving}
+            disabled={inputDisabled}
             onKeyDown={handleCommitOnEnter}
             onBlur={(event) => persistValue(event.target.value)}
           />
@@ -179,7 +230,7 @@ export default function InputCell({ row }: InputCellProps) {
         return (
           <Input
             defaultValue={displayValue}
-            disabled={isSaving}
+            disabled={inputDisabled}
             onKeyDown={handleCommitOnEnter}
             onBlur={(event) => persistValue(event.target.value)}
           />
@@ -188,7 +239,7 @@ export default function InputCell({ row }: InputCellProps) {
         return (
           <Input
             defaultValue={displayValue}
-            disabled={isSaving}
+            disabled={inputDisabled}
             onKeyDown={handleCommitOnEnter}
             onBlur={(event) => persistValue(event.target.value)}
           />
@@ -200,7 +251,7 @@ export default function InputCell({ row }: InputCellProps) {
             inputName={`input_${row.inputDefId}`}
             valueName={displayValue}
             hasValue={Boolean(row.value)}
-            disabled={isSaving}
+            disabled={inputDisabled}
             onValueNameChange={(selectedName) => persistValue(selectedName)}
           />
         );
@@ -215,9 +266,14 @@ export default function InputCell({ row }: InputCellProps) {
   })();
 
   const latestComment = existingComments.at(-1)?.comment;
+  const updatedByLabel = [row.updatedByName, row.updatedByRole]
+    .filter((value): value is string =>
+      Boolean(value && value.trim().length > 0),
+    )
+    .join(" - ");
 
   return (
-    <div className="space-y-2">
+    <div className="space-y-2 border p-4 rounded-lg bg-white shadow-md">
       {inputControl}
       {latestComment ? (
         <p className="text-[11px] text-muted-foreground line-clamp-2">
@@ -234,9 +290,31 @@ export default function InputCell({ row }: InputCellProps) {
           })
         }
         placeholder="Add comment"
-        disabled={isSaving}
+        disabled={isSaving || isDataNotAvailable}
         className="min-h-16 text-xs"
       />
+      <div className="mt-4 flex items-center justify-between">
+        <label
+          className={`flex items-center gap-2 text-sm font-medium transition-colors ${
+            isDataNotAvailable ? "text-amber-600" : "text-slate-500"
+          } ${isSaving ? "" : "cursor-pointer"}`}
+        >
+          <Checkbox
+            checked={isDataNotAvailable}
+            disabled={isSaving}
+            onCheckedChange={(checked: CheckedState) => {
+              persistDataNotAvailable(checked === true);
+            }}
+            className="size-5"
+          />
+          <span>Data Not Available</span>
+        </label>
+        {updatedByLabel ? (
+          <p className="text-[11px] text-muted-foreground px-1">
+            Updated by: {updatedByLabel}
+          </p>
+        ) : null}
+      </div>
     </div>
   );
 }

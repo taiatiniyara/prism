@@ -30,6 +30,9 @@ export interface DataEntryInputRowView {
   unitName: string | null;
   dataTypeId: number;
   controlType: DataEntryControlType;
+  isDataNotAvailable?: boolean;
+  updatedByName?: string | null;
+  updatedByRole?: string | null;
   value: string | null;
   comments: string | null;
 }

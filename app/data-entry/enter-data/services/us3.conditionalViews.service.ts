@@ -4,7 +4,7 @@ import {
   DataEntryGeneratorGroupView,
   DataEntryInputRowView,
 } from "@/app/data-entry/types";
-import { DataEntryComment } from "@/db/schema/dataEntry";
+import { DataEntryComment, DataEntryStatusId } from "@/db/schema/dataEntry";
 
 export const isOperationalContext = (
   context: DataEntryFilterContext,
@@ -38,11 +38,16 @@ export interface GeneratorEntryCandidate {
   id: string;
   inputDefId: number;
   energyResourceId: number | null;
+  statusId: number | null;
+  updatedByName: string | null;
+  updatedByRole: string | null;
   value: string | null;
   comments: DataEntryComment[] | null;
 }
 
-const serializeComments = (comments: DataEntryComment[] | null): string | null => {
+const serializeComments = (
+  comments: DataEntryComment[] | null,
+): string | null => {
   if (!comments || comments.length === 0) {
     return null;
   }
@@ -67,6 +72,10 @@ export const buildGenerationGroups = (
         ...definition,
         dataEntryId: entry?.id,
         energyResourceId: generator.id,
+        isDataNotAvailable:
+          entry?.statusId === DataEntryStatusId.DataNotAvailable,
+        updatedByName: entry?.updatedByName ?? null,
+        updatedByRole: entry?.updatedByRole ?? null,
         value: entry?.value ?? null,
         comments: serializeComments(entry?.comments ?? null),
       };

@@ -1,5 +1,7 @@
 "use server";
 
+import { roles, user as authUser } from "@/db/schema/auth-schema";
+
 import { DataEntryFilterContext } from "@/app/data-entry/constants";
 import { applyOperationalVisibilityRule } from "@/app/data-entry/filterContext.rules";
 import {
@@ -59,6 +61,15 @@ const mapOption = (id: number, name: string): DataEntryFilterOption => ({
   id,
   name,
 });
+
+const isAllLikeOption = (name: string): boolean => {
+  const normalized = name.trim().toLowerCase();
+  return (
+    normalized === "all" ||
+    normalized === "all options" ||
+    normalized.startsWith("all ")
+  );
+};
 
 const getManagedListOptionsByName = async (
   listNamePattern: string,
@@ -216,10 +227,15 @@ const getInputRowsForContext = async (
       id: dataEntries.id,
       inputDefId: dataEntries.input_def_id,
       serviceAreaId: dataEntries.service_area_id,
+      statusId: dataEntries.status_id,
+      updatedByName: authUser.name,
+      updatedByRole: roles.name,
       value: dataEntries.value,
       comments: dataEntries.comments,
     })
     .from(dataEntries)
+    .leftJoin(authUser, eq(dataEntries.updatedById, authUser.id))
+    .leftJoin(roles, eq(authUser.role_id, roles.id))
     .where(and(...entryConditions));
 
   const baseRows = buildInputRowsFromDefinitions(definitions, entries, context);
@@ -298,10 +314,15 @@ const getGenerationGroupsForContext = async (
       id: dataEntries.id,
       inputDefId: dataEntries.input_def_id,
       energyResourceId: dataEntries.energy_resource_id,
+      statusId: dataEntries.status_id,
+      updatedByName: authUser.name,
+      updatedByRole: roles.name,
       value: dataEntries.value,
       comments: dataEntries.comments,
     })
     .from(dataEntries)
+    .leftJoin(authUser, eq(dataEntries.updatedById, authUser.id))
+    .leftJoin(roles, eq(authUser.role_id, roles.id))
     .where(
       and(
         eq(dataEntries.report_period_id, context.reportPeriodId),
@@ -470,18 +491,26 @@ export const getReportPeriodOptions = async (
 export const getInputCategoryOptions = async (): Promise<
   DataEntryFilterOption[]
 > => {
-  return getManagedListOptionsByNamePatterns([
+  const categories = await getManagedListOptionsByNamePatterns([
     "input categor",
     "data label categor",
   ]);
+
+  return categories.filter((category) => !isAllLikeOption(category.name));
 };
 
 export const getInputSubcategoryOptions = async (
   categoryId: number | null,
 ): Promise<DataEntryFilterOption[]> => {
-  return getManagedListOptionsByNamePatterns(
+  const subcategories = await getManagedListOptionsByNamePatterns(
     ["input subcategor", "data label sub-categor"],
     categoryId,
+  );
+
+  return subcategories.filter(
+    (subcategory) =>
+      subcategory.name.trim().toLowerCase() !== "country context" &&
+      !isAllLikeOption(subcategory.name),
   );
 };
 
@@ -714,6 +743,12 @@ interface UpdateDataEntryCommentPayload {
   energyResourceId?: number | null;
   customerTypeId?: number | null;
   paymentModeId?: number | null;
+}
+
+interface UpdateDataEntryAvailabilityPayload {
+  inputDefId: number;
+  isDataNotAvailable: boolean;
+  energyResourceId?: number | null;
 }
 
 const normalizeDataEntryValue = (value: string | null): string | null => {
@@ -1013,4 +1048,164 @@ export const updateDataEntryCommentAction = async (
   }
 
   revalidatePath("/data-entry/enter-data");
+};
+
+export const updateDataEntryAvailabilityAction = async (
+  payload: UpdateDataEntryAvailabilityPayload,
+): Promise<{ kpiRunResult: KpiWorkerRunResult | null }> => {
+  const user = await getCurrentUser();
+  const { context, options } = await bootstrapDataEntryFilterContext(user);
+
+  if (context.reportPeriodId == null) {
+    throw new Error("A report period is required before updating status.");
+  }
+
+  const definitions = filterInputDefinitionsByContext(
+    await getInputDefinitionsForContext(context),
+    context,
+  );
+  const validInputDefIds = new Set(
+    definitions.map((definition) => definition.id),
+  );
+
+  if (!validInputDefIds.has(payload.inputDefId)) {
+    throw new Error("The selected input is not valid for the active context.");
+  }
+
+  const generationMode = isGenerationContext(
+    context,
+    options.inputSubcategories,
+  );
+  const energyResourceId = generationMode
+    ? (payload.energyResourceId ?? null)
+    : null;
+
+  if (generationMode && energyResourceId == null) {
+    throw new Error("Generation mode requires a generator to update status.");
+  }
+
+  const existingConditions = [
+    eq(dataEntries.report_period_id, context.reportPeriodId),
+    eq(dataEntries.input_def_id, payload.inputDefId),
+  ];
+
+  if (context.serviceAreaId == null) {
+    existingConditions.push(isNull(dataEntries.service_area_id));
+  } else {
+    existingConditions.push(
+      eq(dataEntries.service_area_id, context.serviceAreaId),
+    );
+  }
+
+  if (energyResourceId == null) {
+    existingConditions.push(isNull(dataEntries.energy_resource_id));
+  } else {
+    existingConditions.push(
+      eq(dataEntries.energy_resource_id, energyResourceId),
+    );
+  }
+
+  const [existing] = await db
+    .select({ id: dataEntries.id })
+    .from(dataEntries)
+    .where(and(...existingConditions))
+    .limit(1);
+
+  let energyMetadata: {
+    energySourceId: number;
+    energyTypeId: number;
+    energyProviderId: number;
+  } | null = null;
+
+  if (energyResourceId != null) {
+    const [resource] = await db
+      .select({
+        energySourceId: energyResources.energy_source_id,
+        energyTypeId: energyResources.energy_type_id,
+        energyProviderId: energyResources.energy_provider_id,
+      })
+      .from(energyResources)
+      .where(eq(energyResources.id, energyResourceId))
+      .limit(1);
+
+    if (!resource) {
+      throw new Error("Selected generator metadata could not be resolved.");
+    }
+
+    energyMetadata = resource;
+  }
+
+  const nextStatusId = payload.isDataNotAvailable
+    ? DataEntryStatusId.DataNotAvailable
+    : DataEntryStatusId.Entered;
+
+  let sourceDataEntryId = existing?.id ?? null;
+
+  if (existing) {
+    await db
+      .update(dataEntries)
+      .set({
+        status_id: nextStatusId,
+        is_deleted: false,
+        updatedAt: new Date(),
+        updatedById: user.id,
+      })
+      .where(eq(dataEntries.id, existing.id));
+  } else {
+    const [inserted] = await db
+      .insert(dataEntries)
+      .values({
+        report_period_id: context.reportPeriodId,
+        input_def_id: payload.inputDefId,
+        service_area_id: context.serviceAreaId,
+        energy_resource_id: energyResourceId,
+        value: null,
+        comments: null,
+        status_id: nextStatusId,
+        energy_source_id: energyMetadata?.energySourceId,
+        energy_provider_id: energyMetadata?.energyProviderId,
+        is_deleted: false,
+        updatedAt: new Date(),
+        updatedById: user.id,
+      })
+      .returning({ id: dataEntries.id });
+
+    sourceDataEntryId = inserted?.id ?? null;
+  }
+
+  runAggregatedWorkerAsync(user, {
+    reportPeriodId: context.reportPeriodId,
+    serviceAreaId: context.serviceAreaId,
+    energyResourceId,
+  });
+
+  let kpiRunResult: KpiWorkerRunResult | null = null;
+
+  if (sourceDataEntryId) {
+    kpiRunResult = await triggerKpiWorker(
+      {
+        sourceDataEntryId,
+        inputDefId: payload.inputDefId,
+        triggeredByUserId: user.id,
+        scope: {
+          reportPeriodId: context.reportPeriodId,
+          organizationId: user.org_id,
+          serviceAreaId: context.serviceAreaId,
+          energyResourceId,
+          energyProviderId: energyMetadata?.energyProviderId ?? null,
+          energyTypeId: energyMetadata?.energyTypeId ?? null,
+          energySourceId: energyMetadata?.energySourceId ?? null,
+          customerTypeId: null,
+          paymentModeId: null,
+        },
+      },
+      user,
+    );
+  }
+
+  revalidatePath("/data-entry/enter-data");
+
+  return {
+    kpiRunResult,
+  };
 };

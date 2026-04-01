@@ -66,7 +66,7 @@ export default function ManagedListInput(props: {
         disabled
       >
         <SelectTrigger
-          className={`w-full shadow border-l-8 p-2.5 rounded-lg ${
+          className={`w-full shadow border-l-4 p-2.5 rounded-lg ${
             props.hasValue ? "border-l-lime-200" : "border-l-red-200"
           }`}
         >
@@ -108,7 +108,7 @@ export default function ManagedListInput(props: {
       }}
     >
       <SelectTrigger
-        className={`w-full shadow border-l-8 p-2.5 rounded-lg ${
+        className={`w-full shadow border-l-4 p-2.5 rounded-lg ${
           props.hasValue ? "border-l-lime-200" : "border-l-red-200"
         }`}
       >

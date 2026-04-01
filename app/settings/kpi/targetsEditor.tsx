@@ -320,15 +320,48 @@ export default function KpiTargetsEditor(props: {
         <CardTitle>KPI Targets</CardTitle>
       </CardHeader>
       <CardContent className="space-y-5">
-        <p className="text-sm text-muted-foreground">
-          Set KPI target values by year and optional month for your utility.
-          Leave month blank to apply the target to financial year report
-          periods.
-        </p>
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-muted-foreground">
+            Set KPI target values by year and month (optional)
+          </p>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="outline"
+              className="w-full sm:w-auto"
+              onClick={downloadTemplate}
+            >
+              Download Excel Template
+            </Button>
+            <Input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              className="hidden"
+              aria-label="Upload KPI targets Excel file"
+              onChange={onUploadTargetsFile}
+            />
+            <Button
+              type="button"
+              variant="outline"
+              disabled={!props.canEditTargets || isSaving}
+              className="w-full sm:w-auto"
+              onClick={() => fileInputRef.current?.click()}
+            >
+              Upload Filled Template
+            </Button>
+          </div>
+        </div>
 
         <div className="space-y-2">
-          <label className="text-sm font-medium">KPI</label>
+          <label
+            htmlFor="kpi-target-kpi-select"
+            className="text-sm font-medium"
+          >
+            KPI
+          </label>
           <select
+            id="kpi-target-kpi-select"
             value={selectedKpiId}
             onChange={(event) => onKpiChange(event.target.value)}
             className="h-9 w-full rounded-md border bg-background px-3 text-sm"
@@ -339,7 +372,7 @@ export default function KpiTargetsEditor(props: {
                 key={kpi.id}
                 value={String(kpi.id)}
               >
-                {kpi.name}
+                {kpi.name} ({kpi.unit}) - {kpi.category} / {kpi.subcategory}
               </option>
             ))}
           </select>
@@ -352,49 +385,74 @@ export default function KpiTargetsEditor(props: {
         ) : null}
 
         <div className="space-y-3">
-          {rows.map((row) => (
+          {rows.map((row, index) => (
             <div
               key={row.id}
               className="grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-12"
             >
-              <Input
-                type="number"
-                placeholder="Year"
-                value={row.year}
-                disabled={!props.canEditTargets || isSaving}
-                onChange={(event) =>
-                  updateRow(row.id, { year: event.target.value })
-                }
-                className="lg:col-span-2"
-              />
-              <select
-                value={row.month}
-                onChange={(event) =>
-                  updateRow(row.id, { month: event.target.value })
-                }
-                disabled={!props.canEditTargets || isSaving}
-                className="h-9 rounded-md border bg-background px-3 text-sm lg:col-span-4"
-              >
-                <option value="fy">Financial Year Only (blank month)</option>
-                {MONTHS.map((month) => (
-                  <option
-                    key={month.value}
-                    value={month.value}
-                  >
-                    {month.label}
-                  </option>
-                ))}
-              </select>
-              <Input
-                type="text"
-                placeholder="Target value"
-                value={row.targetValue}
-                disabled={!props.canEditTargets || isSaving}
-                className="lg:col-span-4"
-                onChange={(event) =>
-                  updateRow(row.id, { targetValue: event.target.value })
-                }
-              />
+              <div className="space-y-1 lg:col-span-2">
+                <label
+                  htmlFor={`kpi-target-year-${row.id}`}
+                  className="text-xs font-medium text-muted-foreground"
+                >
+                  Year {index + 1}
+                </label>
+                <Input
+                  id={`kpi-target-year-${row.id}`}
+                  type="number"
+                  placeholder="Year"
+                  value={row.year}
+                  disabled={!props.canEditTargets || isSaving}
+                  onChange={(event) =>
+                    updateRow(row.id, { year: event.target.value })
+                  }
+                />
+              </div>
+              <div className="space-y-1 lg:col-span-4">
+                <label
+                  htmlFor={`kpi-target-month-${row.id}`}
+                  className="text-xs font-medium text-muted-foreground"
+                >
+                  Month {index + 1}
+                </label>
+                <select
+                  id={`kpi-target-month-${row.id}`}
+                  value={row.month}
+                  onChange={(event) =>
+                    updateRow(row.id, { month: event.target.value })
+                  }
+                  disabled={!props.canEditTargets || isSaving}
+                  className="h-9 w-full shadow rounded-md border bg-background px-3 text-sm"
+                >
+                  <option value="fy">Financial Year Only</option>
+                  {MONTHS.map((month) => (
+                    <option
+                      key={month.value}
+                      value={month.value}
+                    >
+                      {month.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="space-y-1 lg:col-span-4">
+                <label
+                  htmlFor={`kpi-target-value-${row.id}`}
+                  className="text-xs font-medium text-muted-foreground"
+                >
+                  Target Value {index + 1}
+                </label>
+                <Input
+                  id={`kpi-target-value-${row.id}`}
+                  type="text"
+                  placeholder="Target value"
+                  value={row.targetValue}
+                  disabled={!props.canEditTargets || isSaving}
+                  onChange={(event) =>
+                    updateRow(row.id, { targetValue: event.target.value })
+                  }
+                />
+              </div>
               <Button
                 type="button"
                 variant="outline"
@@ -408,31 +466,7 @@ export default function KpiTargetsEditor(props: {
           ))}
         </div>
 
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <Button
-            type="button"
-            variant="outline"
-            className="w-full sm:w-auto"
-            onClick={downloadTemplate}
-          >
-            Download Excel Template
-          </Button>
-          <Input
-            ref={fileInputRef}
-            type="file"
-            accept=".xlsx,.xls"
-            className="hidden"
-            onChange={onUploadTargetsFile}
-          />
-          <Button
-            type="button"
-            variant="outline"
-            disabled={!props.canEditTargets || isSaving}
-            className="w-full sm:w-auto"
-            onClick={() => fileInputRef.current?.click()}
-          >
-            Upload Filled Template
-          </Button>
+        <div className="flex justify-between flex-col gap-2 sm:flex-row sm:items-center">
           <Button
             type="button"
             variant="secondary"

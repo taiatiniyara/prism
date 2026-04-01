@@ -20,6 +20,7 @@ interface FilterSelectProps {
   disabled?: boolean;
   showLabel?: boolean;
   compact?: boolean;
+  includeAllOption?: boolean;
 }
 
 export function FilterSelect({
@@ -32,6 +33,7 @@ export function FilterSelect({
   disabled,
   showLabel = true,
   compact = false,
+  includeAllOption = true,
 }: FilterSelectProps) {
   return (
     <div className="space-y-1 w-38">
@@ -44,8 +46,12 @@ export function FilterSelect({
         </Label>
       ) : null}
       <Select
-        value={value == null ? "all" : String(value)}
-        onValueChange={(next) => onChange(next === "all" ? null : Number(next))}
+        value={
+          value == null ? (includeAllOption ? "all" : undefined) : String(value)
+        }
+        onValueChange={(next) =>
+          onChange(includeAllOption && next === "all" ? null : Number(next))
+        }
         disabled={disabled}
       >
         <SelectTrigger
@@ -56,7 +62,7 @@ export function FilterSelect({
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
-          <SelectItem value="all">All</SelectItem>
+          {includeAllOption ? <SelectItem value="all">All</SelectItem> : null}
           {options.map((option) => (
             <SelectItem
               key={option.id}
@@ -100,6 +106,7 @@ export const InputCategorySelect = (
     id="input-category-select"
     label="Input Category"
     placeholder="Select input category"
+    includeAllOption={false}
     {...props}
   />
 );
@@ -111,6 +118,7 @@ export const InputSubcategorySelect = (
     id="input-subcategory-select"
     label="Input Subcategory"
     placeholder="Select input subcategory"
+    includeAllOption={false}
     {...props}
   />
 );

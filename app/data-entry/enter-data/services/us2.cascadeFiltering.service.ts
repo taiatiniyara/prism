@@ -6,7 +6,7 @@ import {
   DataEntryInputRowView,
 } from "@/app/data-entry/types";
 import { mapDataTypeToControlType } from "@/app/data-entry/inputControlType.mapper";
-import { DataEntryComment } from "@/db/schema/dataEntry";
+import { DataEntryComment, DataEntryStatusId } from "@/db/schema/dataEntry";
 
 export interface InputDefinitionCandidate {
   id: number;
@@ -22,11 +22,16 @@ export interface DataEntryValueCandidate {
   id: string;
   inputDefId: number;
   serviceAreaId: number | null;
+  statusId: number | null;
+  updatedByName: string | null;
+  updatedByRole: string | null;
   value: string | null;
   comments: DataEntryComment[] | null;
 }
 
-const serializeComments = (comments: DataEntryComment[] | null): string | null => {
+const serializeComments = (
+  comments: DataEntryComment[] | null,
+): string | null => {
   if (!comments || comments.length === 0) {
     return null;
   }
@@ -132,6 +137,10 @@ export const buildInputRowsFromDefinitions = (
       unitName: definition.unitName,
       dataTypeId: 0,
       controlType: mapDataTypeToControlType(definition.dataTypeName),
+      isDataNotAvailable:
+        entry?.statusId === DataEntryStatusId.DataNotAvailable,
+      updatedByName: entry?.updatedByName ?? null,
+      updatedByRole: entry?.updatedByRole ?? null,
       value: entry?.value ?? null,
       comments: serializeComments(entry?.comments ?? null),
     };
