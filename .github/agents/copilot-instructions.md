@@ -1,12 +1,14 @@
 ﻿# prism Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-03-26
+Auto-generated from all feature plans. Last updated: 2026-04-02
 
 ## Active Technologies
 - TypeScript (strict), React 19.2.3, Next.js 16.1.1 + Next App Router, Drizzle ORM, `pg`, Tailwind CSS, (005-review-kpi-values)
 - PostgreSQL via Drizzle schema (`data_entries`, `input_definitions`, (005-review-kpi-values)
 - TypeScript 5.x (strict), React 19.2.3, Next.js 16.1.1 + Next.js App Router, Drizzle ORM, pg, Tailwind CSS 4, (006-kpi-balanced-scorecard)
 - PostgreSQL via Drizzle schema under `db/schema` (006-kpi-balanced-scorecard)
+- TypeScript 5.x, React 19.2.3, Next.js 16.1.1 (App + better-auth, drizzle-orm, pg, Next.js server (007-pending-user-activation)
+- PostgreSQL via Drizzle ORM schema in `db/schema` (007-pending-user-activation)
 
 - TypeScript 5.x (strict), React 19.2.3, Next.js 16.1.1 App Router + Next.js
   server actions/API routes, Drizzle ORM, pg, better-auth, Tailwind CSS,
@@ -45,10 +47,10 @@ TypeScript 5.x (strict), React 19.2.3, Next.js 16.1.1 App: Follow standard
 conventions
 
 ## Recent Changes
+- 007-pending-user-activation: Added TypeScript 5.x, React 19.2.3, Next.js 16.1.1 (App + better-auth, drizzle-orm, pg, Next.js server
 - 006-kpi-balanced-scorecard: Added TypeScript 5.x (strict), React 19.2.3, Next.js 16.1.1 + Next.js App Router, Drizzle ORM, pg, Tailwind CSS 4,
 - 005-review-kpi-values: Added TypeScript (strict), React 19.2.3, Next.js 16.1.1 + Next App Router, Drizzle ORM, `pg`, Tailwind CSS,
 
-- 004-review-kpi-ui: Added TypeScript 5.x (strict), React 19.2.3, Next.js 16.1.1
   App Router + Next.js route handlers/server components, Drizzle ORM, pg,
   better-auth, nodemailer, Tailwind CSS, shadcn-compatible UI primitives
   App + Next.js route handlers/server actions, Drizzle ORM,

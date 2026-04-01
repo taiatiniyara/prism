@@ -29,8 +29,11 @@ export const user = pgTable("user", {
   role_id: integer("role_id").references(() => roles.id),
   status: text("status").default("pending").notNull().$type<UserStatus>(),
   date_approved: timestamp("date_approved"),
+  date_rejected: timestamp("date_rejected"),
+  rejected_by_user_id: text("rejected_by_user_id"),
   dataset_required: text("dataset_required"),
   data_access_reason: text("data_access_reason"),
+  reject_reason: text("reject_reason"),
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").default(false).notNull(),
@@ -46,6 +49,28 @@ export type User = typeof user.$inferSelect & {
   organisation?: string | null;
 };
 export type NewUser = typeof user.$inferInsert;
+
+export const userStatusEvent = pgTable(
+  "user_status_event",
+  {
+    id: serial("id").primaryKey(),
+    target_user_id: text("target_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    actor_user_id: text("actor_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    from_status: text("from_status").notNull().$type<UserStatus>(),
+    to_status: text("to_status").notNull().$type<UserStatus>(),
+    decision_type: text("decision_type").notNull(),
+    reason: text("reason"),
+    created_at: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("user_status_event_target_user_idx").on(table.target_user_id),
+    index("user_status_event_actor_user_idx").on(table.actor_user_id),
+  ],
+);
 
 export const session = pgTable(
   "session",

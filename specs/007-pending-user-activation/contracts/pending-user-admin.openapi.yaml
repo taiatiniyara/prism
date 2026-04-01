@@ -1,0 +1,127 @@
+openapi: 3.0.3
+info:
+  title: Pending User Admin Contract
+  version: 1.0.0
+  description: Contract for pending-user listing and decision actions.
+servers:
+  - url: https://app.example.com
+paths:
+  /api/settings/users/pending:
+    get:
+      summary: List pending users for admin decisioning
+      tags: [PendingUsers]
+      responses:
+        "200":
+          description: Pending users returned
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [items]
+                properties:
+                  items:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/PendingUser"
+        "401":
+          description: Unauthenticated
+        "403":
+          description: Authenticated but not BMO/DEV
+  /api/settings/users/{userId}/status:
+    post:
+      summary: Apply activation or rejection decision to pending user
+      tags: [PendingUsers]
+      parameters:
+        - in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UserStatusDecisionRequest"
+      responses:
+        "200":
+          description: Decision applied or idempotent no-op
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserStatusDecisionResponse"
+        "400":
+          description: Invalid request (including missing rejection reason)
+        "401":
+          description: Unauthenticated
+        "403":
+          description: Authenticated but not BMO/DEV
+        "404":
+          description: User not found
+        "409":
+          description: Invalid transition from current state
+components:
+  schemas:
+    PendingUser:
+      type: object
+      required:
+        - id
+        - name
+        - email
+        - registrationDate
+        - status
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        email:
+          type: string
+          format: email
+        organisation:
+          type: string
+          nullable: true
+        registrationDate:
+          type: string
+          format: date-time
+        datasetRequired:
+          type: string
+          nullable: true
+        dataAccessReason:
+          type: string
+          nullable: true
+        status:
+          type: string
+          enum: [pending]
+    UserStatusDecisionRequest:
+      type: object
+      required: [decision]
+      properties:
+        decision:
+          type: string
+          enum: [activate, reject]
+        rejectionReason:
+          type: string
+          description: Required when decision=reject.
+    UserStatusDecisionResponse:
+      type: object
+      required: [userId, fromStatus, toStatus, applied]
+      properties:
+        userId:
+          type: string
+        fromStatus:
+          type: string
+          enum: [pending, active, deactivated]
+        toStatus:
+          type: string
+          enum: [pending, active, deactivated]
+        applied:
+          type: boolean
+        rejectionReason:
+          type: string
+          nullable: true
+        decidedAt:
+          type: string
+          format: date-time
+        decidedBy:
+          type: string

@@ -7,6 +7,7 @@ import { Toaster } from "sonner";
 import { Suspense } from "react";
 import { Noto_Sans } from "next/font/google";
 import Footer from "@/components/layout/footer";
+import BlockedAccessOverlay from "@/components/auth/blocked-access-overlay";
 
 const notoSans = Noto_Sans({
   subsets: ["latin"],
@@ -37,7 +38,11 @@ export default function RootLayout({
           <Suspense fallback={null}>
             <SidebarWrapper />
           </Suspense>
-          <main className="flex-1 min-w-0 overflow-y-auto p-2">{children}</main>
+          <main className="flex-1 min-w-0 overflow-y-auto p-2">
+            <Suspense fallback={null}>
+              <AccessGate>{children}</AccessGate>
+            </Suspense>
+          </main>
         </div>
 
         <Toaster
@@ -78,6 +83,22 @@ async function AppNavigation() {
 async function SidebarWrapper() {
   const session = await getSession();
   if (!session?.user || !session?.role) return null;
+  if (session.blockedState?.blocked) return null;
 
   return <Sidebar list={session.sidebarList} />;
+}
+
+async function AccessGate({ children }: { children: React.ReactNode }) {
+  const session = await getSession();
+
+  if (session?.blockedState?.blocked && session.blockedState.status) {
+    return (
+      <BlockedAccessOverlay
+        status={session.blockedState.status}
+        rejectionReason={session.blockedState.rejectionReason}
+      />
+    );
+  }
+
+  return <>{children}</>;
 }
