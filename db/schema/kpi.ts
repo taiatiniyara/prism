@@ -73,6 +73,7 @@ export const kpiDefinitions = pgTable("kpi_definitions", {
     .notNull()
     .references(() => managedListItems.id)
     .default(1),
+  is_kpi_input: boolean("is_kpi_input").default(false).notNull(),
   is_aggregated: boolean("is_aggregated").default(false).notNull(),
   is_currency: boolean("is_currency").default(false).notNull(),
   is_descriptive: boolean("is_descriptive").default(false).notNull(),

@@ -8,6 +8,7 @@ import {
   kpiDefinitions,
   NewKpiDefinition,
 } from "@/db/schema/kpi";
+import { organisations } from "@/db/schema/utility";
 import { managedListItems, managedLists } from "@/db/schema/managedLists";
 import { and, asc, eq, gt, ilike, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -55,6 +56,11 @@ export interface SaveKpiFormulaPayload {
 }
 
 type KpiDefinitionWritePayload = Partial<KpiDefinition> & {
+  category_id?: string | number | null;
+  subcategory_id?: string | number | null;
+  unit_id?: string | number | null;
+  agg_level_id?: string | number | null;
+  block?: string | number | null;
   limit_lower?: string | number | null;
   limit_upper?: string | number | null;
   limits?: unknown;
@@ -123,6 +129,15 @@ const toNullableNumber = (value: unknown): number | null => {
 
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
+};
+
+const toOptionalNumber = (value: unknown): number | undefined => {
+  if (value === null || typeof value === "undefined" || value === "") {
+    return undefined;
+  }
+
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : NaN;
 };
 
 const isLimitEntry = (value: unknown): value is KpiLimit => {
@@ -211,6 +226,16 @@ const getKpiVisibilityFilter = (user: CurrentUser) => {
   );
 };
 
+const syncKpiDefinitionIdSequence = async () => {
+  await db.execute(sql`
+    select setval(
+      pg_get_serial_sequence('kpi_definitions', 'id'),
+      coalesce((select max(id) from kpi_definitions), 1),
+      true
+    )
+  `);
+};
+
 export async function GetAllKpiDefinitions(): Promise<KpiDefinition[]> {
   const currentUser = await getCurrentUser();
   const visibilityFilter = getKpiVisibilityFilter(currentUser);
@@ -248,11 +273,115 @@ export async function CreateKpiDefinition(
   data: KpiDefinitionWritePayload,
 ): Promise<DataTableFormResponse<KpiDefinition>> {
   const currentUser = await getCurrentUser();
+  const name = String(data.name || "").trim();
+
+  if (!name) {
+    return {
+      success: false,
+      message: "KPI name is required.",
+    };
+  }
+
+  const unitId = toOptionalNumber(data.unit_id);
+  const categoryId = toOptionalNumber(data.category_id);
+  const subcategoryId = toOptionalNumber(data.subcategory_id);
+  const aggLevelId = toOptionalNumber(data.agg_level_id);
+  const block = toOptionalNumber(data.block);
+
+  const hasInvalidManagedListValue =
+    Number.isNaN(unitId) ||
+    Number.isNaN(categoryId) ||
+    Number.isNaN(subcategoryId) ||
+    Number.isNaN(aggLevelId);
+
+  if (hasInvalidManagedListValue) {
+    return {
+      success: false,
+      message: "Please select valid KPI managed-list values.",
+    };
+  }
+
+  if (
+    typeof unitId === "undefined" ||
+    typeof categoryId === "undefined" ||
+    typeof subcategoryId === "undefined" ||
+    typeof aggLevelId === "undefined"
+  ) {
+    return {
+      success: false,
+      message:
+        "Please select KPI category, KPI subcategory, unit, and aggregation level.",
+    };
+  }
+
+  if (Number.isNaN(block)) {
+    return {
+      success: false,
+      message: "Please provide a valid KPI block value.",
+    };
+  }
+
+  if (typeof block === "number" && (block < 1 || block > 9999)) {
+    return {
+      success: false,
+      message: "KPI block must be between 1 and 9999.",
+    };
+  }
+
+  const existingByName = await db
+    .select({ id: kpiDefinitions.id })
+    .from(kpiDefinitions)
+    .where(ilike(kpiDefinitions.name, name))
+    .limit(1);
+
+  if (existingByName.length > 0) {
+    return {
+      success: false,
+      message: "A KPI definition with this name already exists.",
+    };
+  }
 
   if (!isGlobalRole(currentUser.role) && currentUser.org_id == null) {
     return {
       success: false,
       message: "Your account is not scoped to a utility.",
+    };
+  }
+
+  if (!isGlobalRole(currentUser.role) && currentUser.org_id != null) {
+    const [organisation] = await db
+      .select({ id: organisations.id })
+      .from(organisations)
+      .where(eq(organisations.id, currentUser.org_id))
+      .limit(1);
+
+    if (!organisation) {
+      return {
+        success: false,
+        message:
+          "Your assigned utility no longer exists. Please contact an administrator to update your profile.",
+      };
+    }
+  }
+
+  const managedListIds = [unitId, categoryId, subcategoryId, aggLevelId];
+  const existingManagedListIds = await db
+    .select({ id: managedListItems.id })
+    .from(managedListItems)
+    .where(
+      or(
+        eq(managedListItems.id, managedListIds[0]),
+        eq(managedListItems.id, managedListIds[1]),
+        eq(managedListItems.id, managedListIds[2]),
+        eq(managedListItems.id, managedListIds[3]),
+      ),
+    );
+
+  if (existingManagedListIds.length !== 4) {
+    return {
+      success: false,
+      message:
+        "One or more selected managed-list values are no longer valid. Please re-select the KPI category, subcategory, unit, and aggregation level.",
     };
   }
 
@@ -268,40 +397,173 @@ export async function CreateKpiDefinition(
     !isGlobalRole(currentUser.role) && currentUser.org_id != null
       ? {
           owner_utility_id: currentUser.org_id,
-          utilities: [currentUser.org_id],
         }
       : {};
 
-  const [created] = await db
-    .insert(kpiDefinitions)
-    .values({
-      name: String(data.name || "").trim(),
-      description: data.description ? String(data.description) : null,
-      type: resolveCreateKpiType(currentUser, data.type),
-      limits: canSetKpiLimits(currentUser.role)
-        ? (resolveLimitsPayload(data) ?? null)
-        : null,
-      formula: data.formula ? String(data.formula) : "0",
-      formula_inputs:
-        Array.isArray(data.formula_inputs) && data.formula_inputs.length > 0
-          ? data.formula_inputs
-          : [],
-      ...utilityOwnershipFields,
-    })
-    .returning();
-
-  revalidatePath("/settings/kpi");
-  return {
-    success: true,
-    message: "KPI definition created successfully.",
-    data: created,
+  const insertPayload = {
+    name,
+    description: data.description ? String(data.description).trim() : null,
+    unit_id: unitId,
+    category_id: categoryId,
+    subcategory_id: subcategoryId,
+    agg_level_id: aggLevelId,
+    block: block ?? undefined,
+    type: resolveCreateKpiType(currentUser, data.type),
+    is_kpi_input: false,
+    limits: null,
+    formula: null,
+    formula_inputs: null,
+    ...utilityOwnershipFields,
   };
+
+  const insertKpiDefinition = async () => {
+    return db.insert(kpiDefinitions).values(insertPayload).returning();
+  };
+
+  try {
+    const [created] = await insertKpiDefinition();
+
+    revalidatePath("/settings/kpi");
+    return {
+      success: true,
+      message: "KPI definition created successfully.",
+      data: created,
+    };
+  } catch (error) {
+    const baseError =
+      typeof error === "object" && error !== null
+        ? (error as Record<string, unknown>)
+        : null;
+    const nestedCause =
+      baseError &&
+      typeof baseError.cause === "object" &&
+      baseError.cause !== null
+        ? (baseError.cause as Record<string, unknown>)
+        : null;
+
+    const pick = (key: string): string | null => {
+      const fromBase = baseError?.[key];
+      if (typeof fromBase === "string" && fromBase.length > 0) {
+        return fromBase;
+      }
+
+      const fromCause = nestedCause?.[key];
+      if (typeof fromCause === "string" && fromCause.length > 0) {
+        return fromCause;
+      }
+
+      return null;
+    };
+
+    const code = pick("code");
+    const detail = pick("detail");
+    const constraint = pick("constraint");
+    const column = pick("column");
+    const baseMessage =
+      pick("message") ||
+      (error instanceof Error ? error.message : String(error));
+
+    if (code === "23505" && constraint === "kpi_definitions_pkey") {
+      try {
+        await syncKpiDefinitionIdSequence();
+        const [created] = await insertKpiDefinition();
+
+        revalidatePath("/settings/kpi");
+        return {
+          success: true,
+          message: "KPI definition created successfully.",
+          data: created,
+        };
+      } catch (retryError) {
+        console.error(
+          "[KPI settings] CreateKpiDefinition retry after sequence sync failed",
+          {
+            retryError,
+          },
+        );
+      }
+    }
+
+    const contextParts = [
+      code ? `code=${code}` : null,
+      constraint ? `constraint=${constraint}` : null,
+      column ? `column=${column}` : null,
+      detail,
+    ].filter((part): part is string => !!part);
+
+    console.error("[KPI settings] CreateKpiDefinition failed", {
+      role: currentUser.role,
+      orgId: currentUser.org_id,
+      payload: {
+        name,
+        unitId,
+        categoryId,
+        subcategoryId,
+        aggLevelId,
+        block,
+        type: resolveCreateKpiType(currentUser, data.type),
+      },
+      db: {
+        code,
+        constraint,
+        column,
+        detail,
+      },
+      error,
+    });
+
+    return {
+      success: false,
+      message: `Unable to create KPI definition. ${[baseMessage, ...contextParts].join(" | ")}`,
+    };
+  }
 }
 
 export async function UpdateKpiDefinition(
   data: KpiDefinitionWritePayload,
 ): Promise<DataTableFormResponse<KpiDefinition>> {
   const currentUser = await getCurrentUser();
+  const id = Number(data.id);
+
+  if (Number.isNaN(id)) {
+    return {
+      success: false,
+      message: "Invalid KPI definition id.",
+    };
+  }
+
+  const unitId = toOptionalNumber(data.unit_id);
+  const categoryId = toOptionalNumber(data.category_id);
+  const subcategoryId = toOptionalNumber(data.subcategory_id);
+  const aggLevelId = toOptionalNumber(data.agg_level_id);
+  const block = toOptionalNumber(data.block);
+
+  const hasInvalidManagedListValue =
+    Number.isNaN(unitId) ||
+    Number.isNaN(categoryId) ||
+    Number.isNaN(subcategoryId) ||
+    Number.isNaN(aggLevelId);
+
+  if (hasInvalidManagedListValue) {
+    return {
+      success: false,
+      message: "Please select valid KPI managed-list values.",
+    };
+  }
+
+  if (Number.isNaN(block)) {
+    return {
+      success: false,
+      message: "Please provide a valid KPI block value.",
+    };
+  }
+
+  const typePatch =
+    typeof data.type === "undefined"
+      ? undefined
+      : isGlobalRole(currentUser.role)
+        ? normalizeKpiType(data.type)
+        : "custom";
 
   if (!canSetKpiLimits(currentUser.role) && hasLimitValuesInPayload(data)) {
     return {
@@ -311,33 +573,104 @@ export async function UpdateKpiDefinition(
     };
   }
 
-  const [updated] = await db
-    .update(kpiDefinitions)
-    .set({
-      name: data.name ? String(data.name).trim() : undefined,
-      description:
-        typeof data.description === "undefined"
+  try {
+    const [updated] = await db
+      .update(kpiDefinitions)
+      .set({
+        name: data.name ? String(data.name).trim() : undefined,
+        description:
+          typeof data.description === "undefined"
+            ? undefined
+            : data.description
+              ? String(data.description).trim()
+              : null,
+        unit_id: unitId,
+        category_id: categoryId,
+        subcategory_id: subcategoryId,
+        agg_level_id: aggLevelId,
+        block,
+        type: typePatch,
+        limits: !canSetKpiLimits(currentUser.role)
           ? undefined
-          : data.description
-            ? String(data.description)
-            : null,
-      type:
-        typeof data.type === "undefined"
-          ? undefined
-          : normalizeKpiType(data.type),
-      limits: !canSetKpiLimits(currentUser.role)
-        ? undefined
-        : resolveLimitsPayload(data),
-    })
-    .where(eq(kpiDefinitions.id, Number(data.id)))
-    .returning();
+          : resolveLimitsPayload(data),
+      })
+      .where(eq(kpiDefinitions.id, id))
+      .returning();
 
-  revalidatePath("/settings/kpi");
-  return {
-    success: true,
-    message: "KPI definition updated successfully.",
-    data: updated,
-  };
+    revalidatePath("/settings/kpi");
+    return {
+      success: true,
+      message: "KPI definition updated successfully.",
+      data: updated,
+    };
+  } catch (error) {
+    const baseError =
+      typeof error === "object" && error !== null
+        ? (error as Record<string, unknown>)
+        : null;
+    const nestedCause =
+      baseError &&
+      typeof baseError.cause === "object" &&
+      baseError.cause !== null
+        ? (baseError.cause as Record<string, unknown>)
+        : null;
+
+    const pick = (key: string): string | null => {
+      const fromBase = baseError?.[key];
+      if (typeof fromBase === "string" && fromBase.length > 0) {
+        return fromBase;
+      }
+
+      const fromCause = nestedCause?.[key];
+      if (typeof fromCause === "string" && fromCause.length > 0) {
+        return fromCause;
+      }
+
+      return null;
+    };
+
+    const code = pick("code");
+    const detail = pick("detail");
+    const constraint = pick("constraint");
+    const column = pick("column");
+    const baseMessage =
+      pick("message") ||
+      (error instanceof Error ? error.message : String(error));
+
+    console.error("[KPI settings] UpdateKpiDefinition failed", {
+      role: currentUser.role,
+      orgId: currentUser.org_id,
+      payload: {
+        id,
+        name: data.name,
+        unitId,
+        categoryId,
+        subcategoryId,
+        aggLevelId,
+        block,
+        type: typePatch,
+      },
+      db: {
+        code,
+        constraint,
+        column,
+        detail,
+      },
+      error,
+    });
+
+    const contextParts = [
+      code ? `code=${code}` : null,
+      constraint ? `constraint=${constraint}` : null,
+      column ? `column=${column}` : null,
+      detail,
+    ].filter((part): part is string => !!part);
+
+    return {
+      success: false,
+      message: `Unable to update KPI definition. ${[baseMessage, ...contextParts].join(" | ")}`,
+    };
+  }
 }
 
 export async function GetKpiFormulaBuilderData(): Promise<KpiFormulaBuilderData> {

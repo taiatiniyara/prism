@@ -55,6 +55,27 @@ export default async function KpiSettingsPage() {
                   { key: "name", type: "text" },
                   { key: "description", type: "textarea" },
                   {
+                    key: "category_id",
+                    type: "managed-list",
+                    managedListName: "KPI Category",
+                  },
+                  {
+                    key: "subcategory_id",
+                    type: "managed-list",
+                    managedListName: "KPI Sub-Category",
+                  },
+                  {
+                    key: "unit_id",
+                    type: "managed-list",
+                    managedListName: "Unit",
+                  },
+                  {
+                    key: "agg_level_id",
+                    type: "managed-list",
+                    managedListName: "Aggregation Level",
+                  },
+                  { key: "block", type: "number" },
+                  {
                     key: "type",
                     type: "select",
                     disabled: !isGlobalRole,
@@ -66,7 +87,28 @@ export default async function KpiSettingsPage() {
                 formAction: UpdateKpiDefinition,
                 fields: [
                   { key: "name", type: "text" },
-                  { key: "description", type: "textarea" },
+                  { key: "description", type: "text" },
+                  {
+                    key: "category_id",
+                    type: "managed-list",
+                    managedListName: "KPI Category",
+                  },
+                  {
+                    key: "subcategory_id",
+                    type: "managed-list",
+                    managedListName: "KPI Sub-Category",
+                  },
+                  {
+                    key: "unit_id",
+                    type: "managed-list",
+                    managedListName: "Unit",
+                  },
+                  {
+                    key: "agg_level_id",
+                    type: "managed-list",
+                    managedListName: "Aggregation Level",
+                  },
+                  { key: "block", type: "number" },
                   {
                     key: "type",
                     type: "select",
