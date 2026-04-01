@@ -5,59 +5,148 @@ import {
   CreateInputDefinition,
   GetAllInputDefinitions,
   GetInputFormulaBuilderData,
+  UpdateInputDefinition,
 } from "./service";
 import UploadInputsFromExcel from "./uploadFromExcel";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-export default async function InputsSettingsPage() {
+type InputsTab = "definitions" | "formula-builder" | "upload";
+
+function resolveDefaultTab(tab: string | undefined): InputsTab {
+  if (tab === "formula-builder" || tab === "upload" || tab === "definitions") {
+    return tab;
+  }
+  return "definitions";
+}
+
+export default async function InputsSettingsPage(props: {
+  searchParams?: Promise<{ tab?: string }> | { tab?: string };
+}) {
+  const searchParams = await Promise.resolve(props.searchParams);
+  const defaultTab = resolveDefaultTab(searchParams?.tab);
   const inputDefinitions = await GetAllInputDefinitions();
   const formulaBuilderData = await GetInputFormulaBuilderData();
 
   return (
-    <div>
-      <DataTable<InputDefinition>
-        columns={["name", "data_type", "unit", "formula", "is_active"]}
-        title="Inputs"
-        data={inputDefinitions}
-        createFormProps={{
-          formAction: CreateInputDefinition,
-          fields: [
-            {
-              key: "name",
-              type: "text",
-            },
-            {
-              key: "description",
-              type: "text",
-            },
-            {
-              key: "data_type",
-              type: "select",
-            },
-            {
-              key: "unit",
-              type: "text",
-            },
-            {
-              key: "is_active",
-              type: "checkbox",
-            },
-          ],
-        }}
-      />
+    <div className="mx-auto w-full max-w-350 space-y-6 pb-8 sm:space-y-8">
+      <Tabs
+        defaultValue={defaultTab}
+        className="space-y-4"
+      >
+        <TabsList className="h-auto flex-wrap justify-start gap-2 p-1">
+          <TabsTrigger value="definitions">Definitions</TabsTrigger>
+          <TabsTrigger value="formula-builder">Formula Builder</TabsTrigger>
+          <TabsTrigger value="upload">Upload</TabsTrigger>
+        </TabsList>
 
-      <p className="text-muted-foreground mt-4 mb-2 text-sm">
-        Choose an input definition, then build its formula using other input
-        definitions.
-      </p>
-      <InputFormulaBuilder
-        inputs={formulaBuilderData.inputs}
-        energyProviderOptions={formulaBuilderData.energyProviderOptions}
-        energyTypeOptions={formulaBuilderData.energyTypeOptions}
-        energySourceOptions={formulaBuilderData.energySourceOptions}
-        previewContextLabel={formulaBuilderData.previewContextLabel}
-      />
+        <TabsContent value="definitions">
+          <section className="rounded-xl border bg-card p-4 sm:p-6">
+            <DataTable<InputDefinition>
+              columns={["name", "data_type", "unit", "formula", "is_active"]}
+              title="Inputs"
+              data={inputDefinitions}
+              createFormProps={{
+                formAction: CreateInputDefinition,
+                fields: [
+                  {
+                    key: "name",
+                    type: "text",
+                  },
+                  {
+                    key: "description",
+                    type: "textarea",
+                  },
+                  {
+                    key: "category_id",
+                    type: "managed-list",
+                    managedListName: "Input Category",
+                  },
+                  {
+                    key: "subcategory_id",
+                    type: "managed-list",
+                    managedListName: "Input Subcategory",
+                  },
+                  {
+                    key: "data_type_id",
+                    type: "managed-list",
+                    managedListName: "Data Type",
+                  },
+                  {
+                    key: "unit_id",
+                    type: "managed-list",
+                    managedListName: "Unit",
+                  },
+                  {
+                    key: "utility_service_id",
+                    type: "managed-list",
+                    managedListName: "Services Provided",
+                  },
+                ],
+              }}
+              updateFormProps={{
+                formAction: UpdateInputDefinition,
+                fields: [
+                  {
+                    key: "name",
+                    type: "text",
+                  },
+                  {
+                    key: "description",
+                    type: "text",
+                  },
+                  {
+                    key: "category_id",
+                    type: "managed-list",
+                    managedListName: "Input Category",
+                  },
+                  {
+                    key: "subcategory_id",
+                    type: "managed-list",
+                    managedListName: "Input Subcategory",
+                  },
+                  {
+                    key: "data_type_id",
+                    type: "managed-list",
+                    managedListName: "Data Type",
+                  },
+                  {
+                    key: "unit_id",
+                    type: "managed-list",
+                    managedListName: "Unit",
+                  },
+                  {
+                    key: "utility_service_id",
+                    type: "managed-list",
+                    managedListName: "Services Provided",
+                  },
+                ],
+              }}
+            />
+          </section>
+        </TabsContent>
 
-      <UploadInputsFromExcel />
+        <TabsContent value="formula-builder">
+          <section className="rounded-xl border bg-card p-4 sm:p-6">
+            <p className="mb-4 text-sm text-muted-foreground">
+              Choose an input definition, then build its formula using other
+              input definitions.
+            </p>
+            <InputFormulaBuilder
+              inputs={formulaBuilderData.inputs}
+              energyProviderOptions={formulaBuilderData.energyProviderOptions}
+              energyTypeOptions={formulaBuilderData.energyTypeOptions}
+              energySourceOptions={formulaBuilderData.energySourceOptions}
+              previewContextLabel={formulaBuilderData.previewContextLabel}
+            />
+          </section>
+        </TabsContent>
+
+        <TabsContent value="upload">
+          <section className="rounded-xl border bg-card p-4 sm:p-6">
+            <UploadInputsFromExcel />
+          </section>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

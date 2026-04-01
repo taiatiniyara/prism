@@ -90,7 +90,7 @@ export default function AuthForms(props: {
       >
         <Tabs
           defaultValue="Login"
-          className="w-[500px]"
+          className="w-125"
         >
           <TabsList>
             <TabsTrigger

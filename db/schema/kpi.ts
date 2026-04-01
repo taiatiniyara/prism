@@ -34,6 +34,13 @@ interface Limit {
   month?: number | null;
 }
 
+interface KpiTarget {
+  utility_id: number;
+  year: number;
+  month?: number | null;
+  target_value: string;
+}
+
 export const kpiDefinitions = pgTable("kpi_definitions", {
   id: serial("id").primaryKey().notNull(),
   unit_id: integer("unit_id")
@@ -60,6 +67,7 @@ export const kpiDefinitions = pgTable("kpi_definitions", {
   owner_utility_id: integer("owner_utility_id").references(
     () => organisations.id,
   ),
+  targets: json("targets").$type<KpiTarget[]>(),
   block: integer("block").default(60),
   agg_level_id: integer("agg_level_id")
     .notNull()

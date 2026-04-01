@@ -135,7 +135,10 @@ export async function runKpiWorker(
   let failedKpiCount = 0;
 
   try {
-    const targets = await resolveAffectedKpiTargets(trigger.inputDefId);
+    const targets = await resolveAffectedKpiTargets(
+      trigger.inputDefId,
+      trigger.scope,
+    );
 
     for (const target of targets) {
       const attempt = await createKpiCalculationAttempt({
@@ -226,6 +229,7 @@ export async function runKpiWorker(
               kpiDefId: target.kpiDefId,
               actualValue: evaluation.value!,
               formulaVersion: target.formulaVersion,
+              targetValue: target.targetValue,
             });
           },
           {

@@ -6,7 +6,6 @@ import {
   FormulaInput,
   InputDefinition,
   inputDefinitions,
-  NewInputDefinition,
 } from "@/db/schema/dataEntry";
 import { managedListItems, managedLists } from "@/db/schema/managedLists";
 import { createVariableName } from "@/lib/formatters";
@@ -44,6 +43,28 @@ export interface SaveInputFormulaPayload {
   formulaInputs: FormulaInput[];
 }
 
+interface CreateInputDefinitionPayload {
+  name: string;
+  description?: string | null;
+  data_type_id: string | number;
+  category_id: string | number;
+  subcategory_id: string | number;
+  unit_id: string | number;
+  utility_service_id: string | number;
+}
+
+interface UpdateInputDefinitionPayload {
+  id: string | number;
+  name?: string;
+  description?: string | null;
+  data_type_id?: string | number;
+  category_id?: string | number;
+  subcategory_id?: string | number;
+  unit_id?: string | number;
+  utility_service_id?: string | number;
+  is_active?: boolean;
+}
+
 export async function GetAllInputDefinitions(): Promise<InputDefinition[]> {
   const ml = await GetAllManagedListItems();
   const list = await db
@@ -62,18 +83,168 @@ export async function GetAllInputDefinitions(): Promise<InputDefinition[]> {
 }
 
 export async function CreateInputDefinition(
-  data: NewInputDefinition,
+  data: CreateInputDefinitionPayload,
 ): Promise<DataTableFormResponse<InputDefinition>> {
+  const name = data.name?.trim();
+  if (!name) {
+    return {
+      success: false,
+      message: "Input name is required",
+    };
+  }
+
+  const toNumber = (value: string | number) => Number(value);
+  const payload = {
+    name,
+    description: data.description?.trim() || null,
+    variable_name: createVariableName(name),
+    data_type_id: toNumber(data.data_type_id),
+    category_id: toNumber(data.category_id),
+    subcategory_id: toNumber(data.subcategory_id),
+    unit_id: toNumber(data.unit_id),
+    utility_service_id: toNumber(data.utility_service_id),
+    is_active: true,
+  };
+
+  const hasInvalidId = [
+    payload.data_type_id,
+    payload.category_id,
+    payload.subcategory_id,
+    payload.unit_id,
+    payload.utility_service_id,
+  ].some((id) => Number.isNaN(id));
+
+  if (hasInvalidId) {
+    return {
+      success: false,
+      message: "Please select valid managed-list values before submitting.",
+    };
+  }
+
+  const existing = await db
+    .select({ id: inputDefinitions.id })
+    .from(inputDefinitions)
+    .where(ilike(inputDefinitions.name, name))
+    .limit(1);
+
+  if (existing.length > 0) {
+    return {
+      success: false,
+      message: "An input definition with this name already exists.",
+    };
+  }
+
   const [result] = await db
     .insert(inputDefinitions)
-    .values({
-      ...data,
-      is_active: true,
-    })
+    .values(payload)
     .returning();
+
+  revalidatePath("/settings/inputs");
+
   return {
     success: true,
     message: "Input definition created successfully",
+    data: result,
+  };
+}
+
+export async function UpdateInputDefinition(
+  data: Partial<UpdateInputDefinitionPayload>,
+): Promise<DataTableFormResponse<InputDefinition>> {
+  const id = Number(data.id);
+  if (Number.isNaN(id)) {
+    return {
+      success: false,
+      message: "Invalid input definition id.",
+    };
+  }
+
+  const patch: Partial<InputDefinition> = {};
+
+  if (typeof data.name === "string") {
+    const trimmedName = data.name.trim();
+    if (!trimmedName) {
+      return {
+        success: false,
+        message: "Input name is required.",
+      };
+    }
+
+    const duplicate = await db
+      .select({ id: inputDefinitions.id })
+      .from(inputDefinitions)
+      .where(ilike(inputDefinitions.name, trimmedName));
+
+    if (duplicate.some((item) => item.id !== id)) {
+      return {
+        success: false,
+        message: "An input definition with this name already exists.",
+      };
+    }
+
+    patch.name = trimmedName;
+    patch.variable_name = createVariableName(trimmedName);
+  }
+
+  if (typeof data.description === "string") {
+    patch.description = data.description.trim() || null;
+  }
+
+  const assignNumericField = (
+    key: keyof Pick<
+      UpdateInputDefinitionPayload,
+      | "data_type_id"
+      | "category_id"
+      | "subcategory_id"
+      | "unit_id"
+      | "utility_service_id"
+    >,
+  ) => {
+    if (data[key] == null || data[key] === "") {
+      return;
+    }
+    const value = Number(data[key]);
+    if (Number.isNaN(value)) {
+      throw new Error(`Invalid value for ${String(key)}`);
+    }
+    (patch as any)[key] = value;
+  };
+
+  try {
+    assignNumericField("data_type_id");
+    assignNumericField("category_id");
+    assignNumericField("subcategory_id");
+    assignNumericField("unit_id");
+    assignNumericField("utility_service_id");
+  } catch (error) {
+    return {
+      success: false,
+      message: (error as Error).message,
+    };
+  }
+
+  if (typeof data.is_active === "boolean") {
+    patch.is_active = data.is_active;
+  }
+
+  if (Object.keys(patch).length === 0) {
+    return {
+      success: false,
+      message: "No valid fields provided for update.",
+    };
+  }
+
+  const [result] = await db
+    .update(inputDefinitions)
+    .set(patch)
+    .where(eq(inputDefinitions.id, id))
+    .returning();
+
+  revalidatePath("/settings/inputs");
+
+  return {
+    success: true,
+    message: "Input definition updated successfully",
     data: result,
   };
 }

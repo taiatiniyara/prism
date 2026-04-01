@@ -67,9 +67,25 @@ interface KpiLimit {
   month?: number | null;
 }
 
+interface KpiTargetValue {
+  utility_id: number;
+  year: number;
+  month?: number | null;
+  target_value: string;
+}
+
 export interface SaveKpiLimitsPayload {
   kpiId: number;
   limits: KpiLimit[];
+}
+
+export interface SaveKpiTargetsPayload {
+  kpiId: number;
+  targets: Array<{
+    year: number;
+    month?: number | null;
+    target_value: string;
+  }>;
 }
 
 const normalizeKpiType = (value: unknown): "benchmarking" | "custom" => {
@@ -87,6 +103,10 @@ const isDevRole = (role: string) => role === "DEV";
 const isGlobalRole = (role: string) => role === "DEV" || role === "BMO";
 
 const canSetKpiLimits = (role: string) => isDevRole(role);
+
+const canSetKpiTargets = (user: CurrentUser) => {
+  return !isGlobalRole(user.role) && user.org_id != null;
+};
 
 const hasLimitValuesInPayload = (data: KpiDefinitionWritePayload): boolean => {
   return (
@@ -504,6 +524,110 @@ export async function SaveKpiLimits(
   return {
     success: true,
     message: "KPI limits saved successfully.",
+    data: updated,
+  };
+}
+
+export async function SaveKpiTargets(
+  payload: SaveKpiTargetsPayload,
+): Promise<DataTableFormResponse<KpiDefinition>> {
+  const currentUser = await getCurrentUser();
+
+  if (!canSetKpiTargets(currentUser)) {
+    return {
+      success: false,
+      message: "Only utility users can set KPI targets from this page.",
+    };
+  }
+
+  if (!payload.kpiId || Number.isNaN(payload.kpiId)) {
+    return {
+      success: false,
+      message: "Please select a KPI.",
+    };
+  }
+
+  const [existing] = await db
+    .select({
+      id: kpiDefinitions.id,
+      targets: kpiDefinitions.targets,
+    })
+    .from(kpiDefinitions)
+    .where(eq(kpiDefinitions.id, Number(payload.kpiId)))
+    .limit(1);
+
+  if (!existing) {
+    return {
+      success: false,
+      message: "KPI definition not found.",
+    };
+  }
+
+  const utilityId = currentUser.org_id!;
+
+  const sanitizedTargets = (payload.targets ?? [])
+    .map((item) => ({
+      year: Number(item.year),
+      month:
+        item.month == null || typeof item.month === "undefined"
+          ? null
+          : Number(item.month),
+      target_value: String(item.target_value ?? "").trim(),
+    }))
+    .filter(
+      (item) =>
+        Number.isInteger(item.year) &&
+        item.year >= 1900 &&
+        item.year <= 3000 &&
+        (item.month == null ||
+          (Number.isInteger(item.month) &&
+            item.month >= 1 &&
+            item.month <= 12)) &&
+        item.target_value.length > 0,
+    )
+    .sort((a, b) => {
+      if (a.year !== b.year) {
+        return a.year - b.year;
+      }
+
+      return (a.month ?? 0) - (b.month ?? 0);
+    });
+
+  const byYearMonth = new Map<string, KpiTargetValue>();
+  for (const target of sanitizedTargets) {
+    const key = `${target.year}-${target.month ?? "fy"}`;
+    byYearMonth.set(key, {
+      utility_id: utilityId,
+      year: target.year,
+      month: target.month,
+      target_value: target.target_value,
+    });
+  }
+
+  const existingOtherUtilityTargets = (existing.targets ?? []).filter(
+    (target) => target.utility_id !== utilityId,
+  );
+
+  const nextTargets = [...existingOtherUtilityTargets, ...byYearMonth.values()];
+
+  await db
+    .update(kpiDefinitions)
+    .set({
+      targets: nextTargets,
+    })
+    .where(eq(kpiDefinitions.id, Number(payload.kpiId)));
+
+  const [updated] = await db
+    .select()
+    .from(kpiDefinitions)
+    .where(eq(kpiDefinitions.id, Number(payload.kpiId)))
+    .limit(1);
+
+  revalidatePath("/settings/kpi");
+  revalidatePath("/data-entry/review-kpi");
+  return {
+    success: true,
+    message: "KPI targets saved successfully.",
     data: updated,
   };
 }

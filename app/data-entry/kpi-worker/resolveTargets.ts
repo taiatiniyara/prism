@@ -3,6 +3,9 @@ import { eq } from "drizzle-orm";
 import { db } from "@/db/connection";
 import type { FormulaInput } from "@/db/schema/dataEntry";
 import { kpiDefinitions } from "@/db/schema/kpi";
+import { reportPeriods } from "@/db/schema/reportPeriods";
+
+import type { KpiWorkerScope } from "./types";
 
 import { createFormulaVersionSnapshot } from "./snapshot";
 
@@ -12,6 +15,7 @@ export interface ResolvedKpiTarget {
   formula: string;
   formulaInputs: FormulaInput[];
   formulaVersion: string;
+  targetValue: string | null;
 }
 
 interface KpiDefinitionLike {
@@ -20,7 +24,51 @@ interface KpiDefinitionLike {
   is_active: boolean;
   formula: string | null;
   formula_inputs: FormulaInput[] | null;
+  targets:
+    | {
+        utility_id: number;
+        year: number;
+        month?: number | null;
+        target_value: string;
+      }[]
+    | null;
 }
+
+interface TargetResolutionContext {
+  utilityId: number | null;
+  year: number;
+  month: number;
+}
+
+const resolveTargetValueForContext = (
+  targets: KpiDefinitionLike["targets"],
+  context: TargetResolutionContext,
+): string | null => {
+  if (!targets || context.utilityId == null) {
+    return null;
+  }
+
+  const utilityTargets = targets.filter(
+    (item) =>
+      item.utility_id === context.utilityId &&
+      item.year === context.year &&
+      item.target_value?.trim(),
+  );
+
+  if (utilityTargets.length === 0) {
+    return null;
+  }
+
+  const monthlyTarget = utilityTargets.find(
+    (item) => item.month === context.month,
+  );
+  if (monthlyTarget) {
+    return monthlyTarget.target_value;
+  }
+
+  const yearlyTarget = utilityTargets.find((item) => item.month == null);
+  return yearlyTarget?.target_value ?? null;
+};
 
 const toNullableNumber = (value: unknown): number | null => {
   if (value == null) {
@@ -31,9 +79,7 @@ const toNullableNumber = (value: unknown): number | null => {
   return Number.isFinite(numeric) ? numeric : null;
 };
 
-const normalizeFormulaInput = (
-  input: FormulaInput,
-): FormulaInput | null => {
+const normalizeFormulaInput = (input: FormulaInput): FormulaInput | null => {
   const inputDefId = toNullableNumber(
     (input as FormulaInput & { input_def_id?: unknown }).input_def_id,
   );
@@ -60,6 +106,7 @@ const normalizeFormulaInput = (
 export const filterAffectedKpiTargets = (
   definitions: KpiDefinitionLike[],
   inputDefId: number,
+  targetContext: TargetResolutionContext,
 ): ResolvedKpiTarget[] => {
   return definitions
     .filter((definition) => {
@@ -91,13 +138,34 @@ export const filterAffectedKpiTargets = (
           formula: definition.formula!,
           formulaInputs,
         }),
+        targetValue: resolveTargetValueForContext(
+          definition.targets,
+          targetContext,
+        ),
       };
     });
 };
 
 export const resolveAffectedKpiTargets = async (
   inputDefId: number,
+  scope: KpiWorkerScope,
 ): Promise<ResolvedKpiTarget[]> => {
+  const [reportPeriod] = await db
+    .select({
+      utilityId: reportPeriods.utility_id,
+      reportDate: reportPeriods.report_date,
+    })
+    .from(reportPeriods)
+    .where(eq(reportPeriods.id, scope.reportPeriodId))
+    .limit(1);
+
+  const reportDate = reportPeriod?.reportDate ?? new Date();
+  const targetContext: TargetResolutionContext = {
+    utilityId: scope.organizationId ?? reportPeriod?.utilityId ?? null,
+    year: reportDate.getFullYear(),
+    month: reportDate.getMonth() + 1,
+  };
+
   const rows = await db
     .select({
       id: kpiDefinitions.id,
@@ -105,9 +173,10 @@ export const resolveAffectedKpiTargets = async (
       is_active: kpiDefinitions.is_active,
       formula: kpiDefinitions.formula,
       formula_inputs: kpiDefinitions.formula_inputs,
+      targets: kpiDefinitions.targets,
     })
     .from(kpiDefinitions)
     .where(eq(kpiDefinitions.is_active, true));
 
-  return filterAffectedKpiTargets(rows, inputDefId);
+  return filterAffectedKpiTargets(rows, inputDefId, targetContext);
 };
