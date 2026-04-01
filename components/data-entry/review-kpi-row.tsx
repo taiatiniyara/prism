@@ -218,7 +218,7 @@ export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
       </div>
 
       <div className="grid gap-2 p-3 sm:grid-cols-2 xl:grid-cols-3">
-        <section className="space-y-1.5 rounded-md border border-sky-200/80 border-l-4 bg-sky-50/30 p-2 dark:border-sky-900/60 dark:bg-sky-950/15">
+        <section className="space-y-1.5 rounded-md border border-sky-200/80 border-l-7 bg-sky-50/30 p-2 dark:border-sky-900/60 dark:bg-sky-950/15">
           <h3 className="text-[11px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">
             Inputs
           </h3>
@@ -252,7 +252,7 @@ export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
           </ul>
         </section>
 
-        <section className="space-y-1.5 rounded-md border border-amber-200/80 border-l-4 bg-amber-50/40 p-2 dark:border-amber-900/60 dark:bg-amber-950/20">
+        <section className="space-y-1.5 rounded-md border border-amber-200/80 border-l-7 bg-amber-50/40 p-2 dark:border-amber-900/60 dark:bg-amber-950/20">
           <h3 className="text-[11px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
             Formula
           </h3>
@@ -261,7 +261,7 @@ export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
           </div>
         </section>
 
-        <section className="space-y-1.5 rounded-md border border-emerald-200/80 border-l-4 bg-emerald-50/40 p-2 dark:border-emerald-900/60 dark:bg-emerald-950/20">
+        <section className="space-y-1.5 rounded-md border border-emerald-200/80 border-l-7 bg-emerald-50/40 p-2 dark:border-emerald-900/60 dark:bg-emerald-950/20">
           <h3 className="text-[11px] font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
             KPI Result
           </h3>

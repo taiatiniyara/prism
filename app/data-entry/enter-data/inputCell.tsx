@@ -189,7 +189,7 @@ export default function InputCell({ row }: InputCellProps) {
           <Input
             className={`${
               row.value ? "border-l-lime-300" : "border-l-red-200"
-            } border border-l-4 w-full rounded-l-none`}
+            } border border-l-7 w-full rounded-l-none`}
             type="number"
             defaultValue={displayValue}
             disabled={inputDisabled}

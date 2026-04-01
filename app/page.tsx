@@ -140,7 +140,7 @@ export default async function Page() {
                 designed specifically for Pacific Power Association member
                 utilities.
               </p>
-              <p className="font-medium text-slate-800 border-l-4 border-slate-500 pl-4 py-1">
+              <p className="font-medium text-slate-800 border-l-7 border-slate-500 pl-4 py-1">
                 Utilities can now conduct their own benchmarking analysis
                 online, while the PPA Secretariat can prepare the Annual
                 Benchmarking Report more efficiently with automated tools and
