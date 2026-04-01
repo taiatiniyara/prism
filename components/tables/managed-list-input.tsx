@@ -10,7 +10,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { formatLabel } from "@/lib/formatters";
 import { Skeleton } from "../ui/skeleton";
 
 export default function ManagedListInput(props: {
@@ -66,7 +65,7 @@ export default function ManagedListInput(props: {
         disabled
       >
         <SelectTrigger
-          className={`w-full shadow border-l-4 p-2.5 rounded-lg ${
+          className={`w-full rounded-l-none rounded-r-lg shadow p-2 ${
             props.hasValue ? "border-l-lime-200" : "border-l-red-200"
           }`}
         >
@@ -108,11 +107,11 @@ export default function ManagedListInput(props: {
       }}
     >
       <SelectTrigger
-        className={`w-full shadow border-l-4 p-2.5 rounded-lg ${
+        className={`w-full shadow border-l-4 p-2 rounded-l-none rounded-r-lg ${
           props.hasValue ? "border-l-lime-200" : "border-l-red-200"
         }`}
       >
-        <SelectValue placeholder={`Select ${formatLabel(props.inputName)}`} />
+        <SelectValue placeholder={`Select Input`} />
       </SelectTrigger>
       <SelectContent>
         {list.map((item) => (

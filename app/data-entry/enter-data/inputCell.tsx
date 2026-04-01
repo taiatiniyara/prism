@@ -271,6 +271,27 @@ export default function InputCell({ row }: InputCellProps) {
       Boolean(value && value.trim().length > 0),
     )
     .join(" - ");
+  const updatedAtLabel = useMemo(() => {
+    if (!row.updatedAt) {
+      return null;
+    }
+
+    const date = new Date(row.updatedAt);
+    if (Number.isNaN(date.getTime())) {
+      return null;
+    }
+
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(date);
+  }, [row.updatedAt]);
+
+  const updatedMetaLabel = [updatedByLabel, updatedAtLabel]
+    .filter((value): value is string =>
+      Boolean(value && value.trim().length > 0),
+    )
+    .join(" on ");
 
   return (
     <div className="space-y-2 border p-4 rounded-lg bg-white shadow-md">
@@ -309,9 +330,9 @@ export default function InputCell({ row }: InputCellProps) {
           />
           <span>Data Not Available</span>
         </label>
-        {updatedByLabel ? (
+        {updatedMetaLabel ? (
           <p className="text-[11px] text-muted-foreground px-1">
-            Updated by: {updatedByLabel}
+            <b>Updated by:</b> <br /> {updatedMetaLabel}
           </p>
         ) : null}
       </div>

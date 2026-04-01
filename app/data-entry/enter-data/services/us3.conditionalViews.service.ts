@@ -41,6 +41,7 @@ export interface GeneratorEntryCandidate {
   statusId: number | null;
   updatedByName: string | null;
   updatedByRole: string | null;
+  updatedAt: Date | null;
   value: string | null;
   comments: DataEntryComment[] | null;
 }
@@ -76,6 +77,7 @@ export const buildGenerationGroups = (
           entry?.statusId === DataEntryStatusId.DataNotAvailable,
         updatedByName: entry?.updatedByName ?? null,
         updatedByRole: entry?.updatedByRole ?? null,
+        updatedAt: entry?.updatedAt?.toISOString() ?? null,
         value: entry?.value ?? null,
         comments: serializeComments(entry?.comments ?? null),
       };

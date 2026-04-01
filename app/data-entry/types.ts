@@ -33,6 +33,7 @@ export interface DataEntryInputRowView {
   isDataNotAvailable?: boolean;
   updatedByName?: string | null;
   updatedByRole?: string | null;
+  updatedAt?: string | null;
   value: string | null;
   comments: string | null;
 }

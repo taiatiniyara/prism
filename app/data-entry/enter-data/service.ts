@@ -230,6 +230,7 @@ const getInputRowsForContext = async (
       statusId: dataEntries.status_id,
       updatedByName: authUser.name,
       updatedByRole: roles.name,
+      updatedAt: dataEntries.updatedAt,
       value: dataEntries.value,
       comments: dataEntries.comments,
     })
@@ -317,6 +318,7 @@ const getGenerationGroupsForContext = async (
       statusId: dataEntries.status_id,
       updatedByName: authUser.name,
       updatedByRole: roles.name,
+      updatedAt: dataEntries.updatedAt,
       value: dataEntries.value,
       comments: dataEntries.comments,
     })
@@ -858,8 +860,8 @@ export const updateDataEntryValueAction = async (
     customer_type_id: payload.customerTypeId,
     payment_mode_id: payload.paymentModeId,
     is_deleted: false,
-    updated_at: new Date(),
-    updated_by_id: user.id,
+    updatedAt: new Date(),
+    updatedById: user.id,
   };
 
   let sourceDataEntryId = existing?.id ?? null;
