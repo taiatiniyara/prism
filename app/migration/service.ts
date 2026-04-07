@@ -20,6 +20,7 @@ import {
   ServiceArea,
   serviceAreas,
 } from "@/db/schema/utility";
+import { generateRandomNumber } from "@/lib/utils";
 import { gt } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -345,12 +346,12 @@ export async function retrieveKpiDefinitions() {
     (kd) => !existingIds.has(kd.id),
   );
 
-  await db.delete(kpiDefinitions).where(gt(kpiDefinitions.id, 0));
+  console.log(nonExistingKpiDefinitions.length);
 
   if (nonExistingKpiDefinitions.length > 0) {
     await db.insert(kpiDefinitions).values(
-      nonExistingKpiDefinitions.map((kd, i) => {
-        kd.id = i + 1;
+      nonExistingKpiDefinitions.map((kd) => {
+        kd.id = generateRandomNumber(3);
         return kd;
       }),
     );

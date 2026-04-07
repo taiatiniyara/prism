@@ -76,11 +76,6 @@ export default async function InputsSettingsPage(props: {
                     type: "managed-list",
                     managedListName: "Unit",
                   },
-                  {
-                    key: "utility_service_id",
-                    type: "managed-list",
-                    managedListName: "Services Provided",
-                  },
                 ],
               }}
               updateFormProps={{
