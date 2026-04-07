@@ -87,6 +87,10 @@ describe("filter cascade behavior", () => {
           inputDefId: 1,
           serviceAreaId: 10,
           value: "123",
+          statusId: 1,
+          updatedByName: "Test User",
+          updatedByRole: "DEV",
+          updatedAt: new Date("2026-01-01T00:00:00.000Z"),
           comments: [
             {
               comment: "ok",

@@ -27,6 +27,10 @@ describe("generation grouping behavior", () => {
           energyResourceId: 100,
           value: "24",
           comments: null,
+          statusId: 1,
+          updatedByName: "Test User",
+          updatedByRole: "Admin",
+          updatedAt: new Date(),
         },
       ],
     );

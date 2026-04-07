@@ -56,9 +56,9 @@ export const inputDefinitions = pgTable("input_definitions", {
   valid_range_min: integer("valid_range_min"),
   valid_range_max: integer("valid_range_max"),
   is_descriptive: boolean("is_descriptive").default(false).notNull(),
-  utility_service_id: integer("utility_service_id")
-    .notNull()
-    .references(() => managedListItems.id),
+  utility_service_id: integer("utility_service_id").references(
+    () => managedListItems.id,
+  ),
   is_currency: boolean("is_currency").default(false).notNull(),
   is_aggregated: boolean("is_aggregated").default(false).notNull(),
   agg_level_id: integer("agg_level_id").references(() => managedListItems.id),
@@ -68,6 +68,7 @@ export const inputDefinitions = pgTable("input_definitions", {
   is_calculated: boolean("is_calculated").default(false).notNull(),
   is_kpi: boolean("is_kpi").default(false).notNull(),
   is_kpi_input: boolean("is_kpi_input").default(false).notNull(),
+  updated_at: timestamp("updated_at").notNull().defaultNow(),
 });
 export type InputDefinition = typeof inputDefinitions.$inferSelect & {
   category?: string | null;

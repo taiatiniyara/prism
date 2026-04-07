@@ -50,7 +50,7 @@ interface CreateInputDefinitionPayload {
   category_id: string | number;
   subcategory_id: string | number;
   unit_id: string | number;
-  utility_service_id: string | number;
+  utility_service_id: number | null;
 }
 
 interface UpdateInputDefinitionPayload {
@@ -61,7 +61,7 @@ interface UpdateInputDefinitionPayload {
   category_id?: string | number;
   subcategory_id?: string | number;
   unit_id?: string | number;
-  utility_service_id?: string | number;
+  utility_service_id?: number | null;
   is_active?: boolean;
 }
 
@@ -102,7 +102,7 @@ export async function CreateInputDefinition(
     category_id: toNumber(data.category_id),
     subcategory_id: toNumber(data.subcategory_id),
     unit_id: toNumber(data.unit_id),
-    utility_service_id: toNumber(data.utility_service_id),
+    utility_service_id: null,
     is_active: true,
   };
 
@@ -111,7 +111,6 @@ export async function CreateInputDefinition(
     payload.category_id,
     payload.subcategory_id,
     payload.unit_id,
-    payload.utility_service_id,
   ].some((id) => Number.isNaN(id));
 
   if (hasInvalidId) {
@@ -315,6 +314,7 @@ export async function UpdateInputDefinitionFromExcel(
     variable_name: createVariableName(item.name),
     formula: null,
     formula_inputs: null,
+    updated_at: new Date(),
   }));
   if (createList.length > 0) {
     try {
