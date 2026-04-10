@@ -18,7 +18,7 @@ import {
 } from "@/db/schema/dataEntry";
 import { kpiDefinitions } from "@/db/schema/kpi";
 import { kpi } from "@/db/schema/kpi";
-import { managedListItems } from "@/db/schema/managedLists";
+import { managedListItems, managedLists } from "@/db/schema/managedLists";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { serviceAreas } from "@/db/schema/utility";
 import { user as authUsers } from "@/db/schema/auth-schema";
@@ -26,9 +26,23 @@ import { triggerKpiWorkerAsync } from "@/app/data-entry/kpi-worker";
 import { publishSyncEvent } from "@/app/data-entry/review-kpi/sync-store";
 import { CurrentUser, getCurrentUser } from "@/lib/user.service";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import {
+  CustomKpiDecisionType,
+  CustomKpiRequestStatus,
+  CustomKpiVisibilityScope,
+  customKpiDecisions,
+  customKpiRequests,
+} from "@/db/schema/custom-kpi-requests";
+import {
+  assertValidCustomKpiStatusTransition,
+  enqueueCustomKpiDecisionOutcomeEmail,
+  processPendingCustomKpiOutcomeEmailsForDecision,
+  recordCustomKpiLifecycleEvent,
+} from "@/app/settings/kpi/custom-kpi/service";
 
 const EDIT_ROLES = new Set(["DEV", "BMO", "BLO", "DAOO", "DAOF"]);
 const GLOBAL_ROLES = new Set(["DEV", "BMO", "BLO"]);
+const CUSTOM_KPI_REVIEWER_ROLES = new Set(["DEV"]);
 
 const hasRoleAccess = (allowedRoles: Set<string>, role: string | null) => {
   const normalizedRole = role?.trim().toUpperCase();
@@ -46,6 +60,16 @@ export const assertReviewKpiWriteAccess = (user: CurrentUser): void => {
 
   if (!hasRoleAccess(EDIT_ROLES, user.role)) {
     throw new Error("FORBIDDEN:You are not allowed to edit review KPI data.");
+  }
+};
+
+export const assertCustomKpiReviewerAccess = (user: CurrentUser): void => {
+  assertReviewKpiReadAccess(user);
+
+  if (!hasRoleAccess(CUSTOM_KPI_REVIEWER_ROLES, user.role)) {
+    throw new Error(
+      "FORBIDDEN:You are not allowed to review or promote custom KPI requests.",
+    );
   }
 };
 
@@ -136,8 +160,9 @@ export const applyReviewKpiFilterCascade = (
 
 export const getReviewKpiFilterOptions = async (
   user: CurrentUser,
-  context: ReviewKpiFilterContext,
+  _context: ReviewKpiFilterContext,
 ): Promise<ReviewKpiFilterOptions> => {
+  void _context;
   const reportPeriodWhere = [];
   const reportTypeWhere = [eq(managedListItems.is_active, true)];
   const serviceAreaWhere = [eq(serviceAreas.is_active, true)];
@@ -914,4 +939,447 @@ export const addReviewKpiInputComment = async (
   });
 
   return { comments: serializedComments };
+};
+
+export type ApplyCustomKpiDecisionInput = {
+  decisionType: CustomKpiDecisionType;
+  rationale: string;
+  replacementKpiId: number | null;
+  categoryId: number | null;
+  subcategoryId: number | null;
+  override: boolean;
+  priorDecisionId: string | null;
+};
+
+export type CustomKpiApprovalCategoryOption = {
+  id: number;
+  name: string;
+};
+
+export type CustomKpiApprovalSubcategoryOption = {
+  id: number;
+  name: string;
+  categoryId: number | null;
+};
+
+export type CustomKpiApprovalTaxonomyOptions = {
+  categories: CustomKpiApprovalCategoryOption[];
+  subcategories: CustomKpiApprovalSubcategoryOption[];
+};
+
+export const listCustomKpiApprovalTaxonomyOptions =
+  async (): Promise<CustomKpiApprovalTaxonomyOptions> => {
+    const [lists] = await Promise.all([
+      db
+        .select({ id: managedLists.id, name: managedLists.name })
+        .from(managedLists)
+        .where(
+          and(
+            eq(managedLists.is_active, true),
+            inArray(managedLists.name, ["KPI Category", "KPI Sub-Category"]),
+          ),
+        ),
+    ]);
+
+    const categoryListId =
+      lists.find((item) => item.name === "KPI Category")?.id ?? null;
+    const subcategoryListId =
+      lists.find((item) => item.name === "KPI Sub-Category")?.id ?? null;
+
+    if (categoryListId == null || subcategoryListId == null) {
+      return { categories: [], subcategories: [] };
+    }
+
+    const [categoryRows, subcategoryRows] = await Promise.all([
+      db
+        .select({ id: managedListItems.id, name: managedListItems.name })
+        .from(managedListItems)
+        .where(
+          and(
+            eq(managedListItems.list_id, categoryListId),
+            eq(managedListItems.is_active, true),
+          ),
+        )
+        .orderBy(asc(managedListItems.name)),
+      db
+        .select({
+          id: managedListItems.id,
+          name: managedListItems.name,
+          categoryId: managedListItems.parent_id,
+        })
+        .from(managedListItems)
+        .where(
+          and(
+            eq(managedListItems.list_id, subcategoryListId),
+            eq(managedListItems.is_active, true),
+          ),
+        )
+        .orderBy(asc(managedListItems.name)),
+    ]);
+
+    return {
+      categories: categoryRows,
+      subcategories: subcategoryRows,
+    };
+  };
+
+const mapDecisionTypeToStatus = (
+  decisionType: CustomKpiDecisionType,
+): CustomKpiRequestStatus => {
+  switch (decisionType) {
+    case "APPROVE":
+      return "APPROVED";
+    case "REJECT":
+      return "REJECTED";
+    case "REPLACE":
+      return "REPLACED";
+    default:
+      return "REJECTED";
+  }
+};
+
+export const canPromoteCustomKpiVisibility = (
+  status: CustomKpiRequestStatus,
+  scope: CustomKpiVisibilityScope,
+): boolean => status === "APPROVED" && scope === "SUBMITTER_ONLY";
+
+export const resolveOverrideDecisionLineage = (input: {
+  currentStatus: CustomKpiRequestStatus;
+  overrideRequested: boolean;
+  priorDecisionId: string | null;
+}): { requiresOverride: boolean; overrideDecisionId: string | null } => {
+  const requiresOverride = input.currentStatus !== "PENDING_REVIEW";
+
+  if (!requiresOverride) {
+    return { requiresOverride: false, overrideDecisionId: null };
+  }
+
+  if (!input.overrideRequested) {
+    throw new Error(
+      "CONFLICT:Request already has a final decision. Set override=true.",
+    );
+  }
+
+  if (!input.priorDecisionId) {
+    throw new Error("VALIDATION:priorDecisionId is required for overrides.");
+  }
+
+  return { requiresOverride: true, overrideDecisionId: input.priorDecisionId };
+};
+
+export const applyCustomKpiReviewDecision = async (
+  requestId: string,
+  input: ApplyCustomKpiDecisionInput,
+  user: CurrentUser,
+) => {
+  assertCustomKpiReviewerAccess(user);
+
+  if (input.decisionType === "REPLACE" && input.replacementKpiId == null) {
+    throw new Error("VALIDATION:replacementKpiId is required for REPLACE.");
+  }
+
+  if (
+    input.decisionType === "APPROVE" &&
+    (input.categoryId == null || input.subcategoryId == null)
+  ) {
+    throw new Error(
+      "VALIDATION:categoryId and subcategoryId are required for APPROVE.",
+    );
+  }
+
+  const [request] = await db
+    .select({
+      id: customKpiRequests.id,
+      submitterUserId: customKpiRequests.submitter_user_id,
+      title: customKpiRequests.title,
+      description: customKpiRequests.description,
+      formulaExpression: customKpiRequests.formula_expression,
+      businessContext: customKpiRequests.business_context,
+      selectedInputDefinitionIds:
+        customKpiRequests.selected_input_definition_ids,
+      existingKpiDefinitionId: customKpiRequests.replacement_kpi_def_id,
+      status: customKpiRequests.status,
+      visibilityScope: customKpiRequests.visibility_scope,
+      createdAt: customKpiRequests.created_at,
+    })
+    .from(customKpiRequests)
+    .where(eq(customKpiRequests.id, requestId))
+    .limit(1);
+
+  if (!request) {
+    throw new Error("VALIDATION:Custom KPI request does not exist.");
+  }
+
+  const nextStatus = mapDecisionTypeToStatus(input.decisionType);
+  const lineage = resolveOverrideDecisionLineage({
+    currentStatus: request.status,
+    overrideRequested: input.override,
+    priorDecisionId: input.priorDecisionId,
+  });
+
+  assertValidCustomKpiStatusTransition(request.status, nextStatus, {
+    override: lineage.requiresOverride,
+  });
+
+  const [decision] = await db
+    .insert(customKpiDecisions)
+    .values({
+      request_id: requestId,
+      reviewer_user_id: user.id,
+      decision_type: input.decisionType,
+      rationale: input.rationale,
+      override_of_decision_id: lineage.overrideDecisionId,
+    })
+    .returning({ id: customKpiDecisions.id });
+
+  let approvedKpiDefinitionId: number | null = null;
+  if (input.decisionType === "APPROVE") {
+    if (
+      request.status === "APPROVED" &&
+      request.existingKpiDefinitionId != null &&
+      lineage.requiresOverride
+    ) {
+      approvedKpiDefinitionId = request.existingKpiDefinitionId;
+    } else {
+      const [submitter] = await db
+        .select({ organisationId: authUsers.organisation_id })
+        .from(authUsers)
+        .where(eq(authUsers.id, request.submitterUserId))
+        .limit(1);
+
+      if (!submitter || submitter.organisationId == null) {
+        throw new Error(
+          "VALIDATION:Submitter must belong to an organisation before approval.",
+        );
+      }
+
+      const selectedInputDefinitions =
+        request.selectedInputDefinitionIds.length > 0
+          ? await db
+              .select({
+                id: inputDefinitions.id,
+                variableName: inputDefinitions.variable_name,
+              })
+              .from(inputDefinitions)
+              .where(
+                inArray(
+                  inputDefinitions.id,
+                  request.selectedInputDefinitionIds,
+                ),
+              )
+          : [];
+
+      const formulaInputs = selectedInputDefinitions
+        .filter(
+          (item) =>
+            typeof item.variableName === "string" &&
+            item.variableName.trim().length > 0,
+        )
+        .map((item) => ({
+          input_def_id: item.id,
+          variable_name: item.variableName as string,
+        }));
+
+      const [categoryItem] =
+        input.categoryId != null
+          ? await db
+              .select({ id: managedListItems.id })
+              .from(managedListItems)
+              .innerJoin(
+                managedLists,
+                eq(managedListItems.list_id, managedLists.id),
+              )
+              .where(
+                and(
+                  eq(managedListItems.id, input.categoryId),
+                  eq(managedListItems.is_active, true),
+                  eq(managedLists.name, "KPI Category"),
+                ),
+              )
+              .limit(1)
+          : [];
+
+      const [subcategoryItem] =
+        input.subcategoryId != null
+          ? await db
+              .select({
+                id: managedListItems.id,
+                categoryId: managedListItems.parent_id,
+              })
+              .from(managedListItems)
+              .innerJoin(
+                managedLists,
+                eq(managedListItems.list_id, managedLists.id),
+              )
+              .where(
+                and(
+                  eq(managedListItems.id, input.subcategoryId),
+                  eq(managedListItems.is_active, true),
+                  eq(managedLists.name, "KPI Sub-Category"),
+                ),
+              )
+              .limit(1)
+          : [];
+
+      if (!categoryItem || !subcategoryItem) {
+        throw new Error(
+          "VALIDATION:Selected KPI category or subcategory is invalid.",
+        );
+      }
+
+      if (subcategoryItem.categoryId !== categoryItem.id) {
+        throw new Error(
+          "VALIDATION:Selected KPI subcategory does not match the selected category.",
+        );
+      }
+
+      const [createdKpiDefinition] = await db
+        .insert(kpiDefinitions)
+        .values({
+          name: request.title,
+          description: request.description ?? request.businessContext,
+          formula: request.formulaExpression,
+          formula_inputs: formulaInputs.length > 0 ? formulaInputs : null,
+          category_id: categoryItem.id,
+          subcategory_id: subcategoryItem.id,
+          type: "custom",
+          owner_utility_id: submitter.organisationId,
+          utilities: [submitter.organisationId],
+        })
+        .returning({ id: kpiDefinitions.id });
+
+      approvedKpiDefinitionId = createdKpiDefinition.id;
+    }
+  }
+
+  const nextScope: CustomKpiVisibilityScope =
+    input.decisionType === "APPROVE"
+      ? "SUBMITTER_ONLY"
+      : request.visibilityScope;
+
+  await db
+    .update(customKpiRequests)
+    .set({
+      status: nextStatus,
+      visibility_scope: nextScope,
+      replacement_kpi_def_id:
+        input.decisionType === "APPROVE"
+          ? approvedKpiDefinitionId
+          : input.decisionType === "REPLACE"
+            ? input.replacementKpiId
+            : null,
+      updated_at: new Date(),
+    })
+    .where(eq(customKpiRequests.id, requestId));
+
+  await recordCustomKpiLifecycleEvent({
+    requestId,
+    eventType:
+      input.decisionType === "APPROVE"
+        ? "DECISION_APPROVED"
+        : input.decisionType === "REJECT"
+          ? "DECISION_REJECTED"
+          : "DECISION_REPLACED",
+    actorUserId: user.id,
+    metadata: {
+      decisionId: decision.id,
+      rationale: input.rationale,
+      approvedKpiDefinitionId,
+      replacementKpiId: input.replacementKpiId,
+      categoryId: input.categoryId,
+      subcategoryId: input.subcategoryId,
+      override: lineage.requiresOverride,
+      priorDecisionId: lineage.overrideDecisionId,
+    },
+  });
+
+  if (lineage.requiresOverride) {
+    await recordCustomKpiLifecycleEvent({
+      requestId,
+      eventType: "DECISION_OVERRIDDEN",
+      actorUserId: user.id,
+      metadata: {
+        decisionId: decision.id,
+        priorDecisionId: lineage.overrideDecisionId,
+      },
+    });
+  }
+
+  // SC-002 decision cycle-time telemetry for finalized decisions.
+  console.info("metric.custom_kpi.decision_cycle_time_ms", {
+    requestId,
+    decisionId: decision.id,
+    durationMs: Date.now() - request.createdAt.getTime(),
+    decisionType: input.decisionType,
+  });
+
+  try {
+    await enqueueCustomKpiDecisionOutcomeEmail({
+      requestId,
+      decisionId: decision.id,
+    });
+
+    // Send immediately when possible; retry flow still handles transient failures.
+    await processPendingCustomKpiOutcomeEmailsForDecision(decision.id, 200);
+  } catch (error) {
+    console.error("Failed to enqueue custom KPI outcome email", {
+      requestId,
+      decisionId: decision.id,
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+  }
+
+  return {
+    requestId,
+    decisionId: decision.id,
+    status: nextStatus,
+    visibilityScope: nextScope,
+  };
+};
+
+export const promoteCustomKpiRequestVisibility = async (
+  requestId: string,
+  user: CurrentUser,
+) => {
+  assertCustomKpiReviewerAccess(user);
+
+  const [request] = await db
+    .select({
+      id: customKpiRequests.id,
+      status: customKpiRequests.status,
+      visibilityScope: customKpiRequests.visibility_scope,
+    })
+    .from(customKpiRequests)
+    .where(eq(customKpiRequests.id, requestId))
+    .limit(1);
+
+  if (!request) {
+    throw new Error("VALIDATION:Custom KPI request does not exist.");
+  }
+
+  if (!canPromoteCustomKpiVisibility(request.status, request.visibilityScope)) {
+    throw new Error(
+      "CONFLICT:Only approved submitter-only requests can be promoted.",
+    );
+  }
+
+  await db
+    .update(customKpiRequests)
+    .set({ visibility_scope: "GLOBAL", updated_at: new Date() })
+    .where(eq(customKpiRequests.id, requestId));
+
+  await recordCustomKpiLifecycleEvent({
+    requestId,
+    eventType: "VISIBILITY_PROMOTED",
+    actorUserId: user.id,
+    metadata: {
+      from: "SUBMITTER_ONLY",
+      to: "GLOBAL",
+    },
+  });
+
+  return {
+    requestId,
+    visibilityScope: "GLOBAL" as const,
+  };
 };

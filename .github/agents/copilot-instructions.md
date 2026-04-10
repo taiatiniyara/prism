@@ -1,6 +1,6 @@
 ﻿# prism Development Guidelines
 
-Auto-generated from all feature plans. Last updated: 2026-04-02
+Auto-generated from all feature plans. Last updated: 2026-04-10
 
 ## Active Technologies
 - TypeScript (strict), React 19.2.3, Next.js 16.1.1 + Next App Router, Drizzle ORM, `pg`, Tailwind CSS, (005-review-kpi-values)
@@ -9,6 +9,8 @@ Auto-generated from all feature plans. Last updated: 2026-04-02
 - PostgreSQL via Drizzle schema under `db/schema` (006-kpi-balanced-scorecard)
 - TypeScript 5.x, React 19.2.3, Next.js 16.1.1 (App + better-auth, drizzle-orm, pg, Next.js server (007-pending-user-activation)
 - PostgreSQL via Drizzle ORM schema in `db/schema` (007-pending-user-activation)
+- TypeScript (strict mode), React 19.2.3, Next.js 16.1.1 + Next.js App Router, Drizzle ORM, pg, better-auth, nodemailer, Tailwind CSS, shadcn-style UI primitives, zod-style validator pattern already used in route `_lib/validators` modules (008-review-custom-kpi)
+- PostgreSQL via Drizzle ORM (`db/schema/*.ts`, `db/config.ts`) (008-review-custom-kpi)
 
 - TypeScript 5.x (strict), React 19.2.3, Next.js 16.1.1 App Router + Next.js
   server actions/API routes, Drizzle ORM, pg, better-auth, Tailwind CSS,
@@ -47,9 +49,9 @@ TypeScript 5.x (strict), React 19.2.3, Next.js 16.1.1 App: Follow standard
 conventions
 
 ## Recent Changes
+- 008-review-custom-kpi: Added TypeScript (strict mode), React 19.2.3, Next.js 16.1.1 + Next.js App Router, Drizzle ORM, pg, better-auth, nodemailer, Tailwind CSS, shadcn-style UI primitives, zod-style validator pattern already used in route `_lib/validators` modules
 - 007-pending-user-activation: Added TypeScript 5.x, React 19.2.3, Next.js 16.1.1 (App + better-auth, drizzle-orm, pg, Next.js server
 - 006-kpi-balanced-scorecard: Added TypeScript 5.x (strict), React 19.2.3, Next.js 16.1.1 + Next.js App Router, Drizzle ORM, pg, Tailwind CSS 4,
-- 005-review-kpi-values: Added TypeScript (strict), React 19.2.3, Next.js 16.1.1 + Next App Router, Drizzle ORM, `pg`, Tailwind CSS,
 
   App Router + Next.js route handlers/server components, Drizzle ORM, pg,
   better-auth, nodemailer, Tailwind CSS, shadcn-compatible UI primitives
