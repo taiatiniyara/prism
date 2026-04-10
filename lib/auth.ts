@@ -70,9 +70,8 @@ export const auth = betterAuth({
           subject: "Your Magic Login Link",
           html: `
           <div style="font-family: sans-serif; padding: 20px; max-width: 600px; margin: 0 auto;">
-  <div style="text-align: center; margin-bottom: 30px;">
-    <h1 style="color: #334155; margin: 0;">PRISM</h1>
-    <p style="color: #6b7280; margin: 5px 0 0;">PPA Benchmarking Platform</p>
+  <div style="background: #0f172a; padding: 16px; border-radius: 8px; text-align: center; margin-bottom: 16px;">
+    <img src="https://dev.prismdashboard.org/logo.png" alt="PRISM logo" width="140" style="display: block; height: auto; margin: 0 auto;" />
   </div>
 
   <div style="background: white; padding: 30px; border-radius: 8px; box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);">

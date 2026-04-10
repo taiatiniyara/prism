@@ -96,6 +96,11 @@ const buildCustomKpiEmailLayout = (input: {
     <div style="margin: 0; padding: 24px 12px; background: #f3f6fb; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #17213a;">
       <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 640px; margin: 0 auto; border-collapse: separate; border-spacing: 0; background: #ffffff; border: 1px solid #dce3ef; border-radius: 14px; overflow: hidden;">
         <tr>
+          <td style="padding: 16px 24px; background: #0f172a; text-align: center;">
+            <img src="https://dev.prismdashboard.org/logo.png" alt="PRISM logo" width="140" style="display: block; height: auto; margin: 0 auto;" />
+          </td>
+        </tr>
+        <tr>
           <td style="padding: 0; background: linear-gradient(120deg, #1f2a44 0%, #304e7a 100%);">
             <div style="padding: 18px 24px 10px 24px; color: #eaf1ff; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700;">
               ${escapeHtml(input.eyebrow)}
