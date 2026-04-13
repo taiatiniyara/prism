@@ -2,12 +2,174 @@
 
 import { db } from "@/db/connection";
 import { roles } from "@/db/schema/auth-schema";
-import { dataEntries, DataEntryStatusId } from "@/db/schema/dataEntry";
+import {
+  dataEntries,
+  DataEntryStatusId,
+  inputDefinitions,
+} from "@/db/schema/dataEntry";
 import { managedListItems } from "@/db/schema/managedLists";
 import { reportPeriods } from "@/db/schema/reportPeriods";
-import { organisations } from "@/db/schema/utility";
+import {
+  energyResources,
+  organisations,
+  serviceAreas,
+} from "@/db/schema/utility";
 import { CurrentUser } from "@/lib/user.service";
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray, sql } from "drizzle-orm";
+
+const isGlobalRole = (role: string) => role === "DEV" || role === "BMO";
+
+const isServiceAreaScopedByDefinition = (
+  categoryName: string | null,
+  subcategoryName: string | null,
+): boolean => {
+  const normalizedCategory = categoryName?.trim().toLowerCase() ?? "";
+  const normalizedSubcategory = subcategoryName?.trim().toLowerCase() ?? "";
+
+  return (
+    normalizedCategory === "operation" ||
+    normalizedCategory === "operational" ||
+    normalizedSubcategory === "tariff structure"
+  );
+};
+
+const getRequestedCountForPeriod = async (
+  user: CurrentUser,
+  reportPeriodId: number,
+): Promise<number> => {
+  const definitionRows = await db
+    .select({
+      inputDefId: inputDefinitions.id,
+      categoryName: sql<string | null>`(
+        select mli.name
+        from managed_list_items mli
+        where mli.id = ${inputDefinitions.category_id}
+        limit 1
+      )`,
+      subcategoryName: managedListItems.name,
+    })
+    .from(inputDefinitions)
+    .leftJoin(
+      managedListItems,
+      eq(inputDefinitions.subcategory_id, managedListItems.id),
+    )
+    .where(
+      and(
+        eq(inputDefinitions.is_active, true),
+        eq(inputDefinitions.is_aggregated, false),
+        eq(inputDefinitions.is_system_generated, false),
+        sql`lower(${managedListItems.name}) <> 'country context'`,
+      ),
+    );
+
+  if (definitionRows.length === 0) {
+    return 0;
+  }
+
+  const generationInputDefIds = definitionRows
+    .filter((row) => row.subcategoryName?.trim().toLowerCase() === "generation")
+    .map((row) => row.inputDefId);
+  const nonGenerationInputDefIds = definitionRows
+    .filter((row) => row.subcategoryName?.trim().toLowerCase() !== "generation")
+    .map((row) => row.inputDefId);
+
+  const serviceAreaScopedInputDefinitionIds = new Set(
+    definitionRows
+      .filter((row) =>
+        isServiceAreaScopedByDefinition(row.categoryName, row.subcategoryName),
+      )
+      .map((row) => row.inputDefId),
+  );
+
+  const serviceAreaConditions = [eq(serviceAreas.is_active, true)];
+  if (!isGlobalRole(user.role) && user.org_id != null) {
+    serviceAreaConditions.push(eq(serviceAreas.utility_id, user.org_id));
+  }
+
+  const serviceAreaRows = await db
+    .select({ id: serviceAreas.id })
+    .from(serviceAreas)
+    .where(and(...serviceAreaConditions));
+  const serviceAreaIds = serviceAreaRows.map((row) => row.id);
+
+  const irrelevantRows = await db
+    .select({
+      inputDefId: dataEntries.input_def_id,
+      serviceAreaId: dataEntries.service_area_id,
+    })
+    .from(dataEntries)
+    .where(
+      and(
+        eq(dataEntries.report_period_id, reportPeriodId),
+        eq(dataEntries.is_deleted, false),
+        eq(dataEntries.is_relevant, false),
+        inArray(
+          dataEntries.input_def_id,
+          definitionRows.map((row) => row.inputDefId),
+        ),
+      ),
+    );
+
+  const irrelevantByServiceArea = new Map<number | null, Set<number>>();
+  irrelevantRows.forEach((row) => {
+    const existing =
+      irrelevantByServiceArea.get(row.serviceAreaId) ?? new Set<number>();
+    existing.add(row.inputDefId);
+    irrelevantByServiceArea.set(row.serviceAreaId, existing);
+  });
+
+  const generatorConditions = [
+    eq(energyResources.is_active, true),
+    eq(energyResources.is_virtual, false),
+    eq(energyResources.report_period_id, reportPeriodId),
+  ];
+  if (!isGlobalRole(user.role) && user.org_id != null) {
+    generatorConditions.push(eq(energyResources.utility_id, user.org_id));
+  }
+
+  const generators = await db
+    .select({
+      id: energyResources.id,
+      serviceAreaId: energyResources.service_area_id,
+    })
+    .from(energyResources)
+    .where(and(...generatorConditions));
+
+  const expectedKeys = new Set<string>();
+
+  nonGenerationInputDefIds.forEach((inputDefId) => {
+    const isScoped = serviceAreaScopedInputDefinitionIds.has(inputDefId);
+    const scopedServiceAreaIds = isScoped ? serviceAreaIds : [null];
+
+    scopedServiceAreaIds.forEach((serviceAreaId) => {
+      const irrelevantForScope =
+        irrelevantByServiceArea.get(serviceAreaId) ?? new Set<number>();
+
+      if (irrelevantForScope.has(inputDefId)) {
+        return;
+      }
+
+      expectedKeys.add(`${inputDefId}:${serviceAreaId}:null`);
+    });
+  });
+
+  generators.forEach((generator) => {
+    const irrelevantForServiceArea =
+      irrelevantByServiceArea.get(generator.serviceAreaId) ?? new Set<number>();
+
+    generationInputDefIds.forEach((inputDefId) => {
+      if (irrelevantForServiceArea.has(inputDefId)) {
+        return;
+      }
+
+      expectedKeys.add(
+        `${inputDefId}:${generator.serviceAreaId}:${generator.id}`,
+      );
+    });
+  });
+
+  return expectedKeys.size;
+};
 
 export interface ReportPeriodDTO {
   Id: number;
@@ -20,6 +182,7 @@ export interface ReportPeriodDTO {
   Reviewed: number;
   Approved: number;
   Endorsed: number;
+  DataNotAvailable: number;
   Pending_With: string;
   Updated: string;
 }
@@ -38,12 +201,41 @@ export async function GetReportPeriods(
   if (user.role !== "DEV" && user.role !== "BMO") {
     rp.where(eq(reportPeriods.utility_id, user.org_id!));
   }
-  let deList = await de;
+  const deList = await de;
   const list = await rp;
+  const requestedCountByPeriod = new Map<number, number>();
+  await Promise.all(
+    list.map(async (item) => {
+      requestedCountByPeriod.set(
+        item.report_periods.id,
+        await getRequestedCountForPeriod(user, item.report_periods.id),
+      );
+    }),
+  );
+
   return list.map((item) => {
-    deList = deList.filter(
+    const entriesForPeriod = deList.filter(
       (x) => x.report_period_id === item.report_periods.id,
     );
+    const requested = requestedCountByPeriod.get(item.report_periods.id) ?? 0;
+    const enteredOnly = entriesForPeriod.filter(
+      (x) => x.status_id === DataEntryStatusId.Entered,
+    ).length;
+    const reviewed = entriesForPeriod.filter(
+      (x) => x.status_id === DataEntryStatusId.Reviewed,
+    ).length;
+    const approved = entriesForPeriod.filter(
+      (x) => x.status_id === DataEntryStatusId.Approved,
+    ).length;
+    const endorsed = entriesForPeriod.filter(
+      (x) => x.status_id === DataEntryStatusId.Endorsed,
+    ).length;
+    const dataNotAvailable = entriesForPeriod.filter(
+      (x) => x.status_id === DataEntryStatusId.DataNotAvailable,
+    ).length;
+    const entered = enteredOnly + reviewed + approved + endorsed;
+    const pending = Math.max(requested - (entered + dataNotAvailable), 0);
+
     return {
       Id: item.report_periods.id,
       Period: item.report_periods.report_date.toISOString().split("T")[0],
@@ -53,19 +245,13 @@ export async function GetReportPeriods(
       Pending_With:
         rolesList.find((x) => x.id === item.report_periods.who_id)?.name || "",
       Updated: item.report_periods.updated_at.toISOString().split("T")[0],
-      Requested: deList.filter(
-        (x) => x.status_id === DataEntryStatusId.Requested,
-      ).length,
-      Pending: deList.filter((x) => x.status_id === DataEntryStatusId.Pending)
-        .length,
-      Entered: deList.filter((x) => x.status_id === DataEntryStatusId.Entered)
-        .length,
-      Reviewed: deList.filter((x) => x.status_id === DataEntryStatusId.Reviewed)
-        .length,
-      Approved: deList.filter((x) => x.status_id === DataEntryStatusId.Approved)
-        .length,
-      Endorsed: deList.filter((x) => x.status_id === DataEntryStatusId.Endorsed)
-        .length,
+      Requested: requested,
+      Pending: pending,
+      Entered: entered,
+      Reviewed: reviewed,
+      Approved: approved,
+      Endorsed: endorsed,
+      DataNotAvailable: dataNotAvailable,
     };
   });
 }
