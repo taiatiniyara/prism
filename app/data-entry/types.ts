@@ -26,6 +26,10 @@ export interface DataEntryInputRowView {
   dataEntryId?: string;
   inputDefId: number;
   energyResourceId?: number | null;
+  paymentModeId?: number | null;
+  paymentModeName?: string | null;
+  customerTypeId?: number | null;
+  customerTypeName?: string | null;
   inputName: string;
   unitName: string | null;
   dataTypeId: number;
@@ -45,7 +49,27 @@ export interface DataEntryGeneratorGroupView {
   rows: DataEntryInputRowView[];
 }
 
+export interface DataEntryTariffCustomerTypeGroupView {
+  customerTypeId: number;
+  customerTypeName: string;
+  rows: DataEntryInputRowView[];
+}
+
+export interface DataEntryTariffPaymentModeGroupView {
+  paymentModeId: number;
+  paymentModeName: string;
+  customerTypeGroups: DataEntryTariffCustomerTypeGroupView[];
+}
+
 export interface DataEntryProgressSummary {
+  completedInputs: number;
+  totalInputs: number;
+  breakdown: DataEntryProgressBreakdownItem[];
+}
+
+export interface DataEntryProgressBreakdownItem {
+  categoryName: string;
+  subcategoryName: string;
   completedInputs: number;
   totalInputs: number;
 }
@@ -72,6 +96,10 @@ export interface DataEntryPageViewModel {
     | {
         mode: "grouped-by-generator";
         groups: DataEntryGeneratorGroupView[];
+      }
+    | {
+        mode: "grouped-by-payment-mode";
+        groups: DataEntryTariffPaymentModeGroupView[];
       };
 }
 

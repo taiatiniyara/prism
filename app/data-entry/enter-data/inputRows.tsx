@@ -31,7 +31,10 @@ export default function InputRows({ rows }: InputRowsProps) {
               <span className="text-xs text-slate-500">{row.unitName}</span>
             ) : null}
           </div>
-          <InputCell row={row} />
+          <InputCell
+            key={`${row.inputDefId}-${row.dataEntryId ?? "new"}-${row.updatedAt ?? "na"}-${row.isDataNotAvailable ? 1 : 0}`}
+            row={row}
+          />
         </div>
       ))}
     </div>

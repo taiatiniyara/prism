@@ -2,7 +2,12 @@
 
 import { DataTableFormResponse } from "@/components/tables/data-table-create-form";
 import { db } from "@/db/connection";
-import { NewServiceArea, ServiceArea, serviceAreas } from "@/db/schema/utility";
+import {
+  NewServiceArea,
+  organisations,
+  ServiceArea,
+  serviceAreas,
+} from "@/db/schema/utility";
 import { generateRandomNumber } from "@/lib/utils";
 import { getCurrentUser } from "@/lib/user.service";
 import { eq } from "drizzle-orm";
@@ -18,7 +23,8 @@ export async function AllServiceAreas(filters?: {
     .leftJoin(
       managedListItems,
       eq(serviceAreas.services_provided_id, managedListItems.id),
-    );
+    )
+    .leftJoin(organisations, eq(serviceAreas.utility_id, organisations.id));
 
   if (!filters?.all) {
     const user = await getCurrentUser();
@@ -33,6 +39,7 @@ export async function AllServiceAreas(filters?: {
   return res.map((item) => ({
     ...item.service_areas,
     services_provided: item.managed_list_items?.name,
+    utility: item.organisations?.name,
   }));
 }
 

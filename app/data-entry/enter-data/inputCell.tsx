@@ -1,12 +1,6 @@
 "use client";
 
-import {
-  KeyboardEvent,
-  useEffect,
-  useMemo,
-  useState,
-  useTransition,
-} from "react";
+import { KeyboardEvent, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CheckedState } from "@radix-ui/react-checkbox";
 
@@ -34,10 +28,6 @@ export default function InputCell({ row }: InputCellProps) {
     row.isDataNotAvailable ?? false,
   );
   const displayValue = row.value ?? "";
-
-  useEffect(() => {
-    setIsDataNotAvailable(row.isDataNotAvailable ?? false);
-  }, [row.isDataNotAvailable]);
 
   const existingComments = useMemo(() => {
     if (!row.comments) {
@@ -81,6 +71,8 @@ export default function InputCell({ row }: InputCellProps) {
         await updateDataEntryValueAction({
           inputDefId: row.inputDefId,
           energyResourceId: row.energyResourceId ?? null,
+          customerTypeId: row.customerTypeId ?? null,
+          paymentModeId: row.paymentModeId ?? null,
           value: nextValue,
         });
 
@@ -112,6 +104,8 @@ export default function InputCell({ row }: InputCellProps) {
         await updateDataEntryAvailabilityAction({
           inputDefId: row.inputDefId,
           energyResourceId: row.energyResourceId ?? null,
+          customerTypeId: row.customerTypeId ?? null,
+          paymentModeId: row.paymentModeId ?? null,
           isDataNotAvailable: checked,
         });
 
@@ -153,6 +147,8 @@ export default function InputCell({ row }: InputCellProps) {
         await updateDataEntryCommentAction({
           inputDefId: row.inputDefId,
           energyResourceId: row.energyResourceId ?? null,
+          customerTypeId: row.customerTypeId ?? null,
+          paymentModeId: row.paymentModeId ?? null,
           comment: normalized,
         });
 
@@ -201,8 +197,10 @@ export default function InputCell({ row }: InputCellProps) {
       case "boolean":
         return (
           <select
-            className={`border shadow w-full rounded-lg ${
-              row.value ? "bg-lime-100 border-lime-500" : "bg-slate-100"
+            className={`h-9 w-full rounded-md border px-3 text-sm shadow-sm ${
+              row.value
+                ? "bg-lime-100 border-lime-500"
+                : "bg-slate-100 border-input"
             }`}
             defaultValue={displayValue}
             disabled={inputDisabled}

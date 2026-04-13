@@ -463,3 +463,13 @@ export async function SaveInputFormula(payload: SaveInputFormulaPayload) {
   revalidatePath("/settings/inputs");
   return { success: true, message: "Input formula saved successfully." };
 }
+
+export async function getInputsBySubcategory(
+  subcategoryId: number,
+): Promise<InputDefinition[]> {
+  const inputs = await db
+    .select()
+    .from(inputDefinitions)
+    .where(eq(inputDefinitions.subcategory_id, subcategoryId));
+  return inputs;
+}

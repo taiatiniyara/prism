@@ -111,6 +111,7 @@ export const buildInputRowsFromDefinitions = (
   definitions: InputDefinitionCandidate[],
   entries: DataEntryValueCandidate[],
   context: DataEntryFilterContext,
+  serviceAreaScopedInputDefIds: Set<number> = new Set<number>(),
 ): DataEntryInputRowView[] => {
   const validDefinitions = filterInputDefinitionsByContext(
     definitions,
@@ -123,8 +124,16 @@ export const buildInputRowsFromDefinitions = (
         return false;
       }
 
+      const isServiceAreaScoped = serviceAreaScopedInputDefIds.has(
+        definition.id,
+      );
+
+      if (!isServiceAreaScoped) {
+        return candidate.serviceAreaId == null;
+      }
+
       if (context.serviceAreaId == null) {
-        return true;
+        return candidate.serviceAreaId == null;
       }
 
       return candidate.serviceAreaId === context.serviceAreaId;

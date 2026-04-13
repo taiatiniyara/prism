@@ -28,6 +28,18 @@ export const isGenerationContext = (
   return generation != null && context.inputSubcategoryId === generation.id;
 };
 
+export const isTariffContext = (
+  context: DataEntryFilterContext,
+  subcategories: DataEntryFilterOption[],
+): boolean => {
+  const tariff = subcategories.find(
+    (subcategory) =>
+      subcategory.name.trim().toLowerCase() === "tariff structure",
+  );
+
+  return tariff != null && context.inputSubcategoryId === tariff.id;
+};
+
 export interface GeneratorCandidate {
   id: number;
   name: string;

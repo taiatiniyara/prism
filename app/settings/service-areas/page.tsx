@@ -3,9 +3,7 @@ import { AddServiceArea, AllServiceAreas, UpdateServiceArea } from "./service";
 import { ServiceArea } from "@/db/schema/utility";
 
 export default async function ServiceAreasSettingsPage() {
-  const serviceAreas = await AllServiceAreas({
-    all: false,
-  });
+  const serviceAreas = await AllServiceAreas();
   return (
     <DataTable<ServiceArea>
       data={serviceAreas}

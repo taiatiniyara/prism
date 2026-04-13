@@ -1134,11 +1134,98 @@ export const applyCustomKpiReviewDecision = async (
 
   let approvedKpiDefinitionId: number | null = null;
   if (input.decisionType === "APPROVE") {
+    const selectedInputDefinitions =
+      request.selectedInputDefinitionIds.length > 0
+        ? await db
+            .select({
+              id: inputDefinitions.id,
+              variableName: inputDefinitions.variable_name,
+            })
+            .from(inputDefinitions)
+            .where(
+              inArray(inputDefinitions.id, request.selectedInputDefinitionIds),
+            )
+        : [];
+
+    const formulaInputs = selectedInputDefinitions
+      .filter(
+        (item) =>
+          typeof item.variableName === "string" &&
+          item.variableName.trim().length > 0,
+      )
+      .map((item) => ({
+        input_def_id: item.id,
+        variable_name: item.variableName as string,
+      }));
+
+    const [categoryItem] =
+      input.categoryId != null
+        ? await db
+            .select({ id: managedListItems.id })
+            .from(managedListItems)
+            .innerJoin(
+              managedLists,
+              eq(managedListItems.list_id, managedLists.id),
+            )
+            .where(
+              and(
+                eq(managedListItems.id, input.categoryId),
+                eq(managedListItems.is_active, true),
+                eq(managedLists.name, "KPI Category"),
+              ),
+            )
+            .limit(1)
+        : [];
+
+    const [subcategoryItem] =
+      input.subcategoryId != null
+        ? await db
+            .select({
+              id: managedListItems.id,
+              categoryId: managedListItems.parent_id,
+            })
+            .from(managedListItems)
+            .innerJoin(
+              managedLists,
+              eq(managedListItems.list_id, managedLists.id),
+            )
+            .where(
+              and(
+                eq(managedListItems.id, input.subcategoryId),
+                eq(managedListItems.is_active, true),
+                eq(managedLists.name, "KPI Sub-Category"),
+              ),
+            )
+            .limit(1)
+        : [];
+
+    if (!categoryItem || !subcategoryItem) {
+      throw new Error(
+        "VALIDATION:Selected KPI category or subcategory is invalid.",
+      );
+    }
+
+    if (subcategoryItem.categoryId !== categoryItem.id) {
+      throw new Error(
+        "VALIDATION:Selected KPI subcategory does not match the selected category.",
+      );
+    }
+
     if (
       request.status === "APPROVED" &&
       request.existingKpiDefinitionId != null &&
       lineage.requiresOverride
     ) {
+      await db
+        .update(kpiDefinitions)
+        .set({
+          formula: request.formulaExpression,
+          formula_inputs: formulaInputs.length > 0 ? formulaInputs : null,
+          category_id: categoryItem.id,
+          subcategory_id: subcategoryItem.id,
+        })
+        .where(eq(kpiDefinitions.id, request.existingKpiDefinitionId));
+
       approvedKpiDefinitionId = request.existingKpiDefinitionId;
     } else {
       const [submitter] = await db
@@ -1150,86 +1237,6 @@ export const applyCustomKpiReviewDecision = async (
       if (!submitter || submitter.organisationId == null) {
         throw new Error(
           "VALIDATION:Submitter must belong to an organisation before approval.",
-        );
-      }
-
-      const selectedInputDefinitions =
-        request.selectedInputDefinitionIds.length > 0
-          ? await db
-              .select({
-                id: inputDefinitions.id,
-                variableName: inputDefinitions.variable_name,
-              })
-              .from(inputDefinitions)
-              .where(
-                inArray(
-                  inputDefinitions.id,
-                  request.selectedInputDefinitionIds,
-                ),
-              )
-          : [];
-
-      const formulaInputs = selectedInputDefinitions
-        .filter(
-          (item) =>
-            typeof item.variableName === "string" &&
-            item.variableName.trim().length > 0,
-        )
-        .map((item) => ({
-          input_def_id: item.id,
-          variable_name: item.variableName as string,
-        }));
-
-      const [categoryItem] =
-        input.categoryId != null
-          ? await db
-              .select({ id: managedListItems.id })
-              .from(managedListItems)
-              .innerJoin(
-                managedLists,
-                eq(managedListItems.list_id, managedLists.id),
-              )
-              .where(
-                and(
-                  eq(managedListItems.id, input.categoryId),
-                  eq(managedListItems.is_active, true),
-                  eq(managedLists.name, "KPI Category"),
-                ),
-              )
-              .limit(1)
-          : [];
-
-      const [subcategoryItem] =
-        input.subcategoryId != null
-          ? await db
-              .select({
-                id: managedListItems.id,
-                categoryId: managedListItems.parent_id,
-              })
-              .from(managedListItems)
-              .innerJoin(
-                managedLists,
-                eq(managedListItems.list_id, managedLists.id),
-              )
-              .where(
-                and(
-                  eq(managedListItems.id, input.subcategoryId),
-                  eq(managedListItems.is_active, true),
-                  eq(managedLists.name, "KPI Sub-Category"),
-                ),
-              )
-              .limit(1)
-          : [];
-
-      if (!categoryItem || !subcategoryItem) {
-        throw new Error(
-          "VALIDATION:Selected KPI category or subcategory is invalid.",
-        );
-      }
-
-      if (subcategoryItem.categoryId !== categoryItem.id) {
-        throw new Error(
-          "VALIDATION:Selected KPI subcategory does not match the selected category.",
         );
       }
 

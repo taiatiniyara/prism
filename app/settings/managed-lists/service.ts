@@ -12,7 +12,10 @@ import { generateRandomNumber } from "@/lib/utils";
 import { eq, like } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
-export async function GetAllManagedLists(filter?: { name?: string }) {
+export async function GetAllManagedLists(filter?: {
+  name?: string;
+  excludeAll?: boolean;
+}): Promise<ManagedList[]> {
   const items = await db.select().from(managedListItems);
   const query = db.select().from(managedLists).orderBy(managedLists.name);
 
@@ -21,6 +24,14 @@ export async function GetAllManagedLists(filter?: { name?: string }) {
   }
 
   const list = await query;
+  if (filter?.excludeAll) {
+    return list
+      .filter((l) => l.name.toLowerCase().includes("all") === false)
+      .map((m) => ({
+        ...m,
+        items: items.filter((i) => i.list_id === m.id),
+      }));
+  }
   return list.map((m) => ({
     ...m,
     items: items.filter((i) => i.list_id === m.id),
@@ -46,22 +57,44 @@ export async function CreateManagedListItem(
   };
 }
 
-export async function GetAllManagedListItems(): Promise<ManagedListItem[]> {
-  const list = await db
+export async function GetAllManagedListItems(options?: {
+  listName: string;
+  excludeAll?: boolean;
+}): Promise<ManagedListItem[]> {
+  const query = db
     .select()
     .from(managedListItems)
-    .orderBy(managedListItems.list_id, managedListItems.name)
+    .orderBy(managedListItems.name)
     .leftJoin(managedLists, eq(managedListItems.list_id, managedLists.id));
-  return list.map((item) => {
-    const parent = list.find(
-      (l) => l.managed_list_items.id === item.managed_list_items.parent_id,
-    )?.managed_list_items;
-    return {
-      ...item.managed_list_items,
-      list: item.managed_lists?.name!,
-      parent: parent?.name!,
-    };
-  });
+
+  if (options?.listName) {
+    const ml = await db
+      .select()
+      .from(managedLists)
+      .where(eq(managedLists.name, options.listName))
+      .limit(1);
+    if (ml.length === 0) {
+      return [];
+    }
+    query.where(eq(managedListItems.list_id, ml[0].id));
+  }
+  const list = await query;
+  return list
+    .filter((item) =>
+      options?.excludeAll
+        ? item.managed_list_items.name.toLowerCase().includes("all") === false
+        : true,
+    )
+    .map((item) => {
+      const parent = list.find(
+        (l) => l.managed_list_items.id === item.managed_list_items.parent_id,
+      )?.managed_list_items;
+      return {
+        ...item.managed_list_items,
+        list: item.managed_lists?.name!,
+        parent: parent?.name!,
+      };
+    });
 }
 
 export async function CreateManagedList(
@@ -114,4 +147,14 @@ export async function UpdateManagedListItem(
     data: result,
     success: true,
   };
+}
+
+export async function GetManagedListItemByName(
+  name: string,
+): Promise<ManagedListItem | null> {
+  const [result] = await db
+    .select()
+    .from(managedListItems)
+    .where(eq(managedListItems.name, name));
+  return result || null;
 }

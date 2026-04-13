@@ -1,26 +1,20 @@
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getCurrentUser } from "@/lib/user.service";
+import UtilityRelevanceSection from "./utilityRelevance";
+import DevRelevanceSection from "./devRelevance";
 
-export default function RelevanceSettingsPage() {
-  return (
-    <div>
-      <Tabs defaultValue="tariff">
-        <TabsList>
-          <TabsTrigger value="tariff">Tariff</TabsTrigger>
-          <TabsTrigger value="transmission">Transmission</TabsTrigger>
-          <TabsTrigger value="custom-kpi-relevance">
-            Custom KPI Relevance
-          </TabsTrigger>
-        </TabsList>
-        <TabsContent value="tariff">
-          Make changes to your tariff here.
-        </TabsContent>
-        <TabsContent value="transmission">
-          Change your transmission settings here.
-        </TabsContent>
-        <TabsContent value="custom-kpi-relevance">
-          Adjust your custom KPI relevance settings here.
-        </TabsContent>
-      </Tabs>
-    </div>
-  );
+type RelevanceSearchParams = {
+  report_period_id?: string;
+  service_area_id?: string;
+};
+
+export default async function RelevanceSettingsPage(props: {
+  searchParams?: Promise<RelevanceSearchParams> | RelevanceSearchParams;
+}) {
+  const searchParams = await Promise.resolve(props.searchParams);
+  const user = await getCurrentUser();
+
+  if (user && user.role !== "DEV") {
+    return <UtilityRelevanceSection searchParams={searchParams} />;
+  }
+  return <DevRelevanceSection />;
 }
