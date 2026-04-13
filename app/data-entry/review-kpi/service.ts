@@ -195,7 +195,7 @@ export const getReviewKpiFilterOptions = async (
       db
         .select({
           id: reportPeriods.id,
-          name: sql<string>`to_char(${reportPeriods.report_date}, 'YYYY-MM-DD')`,
+          name: sql<string>`to_char(${reportPeriods.report_date}, 'YYYY-MM')`,
         })
         .from(reportPeriods)
         .where(and(...reportPeriodWhere))

@@ -238,7 +238,7 @@ export async function GetUtilityTariffRelevance(
   const reportPeriodOptions: RelevanceFilterOption[] = reportPeriodList.map(
     (item) => ({
       id: item.id,
-      name: item.reportDate.toISOString().split("T")[0],
+      name: item.reportDate.toISOString().slice(0, 7),
     }),
   );
 
@@ -536,7 +536,7 @@ export async function GetTransmissionRelevance(
   const reportPeriodOptions: RelevanceFilterOption[] = reportPeriodList.map(
     (item) => ({
       id: item.id,
-      name: item.reportDate.toISOString().split("T")[0],
+      name: item.reportDate.toISOString().slice(0, 7),
     }),
   );
 

@@ -238,7 +238,7 @@ export async function GetReportPeriods(
 
     return {
       Id: item.report_periods.id,
-      Period: item.report_periods.report_date.toISOString().split("T")[0],
+      Period: item.report_periods.report_date.toISOString().slice(0, 7),
       Utility: item.organisations?.acronym || "",
       Report_Type:
         ml.find((x) => x.id === item.report_periods.report_type_id)?.name || "",

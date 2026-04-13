@@ -51,7 +51,7 @@ export async function GetAllEnergyResources(): Promise<EnergyResource[]> {
       utility: item.organisations?.name,
       service_area: item.service_areas?.name,
       report_period: item.report_periods?.report_date
-        ? item.report_periods?.report_date.toISOString().split("T")[0]
+        ? item.report_periods?.report_date.toISOString().slice(0, 7)
         : "",
       energy_provider: energy_provider?.name,
       energy_type: energy_type?.name,

@@ -935,7 +935,7 @@ export const getReportPeriodOptions = async (
     .orderBy(asc(reportPeriods.report_date));
 
   return rows.map((row) =>
-    mapOption(row.id, row.reportDate.toISOString().split("T")[0]),
+    mapOption(row.id, row.reportDate.toISOString().slice(0, 7)),
   );
 };
 
