@@ -23,7 +23,9 @@ import {
   dataEntries,
   DataEntryComment,
   DataEntryStatusId,
+  generationRelevance,
   inputDefinitions,
+  inputRelevance,
 } from "@/db/schema/dataEntry";
 import { managedListItems, managedLists } from "@/db/schema/managedLists";
 import { reportPeriods } from "@/db/schema/reportPeriods";
@@ -449,6 +451,8 @@ const getGenerationGroupsForContext = async (
       id: energyResources.id,
       name: energyResources.name,
       serviceAreaId: energyResources.service_area_id,
+      energyProviderId: energyResources.energy_provider_id,
+      energySourceId: energyResources.energy_source_id,
     })
     .from(energyResources)
     .where(and(...generatorConditions))
@@ -461,6 +465,81 @@ const getGenerationGroupsForContext = async (
   const definitionRows = await getInputDefinitionRowsForContext(context);
   if (definitionRows.length === 0) {
     return [];
+  }
+
+  const generationRelevanceRows = await db
+    .select({
+      inputDefId: generationRelevance.input_def_id,
+      energyProviderId: generationRelevance.energy_provider_id,
+      energySourceId: generationRelevance.energy_source_id,
+      isRelevant: generationRelevance.is_relevant,
+    })
+    .from(generationRelevance)
+    .where(
+      and(
+        eq(generationRelevance.report_period_id, context.reportPeriodId),
+        eq(generationRelevance.service_area_id, context.serviceAreaId),
+        eq(generationRelevance.is_deleted, false),
+        inArray(
+          generationRelevance.input_def_id,
+          definitionRows.map((row) => row.inputDefId),
+        ),
+        inArray(
+          generationRelevance.energy_provider_id,
+          generators.map((generator) => generator.energyProviderId),
+        ),
+        inArray(
+          generationRelevance.energy_source_id,
+          generators.map((generator) => generator.energySourceId),
+        ),
+      ),
+    )
+    .orderBy(desc(generationRelevance.updatedAt));
+
+  const relevanceByDimension = new Map<string, boolean>();
+
+  for (const row of generationRelevanceRows) {
+    const key = `${row.inputDefId}:${row.energyProviderId}:${row.energySourceId}`;
+
+    if (relevanceByDimension.has(key)) {
+      continue;
+    }
+
+    relevanceByDimension.set(key, row.isRelevant);
+  }
+
+  const inputRelevanceRows = await db
+    .select({
+      id: inputRelevance.id,
+      inputDefId: inputRelevance.input_def_id,
+      dimensionId: inputRelevance.dimension_id,
+      isRelevant: inputRelevance.is_relevant,
+    })
+    .from(inputRelevance)
+    .where(
+      and(
+        inArray(
+          inputRelevance.input_def_id,
+          definitionRows.map((row) => row.inputDefId),
+        ),
+        inArray(
+          inputRelevance.dimension_id,
+          generators.map((generator) => generator.energySourceId),
+        ),
+      ),
+    )
+    .orderBy(desc(inputRelevance.id));
+
+  const sourceRelevanceByDimension = new Map<string, boolean>();
+
+  for (const row of inputRelevanceRows) {
+    const key = `${row.inputDefId}:${row.dimensionId}`;
+
+    if (sourceRelevanceByDimension.has(key)) {
+      continue;
+    }
+
+    sourceRelevanceByDimension.set(key, row.isRelevant);
   }
 
   const entries = await db
@@ -494,7 +573,23 @@ const getGenerationGroupsForContext = async (
       ),
     );
 
-  return buildGenerationGroups(generators, definitionRows, entries);
+  return buildGenerationGroups(
+    generators,
+    definitionRows,
+    entries,
+    (generator, definition) => {
+      const generationKey = `${definition.inputDefId}:${generator.energyProviderId}:${generator.energySourceId}`;
+      const sourceKey = `${definition.inputDefId}:${generator.energySourceId}`;
+
+      const isGenerationRelevant =
+        relevanceByDimension.get(generationKey) ?? true;
+      const isSourceRelevant =
+        sourceRelevanceByDimension.get(sourceKey) ?? true;
+
+      return isGenerationRelevant && isSourceRelevant;
+    },
+    true,
+  );
 };
 
 const isTariffSubcategorySelected = async (

@@ -44,6 +44,8 @@ export interface GeneratorCandidate {
   id: number;
   name: string;
   serviceAreaId: number;
+  energyProviderId?: number;
+  energySourceId?: number;
 }
 
 export interface GeneratorEntryCandidate {
@@ -72,28 +74,39 @@ export const buildGenerationGroups = (
   generators: GeneratorCandidate[],
   definitionRows: DataEntryInputRowView[],
   entries: GeneratorEntryCandidate[],
+  isDefinitionRelevant?: (
+    generator: GeneratorCandidate,
+    definition: DataEntryInputRowView,
+  ) => boolean,
+  excludeEmptyGroups = false,
 ): DataEntryGeneratorGroupView[] => {
-  return generators.map((generator) => {
-    const rows = definitionRows.map((definition) => {
-      const entry = entries.find(
-        (candidate) =>
-          candidate.energyResourceId === generator.id &&
-          candidate.inputDefId === definition.inputDefId,
-      );
+  const groups = generators.map((generator) => {
+    const rows = definitionRows
+      .filter(
+        (definition) =>
+          isDefinitionRelevant == null ||
+          isDefinitionRelevant(generator, definition),
+      )
+      .map((definition) => {
+        const entry = entries.find(
+          (candidate) =>
+            candidate.energyResourceId === generator.id &&
+            candidate.inputDefId === definition.inputDefId,
+        );
 
-      return {
-        ...definition,
-        dataEntryId: entry?.id,
-        energyResourceId: generator.id,
-        isDataNotAvailable:
-          entry?.statusId === DataEntryStatusId.DataNotAvailable,
-        updatedByName: entry?.updatedByName ?? null,
-        updatedByRole: entry?.updatedByRole ?? null,
-        updatedAt: entry?.updatedAt?.toISOString() ?? null,
-        value: entry?.value ?? null,
-        comments: serializeComments(entry?.comments ?? null),
-      };
-    });
+        return {
+          ...definition,
+          dataEntryId: entry?.id,
+          energyResourceId: generator.id,
+          isDataNotAvailable:
+            entry?.statusId === DataEntryStatusId.DataNotAvailable,
+          updatedByName: entry?.updatedByName ?? null,
+          updatedByRole: entry?.updatedByRole ?? null,
+          updatedAt: entry?.updatedAt?.toISOString() ?? null,
+          value: entry?.value ?? null,
+          comments: serializeComments(entry?.comments ?? null),
+        };
+      });
 
     return {
       generatorId: generator.id,
@@ -102,4 +115,8 @@ export const buildGenerationGroups = (
       rows,
     };
   });
+
+  return excludeEmptyGroups
+    ? groups.filter((group) => group.rows.length > 0)
+    : groups;
 };

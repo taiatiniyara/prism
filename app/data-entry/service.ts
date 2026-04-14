@@ -204,14 +204,12 @@ export async function GetReportPeriods(
   const deList = await de;
   const list = await rp;
   const requestedCountByPeriod = new Map<number, number>();
-  await Promise.all(
-    list.map(async (item) => {
-      requestedCountByPeriod.set(
-        item.report_periods.id,
-        await getRequestedCountForPeriod(user, item.report_periods.id),
-      );
-    }),
-  );
+  for (const item of list) {
+    requestedCountByPeriod.set(
+      item.report_periods.id,
+      await getRequestedCountForPeriod(user, item.report_periods.id),
+    );
+  }
 
   return list.map((item) => {
     const entriesForPeriod = deList.filter(

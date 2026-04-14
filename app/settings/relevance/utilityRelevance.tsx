@@ -2,15 +2,18 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   GetCustomKpiRelevance,
   GetTransmissionRelevance,
+  GetUtilityGenerationRelevance,
   GetUtilityTariffRelevance,
   SetCustomKpiRelevance,
   SetTransmissionDataLabelRelevance,
+  SetUtilityGenerationDataLabelRelevance,
   SetUtilityTariffDataLabelRelevance,
 } from "./service";
 import TariffRelevanceTable from "./tariffRelevanceTable";
 import RelevanceFilters from "./relevanceFilters";
 import TransmissionRelevanceTable from "./transmissionRelevanceTable";
 import CustomKpiRelevanceTable from "./customKpiRelevanceTable";
+import GenerationRelevanceTable from "./generationRelevanceTable";
 
 type UtilityRelevanceSearchParams = {
   report_period_id?: string;
@@ -32,18 +35,26 @@ export default async function UtilityRelevanceSection(props: {
   const reportPeriodId = parseId(props.searchParams?.report_period_id);
   const serviceAreaId = parseId(props.searchParams?.service_area_id);
 
-  const [tariffRelevance, transmissionRelevance, customKpiRelevance] =
-    await Promise.all([
-      GetUtilityTariffRelevance({
-        reportPeriodId,
-        serviceAreaId,
-      }),
-      GetTransmissionRelevance({
-        reportPeriodId,
-        serviceAreaId,
-      }),
-      GetCustomKpiRelevance(),
-    ]);
+  const [
+    tariffRelevance,
+    transmissionRelevance,
+    generationRelevance,
+    customKpiRelevance,
+  ] = await Promise.all([
+    GetUtilityTariffRelevance({
+      reportPeriodId,
+      serviceAreaId,
+    }),
+    GetTransmissionRelevance({
+      reportPeriodId,
+      serviceAreaId,
+    }),
+    GetUtilityGenerationRelevance({
+      reportPeriodId,
+      serviceAreaId,
+    }),
+    GetCustomKpiRelevance(),
+  ]);
 
   return (
     <div className="space-y-5">
@@ -51,6 +62,7 @@ export default async function UtilityRelevanceSection(props: {
         <TabsList>
           <TabsTrigger value="tariff">Tariff</TabsTrigger>
           <TabsTrigger value="transmission">Transmission</TabsTrigger>
+          <TabsTrigger value="generation">Generation</TabsTrigger>
           <TabsTrigger value="custom-kpi-relevance">
             Custom KPI Relevance
           </TabsTrigger>
@@ -109,6 +121,37 @@ export default async function UtilityRelevanceSection(props: {
             ) : (
               <p className="text-sm text-muted-foreground">
                 No transmission relevance data is available for the selected
+                filters.
+              </p>
+            )}
+          </div>
+        </TabsContent>
+        <TabsContent value="generation">
+          <div className="space-y-5 rounded-lg border p-5 sm:p-6">
+            <RelevanceFilters
+              reportPeriods={generationRelevance.options.reportPeriods}
+              serviceAreas={generationRelevance.options.serviceAreas}
+              selectedReportPeriodId={
+                generationRelevance.filters.reportPeriodId
+              }
+              selectedServiceAreaId={generationRelevance.filters.serviceAreaId}
+            />
+
+            {generationRelevance.rows.length > 0 &&
+            generationRelevance.energyProviders.length > 0 &&
+            generationRelevance.filters.reportPeriodId != null &&
+            generationRelevance.filters.serviceAreaId != null ? (
+              <GenerationRelevanceTable
+                key={`${generationRelevance.filters.reportPeriodId}-${generationRelevance.filters.serviceAreaId}`}
+                rows={generationRelevance.rows}
+                energyProviders={generationRelevance.energyProviders}
+                reportPeriodId={generationRelevance.filters.reportPeriodId}
+                serviceAreaId={generationRelevance.filters.serviceAreaId}
+                onToggleRelevance={SetUtilityGenerationDataLabelRelevance}
+              />
+            ) : (
+              <p className="text-sm text-muted-foreground">
+                No generation relevance data is available for the selected
                 filters.
               </p>
             )}

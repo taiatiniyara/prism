@@ -12,6 +12,7 @@
     "test:integration": "vitest run test/integration",
     "test:watch": "vitest",
     "db-fix-uuid-timestamps": "tsx ./db/scripts/fix-uuid-to-timestamp.ts",
+    "db-sync-relevance": "tsx ./db/scripts/sync-relevance-to-data-entries.ts",
     "db-push": "drizzle-kit push --config ./db/config.ts",
     "db-push-safe": "npm run db-fix-uuid-timestamps && npm run db-push",
     "deploy-dev": "bash ./scripts/deploy-dev.sh",
