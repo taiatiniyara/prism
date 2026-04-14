@@ -32,6 +32,7 @@ export default function ReportPeriodTable(props: {
                 {item}
               </th>
             ))}
+            <th className="text-left py-2 px-3">Progress</th>
             <th className="text-left py-2 px-3">Pending With</th>
             <th className="text-left py-2 px-3">Updated</th>
           </tr>
@@ -61,6 +62,29 @@ export default function ReportPeriodTable(props: {
                   </span>
                 </td>
               ))}
+              <td className="text-left py-2 px-3 min-w-40">
+                {(() => {
+                  const completed = item.Entered + item.Not_Available;
+                  const progressPct =
+                    item.Requested > 0
+                      ? Math.round((completed / item.Requested) * 100)
+                      : 0;
+
+                  return (
+                    <div className="space-y-1">
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
+                        <div
+                          className="h-full rounded-full bg-lime-500 transition-all"
+                          style={{ width: `${Math.min(progressPct, 100)}%` }}
+                        />
+                      </div>
+                      <div className="text-[11px] text-slate-600">
+                        {progressPct}% ({completed}/{item.Requested})
+                      </div>
+                    </div>
+                  );
+                })()}
+              </td>
               <td className="text-left py-2 px-3">{item.Pending_With}</td>
               <td className="text-left py-2 px-3">{item.Updated}</td>
             </tr>

@@ -182,7 +182,7 @@ export interface ReportPeriodDTO {
   Reviewed: number;
   Approved: number;
   Endorsed: number;
-  DataNotAvailable: number;
+  Not_Available: number;
   Pending_With: string;
   Updated: string;
 }
@@ -229,7 +229,7 @@ export async function GetReportPeriods(
       (x) => x.status_id === DataEntryStatusId.Endorsed,
     ).length;
     const dataNotAvailable = entriesForPeriod.filter(
-      (x) => x.status_id === DataEntryStatusId.DataNotAvailable,
+      (x) => x.status_id === DataEntryStatusId.Not_Available,
     ).length;
     const entered = enteredOnly + reviewed + approved + endorsed;
     const pending = Math.max(requested - (entered + dataNotAvailable), 0);
@@ -249,7 +249,7 @@ export async function GetReportPeriods(
       Reviewed: reviewed,
       Approved: approved,
       Endorsed: endorsed,
-      DataNotAvailable: dataNotAvailable,
+      Not_Available: dataNotAvailable,
     };
   });
 }

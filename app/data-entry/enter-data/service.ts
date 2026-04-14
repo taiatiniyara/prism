@@ -747,7 +747,7 @@ const getTariffGroupsForContext = async (
             dataTypeId: definition.dataTypeId,
             controlType: mapDataTypeToControlType(definition.dataTypeName),
             isDataNotAvailable:
-              entry?.statusId === DataEntryStatusId.DataNotAvailable,
+              entry?.statusId === DataEntryStatusId.Not_Available,
             updatedByName: entry?.updatedByName ?? null,
             updatedByRole: entry?.updatedByRole ?? null,
             updatedAt: entry?.updatedAt?.toISOString() ?? null,
@@ -925,7 +925,7 @@ const getOverallProgressForContext = async (
     eq(dataEntries.is_relevant, true),
     or(
       sql`length(trim(coalesce(${dataEntries.value}, ''))) > 0`,
-      eq(dataEntries.status_id, DataEntryStatusId.DataNotAvailable),
+      eq(dataEntries.status_id, DataEntryStatusId.Not_Available),
     ),
   ];
 
@@ -1783,7 +1783,7 @@ export const updateDataEntryAvailabilityAction = async (
   }
 
   const nextStatusId = payload.isDataNotAvailable
-    ? DataEntryStatusId.DataNotAvailable
+    ? DataEntryStatusId.Not_Available
     : DataEntryStatusId.Entered;
 
   let sourceDataEntryId = existing?.id ?? null;

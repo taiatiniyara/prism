@@ -136,27 +136,27 @@ export enum DataEntryStatusId {
   Reviewed = 4,
   Approved = 5,
   Endorsed = 6,
-  DataNotAvailable = 7,
+  Not_Available = 7,
 }
 
 export const DataEntryStatus = {
   Requested: DataEntryStatusId.Requested,
   Pending: DataEntryStatusId.Pending,
   Entered: DataEntryStatusId.Entered,
+  Not_Available: DataEntryStatusId.Not_Available,
   Reviewed: DataEntryStatusId.Reviewed,
   Approved: DataEntryStatusId.Approved,
   Endorsed: DataEntryStatusId.Endorsed,
-  DataNotAvailable: DataEntryStatusId.DataNotAvailable,
 };
 
 export const dataEntryStatusColors = {
   Requested: "#fb923c",
   Pending: "#facc15",
   Entered: "#a3e635",
+  Not_Available: "#94a3b8",
   Reviewed: "#34d399",
   Approved: "#38bdf8",
   Endorsed: "#a78bfa",
-  DataNotAvailable: "#94a3b8",
 };
 
 export const DataEntryStatusList = Object.keys(DataEntryStatus).map((key) => ({

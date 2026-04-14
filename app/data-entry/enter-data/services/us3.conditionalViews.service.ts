@@ -99,7 +99,7 @@ export const buildGenerationGroups = (
           dataEntryId: entry?.id,
           energyResourceId: generator.id,
           isDataNotAvailable:
-            entry?.statusId === DataEntryStatusId.DataNotAvailable,
+            entry?.statusId === DataEntryStatusId.Not_Available,
           updatedByName: entry?.updatedByName ?? null,
           updatedByRole: entry?.updatedByRole ?? null,
           updatedAt: entry?.updatedAt?.toISOString() ?? null,

@@ -147,8 +147,7 @@ export const buildInputRowsFromDefinitions = (
       unitName: definition.unitName,
       dataTypeId: 0,
       controlType: mapDataTypeToControlType(definition.dataTypeName),
-      isDataNotAvailable:
-        entry?.statusId === DataEntryStatusId.DataNotAvailable,
+      isDataNotAvailable: entry?.statusId === DataEntryStatusId.Not_Available,
       updatedByName: entry?.updatedByName ?? null,
       updatedByRole: entry?.updatedByRole ?? null,
       updatedAt: entry?.updatedAt?.toISOString() ?? null,

@@ -19,17 +19,14 @@ export default async function EnterDataPage() {
         isEmpty={noFilterOptions}
         emptyMessage="No data-entry filter options are available for your account."
       >
-        <DataEntryFiltersClient
-          context={model.context}
-          options={model.options}
-          showServiceAreaSelector={model.ui.showServiceAreaSelector}
-        />
-        <section
-          className="flex justify-end"
-          aria-label="Data entry progress"
-        >
+        <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
+          <DataEntryFiltersClient
+            context={model.context}
+            options={model.options}
+            showServiceAreaSelector={model.ui.showServiceAreaSelector}
+          />
           <ProgressBreakdown progress={model.progress} />
-        </section>
+        </div>
         {model.inputs.mode === "grouped-by-generator" ? (
           <GeneratorGroups groups={model.inputs.groups} />
         ) : model.inputs.mode === "grouped-by-payment-mode" ? (

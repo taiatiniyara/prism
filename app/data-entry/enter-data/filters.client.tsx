@@ -59,7 +59,7 @@ export default function DataEntryFiltersClient({
   };
 
   return (
-    <section className="flex gap-3">
+    <section className="flex flex-wrap gap-3">
       <ReportTypeSelect
         value={localContext.reportTypeId}
         options={options.reportTypes}
