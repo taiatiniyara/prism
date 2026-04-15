@@ -3,6 +3,13 @@
 import { FormEvent, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Button } from "../ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 
 type DecisionType = "APPROVE" | "REJECT" | "REPLACE";
 
@@ -179,19 +186,23 @@ export function CustomKpiReviewActions({
             >
               Decision:
             </label>
-            <select
-              id={`decision-${requestId}`}
-              className="rounded border bg-background px-2 py-1 text-xs sm:text-sm"
+            <Select
               value={decisionType}
-              onChange={(event) =>
-                setDecisionType(event.target.value as DecisionType)
-              }
+              onValueChange={(value) => setDecisionType(value as DecisionType)}
               aria-describedby={`decision-help-${requestId}`}
             >
-              <option value="APPROVE">Approve</option>
-              <option value="REJECT">Reject</option>
-              <option value="REPLACE">Replace</option>
-            </select>
+              <SelectTrigger
+                id={`decision-${requestId}`}
+                className="h-9 text-xs sm:text-sm"
+              >
+                <SelectValue placeholder="Select decision" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="APPROVE">Approve</SelectItem>
+                <SelectItem value="REJECT">Reject</SelectItem>
+                <SelectItem value="REPLACE">Replace</SelectItem>
+              </SelectContent>
+            </Select>
           </div>
           <p
             id={`decision-help-${requestId}`}
@@ -248,27 +259,32 @@ export function CustomKpiReviewActions({
                 >
                   KPI Category
                 </label>
-                <select
-                  id={`approval-category-${requestId}`}
-                  className="rounded border bg-background px-2 py-1 text-xs sm:text-sm"
+                <Select
                   value={categoryId}
-                  onChange={(event) => {
-                    setCategoryId(event.target.value);
+                  onValueChange={(value) => {
+                    setCategoryId(value);
                     setSubcategoryId("");
                   }}
                   required
                   aria-required="true"
                 >
-                  <option value="">Select category</option>
-                  {categoryOptions.map((option) => (
-                    <option
-                      key={option.id}
-                      value={option.id}
-                    >
-                      {option.name}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger
+                    id={`approval-category-${requestId}`}
+                    className="h-9 text-xs sm:text-sm"
+                  >
+                    <SelectValue placeholder="Select category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categoryOptions.map((option) => (
+                      <SelectItem
+                        key={option.id}
+                        value={String(option.id)}
+                      >
+                        {option.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               <div className="flex flex-col gap-1">
@@ -278,25 +294,30 @@ export function CustomKpiReviewActions({
                 >
                   KPI Subcategory
                 </label>
-                <select
-                  id={`approval-subcategory-${requestId}`}
-                  className="rounded border bg-background px-2 py-1 text-xs sm:text-sm"
+                <Select
                   value={subcategoryId}
-                  onChange={(event) => setSubcategoryId(event.target.value)}
+                  onValueChange={setSubcategoryId}
                   required
                   aria-required="true"
                   disabled={parsedCategoryId == null}
                 >
-                  <option value="">Select subcategory</option>
-                  {filteredSubcategoryOptions.map((option) => (
-                    <option
-                      key={option.id}
-                      value={option.id}
-                    >
-                      {option.name}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger
+                    id={`approval-subcategory-${requestId}`}
+                    className="h-9 text-xs sm:text-sm"
+                  >
+                    <SelectValue placeholder="Select subcategory" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {filteredSubcategoryOptions.map((option) => (
+                      <SelectItem
+                        key={option.id}
+                        value={String(option.id)}
+                      >
+                        {option.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           ) : null}

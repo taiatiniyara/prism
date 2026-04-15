@@ -17,7 +17,7 @@ import { managedListItems } from "@/db/schema/managedLists";
 export async function AllServiceAreas(filters?: {
   all: boolean;
 }): Promise<ServiceArea[]> {
-  let query = db
+  const query = db
     .select()
     .from(serviceAreas)
     .leftJoin(

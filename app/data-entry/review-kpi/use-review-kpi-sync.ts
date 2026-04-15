@@ -210,8 +210,6 @@ export const useReviewKpiSync = ({
 
   useEffect(() => {
     if (context.reportPeriodId == null) {
-      setIsConnected(false);
-      setError(null);
       return;
     }
 
@@ -237,7 +235,7 @@ export const useReviewKpiSync = ({
   }, [context]);
 
   return {
-    isConnected,
-    error,
+    isConnected: context.reportPeriodId == null ? false : isConnected,
+    error: context.reportPeriodId == null ? null : error,
   };
 };

@@ -39,3 +39,5 @@ export const Heading = forwardRef<HTMLHeadingElement, HeadingProps>(
     );
   },
 );
+
+Heading.displayName = "Heading";

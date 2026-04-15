@@ -7,6 +7,13 @@ import * as XLSX from "xlsx";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { KpiDefinition } from "@/db/schema/kpi";
 import { toast } from "sonner";
 
@@ -360,22 +367,27 @@ export default function KpiTargetsEditor(props: {
           >
             KPI
           </label>
-          <select
-            id="kpi-target-kpi-select"
+          <Select
             value={selectedKpiId}
-            onChange={(event) => onKpiChange(event.target.value)}
-            className="h-9 w-full rounded-md border bg-background px-3 text-sm"
+            onValueChange={onKpiChange}
           >
-            <option value="">Select KPI</option>
-            {props.kpis.map((kpi) => (
-              <option
-                key={kpi.id}
-                value={String(kpi.id)}
-              >
-                {kpi.name} ({kpi.unit}) - {kpi.category} / {kpi.subcategory}
-              </option>
-            ))}
-          </select>
+            <SelectTrigger
+              id="kpi-target-kpi-select"
+              className="h-9 w-full"
+            >
+              <SelectValue placeholder="Select KPI" />
+            </SelectTrigger>
+            <SelectContent>
+              {props.kpis.map((kpi) => (
+                <SelectItem
+                  key={kpi.id}
+                  value={String(kpi.id)}
+                >
+                  {kpi.name} ({kpi.unit}) - {kpi.category} / {kpi.subcategory}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {!props.canEditTargets ? (
@@ -388,7 +400,7 @@ export default function KpiTargetsEditor(props: {
           {rows.map((row, index) => (
             <div
               key={row.id}
-              className="grid gap-3 rounded-lg border p-3 sm:grid-cols-2 lg:grid-cols-12"
+              className="flex items-end gap-4"
             >
               <div className="space-y-1 lg:col-span-2">
                 <label
@@ -415,25 +427,29 @@ export default function KpiTargetsEditor(props: {
                 >
                   Month {index + 1}
                 </label>
-                <select
-                  id={`kpi-target-month-${row.id}`}
+                <Select
                   value={row.month}
-                  onChange={(event) =>
-                    updateRow(row.id, { month: event.target.value })
-                  }
+                  onValueChange={(value) => updateRow(row.id, { month: value })}
                   disabled={!props.canEditTargets || isSaving}
-                  className="h-9 w-full shadow rounded-md border bg-background px-3 text-sm"
                 >
-                  <option value="fy">Financial Year Only</option>
-                  {MONTHS.map((month) => (
-                    <option
-                      key={month.value}
-                      value={month.value}
-                    >
-                      {month.label}
-                    </option>
-                  ))}
-                </select>
+                  <SelectTrigger
+                    id={`kpi-target-month-${row.id}`}
+                    className="h-9 w-full shadow"
+                  >
+                    <SelectValue placeholder="Financial Year Only" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="fy">Financial Year Only</SelectItem>
+                    {MONTHS.map((month) => (
+                      <SelectItem
+                        key={month.value}
+                        value={month.value}
+                      >
+                        {month.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="space-y-1 lg:col-span-4">
                 <label

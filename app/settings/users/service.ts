@@ -18,7 +18,7 @@ import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export async function AllUsers() {
-  let list = db
+  const list = db
     .select()
     .from(user)
     .leftJoin(roles, eq(user.role_id, roles.id))

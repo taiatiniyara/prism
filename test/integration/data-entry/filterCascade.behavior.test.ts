@@ -102,6 +102,7 @@ describe("filter cascade behavior", () => {
         },
       ],
       context,
+      new Set([1]),
     );
 
     expect(rows).toHaveLength(1);

@@ -1,7 +1,6 @@
 import { ReactNode } from "react";
 
 interface ReviewKpiShellProps {
-  title?: string;
   loading?: boolean;
   error?: string | null;
   isEmpty?: boolean;
@@ -10,7 +9,6 @@ interface ReviewKpiShellProps {
 }
 
 export function ReviewKpiShell({
-  title = "Review KPI Values",
   loading = false,
   error = null,
   isEmpty = false,

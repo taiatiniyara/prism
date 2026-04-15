@@ -21,7 +21,7 @@ describe("review kpi row layout", () => {
 
     expect(screen.getByText("Inputs")).toBeInTheDocument();
     expect(screen.getByText("Formula")).toBeInTheDocument();
-    expect(screen.getByText("Result")).toBeInTheDocument();
+    expect(screen.getByText("KPI Result")).toBeInTheDocument();
 
     expect(screen.getByText("Resolved Requests")).toBeInTheDocument();
     expect(screen.getByText("resolved / total")).toBeInTheDocument();

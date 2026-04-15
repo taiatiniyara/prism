@@ -91,8 +91,8 @@ export async function GetAllManagedListItems(options?: {
       )?.managed_list_items;
       return {
         ...item.managed_list_items,
-        list: item.managed_lists?.name!,
-        parent: parent?.name!,
+        list: item.managed_lists?.name,
+        parent: parent?.name ?? null,
       };
     });
 }

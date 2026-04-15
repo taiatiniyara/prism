@@ -26,6 +26,10 @@ import { revalidatePath } from "next/cache";
 
 const prismOneURL = "https://prismdashboard.org/api/migration";
 
+const logMigrationError = (error: unknown) => {
+  console.log(error);
+};
+
 export async function retrieveRoles() {
   let res = false;
   await db.delete(roles).where(gt(roles.id, 0));
@@ -45,8 +49,8 @@ export async function retrieveRoles() {
       await db.insert(roles).values(nonExistingRoles);
     }
     res = true;
-  } catch (error: Error | any) {
-    console.log(error);
+  } catch (error: unknown) {
+    logMigrationError(error);
   }
 
   revalidatePath("/migration");
@@ -104,8 +108,8 @@ export async function retrieveUtilityData() {
       );
     }
     res = true;
-  } catch (error: Error | any) {
-    console.log(error);
+  } catch (error: unknown) {
+    logMigrationError(error);
   }
 
   revalidatePath("/migration");
@@ -153,8 +157,8 @@ export async function retrieveCountries() {
       );
     }
     res = true;
-  } catch (error: Error | any) {
-    console.log(error);
+  } catch (error: unknown) {
+    logMigrationError(error);
   }
 
   revalidatePath("/migration");
@@ -198,8 +202,8 @@ export async function retrieveManagedLists() {
       await db.insert(managedListItems).values(nonExistingManagedListItems);
     }
     res = true;
-  } catch (error: Error | any) {
-    console.log(error);
+  } catch (error: unknown) {
+    logMigrationError(error);
   }
 
   revalidatePath("/migration");
@@ -237,8 +241,8 @@ export async function retrieveInputDefinitions() {
       );
     }
     res = true;
-  } catch (error: Error | any) {
-    console.log(error);
+  } catch (error: unknown) {
+    logMigrationError(error);
   }
 
   revalidatePath("/migration");
@@ -279,8 +283,8 @@ export async function retrieveReportPeriods() {
       );
     }
     res = true;
-  } catch (error: Error | any) {
-    console.log(error);
+  } catch (error: unknown) {
+    logMigrationError(error);
   }
 
   revalidatePath("/migration");
@@ -321,8 +325,8 @@ export async function retrieveEnergyResources() {
       );
     }
     res = true;
-  } catch (error: Error | any) {
-    console.log(error);
+  } catch (error: unknown) {
+    logMigrationError(error);
   }
 
   revalidatePath("/migration");

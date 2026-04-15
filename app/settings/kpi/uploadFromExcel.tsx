@@ -16,13 +16,15 @@ export default function UploadKpiFromExcel() {
           readXlsxFile(file, { sheet: "DCW2_KPI_Builder Updated" }).then(
             async (rows) => {
               const headers = rows[0] as string[];
-              const data: any[] = rows.slice(1).map((row) => {
-                const rowData: Record<string, any> = {};
-                headers.forEach((header, index) => {
-                  rowData[header] = row[index];
+              const data: Record<string, unknown>[] = rows
+                .slice(1)
+                .map((row) => {
+                  const rowData: Record<string, unknown> = {};
+                  headers.forEach((header, index) => {
+                    rowData[header] = row[index];
+                  });
+                  return rowData;
                 });
-                return rowData;
-              });
               const response = await UpdateKpiDefinitionFromExcel(data);
               if (response.success) {
                 toast.success(response.message);

@@ -41,7 +41,7 @@ export interface DataTableUpdateFormField<T> {
 }
 
 export interface DataTableUpdateFormProps<T> {
-  record: T | any;
+  record: T & { id: string | number };
   fields: DataTableUpdateFormField<T>[];
   formAction: (body: Partial<T>) => Promise<DataTableFormResponse<T>>;
 }
@@ -157,7 +157,12 @@ export default function DataTableUpdateForm<T>(
               <Label htmlFor={field.key as string}>
                 {formatLabel(field.key as string)}
               </Label>
-              {updateField({ ...field, value: props.record[field.key] })}
+              {updateField({
+                ...field,
+                value: (props.record as Record<string, unknown>)[
+                  String(field.key)
+                ] as T[keyof T],
+              })}
             </div>
           ))}
           <SubmitBtn

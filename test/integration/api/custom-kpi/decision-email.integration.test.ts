@@ -14,6 +14,10 @@ vi.mock("@/app/data-entry/review-kpi/service", () => ({
   promoteCustomKpiRequestVisibility: vi.fn(),
 }));
 
+vi.mock("next/cache", () => ({
+  revalidatePath: vi.fn(),
+}));
+
 describe("decision flow triggers email enqueue integration", () => {
   beforeEach(() => {
     mocks.getCurrentUser.mockReset();
@@ -41,6 +45,8 @@ describe("decision flow triggers email enqueue integration", () => {
           body: JSON.stringify({
             decisionType: "APPROVE",
             rationale: "Valid and actionable",
+            categoryId: 1,
+            subcategoryId: 1,
             override: false,
           }),
         },

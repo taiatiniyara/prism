@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
   Controls,
@@ -824,7 +824,7 @@ const buildMapModel = (
   return { nodes, edges };
 };
 
-export default function ScorecardTree({
+function ScorecardTreeCanvas({
   rows,
   relationships = [],
 }: {
@@ -862,15 +862,6 @@ export default function ScorecardTree({
       expandedInitiatives,
     ],
   );
-
-  useEffect(() => {
-    // Reset manual placement when source data changes materially.
-    setManualPositions({});
-    setSelectedNodeId(null);
-    setExpandedPerspectives(new Set());
-    setExpandedObjectives(new Set());
-    setExpandedInitiatives(new Set());
-  }, [rows, relationships]);
 
   const handleNodeClick = (nodeId: string) => {
     if (nodeId.startsWith("perspective:")) {
@@ -1384,5 +1375,34 @@ export default function ScorecardTree({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+export default function ScorecardTree({
+  rows,
+  relationships = [],
+}: {
+  rows: ScorecardInputRow[];
+  relationships?: ScorecardRelationship[];
+}) {
+  const resetKey = useMemo(() => {
+    const rowSignature = rows
+      .map((row) => row.kpiDefinitionId)
+      .sort((a, b) => a - b)
+      .join("|");
+    const relationshipSignature = relationships
+      .map((relationship) => relationship.id)
+      .sort((a, b) => a - b)
+      .join("|");
+
+    return `${rowSignature}::${relationshipSignature}`;
+  }, [rows, relationships]);
+
+  return (
+    <ScorecardTreeCanvas
+      key={resetKey}
+      rows={rows}
+      relationships={relationships}
+    />
   );
 }
