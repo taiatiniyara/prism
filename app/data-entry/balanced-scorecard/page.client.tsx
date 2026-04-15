@@ -1023,7 +1023,7 @@ export default function ScorecardPageClient({
   const step4CardClass =
     "rounded border border-cyan-300 bg-cyan-50 px-1.5 py-1 text-[11px]";
   const step5CardClass =
-    "rounded border border-emerald-300 bg-emerald-50 px-1.5 py-1 text-[11px]";
+    "rounded border border-lime-300 bg-lime-50 px-1.5 py-1 text-[11px]";
 
   return (
     <div className="space-y-2 p-1.5 sm:p-2">
@@ -1098,7 +1098,7 @@ export default function ScorecardPageClient({
                   <div className="rounded border border-indigo-300 bg-indigo-50 px-2 py-1 text-[11px]">
                     2. Build hierarchy
                   </div>
-                  <div className="rounded border border-emerald-300 bg-emerald-50 px-2 py-1 text-[11px]">
+                  <div className="rounded border border-lime-300 bg-lime-50 px-2 py-1 text-[11px]">
                     3. Download and upload template
                   </div>
                 </div>
@@ -1145,7 +1145,7 @@ export default function ScorecardPageClient({
                     <span className="rounded border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-amber-800">
                       Initiative
                     </span>
-                    <span className="rounded border border-emerald-300 bg-emerald-100 px-1.5 py-0.5 text-emerald-800">
+                    <span className="rounded border border-lime-300 bg-lime-100 px-1.5 py-0.5 text-lime-800">
                       KPI
                     </span>
                   </div>
@@ -1274,7 +1274,7 @@ export default function ScorecardPageClient({
                                     type="button"
                                     size="sm"
                                     variant="outline"
-                                    className="h-8 border-emerald-300 bg-white px-2 text-xs text-emerald-900 hover:bg-emerald-50"
+                                    className="h-8 border-lime-300 bg-white px-2 text-xs text-lime-900 hover:bg-lime-50"
                                     onClick={() =>
                                       addKpiPlaceholder(
                                         objective.id,
@@ -1311,10 +1311,10 @@ export default function ScorecardPageClient({
                                     {initiative.kpis.map((kpi, index) => (
                                       <li
                                         key={`${initiative.id}-${kpi.kpiDefinitionId}-${index}`}
-                                        className="rounded-md border border-emerald-300 bg-emerald-50 p-1.5"
+                                        className="rounded-md border border-lime-300 bg-lime-50 p-1.5"
                                       >
                                         <div className="mb-1 flex items-center gap-1">
-                                          <span className="rounded border border-emerald-300 bg-white px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-emerald-800">
+                                          <span className="rounded border border-lime-300 bg-white px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-lime-800">
                                             KPI
                                           </span>
                                         </div>
@@ -1981,7 +1981,7 @@ export default function ScorecardPageClient({
                   )}
                 </div>
 
-                <div className="mt-1.5 rounded-md border border-emerald-300 bg-emerald-50 p-2">
+                <div className="mt-1.5 rounded-md border border-lime-300 bg-lime-50 p-2">
                   <p className="text-[11px] font-medium">
                     Step 5: Add/Update Objective In Perspective
                   </p>
@@ -2211,7 +2211,7 @@ export default function ScorecardPageClient({
                   Unsaved relationship changes
                 </span>
               ) : (
-                <span className="rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-[11px] text-emerald-800">
+                <span className="rounded border border-lime-200 bg-lime-50 px-1.5 py-0.5 text-[11px] text-lime-800">
                   Relationships are up to date
                 </span>
               )}

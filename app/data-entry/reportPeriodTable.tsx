@@ -3,16 +3,45 @@
 import { DataEntryStatus, DataEntryStatusList } from "@/db/schema/dataEntry";
 import { ReportPeriodDTO } from "./service";
 import { FaCircle } from "react-icons/fa";
+import { useRouter } from "next/navigation";
+import { useTransition } from "react";
+import { updateFilterContextAction } from "@/app/data-entry/enter-data/service";
+import { Button } from "@/components/ui/button";
 
 export default function ReportPeriodTable(props: {
   list: ReportPeriodDTO[];
   role: string;
 }) {
+  const router = useRouter();
+  const [isNavigating, startTransition] = useTransition();
+
   if (props.list.length === 0) {
     return <div className="p-12 text-slate-500">No report periods found</div>;
   }
 
-  const statusCols = Object.keys(DataEntryStatus);
+  const statusCols = Object.keys(DataEntryStatus) as Array<
+    keyof typeof DataEntryStatus
+  >;
+  const linkableStatuses = new Set<keyof typeof DataEntryStatus>([
+    "Pending",
+    "Entered",
+    "Not_Available",
+  ]);
+
+  const handleNavigateWithFilters = (
+    reportPeriodId: number,
+    status: keyof typeof DataEntryStatus,
+  ) => {
+    startTransition(async () => {
+      await updateFilterContextAction("reportPeriodId", reportPeriodId);
+      await updateFilterContextAction(
+        "dataEntryStatusId",
+        DataEntryStatus[status],
+      );
+      router.push("/data-entry/enter-data");
+    });
+  };
+
   return (
     <div className="max-h-[calc(100vh-100px)] border overflow-scroll">
       <table className="text-xs w-full">
@@ -58,7 +87,21 @@ export default function ReportPeriodTable(props: {
                         DataEntryStatusList.find((x) => x.name === sc)?.color
                       }
                     />
-                    {item[sc as keyof ReportPeriodDTO]}
+                    {linkableStatuses.has(sc) ? (
+                      <Button
+                        variant="link"
+                        size="xs"
+                        className="h-auto cursor-pointer rounded-sm p-0 text-xs font-semibold text-primary underline decoration-2 underline-offset-2 hover:bg-primary/10 focus-visible:ring-2"
+                        disabled={isNavigating}
+                        title={`Open Enter Data filtered to ${sc.replaceAll("_", " ")} for ${item.Period}`}
+                        aria-label={`Open Enter Data filtered to ${sc.replaceAll("_", " ")} for ${item.Period}`}
+                        onClick={() => handleNavigateWithFilters(item.Id, sc)}
+                      >
+                        {item[sc as keyof ReportPeriodDTO]}
+                      </Button>
+                    ) : (
+                      item[sc as keyof ReportPeriodDTO]
+                    )}
                   </span>
                 </td>
               ))}

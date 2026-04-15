@@ -1050,7 +1050,7 @@ export default function InputFormulaBuilder(props: {
                         : isOperatorToken
                           ? "border-amber-200 bg-amber-100 text-amber-900 dark:border-amber-900 dark:bg-amber-950/40 dark:text-amber-300"
                           : isNumericConstant
-                            ? "border-green-200 bg-green-100 text-green-900 dark:border-green-900 dark:bg-green-950/40 dark:text-green-300"
+                            ? "border-lime-200 bg-lime-100 text-lime-900 dark:border-lime-900 dark:bg-lime-950/40 dark:text-lime-300"
                             : "border-violet-200 bg-violet-100 text-violet-900 dark:border-violet-900 dark:bg-violet-950/40 dark:text-violet-300";
 
                       const filterSummary = getFilterSummaryForToken(token);

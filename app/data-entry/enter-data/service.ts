@@ -533,6 +533,7 @@ const getGenerationGroupsForContext = async (
       serviceAreaId: energyResources.service_area_id,
       energyProviderId: energyResources.energy_provider_id,
       energySourceId: energyResources.energy_source_id,
+      isVirtual: energyResources.is_virtual,
     })
     .from(energyResources)
     .where(and(...generatorConditions))

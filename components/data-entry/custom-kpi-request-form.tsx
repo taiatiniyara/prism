@@ -424,7 +424,7 @@ export function CustomKpiRequestForm(props: {
         className="min-h-5"
       >
         {successMessage ? (
-          <p className="text-xs text-emerald-700">{successMessage}</p>
+          <p className="text-xs text-lime-700">{successMessage}</p>
         ) : null}
       </div>
 

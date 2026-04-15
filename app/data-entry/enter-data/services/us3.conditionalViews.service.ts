@@ -46,6 +46,7 @@ export interface GeneratorCandidate {
   serviceAreaId: number;
   energyProviderId?: number;
   energySourceId?: number;
+  isVirtual?: boolean;
 }
 
 export interface GeneratorEntryCandidate {
@@ -80,41 +81,43 @@ export const buildGenerationGroups = (
   ) => boolean,
   excludeEmptyGroups = false,
 ): DataEntryGeneratorGroupView[] => {
-  const groups = generators.map((generator) => {
-    const rows = definitionRows
-      .filter(
-        (definition) =>
-          isDefinitionRelevant == null ||
-          isDefinitionRelevant(generator, definition),
-      )
-      .map((definition) => {
-        const entry = entries.find(
-          (candidate) =>
-            candidate.energyResourceId === generator.id &&
-            candidate.inputDefId === definition.inputDefId,
-        );
+  const groups = generators
+    .filter((generator) => generator.isVirtual !== true)
+    .map((generator) => {
+      const rows = definitionRows
+        .filter(
+          (definition) =>
+            isDefinitionRelevant == null ||
+            isDefinitionRelevant(generator, definition),
+        )
+        .map((definition) => {
+          const entry = entries.find(
+            (candidate) =>
+              candidate.energyResourceId === generator.id &&
+              candidate.inputDefId === definition.inputDefId,
+          );
 
-        return {
-          ...definition,
-          dataEntryId: entry?.id,
-          energyResourceId: generator.id,
-          isDataNotAvailable:
-            entry?.statusId === DataEntryStatusId.Not_Available,
-          updatedByName: entry?.updatedByName ?? null,
-          updatedByRole: entry?.updatedByRole ?? null,
-          updatedAt: entry?.updatedAt?.toISOString() ?? null,
-          value: entry?.value ?? null,
-          comments: serializeComments(entry?.comments ?? null),
-        };
-      });
+          return {
+            ...definition,
+            dataEntryId: entry?.id,
+            energyResourceId: generator.id,
+            isDataNotAvailable:
+              entry?.statusId === DataEntryStatusId.Not_Available,
+            updatedByName: entry?.updatedByName ?? null,
+            updatedByRole: entry?.updatedByRole ?? null,
+            updatedAt: entry?.updatedAt?.toISOString() ?? null,
+            value: entry?.value ?? null,
+            comments: serializeComments(entry?.comments ?? null),
+          };
+        });
 
-    return {
-      generatorId: generator.id,
-      generatorName: generator.name,
-      serviceAreaId: generator.serviceAreaId,
-      rows,
-    };
-  });
+      return {
+        generatorId: generator.id,
+        generatorName: generator.name,
+        serviceAreaId: generator.serviceAreaId,
+        rows,
+      };
+    });
 
   return excludeEmptyGroups
     ? groups.filter((group) => group.rows.length > 0)

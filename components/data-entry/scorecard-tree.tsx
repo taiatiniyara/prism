@@ -107,7 +107,7 @@ const statusClassName = (
   status: ScorecardInputRow["status"] | null,
 ): string => {
   if (status === "on_track") {
-    return "font-semibold text-emerald-700";
+    return "font-semibold text-lime-700";
   }
 
   if (status === "at_risk") {
@@ -142,7 +142,7 @@ const actualValueClassName = (row: ScorecardInputRow): string => {
   }
 
   return actual >= target
-    ? "font-semibold text-emerald-700"
+    ? "font-semibold text-lime-700"
     : "font-semibold text-rose-700";
 };
 
@@ -1347,7 +1347,7 @@ export default function ScorecardTree({
               Hierarchy flow
             </span>
             <span className="inline-flex items-center gap-1">
-              <span className="h-0.5 w-5 border-t-2 border-dashed border-emerald-500" />
+              <span className="h-0.5 w-5 border-t-2 border-dashed border-lime-500" />
               Relationship
             </span>
           </div>

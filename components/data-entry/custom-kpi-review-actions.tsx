@@ -335,7 +335,7 @@ export function CustomKpiReviewActions({
         role="status"
         aria-live="polite"
       >
-        {message ? <p className="text-xs text-green-700">{message}</p> : null}
+        {message ? <p className="text-xs text-lime-700">{message}</p> : null}
       </div>
       <div
         className="min-h-5"
