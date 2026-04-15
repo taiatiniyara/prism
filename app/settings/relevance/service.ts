@@ -109,20 +109,11 @@ export interface SetTransmissionDataLabelRelevancePayload {
   isRelevant: boolean;
 }
 
-export interface UtilityGenerationRelevanceDataLabel {
-  inputDefId: number;
-  dataLabel: string;
-  isRelevant: boolean;
-  dataEntryId: string | null;
-}
-
 export interface UtilityGenerationRelevanceCell {
   energyProviderId: number;
   energyProvider: string;
   isRelevant: boolean;
-  relevantCount: number;
-  totalCount: number;
-  dataLabels: UtilityGenerationRelevanceDataLabel[];
+  relatedInputCount: number;
 }
 
 export interface UtilityGenerationRelevanceRow {
@@ -149,7 +140,6 @@ export interface SetUtilityGenerationDataLabelRelevancePayload {
   serviceAreaId: number;
   energySourceId: number;
   energyProviderId: number;
-  inputDefId: number;
   isRelevant: boolean;
 }
 
@@ -873,11 +863,7 @@ export async function GetUtilityGenerationRelevance(
   const inputList = await getInputDefinitionsForStructure("Generation");
   const energyProviders = await getManagedDimensionItems("Energy Provider");
   const energySources = await getManagedDimensionItems("Energy Source");
-
-  const dataLabels = inputList.map((input) => ({
-    inputDefId: input.id,
-    dataLabel: input.name,
-  }));
+  const inputDefIds = inputList.map((input) => input.id);
 
   if (
     selectedReportPeriodId == null ||
@@ -900,15 +886,8 @@ export async function GetUtilityGenerationRelevance(
         cells: energyProviders.map((energyProvider) => ({
           energyProviderId: energyProvider.id,
           energyProvider: energyProvider.name,
-          isRelevant: dataLabels.length > 0,
-          relevantCount: dataLabels.length,
-          totalCount: dataLabels.length,
-          dataLabels: dataLabels.map((label) => ({
-            inputDefId: label.inputDefId,
-            dataLabel: label.dataLabel,
-            isRelevant: true,
-            dataEntryId: null,
-          })),
+          isRelevant: true,
+          relatedInputCount: inputDefIds.length,
         })),
       })),
     };
@@ -932,10 +911,7 @@ export async function GetUtilityGenerationRelevance(
               eq(generationRelevance.report_period_id, selectedReportPeriodId),
               eq(generationRelevance.service_area_id, selectedServiceAreaId),
               eq(generationRelevance.is_deleted, false),
-              inArray(
-                generationRelevance.input_def_id,
-                inputList.map((input) => input.id),
-              ),
+              inArray(generationRelevance.input_def_id, inputDefIds),
               inArray(
                 generationRelevance.energy_provider_id,
                 energyProviders.map((provider) => provider.id),
@@ -949,10 +925,7 @@ export async function GetUtilityGenerationRelevance(
           .orderBy(desc(generationRelevance.updatedAt))
       : [];
 
-  const relevanceByDimension = new Map<
-    string,
-    Map<number, { isRelevant: boolean; dataEntryId: string }>
-  >();
+  const cellHasFalse = new Map<string, boolean>();
 
   for (const entry of entries) {
     if (
@@ -963,21 +936,12 @@ export async function GetUtilityGenerationRelevance(
       continue;
     }
 
-    const key = `${entry.reportPeriodId}:${entry.energySourceId}:${entry.energyProviderId}`;
-    const existing =
-      relevanceByDimension.get(key) ??
-      new Map<number, { isRelevant: boolean; dataEntryId: string }>();
-
-    if (existing.has(entry.inputDefId)) {
+    if (entry.isRelevant) {
       continue;
     }
 
-    existing.set(entry.inputDefId, {
-      isRelevant: entry.isRelevant,
-      dataEntryId: entry.id,
-    });
-
-    relevanceByDimension.set(key, existing);
+    const key = `${entry.reportPeriodId}:${entry.energySourceId}:${entry.energyProviderId}`;
+    cellHasFalse.set(key, true);
   }
 
   return {
@@ -995,24 +959,12 @@ export async function GetUtilityGenerationRelevance(
       energySource: energySource.name,
       cells: energyProviders.map((energyProvider) => {
         const key = `${selectedReportPeriodId}:${energySource.id}:${energyProvider.id}`;
-        const labelMap = relevanceByDimension.get(key) ?? new Map();
-
-        const labels = dataLabels.map((label) => ({
-          inputDefId: label.inputDefId,
-          dataLabel: label.dataLabel,
-          isRelevant: labelMap.get(label.inputDefId)?.isRelevant ?? true,
-          dataEntryId: labelMap.get(label.inputDefId)?.dataEntryId ?? null,
-        }));
-
-        const relevantCount = labels.filter((label) => label.isRelevant).length;
 
         return {
           energyProviderId: energyProvider.id,
           energyProvider: energyProvider.name,
-          isRelevant: labels.length > 0 && relevantCount === labels.length,
-          relevantCount,
-          totalCount: labels.length,
-          dataLabels: labels,
+          isRelevant: !cellHasFalse.get(key),
+          relatedInputCount: inputDefIds.length,
         };
       }),
     })),
@@ -1062,12 +1014,14 @@ export async function SetUtilityGenerationDataLabelRelevance(
 
   const inputList = await getInputDefinitionsForStructure("Generation");
 
-  if (!inputList.some((input) => input.id === payload.inputDefId)) {
+  if (inputList.length === 0) {
     return {
       success: false,
-      message: "Selected data label is not a Generation input.",
+      message: "No Generation inputs were found.",
     };
   }
+
+  const inputDefIds = inputList.map((input) => input.id);
 
   const [energyProvider] = await db
     .select({ id: managedListItems.id })
@@ -1104,29 +1058,43 @@ export async function SetUtilityGenerationDataLabelRelevance(
     };
   }
 
-  const [existing] = await db
-    .select({ id: generationRelevance.id })
+  const existingRows = await db
+    .select({
+      id: generationRelevance.id,
+      inputDefId: generationRelevance.input_def_id,
+    })
     .from(generationRelevance)
     .where(
       and(
         eq(generationRelevance.report_period_id, payload.reportPeriodId),
         eq(generationRelevance.service_area_id, payload.serviceAreaId),
-        eq(generationRelevance.input_def_id, payload.inputDefId),
+        inArray(generationRelevance.input_def_id, inputDefIds),
         eq(generationRelevance.energy_provider_id, payload.energyProviderId),
         eq(generationRelevance.energy_source_id, payload.energySourceId),
       ),
     )
-    .orderBy(desc(generationRelevance.updatedAt))
-    .limit(1);
+    .orderBy(desc(generationRelevance.updatedAt));
 
-  if (!existing && payload.isRelevant) {
+  const existingByInputDefId = new Map<number, string>();
+
+  for (const row of existingRows) {
+    if (existingByInputDefId.has(row.inputDefId)) {
+      continue;
+    }
+
+    existingByInputDefId.set(row.inputDefId, row.id);
+  }
+
+  if (existingByInputDefId.size === 0 && payload.isRelevant) {
     return {
       success: true,
       message: "Relevance already set by default.",
     };
   }
 
-  if (existing) {
+  if (existingByInputDefId.size > 0) {
+    const existingIds = Array.from(existingByInputDefId.values());
+
     await db
       .update(generationRelevance)
       .set({
@@ -1135,19 +1103,29 @@ export async function SetUtilityGenerationDataLabelRelevance(
         updatedAt: new Date(),
         updatedById: user.id,
       })
-      .where(eq(generationRelevance.id, existing.id));
-  } else {
-    await db.insert(generationRelevance).values({
-      report_period_id: payload.reportPeriodId,
-      service_area_id: payload.serviceAreaId,
-      input_def_id: payload.inputDefId,
-      energy_provider_id: payload.energyProviderId,
-      energy_source_id: payload.energySourceId,
-      is_relevant: payload.isRelevant,
-      is_deleted: false,
-      updatedAt: new Date(),
-      updatedById: user.id,
-    });
+      .where(inArray(generationRelevance.id, existingIds));
+  }
+
+  if (!payload.isRelevant) {
+    const missingInputDefIds = inputDefIds.filter(
+      (inputDefId) => !existingByInputDefId.has(inputDefId),
+    );
+
+    if (missingInputDefIds.length > 0) {
+      await db.insert(generationRelevance).values(
+        missingInputDefIds.map((inputDefId) => ({
+          report_period_id: payload.reportPeriodId,
+          service_area_id: payload.serviceAreaId,
+          input_def_id: inputDefId,
+          energy_provider_id: payload.energyProviderId,
+          energy_source_id: payload.energySourceId,
+          is_relevant: false,
+          is_deleted: false,
+          updatedAt: new Date(),
+          updatedById: user.id,
+        })),
+      );
+    }
   }
 
   revalidatePath("/settings/relevance");

@@ -62,7 +62,10 @@ export const applyCascadedContextWithOptionValidation = (
   nextValue: number | null,
   options: Pick<
     DataEntryFilterOptions,
-    "reportPeriods" | "inputSubcategories" | "serviceAreas"
+    | "reportPeriods"
+    | "inputSubcategories"
+    | "serviceAreas"
+    | "dataEntryStatuses"
   >,
 ): DataEntryFilterContext => {
   const cascaded = applyFilterCascade(current, changedKey, nextValue);
@@ -80,6 +83,10 @@ export const applyCascadedContextWithOptionValidation = (
     serviceAreaId: ensureValidOrNull(
       cascaded.serviceAreaId,
       options.serviceAreas,
+    ),
+    dataEntryStatusId: ensureValidOrNull(
+      cascaded.dataEntryStatusId,
+      options.dataEntryStatuses,
     ),
   };
 };

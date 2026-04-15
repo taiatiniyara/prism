@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -73,6 +73,16 @@ export default function ReviewKpiFiltersClient({
     setLocalContext(context);
   }, [context]);
 
+  const filteredKpiSubcategories = useMemo(() => {
+    if (localContext.kpiCategoryId == null) {
+      return [];
+    }
+
+    return options.kpiSubcategories.filter(
+      (subcategory) => subcategory.parent_id === localContext.kpiCategoryId,
+    );
+  }, [localContext.kpiCategoryId, options.kpiSubcategories]);
+
   const handleFilterChange = (
     key: keyof ReviewKpiFilterContext,
     value: number | null,
@@ -118,9 +128,13 @@ export default function ReviewKpiFiltersClient({
         />
         <KpiSubcategorySelect
           value={localContext.kpiSubcategoryId}
-          options={options.kpiSubcategories}
+          options={filteredKpiSubcategories}
           compact
-          disabled={isPending || localContext.kpiCategoryId == null}
+          disabled={
+            isPending ||
+            localContext.kpiCategoryId == null ||
+            filteredKpiSubcategories.length === 0
+          }
           onChange={(value) => handleFilterChange("kpiSubcategoryId", value)}
         />
         <ServiceAreaSelect

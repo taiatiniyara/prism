@@ -60,12 +60,10 @@ export default async function UtilityRelevanceSection(props: {
     <div className="space-y-5">
       <Tabs defaultValue="tariff">
         <TabsList>
-          <TabsTrigger value="tariff">Tariff</TabsTrigger>
-          <TabsTrigger value="transmission">Transmission</TabsTrigger>
           <TabsTrigger value="generation">Generation</TabsTrigger>
-          <TabsTrigger value="custom-kpi-relevance">
-            Custom KPI Relevance
-          </TabsTrigger>
+          <TabsTrigger value="transmission">Transmission</TabsTrigger>
+          <TabsTrigger value="tariff">Tariff</TabsTrigger>
+          <TabsTrigger value="custom-kpi-relevance">Custom KPIs</TabsTrigger>
         </TabsList>
         <TabsContent value="tariff">
           <div className="space-y-5 rounded-lg border p-5 sm:p-6">
@@ -144,7 +142,6 @@ export default async function UtilityRelevanceSection(props: {
               <GenerationRelevanceTable
                 key={`${generationRelevance.filters.reportPeriodId}-${generationRelevance.filters.serviceAreaId}`}
                 rows={generationRelevance.rows}
-                energyProviders={generationRelevance.energyProviders}
                 reportPeriodId={generationRelevance.filters.reportPeriodId}
                 serviceAreaId={generationRelevance.filters.serviceAreaId}
                 onToggleRelevance={SetUtilityGenerationDataLabelRelevance}

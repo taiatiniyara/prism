@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import {
+  DataEntryStatusSelect,
   InputCategorySelect,
   InputSubcategorySelect,
   ReportPeriodSelect,
@@ -30,6 +31,7 @@ const keyMap: Record<DataEntryFilterCookieKey, keyof DataEntryFilterContext> = {
   inputCategoryId: "inputCategoryId",
   inputSubcategoryId: "inputSubcategoryId",
   serviceAreaId: "serviceAreaId",
+  dataEntryStatusId: "dataEntryStatusId",
 };
 
 export default function DataEntryFiltersClient({
@@ -92,6 +94,12 @@ export default function DataEntryFiltersClient({
           onChange={(value) => handleChange("serviceAreaId", value)}
         />
       ) : null}
+      <DataEntryStatusSelect
+        value={localContext.dataEntryStatusId}
+        options={options.dataEntryStatuses}
+        disabled={isPending}
+        onChange={(value) => handleChange("dataEntryStatusId", value)}
+      />
     </section>
   );
 }

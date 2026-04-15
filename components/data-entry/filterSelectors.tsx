@@ -155,3 +155,14 @@ export const ServiceAreaSelect = (
     {...props}
   />
 );
+
+export const DataEntryStatusSelect = (
+  props: Omit<FilterSelectProps, "id" | "label" | "placeholder">,
+) => (
+  <FilterSelect
+    id="data-entry-status-select"
+    label="Data Entry Status"
+    placeholder="Select data entry status"
+    {...props}
+  />
+);

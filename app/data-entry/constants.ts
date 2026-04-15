@@ -4,6 +4,7 @@ export const DATA_ENTRY_FILTER_COOKIE_KEYS = {
   inputCategoryId: "inputCategoryId",
   inputSubcategoryId: "inputSubcategoryId",
   serviceAreaId: "serviceAreaId",
+  dataEntryStatusId: "dataEntryStatusId",
 } as const;
 
 export type DataEntryFilterCookieKey =
@@ -15,6 +16,7 @@ export interface DataEntryFilterContext {
   inputCategoryId: number | null;
   inputSubcategoryId: number | null;
   serviceAreaId: number | null;
+  dataEntryStatusId: number | null;
 }
 
 export const DEFAULT_DATA_ENTRY_FILTER_CONTEXT: DataEntryFilterContext = {
@@ -23,4 +25,5 @@ export const DEFAULT_DATA_ENTRY_FILTER_CONTEXT: DataEntryFilterContext = {
   inputCategoryId: null,
   inputSubcategoryId: null,
   serviceAreaId: null,
+  dataEntryStatusId: null,
 };

@@ -11,6 +11,7 @@ const DEPENDENT_RESETS: Record<FilterKey, FilterKey[]> = {
   inputCategoryId: ["inputSubcategoryId", "serviceAreaId"],
   inputSubcategoryId: [],
   serviceAreaId: [],
+  dataEntryStatusId: [],
 };
 
 export const applyFilterCascade = (

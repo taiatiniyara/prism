@@ -11,6 +11,7 @@ export interface DataEntryFilterOptions {
   inputCategories: DataEntryFilterOption[];
   inputSubcategories: DataEntryFilterOption[];
   serviceAreas: DataEntryFilterOption[];
+  dataEntryStatuses: DataEntryFilterOption[];
 }
 
 export type DataEntryControlType =

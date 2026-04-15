@@ -43,6 +43,11 @@ export const sanitizeFilterContext = (
   serviceAreaId: parseNullableInt(
     context.serviceAreaId == null ? undefined : String(context.serviceAreaId),
   ),
+  dataEntryStatusId: parseNullableInt(
+    context.dataEntryStatusId == null
+      ? undefined
+      : String(context.dataEntryStatusId),
+  ),
 });
 
 export const getFilterContextFromCookies =
@@ -63,6 +68,9 @@ export const getFilterContextFromCookies =
       )?.value,
       serviceAreaId: cookieStore.get(
         DATA_ENTRY_FILTER_COOKIE_KEYS.serviceAreaId,
+      )?.value,
+      dataEntryStatusId: cookieStore.get(
+        DATA_ENTRY_FILTER_COOKIE_KEYS.dataEntryStatusId,
       )?.value,
     });
   };
@@ -114,6 +122,10 @@ export const saveFilterContextToCookies = async (
     setFilterCookie(
       DATA_ENTRY_FILTER_COOKIE_KEYS.serviceAreaId,
       safe.serviceAreaId,
+    ),
+    setFilterCookie(
+      DATA_ENTRY_FILTER_COOKIE_KEYS.dataEntryStatusId,
+      safe.dataEntryStatusId,
     ),
   ]);
 };

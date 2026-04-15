@@ -1,5 +1,5 @@
 import { DEFAULT_DATA_ENTRY_FILTER_CONTEXT } from "@/app/data-entry/constants";
-import { getFilterContextFromCookies } from "@/app/data-entry/filterContext.cookies";
+import { getReviewKpiFilterContextFromCookies } from "@/app/data-entry/review-kpi/filterContext.cookies";
 import { applyFilterCascade } from "@/app/data-entry/filterContext.rules";
 import { mapDataTypeToControlType } from "@/app/data-entry/inputControlType.mapper";
 import {
@@ -41,7 +41,6 @@ import {
 } from "@/app/settings/kpi/custom-kpi/service";
 
 const EDIT_ROLES = new Set(["DEV", "BMO", "BLO", "DAOO", "DAOF"]);
-const GLOBAL_ROLES = new Set(["DEV", "BMO", "BLO"]);
 const CUSTOM_KPI_REVIEWER_ROLES = new Set(["DEV"]);
 
 const hasRoleAccess = (allowedRoles: Set<string>, role: string | null) => {
@@ -106,15 +105,7 @@ const mapOption = (id: number, name: string): ReviewKpiFilterOption => ({
 
 export const buildReviewKpiFilterContextFromCookies =
   async (): Promise<ReviewKpiFilterContext> => {
-    const cookieContext = await getFilterContextFromCookies();
-
-    return {
-      reportTypeId: cookieContext.reportTypeId,
-      reportPeriodId: cookieContext.reportPeriodId,
-      kpiCategoryId: cookieContext.inputCategoryId,
-      kpiSubcategoryId: cookieContext.inputSubcategoryId,
-      serviceAreaId: cookieContext.serviceAreaId,
-    };
+    return getReviewKpiFilterContextFromCookies();
   };
 
 export const applyReviewKpiFilterCascade = (
@@ -167,16 +158,14 @@ export const getReviewKpiFilterOptions = async (
   const reportTypeWhere = [eq(managedListItems.is_active, true)];
   const serviceAreaWhere = [eq(serviceAreas.is_active, true)];
 
-  if (!hasRoleAccess(GLOBAL_ROLES, user.role)) {
-    if (user.org_id == null) {
-      reportPeriodWhere.push(sql`1 = 0`);
-      reportTypeWhere.push(sql`1 = 0`);
-      serviceAreaWhere.push(sql`1 = 0`);
-    } else {
-      reportPeriodWhere.push(eq(reportPeriods.utility_id, user.org_id));
-      reportTypeWhere.push(eq(reportPeriods.utility_id, user.org_id));
-      serviceAreaWhere.push(eq(serviceAreas.utility_id, user.org_id));
-    }
+  if (user.org_id == null) {
+    reportPeriodWhere.push(sql`1 = 0`);
+    reportTypeWhere.push(sql`1 = 0`);
+    serviceAreaWhere.push(sql`1 = 0`);
+  } else {
+    reportPeriodWhere.push(eq(reportPeriods.utility_id, user.org_id));
+    reportTypeWhere.push(eq(reportPeriods.utility_id, user.org_id));
+    serviceAreaWhere.push(eq(serviceAreas.utility_id, user.org_id));
   }
 
   const [reportTypeRows, reportPeriodRows, serviceAreaRows, kpiCategoryIdRows] =
@@ -340,6 +329,18 @@ export const sanitizeReviewKpiContextAgainstOptions = (
   };
 
   if (sanitized.kpiCategoryId == null && sanitized.kpiSubcategoryId != null) {
+    sanitized.kpiSubcategoryId = null;
+  }
+
+  if (
+    sanitized.kpiCategoryId != null &&
+    sanitized.kpiSubcategoryId != null &&
+    !options.kpiSubcategories.some(
+      (subcategory) =>
+        subcategory.id === sanitized.kpiSubcategoryId &&
+        subcategory.parent_id === sanitized.kpiCategoryId,
+    )
+  ) {
     sanitized.kpiSubcategoryId = null;
   }
 

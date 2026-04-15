@@ -85,6 +85,86 @@ const isAllLikeOption = (name: string): boolean => {
   );
 };
 
+const DATA_ENTRY_STATUS_OPTIONS: DataEntryFilterOption[] = [
+  mapOption(DataEntryStatusId.Pending, "Pending"),
+  mapOption(DataEntryStatusId.Entered, "Entered"),
+  mapOption(DataEntryStatusId.Not_Available, "Not Available"),
+];
+
+const normalizeDataEntryStatusFilter = (
+  statusId: number | null,
+):
+  | DataEntryStatusId.Pending
+  | DataEntryStatusId.Entered
+  | DataEntryStatusId.Not_Available
+  | null => {
+  if (
+    statusId === DataEntryStatusId.Pending ||
+    statusId === DataEntryStatusId.Entered ||
+    statusId === DataEntryStatusId.Not_Available
+  ) {
+    return statusId;
+  }
+
+  return null;
+};
+
+const filterRowsByDataEntryStatus = (
+  rows: DataEntryInputRowView[],
+  statusId: number | null,
+): DataEntryInputRowView[] => {
+  const normalizedStatus = normalizeDataEntryStatusFilter(statusId);
+  if (normalizedStatus == null) {
+    return rows;
+  }
+
+  return rows.filter((row) => {
+    const isNotAvailable = row.isDataNotAvailable === true;
+    const hasEnteredValue = (row.value?.trim().length ?? 0) > 0;
+    const isEntered = hasEnteredValue && !isNotAvailable;
+    const isPending = !isEntered && !isNotAvailable;
+
+    if (normalizedStatus === DataEntryStatusId.Pending) {
+      return isPending;
+    }
+
+    if (normalizedStatus === DataEntryStatusId.Entered) {
+      return isEntered;
+    }
+
+    return isNotAvailable;
+  });
+};
+
+const filterGenerationGroupsByDataEntryStatus = (
+  groups: DataEntryGeneratorGroupView[],
+  statusId: number | null,
+): DataEntryGeneratorGroupView[] =>
+  groups
+    .map((group) => ({
+      ...group,
+      rows: filterRowsByDataEntryStatus(group.rows, statusId),
+    }))
+    .filter((group) => group.rows.length > 0);
+
+const filterTariffGroupsByDataEntryStatus = (
+  groups: DataEntryTariffPaymentModeGroupView[],
+  statusId: number | null,
+): DataEntryTariffPaymentModeGroupView[] =>
+  groups
+    .map((paymentModeGroup) => ({
+      ...paymentModeGroup,
+      customerTypeGroups: paymentModeGroup.customerTypeGroups
+        .map((customerTypeGroup) => ({
+          ...customerTypeGroup,
+          rows: filterRowsByDataEntryStatus(customerTypeGroup.rows, statusId),
+        }))
+        .filter((customerTypeGroup) => customerTypeGroup.rows.length > 0),
+    }))
+    .filter(
+      (paymentModeGroup) => paymentModeGroup.customerTypeGroups.length > 0,
+    );
+
 const getManagedListOptionsByName = async (
   listNamePattern: string,
   parentId?: number | null,
@@ -1084,17 +1164,23 @@ export const getServiceAreaOptions = async (
   return rows.map((row) => mapOption(row.id, row.name));
 };
 
+export const getDataEntryStatusOptions = async (): Promise<
+  DataEntryFilterOption[]
+> => {
+  return DATA_ENTRY_STATUS_OPTIONS;
+};
+
 export const getBaseFilterOptions = async (
   user: CurrentUser,
   context: DataEntryFilterContext,
 ): Promise<DataEntryFilterOptions> => {
-  const [reportTypes, inputCategories, serviceAreasOptions] = await Promise.all(
-    [
+  const [reportTypes, inputCategories, serviceAreasOptions, dataEntryStatuses] =
+    await Promise.all([
       getReportTypeOptions(),
       getInputCategoryOptions(),
       getServiceAreaOptions(user),
-    ],
-  );
+      getDataEntryStatusOptions(),
+    ]);
 
   const [reportPeriods, inputSubcategories] = await Promise.all([
     getReportPeriodOptions(user, context.reportTypeId),
@@ -1107,6 +1193,7 @@ export const getBaseFilterOptions = async (
     inputCategories,
     inputSubcategories,
     serviceAreas: serviceAreasOptions,
+    dataEntryStatuses,
   };
 };
 
@@ -1144,10 +1231,17 @@ export const bootstrapDataEntryFilterContext = async (
     options.inputSubcategories,
   );
 
-  const context = tariffContext ? dependentContext : operationalContext;
+  const statusAwareContext = {
+    ...(tariffContext ? dependentContext : operationalContext),
+    dataEntryStatusId: options.dataEntryStatuses.some(
+      (status) => status.id === dependentContext.dataEntryStatusId,
+    )
+      ? dependentContext.dataEntryStatusId
+      : null,
+  };
 
   return {
-    context,
+    context: statusAwareContext,
     options,
   };
 };
@@ -1227,7 +1321,10 @@ export const getDataEntryFilterViewModel =
       isGenerationContext(context, options.inputSubcategories) &&
       context.serviceAreaId != null
     ) {
-      const groups = await getGenerationGroupsForContext(user, context);
+      const groups = filterGenerationGroupsByDataEntryStatus(
+        await getGenerationGroupsForContext(user, context),
+        context.dataEntryStatusId,
+      );
 
       return toPageModel(
         context,
@@ -1245,7 +1342,10 @@ export const getDataEntryFilterViewModel =
       (await isTariffSubcategorySelected(context, options)) &&
       context.serviceAreaId != null
     ) {
-      const groups = await getTariffGroupsForContext(context);
+      const groups = filterTariffGroupsByDataEntryStatus(
+        await getTariffGroupsForContext(context),
+        context.dataEntryStatusId,
+      );
 
       return toPageModel(
         context,
@@ -1259,7 +1359,10 @@ export const getDataEntryFilterViewModel =
       );
     }
 
-    const inputRows = await getInputRowsForContext(context);
+    const inputRows = filterRowsByDataEntryStatus(
+      await getInputRowsForContext(context),
+      context.dataEntryStatusId,
+    );
 
     return toPageModel(
       context,
@@ -1294,6 +1397,7 @@ export const updateFilterContextAction = async (
       reportPeriods: options.reportPeriods,
       inputSubcategories: options.inputSubcategories,
       serviceAreas: options.serviceAreas,
+      dataEntryStatuses: options.dataEntryStatuses,
     },
   );
 
