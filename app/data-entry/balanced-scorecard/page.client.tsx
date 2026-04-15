@@ -11,6 +11,7 @@ import {
   fetchScorecardKpiOptions,
   isLatestRequest,
   saveScorecardConfig,
+  saveScorecardDraft,
   saveScorecardRelationships,
 } from "@/app/data-entry/balanced-scorecard/client";
 import type {
@@ -20,6 +21,7 @@ import type {
   ScorecardRelationship,
   ScorecardSnapshot,
 } from "@/app/data-entry/balanced-scorecard/types";
+import type { ReviewKpiFilterOptions } from "@/app/data-entry/review-kpi/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -43,6 +45,8 @@ type DraftObjectiveKpi = {
   kpiId: string | null;
   kpiDefinitionId: number;
   kpiName: string;
+  kpiCategoryId: number | null;
+  kpiSubcategoryId: number | null;
   targetValue: string;
   trackingFrequency: TrackingFrequency;
 };
@@ -112,9 +116,11 @@ const PERSPECTIVE_LABELS: Record<1 | 2 | 3 | 4, string> = {
 
 export default function ScorecardPageClient({
   initialContext,
+  filterOptions,
   kpiOptions,
 }: {
   initialContext: ScorecardFilterContext;
+  filterOptions: ReviewKpiFilterOptions;
   kpiOptions: ScorecardKpiOption[];
 }) {
   const [context, setContext] =
@@ -288,6 +294,14 @@ export default function ScorecardPageClient({
     [availableKpiOptions],
   );
 
+  const kpiOptionByDefinitionId = useMemo(
+    () =>
+      new Map(
+        availableKpiOptions.map((option) => [option.kpiDefinitionId, option]),
+      ),
+    [availableKpiOptions],
+  );
+
   const existingObjectiveRows = useMemo(
     () =>
       scorecardRows.filter(
@@ -359,6 +373,11 @@ export default function ScorecardPageClient({
           row.kpiName?.trim() ||
           kpiNameByDefinitionId.get(row.kpiDefinitionId) ||
           `KPI ${row.kpiDefinitionId}`,
+        kpiCategoryId:
+          kpiOptionByDefinitionId.get(row.kpiDefinitionId)?.categoryId ?? null,
+        kpiSubcategoryId:
+          kpiOptionByDefinitionId.get(row.kpiDefinitionId)?.subcategoryId ??
+          null,
         targetValue: row.targetValue == null ? "" : String(row.targetValue),
         trackingFrequency:
           row.trackingFrequency === "annually" ? "annually" : "monthly",
@@ -407,58 +426,6 @@ export default function ScorecardPageClient({
       }
     };
 
-    for (const row of scorecardRows) {
-      const perspectiveRef: ScorecardRelationship["source"] = {
-        level: "perspective",
-        perspectiveLevel: row.perspectiveLevel as 1 | 2 | 3 | 4,
-      };
-      addOption({
-        id: relationshipRefId(perspectiveRef),
-        label: `Perspective: ${row.perspectiveLabel}`,
-        ref: perspectiveRef,
-      });
-
-      if (row.objective?.trim()) {
-        const objectiveRef: ScorecardRelationship["source"] = {
-          level: "objective",
-          perspectiveLevel: row.perspectiveLevel as 1 | 2 | 3 | 4,
-          objectiveDescription: row.objective.trim(),
-        };
-        addOption({
-          id: relationshipRefId(objectiveRef),
-          label: `Objective (${row.perspectiveLabel}): ${row.objective.trim()}`,
-          ref: objectiveRef,
-        });
-      }
-
-      if (row.objective?.trim() && row.keyInitiative?.trim()) {
-        const initiativeRef: ScorecardRelationship["source"] = {
-          level: "initiative",
-          perspectiveLevel: row.perspectiveLevel as 1 | 2 | 3 | 4,
-          objectiveDescription: row.objective.trim(),
-          keyInitiativeDescription: row.keyInitiative.trim(),
-        };
-        addOption({
-          id: relationshipRefId(initiativeRef),
-          label: `Initiative (${row.perspectiveLabel}): ${row.keyInitiative.trim()}`,
-          ref: initiativeRef,
-        });
-
-        const kpiRef: ScorecardRelationship["source"] = {
-          level: "kpi",
-          perspectiveLevel: row.perspectiveLevel as 1 | 2 | 3 | 4,
-          objectiveDescription: row.objective.trim(),
-          keyInitiativeDescription: row.keyInitiative.trim(),
-          kpiId: row.kpiDefinitionId,
-        };
-        addOption({
-          id: relationshipRefId(kpiRef),
-          label: `KPI (${row.perspectiveLabel}): ${row.kpiName ?? `KPI #${row.kpiDefinitionId}`}`,
-          ref: kpiRef,
-        });
-      }
-    }
-
     for (const objective of draftObjectives) {
       const objectiveRef: ScorecardRelationship["source"] = {
         level: "objective",
@@ -502,7 +469,7 @@ export default function ScorecardPageClient({
     }
 
     return [...options.values()].sort((a, b) => a.label.localeCompare(b.label));
-  }, [draftObjectives, perspectiveLevel, scorecardRows]);
+  }, [draftObjectives, perspectiveLevel]);
 
   const relationshipNodeById = useMemo(
     () => new Map(relationshipNodeOptions.map((item) => [item.id, item])),
@@ -630,6 +597,8 @@ export default function ScorecardPageClient({
                   kpiId: defaultKpi.kpiId,
                   kpiDefinitionId: defaultKpi.kpiDefinitionId,
                   kpiName: defaultKpi.kpiName,
+                  kpiCategoryId: defaultKpi.categoryId,
+                  kpiSubcategoryId: defaultKpi.subcategoryId,
                   targetValue: "",
                   trackingFrequency: "monthly",
                 },
@@ -989,6 +958,87 @@ export default function ScorecardPageClient({
     await uploadTemplateFile(templateUploadFile);
   };
 
+  const handleSaveLinkages = async () => {
+    setSaveMessage(null);
+    setIsSaving(true);
+
+    try {
+      await saveScorecardRelationships({
+        reportPeriodId: context.reportPeriodId,
+        relationships: draftRelationships,
+      });
+
+      setScorecardRelationships(draftRelationships);
+      setSaveMessage("Linkages saved successfully.");
+      setContext((current) => ({ ...current }));
+    } catch (err) {
+      setSaveMessage(
+        err instanceof Error ? err.message : "Unable to save linkages.",
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleSaveBuilderDraft = async () => {
+    setSaveMessage(null);
+    setIsSaving(true);
+
+    try {
+      const objectivesPayload = draftObjectives
+        .map((objective) => ({
+          description: objective.description.trim(),
+          keyInitiatives: objective.keyInitiatives
+            .map((initiative) => ({
+              description: initiative.description.trim(),
+              kpis: initiative.kpis.map((kpiItem) => ({
+                kpiDefinitionId: kpiItem.kpiDefinitionId,
+                trackingFrequency: kpiItem.trackingFrequency,
+              })),
+            }))
+            .filter(
+              (initiative) =>
+                initiative.description.length > 0 && initiative.kpis.length > 0,
+            ),
+        }))
+        .filter(
+          (objective) =>
+            objective.description.length > 0 &&
+            objective.keyInitiatives.length > 0,
+        );
+
+      if (objectivesPayload.length === 0) {
+        throw new Error(
+          "Build at least one objective with initiatives and KPIs before saving draft.",
+        );
+      }
+
+      await saveScorecardDraft({
+        reportPeriodId: context.reportPeriodId,
+        perspectiveLevel,
+        perspectiveDescription: PERSPECTIVE_LABELS[perspectiveLevel],
+        objectives: objectivesPayload,
+      });
+
+      await saveScorecardRelationships({
+        reportPeriodId: context.reportPeriodId,
+        relationships: draftRelationships,
+      });
+
+      setScorecardRelationships(draftRelationships);
+      setSaveMessage(
+        "Builder draft and linkages saved. You can download/upload the template later.",
+      );
+      setContext((current) => ({ ...current }));
+    } catch (err) {
+      setSaveMessage(
+        err instanceof Error ? err.message : "Unable to save builder draft.",
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const perspectiveLabel = PERSPECTIVE_LABELS[perspectiveLevel];
   const objectiveName = strategicObjective.trim();
   const initiativeName = keyInitiative.trim();
@@ -1078,7 +1128,7 @@ export default function ScorecardPageClient({
         open={isBuilderOpen}
         onOpenChange={setIsBuilderOpen}
       >
-        <DialogContent className="min-w-200 max-h-[88vh] overflow-y-auto">
+        <DialogContent className="w-[98vw] max-w-[98vw] max-h-[88vh] overflow-y-auto p-4 sm:w-[95vw] sm:max-w-350 sm:p-5">
           <DialogHeader>
             <DialogTitle>BSC Template Builder</DialogTitle>
             <DialogDescription>
@@ -1088,46 +1138,52 @@ export default function ScorecardPageClient({
           </DialogHeader>
 
           {templateBuilderOnly ? (
-            <div className="space-y-3">
+            <div className="space-y-4">
               <div className="rounded-md border bg-muted/30 p-2">
                 <p className="text-[11px] font-medium">How It Works</p>
-                <div className="mt-1 grid gap-1 md:grid-cols-3">
-                  <div className="rounded border border-sky-300 bg-sky-50 px-2 py-1 text-[11px]">
+                <div className="mt-1 flex flex-wrap items-stretch gap-1">
+                  <div className="min-w-44 flex-1 rounded border border-sky-300 bg-sky-50 px-2 py-1 text-[11px]">
                     1. Choose perspective
                   </div>
-                  <div className="rounded border border-indigo-300 bg-indigo-50 px-2 py-1 text-[11px]">
+                  <div className="min-w-44 flex-1 rounded border border-indigo-300 bg-indigo-50 px-2 py-1 text-[11px]">
                     2. Build hierarchy
                   </div>
-                  <div className="rounded border border-lime-300 bg-lime-50 px-2 py-1 text-[11px]">
+                  <div className="min-w-44 flex-1 rounded border border-lime-300 bg-lime-50 px-2 py-1 text-[11px]">
                     3. Download and upload template
                   </div>
                 </div>
               </div>
 
-              <div className="space-y-0.5 rounded-md border border-sky-300 bg-sky-50 p-2">
-                <label className="text-[11px] font-medium">Perspective</label>
-                <Select
-                  value={String(perspectiveLevel)}
-                  onValueChange={(value) => {
-                    setPerspectiveLevel(Number(value) as 1 | 2 | 3 | 4);
-                    setSelectedExistingObjective(null);
-                    setStrategicObjective("");
-                    setKeyInitiative("");
-                    setCurrentInitiativeKpis([]);
-                    setCurrentObjectiveInitiatives([]);
-                  }}
-                  disabled={isProcessingTemplate}
-                >
-                  <SelectTrigger className="h-8 bg-white text-xs">
-                    <SelectValue placeholder="Select perspective" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">Financial</SelectItem>
-                    <SelectItem value="2">Customer</SelectItem>
-                    <SelectItem value="3">Operation</SelectItem>
-                    <SelectItem value="4">Development</SelectItem>
-                  </SelectContent>
-                </Select>
+              <div className="rounded-md border border-sky-300 bg-sky-50 p-2">
+                <div className="flex flex-wrap items-end gap-1.5">
+                  <div className="min-w-44 flex-1 space-y-0.5">
+                    <label className="text-[11px] font-medium">
+                      Perspective
+                    </label>
+                    <Select
+                      value={String(perspectiveLevel)}
+                      onValueChange={(value) => {
+                        setPerspectiveLevel(Number(value) as 1 | 2 | 3 | 4);
+                        setSelectedExistingObjective(null);
+                        setStrategicObjective("");
+                        setKeyInitiative("");
+                        setCurrentInitiativeKpis([]);
+                        setCurrentObjectiveInitiatives([]);
+                      }}
+                      disabled={isProcessingTemplate}
+                    >
+                      <SelectTrigger className="h-8 bg-white text-xs">
+                        <SelectValue placeholder="Select perspective" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="1">Financial</SelectItem>
+                        <SelectItem value="2">Customer</SelectItem>
+                        <SelectItem value="3">Operation</SelectItem>
+                        <SelectItem value="4">Development</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
                 <p className="text-[11px] text-muted-foreground">
                   Use the hierarchy rows below to add objectives, initiatives,
                   and KPIs.
@@ -1195,7 +1251,7 @@ export default function ScorecardPageClient({
                             Objective
                           </span>
                         </div>
-                        <div className="flex flex-wrap items-center justify-between gap-1.5">
+                        <div className="flex flex-wrap items-end justify-between gap-1.5">
                           <Input
                             value={objective.description}
                             onChange={(event) =>
@@ -1208,7 +1264,7 @@ export default function ScorecardPageClient({
                             className="h-8 min-w-55 flex-1 bg-white text-xs"
                             disabled={isProcessingTemplate}
                           />
-                          <div className="flex items-center gap-1">
+                          <div className="flex flex-wrap items-center gap-1">
                             <Button
                               type="button"
                               variant="outline"
@@ -1256,7 +1312,7 @@ export default function ScorecardPageClient({
                                     Initiative
                                   </span>
                                 </div>
-                                <div className="flex flex-wrap items-center gap-1">
+                                <div className="flex flex-wrap items-end gap-1">
                                   <Input
                                     value={initiative.description}
                                     onChange={(event) =>
@@ -1311,95 +1367,244 @@ export default function ScorecardPageClient({
                                     {initiative.kpis.map((kpi, index) => (
                                       <li
                                         key={`${initiative.id}-${kpi.kpiDefinitionId}-${index}`}
-                                        className="rounded-md border border-lime-300 bg-lime-50 p-1.5"
+                                        className="rounded-md border border-lime-300 bg-lime-50 p-2"
                                       >
                                         <div className="mb-1 flex items-center gap-1">
                                           <span className="rounded border border-lime-300 bg-white px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-lime-800">
                                             KPI
                                           </span>
                                         </div>
-                                        <div className="grid gap-1 md:grid-cols-[minmax(0,1fr)_160px_auto]">
-                                          <Select
-                                            value={String(kpi.kpiDefinitionId)}
-                                            onValueChange={(value) => {
-                                              const selectedOption =
-                                                availableKpiOptions.find(
-                                                  (option) =>
-                                                    option.kpiDefinitionId ===
-                                                    Number(value),
-                                                ) ?? null;
-
-                                              if (selectedOption == null) {
-                                                return;
+                                        <div className="flex flex-wrap gap-1.5">
+                                          <div className="min-w-48 flex-1">
+                                            <Select
+                                              value={
+                                                kpi.kpiCategoryId == null
+                                                  ? "all"
+                                                  : String(kpi.kpiCategoryId)
                                               }
+                                              onValueChange={(value) =>
+                                                updateKpiPlaceholder(
+                                                  objective.id,
+                                                  initiative.id,
+                                                  index,
+                                                  {
+                                                    kpiCategoryId:
+                                                      value === "all"
+                                                        ? null
+                                                        : Number(value),
+                                                    kpiSubcategoryId: null,
+                                                  },
+                                                )
+                                              }
+                                              disabled={isProcessingTemplate}
+                                            >
+                                              <SelectTrigger className="h-8 w-full bg-white text-xs">
+                                                <SelectValue placeholder="KPI category" />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="all">
+                                                  All categories
+                                                </SelectItem>
+                                                {filterOptions.kpiCategories.map(
+                                                  (option) => (
+                                                    <SelectItem
+                                                      key={option.id}
+                                                      value={String(option.id)}
+                                                    >
+                                                      {option.name}
+                                                    </SelectItem>
+                                                  ),
+                                                )}
+                                              </SelectContent>
+                                            </Select>
+                                          </div>
 
-                                              updateKpiPlaceholder(
-                                                objective.id,
-                                                initiative.id,
-                                                index,
-                                                {
-                                                  kpiId: selectedOption.kpiId,
-                                                  kpiDefinitionId:
-                                                    selectedOption.kpiDefinitionId,
-                                                  kpiName:
-                                                    selectedOption.kpiName,
-                                                },
-                                              );
-                                            }}
-                                            disabled={isProcessingTemplate}
-                                          >
-                                            <SelectTrigger className="h-8 bg-white text-xs">
-                                              <SelectValue placeholder="Select KPI" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              {availableKpiOptions.map(
-                                                (option) => (
-                                                  <SelectItem
-                                                    key={option.kpiDefinitionId}
-                                                    value={String(
-                                                      option.kpiDefinitionId,
-                                                    )}
-                                                  >
-                                                    {option.kpiName}
-                                                  </SelectItem>
-                                                ),
+                                          <div className="min-w-48 flex-1">
+                                            <Select
+                                              value={
+                                                kpi.kpiSubcategoryId == null
+                                                  ? "all"
+                                                  : String(kpi.kpiSubcategoryId)
+                                              }
+                                              onValueChange={(value) =>
+                                                updateKpiPlaceholder(
+                                                  objective.id,
+                                                  initiative.id,
+                                                  index,
+                                                  {
+                                                    kpiSubcategoryId:
+                                                      value === "all"
+                                                        ? null
+                                                        : Number(value),
+                                                  },
+                                                )
+                                              }
+                                              disabled={
+                                                isProcessingTemplate ||
+                                                kpi.kpiCategoryId == null
+                                              }
+                                            >
+                                              <SelectTrigger className="h-8 w-full bg-white text-xs">
+                                                <SelectValue placeholder="KPI subcategory" />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="all">
+                                                  All subcategories
+                                                </SelectItem>
+                                                {filterOptions.kpiSubcategories
+                                                  .filter(
+                                                    (subcategory) =>
+                                                      subcategory.parent_id ===
+                                                      kpi.kpiCategoryId,
+                                                  )
+                                                  .map((option) => (
+                                                    <SelectItem
+                                                      key={option.id}
+                                                      value={String(option.id)}
+                                                    >
+                                                      {option.name}
+                                                    </SelectItem>
+                                                  ))}
+                                              </SelectContent>
+                                            </Select>
+                                          </div>
+                                        </div>
+
+                                        <div className="mt-1.5 flex flex-wrap items-end gap-1.5">
+                                          <div className="min-w-64 flex-1">
+                                            <Select
+                                              value={String(
+                                                kpi.kpiDefinitionId,
                                               )}
-                                            </SelectContent>
-                                          </Select>
+                                              onValueChange={(value) => {
+                                                const selectedOption =
+                                                  availableKpiOptions.find(
+                                                    (option) => {
+                                                      if (
+                                                        kpi.kpiCategoryId !=
+                                                          null &&
+                                                        option.categoryId !==
+                                                          kpi.kpiCategoryId
+                                                      ) {
+                                                        return false;
+                                                      }
 
-                                          <Select
-                                            value={kpi.trackingFrequency}
-                                            onValueChange={(value) =>
-                                              updateKpiPlaceholder(
-                                                objective.id,
-                                                initiative.id,
-                                                index,
-                                                {
-                                                  trackingFrequency:
-                                                    value as TrackingFrequency,
-                                                },
-                                              )
-                                            }
-                                            disabled={isProcessingTemplate}
-                                          >
-                                            <SelectTrigger className="h-8 bg-white text-xs">
-                                              <SelectValue placeholder="Tracking" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                              <SelectItem value="monthly">
-                                                Monthly
-                                              </SelectItem>
-                                              <SelectItem value="annually">
-                                                Annually
-                                              </SelectItem>
-                                            </SelectContent>
-                                          </Select>
+                                                      if (
+                                                        kpi.kpiSubcategoryId !=
+                                                          null &&
+                                                        option.subcategoryId !==
+                                                          kpi.kpiSubcategoryId
+                                                      ) {
+                                                        return false;
+                                                      }
+
+                                                      return (
+                                                        option.kpiDefinitionId ===
+                                                        Number(value)
+                                                      );
+                                                    },
+                                                  ) ?? null;
+
+                                                if (selectedOption == null) {
+                                                  return;
+                                                }
+
+                                                updateKpiPlaceholder(
+                                                  objective.id,
+                                                  initiative.id,
+                                                  index,
+                                                  {
+                                                    kpiId: selectedOption.kpiId,
+                                                    kpiDefinitionId:
+                                                      selectedOption.kpiDefinitionId,
+                                                    kpiName:
+                                                      selectedOption.kpiName,
+                                                    kpiCategoryId:
+                                                      selectedOption.categoryId,
+                                                    kpiSubcategoryId:
+                                                      selectedOption.subcategoryId,
+                                                  },
+                                                );
+                                              }}
+                                              disabled={isProcessingTemplate}
+                                            >
+                                              <SelectTrigger className="h-8 w-full bg-white text-xs">
+                                                <SelectValue placeholder="Select KPI" />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                {availableKpiOptions
+                                                  .filter((option) => {
+                                                    if (
+                                                      kpi.kpiCategoryId !=
+                                                        null &&
+                                                      option.categoryId !==
+                                                        kpi.kpiCategoryId
+                                                    ) {
+                                                      return false;
+                                                    }
+
+                                                    if (
+                                                      kpi.kpiSubcategoryId !=
+                                                        null &&
+                                                      option.subcategoryId !==
+                                                        kpi.kpiSubcategoryId
+                                                    ) {
+                                                      return false;
+                                                    }
+
+                                                    return true;
+                                                  })
+                                                  .map((option) => (
+                                                    <SelectItem
+                                                      key={
+                                                        option.kpiDefinitionId
+                                                      }
+                                                      value={String(
+                                                        option.kpiDefinitionId,
+                                                      )}
+                                                    >
+                                                      {option.kpiName}
+                                                    </SelectItem>
+                                                  ))}
+                                              </SelectContent>
+                                            </Select>
+                                          </div>
+
+                                          <div className="min-w-40">
+                                            <Select
+                                              value={kpi.trackingFrequency}
+                                              onValueChange={(value) =>
+                                                updateKpiPlaceholder(
+                                                  objective.id,
+                                                  initiative.id,
+                                                  index,
+                                                  {
+                                                    trackingFrequency:
+                                                      value as TrackingFrequency,
+                                                  },
+                                                )
+                                              }
+                                              disabled={isProcessingTemplate}
+                                            >
+                                              <SelectTrigger className="h-8 w-full bg-white text-xs">
+                                                <SelectValue placeholder="Tracking" />
+                                              </SelectTrigger>
+                                              <SelectContent>
+                                                <SelectItem value="monthly">
+                                                  Monthly
+                                                </SelectItem>
+                                                <SelectItem value="annually">
+                                                  Annually
+                                                </SelectItem>
+                                              </SelectContent>
+                                            </Select>
+                                          </div>
 
                                           <Button
                                             type="button"
                                             size="sm"
                                             variant="ghost"
-                                            className="h-8 px-2 text-xs"
+                                            className="h-8 px-2 text-xs text-rose-700 hover:text-rose-800"
                                             onClick={() =>
                                               removeKpiPlaceholder(
                                                 objective.id,
@@ -1426,16 +1631,248 @@ export default function ScorecardPageClient({
                 )}
               </div>
 
-              <div className="rounded-md border bg-muted/30 p-2">
+              <div className="rounded-md border bg-muted/30 p-3">
                 <p className="text-[11px] font-medium">Template Setup</p>
                 <p className="mt-0.5 text-[11px] text-muted-foreground">
                   Monthly tracking creates 12 monthly rows from the selected
                   start period. Annual tracking creates 3 yearly rows.
                 </p>
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8 px-2 text-xs"
+                    onClick={() => void handleSaveBuilderDraft()}
+                    disabled={isSaving || isProcessingTemplate}
+                  >
+                    {isSaving ? "Saving..." : "Save Builder Draft"}
+                  </Button>
+                  <p className="text-[11px] text-muted-foreground">
+                    Saves hierarchy and linkages first. Targets can be added
+                    later via template upload.
+                  </p>
+                </div>
               </div>
 
-              <div className="grid gap-2 md:grid-cols-3">
-                <div className="space-y-0.5">
+              <div className="rounded-md border p-3">
+                <div className="flex flex-wrap items-center justify-between gap-1.5">
+                  <p className="text-[11px] font-medium">
+                    Save Linkages (Optional Before Targets)
+                  </p>
+                  {hasUnsavedRelationshipChanges ? (
+                    <span className="rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-[11px] text-amber-800">
+                      Unsaved linkage changes
+                    </span>
+                  ) : (
+                    <span className="rounded border border-lime-200 bg-lime-50 px-1.5 py-0.5 text-[11px] text-lime-800">
+                      Linkages are up to date
+                    </span>
+                  )}
+                </div>
+                <p className="mt-0.5 text-[11px] text-muted-foreground">
+                  You can save cross-hierarchy linkages now, then return later
+                  to set KPI targets via template upload.
+                </p>
+
+                <div className="mt-1.5 flex flex-wrap gap-1.5">
+                  <div className="min-w-56 flex-1 space-y-0.5">
+                    <label className="text-[11px] font-medium">
+                      Source Node
+                    </label>
+                    <Select
+                      value={relationshipSourceId}
+                      onValueChange={setRelationshipSourceId}
+                      disabled={
+                        isSaving || relationshipNodeOptions.length === 0
+                      }
+                    >
+                      <SelectTrigger className="h-8 bg-white text-xs">
+                        <SelectValue placeholder="Select source" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {relationshipNodeOptions.map((option) => (
+                          <SelectItem
+                            key={option.id}
+                            value={option.id}
+                          >
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="min-w-44 flex-1 space-y-0.5">
+                    <label className="text-[11px] font-medium">
+                      Relationship
+                    </label>
+                    <Select
+                      value={relationshipType}
+                      onValueChange={(value) =>
+                        setRelationshipType(value as RelationshipType)
+                      }
+                      disabled={isSaving}
+                    >
+                      <SelectTrigger className="h-8 bg-white text-xs">
+                        <SelectValue placeholder="Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="influences">influences</SelectItem>
+                        <SelectItem value="depends_on">depends_on</SelectItem>
+                        <SelectItem value="contributes_to">
+                          contributes_to
+                        </SelectItem>
+                        <SelectItem value="blocks">blocks</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="min-w-56 flex-1 space-y-0.5">
+                    <label className="text-[11px] font-medium">
+                      Target Node
+                    </label>
+                    <Select
+                      value={relationshipTargetId}
+                      onValueChange={setRelationshipTargetId}
+                      disabled={
+                        isSaving || relationshipNodeOptions.length === 0
+                      }
+                    >
+                      <SelectTrigger className="h-8 bg-white text-xs">
+                        <SelectValue placeholder="Select target" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {relationshipNodeOptions.map((option) => (
+                          <SelectItem
+                            key={option.id}
+                            value={option.id}
+                          >
+                            {option.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+
+                <div className="mt-1.5 flex flex-wrap items-center gap-1.5">
+                  <Button
+                    type="button"
+                    size="sm"
+                    className="h-8 px-2 text-xs"
+                    disabled={isSaving}
+                    onClick={() => {
+                      const source =
+                        relationshipNodeById.get(relationshipSourceId);
+                      const target =
+                        relationshipNodeById.get(relationshipTargetId);
+
+                      if (!source || !target) {
+                        setSaveMessage("Select both source and target nodes.");
+                        return;
+                      }
+
+                      if (source.id === target.id) {
+                        setSaveMessage(
+                          "Source and target nodes must be different.",
+                        );
+                        return;
+                      }
+
+                      const next: ScorecardRelationship = {
+                        id: `${Date.now()}-${Math.random()}`,
+                        source: source.ref,
+                        target: target.ref,
+                        relationshipType,
+                      };
+
+                      setDraftRelationships((prev) => {
+                        const exists = prev.some(
+                          (item) =>
+                            relationshipPairKey(
+                              item.source,
+                              item.target,
+                              item.relationshipType,
+                            ) ===
+                            relationshipPairKey(
+                              next.source,
+                              next.target,
+                              next.relationshipType,
+                            ),
+                        );
+
+                        if (exists) {
+                          return prev;
+                        }
+
+                        return [...prev, next];
+                      });
+                      setSaveMessage("Linkage added to draft.");
+                    }}
+                  >
+                    Add Linkage
+                  </Button>
+
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="h-8 px-2 text-xs"
+                    disabled={isSaving || !hasUnsavedRelationshipChanges}
+                    onClick={() => void handleSaveLinkages()}
+                  >
+                    {isSaving ? "Saving..." : "Save Linkages"}
+                  </Button>
+                </div>
+
+                {draftRelationships.length > 0 ? (
+                  <ul className="mt-1.5 space-y-1">
+                    {draftRelationships.map((item) => {
+                      const sourceId = relationshipRefId(item.source);
+                      const targetId = relationshipRefId(item.target);
+                      const sourceLabel =
+                        relationshipNodeById.get(sourceId)?.label ?? sourceId;
+                      const targetLabel =
+                        relationshipNodeById.get(targetId)?.label ?? targetId;
+
+                      return (
+                        <li
+                          key={item.id}
+                          className="flex flex-wrap items-center justify-between gap-1 rounded border px-2 py-1 text-[11px]"
+                        >
+                          <span className="min-w-0 flex-1 wrap-break-word">
+                            {sourceLabel} {" -> "} {targetLabel} (
+                            {item.relationshipType})
+                          </span>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="sm"
+                            className="h-6 px-1.5 text-[11px]"
+                            onClick={() =>
+                              setDraftRelationships((prev) =>
+                                prev.filter(
+                                  (relationship) => relationship.id !== item.id,
+                                ),
+                              )
+                            }
+                          >
+                            Remove
+                          </Button>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                ) : (
+                  <p className="mt-1.5 text-[11px] text-muted-foreground">
+                    No cross-hierarchy linkages defined yet.
+                  </p>
+                )}
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <div className="min-w-36 flex-1 space-y-0.5">
                   <label className="text-[11px] font-medium">Start Year</label>
                   <Input
                     type="number"
@@ -1448,7 +1885,7 @@ export default function ScorecardPageClient({
                   />
                 </div>
 
-                <div className="space-y-0.5">
+                <div className="min-w-36 flex-1 space-y-0.5">
                   <label className="text-[11px] font-medium">Start Month</label>
                   <Select
                     value={String(templateStartMonth)}
@@ -1475,7 +1912,7 @@ export default function ScorecardPageClient({
                   </Select>
                 </div>
 
-                <div className="flex items-end">
+                <div className="flex min-w-44 items-end">
                   <Button
                     type="button"
                     size="sm"
@@ -1823,6 +2260,8 @@ export default function ScorecardPageClient({
                         kpiId: selectedKpiOption.kpiId,
                         kpiDefinitionId: selectedKpiOption.kpiDefinitionId,
                         kpiName: selectedKpiOption.kpiName,
+                        kpiCategoryId: selectedKpiOption.categoryId,
+                        kpiSubcategoryId: selectedKpiOption.subcategoryId,
                         targetValue: targetValue.trim(),
                         trackingFrequency,
                       };
@@ -2180,29 +2619,7 @@ export default function ScorecardPageClient({
                 variant="outline"
                 className="h-8 px-2 text-xs"
                 disabled={isSaving || !hasUnsavedRelationshipChanges}
-                onClick={async () => {
-                  setSaveMessage(null);
-                  setIsSaving(true);
-
-                  try {
-                    await saveScorecardRelationships({
-                      reportPeriodId: context.reportPeriodId,
-                      relationships: draftRelationships,
-                    });
-
-                    setScorecardRelationships(draftRelationships);
-                    setSaveMessage("Relationships saved successfully.");
-                    setContext((current) => ({ ...current }));
-                  } catch (err) {
-                    setSaveMessage(
-                      err instanceof Error
-                        ? err.message
-                        : "Unable to save relationships.",
-                    );
-                  } finally {
-                    setIsSaving(false);
-                  }
-                }}
+                onClick={() => void handleSaveLinkages()}
               >
                 {isSaving ? "Saving..." : "Save Relationships Only"}
               </Button>

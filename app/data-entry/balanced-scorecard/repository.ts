@@ -1,4 +1,5 @@
 import type {
+  ScorecardDraftSavePayload,
   ScorecardFilterContext,
   ScorecardInputRow,
   ScorecardKpiOption,
@@ -335,6 +336,8 @@ export const listScorecardKpiOptions = async (
     .select({
       kpiDefinitionId: kpiDefinitions.id,
       kpiName: kpiDefinitions.name,
+      categoryId: kpiDefinitions.category_id,
+      subcategoryId: kpiDefinitions.subcategory_id,
       kpiId: kpi.id,
       targetValue: kpi.target_value,
       reportPeriodId: reportPeriods.id,
@@ -356,6 +359,8 @@ export const listScorecardKpiOptions = async (
       kpiDefinitionId: row.kpiDefinitionId,
       reportPeriodId: row.reportPeriodId,
       kpiName: row.kpiName,
+      categoryId: row.categoryId,
+      subcategoryId: row.subcategoryId,
       targetValue: row.targetValue,
     }))
     .sort((a, b) => a.kpiName.localeCompare(b.kpiName));
@@ -756,5 +761,146 @@ export const upsertScorecardRelationships = async (
   return {
     reportPeriodId: payload.reportPeriodId,
     relationships: payload.relationships,
+  };
+};
+
+export const upsertScorecardDraft = async (
+  utilityId: number,
+  updatedById: string | null,
+  payload: ScorecardDraftSavePayload,
+) => {
+  const [period] = await db
+    .select({ id: reportPeriods.id, utilityId: reportPeriods.utility_id })
+    .from(reportPeriods)
+    .where(eq(reportPeriods.id, payload.reportPeriodId))
+    .limit(1);
+
+  if (period == null || period.utilityId !== utilityId) {
+    throw new Error("VALIDATION:Invalid report period for this utility.");
+  }
+
+  const existingBscRows = await db
+    .select({
+      id: bsc.id,
+      perspective: bsc.perspective,
+      relationships: bsc.relationships,
+    })
+    .from(bsc)
+    .where(eq(bsc.utility_id, utilityId))
+    .orderBy(desc(bsc.updated_at));
+
+  const existingBsc =
+    existingBscRows.find(
+      (row) => row.perspective?.perspective_level === payload.perspectiveLevel,
+    ) ?? null;
+
+  const currentPerspective =
+    existingBsc?.perspective?.perspective_level === payload.perspectiveLevel
+      ? existingBsc.perspective
+      : toDefaultPerspective(
+          payload.perspectiveLevel,
+          payload.perspectiveDescription.trim() ||
+            perspectiveLabel(payload.perspectiveLevel),
+        );
+
+  const existingTargetsByKpiAndFrequency = new Map<
+    string,
+    { year: number; month?: number | null; value: string }[]
+  >();
+  for (const objective of currentPerspective.strategic_objective ?? []) {
+    for (const initiative of objective.key_initiatives ?? []) {
+      for (const linkedKpi of initiative.kpis ?? []) {
+        const key = `${linkedKpi.kpi_id}|${linkedKpi.tracking_frequency}`;
+        if (!existingTargetsByKpiAndFrequency.has(key)) {
+          existingTargetsByKpiAndFrequency.set(key, [
+            ...(linkedKpi.targets ?? []),
+          ]);
+        }
+      }
+    }
+  }
+
+  const nextPerspective: Perspective = {
+    perspective_level: payload.perspectiveLevel,
+    description:
+      payload.perspectiveDescription.trim() ||
+      currentPerspective.description ||
+      perspectiveLabel(payload.perspectiveLevel),
+    strategic_objective: payload.objectives.map((objective) => ({
+      description: objective.description,
+      key_initiatives: objective.keyInitiatives.map((initiative) => ({
+        description: initiative.description,
+        kpis: initiative.kpis.map((kpiItem) => {
+          const key = `${kpiItem.kpiDefinitionId}|${kpiItem.trackingFrequency}`;
+          return {
+            kpi_id: kpiItem.kpiDefinitionId,
+            tracking_frequency: kpiItem.trackingFrequency,
+            targets: existingTargetsByKpiAndFrequency.get(key) ?? [],
+          };
+        }),
+      })),
+    })),
+  };
+
+  const uniqueKpiDefinitionIds = Array.from(
+    new Set(
+      payload.objectives.flatMap((objective) =>
+        objective.keyInitiatives.flatMap((initiative) =>
+          initiative.kpis.map((item) => item.kpiDefinitionId),
+        ),
+      ),
+    ),
+  );
+
+  if (uniqueKpiDefinitionIds.length > 0) {
+    const existingKpis = await db
+      .select({ kpiDefId: kpi.kpi_def_id })
+      .from(kpi)
+      .where(
+        and(
+          eq(kpi.report_period_id, payload.reportPeriodId),
+          inArray(kpi.kpi_def_id, uniqueKpiDefinitionIds),
+        ),
+      );
+
+    const existingKpiDefIds = new Set(existingKpis.map((row) => row.kpiDefId));
+
+    const missingRows = uniqueKpiDefinitionIds
+      .filter((kpiDefId) => !existingKpiDefIds.has(kpiDefId))
+      .map((kpiDefId) => ({
+        report_period_id: payload.reportPeriodId,
+        kpi_def_id: kpiDefId,
+        target_value: null,
+        actual_value: "0",
+      }));
+
+    if (missingRows.length > 0) {
+      await db.insert(kpi).values(missingRows);
+    }
+  }
+
+  if (existingBsc) {
+    await db
+      .update(bsc)
+      .set({
+        perspective: nextPerspective,
+        updated_by_id: updatedById,
+        updated_at: new Date(),
+      })
+      .where(eq(bsc.id, existingBsc.id));
+  } else {
+    await db.insert(bsc).values({
+      utility_id: utilityId,
+      perspective: nextPerspective,
+      relationships: existingBscRows[0]?.relationships ?? [],
+      updated_by_id: updatedById,
+      updated_at: new Date(),
+    });
+  }
+
+  return {
+    reportPeriodId: payload.reportPeriodId,
+    perspectiveLevel: payload.perspectiveLevel,
+    objectiveCount: payload.objectives.length,
   };
 };

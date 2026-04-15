@@ -26,7 +26,7 @@ export default function ScorecardFiltersClient({
 
   const visibleSubcategories = useMemo(() => {
     if (context.kpiCategoryId == null) {
-      return options.kpiSubcategories;
+      return [];
     }
 
     return options.kpiSubcategories.filter(
@@ -52,6 +52,9 @@ export default function ScorecardFiltersClient({
         value={context.kpiSubcategoryId}
         compact
         options={visibleSubcategories}
+        disabled={
+          context.kpiCategoryId == null || visibleSubcategories.length === 0
+        }
         onChange={(value) => setField("kpiSubcategoryId", value)}
       />
     </div>

@@ -9,10 +9,12 @@ import {
   listScorecardRelationships,
   listScorecardKpiOptions,
   listScorecardInputRows,
+  upsertScorecardDraft,
   upsertScorecardConfiguration,
   upsertScorecardRelationships,
 } from "@/app/data-entry/balanced-scorecard/repository";
 import type {
+  ScorecardDraftSavePayload,
   ScorecardFilterContext,
   ScorecardKpiOption,
   ScorecardRelationshipsUpdatePayload,
@@ -68,4 +70,18 @@ export const saveScorecardRelationships = async (
   }
 
   return upsertScorecardRelationships(user.org_id, user.id, payload);
+};
+
+export const saveScorecardDraft = async (
+  user: CurrentUser,
+  payload: ScorecardDraftSavePayload,
+) => {
+  assertScorecardWriteAccess(user);
+  if (user.org_id == null) {
+    throw new Error(
+      "VALIDATION:Your account is not scoped to a utility for scorecard updates.",
+    );
+  }
+
+  return upsertScorecardDraft(user.org_id, user.id, payload);
 };

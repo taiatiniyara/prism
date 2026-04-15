@@ -99,11 +99,35 @@ export type ScorecardRelationshipsUpdatePayload = {
   relationships: ScorecardRelationship[];
 };
 
+export type ScorecardDraftKpiInput = {
+  kpiDefinitionId: number;
+  trackingFrequency: "monthly" | "annually";
+};
+
+export type ScorecardDraftInitiativeInput = {
+  description: string;
+  kpis: ScorecardDraftKpiInput[];
+};
+
+export type ScorecardDraftObjectiveInput = {
+  description: string;
+  keyInitiatives: ScorecardDraftInitiativeInput[];
+};
+
+export type ScorecardDraftSavePayload = {
+  reportPeriodId: number;
+  perspectiveLevel: 1 | 2 | 3 | 4;
+  perspectiveDescription: string;
+  objectives: ScorecardDraftObjectiveInput[];
+};
+
 export type ScorecardKpiOption = {
   kpiId: string | null;
   kpiDefinitionId: number;
   reportPeriodId: number;
   kpiName: string;
+  categoryId: number | null;
+  subcategoryId: number | null;
   targetValue: string | null;
 };
 

@@ -18,9 +18,9 @@ const toScorecardContext = (
   reportPeriodId: fallbackReportPeriodId,
   reportTypeId: context.reportTypeId,
   serviceAreaId: context.serviceAreaId,
-  // BSC should always include all KPI categories/subcategories.
-  kpiCategoryId: null,
-  kpiSubcategoryId: null,
+  kpiCategoryId: context.kpiCategoryId,
+  kpiSubcategoryId:
+    context.kpiCategoryId == null ? null : context.kpiSubcategoryId,
 });
 
 export default async function BalancedScorecardPage() {
@@ -37,6 +37,7 @@ export default async function BalancedScorecardPage() {
     return (
       <ScorecardPageClient
         initialContext={scorecardContext}
+        filterOptions={options}
         kpiOptions={kpiOptions}
       />
     );

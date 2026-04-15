@@ -1,4 +1,5 @@
 import type {
+  ScorecardDraftSavePayload,
   ScorecardFilterContext,
   ScorecardKpiOption,
   ScorecardRelationshipsUpdatePayload,
@@ -102,6 +103,24 @@ export const saveScorecardRelationships = async (
     throw new Error(
       result.message ?? "Unable to update scorecard relationships.",
     );
+  }
+};
+
+export const saveScorecardDraft = async (
+  payload: ScorecardDraftSavePayload,
+): Promise<void> => {
+  const response = await fetch(`/api/data-entry/balanced-scorecard/draft`, {
+    method: "PUT",
+    cache: "no-store",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  const result = (await response.json()) as { message?: string };
+  if (!response.ok) {
+    throw new Error(result.message ?? "Unable to save scorecard draft.");
   }
 };
 

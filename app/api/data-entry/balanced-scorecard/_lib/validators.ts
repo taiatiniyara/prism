@@ -1,4 +1,5 @@
 import type {
+  ScorecardDraftSavePayload,
   ScorecardFilterContext,
   ScorecardRelationship,
   ScorecardRelationshipsUpdatePayload,
@@ -308,5 +309,124 @@ export const parseScorecardUpdatePayload = (
       targetValue,
     },
     relationships,
+  };
+};
+
+export const parseScorecardDraftSavePayload = (
+  body: unknown,
+): ScorecardDraftSavePayload => {
+  if (!isPlainObject(body)) {
+    throw new Error("VALIDATION:Request body must be an object.");
+  }
+
+  const reportPeriodId = Number(body.reportPeriodId);
+  if (!Number.isInteger(reportPeriodId) || reportPeriodId <= 0) {
+    throw new Error("VALIDATION:reportPeriodId must be a positive integer.");
+  }
+
+  const perspectiveLevel = Number(body.perspectiveLevel);
+  if (![1, 2, 3, 4].includes(perspectiveLevel)) {
+    throw new Error("VALIDATION:perspectiveLevel must be 1, 2, 3, or 4.");
+  }
+
+  const perspectiveDescription =
+    typeof body.perspectiveDescription === "string"
+      ? body.perspectiveDescription.trim()
+      : "";
+
+  if (!Array.isArray(body.objectives)) {
+    throw new Error("VALIDATION:objectives must be an array.");
+  }
+
+  const objectives = body.objectives.map((objective, objectiveIndex) => {
+    if (!isPlainObject(objective)) {
+      throw new Error(
+        `VALIDATION:objectives[${objectiveIndex}] must be an object.`,
+      );
+    }
+
+    const description =
+      typeof objective.description === "string"
+        ? objective.description.trim()
+        : "";
+
+    if (description.length === 0) {
+      throw new Error(
+        `VALIDATION:objectives[${objectiveIndex}].description is required.`,
+      );
+    }
+
+    if (!Array.isArray(objective.keyInitiatives)) {
+      throw new Error(
+        `VALIDATION:objectives[${objectiveIndex}].keyInitiatives must be an array.`,
+      );
+    }
+
+    const keyInitiatives = objective.keyInitiatives.map(
+      (initiative, initiativeIndex) => {
+        if (!isPlainObject(initiative)) {
+          throw new Error(
+            `VALIDATION:objectives[${objectiveIndex}].keyInitiatives[${initiativeIndex}] must be an object.`,
+          );
+        }
+
+        const initiativeDescription =
+          typeof initiative.description === "string"
+            ? initiative.description.trim()
+            : "";
+
+        if (initiativeDescription.length === 0) {
+          throw new Error(
+            `VALIDATION:objectives[${objectiveIndex}].keyInitiatives[${initiativeIndex}].description is required.`,
+          );
+        }
+
+        if (!Array.isArray(initiative.kpis)) {
+          throw new Error(
+            `VALIDATION:objectives[${objectiveIndex}].keyInitiatives[${initiativeIndex}].kpis must be an array.`,
+          );
+        }
+
+        const kpis = initiative.kpis.map((kpiItem, kpiIndex) => {
+          if (!isPlainObject(kpiItem)) {
+            throw new Error(
+              `VALIDATION:objectives[${objectiveIndex}].keyInitiatives[${initiativeIndex}].kpis[${kpiIndex}] must be an object.`,
+            );
+          }
+
+          const kpiDefinitionId = Number(kpiItem.kpiDefinitionId);
+          if (!Number.isInteger(kpiDefinitionId) || kpiDefinitionId <= 0) {
+            throw new Error(
+              `VALIDATION:objectives[${objectiveIndex}].keyInitiatives[${initiativeIndex}].kpis[${kpiIndex}].kpiDefinitionId must be a positive integer.`,
+            );
+          }
+
+          const trackingFrequency: "monthly" | "annually" =
+            kpiItem.trackingFrequency === "annually" ? "annually" : "monthly";
+
+          return {
+            kpiDefinitionId,
+            trackingFrequency,
+          };
+        });
+
+        return {
+          description: initiativeDescription,
+          kpis,
+        };
+      },
+    );
+
+    return {
+      description,
+      keyInitiatives,
+    };
+  });
+
+  return {
+    reportPeriodId,
+    perspectiveLevel: perspectiveLevel as 1 | 2 | 3 | 4,
+    perspectiveDescription,
+    objectives,
   };
 };
