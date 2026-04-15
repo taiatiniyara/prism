@@ -4,10 +4,12 @@ import { toast } from "sonner";
 import { Switch } from "../ui/switch";
 import { DataTableFormResponse } from "./data-table-create-form";
 
-export default function BooleanToggle<T>(props: {
-  data: T | any;
+type BooleanToggleRecord = { id: string | number } & Record<string, unknown>;
+
+export default function BooleanToggle<T extends BooleanToggleRecord>(props: {
+  data: T;
   column: keyof T;
-  onCheckChange: (data: Partial<T | any>) => Promise<DataTableFormResponse<T>>;
+  onCheckChange: (data: Partial<T>) => Promise<DataTableFormResponse<T>>;
 }) {
   return (
     <Switch
@@ -15,10 +17,10 @@ export default function BooleanToggle<T>(props: {
       size="sm"
       defaultChecked={props.data[props.column] as boolean}
       onCheckedChange={async (checked) => {
-        const data: Partial<T | any> = {
+        const data: Partial<T> = {
           id: props.data.id,
           [props.column]: checked,
-        };
+        } as Partial<T>;
         const res = await props.onCheckChange(data);
         if (res.success) {
           toast.success(res.message);

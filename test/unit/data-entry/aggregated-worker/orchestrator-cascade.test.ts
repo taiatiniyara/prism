@@ -9,6 +9,7 @@ const mocks = vi.hoisted(() => ({
   writeCalculatedTargetValue: vi.fn(),
   storeRunStart: vi.fn(),
   storeRunOutcomes: vi.fn(),
+  triggerKpiWorker: vi.fn(),
 }));
 
 vi.mock(
@@ -47,11 +48,16 @@ vi.mock(
   }),
 );
 
+vi.mock("@/app/data-entry/kpi-worker", () => ({
+  triggerKpiWorker: mocks.triggerKpiWorker,
+}));
+
 describe("aggregated worker orchestrator cascade", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     mocks.assertScopeAuthorization.mockResolvedValue(undefined);
     mocks.writeCalculatedTargetValue.mockResolvedValue(undefined);
+    mocks.triggerKpiWorker.mockResolvedValue(undefined);
     mocks.buildSourceSnapshot.mockResolvedValue({
       capturedAt: "2026-01-01T00:00:00.000Z",
       scope: { reportPeriodId: 12 },

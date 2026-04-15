@@ -18,6 +18,7 @@ describe("sanitizeFilterContext", () => {
       inputCategoryId: 12,
       inputSubcategoryId: 13,
       serviceAreaId: 14,
+      dataEntryStatusId: null,
     });
   });
 
@@ -36,6 +37,7 @@ describe("sanitizeFilterContext", () => {
       inputCategoryId: null,
       inputSubcategoryId: null,
       serviceAreaId: null,
+      dataEntryStatusId: null,
     });
   });
 });

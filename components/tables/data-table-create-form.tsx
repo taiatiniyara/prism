@@ -66,10 +66,11 @@ export function formDataToObject<T>(
   fields: DataTableCreateFormField<T>[],
 ): T {
   const obj: T = {} as T;
+  const mutable = obj as Record<string, FormDataEntryValue>;
   for (const field of fields) {
     const value = formData.get(field.key as string);
     if (value !== null) {
-      (obj as any)[field.key] = value;
+      mutable[String(field.key)] = value;
     }
   }
   return obj;

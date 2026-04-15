@@ -453,10 +453,7 @@ export default function InputFormulaBuilder(props: {
     };
   };
 
-  const parsedInlineFormula = useMemo(
-    () => parseInlineFormula(formula),
-    [formula, energyProviderIdByName, energyTypeIdByName, energySourceIdByName],
-  );
+  const parsedInlineFormula = parseInlineFormula(formula);
 
   const effectiveInputFilters = useMemo(() => {
     const merged: Record<number, FormulaInputFilters> = {};
@@ -567,7 +564,7 @@ export default function InputFormulaBuilder(props: {
     );
   };
 
-  const tokenPreviewRows = useMemo<TokenPreviewRow[]>(() => {
+  const tokenPreviewRows: TokenPreviewRow[] = (() => {
     const identifiers =
       parsedInlineFormula.cleanedFormula.match(/[A-Za-z_][A-Za-z0-9_]*/g) ?? [];
     const seen = new Set<string>();
@@ -594,13 +591,7 @@ export default function InputFormulaBuilder(props: {
     }
 
     return rows;
-  }, [
-    inputByToken,
-    parsedInlineFormula.cleanedFormula,
-    effectiveInputFilters,
-    dummyBaseValue,
-    dummySeed,
-  ]);
+  })();
 
   const formulaPreviewResult = useMemo(() => {
     const cleanFormula = parsedInlineFormula.cleanedFormula.trim();

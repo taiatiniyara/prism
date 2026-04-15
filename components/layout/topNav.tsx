@@ -2,6 +2,7 @@
 
 import { LogIn, Menu, X } from "lucide-react";
 import Image from "next/image";
+import Link from "next/link";
 import NavList from "./navList";
 import { Session } from "better-auth";
 import UserDropdown from "./userDropdown";
@@ -46,14 +47,14 @@ export default function TopNav(props: {
       {/* Main Top Bar */}
       <div className="flex justify-between items-center p-3 relative z-20 bg-transparent">
         <div className="flex items-center gap-16">
-          <a href="/">
+          <Link href="/">
             <Image
               src="/logo.png"
               alt="Logo"
               width={100}
               height={50}
             />
-          </a>
+          </Link>
           <NavList
             navList={navList}
             className="flex-row gap-8 items-center"
@@ -70,12 +71,12 @@ export default function TopNav(props: {
                 fullName={props.fullName}
               />
             ) : (
-              <a
+              <Link
                 href="/auth"
                 className="gap-2 flex items-center hover:text-slate-400"
               >
                 <LogIn size={18} /> Login
-              </a>
+              </Link>
             )}
           </div>
 
@@ -110,12 +111,12 @@ export default function TopNav(props: {
                   </div>
                 </div>
               ) : (
-                <a
+                <Link
                   href="/auth"
                   className="flex items-center gap-2 hover:text-slate-400 py-2"
                 >
                   <LogIn size={20} /> Login
-                </a>
+                </Link>
               )}
             </div>
           </div>

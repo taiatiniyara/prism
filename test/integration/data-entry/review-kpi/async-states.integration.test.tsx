@@ -20,7 +20,10 @@ describe("review kpi async states", () => {
       resolvePending = resolve;
     });
 
-    vi.stubGlobal("fetch", vi.fn(() => pending));
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(() => pending),
+    );
 
     render(
       <ReviewKpiRowCard
@@ -29,8 +32,12 @@ describe("review kpi async states", () => {
       />,
     );
 
-    fireEvent.change(screen.getByDisplayValue("80"), { target: { value: "81" } });
-    fireEvent.click(screen.getByRole("button", { name: "Save Resolved Requests" }));
+    fireEvent.change(screen.getByDisplayValue("80"), {
+      target: { value: "81" },
+    });
+    fireEvent.click(
+      screen.getByRole("button", { name: "Save Resolved Requests" }),
+    );
 
     expect(
       screen.getByRole("button", { name: "Save Resolved Requests" }),
@@ -74,15 +81,17 @@ describe("review kpi async states", () => {
       />,
     );
 
-    const commentInputs = screen.getAllByPlaceholderText("Add a comment");
+    const commentInputs = screen.getAllByPlaceholderText("Add a note...");
 
     fireEvent.change(commentInputs[0], {
       target: { value: "Need verification" },
     });
-    fireEvent.click(screen.getAllByRole("button", { name: "Add comment" })[0]);
+    fireEvent.click(screen.getAllByRole("button", { name: "Post" })[0]);
 
     await waitFor(() => {
-      expect(screen.getByText("Comment service unavailable.")).toBeInTheDocument();
+      expect(
+        screen.getByText("Comment service unavailable."),
+      ).toBeInTheDocument();
     });
   });
 });

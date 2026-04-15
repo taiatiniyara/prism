@@ -17,7 +17,6 @@ import {
 interface GeneratorGroupsProps {
   groups: DataEntryGeneratorGroupView[];
 }
-``;
 
 export default function GeneratorGroups({ groups }: GeneratorGroupsProps) {
   const [openGeneratorId, setOpenGeneratorId] = useState<number | null>(null);

@@ -14,6 +14,10 @@ vi.mock("@/app/data-entry/review-kpi/service", () => ({
   promoteCustomKpiRequestVisibility: vi.fn(),
 }));
 
+vi.mock("next/cache", () => ({
+  revalidatePath: vi.fn(),
+}));
+
 describe("custom KPI decision POST contract", () => {
   beforeEach(() => {
     mocks.getCurrentUser.mockReset();
@@ -41,6 +45,8 @@ describe("custom KPI decision POST contract", () => {
           body: JSON.stringify({
             decisionType: "APPROVE",
             rationale: "Meets criteria",
+            categoryId: 1,
+            subcategoryId: 1,
             override: false,
           }),
         },

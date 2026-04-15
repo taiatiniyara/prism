@@ -12,7 +12,7 @@ export async function AllOrganisations(filters?: {
   activeOnly?: boolean;
   all?: boolean;
 }) {
-  let query = db
+  const query = db
     .select()
     .from(organisations)
     .orderBy(organisations.name)

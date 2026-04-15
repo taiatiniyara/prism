@@ -15,8 +15,8 @@ export default function UploadInputsFromExcel() {
         if (file != null) {
           readXlsxFile(file, { sheet: "Input Source" }).then(async (rows) => {
             const headers = rows[0] as string[];
-            const data: any[] = rows.slice(1).map((row) => {
-              const rowData: Record<string, any> = {};
+            const data: Record<string, unknown>[] = rows.slice(1).map((row) => {
+              const rowData: Record<string, unknown> = {};
               headers.forEach((header, index) => {
                 rowData[header] = row[index];
               });

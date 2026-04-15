@@ -1172,7 +1172,7 @@ export default function ScorecardPageClient({
                       }}
                       disabled={isProcessingTemplate}
                     >
-                      <SelectTrigger className="h-8 bg-white text-xs">
+                      <SelectTrigger className="bg-white text-xs">
                         <SelectValue placeholder="Select perspective" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1398,7 +1398,7 @@ export default function ScorecardPageClient({
                                               }
                                               disabled={isProcessingTemplate}
                                             >
-                                              <SelectTrigger className="h-8 w-full bg-white text-xs">
+                                              <SelectTrigger className="w-full bg-white text-xs">
                                                 <SelectValue placeholder="KPI category" />
                                               </SelectTrigger>
                                               <SelectContent>
@@ -1444,7 +1444,7 @@ export default function ScorecardPageClient({
                                                 kpi.kpiCategoryId == null
                                               }
                                             >
-                                              <SelectTrigger className="h-8 w-full bg-white text-xs">
+                                              <SelectTrigger className="w-full bg-white text-xs">
                                                 <SelectValue placeholder="KPI subcategory" />
                                               </SelectTrigger>
                                               <SelectContent>
@@ -1528,7 +1528,7 @@ export default function ScorecardPageClient({
                                               }}
                                               disabled={isProcessingTemplate}
                                             >
-                                              <SelectTrigger className="h-8 w-full bg-white text-xs">
+                                              <SelectTrigger className="w-full bg-white text-xs">
                                                 <SelectValue placeholder="Select KPI" />
                                               </SelectTrigger>
                                               <SelectContent>
@@ -1586,7 +1586,7 @@ export default function ScorecardPageClient({
                                               }
                                               disabled={isProcessingTemplate}
                                             >
-                                              <SelectTrigger className="h-8 w-full bg-white text-xs">
+                                              <SelectTrigger className="w-full bg-white text-xs">
                                                 <SelectValue placeholder="Tracking" />
                                               </SelectTrigger>
                                               <SelectContent>
@@ -1687,7 +1687,7 @@ export default function ScorecardPageClient({
                         isSaving || relationshipNodeOptions.length === 0
                       }
                     >
-                      <SelectTrigger className="h-8 bg-white text-xs">
+                      <SelectTrigger className="bg-white text-xs">
                         <SelectValue placeholder="Select source" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1714,7 +1714,7 @@ export default function ScorecardPageClient({
                       }
                       disabled={isSaving}
                     >
-                      <SelectTrigger className="h-8 bg-white text-xs">
+                      <SelectTrigger className="bg-white text-xs">
                         <SelectValue placeholder="Type" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1739,7 +1739,7 @@ export default function ScorecardPageClient({
                         isSaving || relationshipNodeOptions.length === 0
                       }
                     >
-                      <SelectTrigger className="h-8 bg-white text-xs">
+                      <SelectTrigger className="bg-white text-xs">
                         <SelectValue placeholder="Select target" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1894,7 +1894,7 @@ export default function ScorecardPageClient({
                     }
                     disabled={isProcessingTemplate}
                   >
-                    <SelectTrigger className="h-8 bg-white text-xs">
+                    <SelectTrigger className="bg-white text-xs">
                       <SelectValue placeholder="Select month" />
                     </SelectTrigger>
                     <SelectContent>
@@ -2027,7 +2027,7 @@ export default function ScorecardPageClient({
                   }}
                   disabled={isSaving}
                 >
-                  <SelectTrigger className="h-8 bg-white text-xs">
+                  <SelectTrigger className="bg-white text-xs">
                     <SelectValue placeholder="Select perspective" />
                   </SelectTrigger>
                   <SelectContent>
@@ -2062,7 +2062,7 @@ export default function ScorecardPageClient({
                     }}
                     disabled={existingObjectiveItems.length === 0 || isSaving}
                   >
-                    <SelectTrigger className="h-8 bg-white text-xs">
+                    <SelectTrigger className="bg-white text-xs">
                       <SelectValue placeholder="Select an objective" />
                     </SelectTrigger>
                     <SelectContent>
@@ -2169,7 +2169,7 @@ export default function ScorecardPageClient({
                         !hasInitiativeContext
                       }
                     >
-                      <SelectTrigger className="h-8 bg-white text-xs">
+                      <SelectTrigger className="bg-white text-xs">
                         <SelectValue placeholder="Select KPI" />
                       </SelectTrigger>
                       <SelectContent>
@@ -2224,7 +2224,7 @@ export default function ScorecardPageClient({
                       }
                       disabled={isSaving || !hasInitiativeContext}
                     >
-                      <SelectTrigger className="h-8 bg-white text-xs">
+                      <SelectTrigger className="bg-white text-xs">
                         <SelectValue placeholder="Select tracking frequency" />
                       </SelectTrigger>
                       <SelectContent>
@@ -2651,7 +2651,7 @@ export default function ScorecardPageClient({
                     onValueChange={setRelationshipSourceId}
                     disabled={isSaving || relationshipNodeOptions.length === 0}
                   >
-                    <SelectTrigger className="h-8 bg-white text-xs">
+                    <SelectTrigger className="bg-white text-xs">
                       <SelectValue placeholder="Select source" />
                     </SelectTrigger>
                     <SelectContent>
@@ -2678,7 +2678,7 @@ export default function ScorecardPageClient({
                     }
                     disabled={isSaving}
                   >
-                    <SelectTrigger className="h-8 bg-white text-xs">
+                    <SelectTrigger className="bg-white text-xs">
                       <SelectValue placeholder="Type" />
                     </SelectTrigger>
                     <SelectContent>
@@ -2699,7 +2699,7 @@ export default function ScorecardPageClient({
                     onValueChange={setRelationshipTargetId}
                     disabled={isSaving || relationshipNodeOptions.length === 0}
                   >
-                    <SelectTrigger className="h-8 bg-white text-xs">
+                    <SelectTrigger className="bg-white text-xs">
                       <SelectValue placeholder="Select target" />
                     </SelectTrigger>
                     <SelectContent>

@@ -206,7 +206,7 @@ export async function UpdateInputDefinition(
     if (Number.isNaN(value)) {
       throw new Error(`Invalid value for ${String(key)}`);
     }
-    (patch as any)[key] = value;
+    patch[key] = value;
   };
 
   try {

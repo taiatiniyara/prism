@@ -20,7 +20,7 @@ export async function getSession() {
     data = await auth.api.getSession({
       headers: new Headers(headerEntries),
     });
-  } catch (err) {
+  } catch {
     return null;
   }
 
