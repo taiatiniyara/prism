@@ -4,12 +4,9 @@ import { GetAllManagedLists } from "@/app/settings/managed-lists/service";
 import { ManagedListItem } from "@/db/schema/managedLists";
 import { useEffect, useState } from "react";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  DataEntrySelect,
+  type DataEntrySelectOption,
+} from "@/components/data-entry/dataEntrySelect";
 import { Skeleton } from "../ui/skeleton";
 
 export default function ManagedListInput(props: {
@@ -62,26 +59,23 @@ export default function ManagedListInput(props: {
 
   if (list.length === 0) {
     return (
-      <Select
+      <DataEntrySelect
         name={props.inputName}
         disabled
-      >
-        <SelectTrigger
-          className={`w-full rounded-l-none rounded-r-lg shadow p-2 ${
-            props.hasValue ? "border-l-lime-200" : "border-l-red-200"
-          }`}
-        >
-          <SelectValue placeholder="No managed-list options available" />
-        </SelectTrigger>
-        <SelectContent>
-          <SelectItem
-            value="__empty"
-            disabled
-          >
-            No managed-list options available
-          </SelectItem>
-        </SelectContent>
-      </Select>
+        value="__empty"
+        size="input"
+        placeholder="No managed-list options available"
+        options={[
+          {
+            value: "__empty",
+            label: "No managed-list options available",
+            disabled: true,
+          },
+        ]}
+        triggerClassName={`border-l-7 rounded-l-none rounded-r-lg ${
+          props.hasValue ? "border-l-lime-200" : "border-l-red-200"
+        }`}
+      />
     );
   }
 
@@ -95,36 +89,28 @@ export default function ManagedListInput(props: {
       : selectedIdFromName != null
         ? selectedIdFromName.toString()
         : undefined;
+  const selectOptions: DataEntrySelectOption[] = list.map((item) => ({
+    value: item.id!.toString(),
+    label: item.name,
+  }));
 
   return (
-    <Select
+    <DataEntrySelect
       value={selectedValue}
       name={props.inputName}
       disabled={props.disabled}
+      size="input"
       onValueChange={(nextValue) => {
         const selectedItem = list.find((item) => String(item.id) === nextValue);
         if (selectedItem && props.onValueNameChange) {
           props.onValueNameChange(selectedItem.name);
         }
       }}
-    >
-      <SelectTrigger
-        className={`w-full shadow border-l-7 p-2 rounded-l-none rounded-r-lg ${
-          props.hasValue ? "border-l-lime-200" : "border-l-red-200"
-        }`}
-      >
-        <SelectValue placeholder={`Select Input`} />
-      </SelectTrigger>
-      <SelectContent>
-        {list.map((item) => (
-          <SelectItem
-            key={item.id}
-            value={item.id!.toString()}
-          >
-            {item.name}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+      placeholder="Select input"
+      options={selectOptions}
+      triggerClassName={`border-l-7 rounded-l-none rounded-r-lg ${
+        props.hasValue ? "border-l-lime-200" : "border-l-red-200"
+      }`}
+    />
   );
 }

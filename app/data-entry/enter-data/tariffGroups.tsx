@@ -5,6 +5,7 @@ import { useState } from "react";
 import { DataEntryTariffPaymentModeGroupView } from "@/app/data-entry/types";
 
 import InputCell from "@/app/data-entry/enter-data/inputCell";
+import { DataEntrySelect } from "@/components/data-entry/dataEntrySelect";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface TariffGroupsProps {
@@ -64,24 +65,20 @@ export default function TariffGroups({ groups }: TariffGroupsProps) {
             <label className="text-xs font-medium text-slate-600">
               Payment Mode
             </label>
-            <select
+            <DataEntrySelect
               value={String(activePaymentMode.paymentModeId)}
-              onChange={(event) => {
-                const nextPaymentModeId = Number(event.target.value);
+              size="input"
+              onValueChange={(nextValue) => {
+                const nextPaymentModeId = Number(nextValue);
                 setOpenPaymentModeId(nextPaymentModeId);
                 setSearchQuery("");
               }}
-              className="h-9 w-full rounded-md border bg-background px-2 text-sm"
-            >
-              {groups.map((group) => (
-                <option
-                  key={group.paymentModeId}
-                  value={group.paymentModeId}
-                >
-                  {group.paymentModeName}
-                </option>
-              ))}
-            </select>
+              placeholder="Select payment mode"
+              options={groups.map((group) => ({
+                value: String(group.paymentModeId),
+                label: group.paymentModeName,
+              }))}
+            />
           </div>
 
           <div className="space-y-1 md:col-span-2">

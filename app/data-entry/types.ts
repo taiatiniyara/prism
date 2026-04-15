@@ -21,7 +21,8 @@ export type DataEntryControlType =
   | "select"
   | "date"
   | "managedLists"
-  | "fallback";
+  | "fallback"
+  | "gender";
 
 export interface DataEntryInputRowView {
   dataEntryId?: string;

@@ -16,6 +16,7 @@ const CONTROL_TYPE_MAP: Record<string, DataEntryControlType> = {
   managedlists: "managedLists",
   "managed-lists": "managedLists",
   "managed list": "managedLists",
+  gender: "gender",
 };
 
 export const mapDataTypeToControlType = (

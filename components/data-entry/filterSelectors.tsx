@@ -1,12 +1,9 @@
 "use client";
 
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  DataEntrySelect,
+  type DataEntrySelectOption,
+} from "@/components/data-entry/dataEntrySelect";
 import { Label } from "@/components/ui/label";
 import { DataEntryFilterOption } from "@/app/data-entry/types";
 
@@ -35,6 +32,14 @@ export function FilterSelect({
   compact = false,
   includeAllOption = true,
 }: FilterSelectProps) {
+  const selectOptions: DataEntrySelectOption[] = [
+    ...(includeAllOption ? [{ value: "all", label: "All" }] : []),
+    ...options.map((option) => ({
+      value: String(option.id),
+      label: option.name,
+    })),
+  ];
+
   return (
     <div className="space-y-1 w-38">
       {showLabel ? (
@@ -45,7 +50,7 @@ export function FilterSelect({
           {label}
         </Label>
       ) : null}
-      <Select
+      <DataEntrySelect
         value={
           value == null ? (includeAllOption ? "all" : undefined) : String(value)
         }
@@ -53,26 +58,13 @@ export function FilterSelect({
           onChange(includeAllOption && next === "all" ? null : Number(next))
         }
         disabled={disabled}
-      >
-        <SelectTrigger
-          id={id}
-          className={`w-full min-w-0 ${compact ? "h-7 px-1.5 py-0 text-[11px]" : "h-8 px-2 text-xs"} shadow`}
-          aria-label={label}
-        >
-          <SelectValue placeholder={placeholder} />
-        </SelectTrigger>
-        <SelectContent>
-          {includeAllOption ? <SelectItem value="all">All</SelectItem> : null}
-          {options.map((option) => (
-            <SelectItem
-              key={option.id}
-              value={String(option.id)}
-            >
-              {option.name}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
+        id={id}
+        ariaLabel={label}
+        placeholder={placeholder}
+        options={selectOptions}
+        size={compact ? "compact" : "default"}
+        triggerClassName={compact ? "h-7 px-1.5 text-[11px]" : undefined}
+      />
     </div>
   );
 }

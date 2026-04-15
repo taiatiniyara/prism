@@ -10,6 +10,7 @@ import {
   updateDataEntryValueAction,
 } from "@/app/data-entry/enter-data/service";
 import { DataEntryInputRowView } from "@/app/data-entry/types";
+import { DataEntrySelect } from "@/components/data-entry/dataEntrySelect";
 import ManagedListInput from "@/components/tables/managed-list-input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -196,23 +197,20 @@ export default function InputCell({ row }: InputCellProps) {
         );
       case "boolean":
         return (
-          <select
-            className={`h-9 w-full rounded-md border px-3 text-sm shadow-sm ${
-              row.value
-                ? "bg-lime-100 border-lime-500"
-                : "bg-slate-100 border-input"
-            }`}
-            defaultValue={displayValue}
+          <DataEntrySelect
+            value={displayValue || undefined}
             disabled={inputDisabled}
-            onChange={(event) => {
-              const nextValue = event.target.value;
-              persistValue(nextValue);
-            }}
-          >
-            <option value="">-- Select --</option>
-            <option value="Yes">Yes</option>
-            <option value="No">No</option>
-          </select>
+            size="input"
+            placeholder="Select"
+            options={[
+              { value: "Yes", label: "Yes" },
+              { value: "No", label: "No" },
+            ]}
+            onValueChange={(nextValue) => persistValue(nextValue)}
+            triggerClassName={`border-l-7 rounded-l-none rounded-r-lg ${
+              row.value ? "border-l-lime-200" : "border-l-red-200"
+            }`}
+          />
         );
       case "date":
         return (
@@ -251,6 +249,23 @@ export default function InputCell({ row }: InputCellProps) {
             hasValue={Boolean(row.value)}
             disabled={inputDisabled}
             onValueNameChange={(selectedName) => persistValue(selectedName)}
+          />
+        );
+      case "gender":
+        return (
+          <DataEntrySelect
+            value={displayValue || undefined}
+            disabled={inputDisabled}
+            size="input"
+            placeholder="Select"
+            options={[
+              { value: "Male", label: "Male" },
+              { value: "Female", label: "Female" },
+            ]}
+            onValueChange={(nextValue) => persistValue(nextValue)}
+            triggerClassName={`border-l-7 rounded-l-none rounded-r-lg ${
+              row.value ? "border-l-lime-200" : "border-l-red-200"
+            }`}
           />
         );
       case "fallback":
