@@ -40,6 +40,34 @@ export const mapToSafeAiError = (error: unknown): SafeAiError => {
   }
 
   if (error instanceof Error) {
+    if (error.message.startsWith("VALIDATION:")) {
+      return {
+        code: "VALIDATION",
+        message: error.message.replace("VALIDATION:", "").trim(),
+      };
+    }
+
+    if (error.message.startsWith("FORBIDDEN:")) {
+      return {
+        code: "FORBIDDEN",
+        message: error.message.replace("FORBIDDEN:", "").trim(),
+      };
+    }
+
+    if (error.message.startsWith("NO_DATA:")) {
+      return {
+        code: "NO_DATA",
+        message: error.message.replace("NO_DATA:", "").trim(),
+      };
+    }
+
+    if (error.message.startsWith("POLICY_BYPASS:")) {
+      return {
+        code: "POLICY_BYPASS",
+        message: error.message.replace("POLICY_BYPASS:", "").trim(),
+      };
+    }
+
     return {
       code: "DOWNSTREAM_FAILURE",
       message: error.message || "A downstream dependency failed.",

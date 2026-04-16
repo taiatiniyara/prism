@@ -248,7 +248,7 @@ export async function UpdateInputDefinition(
   };
 }
 
-interface ExcelInputDefinition {
+export interface ExcelInputDefinition {
   agg_level_id: number;
   data_type_id: number;
   description: string;

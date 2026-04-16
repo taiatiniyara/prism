@@ -6,8 +6,33 @@ export type ReviewDecisionInput = {
   replacementKpiId: number | null;
   categoryId: number | null;
   subcategoryId: number | null;
+  proposedUnits: Array<{
+    name: string;
+    description: string | null;
+    existingUnitId: number | null;
+  }>;
+  proposedInputs: Array<{
+    name: string;
+    description: string | null;
+    unit: string;
+    dataType: string;
+    existingInputId: number | null;
+  }>;
   override: boolean;
   priorDecisionId: string | null;
+};
+
+const optionalString = (value: unknown, max = 255): string | null => {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return null;
+  }
+
+  return trimmed.slice(0, max);
 };
 
 const parsePositiveIntOrNull = (value: unknown): number | null => {
@@ -84,6 +109,72 @@ export const parseReviewDecisionPayload = (
   const categoryId = parsePositiveIntOrNull(source.categoryId);
   const subcategoryId = parsePositiveIntOrNull(source.subcategoryId);
 
+  const proposedUnits = Array.isArray(source.proposedUnits)
+    ? source.proposedUnits
+        .map((item) => {
+          if (typeof item !== "object" || item == null) {
+            return null;
+          }
+
+          const value = item as Record<string, unknown>;
+          const name = optionalString(value.name);
+          if (!name) {
+            return null;
+          }
+
+          return {
+            name,
+            description: optionalString(value.description),
+            existingUnitId: parsePositiveIntOrNull(value.existingUnitId),
+          };
+        })
+        .filter(
+          (
+            item,
+          ): item is {
+            name: string;
+            description: string | null;
+            existingUnitId: number | null;
+          } => Boolean(item),
+        )
+    : [];
+
+  const proposedInputs = Array.isArray(source.proposedInputs)
+    ? source.proposedInputs
+        .map((item) => {
+          if (typeof item !== "object" || item == null) {
+            return null;
+          }
+
+          const value = item as Record<string, unknown>;
+          const name = optionalString(value.name);
+          const unit = optionalString(value.unit);
+          const dataType = optionalString(value.dataType);
+          if (!name || !unit || !dataType) {
+            return null;
+          }
+
+          return {
+            name,
+            description: optionalString(value.description),
+            unit,
+            dataType,
+            existingInputId: parsePositiveIntOrNull(value.existingInputId),
+          };
+        })
+        .filter(
+          (
+            item,
+          ): item is {
+            name: string;
+            description: string | null;
+            unit: string;
+            dataType: string;
+            existingInputId: number | null;
+          } => Boolean(item),
+        )
+    : [];
+
   if (decisionType === "APPROVE") {
     if (categoryId == null) {
       throw new Error("VALIDATION:categoryId is required for APPROVE.");
@@ -112,6 +203,8 @@ export const parseReviewDecisionPayload = (
     replacementKpiId,
     categoryId,
     subcategoryId,
+    proposedUnits,
+    proposedInputs,
     override,
     priorDecisionId,
   };

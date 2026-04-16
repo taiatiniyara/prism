@@ -1,6 +1,9 @@
 "use client";
 import readXlsxFile from "read-excel-file/browser";
-import { UpdateInputDefinitionFromExcel } from "./service";
+import {
+  ExcelInputDefinition,
+  UpdateInputDefinitionFromExcel,
+} from "./service";
 import SubmitBtn from "@/components/submitBtn";
 import { Heading } from "@/components/heading";
 import { toast } from "sonner";
@@ -22,7 +25,9 @@ export default function UploadInputsFromExcel() {
               });
               return rowData;
             });
-            await UpdateInputDefinitionFromExcel(data);
+            await UpdateInputDefinitionFromExcel(
+              data as unknown as ExcelInputDefinition[],
+            );
             toast.success("Inputs updated successfully");
           });
         } else {

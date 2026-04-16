@@ -42,8 +42,8 @@ describe("custom KPI request POST contract", () => {
         body: JSON.stringify({
           title: "Total Energy Use",
           formulaExpression: "inputA / inputB",
-          businessContext: "Utility Monthly",
           description: "Custom KPI",
+          unitId: 91,
         }),
       }),
     );

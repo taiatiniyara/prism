@@ -21,7 +21,15 @@ type InputOption = {
   unit: string | null;
 };
 
-export function CustomKpiRequestDialog(props: { inputOptions: InputOption[] }) {
+type UnitOption = {
+  id: number;
+  name: string;
+};
+
+export function CustomKpiRequestDialog(props: {
+  inputOptions: InputOption[];
+  unitOptions: UnitOption[];
+}) {
   const [open, setOpen] = useState(false);
 
   return (
@@ -36,15 +44,16 @@ export function CustomKpiRequestDialog(props: { inputOptions: InputOption[] }) {
       </DialogTrigger>
       <DialogContent className="max-h-[90vh] max-w-5xl overflow-y-auto p-0 sm:max-w-5xl">
         <DialogHeader className="border-b px-6 pt-6 pb-4">
-          <DialogTitle>New custom KPI request</DialogTitle>
+          <DialogTitle>New Custom KPI Request</DialogTitle>
           <DialogDescription>
-            Submit a custom KPI for DEV review.
+            Submit a custom KPI for Admins to review.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="p-6">
+        <div className="px-6">
           <CustomKpiRequestForm
             inputOptions={props.inputOptions}
+            unitOptions={props.unitOptions}
             onSubmitted={() => setOpen(false)}
           />
         </div>

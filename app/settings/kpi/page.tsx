@@ -3,6 +3,7 @@ import { KpiDefinition } from "@/db/schema/kpi";
 import { getCurrentUser } from "@/lib/user.service";
 import {
   getCustomKpiPageViewModel,
+  listCustomKpiProposalReferenceOptions,
   listCustomKpiReviewQueue,
 } from "@/app/settings/kpi/custom-kpi/service";
 import { CustomKpiRequestDialog } from "@/components/data-entry/custom-kpi-request-dialog";
@@ -27,7 +28,7 @@ export default async function KpiSettingsPage() {
   const isBloRole = currentUser.role === "BLO";
   const isGlobalRole = currentUser.role === "DEV" || currentUser.role === "BMO";
   const canEditTargets = !isGlobalRole && currentUser.org_id != null;
-  const definitionsTitle = isDevRole ? "Definitions" : "Custom KPIs";
+  const definitionsTitle = isDevRole ? "Definitions" : "Custom KPI Requests";
   const showCustomKpiReviewView = isDevRole;
   const showCustomKpiRequestsView = isBloRole;
   const kpiDefinitions = await GetAllKpiDefinitions();
@@ -39,6 +40,17 @@ export default async function KpiSettingsPage() {
   const customKpiQueue = showCustomKpiReviewView
     ? await listCustomKpiReviewQueue().catch(() => null)
     : null;
+  const customKpiProposalReferenceOptions = showCustomKpiReviewView
+    ? await listCustomKpiProposalReferenceOptions().catch(() => ({
+        availableInputDefinitions: [],
+        availableUnits: [],
+        availableDataTypes: [],
+      }))
+    : {
+        availableInputDefinitions: [],
+        availableUnits: [],
+        availableDataTypes: [],
+      };
   const customKpiApprovalOptions = showCustomKpiReviewView
     ? await listCustomKpiApprovalTaxonomyOptions().catch(() => ({
         categories: [],
@@ -51,6 +63,7 @@ export default async function KpiSettingsPage() {
         <>
           <CustomKpiRequestDialog
             inputOptions={customKpiViewModel.availableInputDefinitions}
+            unitOptions={customKpiViewModel.availableUnits}
           />
 
           {customKpiViewModel.requests.length === 0 ? (
@@ -98,15 +111,6 @@ export default async function KpiSettingsPage() {
                         </p>
                         <div className="whitespace-pre-wrap rounded border bg-muted/20 p-2 font-mono text-[11px] sm:text-xs">
                           {request.formula_expression}
-                        </div>
-                      </div>
-
-                      <div>
-                        <p className="mb-1 text-xs font-medium text-muted-foreground">
-                          Business context
-                        </p>
-                        <div className="whitespace-pre-wrap rounded border bg-muted/20 p-2 text-xs sm:text-sm">
-                          {request.business_context}
                         </div>
                       </div>
 
@@ -252,15 +256,6 @@ export default async function KpiSettingsPage() {
 
                     <div>
                       <p className="mb-1 text-xs font-medium text-muted-foreground">
-                        Business context
-                      </p>
-                      <div className="whitespace-pre-wrap wrap-break-word rounded border bg-muted/20 p-2 text-xs sm:text-sm">
-                        {item.business_context}
-                      </div>
-                    </div>
-
-                    <div>
-                      <p className="mb-1 text-xs font-medium text-muted-foreground">
                         Description
                       </p>
                       <div className="whitespace-pre-wrap wrap-break-word rounded border bg-muted/20 p-2 text-xs sm:text-sm">
@@ -289,6 +284,53 @@ export default async function KpiSettingsPage() {
                         </ul>
                       )}
                     </div>
+
+                    <div>
+                      <p className="mb-1 text-xs font-medium text-muted-foreground">
+                        Proposed units ({item.proposed_units.length})
+                      </p>
+                      {item.proposed_units.length === 0 ? (
+                        <div className="rounded border bg-muted/20 p-2 text-xs sm:text-sm">
+                          -
+                        </div>
+                      ) : (
+                        <ul className="list-disc space-y-1 rounded border bg-muted/20 p-3 pl-7 text-xs sm:text-sm">
+                          {item.proposed_units.map((proposedUnit, index) => (
+                            <li key={`${item.id}-proposed-unit-${index}`}>
+                              {proposedUnit.name}
+                              {proposedUnit.description
+                                ? ` - ${proposedUnit.description}`
+                                : ""}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
+
+                    <div>
+                      <p className="mb-1 text-xs font-medium text-muted-foreground">
+                        Proposed inputs ({item.proposed_inputs.length})
+                      </p>
+                      {item.proposed_inputs.length === 0 ? (
+                        <div className="rounded border bg-muted/20 p-2 text-xs sm:text-sm">
+                          -
+                        </div>
+                      ) : (
+                        <ul className="list-disc space-y-1 rounded border bg-muted/20 p-3 pl-7 text-xs sm:text-sm">
+                          {item.proposed_inputs.map((proposedInput, index) => (
+                            <li key={`${item.id}-proposed-input-${index}`}>
+                              {proposedInput.name}
+                              {proposedInput.unit
+                                ? ` (${proposedInput.unit})`
+                                : ""}
+                              {proposedInput.dataType
+                                ? ` [${proposedInput.dataType}]`
+                                : ""}
+                            </li>
+                          ))}
+                        </ul>
+                      )}
+                    </div>
                   </div>
 
                   <div className="border-t pt-4">
@@ -306,6 +348,17 @@ export default async function KpiSettingsPage() {
                       subcategoryOptions={
                         customKpiApprovalOptions.subcategories
                       }
+                      existingInputOptions={
+                        customKpiProposalReferenceOptions.availableInputDefinitions
+                      }
+                      existingUnitOptions={
+                        customKpiProposalReferenceOptions.availableUnits
+                      }
+                      dataTypeOptions={
+                        customKpiProposalReferenceOptions.availableDataTypes
+                      }
+                      proposedUnits={item.proposed_units}
+                      proposedInputs={item.proposed_inputs}
                     />
                   </div>
                 </details>
@@ -335,9 +388,11 @@ export default async function KpiSettingsPage() {
           {!isBloRole ? (
             <TabsTrigger value="custom-kpi">Custom KPI Workflow</TabsTrigger>
           ) : null}
-          <TabsTrigger value="limits">Limits</TabsTrigger>
-          <TabsTrigger value="targets">Targets</TabsTrigger>
-          <TabsTrigger value="formula-builder">Formula Builder</TabsTrigger>
+          <TabsTrigger value="targets">KPI Targets</TabsTrigger>
+          <TabsTrigger value="limits">KPI Limits</TabsTrigger>
+          {isDevRole ? (
+            <TabsTrigger value="formula-builder">Formula Builder</TabsTrigger>
+          ) : null}
         </TabsList>
 
         {!isBloRole ? (
@@ -450,22 +505,24 @@ export default async function KpiSettingsPage() {
           />
         </TabsContent>
 
-        <TabsContent value="formula-builder">
-          <section className="rounded-xl border bg-card p-4 sm:p-6">
-            <p className="mb-4 text-sm text-muted-foreground">
-              Choose a KPI, select input variables, and build the formula to be
-              used in future KPI calculations.
-            </p>
-            <KpiFormulaBuilder
-              kpis={data.kpis}
-              inputs={data.inputs}
-              energyProviderOptions={data.energyProviderOptions}
-              energyTypeOptions={data.energyTypeOptions}
-              energySourceOptions={data.energySourceOptions}
-              previewContextLabel={data.previewContextLabel}
-            />
-          </section>
-        </TabsContent>
+        {isDevRole ? (
+          <TabsContent value="formula-builder">
+            <section className="rounded-xl border bg-card p-4 sm:p-6">
+              <p className="mb-4 text-sm text-muted-foreground">
+                Choose a KPI, select input variables, and build the formula to
+                be used in future KPI calculations.
+              </p>
+              <KpiFormulaBuilder
+                kpis={data.kpis}
+                inputs={data.inputs}
+                energyProviderOptions={data.energyProviderOptions}
+                energyTypeOptions={data.energyTypeOptions}
+                energySourceOptions={data.energySourceOptions}
+                previewContextLabel={data.previewContextLabel}
+              />
+            </section>
+          </TabsContent>
+        ) : null}
       </Tabs>
     </div>
   );

@@ -948,6 +948,18 @@ export type ApplyCustomKpiDecisionInput = {
   replacementKpiId: number | null;
   categoryId: number | null;
   subcategoryId: number | null;
+  proposedUnits: Array<{
+    name: string;
+    description: string | null;
+    existingUnitId: number | null;
+  }>;
+  proposedInputs: Array<{
+    name: string;
+    description: string | null;
+    unit: string;
+    dataType: string;
+    existingInputId: number | null;
+  }>;
   override: boolean;
   priorDecisionId: string | null;
 };
@@ -1068,6 +1080,191 @@ export const resolveOverrideDecisionLineage = (input: {
   return { requiresOverride: true, overrideDecisionId: input.priorDecisionId };
 };
 
+const normalizeText = (value: string) =>
+  value.trim().replace(/\s+/g, " ").toLowerCase();
+
+const buildVariableNameFromInputName = (name: string) =>
+  name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "")
+    .slice(0, 255);
+
+const resolveProposedUnitNameToId = async (
+  proposedUnits: ApplyCustomKpiDecisionInput["proposedUnits"],
+) => {
+  const [unitList] = await db
+    .select({ id: managedLists.id })
+    .from(managedLists)
+    .where(
+      and(
+        eq(managedLists.is_active, true),
+        inArray(managedLists.name, ["Unit", "Units", "unit", "units"]),
+      ),
+    )
+    .limit(1);
+
+  if (!unitList) {
+    throw new Error("VALIDATION:Managed list 'Unit' was not found.");
+  }
+
+  const existingUnits = await db
+    .select({ id: managedListItems.id, name: managedListItems.name })
+    .from(managedListItems)
+    .where(
+      and(
+        eq(managedListItems.list_id, unitList.id),
+        eq(managedListItems.is_active, true),
+      ),
+    );
+
+  const byNormalizedName = new Map<string, number>(
+    existingUnits.map((item) => [normalizeText(item.name), item.id]),
+  );
+
+  for (const proposedUnit of proposedUnits) {
+    const normalizedName = normalizeText(proposedUnit.name);
+    if (!normalizedName) {
+      continue;
+    }
+
+    if (proposedUnit.existingUnitId != null) {
+      byNormalizedName.set(normalizedName, proposedUnit.existingUnitId);
+      continue;
+    }
+
+    const existingId = byNormalizedName.get(normalizedName);
+    if (existingId != null) {
+      continue;
+    }
+
+    const [created] = await db
+      .insert(managedListItems)
+      .values({
+        list_id: unitList.id,
+        name: proposedUnit.name.trim(),
+        description: proposedUnit.description,
+        is_active: true,
+      })
+      .returning({ id: managedListItems.id, name: managedListItems.name });
+
+    byNormalizedName.set(normalizedName, created.id);
+  }
+
+  return byNormalizedName;
+};
+
+const resolveProposedInputDefinitionIds = async (input: {
+  proposedInputs: ApplyCustomKpiDecisionInput["proposedInputs"];
+  categoryId: number;
+  subcategoryId: number;
+  fallbackUnitId: number | null;
+  proposedUnitNameToId: Map<string, number>;
+}) => {
+  if (input.proposedInputs.length === 0) {
+    return [] as number[];
+  }
+
+  const [dataTypeList] = await db
+    .select({ id: managedLists.id })
+    .from(managedLists)
+    .where(
+      and(
+        eq(managedLists.is_active, true),
+        inArray(managedLists.name, ["Data Type", "Data Types"]),
+      ),
+    )
+    .limit(1);
+
+  if (!dataTypeList) {
+    throw new Error("VALIDATION:Managed list 'Data Type' was not found.");
+  }
+
+  const [existingInputs, dataTypeRows] = await Promise.all([
+    db
+      .select({ id: inputDefinitions.id, name: inputDefinitions.name })
+      .from(inputDefinitions)
+      .where(eq(inputDefinitions.is_active, true)),
+    db
+      .select({ id: managedListItems.id, name: managedListItems.name })
+      .from(managedListItems)
+      .where(
+        and(
+          eq(managedListItems.list_id, dataTypeList.id),
+          eq(managedListItems.is_active, true),
+        ),
+      ),
+  ]);
+
+  const inputNameToId = new Map<string, number>(
+    existingInputs.map((item) => [normalizeText(item.name), item.id]),
+  );
+  const dataTypeNameToId = new Map<string, number>(
+    dataTypeRows.map((item) => [normalizeText(item.name), item.id]),
+  );
+
+  const resolvedIds: number[] = [];
+
+  for (const proposedInput of input.proposedInputs) {
+    if (proposedInput.existingInputId != null) {
+      resolvedIds.push(proposedInput.existingInputId);
+      continue;
+    }
+
+    const normalizedName = normalizeText(proposedInput.name);
+    if (!normalizedName) {
+      continue;
+    }
+
+    const existingInputId = inputNameToId.get(normalizedName);
+    if (existingInputId != null) {
+      resolvedIds.push(existingInputId);
+      continue;
+    }
+
+    const normalizedUnitName = normalizeText(proposedInput.unit);
+    const unitId =
+      input.proposedUnitNameToId.get(normalizedUnitName) ??
+      input.fallbackUnitId;
+    if (unitId == null) {
+      throw new Error(
+        `VALIDATION:Unable to resolve unit for proposed input '${proposedInput.name}'.`,
+      );
+    }
+
+    const dataTypeId = dataTypeNameToId.get(
+      normalizeText(proposedInput.dataType),
+    );
+    if (dataTypeId == null) {
+      throw new Error(
+        `VALIDATION:Unknown data type '${proposedInput.dataType}' for proposed input '${proposedInput.name}'.`,
+      );
+    }
+
+    const variableName = buildVariableNameFromInputName(proposedInput.name);
+
+    const [createdInput] = await db
+      .insert(inputDefinitions)
+      .values({
+        name: proposedInput.name.trim(),
+        description: proposedInput.description,
+        variable_name: variableName.length > 0 ? variableName : null,
+        category_id: input.categoryId,
+        subcategory_id: input.subcategoryId,
+        unit_id: unitId,
+        data_type_id: dataTypeId,
+        is_active: true,
+      })
+      .returning({ id: inputDefinitions.id, name: inputDefinitions.name });
+
+    inputNameToId.set(normalizedName, createdInput.id);
+    resolvedIds.push(createdInput.id);
+  }
+
+  return resolvedIds;
+};
+
 export const applyCustomKpiReviewDecision = async (
   requestId: string,
   input: ApplyCustomKpiDecisionInput,
@@ -1095,7 +1292,9 @@ export const applyCustomKpiReviewDecision = async (
       title: customKpiRequests.title,
       description: customKpiRequests.description,
       formulaExpression: customKpiRequests.formula_expression,
-      businessContext: customKpiRequests.business_context,
+      unitId: customKpiRequests.unit_id,
+      proposedUnits: customKpiRequests.proposed_units,
+      proposedInputs: customKpiRequests.proposed_inputs,
       selectedInputDefinitionIds:
         customKpiRequests.selected_input_definition_ids,
       existingKpiDefinitionId: customKpiRequests.replacement_kpi_def_id,
@@ -1135,17 +1334,34 @@ export const applyCustomKpiReviewDecision = async (
 
   let approvedKpiDefinitionId: number | null = null;
   if (input.decisionType === "APPROVE") {
+    const proposedUnitNameToId = await resolveProposedUnitNameToId(
+      input.proposedUnits,
+    );
+
+    const resolvedProposedInputIds = await resolveProposedInputDefinitionIds({
+      proposedInputs: input.proposedInputs,
+      categoryId: input.categoryId!,
+      subcategoryId: input.subcategoryId!,
+      fallbackUnitId: request.unitId,
+      proposedUnitNameToId,
+    });
+
+    const resolvedInputDefinitionIds = [
+      ...new Set([
+        ...(request.selectedInputDefinitionIds ?? []),
+        ...resolvedProposedInputIds,
+      ]),
+    ];
+
     const selectedInputDefinitions =
-      request.selectedInputDefinitionIds.length > 0
+      resolvedInputDefinitionIds.length > 0
         ? await db
             .select({
               id: inputDefinitions.id,
               variableName: inputDefinitions.variable_name,
             })
             .from(inputDefinitions)
-            .where(
-              inArray(inputDefinitions.id, request.selectedInputDefinitionIds),
-            )
+            .where(inArray(inputDefinitions.id, resolvedInputDefinitionIds))
         : [];
 
     const formulaInputs = selectedInputDefinitions
@@ -1222,6 +1438,7 @@ export const applyCustomKpiReviewDecision = async (
         .set({
           formula: request.formulaExpression,
           formula_inputs: formulaInputs.length > 0 ? formulaInputs : null,
+          ...(request.unitId != null ? { unit_id: request.unitId } : {}),
           category_id: categoryItem.id,
           subcategory_id: subcategoryItem.id,
         })
@@ -1245,9 +1462,10 @@ export const applyCustomKpiReviewDecision = async (
         .insert(kpiDefinitions)
         .values({
           name: request.title,
-          description: request.description ?? request.businessContext,
+          description: request.description ?? request.title,
           formula: request.formulaExpression,
           formula_inputs: formulaInputs.length > 0 ? formulaInputs : null,
+          ...(request.unitId != null ? { unit_id: request.unitId } : {}),
           category_id: categoryItem.id,
           subcategory_id: subcategoryItem.id,
           type: "custom",

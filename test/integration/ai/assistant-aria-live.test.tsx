@@ -24,14 +24,14 @@ describe("assistant aria-live announcements", () => {
   it("announces loading updates via aria-live region", async () => {
     render(<AssistantPanel />);
 
-    fireEvent.change(screen.getByLabelText("Ask a reporting question"), {
+    fireEvent.change(screen.getByLabelText("Message the assistant"), {
       target: { value: "show completeness" },
     });
 
-    fireEvent.click(screen.getByRole("button", { name: "Run query" }));
+    fireEvent.click(screen.getByRole("button", { name: "Send" }));
 
     await waitFor(() => {
-      expect(screen.getByText("Loading results...")).toBeInTheDocument();
+      expect(screen.getByText("Assistant is thinking...")).toBeInTheDocument();
     });
   });
 });

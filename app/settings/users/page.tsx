@@ -11,7 +11,7 @@ const utilityRoles = ["BLO", "CEO", "DAOF", "DAOH", "DAOO", "MGR", "EXE"];
 
 export default async function UsersSettingsPage() {
   const users = await AllUsers();
-  let columns: string[] = [
+  let columns: (keyof User)[] = [
     "name",
     "email",
     "role",

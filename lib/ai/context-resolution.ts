@@ -65,10 +65,60 @@ export const resolveFilterContext = ({
     ) ??
     sanitizePositiveInt(roleDefaults?.serviceAreaId, "serviceAreaId", warnings);
 
+  const energyResourceId =
+    sanitizePositiveInt(
+      requestContext?.energyResourceId,
+      "energyResourceId",
+      warnings,
+    ) ??
+    sanitizePositiveInt(
+      sessionContext?.energyResourceId,
+      "energyResourceId",
+      warnings,
+    ) ??
+    sanitizePositiveInt(
+      roleDefaults?.energyResourceId,
+      "energyResourceId",
+      warnings,
+    );
+
+  const year =
+    sanitizePositiveInt(requestContext?.year, "year", warnings) ??
+    sanitizePositiveInt(sessionContext?.year, "year", warnings) ??
+    sanitizePositiveInt(roleDefaults?.year, "year", warnings);
+
+  const utilityId =
+    sanitizePositiveInt(requestContext?.utilityId, "utilityId", warnings) ??
+    sanitizePositiveInt(sessionContext?.utilityId, "utilityId", warnings) ??
+    sanitizePositiveInt(roleDefaults?.utilityId, "utilityId", warnings);
+
+  const utilityName =
+    requestContext?.utilityName?.trim() ||
+    sessionContext?.utilityName?.trim() ||
+    roleDefaults?.utilityName?.trim() ||
+    undefined;
+
+  const runId =
+    requestContext?.runId?.trim() ||
+    sessionContext?.runId?.trim() ||
+    roleDefaults?.runId?.trim() ||
+    undefined;
+
+  const renewableDefinition =
+    requestContext?.renewableDefinition ??
+    sessionContext?.renewableDefinition ??
+    roleDefaults?.renewableDefinition;
+
   return {
     context: {
       reportPeriodId,
       serviceAreaId,
+      energyResourceId,
+      year,
+      utilityId,
+      utilityName,
+      runId,
+      renewableDefinition,
     },
     warnings,
   };

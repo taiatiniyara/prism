@@ -2,32 +2,15 @@
 
 import { useState } from "react";
 
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import type { AiQueryResponse, QueryClass } from "@/lib/ai/types";
+import type { AiQueryResponse } from "@/lib/ai/types";
 import { ExportActions } from "./export-actions";
 import { ResponseMetricsTable } from "./response-metrics-table";
 import { ResponseSourceAttribution } from "./response-source-attribution";
 import { ResponseSummary } from "./response-summary";
 import { AI_FOCUS_RING_CLASS } from "./shared";
 
-const QUERY_CLASSES: QueryClass[] = [
-  "completeness",
-  "review-bottlenecks",
-  "stale-missing-kpi",
-  "pending-queue",
-];
-
 export function AssistantPanel() {
   const [prompt, setPrompt] = useState("");
-  const [queryClass, setQueryClass] = useState<QueryClass>("completeness");
-  const [reportPeriodId, setReportPeriodId] = useState("");
-  const [serviceAreaId, setServiceAreaId] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [response, setResponse] = useState<AiQueryResponse | null>(null);
@@ -40,11 +23,7 @@ export function AssistantPanel() {
     try {
       const payload = {
         prompt,
-        queryClass,
-        filterContext: {
-          reportPeriodId: reportPeriodId ? Number(reportPeriodId) : undefined,
-          serviceAreaId: serviceAreaId ? Number(serviceAreaId) : undefined,
-        },
+        mode: "auto-scope",
       };
 
       const result = await fetch("/api/ai/query", {
@@ -65,9 +44,10 @@ export function AssistantPanel() {
       }
 
       setResponse(body as AiQueryResponse);
+      setPrompt("");
     } catch {
       setResponse(null);
-      setError("Unable to run query.");
+      setError("Unable to send message.");
     } finally {
       setIsLoading(false);
     }
@@ -83,74 +63,35 @@ export function AssistantPanel() {
           className="block text-sm font-medium text-slate-700"
           htmlFor="ai-prompt"
         >
-          Ask a reporting question
+          Message the assistant
         </label>
         <textarea
           id="ai-prompt"
           className={`w-full rounded-md border border-slate-300 p-2 text-sm ${AI_FOCUS_RING_CLASS}`}
           value={prompt}
           onChange={(event) => setPrompt(event.target.value)}
+          placeholder="Ask anything about your PRISM data..."
           rows={4}
           required
         />
 
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-          <label className="text-sm text-slate-700">
-            Query class
-            <Select
-              value={queryClass}
-              onValueChange={(value) => setQueryClass(value as QueryClass)}
-            >
-              <SelectTrigger
-                className={`mt-1 h-9 w-full border-slate-300 ${AI_FOCUS_RING_CLASS}`}
-              >
-                <SelectValue placeholder="Select query class" />
-              </SelectTrigger>
-              <SelectContent>
-                {QUERY_CLASSES.map((item) => (
-                  <SelectItem
-                    key={item}
-                    value={item}
-                  >
-                    {item}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </label>
-          <label className="text-sm text-slate-700">
-            Report period ID
-            <input
-              className={`mt-1 w-full rounded-md border border-slate-300 p-2 ${AI_FOCUS_RING_CLASS}`}
-              value={reportPeriodId}
-              onChange={(event) => setReportPeriodId(event.target.value)}
-              inputMode="numeric"
-            />
-          </label>
-          <label className="text-sm text-slate-700">
-            Service area ID
-            <input
-              className={`mt-1 w-full rounded-md border border-slate-300 p-2 ${AI_FOCUS_RING_CLASS}`}
-              value={serviceAreaId}
-              onChange={(event) => setServiceAreaId(event.target.value)}
-              inputMode="numeric"
-            />
-          </label>
-        </div>
+        <p className="text-xs text-slate-500">
+          No manual filters required. The assistant auto-scopes your request.
+        </p>
 
         <button
           type="submit"
           className={`rounded-md bg-slate-900 px-4 py-2 text-sm font-medium text-white ${AI_FOCUS_RING_CLASS} disabled:opacity-60`}
           disabled={isLoading}
         >
-          {isLoading ? "Running query..." : "Run query"}
+          {isLoading ? "Sending..." : "Send"}
         </button>
 
         <p
           aria-live="polite"
           className="text-sm text-slate-600"
         >
-          {isLoading ? "Loading results..." : ""}
+          {isLoading ? "Assistant is thinking..." : ""}
         </p>
       </form>
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState, useTransition } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import readXlsxFile from "read-excel-file/browser";
 import * as XLSX from "xlsx";
 
@@ -79,6 +79,78 @@ export default function KpiTargetsEditor(props: {
   const [selectedKpiId, setSelectedKpiId] = useState<string>(
     props.kpis[0]?.id ? String(props.kpis[0].id) : "",
   );
+  const [selectedCategory, setSelectedCategory] = useState<string>("all");
+  const [selectedSubcategory, setSelectedSubcategory] = useState<string>("all");
+
+  const categoryOptions = useMemo(() => {
+    const options = new Set<string>();
+    for (const kpi of props.kpis) {
+      const category = (kpi.category ?? "").trim();
+      if (category) {
+        options.add(category);
+      }
+    }
+
+    return [...options].sort((a, b) => a.localeCompare(b));
+  }, [props.kpis]);
+
+  const subcategoryOptions = useMemo(() => {
+    const options = new Set<string>();
+    for (const kpi of props.kpis) {
+      const matchesCategory =
+        selectedCategory === "all" ||
+        (kpi.category ?? "").trim() === selectedCategory;
+      if (!matchesCategory) {
+        continue;
+      }
+
+      const subcategory = (kpi.subcategory ?? "").trim();
+      if (subcategory) {
+        options.add(subcategory);
+      }
+    }
+
+    return [...options].sort((a, b) => a.localeCompare(b));
+  }, [props.kpis, selectedCategory]);
+
+  const filteredKpis = useMemo(
+    () =>
+      props.kpis.filter((kpi) => {
+        const category = (kpi.category ?? "").trim();
+        const subcategory = (kpi.subcategory ?? "").trim();
+
+        const matchesCategory =
+          selectedCategory === "all" || category === selectedCategory;
+        const matchesSubcategory =
+          selectedSubcategory === "all" || subcategory === selectedSubcategory;
+
+        return matchesCategory && matchesSubcategory;
+      }),
+    [props.kpis, selectedCategory, selectedSubcategory],
+  );
+
+  useEffect(() => {
+    if (
+      selectedSubcategory !== "all" &&
+      !subcategoryOptions.includes(selectedSubcategory)
+    ) {
+      setSelectedSubcategory("all");
+    }
+  }, [selectedSubcategory, subcategoryOptions]);
+
+  useEffect(() => {
+    const selectedStillVisible = filteredKpis.some(
+      (kpi) => String(kpi.id) === selectedKpiId,
+    );
+
+    if (selectedStillVisible) {
+      return;
+    }
+
+    const fallback = filteredKpis[0];
+    setSelectedKpiId(fallback ? String(fallback.id) : "");
+    setRows(parseTargetRows(fallback, props.utilityId));
+  }, [filteredKpis, props.utilityId, selectedKpiId]);
 
   const selectedKpi = useMemo(
     () => props.kpis.find((kpi) => String(kpi.id) === selectedKpiId),
@@ -360,34 +432,104 @@ export default function KpiTargetsEditor(props: {
           </div>
         </div>
 
-        <div className="space-y-2">
-          <label
-            htmlFor="kpi-target-kpi-select"
-            className="text-sm font-medium"
-          >
-            KPI
-          </label>
-          <Select
-            value={selectedKpiId}
-            onValueChange={onKpiChange}
-          >
-            <SelectTrigger
-              id="kpi-target-kpi-select"
-              className="h-9 w-full"
+        <div className="grid gap-3 md:grid-cols-3">
+          <div className="space-y-2">
+            <label
+              htmlFor="kpi-target-category-filter"
+              className="text-sm font-medium"
             >
-              <SelectValue placeholder="Select KPI" />
-            </SelectTrigger>
-            <SelectContent>
-              {props.kpis.map((kpi) => (
-                <SelectItem
-                  key={kpi.id}
-                  value={String(kpi.id)}
-                >
-                  {kpi.name} ({kpi.unit}) - {kpi.category} / {kpi.subcategory}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+              KPI Category
+            </label>
+            <Select
+              value={selectedCategory}
+              onValueChange={setSelectedCategory}
+            >
+              <SelectTrigger
+                id="kpi-target-category-filter"
+                className="h-9 w-full"
+              >
+                <SelectValue placeholder="All categories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All categories</SelectItem>
+                {categoryOptions.map((category) => (
+                  <SelectItem
+                    key={category}
+                    value={category}
+                  >
+                    {category}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <label
+              htmlFor="kpi-target-subcategory-filter"
+              className="text-sm font-medium"
+            >
+              KPI Subcategory
+            </label>
+            <Select
+              value={selectedSubcategory}
+              onValueChange={setSelectedSubcategory}
+            >
+              <SelectTrigger
+                id="kpi-target-subcategory-filter"
+                className="h-9 w-full"
+              >
+                <SelectValue placeholder="All subcategories" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All subcategories</SelectItem>
+                {subcategoryOptions.map((subcategory) => (
+                  <SelectItem
+                    key={subcategory}
+                    value={subcategory}
+                  >
+                    {subcategory}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-2">
+            <label
+              htmlFor="kpi-target-kpi-select"
+              className="text-sm font-medium"
+            >
+              KPI
+            </label>
+            <Select
+              value={selectedKpiId}
+              onValueChange={onKpiChange}
+            >
+              <SelectTrigger
+                id="kpi-target-kpi-select"
+                className="h-9 w-full"
+              >
+                <SelectValue placeholder="Select KPI" />
+              </SelectTrigger>
+              <SelectContent>
+                {filteredKpis.map((kpi) => (
+                  <SelectItem
+                    key={kpi.id}
+                    value={String(kpi.id)}
+                  >
+                    {kpi.name} ({kpi.unit}) - {kpi.category} / {kpi.subcategory}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            {filteredKpis.length === 0 ? (
+              <p className="text-xs text-muted-foreground">
+                No KPI matches the selected category filters.
+              </p>
+            ) : null}
+          </div>
         </div>
 
         {!props.canEditTargets ? (

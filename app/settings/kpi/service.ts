@@ -965,7 +965,7 @@ export async function SaveKpiTargets(
   };
 }
 
-interface ExcelKpiDefinition {
+export interface ExcelKpiDefinition {
   source_id: number;
   formula: string;
   kpi_category_id: number;

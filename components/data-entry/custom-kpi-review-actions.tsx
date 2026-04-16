@@ -30,6 +30,16 @@ type CustomKpiReviewActionsProps = {
   canPromote: boolean;
   categoryOptions: CategoryOption[];
   subcategoryOptions: SubcategoryOption[];
+  existingInputOptions: Array<{ id: number; name: string }>;
+  existingUnitOptions: Array<{ id: number; name: string }>;
+  dataTypeOptions: Array<{ id: number; name: string }>;
+  proposedUnits: Array<{ name: string; description?: string | null }>;
+  proposedInputs: Array<{
+    name: string;
+    description?: string | null;
+    unit: string;
+    dataType: string;
+  }>;
 };
 
 export function CustomKpiReviewActions({
@@ -38,6 +48,11 @@ export function CustomKpiReviewActions({
   canPromote,
   categoryOptions,
   subcategoryOptions,
+  existingInputOptions,
+  existingUnitOptions,
+  dataTypeOptions,
+  proposedUnits,
+  proposedInputs,
 }: CustomKpiReviewActionsProps) {
   const router = useRouter();
   const [decisionType, setDecisionType] = useState<DecisionType>("APPROVE");
@@ -46,6 +61,22 @@ export function CustomKpiReviewActions({
   const [categoryId, setCategoryId] = useState("");
   const [subcategoryId, setSubcategoryId] = useState("");
   const [override, setOverride] = useState(false);
+  const [unitResolutions, setUnitResolutions] = useState(
+    proposedUnits.map((item) => ({
+      name: item.name,
+      description: item.description ?? "",
+      existingUnitId: "",
+    })),
+  );
+  const [inputResolutions, setInputResolutions] = useState(
+    proposedInputs.map((item) => ({
+      name: item.name,
+      description: item.description ?? "",
+      unit: item.unit,
+      dataType: item.dataType,
+      existingInputId: "",
+    })),
+  );
   const [submittingDecision, setSubmittingDecision] = useState(false);
   const [submittingPromotion, setSubmittingPromotion] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
@@ -109,6 +140,8 @@ export function CustomKpiReviewActions({
             replacementKpiId,
             categoryId: parsedCategoryId,
             subcategoryId: parsedSubcategoryId,
+            proposedUnits: unitResolutions,
+            proposedInputs: inputResolutions,
             override,
             priorDecisionId: override ? latestDecisionId : null,
           }),
@@ -251,73 +284,267 @@ export function CustomKpiReviewActions({
           ) : null}
 
           {decisionType === "APPROVE" ? (
-            <div className="grid gap-2 sm:grid-cols-2">
-              <div className="flex flex-col gap-1">
-                <label
-                  className="text-xs sm:text-sm"
-                  htmlFor={`approval-category-${requestId}`}
-                >
-                  KPI Category
-                </label>
-                <Select
-                  value={categoryId}
-                  onValueChange={(value) => {
-                    setCategoryId(value);
-                    setSubcategoryId("");
-                  }}
-                  required
-                  aria-required="true"
-                >
-                  <SelectTrigger
-                    id={`approval-category-${requestId}`}
-                    className="h-9 text-xs sm:text-sm"
+            <div className="space-y-3">
+              <div className="grid gap-2 sm:grid-cols-2">
+                <div className="flex flex-col gap-1">
+                  <label
+                    className="text-xs sm:text-sm"
+                    htmlFor={`approval-category-${requestId}`}
                   >
-                    <SelectValue placeholder="Select category" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {categoryOptions.map((option) => (
-                      <SelectItem
-                        key={option.id}
-                        value={String(option.id)}
-                      >
-                        {option.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                    KPI Category
+                  </label>
+                  <Select
+                    value={categoryId}
+                    onValueChange={(value) => {
+                      setCategoryId(value);
+                      setSubcategoryId("");
+                    }}
+                    required
+                    aria-required="true"
+                  >
+                    <SelectTrigger
+                      id={`approval-category-${requestId}`}
+                      className="h-9 text-xs sm:text-sm"
+                    >
+                      <SelectValue placeholder="Select category" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {categoryOptions.map((option) => (
+                        <SelectItem
+                          key={option.id}
+                          value={String(option.id)}
+                        >
+                          {option.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="flex flex-col gap-1">
+                  <label
+                    className="text-xs sm:text-sm"
+                    htmlFor={`approval-subcategory-${requestId}`}
+                  >
+                    KPI Subcategory
+                  </label>
+                  <Select
+                    value={subcategoryId}
+                    onValueChange={setSubcategoryId}
+                    required
+                    aria-required="true"
+                    disabled={parsedCategoryId == null}
+                  >
+                    <SelectTrigger
+                      id={`approval-subcategory-${requestId}`}
+                      className="h-9 text-xs sm:text-sm"
+                    >
+                      <SelectValue placeholder="Select subcategory" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {filteredSubcategoryOptions.map((option) => (
+                        <SelectItem
+                          key={option.id}
+                          value={String(option.id)}
+                        >
+                          {option.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
               </div>
 
-              <div className="flex flex-col gap-1">
-                <label
-                  className="text-xs sm:text-sm"
-                  htmlFor={`approval-subcategory-${requestId}`}
-                >
-                  KPI Subcategory
-                </label>
-                <Select
-                  value={subcategoryId}
-                  onValueChange={setSubcategoryId}
-                  required
-                  aria-required="true"
-                  disabled={parsedCategoryId == null}
-                >
-                  <SelectTrigger
-                    id={`approval-subcategory-${requestId}`}
-                    className="h-9 text-xs sm:text-sm"
-                  >
-                    <SelectValue placeholder="Select subcategory" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {filteredSubcategoryOptions.map((option) => (
-                      <SelectItem
-                        key={option.id}
-                        value={String(option.id)}
+              <div className="space-y-2 rounded border p-2">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Proposed units resolution
+                </p>
+                {unitResolutions.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    No proposed units.
+                  </p>
+                ) : (
+                  unitResolutions.map((item, index) => (
+                    <div
+                      key={`unit-resolution-${index}`}
+                      className="grid gap-2 sm:grid-cols-2"
+                    >
+                      <input
+                        className="rounded border bg-background px-2 py-1 text-xs sm:text-sm"
+                        value={item.name}
+                        placeholder="Unit name"
+                        onChange={(event) =>
+                          setUnitResolutions((current) =>
+                            current.map((unit, unitIndex) =>
+                              unitIndex === index
+                                ? { ...unit, name: event.target.value }
+                                : unit,
+                            ),
+                          )
+                        }
+                      />
+                      <Select
+                        value={item.existingUnitId}
+                        onValueChange={(value) =>
+                          setUnitResolutions((current) =>
+                            current.map((unit, unitIndex) =>
+                              unitIndex === index
+                                ? { ...unit, existingUnitId: value }
+                                : unit,
+                            ),
+                          )
+                        }
                       >
-                        {option.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+                        <SelectTrigger className="h-9 text-xs sm:text-sm">
+                          <SelectValue placeholder="Use existing unit (optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__create_new__">
+                            Create new unit
+                          </SelectItem>
+                          {existingUnitOptions.map((option) => (
+                            <SelectItem
+                              key={option.id}
+                              value={String(option.id)}
+                            >
+                              {option.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <input
+                        className="rounded border bg-background px-2 py-1 text-xs sm:text-sm sm:col-span-2"
+                        value={item.description}
+                        placeholder="Unit description"
+                        onChange={(event) =>
+                          setUnitResolutions((current) =>
+                            current.map((unit, unitIndex) =>
+                              unitIndex === index
+                                ? { ...unit, description: event.target.value }
+                                : unit,
+                            ),
+                          )
+                        }
+                      />
+                    </div>
+                  ))
+                )}
+              </div>
+
+              <div className="space-y-2 rounded border p-2">
+                <p className="text-xs font-medium text-muted-foreground">
+                  Proposed inputs resolution
+                </p>
+                {inputResolutions.length === 0 ? (
+                  <p className="text-xs text-muted-foreground">
+                    No proposed inputs.
+                  </p>
+                ) : (
+                  inputResolutions.map((item, index) => (
+                    <div
+                      key={`input-resolution-${index}`}
+                      className="grid gap-2 sm:grid-cols-2"
+                    >
+                      <input
+                        className="rounded border bg-background px-2 py-1 text-xs sm:text-sm"
+                        value={item.name}
+                        placeholder="Input name"
+                        onChange={(event) =>
+                          setInputResolutions((current) =>
+                            current.map((row, rowIndex) =>
+                              rowIndex === index
+                                ? { ...row, name: event.target.value }
+                                : row,
+                            ),
+                          )
+                        }
+                      />
+                      <Select
+                        value={item.existingInputId}
+                        onValueChange={(value) =>
+                          setInputResolutions((current) =>
+                            current.map((row, rowIndex) =>
+                              rowIndex === index
+                                ? { ...row, existingInputId: value }
+                                : row,
+                            ),
+                          )
+                        }
+                      >
+                        <SelectTrigger className="h-9 text-xs sm:text-sm">
+                          <SelectValue placeholder="Use existing input (optional)" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="__create_new__">
+                            Create new input
+                          </SelectItem>
+                          {existingInputOptions.map((option) => (
+                            <SelectItem
+                              key={option.id}
+                              value={String(option.id)}
+                            >
+                              {option.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <input
+                        className="rounded border bg-background px-2 py-1 text-xs sm:text-sm sm:col-span-2"
+                        value={item.description}
+                        placeholder="Input description"
+                        onChange={(event) =>
+                          setInputResolutions((current) =>
+                            current.map((row, rowIndex) =>
+                              rowIndex === index
+                                ? { ...row, description: event.target.value }
+                                : row,
+                            ),
+                          )
+                        }
+                      />
+                      <input
+                        className="rounded border bg-background px-2 py-1 text-xs sm:text-sm"
+                        value={item.unit}
+                        placeholder="Unit name"
+                        onChange={(event) =>
+                          setInputResolutions((current) =>
+                            current.map((row, rowIndex) =>
+                              rowIndex === index
+                                ? { ...row, unit: event.target.value }
+                                : row,
+                            ),
+                          )
+                        }
+                      />
+                      <Select
+                        value={item.dataType}
+                        onValueChange={(value) =>
+                          setInputResolutions((current) =>
+                            current.map((row, rowIndex) =>
+                              rowIndex === index
+                                ? { ...row, dataType: value }
+                                : row,
+                            ),
+                          )
+                        }
+                      >
+                        <SelectTrigger className="h-9 text-xs sm:text-sm">
+                          <SelectValue placeholder="Data type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {dataTypeOptions.map((option) => (
+                            <SelectItem
+                              key={option.id}
+                              value={option.name}
+                            >
+                              {option.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ))
+                )}
               </div>
             </div>
           ) : null}

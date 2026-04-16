@@ -4,6 +4,7 @@ export interface FilterContextFixture {
   inputCategoryId: number | null;
   inputSubcategoryId: number | null;
   serviceAreaId: number | null;
+  dataEntryStatusId: number | null;
 }
 
 export interface FilterOptionFixture {
@@ -27,6 +28,7 @@ export const buildFilterContextFixture = (
   inputCategoryId: 515,
   inputSubcategoryId: 600,
   serviceAreaId: 10,
+  dataEntryStatusId: null,
   ...overrides,
 });
 

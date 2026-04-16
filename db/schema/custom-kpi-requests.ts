@@ -10,6 +10,7 @@ import {
 
 import { user } from "./auth-schema";
 import { kpiDefinitions } from "./kpi";
+import { managedListItems } from "./managedLists";
 
 export type CustomKpiRequestStatus =
   | "PENDING_REVIEW"
@@ -37,6 +38,18 @@ export type CustomKpiEmailDeliveryStatus =
   | "FAILED_RETRYABLE"
   | "FAILED_FINAL";
 
+export type CustomKpiProposedUnit = {
+  name: string;
+  description?: string | null;
+};
+
+export type CustomKpiProposedInput = {
+  name: string;
+  description?: string | null;
+  unit: string;
+  dataType: string;
+};
+
 export const customKpiRequests = pgTable(
   "custom_kpi_request",
   {
@@ -47,7 +60,15 @@ export const customKpiRequests = pgTable(
     title: text("title").notNull(),
     description: text("description"),
     formula_expression: text("formula_expression").notNull(),
-    business_context: text("business_context").notNull(),
+    unit_id: integer("unit_id").references(() => managedListItems.id),
+    proposed_units: json("proposed_units")
+      .$type<CustomKpiProposedUnit[]>()
+      .notNull()
+      .default([]),
+    proposed_inputs: json("proposed_inputs")
+      .$type<CustomKpiProposedInput[]>()
+      .notNull()
+      .default([]),
     selected_input_definition_ids: json("selected_input_definition_ids")
       .$type<number[]>()
       .notNull()

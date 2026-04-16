@@ -1388,11 +1388,11 @@ export default function ScorecardTree({
   const resetKey = useMemo(() => {
     const rowSignature = rows
       .map((row) => row.kpiDefinitionId)
-      .sort((a, b) => a - b)
+      .sort((a, b) => Number(a) - Number(b))
       .join("|");
     const relationshipSignature = relationships
       .map((relationship) => relationship.id)
-      .sort((a, b) => a - b)
+      .sort((a, b) => Number(a) - Number(b))
       .join("|");
 
     return `${rowSignature}::${relationshipSignature}`;

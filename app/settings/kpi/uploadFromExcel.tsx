@@ -1,6 +1,6 @@
 "use client";
 import readXlsxFile from "read-excel-file/browser";
-import { UpdateKpiDefinitionFromExcel } from "./service";
+import { ExcelKpiDefinition, UpdateKpiDefinitionFromExcel } from "./service";
 import SubmitBtn from "@/components/submitBtn";
 import { Heading } from "@/components/heading";
 import { toast } from "sonner";
@@ -25,7 +25,9 @@ export default function UploadKpiFromExcel() {
                   });
                   return rowData;
                 });
-              const response = await UpdateKpiDefinitionFromExcel(data);
+              const response = await UpdateKpiDefinitionFromExcel(
+                data as unknown as ExcelKpiDefinition[],
+              );
               if (response.success) {
                 toast.success(response.message);
               } else {

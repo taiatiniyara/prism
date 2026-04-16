@@ -31,6 +31,7 @@ describe("filter cascade behavior", () => {
         reportPeriods: options.reportPeriods,
         inputSubcategories: options.inputSubcategories,
         serviceAreas: options.serviceAreas,
+        dataEntryStatuses: [],
       },
     );
 

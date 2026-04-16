@@ -37,7 +37,11 @@ interface DataTableProps<T> {
 
 type SortDirection = "asc" | "desc" | null;
 
-export default function DataTable<T>(props: DataTableProps<T>) {
+type DataTableRecord = { id: string | number } & Record<string, unknown>;
+
+export default function DataTable<T extends DataTableRecord>(
+  props: DataTableProps<T>,
+) {
   const { columns, title, data, createFormProps, updateFormProps } = props;
 
   const [search, setSearch] = useState("");

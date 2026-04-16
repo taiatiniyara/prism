@@ -16,13 +16,13 @@ describe("custom KPI submit request service", () => {
     const a = buildCustomKpiDefinitionFingerprint({
       title: "  Total Energy Use",
       formulaExpression: "inputA / inputB ",
-      businessContext: " Utility Monthly ",
+      unitId: 91,
     });
 
     const b = buildCustomKpiDefinitionFingerprint({
       title: "total energy use",
       formulaExpression: "inputa / inputb",
-      businessContext: "utility monthly",
+      unitId: 91,
     });
 
     expect(a).toBe(b);

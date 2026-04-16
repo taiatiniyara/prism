@@ -2,8 +2,24 @@ export type CreateCustomKpiRequestInput = {
   title: string;
   description: string | null;
   formulaExpression: string;
-  businessContext: string;
+  unitId: number;
+  proposedUnits: Array<{ name: string; description: string | null }>;
+  proposedInputs: Array<{
+    name: string;
+    description: string | null;
+    unit: string;
+    dataType: string;
+  }>;
   selectedInputDefinitionIds: number[];
+};
+
+const requirePositiveInteger = (value: unknown, field: string): number => {
+  const parsed = typeof value === "number" ? value : Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error(`VALIDATION:${field} must be a positive integer.`);
+  }
+
+  return parsed;
 };
 
 const requireString = (value: unknown, field: string, max = 2000): string => {
@@ -21,6 +37,19 @@ const requireString = (value: unknown, field: string, max = 2000): string => {
   }
 
   return trimmed;
+};
+
+const optionalString = (value: unknown, max = 2000): string | null => {
+  if (typeof value !== "string") {
+    return null;
+  }
+
+  const trimmed = value.trim();
+  if (trimmed.length === 0) {
+    return null;
+  }
+
+  return trimmed.slice(0, max);
 };
 
 const parseSelectedInputDefinitionIds = (value: unknown): number[] => {
@@ -43,6 +72,88 @@ const parseSelectedInputDefinitionIds = (value: unknown): number[] => {
   }
 
   return [...new Set(ids)];
+};
+
+const parseProposedUnits = (
+  value: unknown,
+): Array<{ name: string; description: string | null }> => {
+  if (value == null) {
+    return [];
+  }
+
+  if (!Array.isArray(value)) {
+    throw new Error("VALIDATION:proposedUnits must be an array.");
+  }
+
+  return value
+    .map((item) => {
+      if (typeof item !== "object" || item == null) {
+        return null;
+      }
+
+      const source = item as Record<string, unknown>;
+      const name = optionalString(source.name, 255);
+      if (!name) {
+        return null;
+      }
+
+      return {
+        name,
+        description: optionalString(source.description, 255),
+      };
+    })
+    .filter((item): item is { name: string; description: string | null } =>
+      Boolean(item),
+    );
+};
+
+const parseProposedInputs = (
+  value: unknown,
+): Array<{
+  name: string;
+  description: string | null;
+  unit: string;
+  dataType: string;
+}> => {
+  if (value == null) {
+    return [];
+  }
+
+  if (!Array.isArray(value)) {
+    throw new Error("VALIDATION:proposedInputs must be an array.");
+  }
+
+  return value
+    .map((item) => {
+      if (typeof item !== "object" || item == null) {
+        return null;
+      }
+
+      const source = item as Record<string, unknown>;
+      const name = optionalString(source.name, 255);
+      const unit = optionalString(source.unit, 255);
+      const dataType = optionalString(source.dataType, 255);
+      if (!name || !unit || !dataType) {
+        return null;
+      }
+
+      return {
+        name,
+        description: optionalString(source.description, 255),
+        unit,
+        dataType,
+      };
+    })
+    .filter(
+      (
+        item,
+      ): item is {
+        name: string;
+        description: string | null;
+        unit: string;
+        dataType: string;
+      } => Boolean(item),
+    );
 };
 
 export const parseCreateCustomKpiRequestPayload = (
@@ -68,11 +179,9 @@ export const parseCreateCustomKpiRequestPayload = (
       "formulaExpression",
       2000,
     ),
-    businessContext: requireString(
-      source.businessContext,
-      "businessContext",
-      2000,
-    ),
+    unitId: requirePositiveInteger(source.unitId, "unitId"),
+    proposedUnits: parseProposedUnits(source.proposedUnits),
+    proposedInputs: parseProposedInputs(source.proposedInputs),
     selectedInputDefinitionIds: parseSelectedInputDefinitionIds(
       source.selectedInputDefinitionIds,
     ),

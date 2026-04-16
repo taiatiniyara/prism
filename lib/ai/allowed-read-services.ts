@@ -4,7 +4,11 @@ export type AllowedReadServiceKey =
   | "completeness-summary"
   | "review-bottlenecks"
   | "stale-missing-kpi"
-  | "pending-queue";
+  | "pending-queue"
+  | "aggregated-run-summary"
+  | "aggregated-run-details"
+  | "aggregated-failure-analysis"
+  | "renewable-generation-utility-year";
 
 export interface AllowedReadServiceDefinition {
   key: AllowedReadServiceKey;
@@ -42,6 +46,35 @@ export const allowedReadServices: Record<
   "pending-queue": {
     key: "pending-queue",
     description: "Pending queue snapshots by report period.",
+    allowedRoles: ["DEV", "BMO", "BLO", "CEO"],
+    deterministic: true,
+    readOnly: true,
+  },
+  "aggregated-run-summary": {
+    key: "aggregated-run-summary",
+    description: "Summary of aggregated worker runs for scoped context.",
+    allowedRoles: ["DEV", "BMO", "BLO", "CEO"],
+    deterministic: true,
+    readOnly: true,
+  },
+  "aggregated-run-details": {
+    key: "aggregated-run-details",
+    description: "Detailed outcomes for a specific aggregated worker run.",
+    allowedRoles: ["DEV", "BMO", "BLO", "CEO"],
+    deterministic: true,
+    readOnly: true,
+  },
+  "aggregated-failure-analysis": {
+    key: "aggregated-failure-analysis",
+    description: "Failure reason analysis for aggregated worker runs.",
+    allowedRoles: ["DEV", "BMO", "BLO", "CEO"],
+    deterministic: true,
+    readOnly: true,
+  },
+  "renewable-generation-utility-year": {
+    key: "renewable-generation-utility-year",
+    description:
+      "Renewable generation totals by utility and year from scoped PRISM data.",
     allowedRoles: ["DEV", "BMO", "BLO", "CEO"],
     deterministic: true,
     readOnly: true,

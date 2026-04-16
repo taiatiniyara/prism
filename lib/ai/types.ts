@@ -4,16 +4,31 @@ export type QueryClass =
   | "completeness"
   | "review-bottlenecks"
   | "stale-missing-kpi"
-  | "pending-queue";
+  | "pending-queue"
+  | "aggregation-run-summary"
+  | "aggregation-run-details"
+  | "aggregation-failure-analysis"
+  | "generation-renewable-by-utility-year";
+
+export type QueryMode = "manual" | "auto-scope";
+
+export type RenewableDefinition = "energy-source" | "energy-type" | "either";
 
 export interface QueryFilterContext {
   reportPeriodId?: number;
   serviceAreaId?: number;
+  energyResourceId?: number;
+  year?: number;
+  utilityId?: number;
+  utilityName?: string;
+  runId?: string;
+  renewableDefinition?: RenewableDefinition;
 }
 
 export interface AiQueryInput {
   prompt: string;
-  queryClass: QueryClass;
+  queryClass?: QueryClass;
+  mode?: QueryMode;
   filterContext?: QueryFilterContext;
   sessionContextId?: string | null;
 }

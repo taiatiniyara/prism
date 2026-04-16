@@ -6,14 +6,7 @@ import { useState } from "react";
 import { FaList, FaChevronLeft, FaChevronRight } from "react-icons/fa";
 import { cn } from "@/lib/utils";
 
-const noSidebarPages = [
-  "/",
-  "/dashboard",
-  "/login",
-  "/register",
-  "/profile",
-  "/docs",
-];
+const noSidebarPages = ["/", "/login", "/register", "/profile", "/docs"];
 
 export default function Sidebar(props: {
   list: {

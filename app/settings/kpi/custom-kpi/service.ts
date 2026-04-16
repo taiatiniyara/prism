@@ -4,6 +4,8 @@ import { db } from "@/db/connection";
 import {
   CustomKpiDecisionType,
   CustomKpiEmailDeliveryStatus,
+  CustomKpiProposedInput,
+  CustomKpiProposedUnit,
   CustomKpiRequest,
   CustomKpiLifecycleEventType,
   CustomKpiRequestStatus,
@@ -13,7 +15,7 @@ import {
   customKpiRequests,
 } from "@/db/schema/custom-kpi-requests";
 import { inputDefinitions } from "@/db/schema/dataEntry";
-import { managedListItems } from "@/db/schema/managedLists";
+import { managedListItems, managedLists } from "@/db/schema/managedLists";
 import { organisations } from "@/db/schema/utility";
 import { roles, user } from "@/db/schema/auth-schema";
 import {
@@ -28,13 +30,17 @@ const normalize = (value: string): string =>
 export const buildCustomKpiDefinitionFingerprint = (input: {
   title: string;
   formulaExpression: string;
-  businessContext: string;
+  unitId: number;
+  proposedUnits?: CustomKpiProposedUnit[];
+  proposedInputs?: CustomKpiProposedInput[];
   selectedInputDefinitionIds?: number[];
 }): string =>
   [
     normalize(input.title),
     normalize(input.formulaExpression),
-    normalize(input.businessContext),
+    String(input.unitId),
+    JSON.stringify(input.proposedUnits ?? []),
+    JSON.stringify(input.proposedInputs ?? []),
     [...(input.selectedInputDefinitionIds ?? [])]
       .sort((a, b) => a - b)
       .join(","),
@@ -44,7 +50,9 @@ export const isDuplicatePendingCustomKpiSubmission = async (input: {
   submitterUserId: string;
   title: string;
   formulaExpression: string;
-  businessContext: string;
+  unitId: number;
+  proposedUnits?: CustomKpiProposedUnit[];
+  proposedInputs?: CustomKpiProposedInput[];
   selectedInputDefinitionIds?: number[];
 }): Promise<boolean> => {
   const definitionFingerprint = buildCustomKpiDefinitionFingerprint(input);
@@ -110,7 +118,9 @@ export type CreateCustomKpiRequestInput = {
   title: string;
   description: string | null;
   formulaExpression: string;
-  businessContext: string;
+  unitId: number;
+  proposedUnits: CustomKpiProposedUnit[];
+  proposedInputs: CustomKpiProposedInput[];
   selectedInputDefinitionIds: number[];
 };
 
@@ -121,13 +131,25 @@ export type CustomKpiInputOption = {
   unit: string | null;
 };
 
+export type CustomKpiUnitOption = {
+  id: number;
+  name: string;
+};
+
+export type CustomKpiDataTypeOption = {
+  id: number;
+  name: string;
+};
+
 export type CustomKpiRequestListItem = Pick<
   CustomKpiRequest,
   | "id"
   | "title"
   | "description"
   | "formula_expression"
-  | "business_context"
+  | "unit_id"
+  | "proposed_units"
+  | "proposed_inputs"
   | "status"
   | "visibility_scope"
   | "replacement_kpi_def_id"
@@ -141,6 +163,25 @@ export type CustomKpiRequestListItem = Pick<
     unit: string | null;
     variableName: string | null;
   }>;
+};
+
+const assertCustomKpiUnitIdIsValid = async (unitId: number) => {
+  const [unit] = await db
+    .select({ id: managedListItems.id })
+    .from(managedListItems)
+    .innerJoin(managedLists, eq(managedListItems.list_id, managedLists.id))
+    .where(
+      and(
+        eq(managedListItems.id, unitId),
+        eq(managedListItems.is_active, true),
+        inArray(managedLists.name, ["Unit", "Units", "unit", "units"]),
+      ),
+    )
+    .limit(1);
+
+  if (!unit) {
+    throw new Error("VALIDATION:Selected unit ID is invalid.");
+  }
 };
 
 export const assertCustomKpiRequestCreateAccess = (userId: string | null) => {
@@ -196,6 +237,59 @@ export const listCustomKpiInputOptions = async (): Promise<
     )
     .where(eq(inputDefinitions.is_active, true))
     .orderBy(asc(inputDefinitions.name));
+};
+
+export const listCustomKpiUnitOptions = async (): Promise<
+  CustomKpiUnitOption[]
+> => {
+  return db
+    .select({
+      id: managedListItems.id,
+      name: managedListItems.name,
+    })
+    .from(managedListItems)
+    .innerJoin(managedLists, eq(managedListItems.list_id, managedLists.id))
+    .where(
+      and(
+        inArray(managedLists.name, ["Unit", "Units", "unit", "units"]),
+        eq(managedListItems.is_active, true),
+      ),
+    )
+    .orderBy(asc(managedListItems.name));
+};
+
+export const listCustomKpiDataTypeOptions = async (): Promise<
+  CustomKpiDataTypeOption[]
+> => {
+  return db
+    .select({
+      id: managedListItems.id,
+      name: managedListItems.name,
+    })
+    .from(managedListItems)
+    .innerJoin(managedLists, eq(managedListItems.list_id, managedLists.id))
+    .where(
+      and(
+        inArray(managedLists.name, ["Data Type", "Data Types"]),
+        eq(managedListItems.is_active, true),
+      ),
+    )
+    .orderBy(asc(managedListItems.name));
+};
+
+export const listCustomKpiProposalReferenceOptions = async () => {
+  const [availableInputDefinitions, availableUnits, availableDataTypes] =
+    await Promise.all([
+      listCustomKpiInputOptions(),
+      listCustomKpiUnitOptions(),
+      listCustomKpiDataTypeOptions(),
+    ]);
+
+  return {
+    availableInputDefinitions,
+    availableUnits,
+    availableDataTypes,
+  };
 };
 
 const notifyDevUsersOfCustomKpiSubmission = async (input: {
@@ -279,6 +373,7 @@ export const createCustomKpiRequest = async (
   input: CreateCustomKpiRequestInput,
 ): Promise<CustomKpiRequestListItem> => {
   assertCustomKpiRequestCreateAccess(submitterUserId);
+  await assertCustomKpiUnitIdIsValid(input.unitId);
   await assertSelectedInputDefinitionIdsAreValid(
     input.selectedInputDefinitionIds,
   );
@@ -287,7 +382,9 @@ export const createCustomKpiRequest = async (
     submitterUserId,
     title: input.title,
     formulaExpression: input.formulaExpression,
-    businessContext: input.businessContext,
+    unitId: input.unitId,
+    proposedUnits: input.proposedUnits,
+    proposedInputs: input.proposedInputs,
     selectedInputDefinitionIds: input.selectedInputDefinitionIds,
   });
 
@@ -300,7 +397,9 @@ export const createCustomKpiRequest = async (
   const definitionFingerprint = buildCustomKpiDefinitionFingerprint({
     title: input.title,
     formulaExpression: input.formulaExpression,
-    businessContext: input.businessContext,
+    unitId: input.unitId,
+    proposedUnits: input.proposedUnits,
+    proposedInputs: input.proposedInputs,
     selectedInputDefinitionIds: input.selectedInputDefinitionIds,
   });
 
@@ -311,7 +410,9 @@ export const createCustomKpiRequest = async (
       title: input.title,
       description: input.description,
       formula_expression: input.formulaExpression,
-      business_context: input.businessContext,
+      unit_id: input.unitId,
+      proposed_units: input.proposedUnits,
+      proposed_inputs: input.proposedInputs,
       selected_input_definition_ids: input.selectedInputDefinitionIds,
       definition_fingerprint: definitionFingerprint,
       status: "PENDING_REVIEW",
@@ -322,7 +423,9 @@ export const createCustomKpiRequest = async (
       title: customKpiRequests.title,
       description: customKpiRequests.description,
       formula_expression: customKpiRequests.formula_expression,
-      business_context: customKpiRequests.business_context,
+      unit_id: customKpiRequests.unit_id,
+      proposed_units: customKpiRequests.proposed_units,
+      proposed_inputs: customKpiRequests.proposed_inputs,
       status: customKpiRequests.status,
       visibility_scope: customKpiRequests.visibility_scope,
       replacement_kpi_def_id: customKpiRequests.replacement_kpi_def_id,
@@ -413,7 +516,9 @@ export const listMyCustomKpiRequests = async (
       title: customKpiRequests.title,
       description: customKpiRequests.description,
       formula_expression: customKpiRequests.formula_expression,
-      business_context: customKpiRequests.business_context,
+      unit_id: customKpiRequests.unit_id,
+      proposed_units: customKpiRequests.proposed_units,
+      proposed_inputs: customKpiRequests.proposed_inputs,
       status: customKpiRequests.status,
       visibility_scope: customKpiRequests.visibility_scope,
       replacement_kpi_def_id: customKpiRequests.replacement_kpi_def_id,
@@ -481,14 +586,23 @@ export const listMyCustomKpiRequests = async (
 };
 
 export const getCustomKpiPageViewModel = async (submitterUserId: string) => {
-  const [requests, availableInputDefinitions] = await Promise.all([
+  const [
+    requests,
+    availableInputDefinitions,
+    availableUnits,
+    availableDataTypes,
+  ] = await Promise.all([
     listMyCustomKpiRequests(submitterUserId),
     listCustomKpiInputOptions(),
+    listCustomKpiUnitOptions(),
+    listCustomKpiDataTypeOptions(),
   ]);
 
   return {
     requests,
     availableInputDefinitions,
+    availableUnits,
+    availableDataTypes,
   };
 };
 
@@ -499,7 +613,9 @@ export type CustomKpiReviewQueueItem = Pick<
   | "title"
   | "description"
   | "formula_expression"
-  | "business_context"
+  | "unit_id"
+  | "proposed_units"
+  | "proposed_inputs"
   | "selected_input_definition_ids"
   | "status"
   | "visibility_scope"
@@ -528,7 +644,9 @@ export const listCustomKpiReviewQueue = async (): Promise<
       title: customKpiRequests.title,
       description: customKpiRequests.description,
       formula_expression: customKpiRequests.formula_expression,
-      business_context: customKpiRequests.business_context,
+      unit_id: customKpiRequests.unit_id,
+      proposed_units: customKpiRequests.proposed_units,
+      proposed_inputs: customKpiRequests.proposed_inputs,
       selected_input_definition_ids:
         customKpiRequests.selected_input_definition_ids,
       status: customKpiRequests.status,
