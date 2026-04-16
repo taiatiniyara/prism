@@ -6,13 +6,7 @@ import { evaluateKpiFormula } from "@/app/data-entry/kpi-worker/evaluator";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Label } from "@/components/ui/label";
@@ -802,41 +796,22 @@ export default function InputFormulaBuilder(props: {
             </div>
           </div>
 
-          <Select
+          <SearchableSelect
             value={selectedInputId}
             onValueChange={handleInputChange}
-          >
-            <SelectTrigger className="w-full p-2 text-xs">
-              <SelectValue placeholder="Select input definition" />
-            </SelectTrigger>
-            <SelectContent>
-              <div className="sticky top-0 z-10 border-b bg-popover p-1.5 sm:p-2">
-                <Input
-                  value={inputSearch}
-                  onChange={(event) => setInputSearch(event.target.value)}
-                  onKeyDown={(event) => event.stopPropagation()}
-                  className="h-8 text-xs sm:h-9 sm:text-sm"
-                  placeholder="Search input definition..."
-                />
-              </div>
-              {filteredInputDefinitions.length === 0 && (
-                <p className="text-muted-foreground px-2 py-2 text-sm">
-                  No input definition found.
-                </p>
-              )}
-              {filteredInputDefinitions.map((input) => (
-                <SelectItem
-                  key={input.id}
-                  value={input.id.toString()}
-                  className="text-xs sm:text-sm"
-                >
-                  <span className="block max-w-full truncate">
-                    {input.name}
-                  </span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            options={filteredInputDefinitions.map((input) => ({
+              value: input.id.toString(),
+              label: input.name,
+            }))}
+            placeholder="Select input definition"
+            searchPlaceholder="Search input definition..."
+            emptyLabel="No input definition found."
+            triggerClassName="w-full p-2 text-xs"
+            searchContainerClassName="sticky top-0 z-10 border-b bg-popover p-1.5 sm:p-2"
+            searchInputClassName="text-xs sm:h-9 sm:text-sm"
+            itemClassName="text-xs sm:text-sm"
+            allowEscapeKeyPropagation={false}
+          />
           <p className="text-muted-foreground mt-1 text-xs sm:text-sm">
             Input Unit: {selectedInput?.unit ?? "Not set"}
           </p>

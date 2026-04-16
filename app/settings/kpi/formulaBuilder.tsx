@@ -8,13 +8,7 @@ import { evaluateKpiFormula } from "@/app/data-entry/kpi-worker/evaluator";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
@@ -799,39 +793,22 @@ export default function KpiFormulaBuilder(props: {
             </div>
           </div>
 
-          <Select
+          <SearchableSelect
             value={selectedKpiId}
             onValueChange={handleKpiChange}
-          >
-            <SelectTrigger className="w-full p-2 text-xs">
-              <SelectValue placeholder="Select KPI definition" />
-            </SelectTrigger>
-            <SelectContent>
-              <div className="sticky top-0 z-10 border-b bg-popover p-1.5 sm:p-2">
-                <Input
-                  value={kpiSearch}
-                  onChange={(event) => setKpiSearch(event.target.value)}
-                  onKeyDown={(event) => event.stopPropagation()}
-                  className="h-8 text-xs sm:h-9 sm:text-sm"
-                  placeholder="Search KPI..."
-                />
-              </div>
-              {filteredKpis.length === 0 && (
-                <p className="text-muted-foreground px-2 py-2 text-sm">
-                  No KPI found.
-                </p>
-              )}
-              {filteredKpis.map((kpi) => (
-                <SelectItem
-                  key={kpi.id}
-                  value={kpi.id.toString()}
-                  className="text-xs sm:text-sm"
-                >
-                  <span className="block max-w-full truncate">{kpi.name}</span>
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+            options={filteredKpis.map((kpi) => ({
+              value: kpi.id.toString(),
+              label: kpi.name,
+            }))}
+            placeholder="Select KPI definition"
+            searchPlaceholder="Search KPI..."
+            emptyLabel="No KPI found."
+            triggerClassName="w-full p-2 text-xs"
+            searchContainerClassName="sticky top-0 z-10 border-b bg-popover p-1.5 sm:p-2"
+            searchInputClassName="text-xs sm:h-9 sm:text-sm"
+            itemClassName="text-xs sm:text-sm"
+            allowEscapeKeyPropagation={false}
+          />
           <p className="text-muted-foreground mt-1 text-xs sm:text-sm">
             KPI Unit: {selectedKpi?.unit ?? "Not set"}
           </p>

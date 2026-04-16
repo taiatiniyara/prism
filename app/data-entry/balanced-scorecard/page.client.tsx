@@ -24,6 +24,7 @@ import type {
 import type { ReviewKpiFilterOptions } from "@/app/data-entry/review-kpi/types";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Select,
   SelectContent,
@@ -139,7 +140,6 @@ export default function ScorecardPageClient({
   const [kpiDefinitionId, setKpiDefinitionId] = useState<number | null>(
     kpiOptions[0]?.kpiDefinitionId ?? null,
   );
-  const [kpiSearchTerm, setKpiSearchTerm] = useState("");
   const [perspectiveLevel, setPerspectiveLevel] = useState<1 | 2 | 3 | 4>(1);
   const [strategicObjective, setStrategicObjective] = useState("");
   const [keyInitiative, setKeyInitiative] = useState("");
@@ -155,7 +155,6 @@ export default function ScorecardPageClient({
   const [selectedExistingObjective, setSelectedExistingObjective] = useState<
     string | null
   >(null);
-  const [objectiveSearchTerm, setObjectiveSearchTerm] = useState("");
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isBuilderOpen, setIsBuilderOpen] = useState(false);
@@ -270,19 +269,6 @@ export default function ScorecardPageClient({
     [availableKpiOptions, kpiDefinitionId],
   );
 
-  const filteredKpiOptions = useMemo(() => {
-    const query = kpiSearchTerm.trim().toLowerCase();
-    if (query.length === 0) {
-      return availableKpiOptions;
-    }
-
-    return availableKpiOptions.filter((option) => {
-      const haystack =
-        `${option.kpiName} ${option.kpiDefinitionId}`.toLowerCase();
-      return haystack.includes(query);
-    });
-  }, [availableKpiOptions, kpiSearchTerm]);
-
   const kpiNameByDefinitionId = useMemo(
     () =>
       new Map(
@@ -320,17 +306,6 @@ export default function ScorecardPageClient({
       ).sort((a, b) => a.localeCompare(b)),
     [existingObjectiveRows],
   );
-
-  const filteredObjectiveItems = useMemo(() => {
-    const query = objectiveSearchTerm.trim().toLowerCase();
-    if (query.length === 0) {
-      return existingObjectiveItems;
-    }
-
-    return existingObjectiveItems.filter((item) =>
-      item.toLowerCase().includes(query),
-    );
-  }, [existingObjectiveItems, objectiveSearchTerm]);
 
   const loadObjectiveIntoEditor = (objectiveName: string) => {
     const normalizedObjective = objectiveName.trim();
@@ -2048,53 +2023,26 @@ export default function ScorecardPageClient({
                     Select an existing objective to edit its initiatives and KPI
                     targets.
                   </p>
-                  <Select
+                  <SearchableSelect
                     value={selectedExistingObjective ?? ""}
                     onValueChange={(value) =>
                       handleExistingObjectiveSelect(
                         value.length === 0 ? null : value,
                       )
                     }
-                    onOpenChange={(open) => {
-                      if (!open) {
-                        setObjectiveSearchTerm("");
-                      }
-                    }}
                     disabled={existingObjectiveItems.length === 0 || isSaving}
-                  >
-                    <SelectTrigger className="bg-white text-xs">
-                      <SelectValue placeholder="Select an objective" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <div className="sticky top-0 z-10 bg-popover p-1">
-                        <Input
-                          className="h-8 bg-white text-xs"
-                          placeholder="Search objective"
-                          value={objectiveSearchTerm}
-                          onChange={(event) =>
-                            setObjectiveSearchTerm(event.target.value)
-                          }
-                          onKeyDown={(event) => event.stopPropagation()}
-                          autoFocus
-                        />
-                      </div>
-
-                      {filteredObjectiveItems.length === 0 ? (
-                        <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                          No objectives found.
-                        </div>
-                      ) : (
-                        filteredObjectiveItems.map((item) => (
-                          <SelectItem
-                            key={item}
-                            value={item}
-                          >
-                            {item}
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                    options={existingObjectiveItems.map((item) => ({
+                      value: item,
+                      label: item,
+                    }))}
+                    placeholder="Select an objective"
+                    searchPlaceholder="Search objective"
+                    emptyLabel="No objectives found."
+                    triggerClassName="bg-white text-xs"
+                    searchContainerClassName="sticky top-0 z-10 bg-popover p-1"
+                    searchInputClassName="h-8 bg-white text-xs"
+                    allowEscapeKeyPropagation={false}
+                  />
                 </div>
 
                 <div className="space-y-0.5">
@@ -2150,58 +2098,30 @@ export default function ScorecardPageClient({
                 <div className="mt-1 grid gap-1.5 md:grid-cols-4">
                   <div className="space-y-0.5 md:col-span-2">
                     <label className="text-[11px] font-medium">KPI</label>
-                    <Select
+                    <SearchableSelect
                       value={
                         kpiDefinitionId == null ? "" : String(kpiDefinitionId)
                       }
                       onValueChange={(value) => {
                         setKpiDefinitionId(Number(value));
-                        setKpiSearchTerm("");
-                      }}
-                      onOpenChange={(open) => {
-                        if (!open) {
-                          setKpiSearchTerm("");
-                        }
                       }}
                       disabled={
                         availableKpiOptions.length === 0 ||
                         isSaving ||
                         !hasInitiativeContext
                       }
-                    >
-                      <SelectTrigger className="bg-white text-xs">
-                        <SelectValue placeholder="Select KPI" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <div className="sticky top-0 z-10 bg-popover p-1">
-                          <Input
-                            className="h-8 bg-white text-xs"
-                            placeholder="Search KPI"
-                            value={kpiSearchTerm}
-                            onChange={(event) =>
-                              setKpiSearchTerm(event.target.value)
-                            }
-                            onKeyDown={(event) => event.stopPropagation()}
-                            autoFocus
-                          />
-                        </div>
-
-                        {filteredKpiOptions.length === 0 ? (
-                          <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                            No KPIs found.
-                          </div>
-                        ) : (
-                          filteredKpiOptions.map((option) => (
-                            <SelectItem
-                              key={option.kpiDefinitionId}
-                              value={String(option.kpiDefinitionId)}
-                            >
-                              {option.kpiName}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
+                      options={availableKpiOptions.map((option) => ({
+                        value: String(option.kpiDefinitionId),
+                        label: option.kpiName,
+                      }))}
+                      placeholder="Select KPI"
+                      searchPlaceholder="Search KPI"
+                      emptyLabel="No KPIs found."
+                      triggerClassName="bg-white text-xs"
+                      searchContainerClassName="sticky top-0 z-10 bg-popover p-1"
+                      searchInputClassName="h-8 bg-white text-xs"
+                      allowEscapeKeyPropagation={false}
+                    />
                   </div>
 
                   <div className="space-y-0.5">

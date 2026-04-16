@@ -2,15 +2,8 @@
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { useState, useTransition } from "react";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 
 type DevInputRelevanceItem = {
@@ -26,73 +19,6 @@ type DevInputRelevanceOption = {
   id: number;
   name: string;
 };
-
-function SearchableSelect(props: {
-  options: DevInputRelevanceOption[];
-  value?: string;
-  placeholder: string;
-  searchPlaceholder: string;
-  emptyLabel: string;
-  className?: string;
-  disabled?: boolean;
-  onValueChange: (value: string) => void;
-}) {
-  const [search, setSearch] = useState("");
-
-  const filteredOptions = props.options.filter((option) =>
-    option.name.toLowerCase().includes(search.trim().toLowerCase()),
-  );
-
-  return (
-    <Select
-      disabled={props.disabled}
-      value={props.value}
-      onValueChange={(value) => {
-        props.onValueChange(value);
-        setSearch("");
-      }}
-    >
-      <SelectTrigger className={props.className ?? "w-full min-w-72"}>
-        <SelectValue placeholder={props.placeholder} />
-      </SelectTrigger>
-      <SelectContent>
-        <div className="p-2">
-          <Input
-            value={search}
-            onChange={(event) => setSearch(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key !== "Escape") {
-                event.stopPropagation();
-              }
-            }}
-            onKeyUp={(event) => {
-              if (event.key !== "Escape") {
-                event.stopPropagation();
-              }
-            }}
-            onPointerDown={(event) => event.stopPropagation()}
-            placeholder={props.searchPlaceholder}
-            className="h-8"
-          />
-        </div>
-        {filteredOptions.length > 0 ? (
-          filteredOptions.map((option) => (
-            <SelectItem
-              key={option.id}
-              value={option.id.toString()}
-            >
-              {option.name}
-            </SelectItem>
-          ))
-        ) : (
-          <div className="px-3 py-2 text-sm text-muted-foreground">
-            {props.emptyLabel}
-          </div>
-        )}
-      </SelectContent>
-    </Select>
-  );
-}
 
 export default function DevInputRelevanceTable(props: {
   items: DevInputRelevanceItem[];
@@ -135,6 +61,22 @@ export default function DevInputRelevanceTable(props: {
   );
   const dimensionNameById = new Map(
     props.dimensionOptions.map((option) => [option.id, option.name]),
+  );
+  const inputSelectOptions = useMemo(
+    () =>
+      props.inputOptions.map((option) => ({
+        value: option.id.toString(),
+        label: option.name,
+      })),
+    [props.inputOptions],
+  );
+  const dimensionSelectOptions = useMemo(
+    () =>
+      props.dimensionOptions.map((option) => ({
+        value: option.id.toString(),
+        label: option.name,
+      })),
+    [props.dimensionOptions],
   );
 
   const onAddRow = () => {
@@ -243,11 +185,13 @@ export default function DevInputRelevanceTable(props: {
             <td className="sticky left-0 z-20 border bg-background px-5 py-4 align-top">
               <SearchableSelect
                 disabled={isSaving}
-                options={props.inputOptions}
+                options={inputSelectOptions}
                 value={newItem.inputDefId?.toString()}
                 placeholder="Select input"
                 searchPlaceholder="Search inputs"
                 emptyLabel="No inputs found."
+                triggerClassName="w-full min-w-72"
+                contentClassName="min-w-72"
                 onValueChange={(value) =>
                   setNewItem((prev) => ({ ...prev, inputDefId: Number(value) }))
                 }
@@ -256,11 +200,13 @@ export default function DevInputRelevanceTable(props: {
             <td className="border px-5 py-4 align-top">
               <SearchableSelect
                 disabled={isSaving}
-                options={props.dimensionOptions}
+                options={dimensionSelectOptions}
                 value={newItem.dimensionId?.toString()}
                 placeholder="Select dimension"
                 searchPlaceholder="Search dimensions"
                 emptyLabel="No dimensions found."
+                triggerClassName="w-full min-w-72"
+                contentClassName="min-w-72"
                 onValueChange={(value) =>
                   setNewItem((prev) => ({
                     ...prev,
@@ -296,13 +242,15 @@ export default function DevInputRelevanceTable(props: {
               <td className="sticky left-0 z-20 border bg-background px-5 py-4 align-top">
                 <SearchableSelect
                   disabled={isSaving}
-                  options={props.inputOptions}
+                  options={inputSelectOptions}
                   value={item.inputDefId.toString()}
                   placeholder={
                     inputNameById.get(item.inputDefId) ?? "Select input"
                   }
                   searchPlaceholder="Search inputs"
                   emptyLabel="No inputs found."
+                  triggerClassName="w-full min-w-72"
+                  contentClassName="min-w-72"
                   onValueChange={(value) =>
                     updateDraft(item.id, { inputDefId: Number(value) })
                   }
@@ -311,7 +259,7 @@ export default function DevInputRelevanceTable(props: {
               <td className="border px-5 py-4 align-top">
                 <SearchableSelect
                   disabled={isSaving}
-                  options={props.dimensionOptions}
+                  options={dimensionSelectOptions}
                   value={item.dimensionId.toString()}
                   placeholder={
                     dimensionNameById.get(item.dimensionId) ??
@@ -319,6 +267,8 @@ export default function DevInputRelevanceTable(props: {
                   }
                   searchPlaceholder="Search dimensions"
                   emptyLabel="No dimensions found."
+                  triggerClassName="w-full min-w-72"
+                  contentClassName="min-w-72"
                   onValueChange={(value) =>
                     updateDraft(item.id, { dimensionId: Number(value) })
                   }
