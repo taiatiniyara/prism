@@ -190,8 +190,11 @@ export default function KpiFormulaBuilder(props: {
   const [formulaTextDraft, setFormulaTextDraft] = useState<string>("");
   const [customToken, setCustomToken] = useState<string>("");
   const [isDraggingOverFormula, setIsDraggingOverFormula] = useState(false);
-  const [dummyBaseValue, setDummyBaseValue] = useState<number>(10);
-  const [dummySeed, setDummySeed] = useState<number>(1);
+  const [sampleBaseValue, setSampleBaseValue] = useState<number>(10);
+  const [sampleSeed, setSampleSeed] = useState<number>(1);
+  const [manualSampleValues, setManualSampleValues] = useState<
+    Record<string, string>
+  >({});
 
   const normalizeInputId = (id: number) => Number(id);
 
@@ -535,7 +538,7 @@ export default function KpiFormulaBuilder(props: {
     return hash;
   };
 
-  const resolveDummyValueForToken = (token: string): number => {
+  const resolveSampleValueForToken = (token: string): number => {
     const input = inputByToken.get(token);
     if (!input) {
       return 0;
@@ -545,12 +548,12 @@ export default function KpiFormulaBuilder(props: {
     const providerWeight = filters?.energyProviderId != null ? 3 : 0;
     const typeWeight = filters?.energyTypeId != null ? 5 : 0;
     const sourceWeight = filters?.energySourceId != null ? 7 : 0;
-    const tokenWeight = (toTokenHash(`${token}:${dummySeed}`) % 17) + 1;
+    const tokenWeight = (toTokenHash(`${token}:${sampleSeed}`) % 17) + 1;
 
-    // Deterministic per-token dummy value so preview stays stable while editing.
+    // Deterministic per-token sample value so preview stays stable while editing.
     return Number(
       (
-        dummyBaseValue +
+        sampleBaseValue +
         input.id * 2 +
         tokenWeight +
         providerWeight +
@@ -558,6 +561,20 @@ export default function KpiFormulaBuilder(props: {
         sourceWeight
       ).toFixed(2),
     );
+  };
+
+  const resolvePreviewValueForToken = (token: string): number => {
+    const manual = manualSampleValues[token];
+    if (typeof manual !== "string" || manual.trim().length === 0) {
+      return resolveSampleValueForToken(token);
+    }
+
+    const parsed = Number(manual);
+    if (!Number.isFinite(parsed)) {
+      return resolveSampleValueForToken(token);
+    }
+
+    return parsed;
   };
 
   const tokenPreviewRows: TokenPreviewRow[] = (() => {
@@ -581,7 +598,7 @@ export default function KpiFormulaBuilder(props: {
         token,
         inputName: input.name,
         unit: input.unit,
-        value: resolveDummyValueForToken(token),
+        value: resolvePreviewValueForToken(token),
         filterSummary: getFilterSummaryForToken(token),
       });
     }
@@ -605,6 +622,21 @@ export default function KpiFormulaBuilder(props: {
       };
     }
 
+    const invalidManualToken = tokenPreviewRows.find((row) => {
+      const raw = manualSampleValues[row.token];
+      if (typeof raw !== "string" || raw.trim().length === 0) {
+        return false;
+      }
+      return !Number.isFinite(Number(raw));
+    });
+
+    if (invalidManualToken) {
+      return {
+        status: "error" as const,
+        message: `Preview value for '${invalidManualToken.token}' must be numeric.`,
+      };
+    }
+
     const variables: Record<string, number> = {};
     for (const row of tokenPreviewRows) {
       variables[row.token] = row.value;
@@ -622,9 +654,9 @@ export default function KpiFormulaBuilder(props: {
     return {
       status: "ok" as const,
       value: evaluated.value ?? null,
-      message: "Preview computed from dummy input values.",
+      message: "Preview computed from sample input values.",
     };
-  }, [parsedInlineFormula, tokenPreviewRows]);
+  }, [manualSampleValues, parsedInlineFormula, tokenPreviewRows]);
 
   const handleKpiChange = (value: string) => {
     setSelectedKpiId(value);
@@ -728,6 +760,7 @@ export default function KpiFormulaBuilder(props: {
     setIsFormulaTextMode(false);
     setCustomToken("");
     setIsDraggingOverFormula(false);
+    setManualSampleValues({});
   };
 
   const handleSave = () => {
@@ -1062,9 +1095,11 @@ export default function KpiFormulaBuilder(props: {
               <Label className="text-xs sm:text-sm">Preview</Label>
               <div className="grid gap-1.5 rounded-md border border-dashed bg-muted/20 p-2">
                 <div className="flex items-center justify-between gap-2">
-                  <Label className="text-xs sm:text-sm">Dummy Base Value</Label>
+                  <Label className="text-xs sm:text-sm">
+                    Sample Base Value
+                  </Label>
                   <span className="text-muted-foreground text-xs sm:text-sm">
-                    {dummyBaseValue}
+                    {sampleBaseValue}
                   </span>
                 </div>
                 <Input
@@ -1072,9 +1107,9 @@ export default function KpiFormulaBuilder(props: {
                   min={1}
                   max={100}
                   step={1}
-                  value={dummyBaseValue}
+                  value={sampleBaseValue}
                   onChange={(event) =>
-                    setDummyBaseValue(Number(event.target.value))
+                    setSampleBaseValue(Number(event.target.value))
                   }
                   className="h-8"
                 />
@@ -1083,10 +1118,19 @@ export default function KpiFormulaBuilder(props: {
                   variant="outline"
                   size="sm"
                   className="h-7 text-xs"
-                  onClick={() => setDummySeed((prev) => prev + 1)}
+                  onClick={() => setSampleSeed((prev) => prev + 1)}
                 >
                   <FaDice />
-                  Randomize Dummy Values
+                  Randomize Sample Values
+                </Button>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => setManualSampleValues({})}
+                >
+                  Use Auto-Fill Values
                 </Button>
               </div>
 
@@ -1102,15 +1146,46 @@ export default function KpiFormulaBuilder(props: {
                       {tokenPreviewRows.map((row) => (
                         <div
                           key={row.token}
-                          className="flex items-center justify-between gap-2 rounded border bg-background px-2 py-1 text-xs"
+                          className="rounded border bg-background px-2 py-1 text-xs"
                         >
-                          <span className="truncate font-medium">
-                            {row.token}
-                          </span>
-                          <span>
-                            {formatPreviewNumber(row.value)}
-                            {row.unit ? ` ${row.unit}` : ""}
-                          </span>
+                          <div className="mb-1 flex items-center justify-between gap-2">
+                            <span
+                              className="truncate font-medium"
+                              title={row.inputName}
+                            >
+                              {row.token}
+                            </span>
+                            <span className="text-muted-foreground text-[10px]">
+                              {row.unit ?? "No unit"}
+                            </span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Input
+                              type="number"
+                              step="any"
+                              value={manualSampleValues[row.token] ?? ""}
+                              onChange={(event) => {
+                                const nextValue = event.target.value;
+                                setManualSampleValues((prev) => ({
+                                  ...prev,
+                                  [row.token]: nextValue,
+                                }));
+                              }}
+                              placeholder={formatPreviewNumber(
+                                resolveSampleValueForToken(row.token),
+                              )}
+                              className="h-7 text-xs"
+                            />
+                            <span className="text-muted-foreground min-w-20 text-right text-[10px]">
+                              = {formatPreviewNumber(row.value)}
+                            </span>
+                          </div>
+                          {row.filterSummary &&
+                            row.filterSummary !== "All filters" && (
+                              <p className="text-muted-foreground mt-1 text-[10px]">
+                                {row.filterSummary}
+                              </p>
+                            )}
                         </div>
                       ))}
                     </div>

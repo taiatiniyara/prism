@@ -6,7 +6,9 @@ import {
   generationRelevance,
   inputRelevance,
   inputDefinitions,
+  organisations,
   serviceAreas,
+  user as authUsers,
 } from "@/db/schema";
 import { kpiDefinitions } from "@/db/schema/kpi";
 import { managedListItems, managedLists } from "@/db/schema/managedLists";
@@ -36,6 +38,11 @@ interface UtilityGenerationRelevanceFilter {
   reportPeriodId?: number | null;
   serviceAreaId?: number | null;
 }
+
+type UtilityScopedRelevanceFilter = {
+  reportPeriodId?: number | null;
+  serviceAreaId?: number | null;
+};
 
 export interface UtilityTariffRelevanceCell {
   customerTypeId: number;
@@ -153,6 +160,11 @@ export interface CustomKpiRelevanceItem {
   kpiName: string;
   description: string | null;
   formula: string | null;
+  ownerUserId: string | null;
+  ownerUserName: string | null;
+  ownerUserOrgAcronym: string | null;
+  ownerUtilityId: number | null;
+  ownerUtilityName: string | null;
   utilityIds: number[];
   isRelevant: boolean;
   inputs: CustomKpiRelevanceInput[];
@@ -193,6 +205,96 @@ const resolveSelectedId = (
   }
 
   return options[0].id;
+};
+
+const getUtilityRelevanceFilterContext = async (
+  utilityId: number,
+  filters: UtilityScopedRelevanceFilter,
+): Promise<{
+  serviceAreaOptions: RelevanceFilterOption[];
+  reportPeriodOptions: RelevanceFilterOption[];
+  selectedReportPeriodId: number | null;
+  selectedServiceAreaId: number | null;
+}> => {
+  const serviceAreaList = await db
+    .select({
+      id: serviceAreas.id,
+      name: serviceAreas.name,
+    })
+    .from(serviceAreas)
+    .orderBy(serviceAreas.name)
+    .where(eq(serviceAreas.utility_id, utilityId));
+
+  const reportPeriodList = await db
+    .select({
+      id: reportPeriods.id,
+      reportDate: reportPeriods.report_date,
+    })
+    .from(reportPeriods)
+    .where(eq(reportPeriods.utility_id, utilityId))
+    .orderBy(desc(reportPeriods.report_date));
+
+  const serviceAreaOptions: RelevanceFilterOption[] = serviceAreaList.map(
+    (item) => ({
+      id: item.id,
+      name: item.name,
+    }),
+  );
+
+  const reportPeriodOptions: RelevanceFilterOption[] = reportPeriodList.map(
+    (item) => ({
+      id: item.id,
+      name: item.reportDate.toISOString().slice(0, 7),
+    }),
+  );
+
+  return {
+    serviceAreaOptions,
+    reportPeriodOptions,
+    selectedReportPeriodId: resolveSelectedId(
+      filters.reportPeriodId,
+      reportPeriodOptions,
+    ),
+    selectedServiceAreaId: resolveSelectedId(
+      filters.serviceAreaId,
+      serviceAreaOptions,
+    ),
+  };
+};
+
+const hasValidUtilityContext = async (
+  utilityId: number,
+  serviceAreaId: number,
+  reportPeriodId: number,
+): Promise<boolean> => {
+  const [validServiceArea] = await db
+    .select({ id: serviceAreas.id })
+    .from(serviceAreas)
+    .where(
+      and(
+        eq(serviceAreas.id, serviceAreaId),
+        eq(serviceAreas.utility_id, utilityId),
+      ),
+    )
+    .limit(1);
+
+  const [validReportPeriod] = await db
+    .select({ id: reportPeriods.id })
+    .from(reportPeriods)
+    .where(
+      and(
+        eq(reportPeriods.id, reportPeriodId),
+        eq(reportPeriods.utility_id, utilityId),
+      ),
+    )
+    .limit(1);
+
+  return !!validServiceArea && !!validReportPeriod;
+};
+
+const revalidateRelevanceAndDataEntry = () => {
+  revalidatePath("/settings/relevance");
+  revalidatePath("/data-entry/enter-data");
 };
 
 const getInputDefinitionsForStructure = async (
@@ -269,46 +371,12 @@ export async function GetUtilityTariffRelevance(
     throw new Error("User not authenticated");
   }
 
-  const serviceAreaList = await db
-    .select({
-      id: serviceAreas.id,
-      name: serviceAreas.name,
-    })
-    .from(serviceAreas)
-    .orderBy(serviceAreas.name)
-    .where(eq(serviceAreas.utility_id, user.org_id!));
-
-  const reportPeriodList = await db
-    .select({
-      id: reportPeriods.id,
-      reportDate: reportPeriods.report_date,
-    })
-    .from(reportPeriods)
-    .where(eq(reportPeriods.utility_id, user.org_id!))
-    .orderBy(desc(reportPeriods.report_date));
-
-  const serviceAreaOptions: RelevanceFilterOption[] = serviceAreaList.map(
-    (item) => ({
-      id: item.id,
-      name: item.name,
-    }),
-  );
-
-  const reportPeriodOptions: RelevanceFilterOption[] = reportPeriodList.map(
-    (item) => ({
-      id: item.id,
-      name: item.reportDate.toISOString().slice(0, 7),
-    }),
-  );
-
-  const selectedReportPeriodId = resolveSelectedId(
-    filters.reportPeriodId,
-    reportPeriodOptions,
-  );
-  const selectedServiceAreaId = resolveSelectedId(
-    filters.serviceAreaId,
+  const {
     serviceAreaOptions,
-  );
+    reportPeriodOptions,
+    selectedReportPeriodId,
+    selectedServiceAreaId,
+  } = await getUtilityRelevanceFilterContext(user.org_id!, filters);
 
   const inputList = await getInputDefinitionsForStructure("Tariff Structure");
 
@@ -461,29 +529,13 @@ export async function SetUtilityTariffDataLabelRelevance(
     };
   }
 
-  const [validServiceArea] = await db
-    .select({ id: serviceAreas.id })
-    .from(serviceAreas)
-    .where(
-      and(
-        eq(serviceAreas.id, payload.serviceAreaId),
-        eq(serviceAreas.utility_id, user.org_id!),
-      ),
-    )
-    .limit(1);
+  const isValidContext = await hasValidUtilityContext(
+    user.org_id!,
+    payload.serviceAreaId,
+    payload.reportPeriodId,
+  );
 
-  const [validReportPeriod] = await db
-    .select({ id: reportPeriods.id })
-    .from(reportPeriods)
-    .where(
-      and(
-        eq(reportPeriods.id, payload.reportPeriodId),
-        eq(reportPeriods.utility_id, user.org_id!),
-      ),
-    )
-    .limit(1);
-
-  if (!validServiceArea || !validReportPeriod) {
+  if (!isValidContext) {
     return {
       success: false,
       message: "Invalid relevance context for this utility.",
@@ -549,8 +601,7 @@ export async function SetUtilityTariffDataLabelRelevance(
     });
   }
 
-  revalidatePath("/settings/relevance");
-  revalidatePath("/data-entry/enter-data");
+  revalidateRelevanceAndDataEntry();
 
   return {
     success: true,
@@ -567,46 +618,12 @@ export async function GetTransmissionRelevance(
     throw new Error("User not authenticated");
   }
 
-  const serviceAreaList = await db
-    .select({
-      id: serviceAreas.id,
-      name: serviceAreas.name,
-    })
-    .from(serviceAreas)
-    .orderBy(serviceAreas.name)
-    .where(eq(serviceAreas.utility_id, user.org_id!));
-
-  const reportPeriodList = await db
-    .select({
-      id: reportPeriods.id,
-      reportDate: reportPeriods.report_date,
-    })
-    .from(reportPeriods)
-    .where(eq(reportPeriods.utility_id, user.org_id!))
-    .orderBy(desc(reportPeriods.report_date));
-
-  const serviceAreaOptions: RelevanceFilterOption[] = serviceAreaList.map(
-    (item) => ({
-      id: item.id,
-      name: item.name,
-    }),
-  );
-
-  const reportPeriodOptions: RelevanceFilterOption[] = reportPeriodList.map(
-    (item) => ({
-      id: item.id,
-      name: item.reportDate.toISOString().slice(0, 7),
-    }),
-  );
-
-  const selectedReportPeriodId = resolveSelectedId(
-    filters.reportPeriodId,
-    reportPeriodOptions,
-  );
-  const selectedServiceAreaId = resolveSelectedId(
-    filters.serviceAreaId,
+  const {
     serviceAreaOptions,
-  );
+    reportPeriodOptions,
+    selectedReportPeriodId,
+    selectedServiceAreaId,
+  } = await getUtilityRelevanceFilterContext(user.org_id!, filters);
 
   const inputList = await getInputDefinitionsForStructure("Transmission");
 
@@ -713,29 +730,13 @@ export async function SetTransmissionDataLabelRelevance(
     };
   }
 
-  const [validServiceArea] = await db
-    .select({ id: serviceAreas.id })
-    .from(serviceAreas)
-    .where(
-      and(
-        eq(serviceAreas.id, payload.serviceAreaId),
-        eq(serviceAreas.utility_id, user.org_id!),
-      ),
-    )
-    .limit(1);
+  const isValidContext = await hasValidUtilityContext(
+    user.org_id!,
+    payload.serviceAreaId,
+    payload.reportPeriodId,
+  );
 
-  const [validReportPeriod] = await db
-    .select({ id: reportPeriods.id })
-    .from(reportPeriods)
-    .where(
-      and(
-        eq(reportPeriods.id, payload.reportPeriodId),
-        eq(reportPeriods.utility_id, user.org_id!),
-      ),
-    )
-    .limit(1);
-
-  if (!validServiceArea || !validReportPeriod) {
+  if (!isValidContext) {
     return {
       success: false,
       message: "Invalid relevance context for this utility.",
@@ -801,8 +802,7 @@ export async function SetTransmissionDataLabelRelevance(
     });
   }
 
-  revalidatePath("/settings/relevance");
-  revalidatePath("/data-entry/enter-data");
+  revalidateRelevanceAndDataEntry();
 
   return {
     success: true,
@@ -819,46 +819,12 @@ export async function GetUtilityGenerationRelevance(
     throw new Error("User not authenticated");
   }
 
-  const serviceAreaList = await db
-    .select({
-      id: serviceAreas.id,
-      name: serviceAreas.name,
-    })
-    .from(serviceAreas)
-    .orderBy(serviceAreas.name)
-    .where(eq(serviceAreas.utility_id, user.org_id!));
-
-  const reportPeriodList = await db
-    .select({
-      id: reportPeriods.id,
-      reportDate: reportPeriods.report_date,
-    })
-    .from(reportPeriods)
-    .where(eq(reportPeriods.utility_id, user.org_id!))
-    .orderBy(desc(reportPeriods.report_date));
-
-  const serviceAreaOptions: RelevanceFilterOption[] = serviceAreaList.map(
-    (item) => ({
-      id: item.id,
-      name: item.name,
-    }),
-  );
-
-  const reportPeriodOptions: RelevanceFilterOption[] = reportPeriodList.map(
-    (item) => ({
-      id: item.id,
-      name: item.reportDate.toISOString().slice(0, 7),
-    }),
-  );
-
-  const selectedReportPeriodId = resolveSelectedId(
-    filters.reportPeriodId,
-    reportPeriodOptions,
-  );
-  const selectedServiceAreaId = resolveSelectedId(
-    filters.serviceAreaId,
+  const {
     serviceAreaOptions,
-  );
+    reportPeriodOptions,
+    selectedReportPeriodId,
+    selectedServiceAreaId,
+  } = await getUtilityRelevanceFilterContext(user.org_id!, filters);
 
   const inputList = await getInputDefinitionsForStructure("Generation");
   const energyProviders = await getManagedDimensionItems("Energy Provider");
@@ -983,29 +949,13 @@ export async function SetUtilityGenerationDataLabelRelevance(
     };
   }
 
-  const [validServiceArea] = await db
-    .select({ id: serviceAreas.id })
-    .from(serviceAreas)
-    .where(
-      and(
-        eq(serviceAreas.id, payload.serviceAreaId),
-        eq(serviceAreas.utility_id, user.org_id!),
-      ),
-    )
-    .limit(1);
+  const isValidContext = await hasValidUtilityContext(
+    user.org_id!,
+    payload.serviceAreaId,
+    payload.reportPeriodId,
+  );
 
-  const [validReportPeriod] = await db
-    .select({ id: reportPeriods.id })
-    .from(reportPeriods)
-    .where(
-      and(
-        eq(reportPeriods.id, payload.reportPeriodId),
-        eq(reportPeriods.utility_id, user.org_id!),
-      ),
-    )
-    .limit(1);
-
-  if (!validServiceArea || !validReportPeriod) {
+  if (!isValidContext) {
     return {
       success: false,
       message: "Invalid relevance context for this utility.",
@@ -1128,8 +1078,7 @@ export async function SetUtilityGenerationDataLabelRelevance(
     }
   }
 
-  revalidatePath("/settings/relevance");
-  revalidatePath("/data-entry/enter-data");
+  revalidateRelevanceAndDataEntry();
 
   return {
     success: true,
@@ -1156,6 +1105,8 @@ export async function GetCustomKpiRelevance(): Promise<
       name: kpiDefinitions.name,
       description: kpiDefinitions.description,
       formula: kpiDefinitions.formula,
+      ownerUserId: kpiDefinitions.owner_user_id,
+      ownerUtilityId: kpiDefinitions.owner_utility_id,
       utilities: kpiDefinitions.utilities,
       formulaInputs: kpiDefinitions.formula_inputs,
     })
@@ -1191,6 +1142,87 @@ export async function GetCustomKpiRelevance(): Promise<
 
   const inputNameById = new Map(inputRows.map((row) => [row.id, row.name]));
 
+  const ownerUserIds = Array.from(
+    new Set(
+      kpis
+        .map((kpi) => kpi.ownerUserId)
+        .filter((value): value is string => typeof value === "string"),
+    ),
+  );
+
+  const ownerUserRows =
+    ownerUserIds.length > 0
+      ? await db
+          .select({
+            id: authUsers.id,
+            name: authUsers.name,
+            organisationId: authUsers.organisation_id,
+          })
+          .from(authUsers)
+          .where(inArray(authUsers.id, ownerUserIds))
+      : [];
+
+  const ownerUserNameById = new Map(
+    ownerUserRows.map((row) => [row.id, row.name]),
+  );
+
+  const ownerUserOrganisationIdByUserId = new Map(
+    ownerUserRows
+      .filter(
+        (row): row is typeof row & { organisationId: number } =>
+          typeof row.organisationId === "number",
+      )
+      .map((row) => [row.id, row.organisationId]),
+  );
+
+  const ownerUserOrganisationIds = Array.from(
+    new Set(ownerUserOrganisationIdByUserId.values()),
+  );
+
+  const ownerUserOrganisationRows =
+    ownerUserOrganisationIds.length > 0
+      ? await db
+          .select({
+            id: organisations.id,
+            acronym: organisations.acronym,
+          })
+          .from(organisations)
+          .where(inArray(organisations.id, ownerUserOrganisationIds))
+      : [];
+
+  const ownerUserOrgAcronymByOrganisationId = new Map(
+    ownerUserOrganisationRows
+      .filter(
+        (row): row is typeof row & { acronym: string } =>
+          typeof row.acronym === "string" && row.acronym.trim().length > 0,
+      )
+      .map((row) => [row.id, row.acronym]),
+  );
+
+  const ownerUtilityIds = Array.from(
+    new Set(
+      kpis
+        .map((kpi) => kpi.ownerUtilityId)
+        .filter((value): value is number => typeof value === "number"),
+    ),
+  );
+
+  const ownerUtilityRows =
+    ownerUtilityIds.length > 0
+      ? await db
+          .select({
+            id: organisations.id,
+            name: organisations.name,
+            acronym: organisations.acronym,
+          })
+          .from(organisations)
+          .where(inArray(organisations.id, ownerUtilityIds))
+      : [];
+
+  const ownerUtilityNameById = new Map(
+    ownerUtilityRows.map((row) => [row.id, row.acronym || row.name]),
+  );
+
   return kpis.map((kpi) => {
     const utilityIds = Array.isArray(kpi.utilities)
       ? kpi.utilities.filter((value): value is number =>
@@ -1217,6 +1249,24 @@ export async function GetCustomKpiRelevance(): Promise<
       kpiName: kpi.name,
       description: kpi.description,
       formula: kpi.formula,
+      ownerUserId: kpi.ownerUserId ?? null,
+      ownerUserName:
+        (typeof kpi.ownerUserId === "string"
+          ? ownerUserNameById.get(kpi.ownerUserId)
+          : null) ?? null,
+      ownerUserOrgAcronym:
+        (typeof kpi.ownerUserId === "string"
+          ? ownerUserOrganisationIdByUserId.get(kpi.ownerUserId)
+          : null) != null
+          ? (ownerUserOrgAcronymByOrganisationId.get(
+              ownerUserOrganisationIdByUserId.get(kpi.ownerUserId as string)!,
+            ) ?? null)
+          : null,
+      ownerUtilityId: kpi.ownerUtilityId ?? null,
+      ownerUtilityName:
+        (typeof kpi.ownerUtilityId === "number"
+          ? ownerUtilityNameById.get(kpi.ownerUtilityId)
+          : null) ?? null,
       utilityIds,
       isRelevant: utilityIds.includes(user.org_id!),
       inputs,

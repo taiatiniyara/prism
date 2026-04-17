@@ -14,10 +14,15 @@ import { DataTableFormResponse } from "@/components/tables/data-table-create-for
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { managedListItems } from "@/db/schema/managedLists";
 import { revalidatePath } from "next/cache";
+import {
+  buildManagedListNameMap,
+  resolveManagedListName,
+} from "@/lib/managed-list-utils";
 
 export async function GetAllEnergyResources(): Promise<EnergyResource[]> {
   const user = await getCurrentUser();
   const ml = await db.select().from(managedListItems);
+  const managedListNamesById = buildManagedListNameMap(ml);
 
   const query = db
     .select()
@@ -37,15 +42,6 @@ export async function GetAllEnergyResources(): Promise<EnergyResource[]> {
 
   const list = await query.orderBy(energyResources.name);
   return list.map((item) => {
-    const energy_provider = ml.find(
-      (m) => m.id === item.energy_resources.energy_provider_id,
-    );
-    const energy_type = ml.find(
-      (m) => m.id === item.energy_resources.energy_type_id,
-    );
-    const energy_source = ml.find(
-      (m) => m.id === item.energy_resources.energy_source_id,
-    );
     return {
       ...item.energy_resources,
       utility: item.organisations?.name,
@@ -53,9 +49,21 @@ export async function GetAllEnergyResources(): Promise<EnergyResource[]> {
       report_period: item.report_periods?.report_date
         ? item.report_periods?.report_date.toISOString().slice(0, 7)
         : "",
-      energy_provider: energy_provider?.name,
-      energy_type: energy_type?.name,
-      energy_source: energy_source?.name,
+      energy_provider: resolveManagedListName(
+        managedListNamesById,
+        item.energy_resources.energy_provider_id,
+        null,
+      ),
+      energy_type: resolveManagedListName(
+        managedListNamesById,
+        item.energy_resources.energy_type_id,
+        null,
+      ),
+      energy_source: resolveManagedListName(
+        managedListNamesById,
+        item.energy_resources.energy_source_id,
+        null,
+      ),
     };
   });
 }
@@ -86,7 +94,6 @@ export async function UpdateEnergyResource(
   data: Partial<EnergyResource>,
 ): Promise<DataTableFormResponse<EnergyResource>> {
   const user = await getCurrentUser();
-  console.log(data);
   const query = db
     .update(energyResources)
     .set({

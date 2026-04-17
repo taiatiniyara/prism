@@ -25,20 +25,25 @@ import { gt } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 const prismOneURL = "https://prismdashboard.org/api/migration";
+const JSON_HEADERS = {
+  "Content-Type": "application/json",
+} as const;
 
 const logMigrationError = (error: unknown) => {
-  console.log(error);
+  console.error("[migration] operation failed", error);
+};
+
+const fetchMigrationEndpoint = async (path: string) => {
+  return fetch(`${prismOneURL}${path}`, {
+    method: "GET",
+    headers: JSON_HEADERS,
+  });
 };
 
 export async function retrieveRoles() {
   let res = false;
   await db.delete(roles).where(gt(roles.id, 0));
-  const call = await fetch(prismOneURL + "/roles", {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
+  const call = await fetchMigrationEndpoint("/roles");
   const list: Role[] = await call.json();
 
   const existingRoles = await db.select().from(roles);
@@ -63,12 +68,7 @@ export async function retrieveUtilityData() {
   await db.delete(serviceAreas).where(gt(serviceAreas.id, 0));
   await db.delete(reportPeriods).where(gt(reportPeriods.id, 0));
   await db.delete(organisations).where(gt(organisations.id, 0));
-  const call = await fetch(prismOneURL + "/organisation", {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
+  const call = await fetchMigrationEndpoint("/organisation");
   const list = await call.json();
   const serviceAreaList: ServiceArea[] = list.serviceAreas;
   const reportPeriodsList: ReportPeriod[] = list.reportPeriods;
@@ -121,12 +121,7 @@ export async function retrieveCountries() {
   let res = false;
   await db.delete(subRegions).where(gt(subRegions.id, 0));
   await db.delete(countries).where(gt(countries.id, 0));
-  const call = await fetch(prismOneURL + "/country", {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
+  const call = await fetchMigrationEndpoint("/country");
   const list = await call.json();
   const subRegionList: SubRegion[] = list.subregions;
   const existingSubRegions = await db.select().from(subRegions);
@@ -170,12 +165,7 @@ export async function retrieveManagedLists() {
   let res = false;
   await db.delete(managedLists).where(gt(managedLists.id, 0));
   await db.delete(managedListItems).where(gt(managedListItems.id, 0));
-  const call = await fetch(prismOneURL + "/managedList", {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
+  const call = await fetchMigrationEndpoint("/managedList");
   const list = await call.json();
   const managedListItemsList: ManagedListItem[] = list.managedListItems;
   const managedListsList: ManagedList[] = list.managedLists;
@@ -214,12 +204,7 @@ export async function retrieveManagedLists() {
 export async function retrieveInputDefinitions() {
   let res = false;
   await db.delete(inputDefinitions).where(gt(inputDefinitions.id, 0));
-  const call = await fetch(prismOneURL + "/inputDefinitions", {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
+  const call = await fetchMigrationEndpoint("/inputDefinitions");
   const list = await call.json();
   const inputDefinitionsList: InputDefinition[] = list.inputDefinitions;
   const existingInputDefinitions = await db.select().from(inputDefinitions);
@@ -253,12 +238,7 @@ export async function retrieveInputDefinitions() {
 export async function retrieveReportPeriods() {
   let res = false;
   await db.delete(reportPeriods).where(gt(reportPeriods.id, 0));
-  const call = await fetch(prismOneURL + "/reportPeriods", {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
+  const call = await fetchMigrationEndpoint("/reportPeriods");
   const list = await call.json();
   const reportPeriodsList: ReportPeriod[] = list;
   const existingReportPeriods = await db.select().from(reportPeriods);
@@ -267,7 +247,6 @@ export async function retrieveReportPeriods() {
     (rp) => !existingIds.has(rp.id),
   );
 
-  console.log(nonExistingReportPeriods.length);
   try {
     if (nonExistingReportPeriods.length > 0) {
       await db.insert(reportPeriods).values(
@@ -295,14 +274,8 @@ export async function retrieveReportPeriods() {
 export async function retrieveEnergyResources() {
   let res = false;
   await db.delete(energyResources).where(gt(energyResources.id, 0));
-  const call = await fetch(prismOneURL + "/generators", {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
+  const call = await fetchMigrationEndpoint("/generators");
   const list = await call.json();
-  console.log(list);
   const energyResourcesList: EnergyResource[] = list;
   const existingEnergyResources = await db.select().from(energyResources);
   const existingIds = new Set(existingEnergyResources.map((er) => er.id));
@@ -310,7 +283,6 @@ export async function retrieveEnergyResources() {
     (er) => !existingIds.has(er.id),
   );
 
-  console.log(nonExistingEnergyResources.length);
   try {
     if (nonExistingEnergyResources.length > 0) {
       await db.insert(energyResources).values(
@@ -336,12 +308,7 @@ export async function retrieveEnergyResources() {
 
 export async function retrieveKpiDefinitions() {
   let res = false;
-  const call = await fetch(prismOneURL + "/kpi", {
-    method: "GET",
-    headers: {
-      "Content-Type": "application/json",
-    },
-  });
+  const call = await fetchMigrationEndpoint("/kpi");
   const list = await call.json();
   const kpiDefinitionsList: KpiDefinition[] = list;
   const existingKpiDefinitions = await db.select().from(kpiDefinitions);
@@ -349,8 +316,6 @@ export async function retrieveKpiDefinitions() {
   const nonExistingKpiDefinitions = kpiDefinitionsList.filter(
     (kd) => !existingIds.has(kd.id),
   );
-
-  console.log(nonExistingKpiDefinitions.length);
 
   if (nonExistingKpiDefinitions.length > 0) {
     await db.insert(kpiDefinitions).values(

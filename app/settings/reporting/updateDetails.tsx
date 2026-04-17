@@ -1,30 +1,25 @@
 "use client";
 
-import { Heading } from "@/components/heading";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useState } from "react";
 import { FaSave } from "react-icons/fa";
 import { UpdateOrganisation } from "../organisations/orgs.service";
 import { toast } from "sonner";
 import SubmitBtn from "@/components/submitBtn";
 import { Switch } from "@/components/ui/switch";
+import SettingsSection from "@/components/settings/settings-section";
 
 export default function UpdateReportingDetailsForm(props: {
   financial_year_end: string | null;
   is_mth_report_relevant: boolean;
   orgId: number;
 }) {
-  const [save, setSave] = useState(false);
   return (
     <div className="space-y-12">
-      <div className="space-y-3">
-        <Heading level={4}>Financial Year End</Heading>
-        <p className="text-muted-foreground w-1/2 mt-2">
-          Set the financial year end month for your organisation. This will be
-          used to determine the financial year for reporting purposes.
-        </p>
-
+      <SettingsSection
+        title="Financial Year End"
+        description="Set the financial year end month for your organisation. This will be used to determine the financial year for reporting purposes."
+      >
         <form
           action={async (formData) => {
             const financial_year_end = formData.get(
@@ -39,7 +34,6 @@ export default function UpdateReportingDetailsForm(props: {
               id: props.orgId,
             });
             if (res.success) {
-              setSave(false);
               toast.success(res.message);
             } else {
               toast.error(res.message);
@@ -48,32 +42,25 @@ export default function UpdateReportingDetailsForm(props: {
           className="flex items-center space-x-3 w-fit"
         >
           <Input
-            onChange={() => {
-              setSave(true);
-            }}
             className="p-3.5"
             required
             name="financial_year_end"
             defaultValue={props.financial_year_end || undefined}
             placeholder="E.g. 30 December"
           />
-          {save && (
-            <SubmitBtn
-              text={
-                <>
-                  <FaSave /> Save
-                </>
-              }
-            />
-          )}
+          <SubmitBtn
+            text={
+              <>
+                <FaSave /> Save
+              </>
+            }
+          />
         </form>
-      </div>
-      <div className="space-y-3">
-        <Heading level={4}>Monthly Reporting</Heading>
-        <p className="text-muted-foreground w-1/2 mt-2">
-          Specify whether your organisation prepares monthly reports.
-        </p>
-
+      </SettingsSection>
+      <SettingsSection
+        title="Monthly Reporting"
+        description="Specify whether your organisation prepares monthly reports."
+      >
         <div className="flex items-center space-x-8 border w-fit p-4.5 rounded-lg shadow-md">
           <Label htmlFor="monthly-reporting">Submit Monthly Reports</Label>
 
@@ -93,7 +80,7 @@ export default function UpdateReportingDetailsForm(props: {
             }}
           />
         </div>
-      </div>
+      </SettingsSection>
     </div>
   );
 }

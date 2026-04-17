@@ -6,6 +6,17 @@ import { authClient } from "@/lib/auth-client";
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 
+const getForwardedAuthHeaders = async () => {
+  const headersList = await headers();
+
+  return {
+    origin: headersList.get("origin") ?? "",
+    host: headersList.get("host") ?? "",
+    "x-forwarded-host": headersList.get("x-forwarded-host") ?? "",
+    cookie: headersList.get("cookie") ?? "",
+  };
+};
+
 export async function sendMagicLink(email: string) {
   const checkUser = await db.select().from(user).where(eq(user.email, email));
   if (checkUser.length === 0) {
@@ -15,7 +26,7 @@ export async function sendMagicLink(email: string) {
     };
   }
 
-  const headersList = await headers();
+  const forwardedHeaders = await getForwardedAuthHeaders();
 
   await authClient.signIn.magicLink(
     {
@@ -23,12 +34,7 @@ export async function sendMagicLink(email: string) {
       callbackURL: "/dashboard",
     },
     {
-      headers: {
-        origin: headersList.get("origin") ?? "",
-        host: headersList.get("host") ?? "",
-        "x-forwarded-host": headersList.get("x-forwarded-host") ?? "",
-        cookie: headersList.get("cookie") ?? "",
-      },
+      headers: forwardedHeaders,
     },
   );
 
@@ -49,8 +55,7 @@ export async function registerUser(data: {
 }) {
   let sent = false;
   try {
-    console.log(data);
-    const headersList = await headers();
+    const forwardedHeaders = await getForwardedAuthHeaders();
 
     const s = await authClient.signUp.email(
       {
@@ -60,17 +65,11 @@ export async function registerUser(data: {
         callbackURL: "/",
       },
       {
-        headers: {
-          origin: headersList.get("origin") ?? "",
-          host: headersList.get("host") ?? "",
-          "x-forwarded-host": headersList.get("x-forwarded-host") ?? "",
-          cookie: headersList.get("cookie") ?? "",
-        },
+        headers: forwardedHeaders,
       },
     );
 
     const u = s.data?.user;
-    console.log(u);
 
     if (u) {
       await db
@@ -92,18 +91,13 @@ export async function registerUser(data: {
         callbackURL: "/dashboard",
       },
       {
-        headers: {
-          origin: headersList.get("origin") ?? "",
-          host: headersList.get("host") ?? "",
-          "x-forwarded-host": headersList.get("x-forwarded-host") ?? "",
-          cookie: headersList.get("cookie") ?? "",
-        },
+        headers: forwardedHeaders,
       },
     );
 
     sent = true;
   } catch (error) {
-    console.log(error);
+    console.error("[auth] registerUser failed", error);
     sent = false;
   }
 

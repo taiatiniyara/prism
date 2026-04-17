@@ -1440,14 +1440,103 @@ const normalizeDataEntryValue = (value: string | null): string | null => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
-export const updateDataEntryValueAction = async (
-  payload: UpdateDataEntryValuePayload,
-): Promise<{ kpiRunResult: KpiWorkerRunResult | null }> => {
+type DataEntryScopedPayload = {
+  inputDefId: number;
+  energyResourceId?: number | null;
+  customerTypeId?: number | null;
+  paymentModeId?: number | null;
+};
+
+type EnergyMetadata = {
+  energySourceId: number;
+  energyTypeId: number;
+  energyProviderId: number;
+};
+
+const resolveEnergyMetadata = async (
+  energyResourceId: number | null,
+): Promise<EnergyMetadata | null> => {
+  if (energyResourceId == null) {
+    return null;
+  }
+
+  const [resource] = await db
+    .select({
+      energySourceId: energyResources.energy_source_id,
+      energyTypeId: energyResources.energy_type_id,
+      energyProviderId: energyResources.energy_provider_id,
+    })
+    .from(energyResources)
+    .where(eq(energyResources.id, energyResourceId))
+    .limit(1);
+
+  if (!resource) {
+    throw new Error("Selected generator metadata could not be resolved.");
+  }
+
+  return resource;
+};
+
+const buildExistingDataEntryConditions = (params: {
+  reportPeriodId: number;
+  inputDefId: number;
+  serviceAreaId: number | null;
+  energyResourceId: number | null;
+  customerTypeId: number | null;
+  paymentModeId: number | null;
+}) => {
+  const conditions = [
+    eq(dataEntries.report_period_id, params.reportPeriodId),
+    eq(dataEntries.input_def_id, params.inputDefId),
+  ];
+
+  if (params.serviceAreaId == null) {
+    conditions.push(isNull(dataEntries.service_area_id));
+  } else {
+    conditions.push(eq(dataEntries.service_area_id, params.serviceAreaId));
+  }
+
+  if (params.energyResourceId == null) {
+    conditions.push(isNull(dataEntries.energy_resource_id));
+  } else {
+    conditions.push(
+      eq(dataEntries.energy_resource_id, params.energyResourceId),
+    );
+  }
+
+  if (params.customerTypeId == null) {
+    conditions.push(isNull(dataEntries.customer_type_id));
+  } else {
+    conditions.push(eq(dataEntries.customer_type_id, params.customerTypeId));
+  }
+
+  if (params.paymentModeId == null) {
+    conditions.push(isNull(dataEntries.payment_mode_id));
+  } else {
+    conditions.push(eq(dataEntries.payment_mode_id, params.paymentModeId));
+  }
+
+  return conditions;
+};
+
+const resolveDataEntryActionScope = async (
+  payload: DataEntryScopedPayload,
+  errors: {
+    missingReportPeriod: string;
+    missingGenerationResource: string;
+  },
+): Promise<{
+  user: CurrentUser;
+  context: DataEntryFilterContext;
+  scopedServiceAreaId: number | null;
+  energyResourceId: number | null;
+  energyMetadata: EnergyMetadata | null;
+}> => {
   const user = await getCurrentUser();
   const { context, options } = await bootstrapDataEntryFilterContext(user);
 
   if (context.reportPeriodId == null) {
-    throw new Error("A report period is required before saving data entries.");
+    throw new Error(errors.missingReportPeriod);
   }
 
   const definitions = filterInputDefinitionsByContext(
@@ -1479,45 +1568,53 @@ export const updateDataEntryValueAction = async (
     : null;
 
   if (generationMode && energyResourceId == null) {
-    throw new Error("Generation mode requires a generator to save values.");
+    throw new Error(errors.missingGenerationResource);
   }
 
-  const existingConditions = [
-    eq(dataEntries.report_period_id, context.reportPeriodId),
-    eq(dataEntries.input_def_id, payload.inputDefId),
-  ];
+  const energyMetadata = await resolveEnergyMetadata(energyResourceId);
 
-  if (scopedServiceAreaId == null) {
-    existingConditions.push(isNull(dataEntries.service_area_id));
-  } else {
-    existingConditions.push(
-      eq(dataEntries.service_area_id, scopedServiceAreaId),
-    );
+  return {
+    user,
+    context,
+    scopedServiceAreaId,
+    energyResourceId,
+    energyMetadata,
+  };
+};
+
+const revalidateEnterData = () => {
+  revalidatePath("/data-entry/enter-data");
+};
+
+export const updateDataEntryValueAction = async (
+  payload: UpdateDataEntryValuePayload,
+): Promise<{ kpiRunResult: KpiWorkerRunResult | null }> => {
+  const {
+    user,
+    context,
+    scopedServiceAreaId,
+    energyResourceId,
+    energyMetadata,
+  } = await resolveDataEntryActionScope(payload, {
+    missingReportPeriod:
+      "A report period is required before saving data entries.",
+    missingGenerationResource:
+      "Generation mode requires a generator to save values.",
+  });
+
+  const reportPeriodId = context.reportPeriodId;
+  if (reportPeriodId == null) {
+    throw new Error("A report period is required before saving data entries.");
   }
 
-  if (energyResourceId == null) {
-    existingConditions.push(isNull(dataEntries.energy_resource_id));
-  } else {
-    existingConditions.push(
-      eq(dataEntries.energy_resource_id, energyResourceId),
-    );
-  }
-
-  if (payload.customerTypeId == null) {
-    existingConditions.push(isNull(dataEntries.customer_type_id));
-  } else {
-    existingConditions.push(
-      eq(dataEntries.customer_type_id, payload.customerTypeId),
-    );
-  }
-
-  if (payload.paymentModeId == null) {
-    existingConditions.push(isNull(dataEntries.payment_mode_id));
-  } else {
-    existingConditions.push(
-      eq(dataEntries.payment_mode_id, payload.paymentModeId),
-    );
-  }
+  const existingConditions = buildExistingDataEntryConditions({
+    reportPeriodId,
+    inputDefId: payload.inputDefId,
+    serviceAreaId: scopedServiceAreaId,
+    energyResourceId,
+    customerTypeId: payload.customerTypeId ?? null,
+    paymentModeId: payload.paymentModeId ?? null,
+  });
 
   const [existing] = await db
     .select({ id: dataEntries.id })
@@ -1525,32 +1622,8 @@ export const updateDataEntryValueAction = async (
     .where(and(...existingConditions))
     .limit(1);
 
-  let energyMetadata: {
-    energySourceId: number;
-    energyTypeId: number;
-    energyProviderId: number;
-  } | null = null;
-
-  if (energyResourceId != null) {
-    const [resource] = await db
-      .select({
-        energySourceId: energyResources.energy_source_id,
-        energyTypeId: energyResources.energy_type_id,
-        energyProviderId: energyResources.energy_provider_id,
-      })
-      .from(energyResources)
-      .where(eq(energyResources.id, energyResourceId))
-      .limit(1);
-
-    if (!resource) {
-      throw new Error("Selected generator metadata could not be resolved.");
-    }
-
-    energyMetadata = resource;
-  }
-
   const values = {
-    report_period_id: context.reportPeriodId,
+    report_period_id: reportPeriodId,
     input_def_id: payload.inputDefId,
     service_area_id: scopedServiceAreaId,
     energy_resource_id: energyResourceId,
@@ -1582,7 +1655,7 @@ export const updateDataEntryValueAction = async (
   }
 
   runAggregatedWorkerAsync(user, {
-    reportPeriodId: context.reportPeriodId,
+    reportPeriodId,
     serviceAreaId: scopedServiceAreaId,
     energyResourceId,
   });
@@ -1596,7 +1669,7 @@ export const updateDataEntryValueAction = async (
         inputDefId: payload.inputDefId,
         triggeredByUserId: user.id,
         scope: {
-          reportPeriodId: context.reportPeriodId,
+          reportPeriodId,
           organizationId: user.org_id,
           serviceAreaId: scopedServiceAreaId,
           energyResourceId,
@@ -1611,7 +1684,7 @@ export const updateDataEntryValueAction = async (
     );
   }
 
-  revalidatePath("/data-entry/enter-data");
+  revalidateEnterData();
 
   return {
     kpiRunResult,
@@ -1621,10 +1694,20 @@ export const updateDataEntryValueAction = async (
 export const updateDataEntryCommentAction = async (
   payload: UpdateDataEntryCommentPayload,
 ): Promise<void> => {
-  const user = await getCurrentUser();
-  const { context, options } = await bootstrapDataEntryFilterContext(user);
+  const {
+    user,
+    context,
+    scopedServiceAreaId,
+    energyResourceId,
+    energyMetadata,
+  } = await resolveDataEntryActionScope(payload, {
+    missingReportPeriod: "A report period is required before saving comments.",
+    missingGenerationResource:
+      "Generation mode requires a generator to save comments.",
+  });
 
-  if (context.reportPeriodId == null) {
+  const reportPeriodId = context.reportPeriodId;
+  if (reportPeriodId == null) {
     throw new Error("A report period is required before saving comments.");
   }
 
@@ -1633,74 +1716,14 @@ export const updateDataEntryCommentAction = async (
     throw new Error("A comment is required.");
   }
 
-  const definitions = filterInputDefinitionsByContext(
-    await getInputDefinitionsForContext(context),
-    context,
-  );
-  const validInputDefIds = new Set(
-    definitions.map((definition) => definition.id),
-  );
-
-  if (!validInputDefIds.has(payload.inputDefId)) {
-    throw new Error("The selected input is not valid for the active context.");
-  }
-
-  const serviceAreaScopedInputDefinitionIds =
-    await getServiceAreaScopedInputDefinitionIds([payload.inputDefId]);
-  const scopedServiceAreaId = serviceAreaScopedInputDefinitionIds.has(
-    payload.inputDefId,
-  )
-    ? context.serviceAreaId
-    : null;
-
-  const generationMode = isGenerationContext(
-    context,
-    options.inputSubcategories,
-  );
-  const energyResourceId = generationMode
-    ? (payload.energyResourceId ?? null)
-    : null;
-
-  if (generationMode && energyResourceId == null) {
-    throw new Error("Generation mode requires a generator to save comments.");
-  }
-
-  const existingConditions = [
-    eq(dataEntries.report_period_id, context.reportPeriodId),
-    eq(dataEntries.input_def_id, payload.inputDefId),
-  ];
-
-  if (scopedServiceAreaId == null) {
-    existingConditions.push(isNull(dataEntries.service_area_id));
-  } else {
-    existingConditions.push(
-      eq(dataEntries.service_area_id, scopedServiceAreaId),
-    );
-  }
-
-  if (energyResourceId == null) {
-    existingConditions.push(isNull(dataEntries.energy_resource_id));
-  } else {
-    existingConditions.push(
-      eq(dataEntries.energy_resource_id, energyResourceId),
-    );
-  }
-
-  if (payload.customerTypeId == null) {
-    existingConditions.push(isNull(dataEntries.customer_type_id));
-  } else {
-    existingConditions.push(
-      eq(dataEntries.customer_type_id, payload.customerTypeId),
-    );
-  }
-
-  if (payload.paymentModeId == null) {
-    existingConditions.push(isNull(dataEntries.payment_mode_id));
-  } else {
-    existingConditions.push(
-      eq(dataEntries.payment_mode_id, payload.paymentModeId),
-    );
-  }
+  const existingConditions = buildExistingDataEntryConditions({
+    reportPeriodId,
+    inputDefId: payload.inputDefId,
+    serviceAreaId: scopedServiceAreaId,
+    energyResourceId,
+    customerTypeId: payload.customerTypeId ?? null,
+    paymentModeId: payload.paymentModeId ?? null,
+  });
 
   const [existing] = await db
     .select({
@@ -1711,30 +1734,6 @@ export const updateDataEntryCommentAction = async (
     .from(dataEntries)
     .where(and(...existingConditions))
     .limit(1);
-
-  let energyMetadata: {
-    energySourceId: number;
-    energyTypeId: number;
-    energyProviderId: number;
-  } | null = null;
-
-  if (energyResourceId != null) {
-    const [resource] = await db
-      .select({
-        energySourceId: energyResources.energy_source_id,
-        energyTypeId: energyResources.energy_type_id,
-        energyProviderId: energyResources.energy_provider_id,
-      })
-      .from(energyResources)
-      .where(eq(energyResources.id, energyResourceId))
-      .limit(1);
-
-    if (!resource) {
-      throw new Error("Selected generator metadata could not be resolved.");
-    }
-
-    energyMetadata = resource;
-  }
 
   const nextComments: DataEntryComment[] = [
     ...((existing?.comments ?? []) as DataEntryComment[]),
@@ -1758,7 +1757,7 @@ export const updateDataEntryCommentAction = async (
       .where(eq(dataEntries.id, existing.id));
   } else {
     await db.insert(dataEntries).values({
-      report_period_id: context.reportPeriodId,
+      report_period_id: reportPeriodId,
       input_def_id: payload.inputDefId,
       service_area_id: scopedServiceAreaId,
       energy_resource_id: energyResourceId,
@@ -1775,117 +1774,43 @@ export const updateDataEntryCommentAction = async (
     });
   }
 
-  revalidatePath("/data-entry/enter-data");
+  revalidateEnterData();
 };
 
 export const updateDataEntryAvailabilityAction = async (
   payload: UpdateDataEntryAvailabilityPayload,
 ): Promise<{ kpiRunResult: KpiWorkerRunResult | null }> => {
-  const user = await getCurrentUser();
-  const { context, options } = await bootstrapDataEntryFilterContext(user);
+  const {
+    user,
+    context,
+    scopedServiceAreaId,
+    energyResourceId,
+    energyMetadata,
+  } = await resolveDataEntryActionScope(payload, {
+    missingReportPeriod: "A report period is required before updating status.",
+    missingGenerationResource:
+      "Generation mode requires a generator to update status.",
+  });
 
-  if (context.reportPeriodId == null) {
+  const reportPeriodId = context.reportPeriodId;
+  if (reportPeriodId == null) {
     throw new Error("A report period is required before updating status.");
   }
 
-  const definitions = filterInputDefinitionsByContext(
-    await getInputDefinitionsForContext(context),
-    context,
-  );
-  const validInputDefIds = new Set(
-    definitions.map((definition) => definition.id),
-  );
-
-  if (!validInputDefIds.has(payload.inputDefId)) {
-    throw new Error("The selected input is not valid for the active context.");
-  }
-
-  const serviceAreaScopedInputDefinitionIds =
-    await getServiceAreaScopedInputDefinitionIds([payload.inputDefId]);
-  const scopedServiceAreaId = serviceAreaScopedInputDefinitionIds.has(
-    payload.inputDefId,
-  )
-    ? context.serviceAreaId
-    : null;
-
-  const generationMode = isGenerationContext(
-    context,
-    options.inputSubcategories,
-  );
-  const energyResourceId = generationMode
-    ? (payload.energyResourceId ?? null)
-    : null;
-
-  if (generationMode && energyResourceId == null) {
-    throw new Error("Generation mode requires a generator to update status.");
-  }
-
-  const existingConditions = [
-    eq(dataEntries.report_period_id, context.reportPeriodId),
-    eq(dataEntries.input_def_id, payload.inputDefId),
-  ];
-
-  if (scopedServiceAreaId == null) {
-    existingConditions.push(isNull(dataEntries.service_area_id));
-  } else {
-    existingConditions.push(
-      eq(dataEntries.service_area_id, scopedServiceAreaId),
-    );
-  }
-
-  if (energyResourceId == null) {
-    existingConditions.push(isNull(dataEntries.energy_resource_id));
-  } else {
-    existingConditions.push(
-      eq(dataEntries.energy_resource_id, energyResourceId),
-    );
-  }
-
-  if (payload.customerTypeId == null) {
-    existingConditions.push(isNull(dataEntries.customer_type_id));
-  } else {
-    existingConditions.push(
-      eq(dataEntries.customer_type_id, payload.customerTypeId),
-    );
-  }
-
-  if (payload.paymentModeId == null) {
-    existingConditions.push(isNull(dataEntries.payment_mode_id));
-  } else {
-    existingConditions.push(
-      eq(dataEntries.payment_mode_id, payload.paymentModeId),
-    );
-  }
+  const existingConditions = buildExistingDataEntryConditions({
+    reportPeriodId,
+    inputDefId: payload.inputDefId,
+    serviceAreaId: scopedServiceAreaId,
+    energyResourceId,
+    customerTypeId: payload.customerTypeId ?? null,
+    paymentModeId: payload.paymentModeId ?? null,
+  });
 
   const [existing] = await db
     .select({ id: dataEntries.id })
     .from(dataEntries)
     .where(and(...existingConditions))
     .limit(1);
-
-  let energyMetadata: {
-    energySourceId: number;
-    energyTypeId: number;
-    energyProviderId: number;
-  } | null = null;
-
-  if (energyResourceId != null) {
-    const [resource] = await db
-      .select({
-        energySourceId: energyResources.energy_source_id,
-        energyTypeId: energyResources.energy_type_id,
-        energyProviderId: energyResources.energy_provider_id,
-      })
-      .from(energyResources)
-      .where(eq(energyResources.id, energyResourceId))
-      .limit(1);
-
-    if (!resource) {
-      throw new Error("Selected generator metadata could not be resolved.");
-    }
-
-    energyMetadata = resource;
-  }
 
   const nextStatusId = payload.isDataNotAvailable
     ? DataEntryStatusId.Not_Available
@@ -1909,7 +1834,7 @@ export const updateDataEntryAvailabilityAction = async (
     const [inserted] = await db
       .insert(dataEntries)
       .values({
-        report_period_id: context.reportPeriodId,
+        report_period_id: reportPeriodId,
         input_def_id: payload.inputDefId,
         service_area_id: scopedServiceAreaId,
         energy_resource_id: energyResourceId,
@@ -1930,7 +1855,7 @@ export const updateDataEntryAvailabilityAction = async (
   }
 
   runAggregatedWorkerAsync(user, {
-    reportPeriodId: context.reportPeriodId,
+    reportPeriodId,
     serviceAreaId: scopedServiceAreaId,
     energyResourceId,
   });
@@ -1944,7 +1869,7 @@ export const updateDataEntryAvailabilityAction = async (
         inputDefId: payload.inputDefId,
         triggeredByUserId: user.id,
         scope: {
-          reportPeriodId: context.reportPeriodId,
+          reportPeriodId,
           organizationId: user.org_id,
           serviceAreaId: scopedServiceAreaId,
           energyResourceId,
@@ -1959,7 +1884,7 @@ export const updateDataEntryAvailabilityAction = async (
     );
   }
 
-  revalidatePath("/data-entry/enter-data");
+  revalidateEnterData();
 
   return {
     kpiRunResult,

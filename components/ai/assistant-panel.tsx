@@ -10,13 +10,21 @@ import { ResponseSummary } from "./response-summary";
 import { AI_FOCUS_RING_CLASS } from "./shared";
 
 export function AssistantPanel() {
-  const [prompt, setPrompt] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [response, setResponse] = useState<AiQueryResponse | null>(null);
 
   const onSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const prompt = String(formData.get("prompt") ?? "").trim();
+
+    if (!prompt) {
+      setError("Please enter a prompt.");
+      setResponse(null);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
@@ -44,7 +52,7 @@ export function AssistantPanel() {
       }
 
       setResponse(body as AiQueryResponse);
-      setPrompt("");
+      event.currentTarget.reset();
     } catch {
       setResponse(null);
       setError("Unable to send message.");
@@ -67,9 +75,8 @@ export function AssistantPanel() {
         </label>
         <textarea
           id="ai-prompt"
+          name="prompt"
           className={`w-full rounded-md border border-slate-300 p-2 text-sm ${AI_FOCUS_RING_CLASS}`}
-          value={prompt}
-          onChange={(event) => setPrompt(event.target.value)}
           placeholder="Ask anything about your PRISM data..."
           rows={4}
           required

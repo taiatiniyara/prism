@@ -64,6 +64,7 @@ export const kpiDefinitions = pgTable("kpi_definitions", {
     .notNull()
     .$type<"benchmarking" | "custom">(),
   utilities: json("utility_ids").$type<number[]>(),
+  owner_user_id: text("owner_user_id").references(() => user.id),
   owner_utility_id: integer("owner_utility_id").references(
     () => organisations.id,
   ),
@@ -77,6 +78,10 @@ export const kpiDefinitions = pgTable("kpi_definitions", {
   is_aggregated: boolean("is_aggregated").default(false).notNull(),
   is_currency: boolean("is_currency").default(false).notNull(),
   is_descriptive: boolean("is_descriptive").default(false).notNull(),
+  updated_at: timestamp("updated_at")
+    .defaultNow()
+    .$onUpdate(() => /* @__PURE__ */ new Date())
+    .notNull(),
   is_active: boolean("is_active").default(true).notNull(),
 });
 export type KpiDefinition = typeof kpiDefinitions.$inferSelect & {

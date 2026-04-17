@@ -17,7 +17,6 @@ export function InputCommentThread({
   comments,
   onCommentsUpdated,
 }: InputCommentThreadProps) {
-  const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -43,7 +42,8 @@ export function InputCommentThread({
 
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const trimmed = draft.trim();
+    const formData = new FormData(event.currentTarget);
+    const trimmed = String(formData.get("comment") ?? "").trim();
 
     if (trimmed.length === 0) {
       setError("Please enter a comment.");
@@ -72,7 +72,7 @@ export function InputCommentThread({
 
         const body = (await response.json()) as { comments: InputComment[] };
         onCommentsUpdated(body.comments);
-        setDraft("");
+        event.currentTarget.reset();
       } catch (submitError) {
         setError(
           submitError instanceof Error
@@ -120,8 +120,7 @@ export function InputCommentThread({
         onSubmit={handleSubmit}
       >
         <Textarea
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
+          name="comment"
           placeholder="Add a note..."
           disabled={isPending}
           className="min-h-14 text-xs"

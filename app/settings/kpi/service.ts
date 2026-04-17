@@ -13,6 +13,10 @@ import { managedListItems, managedLists } from "@/db/schema/managedLists";
 import { and, asc, eq, gt, ilike, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { CurrentUser, getCurrentUser } from "@/lib/user.service";
+import {
+  buildManagedListNameMap,
+  resolveManagedListName,
+} from "@/lib/managed-list-utils";
 
 export interface KpiFormulaInputOption {
   id: number;
@@ -240,6 +244,7 @@ export async function GetAllKpiDefinitions(): Promise<KpiDefinition[]> {
   const currentUser = await getCurrentUser();
   const visibilityFilter = getKpiVisibilityFilter(currentUser);
   const managedListsItems = await db.select().from(managedListItems);
+  const managedListNamesById = buildManagedListNameMap(managedListsItems);
   const list = await (
     visibilityFilter
       ? db.select().from(kpiDefinitions).where(visibilityFilter)
@@ -249,14 +254,22 @@ export async function GetAllKpiDefinitions(): Promise<KpiDefinition[]> {
   return list.map((item) => {
     const i: KpiDefinition = {
       ...item,
-      agg_level:
-        managedListsItems.find((m) => m.id === item.agg_level_id)?.name || null,
-      category:
-        managedListsItems.find((m) => m.id === item.category_id)?.name || null,
-      subcategory:
-        managedListsItems.find((m) => m.id === item.subcategory_id)?.name ||
+      agg_level: resolveManagedListName(
+        managedListNamesById,
+        item.agg_level_id,
         null,
-      unit: managedListsItems.find((m) => m.id === item.unit_id)?.name || null,
+      ),
+      category: resolveManagedListName(
+        managedListNamesById,
+        item.category_id,
+        null,
+      ),
+      subcategory: resolveManagedListName(
+        managedListNamesById,
+        item.subcategory_id,
+        null,
+      ),
+      unit: resolveManagedListName(managedListNamesById, item.unit_id, null),
     };
     return i;
   });
@@ -675,18 +688,28 @@ export async function UpdateKpiDefinition(
 
 export async function GetKpiFormulaBuilderData(): Promise<KpiFormulaBuilderData> {
   const managedListsItems = await db.select().from(managedListItems);
+  const managedListNamesById = buildManagedListNameMap(managedListsItems);
   const kpis = (
     await db.select().from(kpiDefinitions).orderBy(asc(kpiDefinitions.name))
   ).map((i) => {
     const kpi: KpiDefinition = {
       ...i,
-      agg_level:
-        managedListsItems.find((m) => m.id === i.agg_level_id)?.name || null,
-      category:
-        managedListsItems.find((m) => m.id === i.category_id)?.name || null,
-      subcategory:
-        managedListsItems.find((m) => m.id === i.subcategory_id)?.name || null,
-      unit: managedListsItems.find((m) => m.id === i.unit_id)?.name || null,
+      agg_level: resolveManagedListName(
+        managedListNamesById,
+        i.agg_level_id,
+        null,
+      ),
+      category: resolveManagedListName(
+        managedListNamesById,
+        i.category_id,
+        null,
+      ),
+      subcategory: resolveManagedListName(
+        managedListNamesById,
+        i.subcategory_id,
+        null,
+      ),
+      unit: resolveManagedListName(managedListNamesById, i.unit_id, null),
     };
     return kpi;
   });
@@ -707,13 +730,13 @@ export async function GetKpiFormulaBuilderData(): Promise<KpiFormulaBuilderData>
     )
     .orderBy(asc(inputDefinitions.name));
 
-  const previewContextLabel = "Preview uses dummy values.";
+  const previewContextLabel = "Preview uses sample values.";
 
   const formulaInputs: KpiFormulaInputOption[] = inputs.map((item) => ({
     id: item.id,
     name: item.name,
     variable_name: item.variable_name,
-    unit: managedListsItems.find((m) => m.id === item.unitId)?.name || null,
+    unit: resolveManagedListName(managedListNamesById, item.unitId, null),
     actualSamples: [],
   }));
 

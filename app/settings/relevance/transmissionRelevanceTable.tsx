@@ -1,6 +1,7 @@
 "use client";
 
 import { Checkbox } from "@/components/ui/checkbox";
+import BorderedPanel from "@/components/ui/bordered-panel";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -94,7 +95,7 @@ export default function TransmissionRelevanceTable(props: {
   };
 
   return (
-    <div className="space-y-4 rounded-md border p-4">
+    <BorderedPanel className="space-y-4">
       <div className="flex items-center justify-between gap-4">
         <label className="flex items-center gap-2 text-sm font-medium">
           <Checkbox
@@ -126,6 +127,6 @@ export default function TransmissionRelevanceTable(props: {
           </li>
         ))}
       </ul>
-    </div>
+    </BorderedPanel>
   );
 }

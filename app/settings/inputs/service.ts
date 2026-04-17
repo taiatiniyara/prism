@@ -12,6 +12,10 @@ import { createVariableName } from "@/lib/formatters";
 import { and, asc, eq, ilike, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { GetAllManagedListItems } from "../managed-lists/service";
+import {
+  buildManagedListNameMap,
+  resolveManagedListName,
+} from "@/lib/managed-list-utils";
 
 export interface InputFormulaOption {
   id: number;
@@ -67,17 +71,25 @@ interface UpdateInputDefinitionPayload {
 
 export async function GetAllInputDefinitions(): Promise<InputDefinition[]> {
   const ml = await GetAllManagedListItems();
+  const managedListNamesById = buildManagedListNameMap(ml);
   const list = await db
     .select()
     .from(inputDefinitions)
     .orderBy(inputDefinitions.name);
   const returnList: InputDefinition[] = list.map((item) => ({
     ...item,
-    category: ml.find((m) => m.id === item.category_id)?.name || "Unknown",
-    data_type: ml.find((m) => m.id === item.data_type_id)?.name || "Unknown",
+    category:
+      resolveManagedListName(managedListNamesById, item.category_id, null) ||
+      "Unknown",
+    data_type:
+      resolveManagedListName(managedListNamesById, item.data_type_id, null) ||
+      "Unknown",
     subcategory:
-      ml.find((m) => m.id === item.subcategory_id)?.name || "Unknown",
-    unit: ml.find((m) => m.id === item.unit_id)?.name || "Unknown",
+      resolveManagedListName(managedListNamesById, item.subcategory_id, null) ||
+      "Unknown",
+    unit:
+      resolveManagedListName(managedListNamesById, item.unit_id, null) ||
+      "Unknown",
   }));
   return returnList;
 }
@@ -330,6 +342,7 @@ export async function UpdateInputDefinitionFromExcel(
 
 export async function GetInputFormulaBuilderData(): Promise<InputFormulaBuilderData> {
   const managedListsItems = await db.select().from(managedListItems);
+  const managedListNamesById = buildManagedListNameMap(managedListsItems);
 
   const inputs = await db
     .select({
@@ -405,9 +418,7 @@ export async function GetInputFormulaBuilderData(): Promise<InputFormulaBuilderD
       name: item.name,
       description: item.description,
       variable_name: item.variable_name,
-      unit:
-        managedListsItems.find((managedItem) => managedItem.id === item.unitId)
-          ?.name || null,
+      unit: resolveManagedListName(managedListNamesById, item.unitId, null),
       formula: item.formula,
       formula_inputs: item.formula_inputs,
       is_active: item.is_active,
@@ -415,7 +426,7 @@ export async function GetInputFormulaBuilderData(): Promise<InputFormulaBuilderD
     energyProviderOptions: energyProviderRows,
     energyTypeOptions: energyTypeRows,
     energySourceOptions: energySourceRows,
-    previewContextLabel: "Preview uses dummy values.",
+    previewContextLabel: "Preview uses sample values.",
   };
 }
 

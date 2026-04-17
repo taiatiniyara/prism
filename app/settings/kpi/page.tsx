@@ -21,6 +21,11 @@ import { listCustomKpiApprovalTaxonomyOptions } from "@/app/data-entry/review-kp
 import KpiLimitsEditor from "./limitsEditor";
 import KpiTargetsEditor from "./targetsEditor";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import SectionContainer from "@/components/layout/section-container";
+import StateMessage from "@/components/ui/state-message";
+import DetailsExpandIndicator from "@/components/ui/details-expand-indicator";
+import LabeledContentBlock from "@/components/ui/labeled-content-block";
+import MutedBulletedList from "@/components/ui/muted-bulleted-list";
 
 export default async function KpiSettingsPage() {
   const currentUser = await getCurrentUser();
@@ -58,23 +63,25 @@ export default async function KpiSettingsPage() {
       }))
     : { categories: [], subcategories: [] };
   const customKpiWorkflowSection = (
-    <section className="space-y-4 rounded-xl border bg-card p-4 sm:p-6">
+    <SectionContainer className="space-y-4">
       {showCustomKpiRequestsView && customKpiViewModel ? (
         <>
           <CustomKpiRequestDialog
             inputOptions={customKpiViewModel.availableInputDefinitions}
             unitOptions={customKpiViewModel.availableUnits}
+            dataTypeOptions={customKpiViewModel.availableDataTypes}
           />
 
           {customKpiViewModel.requests.length === 0 ? (
-            <div className="rounded-md border bg-muted/20 p-3 text-sm text-muted-foreground">
+            <StateMessage className="p-3 text-sm text-muted-foreground">
               No custom KPI requests submitted yet.
-            </div>
+            </StateMessage>
           ) : (
             <div className="space-y-2">
               {customKpiViewModel.requests.map((request) => (
                 <details
                   key={request.id}
+                  data-custom-kpi-request-details="true"
                   className="group rounded-md border bg-background p-3 text-sm"
                 >
                   <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
@@ -84,15 +91,9 @@ export default async function KpiSettingsPage() {
                         Submitted {request.created_at.toLocaleString()}
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground group-open:hidden">
-                        Expand
-                      </span>
-                      <span className="hidden text-xs text-muted-foreground group-open:inline">
-                        Collapse
-                      </span>
+                    <DetailsExpandIndicator>
                       <CustomKpiRequestStatusBadge status={request.status} />
-                    </div>
+                    </DetailsExpandIndicator>
                   </summary>
 
                   <div className="mt-3 border-t pt-3 text-xs text-muted-foreground sm:text-sm">
@@ -105,34 +106,25 @@ export default async function KpiSettingsPage() {
                     </div>
 
                     <div className="mt-3 space-y-3 text-foreground">
-                      <div>
-                        <p className="mb-1 text-xs font-medium text-muted-foreground">
-                          Formula expression
-                        </p>
+                      <LabeledContentBlock label="Formula expression">
                         <div className="whitespace-pre-wrap rounded border bg-muted/20 p-2 font-mono text-[11px] sm:text-xs">
                           {request.formula_expression}
                         </div>
-                      </div>
+                      </LabeledContentBlock>
 
-                      <div>
-                        <p className="mb-1 text-xs font-medium text-muted-foreground">
-                          Description
-                        </p>
+                      <LabeledContentBlock label="Description">
                         <div className="whitespace-pre-wrap rounded border bg-muted/20 p-2 text-xs sm:text-sm">
                           {request.description || "-"}
                         </div>
-                      </div>
+                      </LabeledContentBlock>
 
-                      <div>
-                        <p className="mb-1 text-xs font-medium text-muted-foreground">
-                          Selected input details
-                        </p>
+                      <LabeledContentBlock label="Selected input details">
                         {request.selectedInputs.length === 0 ? (
                           <div className="rounded border bg-muted/20 p-2 text-xs sm:text-sm">
                             -
                           </div>
                         ) : (
-                          <ul className="list-disc space-y-1 rounded border bg-muted/20 p-3 pl-7 text-xs sm:text-sm">
+                          <MutedBulletedList>
                             {request.selectedInputs.map((selectedInput) => (
                               <li key={selectedInput.id}>
                                 {selectedInput.name}
@@ -144,9 +136,9 @@ export default async function KpiSettingsPage() {
                                   : ""}
                               </li>
                             ))}
-                          </ul>
+                          </MutedBulletedList>
                         )}
-                      </div>
+                      </LabeledContentBlock>
                     </div>
                   </div>
                 </details>
@@ -180,6 +172,7 @@ export default async function KpiSettingsPage() {
               {customKpiQueue!.map((item) => (
                 <details
                   key={item.id}
+                  data-custom-kpi-request-details="true"
                   className="group rounded-lg border bg-background p-5 shadow-sm sm:p-6"
                 >
                   <summary className="flex cursor-pointer list-none items-start justify-between gap-3">
@@ -195,15 +188,9 @@ export default async function KpiSettingsPage() {
                         {item.created_at.toLocaleString()}
                       </p>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-muted-foreground group-open:hidden">
-                        Expand
-                      </span>
-                      <span className="hidden text-xs text-muted-foreground group-open:inline">
-                        Collapse
-                      </span>
+                    <DetailsExpandIndicator>
                       <CustomKpiRequestStatusBadge status={item.status} />
-                    </div>
+                    </DetailsExpandIndicator>
                   </summary>
 
                   <div className="mb-4 mt-4 border-b pb-3" />
@@ -233,6 +220,12 @@ export default async function KpiSettingsPage() {
                       </div>
                       <div>
                         <dt className="font-medium text-muted-foreground">
+                          Role
+                        </dt>
+                        <dd>{item.submitterRole || "-"}</dd>
+                      </div>
+                      <div>
+                        <dt className="font-medium text-muted-foreground">
                           Request date
                         </dt>
                         <dd>{item.created_at.toLocaleString()}</dd>
@@ -245,34 +238,27 @@ export default async function KpiSettingsPage() {
                       Request content
                     </h4>
 
-                    <div>
-                      <p className="mb-1 text-xs font-medium text-muted-foreground">
-                        Formula expression
-                      </p>
+                    <LabeledContentBlock label="Formula expression">
                       <div className="whitespace-pre-wrap wrap-break-word rounded border bg-muted/20 p-2 font-mono text-[11px] sm:text-xs">
                         {item.formula_expression}
                       </div>
-                    </div>
+                    </LabeledContentBlock>
 
-                    <div>
-                      <p className="mb-1 text-xs font-medium text-muted-foreground">
-                        Description
-                      </p>
+                    <LabeledContentBlock label="Description">
                       <div className="whitespace-pre-wrap wrap-break-word rounded border bg-muted/20 p-2 text-xs sm:text-sm">
                         {item.description || "-"}
                       </div>
-                    </div>
+                    </LabeledContentBlock>
 
-                    <div>
-                      <p className="mb-1 text-xs font-medium text-muted-foreground">
-                        Selected inputs ({item.selectedInputs.length})
-                      </p>
+                    <LabeledContentBlock
+                      label={`Selected inputs (${item.selectedInputs.length})`}
+                    >
                       {item.selectedInputs.length === 0 ? (
                         <div className="rounded border bg-muted/20 p-2 text-xs sm:text-sm">
                           -
                         </div>
                       ) : (
-                        <ul className="list-disc space-y-1 rounded border bg-muted/20 p-3 pl-7 text-xs sm:text-sm">
+                        <MutedBulletedList>
                           {item.selectedInputs.map((selectedInput) => (
                             <li key={selectedInput.id}>
                               {selectedInput.name}
@@ -281,20 +267,19 @@ export default async function KpiSettingsPage() {
                                 : ""}
                             </li>
                           ))}
-                        </ul>
+                        </MutedBulletedList>
                       )}
-                    </div>
+                    </LabeledContentBlock>
 
-                    <div>
-                      <p className="mb-1 text-xs font-medium text-muted-foreground">
-                        Proposed units ({item.proposed_units.length})
-                      </p>
+                    <LabeledContentBlock
+                      label={`Proposed units (${item.proposed_units.length})`}
+                    >
                       {item.proposed_units.length === 0 ? (
                         <div className="rounded border bg-muted/20 p-2 text-xs sm:text-sm">
                           -
                         </div>
                       ) : (
-                        <ul className="list-disc space-y-1 rounded border bg-muted/20 p-3 pl-7 text-xs sm:text-sm">
+                        <MutedBulletedList>
                           {item.proposed_units.map((proposedUnit, index) => (
                             <li key={`${item.id}-proposed-unit-${index}`}>
                               {proposedUnit.name}
@@ -303,20 +288,19 @@ export default async function KpiSettingsPage() {
                                 : ""}
                             </li>
                           ))}
-                        </ul>
+                        </MutedBulletedList>
                       )}
-                    </div>
+                    </LabeledContentBlock>
 
-                    <div>
-                      <p className="mb-1 text-xs font-medium text-muted-foreground">
-                        Proposed inputs ({item.proposed_inputs.length})
-                      </p>
+                    <LabeledContentBlock
+                      label={`Proposed inputs (${item.proposed_inputs.length})`}
+                    >
                       {item.proposed_inputs.length === 0 ? (
                         <div className="rounded border bg-muted/20 p-2 text-xs sm:text-sm">
                           -
                         </div>
                       ) : (
-                        <ul className="list-disc space-y-1 rounded border bg-muted/20 p-3 pl-7 text-xs sm:text-sm">
+                        <MutedBulletedList>
                           {item.proposed_inputs.map((proposedInput, index) => (
                             <li key={`${item.id}-proposed-input-${index}`}>
                               {proposedInput.name}
@@ -328,9 +312,9 @@ export default async function KpiSettingsPage() {
                                 : ""}
                             </li>
                           ))}
-                        </ul>
+                        </MutedBulletedList>
                       )}
-                    </div>
+                    </LabeledContentBlock>
                   </div>
 
                   <div className="border-t pt-4">
@@ -369,12 +353,12 @@ export default async function KpiSettingsPage() {
       ) : null}
 
       {!showCustomKpiRequestsView && !showCustomKpiReviewView ? (
-        <div className="rounded-md border bg-muted/20 p-3 text-sm text-muted-foreground">
+        <StateMessage className="p-3 text-sm text-muted-foreground">
           This workflow is only available to BLO (requesting) and DEV
           (reviewing) users.
-        </div>
+        </StateMessage>
       ) : null}
-    </section>
+    </SectionContainer>
   );
 
   return (
@@ -405,7 +389,7 @@ export default async function KpiSettingsPage() {
           {isBloRole ? (
             customKpiWorkflowSection
           ) : (
-            <section className="rounded-xl border bg-card p-4 sm:p-6">
+            <SectionContainer>
               <DataTable<KpiDefinition>
                 title={definitionsTitle}
                 data={kpiDefinitions}
@@ -486,7 +470,7 @@ export default async function KpiSettingsPage() {
                   ],
                 }}
               />
-            </section>
+            </SectionContainer>
           )}
         </TabsContent>
 
@@ -507,7 +491,7 @@ export default async function KpiSettingsPage() {
 
         {isDevRole ? (
           <TabsContent value="formula-builder">
-            <section className="rounded-xl border bg-card p-4 sm:p-6">
+            <SectionContainer>
               <p className="mb-4 text-sm text-muted-foreground">
                 Choose a KPI, select input variables, and build the formula to
                 be used in future KPI calculations.
@@ -520,7 +504,7 @@ export default async function KpiSettingsPage() {
                 energySourceOptions={data.energySourceOptions}
                 previewContextLabel={data.previewContextLabel}
               />
-            </section>
+            </SectionContainer>
           </TabsContent>
         ) : null}
       </Tabs>

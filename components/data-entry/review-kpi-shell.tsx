@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import StateMessage from "@/components/ui/state-message";
 
 interface ReviewKpiShellProps {
   loading?: boolean;
@@ -18,27 +19,25 @@ export function ReviewKpiShell({
   return (
     <section className="space-y-2">
       {loading ? (
-        <div
-          className="rounded-md border bg-muted/30 p-2 text-xs sm:text-sm"
-          aria-live="polite"
+        <StateMessage
+          variant="loading"
+          ariaLive="polite"
         >
           Loading KPI rows...
-        </div>
+        </StateMessage>
       ) : null}
 
       {error ? (
-        <div
-          className="rounded-md border border-destructive/40 bg-destructive/10 p-2 text-xs text-destructive sm:text-sm"
+        <StateMessage
+          variant="error"
           role="alert"
         >
           {error}
-        </div>
+        </StateMessage>
       ) : null}
 
       {!loading && !error && isEmpty ? (
-        <div className="rounded-md border bg-muted/20 p-2 text-xs sm:text-sm">
-          {emptyMessage}
-        </div>
+        <StateMessage>{emptyMessage}</StateMessage>
       ) : null}
 
       {!loading && !error && !isEmpty ? children : null}

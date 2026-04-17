@@ -653,6 +653,63 @@ const toReviewInputValue = (
   updatedById: row.updatedById,
 });
 
+const getReviewKpiDataEntryById = async (dataEntryId: string) => {
+  const [row] = await db
+    .select({
+      id: dataEntries.id,
+      inputDefId: dataEntries.input_def_id,
+      value: dataEntries.value,
+      comments: dataEntries.comments,
+      updatedAt: dataEntries.updatedAt,
+      updatedById: dataEntries.updatedById,
+      reportPeriodId: dataEntries.report_period_id,
+      serviceAreaId: dataEntries.service_area_id,
+      inputName: inputDefinitions.name,
+      unitName: sql<string | null>`(
+        select ${managedListItems.name}
+        from ${managedListItems}
+        where ${managedListItems.id} = ${inputDefinitions.unit_id}
+        limit 1
+      )`,
+      dataTypeName: managedListItems.name,
+    })
+    .from(dataEntries)
+    .innerJoin(
+      inputDefinitions,
+      eq(dataEntries.input_def_id, inputDefinitions.id),
+    )
+    .leftJoin(
+      managedListItems,
+      eq(inputDefinitions.data_type_id, managedListItems.id),
+    )
+    .where(eq(dataEntries.id, dataEntryId))
+    .limit(1);
+
+  return row ?? null;
+};
+
+const toReviewInputValueFromDataEntry = (
+  row: Awaited<ReturnType<typeof getReviewKpiDataEntryById>>,
+) => {
+  if (!row) {
+    throw new Error("Unable to map review KPI input from missing row.");
+  }
+
+  return toReviewInputValue(
+    {
+      id: row.id,
+      inputDefId: row.inputDefId,
+      value: row.value,
+      comments: row.comments,
+      updatedAt: row.updatedAt,
+      updatedById: row.updatedById,
+    },
+    row.inputName,
+    row.unitName,
+    row.dataTypeName,
+  );
+};
+
 const resolveKpiDefIdForInput = async (
   inputDefId: number,
 ): Promise<number | null> => {
@@ -729,55 +786,14 @@ export const updateReviewKpiInputValue = async (
 ) => {
   assertReviewKpiWriteAccess(user);
 
-  const [existing] = await db
-    .select({
-      id: dataEntries.id,
-      inputDefId: dataEntries.input_def_id,
-      reportPeriodId: dataEntries.report_period_id,
-      serviceAreaId: dataEntries.service_area_id,
-      comments: dataEntries.comments,
-      value: dataEntries.value,
-      updatedAt: dataEntries.updatedAt,
-      updatedById: dataEntries.updatedById,
-      inputName: inputDefinitions.name,
-      unitName: sql<string | null>`(
-        select ${managedListItems.name}
-        from ${managedListItems}
-        where ${managedListItems.id} = ${inputDefinitions.unit_id}
-        limit 1
-      )`,
-      dataTypeName: managedListItems.name,
-    })
-    .from(dataEntries)
-    .innerJoin(
-      inputDefinitions,
-      eq(dataEntries.input_def_id, inputDefinitions.id),
-    )
-    .leftJoin(
-      managedListItems,
-      eq(inputDefinitions.data_type_id, managedListItems.id),
-    )
-    .where(eq(dataEntries.id, dataEntryId))
-    .limit(1);
+  const existing = await getReviewKpiDataEntryById(dataEntryId);
 
   if (!existing) {
     throw new Error("VALIDATION:Input value does not exist.");
   }
 
   if (existing.updatedAt.toISOString() !== payload.updatedAt) {
-    const latest = toReviewInputValue(
-      {
-        id: existing.id,
-        inputDefId: existing.inputDefId,
-        value: existing.value,
-        comments: existing.comments,
-        updatedAt: existing.updatedAt,
-        updatedById: existing.updatedById,
-      },
-      existing.inputName,
-      existing.unitName,
-      existing.dataTypeName,
-    );
+    const latest = toReviewInputValueFromDataEntry(existing);
 
     throw Object.assign(new Error("CONFLICT:Input value is stale."), {
       latest,
@@ -793,36 +809,7 @@ export const updateReviewKpiInputValue = async (
     })
     .where(eq(dataEntries.id, dataEntryId));
 
-  const [updated] = await db
-    .select({
-      id: dataEntries.id,
-      inputDefId: dataEntries.input_def_id,
-      value: dataEntries.value,
-      comments: dataEntries.comments,
-      updatedAt: dataEntries.updatedAt,
-      updatedById: dataEntries.updatedById,
-      inputName: inputDefinitions.name,
-      unitName: sql<string | null>`(
-        select ${managedListItems.name}
-        from ${managedListItems}
-        where ${managedListItems.id} = ${inputDefinitions.unit_id}
-        limit 1
-      )`,
-      dataTypeName: managedListItems.name,
-      reportPeriodId: dataEntries.report_period_id,
-      serviceAreaId: dataEntries.service_area_id,
-    })
-    .from(dataEntries)
-    .innerJoin(
-      inputDefinitions,
-      eq(dataEntries.input_def_id, inputDefinitions.id),
-    )
-    .leftJoin(
-      managedListItems,
-      eq(inputDefinitions.data_type_id, managedListItems.id),
-    )
-    .where(eq(dataEntries.id, dataEntryId))
-    .limit(1);
+  const updated = await getReviewKpiDataEntryById(dataEntryId);
 
   if (!updated) {
     throw new Error("Unable to read updated input value.");
@@ -845,19 +832,7 @@ export const updateReviewKpiInputValue = async (
   const kpiDefId = await resolveKpiDefIdForInput(updated.inputDefId);
   const result = await findLatestKpiResult(updated.reportPeriodId, kpiDefId);
 
-  const input = toReviewInputValue(
-    {
-      id: updated.id,
-      inputDefId: updated.inputDefId,
-      value: updated.value,
-      comments: updated.comments,
-      updatedAt: updated.updatedAt,
-      updatedById: updated.updatedById,
-    },
-    updated.inputName,
-    updated.unitName,
-    updated.dataTypeName,
-  );
+  const input = toReviewInputValueFromDataEntry(updated);
 
   publishSyncEvent({
     eventId: crypto.randomUUID(),
@@ -982,22 +957,12 @@ export type CustomKpiApprovalTaxonomyOptions = {
 
 export const listCustomKpiApprovalTaxonomyOptions =
   async (): Promise<CustomKpiApprovalTaxonomyOptions> => {
-    const [lists] = await Promise.all([
-      db
-        .select({ id: managedLists.id, name: managedLists.name })
-        .from(managedLists)
-        .where(
-          and(
-            eq(managedLists.is_active, true),
-            inArray(managedLists.name, ["KPI Category", "KPI Sub-Category"]),
-          ),
-        ),
+    const listIdByName = await getActiveManagedListIdMap([
+      "KPI Category",
+      "KPI Sub-Category",
     ]);
-
-    const categoryListId =
-      lists.find((item) => item.name === "KPI Category")?.id ?? null;
-    const subcategoryListId =
-      lists.find((item) => item.name === "KPI Sub-Category")?.id ?? null;
+    const categoryListId = listIdByName.get("KPI Category") ?? null;
+    const subcategoryListId = listIdByName.get("KPI Sub-Category") ?? null;
 
     if (categoryListId == null || subcategoryListId == null) {
       return { categories: [], subcategories: [] };
@@ -1083,6 +1048,81 @@ export const resolveOverrideDecisionLineage = (input: {
 const normalizeText = (value: string) =>
   value.trim().replace(/\s+/g, " ").toLowerCase();
 
+const getActiveManagedListIdMap = async (names: string[]) => {
+  const uniqueNames = [...new Set(names)];
+  if (uniqueNames.length === 0) {
+    return new Map<string, number>();
+  }
+
+  const rows = await db
+    .select({ id: managedLists.id, name: managedLists.name })
+    .from(managedLists)
+    .where(
+      and(
+        eq(managedLists.is_active, true),
+        inArray(managedLists.name, uniqueNames),
+      ),
+    );
+
+  return new Map(rows.map((row) => [row.name, row.id]));
+};
+
+const getActiveManagedListItem = async (input: {
+  itemId: number;
+  listName: string;
+}) => {
+  const [row] = await db
+    .select({
+      id: managedListItems.id,
+      parentId: managedListItems.parent_id,
+    })
+    .from(managedListItems)
+    .innerJoin(managedLists, eq(managedListItems.list_id, managedLists.id))
+    .where(
+      and(
+        eq(managedListItems.id, input.itemId),
+        eq(managedListItems.is_active, true),
+        eq(managedLists.name, input.listName),
+      ),
+    )
+    .limit(1);
+
+  return row ?? null;
+};
+
+const resolveAndValidateKpiTaxonomy = async (input: {
+  categoryId: number;
+  subcategoryId: number;
+}) => {
+  const [categoryItem, subcategoryItem] = await Promise.all([
+    getActiveManagedListItem({
+      itemId: input.categoryId,
+      listName: "KPI Category",
+    }),
+    getActiveManagedListItem({
+      itemId: input.subcategoryId,
+      listName: "KPI Sub-Category",
+    }),
+  ]);
+
+  if (!categoryItem || !subcategoryItem) {
+    throw new Error(
+      "VALIDATION:Selected KPI category or subcategory is invalid.",
+    );
+  }
+
+  if (subcategoryItem.parentId !== categoryItem.id) {
+    throw new Error(
+      "VALIDATION:Selected KPI subcategory does not match the selected category.",
+    );
+  }
+
+  return {
+    categoryId: categoryItem.id,
+    subcategoryId: subcategoryItem.id,
+  };
+};
+
 const buildVariableNameFromInputName = (name: string) =>
   name
     .trim()
@@ -1094,18 +1134,20 @@ const buildVariableNameFromInputName = (name: string) =>
 const resolveProposedUnitNameToId = async (
   proposedUnits: ApplyCustomKpiDecisionInput["proposedUnits"],
 ) => {
-  const [unitList] = await db
-    .select({ id: managedLists.id })
-    .from(managedLists)
-    .where(
-      and(
-        eq(managedLists.is_active, true),
-        inArray(managedLists.name, ["Unit", "Units", "unit", "units"]),
-      ),
-    )
-    .limit(1);
+  const listIdByName = await getActiveManagedListIdMap([
+    "Unit",
+    "Units",
+    "unit",
+    "units",
+  ]);
+  const unitListId =
+    listIdByName.get("Unit") ??
+    listIdByName.get("Units") ??
+    listIdByName.get("unit") ??
+    listIdByName.get("units") ??
+    null;
 
-  if (!unitList) {
+  if (unitListId == null) {
     throw new Error("VALIDATION:Managed list 'Unit' was not found.");
   }
 
@@ -1114,7 +1156,7 @@ const resolveProposedUnitNameToId = async (
     .from(managedListItems)
     .where(
       and(
-        eq(managedListItems.list_id, unitList.id),
+        eq(managedListItems.list_id, unitListId),
         eq(managedListItems.is_active, true),
       ),
     );
@@ -1142,7 +1184,7 @@ const resolveProposedUnitNameToId = async (
     const [created] = await db
       .insert(managedListItems)
       .values({
-        list_id: unitList.id,
+        list_id: unitListId,
         name: proposedUnit.name.trim(),
         description: proposedUnit.description,
         is_active: true,
@@ -1166,18 +1208,14 @@ const resolveProposedInputDefinitionIds = async (input: {
     return [] as number[];
   }
 
-  const [dataTypeList] = await db
-    .select({ id: managedLists.id })
-    .from(managedLists)
-    .where(
-      and(
-        eq(managedLists.is_active, true),
-        inArray(managedLists.name, ["Data Type", "Data Types"]),
-      ),
-    )
-    .limit(1);
+  const listIdByName = await getActiveManagedListIdMap([
+    "Data Type",
+    "Data Types",
+  ]);
+  const dataTypeListId =
+    listIdByName.get("Data Type") ?? listIdByName.get("Data Types") ?? null;
 
-  if (!dataTypeList) {
+  if (dataTypeListId == null) {
     throw new Error("VALIDATION:Managed list 'Data Type' was not found.");
   }
 
@@ -1191,7 +1229,7 @@ const resolveProposedInputDefinitionIds = async (input: {
       .from(managedListItems)
       .where(
         and(
-          eq(managedListItems.list_id, dataTypeList.id),
+          eq(managedListItems.list_id, dataTypeListId),
           eq(managedListItems.is_active, true),
         ),
       ),
@@ -1265,26 +1303,7 @@ const resolveProposedInputDefinitionIds = async (input: {
   return resolvedIds;
 };
 
-export const applyCustomKpiReviewDecision = async (
-  requestId: string,
-  input: ApplyCustomKpiDecisionInput,
-  user: CurrentUser,
-) => {
-  assertCustomKpiReviewerAccess(user);
-
-  if (input.decisionType === "REPLACE" && input.replacementKpiId == null) {
-    throw new Error("VALIDATION:replacementKpiId is required for REPLACE.");
-  }
-
-  if (
-    input.decisionType === "APPROVE" &&
-    (input.categoryId == null || input.subcategoryId == null)
-  ) {
-    throw new Error(
-      "VALIDATION:categoryId and subcategoryId are required for APPROVE.",
-    );
-  }
-
+const getCustomKpiDecisionRequestOrThrow = async (requestId: string) => {
   const [request] = await db
     .select({
       id: customKpiRequests.id,
@@ -1309,6 +1328,49 @@ export const applyCustomKpiReviewDecision = async (
   if (!request) {
     throw new Error("VALIDATION:Custom KPI request does not exist.");
   }
+
+  return request;
+};
+
+const getCustomKpiPromotionRequestOrThrow = async (requestId: string) => {
+  const [request] = await db
+    .select({
+      id: customKpiRequests.id,
+      status: customKpiRequests.status,
+      visibilityScope: customKpiRequests.visibility_scope,
+    })
+    .from(customKpiRequests)
+    .where(eq(customKpiRequests.id, requestId))
+    .limit(1);
+
+  if (!request) {
+    throw new Error("VALIDATION:Custom KPI request does not exist.");
+  }
+
+  return request;
+};
+
+export const applyCustomKpiReviewDecision = async (
+  requestId: string,
+  input: ApplyCustomKpiDecisionInput,
+  user: CurrentUser,
+) => {
+  assertCustomKpiReviewerAccess(user);
+
+  if (input.decisionType === "REPLACE" && input.replacementKpiId == null) {
+    throw new Error("VALIDATION:replacementKpiId is required for REPLACE.");
+  }
+
+  if (
+    input.decisionType === "APPROVE" &&
+    (input.categoryId == null || input.subcategoryId == null)
+  ) {
+    throw new Error(
+      "VALIDATION:categoryId and subcategoryId are required for APPROVE.",
+    );
+  }
+
+  const request = await getCustomKpiDecisionRequestOrThrow(requestId);
 
   const nextStatus = mapDecisionTypeToStatus(input.decisionType);
   const lineage = resolveOverrideDecisionLineage({
@@ -1375,58 +1437,10 @@ export const applyCustomKpiReviewDecision = async (
         variable_name: item.variableName as string,
       }));
 
-    const [categoryItem] =
-      input.categoryId != null
-        ? await db
-            .select({ id: managedListItems.id })
-            .from(managedListItems)
-            .innerJoin(
-              managedLists,
-              eq(managedListItems.list_id, managedLists.id),
-            )
-            .where(
-              and(
-                eq(managedListItems.id, input.categoryId),
-                eq(managedListItems.is_active, true),
-                eq(managedLists.name, "KPI Category"),
-              ),
-            )
-            .limit(1)
-        : [];
-
-    const [subcategoryItem] =
-      input.subcategoryId != null
-        ? await db
-            .select({
-              id: managedListItems.id,
-              categoryId: managedListItems.parent_id,
-            })
-            .from(managedListItems)
-            .innerJoin(
-              managedLists,
-              eq(managedListItems.list_id, managedLists.id),
-            )
-            .where(
-              and(
-                eq(managedListItems.id, input.subcategoryId),
-                eq(managedListItems.is_active, true),
-                eq(managedLists.name, "KPI Sub-Category"),
-              ),
-            )
-            .limit(1)
-        : [];
-
-    if (!categoryItem || !subcategoryItem) {
-      throw new Error(
-        "VALIDATION:Selected KPI category or subcategory is invalid.",
-      );
-    }
-
-    if (subcategoryItem.categoryId !== categoryItem.id) {
-      throw new Error(
-        "VALIDATION:Selected KPI subcategory does not match the selected category.",
-      );
-    }
+    const taxonomy = await resolveAndValidateKpiTaxonomy({
+      categoryId: input.categoryId!,
+      subcategoryId: input.subcategoryId!,
+    });
 
     if (
       request.status === "APPROVED" &&
@@ -1439,8 +1453,8 @@ export const applyCustomKpiReviewDecision = async (
           formula: request.formulaExpression,
           formula_inputs: formulaInputs.length > 0 ? formulaInputs : null,
           ...(request.unitId != null ? { unit_id: request.unitId } : {}),
-          category_id: categoryItem.id,
-          subcategory_id: subcategoryItem.id,
+          category_id: taxonomy.categoryId,
+          subcategory_id: taxonomy.subcategoryId,
         })
         .where(eq(kpiDefinitions.id, request.existingKpiDefinitionId));
 
@@ -1466,9 +1480,10 @@ export const applyCustomKpiReviewDecision = async (
           formula: request.formulaExpression,
           formula_inputs: formulaInputs.length > 0 ? formulaInputs : null,
           ...(request.unitId != null ? { unit_id: request.unitId } : {}),
-          category_id: categoryItem.id,
-          subcategory_id: subcategoryItem.id,
+          category_id: taxonomy.categoryId,
+          subcategory_id: taxonomy.subcategoryId,
           type: "custom",
+          owner_user_id: request.submitterUserId,
           owner_utility_id: submitter.organisationId,
           utilities: [submitter.organisationId],
         })
@@ -1532,10 +1547,14 @@ export const applyCustomKpiReviewDecision = async (
   }
 
   // SC-002 decision cycle-time telemetry for finalized decisions.
+  const decisionCycleDurationMs = Math.max(
+    0,
+    Date.now() - request.createdAt.getTime(),
+  );
   console.info("metric.custom_kpi.decision_cycle_time_ms", {
     requestId,
     decisionId: decision.id,
-    durationMs: Date.now() - request.createdAt.getTime(),
+    durationMs: decisionCycleDurationMs,
     decisionType: input.decisionType,
   });
 
@@ -1569,19 +1588,7 @@ export const promoteCustomKpiRequestVisibility = async (
 ) => {
   assertCustomKpiReviewerAccess(user);
 
-  const [request] = await db
-    .select({
-      id: customKpiRequests.id,
-      status: customKpiRequests.status,
-      visibilityScope: customKpiRequests.visibility_scope,
-    })
-    .from(customKpiRequests)
-    .where(eq(customKpiRequests.id, requestId))
-    .limit(1);
-
-  if (!request) {
-    throw new Error("VALIDATION:Custom KPI request does not exist.");
-  }
+  const request = await getCustomKpiPromotionRequestOrThrow(requestId);
 
   if (!canPromoteCustomKpiVisibility(request.status, request.visibilityScope)) {
     throw new Error(

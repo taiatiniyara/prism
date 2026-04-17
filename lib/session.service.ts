@@ -35,7 +35,6 @@ export async function getSession() {
     .where(eq(user.id, session.userId));
 
   if (!currentUser) {
-    console.log("No current user found for session userId:", session.userId);
     return null;
   }
 
@@ -48,7 +47,6 @@ export async function getSession() {
     : [null];
 
   if (currentUser.role_id && !role) {
-    console.log("No role found for role ID:", currentUser.role_id);
     throw new Error("No role found for role ID: " + currentUser.role_id);
   }
 

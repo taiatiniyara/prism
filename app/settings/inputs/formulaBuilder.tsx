@@ -178,8 +178,8 @@ export default function InputFormulaBuilder(props: {
   const [formulaTextDraft, setFormulaTextDraft] = useState<string>("");
   const [customToken, setCustomToken] = useState<string>("");
   const [isDraggingOverFormula, setIsDraggingOverFormula] = useState(false);
-  const [dummyBaseValue, setDummyBaseValue] = useState<number>(10);
-  const [dummySeed, setDummySeed] = useState<number>(1);
+  const [sampleBaseValue, setSampleBaseValue] = useState<number>(10);
+  const [sampleSeed, setSampleSeed] = useState<number>(1);
 
   const normalizeInputId = (id: number) => Number(id);
 
@@ -534,7 +534,7 @@ export default function InputFormulaBuilder(props: {
     return hash;
   };
 
-  const resolveDummyValueForToken = (token: string): number => {
+  const resolveSampleValueForToken = (token: string): number => {
     const input = inputByToken.get(token);
     if (!input) {
       return 0;
@@ -544,11 +544,11 @@ export default function InputFormulaBuilder(props: {
     const providerWeight = filters?.energyProviderId != null ? 3 : 0;
     const typeWeight = filters?.energyTypeId != null ? 5 : 0;
     const sourceWeight = filters?.energySourceId != null ? 7 : 0;
-    const tokenWeight = (toTokenHash(`${token}:${dummySeed}`) % 17) + 1;
+    const tokenWeight = (toTokenHash(`${token}:${sampleSeed}`) % 17) + 1;
 
     return Number(
       (
-        dummyBaseValue +
+        sampleBaseValue +
         input.id * 2 +
         tokenWeight +
         providerWeight +
@@ -579,7 +579,7 @@ export default function InputFormulaBuilder(props: {
         token,
         inputName: input.name,
         unit: input.unit,
-        value: resolveDummyValueForToken(token),
+        value: resolveSampleValueForToken(token),
         filterSummary: getFilterSummaryForToken(token),
       });
     }
@@ -621,7 +621,7 @@ export default function InputFormulaBuilder(props: {
       status: "ok" as const,
       value: evaluated.value ?? null,
       message:
-        props.previewContextLabel ?? "Preview computed from dummy values.",
+        props.previewContextLabel ?? "Preview computed from sample values.",
     };
   }, [parsedInlineFormula, tokenPreviewRows, props.previewContextLabel]);
 
@@ -1067,9 +1067,11 @@ export default function InputFormulaBuilder(props: {
               <Label className="text-xs sm:text-sm">Preview</Label>
               <div className="grid gap-1.5 rounded-md border border-dashed bg-muted/20 p-2">
                 <div className="flex items-center justify-between gap-2">
-                  <Label className="text-xs sm:text-sm">Dummy Base Value</Label>
+                  <Label className="text-xs sm:text-sm">
+                    Sample Base Value
+                  </Label>
                   <span className="text-muted-foreground text-xs sm:text-sm">
-                    {dummyBaseValue}
+                    {sampleBaseValue}
                   </span>
                 </div>
                 <Input
@@ -1077,9 +1079,9 @@ export default function InputFormulaBuilder(props: {
                   min={1}
                   max={100}
                   step={1}
-                  value={dummyBaseValue}
+                  value={sampleBaseValue}
                   onChange={(event) =>
-                    setDummyBaseValue(Number(event.target.value))
+                    setSampleBaseValue(Number(event.target.value))
                   }
                   className="h-8"
                 />
@@ -1088,10 +1090,10 @@ export default function InputFormulaBuilder(props: {
                   variant="outline"
                   size="sm"
                   className="h-7 text-xs"
-                  onClick={() => setDummySeed((prev) => prev + 1)}
+                  onClick={() => setSampleSeed((prev) => prev + 1)}
                 >
                   <FaDice />
-                  Randomize Dummy Values
+                  Randomize Sample Values
                 </Button>
               </div>
 

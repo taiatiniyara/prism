@@ -10,6 +10,7 @@ import {
 } from "@/app/data-entry/review-kpi/types";
 import { useReviewKpiSync } from "@/app/data-entry/review-kpi/use-review-kpi-sync";
 import { ReviewKpiInputValueCard } from "@/components/data-entry/review-kpi-input-value";
+import { ReviewKpiSection } from "@/components/data-entry/review-kpi-section";
 import { Badge } from "@/components/ui/badge";
 
 interface ReviewKpiRowProps {
@@ -218,10 +219,10 @@ export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
       </div>
 
       <div className="grid gap-2 p-3 sm:grid-cols-2 xl:grid-cols-3">
-        <section className="space-y-1.5 rounded-md border border-sky-200/80 border-l-7 bg-sky-50/30 p-2 dark:border-sky-900/60 dark:bg-sky-950/15">
-          <h3 className="text-[11px] font-semibold uppercase tracking-wide text-sky-700 dark:text-sky-300">
-            Inputs
-          </h3>
+        <ReviewKpiSection
+          tone="sky"
+          title="Inputs"
+        >
           <ul className="space-y-3">
             {sortedInputs.map((input) => (
               <ReviewKpiInputValueCard
@@ -250,21 +251,21 @@ export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
               />
             ))}
           </ul>
-        </section>
+        </ReviewKpiSection>
 
-        <section className="space-y-1.5 rounded-md border border-amber-200/80 border-l-7 bg-amber-50/40 p-2 dark:border-amber-900/60 dark:bg-amber-950/20">
-          <h3 className="text-[11px] font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
-            Formula
-          </h3>
+        <ReviewKpiSection
+          tone="amber"
+          title="Formula"
+        >
           <div className="rounded-md border border-amber-200/60 bg-background p-2 text-xs sm:text-sm wrap-break-word dark:border-amber-900/50">
             {row.formulaText ?? "No formula configured"}
           </div>
-        </section>
+        </ReviewKpiSection>
 
-        <section className="space-y-1.5 rounded-md border border-lime-200/80 border-l-7 bg-lime-50/40 p-2 dark:border-lime-900/60 dark:bg-lime-950/20">
-          <h3 className="text-[11px] font-semibold uppercase tracking-wide text-lime-700 dark:text-lime-300">
-            KPI Result
-          </h3>
+        <ReviewKpiSection
+          tone="lime"
+          title="KPI Result"
+        >
           <div className="rounded-md border border-lime-200/60 bg-background p-2 text-xs sm:text-sm dark:border-lime-900/50">
             <div className="mb-1 text-sm font-semibold sm:text-base">
               {formattedResultValue}
@@ -313,7 +314,7 @@ export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
               </p>
             ) : null}
           </div>
-        </section>
+        </ReviewKpiSection>
       </div>
     </div>
   );

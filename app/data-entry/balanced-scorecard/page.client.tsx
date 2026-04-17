@@ -23,6 +23,8 @@ import type {
 } from "@/app/data-entry/balanced-scorecard/types";
 import type { ReviewKpiFilterOptions } from "@/app/data-entry/review-kpi/types";
 import { Button } from "@/components/ui/button";
+import BorderedPanel from "@/components/ui/bordered-panel";
+import BorderedGrid from "@/components/ui/bordered-grid";
 import { Input } from "@/components/ui/input";
 import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
@@ -1606,7 +1608,7 @@ export default function ScorecardPageClient({
                 )}
               </div>
 
-              <div className="rounded-md border bg-muted/30 p-3">
+              <BorderedPanel className="bg-muted/30 p-3">
                 <p className="text-[11px] font-medium">Template Setup</p>
                 <p className="mt-0.5 text-[11px] text-muted-foreground">
                   Monthly tracking creates 12 monthly rows from the selected
@@ -1628,9 +1630,9 @@ export default function ScorecardPageClient({
                     later via template upload.
                   </p>
                 </div>
-              </div>
+              </BorderedPanel>
 
-              <div className="rounded-md border p-3">
+              <BorderedPanel className="p-3">
                 <div className="flex flex-wrap items-center justify-between gap-1.5">
                   <p className="text-[11px] font-medium">
                     Save Linkages (Optional Before Targets)
@@ -1844,7 +1846,6 @@ export default function ScorecardPageClient({
                     No cross-hierarchy linkages defined yet.
                   </p>
                 )}
-              </div>
 
               <div className="flex flex-wrap gap-2">
                 <div className="min-w-36 flex-1 space-y-0.5">
@@ -1899,6 +1900,7 @@ export default function ScorecardPageClient({
                   </Button>
                 </div>
               </div>
+              </BorderedPanel>
 
               <div className="rounded-md border p-2">
                 <p className="text-[11px] font-medium">
@@ -2286,7 +2288,7 @@ export default function ScorecardPageClient({
                   </Button>
                 </div>
 
-                <div className="mt-2 rounded-md border p-2">
+                <BorderedPanel className="mt-2 p-2">
                   <p className="text-[11px] font-medium">
                     Key Initiatives Under Objective
                   </p>
@@ -2298,10 +2300,7 @@ export default function ScorecardPageClient({
                     <ul className="mt-1 space-y-1.5">
                       {currentObjectiveInitiatives.map(
                         (initiative, initiativeIndex) => (
-                          <li
-                            key={initiative.id}
-                            className="rounded border p-2"
-                          >
+                          <BorderedGrid key={initiative.id}>
                             <div className="flex items-center justify-between gap-1.5">
                               <p className="text-[11px] font-medium">
                                 Initiative {initiativeIndex + 1}:{" "}
@@ -2333,12 +2332,12 @@ export default function ScorecardPageClient({
                                 </li>
                               ))}
                             </ul>
-                          </li>
+                          </BorderedGrid>
                         ),
                       )}
                     </ul>
                   )}
-                </div>
+                    </BorderedPanel>
 
                 <div className="mt-1.5 rounded-md border border-lime-300 bg-lime-50 p-2">
                   <p className="text-[11px] font-medium">
@@ -2406,7 +2405,7 @@ export default function ScorecardPageClient({
                 </div>
               </div>
 
-              <div className="mt-2 rounded-md border p-2">
+              <BorderedPanel className="mt-2 p-2">
                 <p className="text-[11px] font-medium">Draft Objectives</p>
                 {draftObjectives.length === 0 ? (
                   <p className="mt-1 text-[11px] text-muted-foreground">
@@ -2415,10 +2414,7 @@ export default function ScorecardPageClient({
                 ) : (
                   <ul className="mt-1 space-y-1.5">
                     {draftObjectives.map((objective, objectiveIndex) => (
-                      <li
-                        key={objective.id}
-                        className="rounded border p-2"
-                      >
+                      <BorderedGrid key={objective.id}>
                         <div className="flex items-center justify-between gap-1.5">
                           <p className="text-[11px] font-medium">
                             Objective {objectiveIndex + 1}:{" "}
@@ -2463,11 +2459,11 @@ export default function ScorecardPageClient({
                             ),
                           )}
                         </div>
-                      </li>
+                      </BorderedGrid>
                     ))}
                   </ul>
                 )}
-              </div>
+              </BorderedPanel>
             </div>
 
             <div className="mt-2 flex items-center gap-1.5">
@@ -2559,7 +2555,7 @@ export default function ScorecardPageClient({
               ) : null}
             </div>
 
-            <div className="mt-2 rounded-md border p-2">
+            <BorderedPanel className="mt-2 p-2">
               <p className="text-[11px] font-medium">
                 Cross-Hierarchy Relationships
               </p>
@@ -2738,7 +2734,7 @@ export default function ScorecardPageClient({
                   No cross-hierarchy relationships defined yet.
                 </p>
               )}
-            </div>
+            </BorderedPanel>
 
             {availableKpiOptions.length === 0 ? (
               <p className="mt-2 text-xs text-muted-foreground">

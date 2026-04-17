@@ -14,6 +14,11 @@ type CustomKpiRelevanceItem = {
   kpiName: string;
   description: string | null;
   formula: string | null;
+  ownerUserId: string | null;
+  ownerUserName: string | null;
+  ownerUserOrgAcronym: string | null;
+  ownerUtilityId: number | null;
+  ownerUtilityName: string | null;
   isRelevant: boolean;
   utilityIds: number[];
   inputs: CustomKpiInput[];
@@ -61,73 +66,80 @@ export default function CustomKpiRelevanceTable(props: {
   };
 
   return (
-    <div className="overflow-auto border">
-      <table className="w-full border-collapse text-sm">
-        <thead>
-          <tr className="bg-muted/30">
-            <th className="border px-4 py-3 text-left font-semibold">KPI</th>
-            <th className="border px-4 py-3 text-left font-semibold">
-              Formula
-            </th>
-            <th className="border px-4 py-3 text-left font-semibold">Inputs</th>
-            <th className="border px-4 py-3 text-left font-semibold">
-              Relevant
-            </th>
-          </tr>
-        </thead>
-        <tbody>
-          {items.map((item) => (
-            <tr key={item.kpiDefId}>
-              <td className="border px-4 py-3 align-top">
-                <div className="space-y-1">
-                  <p className="font-medium">{item.kpiName}</p>
-                  {item.description ? (
-                    <p className="text-xs text-muted-foreground">
-                      {item.description}
-                    </p>
-                  ) : null}
-                </div>
-              </td>
-              <td className="border px-4 py-3 align-top text-muted-foreground">
-                {item.formula ? (
-                  <code className="whitespace-pre-wrap wrap-break-word text-xs leading-6">
-                    {item.formula}
-                  </code>
-                ) : (
-                  <span>No formula configured.</span>
-                )}
-              </td>
-              <td className="border px-4 py-3 text-muted-foreground">
-                {item.inputs.length > 0 ? (
-                  <ul className="list-disc space-y-1 pl-5">
-                    {item.inputs.map((input) => (
-                      <li key={`${item.kpiDefId}-${input.inputDefId}`}>
-                        {input.dataLabel}
-                      </li>
-                    ))}
-                  </ul>
-                ) : (
-                  <span>No formula inputs configured.</span>
-                )}
-              </td>
-              <td className="border px-4 py-3">
-                <label className="flex items-center gap-2">
-                  <Checkbox
-                    checked={item.isRelevant}
-                    disabled={isSaving}
-                    onCheckedChange={(next) =>
-                      onItemToggle(item.kpiDefId, next === true)
-                    }
-                  />
-                  <span className="text-sm text-muted-foreground">
-                    {item.isRelevant ? "Relevant" : "Not relevant"}
-                  </span>
-                </label>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="grid gap-3 xl:grid-cols-2">
+      {items.map((item) => (
+        <section
+          key={item.kpiDefId}
+          className={`rounded-lg border bg-card p-4 shadow-sm ${
+            item.isRelevant ? "border-lime-300" : "border-border"
+          }`}
+          aria-label={`Custom KPI relevance for ${item.kpiName}`}
+        >
+          <div className="space-y-1">
+            <label className="inline-flex items-center gap-2 text-sm font-semibold">
+              <Checkbox
+                checked={item.isRelevant}
+                disabled={isSaving}
+                onCheckedChange={(next) =>
+                  onItemToggle(item.kpiDefId, next === true)
+                }
+              />
+              <span>{item.kpiName}</span>
+            </label>
+            <p className="mt-2 text-xs text-muted-foreground">
+              Added by:{" "}
+              {item.ownerUserName ?? item.ownerUtilityName ?? "Unknown user"}
+              {item.ownerUserName && item.ownerUserOrgAcronym
+                ? ` | ${item.ownerUserOrgAcronym}`
+                : ""}
+            </p>
+            {item.description ? (
+              <p className="text-xs text-muted-foreground">
+                {item.description}
+              </p>
+            ) : null}
+          </div>
+
+          <div className="mt-4 grid gap-3 lg:grid-cols-2">
+            <div className="space-y-1 rounded-md border bg-background p-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Formula
+              </p>
+              {item.formula ? (
+                <code className="whitespace-pre-wrap wrap-break-word text-xs leading-6 text-muted-foreground">
+                  {item.formula}
+                </code>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  No formula configured.
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-1 rounded-md border bg-background p-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+                Inputs
+              </p>
+              {item.inputs.length > 0 ? (
+                <ul className="space-y-1">
+                  {item.inputs.map((input) => (
+                    <li
+                      key={`${item.kpiDefId}-${input.inputDefId}`}
+                      className="rounded border border-muted bg-muted/20 px-2 py-1 text-xs text-foreground"
+                    >
+                      {input.dataLabel}
+                    </li>
+                  ))}
+                </ul>
+              ) : (
+                <p className="text-xs text-muted-foreground">
+                  No formula inputs configured.
+                </p>
+              )}
+            </div>
+          </div>
+        </section>
+      ))}
     </div>
   );
 }

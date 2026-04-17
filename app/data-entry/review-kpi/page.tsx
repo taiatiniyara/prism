@@ -2,6 +2,7 @@ import { getReviewKpiPageViewModel } from "@/app/data-entry/review-kpi/service";
 import { ReviewKpiShell } from "@/components/data-entry/review-kpi-shell";
 import { ReviewKpiRowCard } from "@/components/data-entry/review-kpi-row";
 import ReviewKpiFiltersClient from "@/app/data-entry/review-kpi/filters.client";
+import StateMessage from "@/components/ui/state-message";
 
 export default async function ReviewKpiPage() {
   const result = await getReviewKpiPageViewModel()
@@ -33,9 +34,9 @@ export default async function ReviewKpiPage() {
         />
 
         {viewModel.rows.length === 0 ? (
-          <div className="rounded-md border bg-muted/20 p-2 text-xs sm:text-sm">
+          <StateMessage>
             No KPI rows are available for the selected filters.
-          </div>
+          </StateMessage>
         ) : null}
 
         {viewModel.rows.map((row) => (

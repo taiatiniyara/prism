@@ -14,6 +14,7 @@ import {
   organisations,
   serviceAreas,
 } from "@/db/schema/utility";
+import { buildManagedListNameMap } from "@/lib/managed-list-utils";
 import { CurrentUser } from "@/lib/user.service";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 
@@ -203,6 +204,8 @@ export async function GetReportPeriods(
   }
   const deList = await de;
   const list = await rp;
+  const reportTypeNameById = buildManagedListNameMap(ml);
+  const roleNameById = new Map(rolesList.map((role) => [role.id, role.name]));
   const requestedCountByPeriod = new Map<number, number>();
   for (const item of list) {
     requestedCountByPeriod.set(
@@ -215,22 +218,31 @@ export async function GetReportPeriods(
     const entriesForPeriod = deList.filter(
       (x) => x.report_period_id === item.report_periods.id,
     );
+    let enteredOnly = 0;
+    let reviewed = 0;
+    let approved = 0;
+    let endorsed = 0;
+    let dataNotAvailable = 0;
+
+    for (const entry of entriesForPeriod) {
+      if (entry.status_id === DataEntryStatusId.Entered) {
+        enteredOnly += 1;
+      }
+      if (entry.status_id === DataEntryStatusId.Reviewed) {
+        reviewed += 1;
+      }
+      if (entry.status_id === DataEntryStatusId.Approved) {
+        approved += 1;
+      }
+      if (entry.status_id === DataEntryStatusId.Endorsed) {
+        endorsed += 1;
+      }
+      if (entry.status_id === DataEntryStatusId.Not_Available) {
+        dataNotAvailable += 1;
+      }
+    }
+
     const requested = requestedCountByPeriod.get(item.report_periods.id) ?? 0;
-    const enteredOnly = entriesForPeriod.filter(
-      (x) => x.status_id === DataEntryStatusId.Entered,
-    ).length;
-    const reviewed = entriesForPeriod.filter(
-      (x) => x.status_id === DataEntryStatusId.Reviewed,
-    ).length;
-    const approved = entriesForPeriod.filter(
-      (x) => x.status_id === DataEntryStatusId.Approved,
-    ).length;
-    const endorsed = entriesForPeriod.filter(
-      (x) => x.status_id === DataEntryStatusId.Endorsed,
-    ).length;
-    const dataNotAvailable = entriesForPeriod.filter(
-      (x) => x.status_id === DataEntryStatusId.Not_Available,
-    ).length;
     const entered = enteredOnly + reviewed + approved + endorsed;
     const pending = Math.max(requested - (entered + dataNotAvailable), 0);
 
@@ -239,9 +251,8 @@ export async function GetReportPeriods(
       Period: item.report_periods.report_date.toISOString().slice(0, 7),
       Utility: item.organisations?.acronym || "",
       Report_Type:
-        ml.find((x) => x.id === item.report_periods.report_type_id)?.name || "",
-      Pending_With:
-        rolesList.find((x) => x.id === item.report_periods.who_id)?.name || "",
+        reportTypeNameById.get(item.report_periods.report_type_id ?? -1) || "",
+      Pending_With: roleNameById.get(item.report_periods.who_id ?? -1) || "",
       Updated: item.report_periods.updated_at.toISOString().split("T")[0],
       Requested: requested,
       Pending: pending,

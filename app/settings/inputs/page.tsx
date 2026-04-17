@@ -9,6 +9,7 @@ import {
 } from "./service";
 import UploadInputsFromExcel from "./uploadFromExcel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import SectionContainer from "@/components/layout/section-container";
 
 type InputsTab = "definitions" | "formula-builder" | "upload";
 
@@ -40,7 +41,7 @@ export default async function InputsSettingsPage(props: {
         </TabsList>
 
         <TabsContent value="definitions">
-          <section className="rounded-xl border bg-card p-4 sm:p-6">
+          <SectionContainer>
             <DataTable<InputDefinition>
               columns={["name", "data_type", "unit", "formula", "is_active"]}
               title="Inputs"
@@ -112,11 +113,11 @@ export default async function InputsSettingsPage(props: {
                 ],
               }}
             />
-          </section>
+          </SectionContainer>
         </TabsContent>
 
         <TabsContent value="formula-builder">
-          <section className="rounded-xl border bg-card p-4 sm:p-6">
+          <SectionContainer>
             <p className="mb-4 text-sm text-muted-foreground">
               Choose an input definition, then build its formula using other
               input definitions.
@@ -128,13 +129,13 @@ export default async function InputsSettingsPage(props: {
               energySourceOptions={formulaBuilderData.energySourceOptions}
               previewContextLabel={formulaBuilderData.previewContextLabel}
             />
-          </section>
+          </SectionContainer>
         </TabsContent>
 
         <TabsContent value="upload">
-          <section className="rounded-xl border bg-card p-4 sm:p-6">
+          <SectionContainer>
             <UploadInputsFromExcel />
-          </section>
+          </SectionContainer>
         </TabsContent>
       </Tabs>
     </div>

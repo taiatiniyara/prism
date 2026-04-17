@@ -129,6 +129,8 @@ export type CustomKpiInputOption = {
   name: string;
   variableName: string | null;
   unit: string | null;
+  category: string | null;
+  subcategory: string | null;
 };
 
 export type CustomKpiUnitOption = {
@@ -223,20 +225,48 @@ const assertSelectedInputDefinitionIdsAreValid = async (
 export const listCustomKpiInputOptions = async (): Promise<
   CustomKpiInputOption[]
 > => {
-  return db
+  const rows = await db
     .select({
       id: inputDefinitions.id,
       name: inputDefinitions.name,
       variableName: inputDefinitions.variable_name,
-      unit: managedListItems.name,
+      unitId: inputDefinitions.unit_id,
+      categoryId: inputDefinitions.category_id,
+      subcategoryId: inputDefinitions.subcategory_id,
     })
     .from(inputDefinitions)
-    .leftJoin(
-      managedListItems,
-      eq(inputDefinitions.unit_id, managedListItems.id),
-    )
     .where(eq(inputDefinitions.is_active, true))
     .orderBy(asc(inputDefinitions.name));
+
+  const managedListIds = [
+    ...new Set(
+      rows.flatMap((row) => [row.unitId, row.categoryId, row.subcategoryId]),
+    ),
+  ];
+
+  const managedNames =
+    managedListIds.length > 0
+      ? await db
+          .select({
+            id: managedListItems.id,
+            name: managedListItems.name,
+          })
+          .from(managedListItems)
+          .where(inArray(managedListItems.id, managedListIds))
+      : [];
+
+  const managedNameById = new Map(
+    managedNames.map((item) => [item.id, item.name]),
+  );
+
+  return rows.map((row) => ({
+    id: row.id,
+    name: row.name,
+    variableName: row.variableName,
+    unit: managedNameById.get(row.unitId) ?? null,
+    category: managedNameById.get(row.categoryId) ?? null,
+    subcategory: managedNameById.get(row.subcategoryId) ?? null,
+  }));
 };
 
 export const listCustomKpiUnitOptions = async (): Promise<
@@ -626,6 +656,7 @@ export type CustomKpiReviewQueueItem = Pick<
   latestDecisionId: string | null;
   submitterName: string | null;
   submitterEmail: string | null;
+  submitterRole: string | null;
   submitterOrganisationAcronym: string | null;
   selectedInputs: Array<{
     id: number;
@@ -699,9 +730,11 @@ export const listCustomKpiReviewQueue = async (): Promise<
       id: user.id,
       name: user.name,
       email: user.email,
+      role: roles.name,
       organisationAcronym: organisations.acronym,
     })
     .from(user)
+    .leftJoin(roles, eq(user.role_id, roles.id))
     .leftJoin(organisations, eq(user.organisation_id, organisations.id))
     .where(inArray(user.id, submitterIds));
   const submitterById = new Map(
@@ -742,6 +775,7 @@ export const listCustomKpiReviewQueue = async (): Promise<
     latestDecisionId: latestDecisionByRequest.get(request.id) ?? null,
     submitterName: submitterById.get(request.submitter_user_id)?.name ?? null,
     submitterEmail: submitterById.get(request.submitter_user_id)?.email ?? null,
+    submitterRole: submitterById.get(request.submitter_user_id)?.role ?? null,
     submitterOrganisationAcronym:
       submitterById.get(request.submitter_user_id)?.organisationAcronym ?? null,
     selectedInputs: (Array.isArray(request.selected_input_definition_ids)
@@ -924,10 +958,14 @@ const dispatchCustomKpiOutcomeEmailDelivery = async (deliveryId: string) => {
       },
     });
 
+    const emailDispatchLatencyMs = Math.max(
+      0,
+      Date.now() - delivery.createdAt.getTime(),
+    );
     console.info("metric.custom_kpi.email_dispatch_latency_ms", {
       requestId: delivery.requestId,
       deliveryId: delivery.id,
-      latencyMs: Date.now() - delivery.createdAt.getTime(),
+      latencyMs: emailDispatchLatencyMs,
     });
 
     return { dispatched: 1, failed: 0 };

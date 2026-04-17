@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import { CustomKpiRequestForm } from "@/components/data-entry/custom-kpi-request-form";
 import { Button } from "@/components/ui/button";
@@ -19,6 +20,8 @@ type InputOption = {
   name: string;
   variableName: string | null;
   unit: string | null;
+  category: string | null;
+  subcategory: string | null;
 };
 
 type UnitOption = {
@@ -26,11 +29,31 @@ type UnitOption = {
   name: string;
 };
 
+type DataTypeOption = {
+  id: number;
+  name: string;
+};
+
 export function CustomKpiRequestDialog(props: {
   inputOptions: InputOption[];
   unitOptions: UnitOption[];
+  dataTypeOptions: DataTypeOption[];
 }) {
   const [open, setOpen] = useState(false);
+  const router = useRouter();
+
+  const collapseExpandedCustomKpiRequests = () => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    const expandedRequests = document.querySelectorAll<HTMLDetailsElement>(
+      'details[data-custom-kpi-request-details="true"][open]',
+    );
+    expandedRequests.forEach((panel) => {
+      panel.open = false;
+    });
+  };
 
   return (
     <Dialog
@@ -54,7 +77,12 @@ export function CustomKpiRequestDialog(props: {
           <CustomKpiRequestForm
             inputOptions={props.inputOptions}
             unitOptions={props.unitOptions}
-            onSubmitted={() => setOpen(false)}
+            dataTypeOptions={props.dataTypeOptions}
+            onSubmitted={async () => {
+              collapseExpandedCustomKpiRequests();
+              setOpen(false);
+              router.refresh();
+            }}
           />
         </div>
       </DialogContent>

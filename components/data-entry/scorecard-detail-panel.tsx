@@ -1,6 +1,7 @@
 import type { PerspectiveScore } from "@/app/data-entry/balanced-scorecard/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { formatScore } from "@/app/data-entry/balanced-scorecard/formatters";
+import StateMessage from "@/components/ui/state-message";
 
 export default function ScorecardDetailPanel({
   perspective,
@@ -9,9 +10,9 @@ export default function ScorecardDetailPanel({
 }) {
   if (perspective == null) {
     return (
-      <div className="rounded-md border p-2 text-xs text-muted-foreground">
+      <StateMessage className="text-xs text-muted-foreground">
         Select a perspective to inspect score drivers.
-      </div>
+      </StateMessage>
     );
   }
 

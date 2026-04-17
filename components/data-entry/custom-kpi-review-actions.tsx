@@ -10,6 +10,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "../ui/select";
+import { FieldGroup } from "../ui/field-group";
+import BorderedPanel from "../ui/bordered-panel";
+import BorderedStack from "../ui/bordered-stack";
 
 type DecisionType = "APPROVE" | "REJECT" | "REPLACE";
 
@@ -55,9 +58,19 @@ export function CustomKpiReviewActions({
   proposedInputs,
 }: CustomKpiReviewActionsProps) {
   const router = useRouter();
+  const collapseExpandedCustomKpiRequests = () => {
+    if (typeof document === "undefined") {
+      return;
+    }
+
+    const expandedRequests = document.querySelectorAll<HTMLDetailsElement>(
+      'details[data-custom-kpi-request-details="true"][open]',
+    );
+    expandedRequests.forEach((panel) => {
+      panel.open = false;
+    });
+  };
   const [decisionType, setDecisionType] = useState<DecisionType>("APPROVE");
-  const [rationale, setRationale] = useState("");
-  const [replacementKpiId, setReplacementKpiId] = useState("");
   const [categoryId, setCategoryId] = useState("");
   const [subcategoryId, setSubcategoryId] = useState("");
   const [override, setOverride] = useState(false);
@@ -91,6 +104,12 @@ export function CustomKpiReviewActions({
 
   const onSubmitDecision = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    const formData = new FormData(event.currentTarget);
+    const rationale = String(formData.get("rationale") ?? "").trim();
+    const replacementKpiId = String(
+      formData.get("replacementKpiId") ?? "",
+    ).trim();
+
     setSubmittingDecision(true);
     setMessage(null);
     setError(null);
@@ -128,6 +147,8 @@ export function CustomKpiReviewActions({
         ? Number.parseInt(subcategoryId, 10)
         : null;
 
+    let decisionApplied = false;
+
     try {
       const response = await fetch(
         `/api/data-entry/custom-kpi/requests/${requestId}/decision`,
@@ -157,14 +178,27 @@ export function CustomKpiReviewActions({
         return;
       }
 
+      decisionApplied = true;
       setMessage("Decision submitted successfully.");
-      setRationale("");
-      setReplacementKpiId("");
       setCategoryId("");
       setSubcategoryId("");
-      router.refresh();
+      event.currentTarget.reset();
+      collapseExpandedCustomKpiRequests();
+      try {
+        router.refresh();
+      } catch (refreshError) {
+        console.error("Decision submitted but refresh failed", {
+          requestId,
+          error:
+            refreshError instanceof Error
+              ? refreshError.message
+              : "Unknown error",
+        });
+      }
     } catch {
-      setError("Unable to submit decision.");
+      if (!decisionApplied) {
+        setError("Unable to submit decision.");
+      }
     } finally {
       setSubmittingDecision(false);
     }
@@ -193,6 +227,7 @@ export function CustomKpiReviewActions({
       }
 
       setMessage("Visibility promoted to global.");
+      collapseExpandedCustomKpiRequests();
       router.refresh();
     } catch {
       setError("Unable to promote request visibility.");
@@ -202,7 +237,7 @@ export function CustomKpiReviewActions({
   };
 
   return (
-    <div className="rounded-md border p-4">
+    <BorderedPanel>
       <form
         className="space-y-2"
         onSubmit={onSubmitDecision}
@@ -212,13 +247,12 @@ export function CustomKpiReviewActions({
             Custom KPI reviewer decision controls
           </legend>
 
-          <div className="flex gap-2 items-center">
-            <label
-              className="text-xs sm:text-sm"
-              htmlFor={`decision-${requestId}`}
-            >
-              Decision:
-            </label>
+          <FieldGroup
+            label="Decision:"
+            htmlFor={`decision-${requestId}`}
+            containerClassName="flex gap-2 items-center"
+            labelClassName="text-xs sm:text-sm"
+          >
             <Select
               value={decisionType}
               onValueChange={(value) => setDecisionType(value as DecisionType)}
@@ -236,7 +270,7 @@ export function CustomKpiReviewActions({
                 <SelectItem value="REPLACE">Replace</SelectItem>
               </SelectContent>
             </Select>
-          </div>
+          </FieldGroup>
           <p
             id={`decision-help-${requestId}`}
             className="text-xs text-muted-foreground"
@@ -244,55 +278,50 @@ export function CustomKpiReviewActions({
             Use replace when an existing KPI should be used instead.
           </p>
 
-          <div className="flex flex-col">
-            <label
-              className="text-xs sm:text-sm"
-              htmlFor={`rationale-${requestId}`}
-            >
-              Rationale:
-            </label>
+          <FieldGroup
+            label="Rationale:"
+            htmlFor={`rationale-${requestId}`}
+            containerClassName="flex flex-col"
+            labelClassName="text-xs sm:text-sm"
+          >
             <textarea
+              name="rationale"
               placeholder="Provide rationale for your decision"
               id={`rationale-${requestId}`}
               className="min-h-20 rounded border bg-background px-2 py-1 text-xs sm:text-sm"
-              value={rationale}
-              onChange={(event) => setRationale(event.target.value)}
               required
               aria-required="true"
             />
-          </div>
+          </FieldGroup>
 
           {decisionType === "REPLACE" ? (
-            <div className="grid gap-2 sm:grid-cols-2">
-              <label
-                className="text-xs sm:text-sm"
-                htmlFor={`replacement-kpi-${requestId}`}
-              >
-                Replacement KPI ID
-              </label>
+            <FieldGroup
+              label="Replacement KPI ID"
+              htmlFor={`replacement-kpi-${requestId}`}
+              containerClassName="grid gap-2 sm:grid-cols-2"
+              labelClassName="text-xs sm:text-sm"
+            >
               <input
+                name="replacementKpiId"
                 id={`replacement-kpi-${requestId}`}
                 className="rounded border bg-background px-2 py-1 text-xs sm:text-sm"
-                value={replacementKpiId}
-                onChange={(event) => setReplacementKpiId(event.target.value)}
                 inputMode="numeric"
                 pattern="[0-9]+"
                 required
                 aria-required="true"
               />
-            </div>
+            </FieldGroup>
           ) : null}
 
           {decisionType === "APPROVE" ? (
             <div className="space-y-3">
               <div className="grid gap-2 sm:grid-cols-2">
-                <div className="flex flex-col gap-1">
-                  <label
-                    className="text-xs sm:text-sm"
-                    htmlFor={`approval-category-${requestId}`}
-                  >
-                    KPI Category
-                  </label>
+                <FieldGroup
+                  label="KPI Category"
+                  htmlFor={`approval-category-${requestId}`}
+                  containerClassName="flex flex-col gap-1"
+                  labelClassName="text-xs sm:text-sm"
+                >
                   <Select
                     value={categoryId}
                     onValueChange={(value) => {
@@ -319,15 +348,14 @@ export function CustomKpiReviewActions({
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
+                </FieldGroup>
 
-                <div className="flex flex-col gap-1">
-                  <label
-                    className="text-xs sm:text-sm"
-                    htmlFor={`approval-subcategory-${requestId}`}
-                  >
-                    KPI Subcategory
-                  </label>
+                <FieldGroup
+                  label="KPI Subcategory"
+                  htmlFor={`approval-subcategory-${requestId}`}
+                  containerClassName="flex flex-col gap-1"
+                  labelClassName="text-xs sm:text-sm"
+                >
                   <Select
                     value={subcategoryId}
                     onValueChange={setSubcategoryId}
@@ -352,10 +380,10 @@ export function CustomKpiReviewActions({
                       ))}
                     </SelectContent>
                   </Select>
-                </div>
+                </FieldGroup>
               </div>
 
-              <div className="space-y-2 rounded border p-2">
+              <BorderedStack className="space-y-2 p-2">
                 <p className="text-xs font-medium text-muted-foreground">
                   Proposed units resolution
                 </p>
@@ -429,9 +457,9 @@ export function CustomKpiReviewActions({
                     </div>
                   ))
                 )}
-              </div>
+              </BorderedStack>
 
-              <div className="space-y-2 rounded border p-2">
+              <BorderedStack className="space-y-2 p-2">
                 <p className="text-xs font-medium text-muted-foreground">
                   Proposed inputs resolution
                 </p>
@@ -545,7 +573,7 @@ export function CustomKpiReviewActions({
                     </div>
                   ))
                 )}
-              </div>
+              </BorderedStack>
             </div>
           ) : null}
 
@@ -594,6 +622,6 @@ export function CustomKpiReviewActions({
         ) : null}
         {error ? <p className="text-xs text-red-700">{error}</p> : null}
       </div>
-    </div>
+    </BorderedPanel>
   );
 }

@@ -40,7 +40,6 @@ export async function CreateUser(
   data: NewUser,
 ): Promise<DataTableFormResponse<User>> {
   const currentUser = await getCurrentUser();
-  console.log(data);
   if (currentUser.role !== "DEV" && currentUser.role !== "BMO") {
     data.organisation_id = currentUser.org_id!;
   }
