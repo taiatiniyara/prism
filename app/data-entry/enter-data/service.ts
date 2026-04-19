@@ -281,7 +281,7 @@ const getInputDefinitionsForContext = async (
       eq(inputDefinitions.data_type_id, managedListItems.id),
     )
     .where(and(...conditions))
-    .orderBy(asc(inputDefinitions.name));
+    .orderBy(asc(inputDefinitions.id));
 
   return rows
     .filter(
