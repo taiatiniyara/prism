@@ -7,7 +7,15 @@ export default async function ServiceAreasSettingsPage() {
   return (
     <DataTable<ServiceArea>
       data={serviceAreas}
-      columns={["name", "services_provided", "is_active"]}
+      columns={[
+        "name",
+        "description",
+        "provides_electricity",
+        "provides_sanitation",
+        "provides_water",
+        "is_active",
+        "is_virtual",
+      ]}
       title="Service Areas"
       createFormProps={{
         formAction: AddServiceArea,
@@ -17,9 +25,20 @@ export default async function ServiceAreasSettingsPage() {
             key: "name",
           },
           {
-            key: "services_provided_id",
-            type: "managed-list",
-            managedListName: "Services Provided",
+            type: "textarea",
+            key: "description",
+          },
+          {
+            type: "boolean",
+            key: "provides_electricity",
+          },
+          {
+            type: "boolean",
+            key: "provides_sanitation",
+          },
+          {
+            type: "boolean",
+            key: "provides_water",
           },
         ],
       }}
@@ -31,9 +50,20 @@ export default async function ServiceAreasSettingsPage() {
             key: "name",
           },
           {
-            key: "services_provided_id",
-            type: "managed-list",
-            managedListName: "Services Provided",
+            type: "textarea",
+            key: "description",
+          },
+          {
+            type: "boolean",
+            key: "provides_electricity",
+          },
+          {
+            type: "boolean",
+            key: "provides_sanitation",
+          },
+          {
+            type: "boolean",
+            key: "provides_water",
           },
         ],
       }}

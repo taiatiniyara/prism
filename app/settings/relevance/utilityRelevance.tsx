@@ -58,7 +58,7 @@ export default async function UtilityRelevanceSection(props: {
 
   return (
     <div className="space-y-5">
-      <Tabs defaultValue="tariff">
+      <Tabs defaultValue="generation">
         <TabsList>
           <TabsTrigger value="generation">Generation</TabsTrigger>
           <TabsTrigger value="transmission">Transmission</TabsTrigger>

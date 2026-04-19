@@ -77,7 +77,10 @@ export default async function KpiSettingsPage() {
               No custom KPI requests submitted yet.
             </StateMessage>
           ) : (
-            <div className="space-y-2">
+            <div
+              className="grid grid-cols-2 gap-4"
+              data-testid="custom-kpi-requests-list"
+            >
               {customKpiViewModel.requests.map((request) => (
                 <details
                   key={request.id}

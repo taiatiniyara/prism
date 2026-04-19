@@ -33,7 +33,7 @@ export default function TopNav(props: {
     },
     {
       label: "Settings",
-      href: "/settings/relevance",
+      href: "/settings/users",
     },
     { label: "Docs", href: "/docs" },
   ];

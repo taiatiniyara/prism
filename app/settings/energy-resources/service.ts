@@ -64,6 +64,11 @@ export async function GetAllEnergyResources(): Promise<EnergyResource[]> {
         item.energy_resources.energy_source_id,
         null,
       ),
+      type: resolveManagedListName(
+        managedListNamesById,
+        item.energy_resources.type_id,
+        null,
+      ),
     };
   });
 }

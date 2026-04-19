@@ -82,22 +82,22 @@ export type NewOrganisation = typeof organisations.$inferInsert;
 export const serviceAreas = pgTable("service_areas", {
   id: serial("id").primaryKey().notNull(),
   name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
   utility_id: integer("utility_id")
     .notNull()
     .references(() => organisations.id),
-  services_provided_id: integer("services_provided_id")
-    .notNull()
-    .references(() => managedListItems.id),
+  provides_electricity: boolean("provides_electricity").notNull().default(true),
+  provides_sanitation: boolean("provides_sanitation").notNull().default(false),
+  provides_water: boolean("provides_water").notNull().default(false),
   operations_only: boolean("operations_only").default(false),
   is_active: boolean("is_active").notNull().default(true),
-  is_virutal: boolean("is_vitural").notNull().default(false),
+  is_virtual: boolean("is_virtual").notNull().default(false),
   agg_level_id: integer("agg_level_id")
     .notNull()
     .references(() => managedListItems.id),
 });
 export type ServiceArea = typeof serviceAreas.$inferSelect & {
   utility?: string | null;
-  services_provided?: string | null;
   agg_level?: string | null;
 };
 export type NewServiceArea = typeof serviceAreas.$inferInsert;
@@ -168,5 +168,6 @@ export type EnergyResource = typeof energyResources.$inferSelect & {
   energy_type?: string | null;
   energy_source?: string | null;
   agg_level?: string | null;
+  type?: string | null;
 };
 export type NewEnergyResource = typeof energyResources.$inferInsert;

@@ -518,7 +518,7 @@ export default function KpiTargetsEditor(props: {
                     key={kpi.id}
                     value={String(kpi.id)}
                   >
-                    {kpi.name} ({kpi.unit}) - {kpi.category} / {kpi.subcategory}
+                    {kpi.name} ({kpi.unit})
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -544,73 +544,49 @@ export default function KpiTargetsEditor(props: {
               key={row.id}
               className="flex items-end gap-4"
             >
-              <div className="space-y-1 lg:col-span-2">
-                <label
-                  htmlFor={`kpi-target-year-${row.id}`}
-                  className="text-xs font-medium text-muted-foreground"
+              <Input
+                id={`kpi-target-year-${row.id}`}
+                type="number"
+                placeholder="Year"
+                value={row.year}
+                disabled={!props.canEditTargets || isSaving}
+                onChange={(event) =>
+                  updateRow(row.id, { year: event.target.value })
+                }
+              />
+              <Select
+                value={row.month}
+                onValueChange={(value) => updateRow(row.id, { month: value })}
+                disabled={!props.canEditTargets || isSaving}
+              >
+                <SelectTrigger
+                  id={`kpi-target-month-${row.id}`}
+                  className="h-9 w-full shadow"
                 >
-                  Year {index + 1}
-                </label>
-                <Input
-                  id={`kpi-target-year-${row.id}`}
-                  type="number"
-                  placeholder="Year"
-                  value={row.year}
-                  disabled={!props.canEditTargets || isSaving}
-                  onChange={(event) =>
-                    updateRow(row.id, { year: event.target.value })
-                  }
-                />
-              </div>
-              <div className="space-y-1 lg:col-span-4">
-                <label
-                  htmlFor={`kpi-target-month-${row.id}`}
-                  className="text-xs font-medium text-muted-foreground"
-                >
-                  Month {index + 1}
-                </label>
-                <Select
-                  value={row.month}
-                  onValueChange={(value) => updateRow(row.id, { month: value })}
-                  disabled={!props.canEditTargets || isSaving}
-                >
-                  <SelectTrigger
-                    id={`kpi-target-month-${row.id}`}
-                    className="h-9 w-full shadow"
-                  >
-                    <SelectValue placeholder="Financial Year Only" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="fy">Financial Year Only</SelectItem>
-                    {MONTHS.map((month) => (
-                      <SelectItem
-                        key={month.value}
-                        value={month.value}
-                      >
-                        {month.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-1 lg:col-span-4">
-                <label
-                  htmlFor={`kpi-target-value-${row.id}`}
-                  className="text-xs font-medium text-muted-foreground"
-                >
-                  Target Value {index + 1}
-                </label>
-                <Input
-                  id={`kpi-target-value-${row.id}`}
-                  type="text"
-                  placeholder="Target value"
-                  value={row.targetValue}
-                  disabled={!props.canEditTargets || isSaving}
-                  onChange={(event) =>
-                    updateRow(row.id, { targetValue: event.target.value })
-                  }
-                />
-              </div>
+                  <SelectValue placeholder="Financial Year Only" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="fy">Financial Year Only</SelectItem>
+                  {MONTHS.map((month) => (
+                    <SelectItem
+                      key={month.value}
+                      value={month.value}
+                    >
+                      {month.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Input
+                id={`kpi-target-value-${row.id}`}
+                type="text"
+                placeholder="Target value"
+                value={row.targetValue}
+                disabled={!props.canEditTargets || isSaving}
+                onChange={(event) =>
+                  updateRow(row.id, { targetValue: event.target.value })
+                }
+              />
               <Button
                 type="button"
                 variant="outline"

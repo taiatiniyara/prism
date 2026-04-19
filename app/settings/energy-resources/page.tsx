@@ -12,6 +12,7 @@ export default async function EnergyResourcesSettingsPage() {
       columns={[
         "report_period",
         "name",
+        "type",
         "energy_provider",
         "energy_source",
         "capacity_mw",
@@ -45,6 +46,11 @@ export default async function EnergyResourcesSettingsPage() {
             type: "managed-list",
             managedListName: "Energy Source",
           },
+          {
+            key: "type_id",
+            type: "managed-list",
+            managedListName: "Energy Resource Type",
+          },
         ],
       }}
       updateFormProps={{
@@ -72,6 +78,11 @@ export default async function EnergyResourcesSettingsPage() {
             key: "energy_source_id",
             type: "managed-list",
             managedListName: "Energy Source",
+          },
+          {
+            key: "type_id",
+            type: "managed-list",
+            managedListName: "Energy Resource Type",
           },
         ],
       }}

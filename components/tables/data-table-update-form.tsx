@@ -16,7 +16,6 @@ import SubmitBtn from "../submitBtn";
 import { Label } from "../ui/label";
 import { formatLabel } from "@/lib/formatters";
 import { Input } from "../ui/input";
-import { Checkbox } from "../ui/checkbox";
 import {
   Select,
   SelectContent,
@@ -27,6 +26,7 @@ import {
 import { toast } from "sonner";
 import { FaEdit, FaSave } from "react-icons/fa";
 import ManagedListInput from "./managed-list-input";
+import BooleanFormInput from "./boolean-form-input";
 
 export interface DataTableUpdateFormField<T> {
   key: keyof T;
@@ -49,14 +49,11 @@ export interface DataTableUpdateFormProps<T> {
 function updateField<T>(field: DataTableUpdateFormField<T>) {
   if (field.type === "boolean") {
     return (
-      <Label className="p-3 cursor-pointer shadow border rounded-md">
-        <Checkbox
-          name={field.key as string}
-          disabled={field.disabled}
-          defaultChecked={Boolean(field.value)}
-        />
-        Click to toggle
-      </Label>
+      <BooleanFormInput
+        name={field.key as string}
+        defaultValue={Boolean(field.value)}
+        disabled={field.disabled}
+      />
     );
   }
   if (field.type === "select") {

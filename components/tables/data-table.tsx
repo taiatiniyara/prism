@@ -3,6 +3,8 @@
 import { useState, useMemo } from "react";
 import { Heading } from "../heading";
 import { cn } from "@/lib/utils";
+import { Input } from "../ui/input";
+import { Button } from "../ui/button";
 import {
   DataTableCreateForm,
   DataTableCreateFormProps,
@@ -14,6 +16,17 @@ import DataTableUpdateForm from "./data-table-update-form";
 import { formatLabel } from "@/lib/formatters";
 import BooleanToggle from "./booleanToggle";
 import { FaSquare } from "react-icons/fa";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "../ui/dropdown-menu";
+import { FilterIcon } from "lucide-react";
 
 interface DataTableProps<T> {
   columns: (keyof T)[];
@@ -47,6 +60,9 @@ export default function DataTable<T extends DataTableRecord>(
   const [search, setSearch] = useState("");
   const [sortColumn, setSortColumn] = useState<keyof T | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
+  const [columnFilters, setColumnFilters] = useState<Record<string, string>>(
+    {},
+  );
 
   function handleSort(column: keyof T) {
     if (sortColumn === column) {
@@ -62,6 +78,35 @@ export default function DataTable<T extends DataTableRecord>(
     }
   }
 
+  function inferColumnType(column: keyof T): "boolean" | "text" {
+    const firstValue = data.find(
+      (row) => row[column] !== null && row[column] !== undefined,
+    )?.[column];
+    return typeof firstValue === "boolean" ? "boolean" : "text";
+  }
+
+  function setColumnFilter(column: keyof T, value: string) {
+    const key = String(column);
+    setColumnFilters((prev) => {
+      if (value === "" || value === "all") {
+        const { [key]: _removed, ...rest } = prev;
+        return rest;
+      }
+      return {
+        ...prev,
+        [key]: value,
+      };
+    });
+  }
+
+  const activeFilters = useMemo(
+    () =>
+      Object.entries(columnFilters).filter(([, value]) =>
+        value === "all" ? false : value.trim().length > 0,
+      ),
+    [columnFilters],
+  );
+
   const processedData = useMemo(() => {
     let result = [...data];
 
@@ -76,6 +121,28 @@ export default function DataTable<T extends DataTableRecord>(
       );
     }
 
+    if (activeFilters.length > 0) {
+      result = result.filter((row) => {
+        return activeFilters.every(([columnKey, filterValue]) => {
+          const column = columns.find((col) => String(col) === columnKey);
+          if (!column) {
+            return true;
+          }
+
+          const columnType = inferColumnType(column);
+          const rowValue = row[column];
+
+          if (columnType === "boolean") {
+            return Boolean(rowValue) === (filterValue === "true");
+          }
+
+          return String(rowValue ?? "")
+            .toLowerCase()
+            .includes(filterValue.toLowerCase());
+        });
+      });
+    }
+
     if (sortColumn && sortDirection) {
       result.sort((a, b) => {
         const aVal = String(a[sortColumn] ?? "");
@@ -86,7 +153,7 @@ export default function DataTable<T extends DataTableRecord>(
     }
 
     return result;
-  }, [data, search, sortColumn, sortDirection, columns]);
+  }, [activeFilters, columns, data, search, sortColumn, sortDirection]);
 
   function SortIcon({ column }: { column: keyof T }) {
     const isActive = sortColumn === column;
@@ -156,6 +223,66 @@ export default function DataTable<T extends DataTableRecord>(
     return String(row[col] ?? "");
   }
 
+  function columnFilterMenu(column: keyof T) {
+    const columnType = inferColumnType(column);
+    const key = String(column);
+    const hasFilter = key in columnFilters;
+
+    return (
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button
+            variant="ghost"
+            size="icon-xs"
+            className={cn("ml-1", hasFilter && "text-primary")}
+            aria-label={`Filter ${formatLabel(key)}`}
+            onClick={(e) => e.stopPropagation()}
+          >
+            <FilterIcon className="size-3" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent
+          align="start"
+          className="w-56"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <DropdownMenuLabel>{formatLabel(key)} filter</DropdownMenuLabel>
+          <DropdownMenuSeparator />
+
+          {columnType === "boolean" ? (
+            <DropdownMenuRadioGroup
+              value={columnFilters[key] ?? "all"}
+              onValueChange={(value) => setColumnFilter(column, value)}
+            >
+              <DropdownMenuRadioItem value="all">All</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="true">Yes</DropdownMenuRadioItem>
+              <DropdownMenuRadioItem value="false">No</DropdownMenuRadioItem>
+            </DropdownMenuRadioGroup>
+          ) : (
+            <div className="px-2 py-1">
+              <Input
+                value={columnFilters[key] ?? ""}
+                onChange={(e) => setColumnFilter(column, e.target.value)}
+                className="h-8 text-xs"
+                placeholder={`Filter ${formatLabel(key)}`}
+                onClick={(e) => e.stopPropagation()}
+              />
+            </div>
+          )}
+
+          {hasFilter && (
+            <>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onClick={() => setColumnFilter(column, "")}>
+                Clear filter
+              </DropdownMenuItem>
+            </>
+          )}
+        </DropdownMenuContent>
+      </DropdownMenu>
+    );
+  }
+
   return (
     <div className="w-full">
       {/* Header */}
@@ -190,7 +317,7 @@ export default function DataTable<T extends DataTableRecord>(
                 strokeLinecap="round"
               />
             </svg>
-            <input
+            <Input
               type="text"
               placeholder="Search..."
               value={search}
@@ -224,6 +351,7 @@ export default function DataTable<T extends DataTableRecord>(
                   <span className="inline-flex items-center">
                     {formatLabel(column as string)}
                     <SortIcon column={column} />
+                    {columnFilterMenu(column)}
                   </span>
                 </th>
               ))}

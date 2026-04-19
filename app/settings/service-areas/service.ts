@@ -12,7 +12,6 @@ import { generateRandomNumber } from "@/lib/utils";
 import { getCurrentUser } from "@/lib/user.service";
 import { eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { managedListItems } from "@/db/schema/managedLists";
 
 export async function AllServiceAreas(filters?: {
   all: boolean;
@@ -20,10 +19,6 @@ export async function AllServiceAreas(filters?: {
   const query = db
     .select()
     .from(serviceAreas)
-    .leftJoin(
-      managedListItems,
-      eq(serviceAreas.services_provided_id, managedListItems.id),
-    )
     .leftJoin(organisations, eq(serviceAreas.utility_id, organisations.id));
 
   if (!filters?.all) {
@@ -38,7 +33,6 @@ export async function AllServiceAreas(filters?: {
   const res = await query;
   return res.map((item) => ({
     ...item.service_areas,
-    services_provided: item.managed_list_items?.name,
     utility: item.organisations?.name,
   }));
 }
@@ -54,7 +48,7 @@ export async function AddServiceArea(
       id: generateRandomNumber(5),
       utility_id: user.org_id!,
       is_active: true,
-      is_virutal: false,
+      is_virtual: false,
       operations_only: false,
       agg_level_id: 3,
     })

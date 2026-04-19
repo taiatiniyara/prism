@@ -25,6 +25,7 @@ import { Checkbox } from "../ui/checkbox";
 import { toast } from "sonner";
 import ManagedListInput from "./managed-list-input";
 import { ScrollArea } from "../ui/scroll-area";
+import BooleanFormInput from "./boolean-form-input";
 
 export type FieldType =
   | "text"
@@ -66,11 +67,26 @@ export function formDataToObject<T>(
   fields: DataTableCreateFormField<T>[],
 ): T {
   const obj: T = {} as T;
-  const mutable = obj as Record<string, FormDataEntryValue>;
+  const mutable = obj as Record<string, unknown>;
   for (const field of fields) {
-    const value = formData.get(field.key as string);
+    const key = String(field.key);
+
+    if (field.type === "boolean") {
+      const values = formData.getAll(key);
+      if (values.length > 0) {
+        mutable[key] = values.some((value) => {
+          const normalized = String(value).toLowerCase();
+          return (
+            normalized === "true" || normalized === "on" || normalized === "1"
+          );
+        });
+      }
+      continue;
+    }
+
+    const value = formData.get(key);
     if (value !== null) {
-      mutable[String(field.key)] = value;
+      mutable[key] = value;
     }
   }
   return obj;
@@ -111,6 +127,16 @@ function field<T>(field: DataTableCreateFormField<T>) {
         />
         Yes
       </Label>
+    );
+  }
+
+  if (field.type === "boolean") {
+    return (
+      <BooleanFormInput
+        name={field.key as string}
+        defaultValue={false}
+        disabled={field.disabled}
+      />
     );
   }
 

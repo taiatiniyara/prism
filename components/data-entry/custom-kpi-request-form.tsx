@@ -24,6 +24,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { toast } from "sonner";
 
 type InputOption = {
   id: number;
@@ -66,6 +67,7 @@ const INITIAL_STATE: FormState = {
 };
 
 const FORMULA_OPERATORS = ["+", "-", "*", "/", "(", ")"];
+const CUSTOM_KPI_SUBMIT_TOAST_ID = "custom-kpi-request-submit";
 
 export function CustomKpiRequestForm(props: {
   inputOptions: InputOption[];
@@ -83,8 +85,7 @@ export function CustomKpiRequestForm(props: {
     useState<string>("all");
   const [submitAttempted, setSubmitAttempted] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const submitInFlightRef = useRef(false);
   const [isProposedUnitsDialogOpen, setIsProposedUnitsDialogOpen] =
     useState(false);
   const [isProposedInputsDialogOpen, setIsProposedInputsDialogOpen] =
@@ -325,7 +326,8 @@ export function CustomKpiRequestForm(props: {
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    const formData = new FormData(event.currentTarget);
+    const formElement = event.currentTarget;
+    const formData = new FormData(formElement);
     const title = String(formData.get("title") ?? "").trim();
     const formulaExpression = String(
       formData.get("formulaExpression") ?? "",
@@ -335,8 +337,6 @@ export function CustomKpiRequestForm(props: {
     const parsedUnitId = Number(unitIdRaw);
 
     setSubmitAttempted(true);
-    setSuccessMessage(null);
-    setSubmitError(null);
     const nextErrors: {
       title?: string;
       formulaExpression?: string;
@@ -361,11 +361,29 @@ export function CustomKpiRequestForm(props: {
       return;
     }
 
+    if (submitInFlightRef.current) {
+      console.info("custom_kpi_submit:ignored_inflight");
+      return;
+    }
+
+    submitInFlightRef.current = true;
+    const submitDebugId = `custom-kpi-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    console.info("custom_kpi_submit:start", {
+      submitDebugId,
+      titleLength: title.length,
+      selectedInputCount: form.selectedInputDefinitionIds.length,
+      proposedUnitCount: form.proposedUnits.length,
+      proposedInputCount: form.proposedInputs.length,
+    });
+
     setSubmitting(true);
     try {
       const response = await fetch("/api/data-entry/custom-kpi/requests", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "X-Custom-Kpi-Submit-Debug-Id": submitDebugId,
+        },
         body: JSON.stringify({
           title,
           formulaExpression,
@@ -399,9 +417,22 @@ export function CustomKpiRequestForm(props: {
       const payload = (await response.json().catch(() => ({}))) as {
         message?: string;
       };
+      console.info("custom_kpi_submit:response", {
+        submitDebugId,
+        ok: response.ok,
+        status: response.status,
+        payload,
+      });
 
       if (!response.ok) {
-        setSubmitError(payload.message ?? "Unable to submit request.");
+        console.error("custom_kpi_submit:request_failed", {
+          submitDebugId,
+          status: response.status,
+          payload,
+        });
+        toast.error(payload.message ?? "Unable to submit request.", {
+          id: CUSTOM_KPI_SUBMIT_TOAST_ID,
+        });
         return;
       }
 
@@ -411,15 +442,27 @@ export function CustomKpiRequestForm(props: {
       setIsExpectedResultConfirmed(false);
       setSubmitAttempted(false);
       setFieldErrors({});
-      setSuccessMessage("Custom KPI request submitted successfully.");
-      event.currentTarget.reset();
+      formElement.reset();
+      toast.success("Custom KPI request submitted successfully.", {
+        id: CUSTOM_KPI_SUBMIT_TOAST_ID,
+      });
+      console.info("custom_kpi_submit:request_succeeded", {
+        submitDebugId,
+      });
 
       try {
+        console.info("custom_kpi_submit:callback_start", {
+          submitDebugId,
+        });
         await props.onSubmitted?.();
+        console.info("custom_kpi_submit:callback_done", {
+          submitDebugId,
+        });
       } catch (callbackError) {
         console.error(
           "Custom KPI request submitted but post-submit callback failed",
           {
+            submitDebugId,
             error:
               callbackError instanceof Error
                 ? callbackError.message
@@ -427,9 +470,19 @@ export function CustomKpiRequestForm(props: {
           },
         );
       }
-    } catch {
-      setSubmitError("Unable to submit request.");
+    } catch (error) {
+      console.error("custom_kpi_submit:fetch_exception", {
+        submitDebugId,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+      toast.error("Unable to submit request.", {
+        id: CUSTOM_KPI_SUBMIT_TOAST_ID,
+      });
     } finally {
+      console.info("custom_kpi_submit:finish", {
+        submitDebugId,
+      });
+      submitInFlightRef.current = false;
       setSubmitting(false);
     }
   };
@@ -440,7 +493,7 @@ export function CustomKpiRequestForm(props: {
       onSubmit={onSubmit}
       noValidate
     >
-      <div className="flex gap-4">
+      <div className="flex items-end gap-4">
         {/* Title is the only required field, but we want to surface all validation errors on submit, so it comes first in the form. */}
         <FieldGroup
           label="KPI Name"
@@ -463,8 +516,8 @@ export function CustomKpiRequestForm(props: {
           />
         </FieldGroup>
 
-        <div className="space-y-1 w-[50%]">
-          <div className="flex items-center justify-between gap-2">
+        <div className="w-[50%]">
+          <div className="flex items-end justify-between gap-2 mb-1">
             <Label
               className="text-sm font-medium"
               htmlFor="custom-kpi-unit-id"
@@ -481,9 +534,6 @@ export function CustomKpiRequestForm(props: {
               + Propose Unit
             </Button>
           </div>
-          <p className="text-xs text-muted-foreground">
-            If you cannot find an existing unit, click + Propose Unit.
-          </p>
 
           <Select
             name="unitId"
@@ -502,7 +552,7 @@ export function CustomKpiRequestForm(props: {
                   : undefined
               }
             >
-              <SelectValue placeholder="Select unit" />
+              <SelectValue placeholder="Select from existing units" />
             </SelectTrigger>
             <SelectContent>
               {props.unitOptions.map((unitOption) => (
@@ -561,15 +611,10 @@ export function CustomKpiRequestForm(props: {
             + Propose Input
           </Button>
         </div>
-        <p className="text-xs text-muted-foreground">
-          If you cannot find an existing input, click + Propose Input.
-        </p>
         <div className="flex flex-wrap items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5 text-[11px]">
           <span className="rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-emerald-700">
-            Found in list: select checkbox
-          </span>
-          <span className="rounded border border-amber-200 bg-amber-50 px-1.5 py-0.5 text-amber-700">
-            Not found: propose a new input
+            Select from existing input definitions or propose new ones to be
+            added to the list.
           </span>
         </div>
         <input
@@ -591,7 +636,7 @@ export function CustomKpiRequestForm(props: {
               <SelectValue placeholder="Filter by category" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All categories</SelectItem>
+              <SelectItem value="all">All KPI categories</SelectItem>
               {availableInputCategories.map((category) => (
                 <SelectItem
                   key={`input-category-${category}`}
@@ -611,7 +656,7 @@ export function CustomKpiRequestForm(props: {
               <SelectValue placeholder="Filter by subcategory" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">All subcategories</SelectItem>
+              <SelectItem value="all">All KPI subcategories</SelectItem>
               {availableInputSubcategories.map((subcategory) => (
                 <SelectItem
                   key={`input-subcategory-${subcategory}`}
@@ -918,7 +963,7 @@ export function CustomKpiRequestForm(props: {
             Blue: insert token action
           </span>
           <span className="rounded border border-lime-200 bg-lime-50 px-2 py-0.5 text-lime-700">
-            lime: used in formula
+            Lime: used in formula
           </span>
           <span className="rounded border border-amber-200 bg-amber-50 px-2 py-0.5 text-amber-700">
             Amber: needs sample value
@@ -1095,7 +1140,7 @@ export function CustomKpiRequestForm(props: {
                 disabled={formulaPreview.status !== "ok"}
                 className="mt-0.5"
               />
-              <span>I confirm this KPI result matches what I expect.</span>
+              <span>KPI results match my calculations.</span>
             </label>
           </BorderedStack>
         </div>
@@ -1112,24 +1157,6 @@ export function CustomKpiRequestForm(props: {
       >
         {submitting ? "Submitting..." : "Submit for review"}
       </Button>
-
-      <div
-        aria-live="polite"
-        className="min-h-5"
-      >
-        {successMessage ? (
-          <p className="text-xs text-lime-700">{successMessage}</p>
-        ) : null}
-      </div>
-
-      <div
-        aria-live="assertive"
-        className="min-h-5"
-      >
-        {submitError ? (
-          <p className="text-xs text-destructive">{submitError}</p>
-        ) : null}
-      </div>
     </BorderedForm>
   );
 }
