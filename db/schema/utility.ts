@@ -82,7 +82,6 @@ export type NewOrganisation = typeof organisations.$inferInsert;
 export const serviceAreas = pgTable("service_areas", {
   id: serial("id").primaryKey().notNull(),
   name: varchar("name", { length: 255 }).notNull(),
-  description: text("description"),
   utility_id: integer("utility_id")
     .notNull()
     .references(() => organisations.id),

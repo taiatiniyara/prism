@@ -6,6 +6,7 @@ import InputRows from "@/app/data-entry/enter-data/inputRows";
 import ProgressBreakdown from "@/app/data-entry/enter-data/progressBreakdown";
 import TariffGroups from "@/app/data-entry/enter-data/tariffGroups";
 import { getDataEntryFilterViewModel } from "@/app/data-entry/enter-data/service";
+import EnterDataTemplatePanel from "./templatePanel";
 
 export default async function EnterDataPage() {
   const model = await getDataEntryFilterViewModel();
@@ -19,13 +20,17 @@ export default async function EnterDataPage() {
         isEmpty={noFilterOptions}
         emptyMessage="No data-entry filter options are available for your account."
       >
-        <div className="flex flex-col gap-3 xl:flex-row xl:items-end xl:justify-between">
-          <DataEntryFiltersClient
-            context={model.context}
-            options={model.options}
-            showServiceAreaSelector={model.ui.showServiceAreaSelector}
-          />
-          <ProgressBreakdown progress={model.progress} />
+        <div className="sticky top-0 z-40 bg-background border shadow-md rounded-lg p-3">
+          <div className="flex gap-20 flex-wrap items-end pt-2">
+            <DataEntryFiltersClient
+              context={model.context}
+              options={model.options}
+              showServiceAreaSelector={model.ui.showServiceAreaSelector}
+            />
+            <ProgressBreakdown progress={model.progress} />
+
+            <EnterDataTemplatePanel inputs={model.inputs} />
+          </div>
         </div>
         {model.inputs.mode === "grouped-by-generator" ? (
           <GeneratorGroups groups={model.inputs.groups} />

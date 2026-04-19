@@ -7,6 +7,8 @@ import { toast } from "sonner";
 type RelevanceCell = {
   energyProviderId: number;
   energyProvider: string;
+  energyResourceTypeId: number;
+  energyResourceType: string;
   isRelevant: boolean;
   relatedInputCount: number;
 };
@@ -14,6 +16,8 @@ type RelevanceCell = {
 type RelevanceRow = {
   energySourceId: number;
   energySource: string;
+  energyResourceTypeId: number;
+  energyResourceType: string;
   cells: RelevanceCell[];
 };
 
@@ -22,6 +26,7 @@ type SetRelevancePayload = {
   serviceAreaId: number;
   energySourceId: number;
   energyProviderId: number;
+  energyResourceTypeId: number;
   isRelevant: boolean;
 };
 
@@ -36,52 +41,66 @@ export default function GenerationRelevanceTable(props: {
   const [isSaving, startTransition] = useTransition();
   const [rows, setRows] = useState<RelevanceRow[]>(props.rows);
 
-  const providerGroups = useMemo(() => {
+  const providers = useMemo(() => {
     if (rows.length === 0) {
-      return [] as {
-        energyProviderId: number;
-        energyProvider: string;
-        sources: {
-          energySourceId: number;
-          energySource: string;
-          isRelevant: boolean;
-          relatedInputCount: number;
-        }[];
-      }[];
+      return [] as { energyProviderId: number; energyProvider: string }[];
     }
 
     return rows[0].cells
       .map((providerCell) => ({
         energyProviderId: providerCell.energyProviderId,
         energyProvider: providerCell.energyProvider,
-        sources: rows.map((row) => {
-          const cell =
-            row.cells.find(
-              (value) =>
-                value.energyProviderId === providerCell.energyProviderId,
-            ) ?? providerCell;
-
-          return {
-            energySourceId: row.energySourceId,
-            energySource: row.energySource,
-            isRelevant: cell.isRelevant,
-            relatedInputCount: cell.relatedInputCount,
-          };
-        }),
       }))
-      .sort((a, b) => b.energyProvider.localeCompare(a.energyProvider));
+      .sort((a, b) => a.energyProvider.localeCompare(b.energyProvider));
+  }, [rows]);
+
+  const rowsByEnergyResourceType = useMemo(() => {
+    const grouped = new Map<
+      number,
+      {
+        energyResourceTypeId: number;
+        energyResourceType: string;
+        rows: RelevanceRow[];
+      }
+    >();
+
+    for (const row of rows) {
+      const existing = grouped.get(row.energyResourceTypeId);
+
+      if (existing) {
+        existing.rows.push(row);
+        continue;
+      }
+
+      grouped.set(row.energyResourceTypeId, {
+        energyResourceTypeId: row.energyResourceTypeId,
+        energyResourceType: row.energyResourceType,
+        rows: [row],
+      });
+    }
+
+    return Array.from(grouped.values()).map((group) => ({
+      ...group,
+      rows: [...group.rows].sort((a, b) =>
+        a.energySource.localeCompare(b.energySource),
+      ),
+    }));
   }, [rows]);
 
   const onCellToggle = (
     energySourceId: number,
     energyProviderId: number,
+    energyResourceTypeId: number,
     checked: boolean,
   ) => {
     const previousRows = rows;
 
     setRows((prev) =>
       prev.map((row) => {
-        if (row.energySourceId !== energySourceId) {
+        if (
+          row.energySourceId !== energySourceId ||
+          row.energyResourceTypeId !== energyResourceTypeId
+        ) {
           return row;
         }
 
@@ -105,6 +124,7 @@ export default function GenerationRelevanceTable(props: {
         serviceAreaId: props.serviceAreaId,
         energySourceId,
         energyProviderId,
+        energyResourceTypeId,
         isRelevant: checked,
       });
 
@@ -120,7 +140,10 @@ export default function GenerationRelevanceTable(props: {
       <table className="w-max min-w-full border-collapse text-sm">
         <thead>
           <tr className="bg-muted/30">
-            {providerGroups.map((provider) => (
+            <th className="sticky top-0 left-0 z-40 border bg-muted px-5 py-3 text-left text-sm font-semibold whitespace-nowrap min-w-64">
+              Energy Resource Type
+            </th>
+            {providers.map((provider) => (
               <th
                 key={provider.energyProviderId}
                 className="sticky top-0 z-30 border bg-muted px-5 py-3 text-left text-sm font-semibold whitespace-nowrap min-w-80"
@@ -131,37 +154,57 @@ export default function GenerationRelevanceTable(props: {
           </tr>
         </thead>
         <tbody>
-          <tr>
-            {providerGroups.map((provider) => (
-              <td
-                key={provider.energyProviderId}
-                className="border px-5 py-4 align-top"
-              >
-                <ul className="space-y-3">
-                  {provider.sources.map((source) => (
-                    <li
-                      key={`${provider.energyProviderId}-${source.energySourceId}`}
-                    >
-                      <label className="flex items-center gap-3 text-sm font-medium">
-                        <Checkbox
-                          checked={source.isRelevant}
-                          disabled={isSaving || source.relatedInputCount === 0}
-                          onCheckedChange={(next) =>
-                            onCellToggle(
-                              source.energySourceId,
-                              provider.energyProviderId,
-                              next === true,
-                            )
-                          }
-                        />
-                        <span>{source.energySource}</span>
-                      </label>
-                    </li>
-                  ))}
-                </ul>
+          {rowsByEnergyResourceType.map((group) => (
+            <tr key={group.energyResourceTypeId}>
+              <td className="sticky left-0 z-20 border bg-background px-5 py-3 font-medium whitespace-nowrap">
+                {group.energyResourceType}
               </td>
-            ))}
-          </tr>
+              {providers.map((provider) => {
+                return (
+                  <td
+                    key={`${group.energyResourceTypeId}-${provider.energyProviderId}`}
+                    className="border px-5 py-3 align-top"
+                  >
+                    <ul className="space-y-2">
+                      {group.rows.map((row) => {
+                        const cell = row.cells.find(
+                          (item) =>
+                            item.energyProviderId === provider.energyProviderId,
+                        );
+
+                        return (
+                          <li
+                            key={`${row.energySourceId}-${row.energyResourceTypeId}-${provider.energyProviderId}`}
+                          >
+                            <label className="flex items-center gap-2">
+                              <Checkbox
+                                checked={cell?.isRelevant ?? true}
+                                disabled={
+                                  isSaving ||
+                                  (cell?.relatedInputCount ?? 0) === 0
+                                }
+                                onCheckedChange={(next) =>
+                                  onCellToggle(
+                                    row.energySourceId,
+                                    provider.energyProviderId,
+                                    row.energyResourceTypeId,
+                                    next === true,
+                                  )
+                                }
+                              />
+                              <span className="text-sm">
+                                {row.energySource}
+                              </span>
+                            </label>
+                          </li>
+                        );
+                      })}
+                    </ul>
+                  </td>
+                );
+              })}
+            </tr>
+          ))}
         </tbody>
       </table>
     </div>

@@ -1,22 +1,19 @@
 "use client";
 
 import { GetAllManagedLists } from "@/app/settings/managed-lists/service";
-import { ManagedListItem } from "@/db/schema/managedLists";
-import { useEffect, useState } from "react";
 import {
   DataEntrySelect,
   type DataEntrySelectOption,
 } from "@/components/data-entry/dataEntrySelect";
+import { ManagedListItem } from "@/db/schema/managedLists";
+import { useEffect, useState } from "react";
 import { Skeleton } from "../ui/skeleton";
 
-export default function ManagedListInput(props: {
+export default function DataTableManagedListInput(props: {
   managedListName: string;
   inputName: string;
   value?: number;
-  valueName?: string | null;
-  onValueNameChange?: (valueName: string) => void;
   disabled?: boolean;
-  hasValue?: boolean;
 }) {
   const [list, setList] = useState<ManagedListItem[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -34,7 +31,7 @@ export default function ManagedListInput(props: {
 
         const items = res?.[0]?.items ?? [];
         setList(
-          items.filter((i) => !i.name.includes("All") && i.is_active === true),
+          items.filter((item) => !item.name.includes("All") && item.is_active),
         );
       })
       .catch(() => {
@@ -54,7 +51,7 @@ export default function ManagedListInput(props: {
   }, [props.managedListName]);
 
   if (isLoading) {
-    return <Skeleton className="w-full h-10 rounded-md" />;
+    return <Skeleton className="w-full h-9 rounded-md" />;
   }
 
   if (list.length === 0) {
@@ -63,8 +60,8 @@ export default function ManagedListInput(props: {
         name={props.inputName}
         disabled
         value="__empty"
-        size="input"
         placeholder="No managed-list options available"
+        triggerClassName="rounded-md border border-input"
         options={[
           {
             value: "__empty",
@@ -72,45 +69,25 @@ export default function ManagedListInput(props: {
             disabled: true,
           },
         ]}
-        triggerClassName={`border-l-7 rounded-l-none rounded-r-lg ${
-          props.hasValue ? "border-l-lime-200" : "border-l-red-200"
-        }`}
       />
     );
   }
 
-  const selectedIdFromName =
-    props.valueName == null
-      ? undefined
-      : list.find((item) => item.name === props.valueName)?.id;
-  const selectedValue =
-    props.value != null
-      ? props.value.toString()
-      : selectedIdFromName != null
-        ? selectedIdFromName.toString()
-        : undefined;
-  const selectOptions: DataEntrySelectOption[] = list.map((item) => ({
-    value: item.id!.toString(),
+  const defaultSelectedValue =
+    props.value != null ? String(props.value) : undefined;
+  const options: DataEntrySelectOption[] = list.map((item) => ({
+    value: String(item.id),
     label: item.name,
   }));
 
   return (
     <DataEntrySelect
-      value={selectedValue}
+      defaultValue={defaultSelectedValue}
       name={props.inputName}
       disabled={props.disabled}
-      size="input"
-      onValueChange={(nextValue) => {
-        const selectedItem = list.find((item) => String(item.id) === nextValue);
-        if (selectedItem && props.onValueNameChange) {
-          props.onValueNameChange(selectedItem.name);
-        }
-      }}
-      placeholder="Select input"
-      options={selectOptions}
-      triggerClassName={`border-l-7 rounded-l-none rounded-r-lg ${
-        props.hasValue ? "border-l-lime-200" : "border-l-red-200"
-      }`}
+      placeholder="Select"
+      triggerClassName="rounded-md border border-input"
+      options={options}
     />
   );
 }

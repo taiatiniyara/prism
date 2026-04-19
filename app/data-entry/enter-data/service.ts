@@ -1431,6 +1431,20 @@ interface UpdateDataEntryAvailabilityPayload {
   paymentModeId?: number | null;
 }
 
+export interface DataEntryTemplateUploadRowPayload {
+  inputDefId: number;
+  value: string | null;
+  isDataNotAvailable: boolean;
+  energyResourceId?: number | null;
+  customerTypeId?: number | null;
+  paymentModeId?: number | null;
+}
+
+interface DataEntryTemplateUploadResult {
+  processed: number;
+  skipped: number;
+}
+
 const normalizeDataEntryValue = (value: string | null): string | null => {
   if (value == null) {
     return null;
@@ -1888,5 +1902,60 @@ export const updateDataEntryAvailabilityAction = async (
 
   return {
     kpiRunResult,
+  };
+};
+
+export const uploadDataEntryTemplateAction = async (
+  rows: DataEntryTemplateUploadRowPayload[],
+): Promise<DataEntryTemplateUploadResult> => {
+  if (rows.length === 0) {
+    return {
+      processed: 0,
+      skipped: 0,
+    };
+  }
+
+  let processed = 0;
+  let skipped = 0;
+
+  for (const [index, row] of rows.entries()) {
+    const hasValue = (row.value?.trim().length ?? 0) > 0;
+
+    if (!hasValue && !row.isDataNotAvailable) {
+      skipped += 1;
+      continue;
+    }
+
+    if (hasValue && row.isDataNotAvailable) {
+      throw new Error(
+        `Row ${index + 2} cannot include both a value and a not-available flag.`,
+      );
+    }
+
+    if (row.isDataNotAvailable) {
+      await updateDataEntryAvailabilityAction({
+        inputDefId: row.inputDefId,
+        energyResourceId: row.energyResourceId ?? null,
+        customerTypeId: row.customerTypeId ?? null,
+        paymentModeId: row.paymentModeId ?? null,
+        isDataNotAvailable: true,
+      });
+      processed += 1;
+      continue;
+    }
+
+    await updateDataEntryValueAction({
+      inputDefId: row.inputDefId,
+      energyResourceId: row.energyResourceId ?? null,
+      customerTypeId: row.customerTypeId ?? null,
+      paymentModeId: row.paymentModeId ?? null,
+      value: row.value,
+    });
+    processed += 1;
+  }
+
+  return {
+    processed,
+    skipped,
   };
 };

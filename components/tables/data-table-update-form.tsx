@@ -25,7 +25,7 @@ import {
 } from "../ui/select";
 import { toast } from "sonner";
 import { FaEdit, FaSave } from "react-icons/fa";
-import ManagedListInput from "./managed-list-input";
+import DataTableManagedListInput from "./data-table-managed-list-input";
 import BooleanFormInput from "./boolean-form-input";
 
 export interface DataTableUpdateFormField<T> {
@@ -83,7 +83,7 @@ function updateField<T>(field: DataTableUpdateFormField<T>) {
   }
   if (field.type === "managed-list") {
     return (
-      <ManagedListInput
+      <DataTableManagedListInput
         inputName={field.key as string}
         managedListName={field.managedListName || ""}
         value={field.value as number}

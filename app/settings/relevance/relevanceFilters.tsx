@@ -39,11 +39,11 @@ export default function RelevanceFilters(props: {
   };
 
   return (
-    <div className="flex flex-wrap items-end gap-4 sm:gap-5">
-      <div className="space-y-2">
+    <div className="flex flex-wrap items-end gap-3 sm:gap-4">
+      <div className="space-y-1">
         <Label
           htmlFor="report_period_id"
-          className="text-sm font-medium"
+          className="text-xs font-medium"
         >
           Report Period
         </Label>
@@ -54,7 +54,7 @@ export default function RelevanceFilters(props: {
           onChange={(event) =>
             updateFilter("report_period_id", event.target.value)
           }
-          className="h-11 min-w-52 rounded-md border bg-background px-3 text-sm"
+          className="h-9 min-w-48 rounded-md border bg-background px-2 text-sm"
         >
           {props.reportPeriods.map((option) => (
             <option
@@ -67,10 +67,10 @@ export default function RelevanceFilters(props: {
         </select>
       </div>
 
-      <div className="space-y-2">
+      <div className="space-y-1">
         <Label
           htmlFor="service_area_id"
-          className="text-sm font-medium"
+          className="text-xs font-medium"
         >
           Service Area
         </Label>
@@ -81,7 +81,7 @@ export default function RelevanceFilters(props: {
           onChange={(event) =>
             updateFilter("service_area_id", event.target.value)
           }
-          className="h-11 min-w-52 rounded-md border bg-background px-3 text-sm"
+          className="h-9 min-w-48 rounded-md border bg-background px-2 text-sm"
         >
           {props.serviceAreas.map((option) => (
             <option

@@ -60,7 +60,7 @@ export default async function UtilityRelevanceSection(props: {
     <div className="space-y-5">
       <Tabs defaultValue="generation">
         <TabsList>
-          <TabsTrigger value="generation">Generation</TabsTrigger>
+          <TabsTrigger value="generation">Energy Resources</TabsTrigger>
           <TabsTrigger value="transmission">Transmission</TabsTrigger>
           <TabsTrigger value="tariff">Tariff</TabsTrigger>
           <TabsTrigger value="custom-kpi-relevance">Custom KPIs</TabsTrigger>

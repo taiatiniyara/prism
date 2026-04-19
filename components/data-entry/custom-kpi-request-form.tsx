@@ -531,7 +531,7 @@ export function CustomKpiRequestForm(props: {
               onClick={openProposedUnitsDialog}
               title="Open proposed unit form"
             >
-              + Propose Unit
+              + Propose New Unit
             </Button>
           </div>
 
@@ -581,7 +581,7 @@ export function CustomKpiRequestForm(props: {
       <FieldGroup
         label="Description of Use"
         htmlFor="custom-kpi-description"
-        containerClassName="space-y-1 w-[50%]"
+        containerClassName="space-y-1"
       >
         <Textarea
           placeholder="Enter description"
@@ -594,7 +594,7 @@ export function CustomKpiRequestForm(props: {
 
       {/* Input selection and formula builder are the most complex parts of the form, so they come before business context to avoid overwhelming users right away. */}
       <div className="space-y-1">
-        <div className="flex items-center justify-between gap-2">
+        <div className="flex items-end justify-between gap-2">
           <label
             className="text-sm font-medium"
             htmlFor="custom-kpi-inputs-search"
@@ -608,23 +608,10 @@ export function CustomKpiRequestForm(props: {
             onClick={() => openProposedInputsDialog()}
             title="Open proposed input form"
           >
-            + Propose Input
+            + Propose New Input
           </Button>
         </div>
-        <div className="flex flex-wrap items-center gap-2 rounded-md border border-slate-200 bg-slate-50 px-2 py-1.5 text-[11px]">
-          <span className="rounded border border-emerald-200 bg-emerald-50 px-1.5 py-0.5 text-emerald-700">
-            Select from existing input definitions or propose new ones to be
-            added to the list.
-          </span>
-        </div>
-        <input
-          id="custom-kpi-inputs-search"
-          className="w-full rounded-md border px-3 py-2 text-sm"
-          placeholder="Search input definitions"
-          value={inputSearch}
-          onChange={(event) => setInputSearch(event.target.value)}
-        />
-        <div className="grid gap-2 sm:grid-cols-2">
+        <div className="flex items-center space-x-2">
           <Select
             value={selectedInputCategory}
             onValueChange={(value) => {
@@ -667,6 +654,14 @@ export function CustomKpiRequestForm(props: {
               ))}
             </SelectContent>
           </Select>
+
+          <input
+            id="custom-kpi-inputs-search"
+            className="w-full rounded-md border px-3 py-2 text-sm"
+            placeholder="Search from existing inputs"
+            value={inputSearch}
+            onChange={(event) => setInputSearch(event.target.value)}
+          />
         </div>
         <div className="max-h-48 space-y-2 overflow-y-auto rounded-md border p-3">
           {filteredInputOptions.length === 0 ? (
@@ -974,177 +969,194 @@ export function CustomKpiRequestForm(props: {
             Select input definitions to enable one-click insert.
           </p>
         ) : (
-          <div className="space-y-2">
-            {selectedInputOptions.map((option) => {
-              const token = option.variableName ?? option.name;
-              const isUsedInFormula = formulaInputTokens.includes(token);
-              const hasSampleValue =
-                (sampleInputValues[token] ?? "").trim().length > 0;
+          <div className="overflow-x-auto rounded-md border">
+            <table className="w-full min-w-190 t-sm">
+              <thead>
+                <tr className="border-b bg-muted/50 text-left text-xs uppercase tracking-wider text-muted-foreground">
+                  <th className="px-3 py-2">Input Name</th>
+                  <th className="px-3 py-2">Input Token</th>
+                  <th className="px-3 py-2">Unit</th>
+                  <th className="px-3 py-2">Formula Usage</th>
 
-              return (
-                <div
-                  key={option.id}
-                  className={`rounded-md border p-2 flex gap-4 ${
-                    isUsedInFormula
-                      ? "border-lime-200 bg-lime-50/40"
-                      : "border-border bg-background"
-                  }`}
-                >
-                  <div className="space-y-1 w-[65%]">
-                    <button
-                      type="button"
-                      className="rounded border border-sky-300 bg-sky-50 px-2 py-1 text-xs font-medium text-sky-800"
-                      onClick={() => insertFormulaTokenAtCursor(token)}
-                      title={`Insert ${token} into formula`}
-                    >
-                      Insert token: {token}
-                    </button>
-                    <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
-                      <span className="text-muted-foreground">
-                        {option.name}
-                      </span>
-                      {option.unit ? (
-                        <span className="rounded border border-slate-200 bg-slate-50 px-1.5 py-0.5 text-slate-700">
-                          {option.unit}
-                        </span>
-                      ) : null}
-                      <span
-                        className={`rounded border px-1.5 py-0.5 ${
-                          isUsedInFormula
-                            ? "border-lime-200 bg-lime-50 text-lime-700"
-                            : "border-amber-200 bg-amber-50 text-amber-700"
-                        }`}
-                      >
-                        {isUsedInFormula ? "Used in formula" : "Not in formula"}
-                      </span>
-                    </div>
-                  </div>
+                  <th className="px-3 py-2">Action</th>
+                  <th className="px-3 py-2">Sample Value</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {selectedInputOptions.map((option) => {
+                  const token = option.variableName ?? option.name;
+                  const isUsedInFormula = formulaInputTokens.includes(token);
+                  const hasSampleValue =
+                    (sampleInputValues[token] ?? "").trim().length > 0;
 
-                  <FieldGroup
-                    labelClassName="text-xs text-slate-500"
-                    label="Sample value"
-                    htmlFor={`custom-kpi-preview-${option.id}`}
-                    containerClassName="space-y-1 w-[35%]"
-                  >
-                    <Input
-                      id={`custom-kpi-preview-${option.id}`}
-                      type="number"
-                      step="any"
-                      value={sampleInputValues[token] ?? ""}
-                      onChange={(event) =>
-                        setSampleInputValues((current) => ({
-                          ...current,
-                          [token]: event.target.value,
-                        }))
+                  return (
+                    <tr
+                      key={option.id}
+                      className={
+                        isUsedInFormula ? "bg-lime-50/30" : "bg-background"
                       }
-                      placeholder="Enter sample value"
-                      className={`h-8 ${
-                        hasSampleValue
-                          ? "border-lime-300 bg-lime-50/60"
-                          : "border-amber-300 bg-amber-50/50"
-                      }`}
-                    />
-                  </FieldGroup>
-                </div>
-              );
-            })}
+                    >
+                      <td className="px-3 py-2 text-xs text-foreground">
+                        {option.name}
+                      </td>
+                      <td className="px-3 py-2">
+                        <span className="rounded border border-slate-200 bg-slate-50 px-2 py-0.5 text-xs text-slate-700">
+                          {token}
+                        </span>
+                      </td>
+                      <td className="px-3 py-2 text-xs text-muted-foreground">
+                        {option.unit || "-"}
+                      </td>
+                      <td className="px-3 py-2">
+                        <span
+                          className={`rounded border px-2 py-0.5 text-xs ${
+                            isUsedInFormula
+                              ? "border-lime-200 bg-lime-50 text-lime-700"
+                              : "border-amber-200 bg-amber-50 text-amber-700"
+                          }`}
+                        >
+                          {isUsedInFormula
+                            ? "Used in formula"
+                            : "Not in formula"}
+                        </span>
+                      </td>
+
+                      <td className="px-3 py-2">
+                        <button
+                          type="button"
+                          className="rounded border border-sky-300 bg-sky-50 px-2 py-1 text-xs font-medium text-sky-800"
+                          onClick={() => insertFormulaTokenAtCursor(token)}
+                          title={`Insert ${token} into formula`}
+                        >
+                          Insert Token
+                        </button>
+                      </td>
+                      <td className="px-3 py-2">
+                        <Input
+                          id={`custom-kpi-preview-${option.id}`}
+                          type="number"
+                          step="any"
+                          value={sampleInputValues[token] ?? ""}
+                          onChange={(event) =>
+                            setSampleInputValues((current) => ({
+                              ...current,
+                              [token]: event.target.value,
+                            }))
+                          }
+                          placeholder="Enter sample value"
+                          className={`h-8 text-xs ${
+                            hasSampleValue
+                              ? "border-lime-300 bg-lime-50/60"
+                              : "border-amber-300 bg-amber-50/50"
+                          }`}
+                        />
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
           </div>
         )}
       </div>
-      <FieldGroup
-        label="Formula Builder"
-        htmlFor="custom-kpi-formula"
-        error={submitAttempted ? fieldErrors.formulaExpression : undefined}
-        errorId="custom-kpi-formula-error"
-      >
-        <div className="mt-4 flex gap-4">
-          <div className="space-y-2 w-[65%]">
-            <div className="flex gap-3">
-              <div className="flex flex-wrap gap-2">
-                {FORMULA_OPERATORS.map((operator) => (
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
+        <div className="w-full lg:w-[65%]">
+          <FieldGroup
+            label="Formula Builder"
+            htmlFor="custom-kpi-formula"
+            error={submitAttempted ? fieldErrors.formulaExpression : undefined}
+            errorId="custom-kpi-formula-error"
+          >
+            <div className="space-y-2">
+              <div className="flex gap-3">
+                <div className="flex flex-wrap gap-2">
+                  {FORMULA_OPERATORS.map((operator) => (
+                    <button
+                      key={operator}
+                      type="button"
+                      className="rounded border bg-background px-2 py-1 text-xs"
+                      onClick={() => insertFormulaTokenAtCursor(operator)}
+                    >
+                      {operator}
+                    </button>
+                  ))}
                   <button
-                    key={operator}
                     type="button"
                     className="rounded border bg-background px-2 py-1 text-xs"
-                    onClick={() => insertFormulaTokenAtCursor(operator)}
+                    onClick={() =>
+                      setForm((current) => ({
+                        ...current,
+                        formulaExpression: "",
+                      }))
+                    }
                   >
-                    {operator}
+                    Clear
                   </button>
-                ))}
-                <button
-                  type="button"
-                  className="rounded border bg-background px-2 py-1 text-xs"
-                  onClick={() =>
-                    setForm((current) => ({
-                      ...current,
-                      formulaExpression: "",
-                    }))
-                  }
-                >
-                  Clear
-                </button>
+                </div>
               </div>
-            </div>
 
-            <textarea
-              ref={formulaTextareaRef}
-              name="formulaExpression"
-              id="custom-kpi-formula"
-              className="w-full rounded-md border px-3 py-2 text-sm"
-              value={form.formulaExpression}
-              onChange={(event) =>
-                setForm((current) => ({
-                  ...current,
-                  formulaExpression: event.target.value,
-                }))
-              }
-              aria-invalid={
-                submitAttempted && fieldErrors.formulaExpression ? true : false
-              }
-              aria-describedby={
-                submitAttempted && fieldErrors.formulaExpression
-                  ? "custom-kpi-formula-error"
-                  : undefined
-              }
-            />
-          </div>
-
-          <BorderedStack className="space-y-2 p-3 w-[35%]">
-            <p className="text-xs font-medium">KPI Result</p>
-            <p className="mt-1 text-sm font-semibold">
-              {formulaPreview.status === "ok"
-                ? `${formulaPreview.value.toLocaleString(undefined, { maximumFractionDigits: 4 })}${selectedUnitId ? ` ${props.unitOptions.find((item) => String(item.id) === selectedUnitId)?.name ?? ""}` : ""}`
-                : "--"}
-            </p>
-            <p
-              className={`mt-1 text-xs ${
-                formulaPreview.status === "error"
-                  ? "text-destructive"
-                  : "text-muted-foreground"
-              }`}
-            >
-              {formulaPreview.message}
-            </p>
-
-            <label
-              htmlFor="custom-kpi-expected-result-check"
-              className="mt-1 flex cursor-pointer items-start gap-2 rounded-md border border-amber-200 bg-amber-50/60 p-2 text-xs text-amber-900"
-            >
-              <input
-                id="custom-kpi-expected-result-check"
-                type="checkbox"
-                checked={isExpectedResultConfirmed}
+              <textarea
+                ref={formulaTextareaRef}
+                name="formulaExpression"
+                id="custom-kpi-formula"
+                className="w-full rounded-md border px-3 py-2 text-sm"
+                value={form.formulaExpression}
                 onChange={(event) =>
-                  setIsExpectedResultConfirmed(event.target.checked)
+                  setForm((current) => ({
+                    ...current,
+                    formulaExpression: event.target.value,
+                  }))
                 }
-                disabled={formulaPreview.status !== "ok"}
-                className="mt-0.5"
+                aria-invalid={
+                  submitAttempted && fieldErrors.formulaExpression
+                    ? true
+                    : false
+                }
+                aria-describedby={
+                  submitAttempted && fieldErrors.formulaExpression
+                    ? "custom-kpi-formula-error"
+                    : undefined
+                }
               />
-              <span>KPI results match my calculations.</span>
-            </label>
-          </BorderedStack>
+            </div>
+          </FieldGroup>
         </div>
-      </FieldGroup>
+
+        <BorderedStack className="w-full space-y-2 p-3 lg:w-[35%]">
+          <p className="text-xs font-medium">KPI Result</p>
+          <p className="mt-1 text-sm font-semibold">
+            {formulaPreview.status === "ok"
+              ? `${formulaPreview.value.toLocaleString(undefined, { maximumFractionDigits: 4 })}${selectedUnitId ? ` ${props.unitOptions.find((item) => String(item.id) === selectedUnitId)?.name ?? ""}` : ""}`
+              : "--"}
+          </p>
+          <p
+            className={`mt-1 text-xs ${
+              formulaPreview.status === "error"
+                ? "text-destructive"
+                : "text-muted-foreground"
+            }`}
+          >
+            {formulaPreview.message}
+          </p>
+
+          <label
+            htmlFor="custom-kpi-expected-result-check"
+            className="mt-1 flex cursor-pointer items-start gap-2 rounded-md border border-amber-200 bg-amber-50/60 p-2 text-xs text-amber-900"
+          >
+            <input
+              id="custom-kpi-expected-result-check"
+              type="checkbox"
+              checked={isExpectedResultConfirmed}
+              onChange={(event) =>
+                setIsExpectedResultConfirmed(event.target.checked)
+              }
+              disabled={formulaPreview.status !== "ok"}
+              className="mt-0.5"
+            />
+            <span>KPI results match my calculations.</span>
+          </label>
+        </BorderedStack>
+      </div>
 
       <Button
         className="mt-6"

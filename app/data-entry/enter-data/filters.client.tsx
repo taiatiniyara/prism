@@ -61,29 +61,33 @@ export default function DataEntryFiltersClient({
   };
 
   return (
-    <section className="flex flex-wrap gap-3">
+    <section className="flex flex-wrap gap-1.5 xl:flex-nowrap xl:items-end">
       <ReportTypeSelect
         value={localContext.reportTypeId}
         options={options.reportTypes}
         disabled={isPending}
+        compact
         onChange={(value) => handleChange("reportTypeId", value)}
       />
       <ReportPeriodSelect
         value={localContext.reportPeriodId}
         options={options.reportPeriods}
         disabled={isPending}
+        compact
         onChange={(value) => handleChange("reportPeriodId", value)}
       />
       <InputCategorySelect
         value={localContext.inputCategoryId}
         options={options.inputCategories}
         disabled={isPending}
+        compact
         onChange={(value) => handleChange("inputCategoryId", value)}
       />
       <InputSubcategorySelect
         value={localContext.inputSubcategoryId}
         options={options.inputSubcategories}
         disabled={isPending}
+        compact
         onChange={(value) => handleChange("inputSubcategoryId", value)}
       />
       {showServiceAreaSelector ? (
@@ -91,6 +95,7 @@ export default function DataEntryFiltersClient({
           value={localContext.serviceAreaId}
           options={options.serviceAreas}
           disabled={isPending}
+          compact
           onChange={(value) => handleChange("serviceAreaId", value)}
         />
       ) : null}
@@ -98,6 +103,7 @@ export default function DataEntryFiltersClient({
         value={localContext.dataEntryStatusId}
         options={options.dataEntryStatuses}
         disabled={isPending}
+        compact
         onChange={(value) => handleChange("dataEntryStatusId", value)}
       />
     </section>

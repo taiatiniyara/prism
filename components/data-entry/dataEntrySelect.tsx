@@ -18,7 +18,7 @@ export interface DataEntrySelectOption {
 }
 
 const triggerSizeClassName = {
-  compact: "h-8 px-2 text-xs shadow-sm",
+  compact: "h-7 px-1 text-[11px] shadow-none",
   default: "h-9 px-3 text-sm shadow-sm",
   input: "min-h-10 px-3 py-2.5 text-base md:text-sm shadow",
 } as const;

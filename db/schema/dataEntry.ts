@@ -245,6 +245,9 @@ export const generationRelevance = pgTable(
     energy_source_id: integer("energy_source_id")
       .notNull()
       .references(() => managedListItems.id),
+    energy_resource_type_id: integer("energy_resource_type_id").references(
+      () => managedListItems.id,
+    ),
     is_relevant: boolean("is_relevant").default(true).notNull(),
     is_deleted: boolean("is_deleted").default(false).notNull(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -257,6 +260,7 @@ export const generationRelevance = pgTable(
       table.input_def_id,
       table.energy_provider_id,
       table.energy_source_id,
+      table.energy_resource_type_id,
     ),
   ],
 );

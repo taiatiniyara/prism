@@ -23,7 +23,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "../ui/checkbox";
 import { toast } from "sonner";
-import ManagedListInput from "./managed-list-input";
+import DataTableManagedListInput from "./data-table-managed-list-input";
 import { ScrollArea } from "../ui/scroll-area";
 import BooleanFormInput from "./boolean-form-input";
 
@@ -175,7 +175,7 @@ function field<T>(field: DataTableCreateFormField<T>) {
 
   if (field.type === "managed-list") {
     return (
-      <ManagedListInput
+      <DataTableManagedListInput
         managedListName={field.managedListName!}
         inputName={field.key as string}
       />

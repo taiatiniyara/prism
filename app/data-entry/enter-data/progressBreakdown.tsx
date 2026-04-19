@@ -27,15 +27,10 @@ export default function ProgressBreakdown({
       <DialogTrigger asChild>
         <button
           type="button"
-          className="w-full max-w-xs text-left rounded-md p-1 hover:bg-muted/50 transition-colors"
+          className="border py-2 w-65 text-left rounded-md px-4 shadow hover:shadow-lg cursor-pointer hover:bg-muted/50 transition-colors"
           aria-label="Open progress breakdown"
         >
-          <div className="mb-1 flex items-center justify-end">
-            <span className="text-[11px] text-muted-foreground">
-              {"View breakdown ->"}
-            </span>
-          </div>
-          <div className="mb-1 flex items-center justify-between text-xs">
+          <div className="mb-0.5 flex items-center justify-between text-[11px]">
             <span className="font-medium">Progress</span>
             <span className="text-muted-foreground">{progressPercentage}%</span>
           </div>
@@ -45,9 +40,12 @@ export default function ProgressBreakdown({
               style={{ width: `${progressPercentage}%` }}
             />
           </div>
-          <p className="mt-1 text-[11px] text-muted-foreground">
-            {progress.completedInputs}/{progress.totalInputs} completed
-          </p>
+          <div className="mt-0.5 flex items-center justify-between text-[10px] text-muted-foreground">
+            <span>
+              {progress.completedInputs}/{progress.totalInputs} completed
+            </span>
+            <span>{"View breakdown ->"}</span>
+          </div>
         </button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-2xl">

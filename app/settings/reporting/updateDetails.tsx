@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FaSave } from "react-icons/fa";
@@ -31,6 +33,28 @@ const MONTH_OPTIONS = [
   "Dec",
 ] as const;
 
+function getMaxDayForMonth(month: string | undefined) {
+  switch (month) {
+    case "Feb":
+      return 28;
+    case "Apr":
+    case "Jun":
+    case "Sep":
+    case "Nov":
+      return 30;
+    case "Jan":
+    case "Mar":
+    case "May":
+    case "Jul":
+    case "Aug":
+    case "Oct":
+    case "Dec":
+      return 31;
+    default:
+      return 31;
+  }
+}
+
 function getInitialFinancialYearEnd(value: string | null) {
   if (!value) {
     return { day: "", month: undefined as string | undefined };
@@ -52,6 +76,21 @@ function getInitialFinancialYearEnd(value: string | null) {
       (m) => m.toLowerCase() === normalizedMonth.toLowerCase(),
     ) ?? undefined;
 
+  if (!month) {
+    return {
+      day: "",
+      month: undefined as string | undefined,
+    };
+  }
+
+  const maxDayForMonth = getMaxDayForMonth(month);
+  if (day > maxDayForMonth) {
+    return {
+      day: "",
+      month,
+    };
+  }
+
   return {
     day: String(day),
     month,
@@ -66,6 +105,13 @@ export default function UpdateReportingDetailsForm(props: {
   const initialFinancialYearEnd = getInitialFinancialYearEnd(
     props.financial_year_end,
   );
+  const [financialYearEndMonth, setFinancialYearEndMonth] = useState<
+    string | undefined
+  >(initialFinancialYearEnd.month);
+  const [financialYearEndDay, setFinancialYearEndDay] = useState<string>(
+    initialFinancialYearEnd.day,
+  );
+  const maxFinancialYearEndDay = getMaxDayForMonth(financialYearEndMonth);
 
   return (
     <div className="space-y-12">
@@ -75,25 +121,16 @@ export default function UpdateReportingDetailsForm(props: {
       >
         <form
           action={async (formData) => {
-            const financialYearEndDay = Number(
+            const submittedFinancialYearEndDay = Number(
               formData.get("financial_year_end_day") as string,
             );
-            const financialYearEndMonth = formData.get(
+            const submittedFinancialYearEndMonth = formData.get(
               "financial_year_end_month",
             ) as string;
 
             if (
-              !Number.isInteger(financialYearEndDay) ||
-              financialYearEndDay < 1 ||
-              financialYearEndDay > 31
-            ) {
-              toast.error("Financial year end day must be between 1 and 31");
-              return;
-            }
-
-            if (
               !MONTH_OPTIONS.includes(
-                financialYearEndMonth as (typeof MONTH_OPTIONS)[number],
+                submittedFinancialYearEndMonth as (typeof MONTH_OPTIONS)[number],
               )
             ) {
               toast.error(
@@ -102,7 +139,22 @@ export default function UpdateReportingDetailsForm(props: {
               return;
             }
 
-            const financial_year_end = `${financialYearEndDay} ${financialYearEndMonth}`;
+            const maxDayForMonth = getMaxDayForMonth(
+              submittedFinancialYearEndMonth,
+            );
+
+            if (
+              !Number.isInteger(submittedFinancialYearEndDay) ||
+              submittedFinancialYearEndDay < 1 ||
+              submittedFinancialYearEndDay > maxDayForMonth
+            ) {
+              toast.error(
+                `Financial year end day must be between 1 and ${maxDayForMonth} for ${submittedFinancialYearEndMonth}`,
+              );
+              return;
+            }
+
+            const financial_year_end = `${submittedFinancialYearEndDay} ${submittedFinancialYearEndMonth}`;
 
             const res = await UpdateOrganisation({
               financial_year_end,
@@ -114,24 +166,22 @@ export default function UpdateReportingDetailsForm(props: {
               toast.error(res.message);
             }
           }}
-          className="flex items-center space-x-3 w-fit"
+          className="flex items-start space-x-3 w-fit"
         >
-          <Input
-            className="w-24"
-            required
-            type="number"
-            min={1}
-            max={31}
-            step={1}
-            name="financial_year_end_day"
-            defaultValue={initialFinancialYearEnd.day}
-            placeholder="Day"
-          />
-
           <Select
             name="financial_year_end_month"
             required
             defaultValue={initialFinancialYearEnd.month}
+            onValueChange={(value) => {
+              setFinancialYearEndMonth(value);
+
+              const dayValue = Number(financialYearEndDay);
+              const monthMaxDay = getMaxDayForMonth(value);
+
+              if (Number.isInteger(dayValue) && dayValue > monthMaxDay) {
+                setFinancialYearEndDay(String(monthMaxDay));
+              }
+            }}
           >
             <SelectTrigger className="w-32 shadow">
               <SelectValue placeholder="Month" />
@@ -147,6 +197,47 @@ export default function UpdateReportingDetailsForm(props: {
               ))}
             </SelectContent>
           </Select>
+
+          <div className="space-y-1">
+            <Input
+              className="w-24"
+              required
+              type="number"
+              min={1}
+              max={maxFinancialYearEndDay}
+              step={1}
+              name="financial_year_end_day"
+              value={financialYearEndDay}
+              onChange={(event) => {
+                const { value } = event.currentTarget;
+                if (value === "") {
+                  setFinancialYearEndDay("");
+                  return;
+                }
+
+                const numericValue = Number(value);
+                if (!Number.isInteger(numericValue)) {
+                  return;
+                }
+
+                if (numericValue < 1) {
+                  setFinancialYearEndDay("1");
+                  return;
+                }
+
+                if (numericValue > maxFinancialYearEndDay) {
+                  setFinancialYearEndDay(String(maxFinancialYearEndDay));
+                  return;
+                }
+
+                setFinancialYearEndDay(value);
+              }}
+              placeholder="Day"
+            />
+            <p className="text-xs text-muted-foreground px-1">
+              Max day for selected month: {maxFinancialYearEndDay}
+            </p>
+          </div>
 
           <SubmitBtn
             text={

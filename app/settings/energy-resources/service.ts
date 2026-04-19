@@ -9,7 +9,7 @@ import {
   serviceAreas,
 } from "@/db/schema/utility";
 import { getCurrentUser } from "@/lib/user.service";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { DataTableFormResponse } from "@/components/tables/data-table-create-form";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { managedListItems } from "@/db/schema/managedLists";
@@ -37,7 +37,12 @@ export async function GetAllEnergyResources(): Promise<EnergyResource[]> {
       eq(energyResources.service_area_id, serviceAreas.id),
     );
   if (user?.role !== "DEV") {
-    query.where(eq(energyResources.utility_id, user.org_id!));
+    query.where(
+      and(
+        eq(energyResources.utility_id, user.org_id!),
+        eq(energyResources.is_virtual, false),
+      ),
+    );
   }
 
   const list = await query.orderBy(energyResources.name);

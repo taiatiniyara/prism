@@ -11,7 +11,7 @@ import {
 } from "@/app/data-entry/enter-data/service";
 import { DataEntryInputRowView } from "@/app/data-entry/types";
 import { DataEntrySelect } from "@/components/data-entry/dataEntrySelect";
-import ManagedListInput from "@/components/tables/managed-list-input";
+import DataEntryManagedListInput from "@/components/data-entry/managed-list-input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -242,7 +242,7 @@ export default function InputCell({ row }: InputCellProps) {
         );
       case "managedLists":
         return (
-          <ManagedListInput
+          <DataEntryManagedListInput
             managedListName={row.inputName}
             inputName={`input_${row.inputDefId}`}
             valueName={displayValue}

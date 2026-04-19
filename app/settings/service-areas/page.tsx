@@ -9,7 +9,6 @@ export default async function ServiceAreasSettingsPage() {
       data={serviceAreas}
       columns={[
         "name",
-        "description",
         "provides_electricity",
         "provides_sanitation",
         "provides_water",
@@ -23,10 +22,6 @@ export default async function ServiceAreasSettingsPage() {
           {
             type: "text",
             key: "name",
-          },
-          {
-            type: "textarea",
-            key: "description",
           },
           {
             type: "boolean",
@@ -48,10 +43,6 @@ export default async function ServiceAreasSettingsPage() {
           {
             type: "text",
             key: "name",
-          },
-          {
-            type: "textarea",
-            key: "description",
           },
           {
             type: "boolean",

@@ -10,24 +10,32 @@ import {
 } from "@/db/schema/utility";
 import { generateRandomNumber } from "@/lib/utils";
 import { getCurrentUser } from "@/lib/user.service";
-import { eq } from "drizzle-orm";
+import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 export async function AllServiceAreas(filters?: {
   all: boolean;
 }): Promise<ServiceArea[]> {
+  const user = await getCurrentUser();
   const query = db
     .select()
     .from(serviceAreas)
     .leftJoin(organisations, eq(serviceAreas.utility_id, organisations.id));
 
+  const conditions = [];
+
   if (!filters?.all) {
-    const user = await getCurrentUser();
-    if (user.role !== "DEV" && user.role !== "BMO") {
-      query.where(eq(serviceAreas.utility_id, user.org_id!));
-    } else {
-      query.where(eq(serviceAreas.utility_id, user.org_id!));
-    }
+    conditions.push(eq(serviceAreas.utility_id, user.org_id!));
+  }
+
+  if (user.role !== "DEV") {
+    conditions.push(eq(serviceAreas.is_virtual, false));
+  }
+
+  if (conditions.length > 1) {
+    query.where(and(...conditions));
+  } else if (conditions.length === 1) {
+    query.where(conditions[0]!);
   }
 
   const res = await query;
