@@ -114,6 +114,7 @@ describe("generation grouping behavior", () => {
       ],
       [],
       (generator) => generator.energyProviderId !== 1,
+      undefined,
       true,
     );
 
@@ -153,6 +154,7 @@ describe("generation grouping behavior", () => {
       [],
       (generator, definition) =>
         !(definition.inputDefId === 1 && generator.energySourceId === 11),
+      undefined,
       true,
     );
 

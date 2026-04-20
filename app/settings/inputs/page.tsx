@@ -58,6 +58,11 @@ export default async function InputsSettingsPage(props: {
                     type: "textarea",
                   },
                   {
+                    key: "alternative_names",
+                    type: "alternative-names",
+                    required: false,
+                  },
+                  {
                     key: "category_id",
                     type: "managed-list",
                     managedListName: "Input Category",
@@ -88,7 +93,13 @@ export default async function InputsSettingsPage(props: {
                   },
                   {
                     key: "description",
-                    type: "text",
+                    type: "textarea",
+                    required: false,
+                  },
+                  {
+                    key: "alternative_names",
+                    type: "alternative-names",
+                    required: false,
                   },
                   {
                     key: "category_id",

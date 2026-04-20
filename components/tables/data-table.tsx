@@ -38,6 +38,7 @@ interface DataTableProps<T> {
     fields: {
       key: keyof T;
       type: FieldType;
+      required?: boolean;
       disabled?: boolean;
       selectList?: {
         label: string;

@@ -5,6 +5,7 @@ import { db } from "@/db/connection";
 import {
   FormulaInput,
   InputDefinition,
+  InputDefinitionAlternativeNames,
   inputDefinitions,
 } from "@/db/schema/dataEntry";
 import { managedListItems, managedLists } from "@/db/schema/managedLists";
@@ -50,6 +51,7 @@ export interface SaveInputFormulaPayload {
 interface CreateInputDefinitionPayload {
   name: string;
   description?: string | null;
+  alternative_names?: InputDefinitionAlternativeNames | string | null;
   data_type_id: string | number;
   category_id: string | number;
   subcategory_id: string | number;
@@ -61,6 +63,7 @@ interface UpdateInputDefinitionPayload {
   id: string | number;
   name?: string;
   description?: string | null;
+  alternative_names?: InputDefinitionAlternativeNames | string | null;
   data_type_id?: string | number;
   category_id?: string | number;
   subcategory_id?: string | number;
@@ -68,6 +71,78 @@ interface UpdateInputDefinitionPayload {
   utility_service_id?: number | null;
   is_active?: boolean;
 }
+
+const parseAlternativeNames = (
+  raw: InputDefinitionAlternativeNames | string | null | undefined,
+): InputDefinitionAlternativeNames | null => {
+  if (raw == null) {
+    return null;
+  }
+
+  if (typeof raw === "object") {
+    const normalizedEntries = Object.entries(raw)
+      .map(([key, value]) => [key.trim(), value] as const)
+      .filter(([key]) => key.length > 0)
+      .map(([key, value]) => {
+        if (typeof value !== "string") {
+          throw new Error("Alternative names values must be strings.");
+        }
+
+        const normalizedValue = value.trim();
+        if (!normalizedValue) {
+          throw new Error("Alternative names values cannot be empty strings.");
+        }
+
+        return [key, normalizedValue] as const;
+      });
+
+    if (normalizedEntries.length === 0) {
+      return null;
+    }
+
+    return Object.fromEntries(normalizedEntries);
+  }
+
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    throw new Error(
+      'Alternative names must be valid JSON, e.g. {"41":"Solar output"}.',
+    );
+  }
+
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("Alternative names must be a JSON object.");
+  }
+
+  const normalizedEntries = Object.entries(parsed)
+    .map(([key, value]) => [key.trim(), value] as const)
+    .filter(([key]) => key.length > 0)
+    .map(([key, value]) => {
+      if (typeof value !== "string") {
+        throw new Error("Alternative names values must be strings.");
+      }
+
+      const normalizedValue = value.trim();
+      if (!normalizedValue) {
+        throw new Error("Alternative names values cannot be empty strings.");
+      }
+
+      return [key, normalizedValue] as const;
+    });
+
+  if (normalizedEntries.length === 0) {
+    return null;
+  }
+
+  return Object.fromEntries(normalizedEntries);
+};
 
 export async function GetAllInputDefinitions(): Promise<InputDefinition[]> {
   const ml = await GetAllManagedListItems();
@@ -106,10 +181,22 @@ export async function CreateInputDefinition(
   }
 
   const toNumber = (value: string | number) => Number(value);
+  let alternativeNames: InputDefinitionAlternativeNames | null = null;
+
+  try {
+    alternativeNames = parseAlternativeNames(data.alternative_names);
+  } catch (error) {
+    return {
+      success: false,
+      message: (error as Error).message,
+    };
+  }
+
   const payload = {
     name,
     description: data.description?.trim() || null,
     variable_name: createVariableName(name),
+    alternative_names: alternativeNames,
     data_type_id: toNumber(data.data_type_id),
     category_id: toNumber(data.category_id),
     subcategory_id: toNumber(data.subcategory_id),
@@ -199,6 +286,17 @@ export async function UpdateInputDefinition(
 
   if (typeof data.description === "string") {
     patch.description = data.description.trim() || null;
+  }
+
+  if (data.alternative_names !== undefined) {
+    try {
+      patch.alternative_names = parseAlternativeNames(data.alternative_names);
+    } catch (error) {
+      return {
+        success: false,
+        message: (error as Error).message,
+      };
+    }
   }
 
   const assignNumericField = (
@@ -303,6 +401,7 @@ export async function UpdateInputDefinitionFromExcel(
     id: item.input_id,
     name: item.name,
     description: item.description,
+    alternative_names: null,
     data_type_id: item.data_type_id,
     category_id: item.input_category_id,
     subcategory_id: item.input_subcategory_id,

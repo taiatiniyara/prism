@@ -85,6 +85,46 @@ const isAllLikeOption = (name: string): boolean => {
   );
 };
 
+const normalizeAlternativeNames = (
+  value: unknown,
+): Record<string, string> | null => {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return null;
+  }
+
+  const entries = Object.entries(value).filter(
+    ([, label]) => typeof label === "string" && label.trim().length > 0,
+  );
+
+  if (entries.length === 0) {
+    return null;
+  }
+
+  return Object.fromEntries(entries) as Record<string, string>;
+};
+
+const resolveInputDisplayNameForEnergySource = (
+  defaultName: string,
+  alternativeNames: Record<string, string> | null | undefined,
+  energySourceId?: number,
+): string => {
+  if (!alternativeNames || energySourceId == null) {
+    return defaultName;
+  }
+
+  const direct = alternativeNames[String(energySourceId)]?.trim();
+  if (direct) {
+    return direct;
+  }
+
+  const scoped = alternativeNames[`source:${energySourceId}`]?.trim();
+  if (scoped) {
+    return scoped;
+  }
+
+  return defaultName;
+};
+
 const DATA_ENTRY_STATUS_OPTIONS: DataEntryFilterOption[] = [
   mapOption(DataEntryStatusId.Pending, "Pending"),
   mapOption(DataEntryStatusId.Entered, "Entered"),
@@ -258,6 +298,7 @@ const getInputDefinitionsForContext = async (
     .select({
       id: inputDefinitions.id,
       name: inputDefinitions.name,
+      alternativeNames: inputDefinitions.alternative_names,
       categoryId: inputDefinitions.category_id,
       subcategoryId: inputDefinitions.subcategory_id,
       subcategoryName: sql<string | null>`(
@@ -290,6 +331,7 @@ const getInputDefinitionsForContext = async (
     .map((row) => ({
       id: row.id,
       name: row.name,
+      alternativeNames: normalizeAlternativeNames(row.alternativeNames),
       categoryId: row.categoryId,
       subcategoryId: row.subcategoryId,
       dataTypeName: row.dataTypeName,
@@ -543,6 +585,17 @@ const getGenerationGroupsForContext = async (
     return [];
   }
 
+  const definitionCandidates = filterInputDefinitionsByContext(
+    await getInputDefinitionsForContext(context),
+    context,
+  );
+  const alternativeNamesByInputDefId = new Map(
+    definitionCandidates.map((definition) => [
+      definition.id,
+      definition.alternativeNames,
+    ]),
+  );
+
   const definitionRows = await getInputDefinitionRowsForContext(context);
   if (definitionRows.length === 0) {
     return [];
@@ -669,6 +722,14 @@ const getGenerationGroupsForContext = async (
 
       return isGenerationRelevant && isSourceRelevant;
     },
+    (row, generator) => ({
+      ...row,
+      inputName: resolveInputDisplayNameForEnergySource(
+        row.inputName,
+        alternativeNamesByInputDefId.get(row.inputDefId),
+        generator.energySourceId,
+      ),
+    }),
     true,
   );
 };

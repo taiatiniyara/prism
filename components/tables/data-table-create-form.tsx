@@ -26,6 +26,7 @@ import { toast } from "sonner";
 import DataTableManagedListInput from "./data-table-managed-list-input";
 import { ScrollArea } from "../ui/scroll-area";
 import BooleanFormInput from "./boolean-form-input";
+import InputAlternativeNamesEditor from "./input-alternative-names-editor";
 
 export type FieldType =
   | "text"
@@ -37,6 +38,7 @@ export type FieldType =
   | "email"
   | "boolean"
   | "managed-list"
+  | "alternative-names"
   | "color";
 
 export interface DataTableFormResponse<T> {
@@ -48,6 +50,7 @@ export interface DataTableFormResponse<T> {
 interface DataTableCreateFormField<T> {
   key: keyof T;
   type: FieldType;
+  required?: boolean;
   disabled?: boolean;
   selectList?: {
     label: string;
@@ -121,7 +124,7 @@ function field<T>(field: DataTableCreateFormField<T>) {
     return (
       <Label className="flex justify-start border p-3 shadow rounded-lg">
         <Checkbox
-          required
+          required={field.required ?? true}
           disabled={field.disabled}
           name={field.key as string}
         />
@@ -144,7 +147,7 @@ function field<T>(field: DataTableCreateFormField<T>) {
     return (
       <Input
         className="h-10 p-0 border-0 shadow-none w-24"
-        required
+        required={field.required ?? true}
         disabled={field.disabled}
         type={field.type}
         name={field.key as string}
@@ -155,7 +158,7 @@ function field<T>(field: DataTableCreateFormField<T>) {
   if (field.type === "radio") {
     return (
       <Input
-        required
+        required={field.required ?? true}
         disabled={field.disabled}
         type={field.type}
         name={field.key as string}
@@ -166,7 +169,7 @@ function field<T>(field: DataTableCreateFormField<T>) {
   if (field.type === "textarea") {
     return (
       <Textarea
-        required
+        required={field.required ?? true}
         disabled={field.disabled}
         name={field.key as string}
       ></Textarea>
@@ -182,9 +185,18 @@ function field<T>(field: DataTableCreateFormField<T>) {
     );
   }
 
+  if (field.type === "alternative-names") {
+    return (
+      <InputAlternativeNamesEditor
+        inputName={field.key as string}
+        disabled={field.disabled}
+      />
+    );
+  }
+
   return (
     <Input
-      required
+      required={field.required ?? true}
       disabled={field.disabled}
       type={field.type}
       name={field.key as string}

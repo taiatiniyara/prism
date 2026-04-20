@@ -11,6 +11,7 @@ import { DataEntryComment, DataEntryStatusId } from "@/db/schema/dataEntry";
 export interface InputDefinitionCandidate {
   id: number;
   name: string;
+  alternativeNames: Record<string, string> | null;
   categoryId: number;
   subcategoryId: number;
   dataTypeId: number;

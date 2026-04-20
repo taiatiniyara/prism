@@ -25,11 +25,15 @@ export interface FormulaInput {
   energy_source_id?: number | null;
 }
 
+export type InputDefinitionAlternativeNames = Record<string, string>;
+
 export const inputDefinitions = pgTable("input_definitions", {
   id: serial("id").primaryKey().notNull(),
   name: varchar("name", { length: 255 }).notNull(),
   description: varchar("description", { length: 255 }),
   variable_name: varchar("variable_name", { length: 255 }),
+  alternative_names:
+    json("alternative_names").$type<InputDefinitionAlternativeNames>(),
   formula: text("formula"),
   formula_inputs: json("formula_inputs").$type<FormulaInput[]>(),
   category_id: integer("category_id")

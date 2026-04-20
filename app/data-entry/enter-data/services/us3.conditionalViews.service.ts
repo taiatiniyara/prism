@@ -79,6 +79,11 @@ export const buildGenerationGroups = (
     generator: GeneratorCandidate,
     definition: DataEntryInputRowView,
   ) => boolean,
+  transformRow?: (
+    row: DataEntryInputRowView,
+    generator: GeneratorCandidate,
+    definition: DataEntryInputRowView,
+  ) => DataEntryInputRowView,
   excludeEmptyGroups = false,
 ): DataEntryGeneratorGroupView[] => {
   const groups = generators
@@ -97,7 +102,7 @@ export const buildGenerationGroups = (
               candidate.inputDefId === definition.inputDefId,
           );
 
-          return {
+          const row: DataEntryInputRowView = {
             ...definition,
             dataEntryId: entry?.id,
             energyResourceId: generator.id,
@@ -109,6 +114,8 @@ export const buildGenerationGroups = (
             value: entry?.value ?? null,
             comments: serializeComments(entry?.comments ?? null),
           };
+
+          return transformRow ? transformRow(row, generator, definition) : row;
         });
 
       return {

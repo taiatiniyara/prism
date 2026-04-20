@@ -16,6 +16,7 @@ import SubmitBtn from "../submitBtn";
 import { Label } from "../ui/label";
 import { formatLabel } from "@/lib/formatters";
 import { Input } from "../ui/input";
+import { Textarea } from "../ui/textarea";
 import {
   Select,
   SelectContent,
@@ -27,10 +28,12 @@ import { toast } from "sonner";
 import { FaEdit, FaSave } from "react-icons/fa";
 import DataTableManagedListInput from "./data-table-managed-list-input";
 import BooleanFormInput from "./boolean-form-input";
+import InputAlternativeNamesEditor from "./input-alternative-names-editor";
 
 export interface DataTableUpdateFormField<T> {
   key: keyof T;
   type: FieldType;
+  required?: boolean;
   disabled?: boolean;
   selectList?: {
     label: string;
@@ -45,6 +48,18 @@ export interface DataTableUpdateFormProps<T> {
   fields: DataTableUpdateFormField<T>[];
   formAction: (body: Partial<T>) => Promise<DataTableFormResponse<T>>;
 }
+
+const stringifyFieldValue = (value: unknown): string => {
+  if (value == null) {
+    return "";
+  }
+
+  if (typeof value === "object") {
+    return JSON.stringify(value, null, 2);
+  }
+
+  return String(value);
+};
 
 function updateField<T>(field: DataTableUpdateFormField<T>) {
   if (field.type === "boolean") {
@@ -90,24 +105,46 @@ function updateField<T>(field: DataTableUpdateFormField<T>) {
       />
     );
   }
+
+  if (field.type === "alternative-names") {
+    return (
+      <InputAlternativeNamesEditor
+        inputName={field.key as string}
+        value={field.value}
+        disabled={field.disabled}
+      />
+    );
+  }
   if (field.type === "color") {
     return (
       <Input
         className="border-0 shadow-none h-12 w-24 p-0"
-        required
+        required={field.required ?? true}
         disabled={field.disabled}
         name={field.key as string}
-        defaultValue={String(field.value)}
+        defaultValue={stringifyFieldValue(field.value)}
         type="color"
       />
     );
   }
+
+  if (field.type === "textarea") {
+    return (
+      <Textarea
+        required={field.required ?? true}
+        disabled={field.disabled}
+        name={field.key as string}
+        defaultValue={stringifyFieldValue(field.value)}
+      />
+    );
+  }
+
   return (
     <Input
-      required
+      required={field.required ?? true}
       disabled={field.disabled}
       name={field.key as string}
-      defaultValue={String(field.value)}
+      defaultValue={stringifyFieldValue(field.value)}
       type={field.type}
     />
   );

@@ -51,6 +51,7 @@ describe("filter cascade behavior", () => {
       {
         id: 1,
         name: "Gen MWh",
+        alternativeNames: null,
         categoryId: 515,
         subcategoryId: 600,
         dataTypeId: 1,
@@ -60,6 +61,7 @@ describe("filter cascade behavior", () => {
       {
         id: 2,
         name: "Station Name",
+        alternativeNames: null,
         categoryId: 515,
         subcategoryId: 601,
         dataTypeId: 2,
@@ -69,6 +71,7 @@ describe("filter cascade behavior", () => {
       {
         id: 3,
         name: "Safety",
+        alternativeNames: null,
         categoryId: 999,
         subcategoryId: 700,
         dataTypeId: 3,
