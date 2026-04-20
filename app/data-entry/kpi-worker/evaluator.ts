@@ -22,7 +22,11 @@ export const evaluateKpiFormula = (
   formula: string,
   variables: Record<string, FormulaVariableValue>,
 ): KpiFormulaEvaluationResult => {
-  if (formula.trim().length === 0) {
+  const normalizedFormula = formula
+    .replace(/\bAND\b/gi, "&&")
+    .replace(/\bOR\b/gi, "||");
+
+  if (normalizedFormula.trim().length === 0) {
     return {
       status: "error",
       failureType: "formula-invalid",
@@ -43,7 +47,7 @@ export const evaluateKpiFormula = (
 
   try {
     // Formula text is configured by trusted admin workflows.
-    const evaluator = new Function(...names, `return (${formula});`);
+    const evaluator = new Function(...names, `return (${normalizedFormula});`);
     const computed = evaluator(...(values as number[]));
     const numeric = Number(computed);
 

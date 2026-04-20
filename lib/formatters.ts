@@ -22,3 +22,21 @@ export function createVariableName(str: string): string {
     .replace(/\s+/g, "_")
     .replace(/[^a-z0-9_]/g, "");
 }
+
+export function formatReportPeriodDisplay(
+  reportDate: Date,
+  reportPeriodTypeName?: string | null,
+): string {
+  const monthLabel = reportDate.toISOString().slice(0, 7);
+  const normalizedType = (reportPeriodTypeName ?? "").trim().toLowerCase();
+
+  if (normalizedType.includes("financial year")) {
+    return monthLabel.slice(0, 4);
+  }
+
+  if (normalizedType.includes("month")) {
+    return monthLabel;
+  }
+
+  return monthLabel;
+}

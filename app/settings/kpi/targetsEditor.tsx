@@ -538,66 +538,96 @@ export default function KpiTargetsEditor(props: {
           </p>
         ) : null}
 
-        <div className="space-y-3">
-          {rows.map((row, index) => (
-            <div
-              key={row.id}
-              className="flex items-end gap-4"
-            >
-              <Input
-                id={`kpi-target-year-${row.id}`}
-                type="number"
-                placeholder="Year"
-                value={row.year}
-                disabled={!props.canEditTargets || isSaving}
-                onChange={(event) =>
-                  updateRow(row.id, { year: event.target.value })
-                }
-              />
-              <Select
-                value={row.month}
-                onValueChange={(value) => updateRow(row.id, { month: value })}
-                disabled={!props.canEditTargets || isSaving}
-              >
-                <SelectTrigger
-                  id={`kpi-target-month-${row.id}`}
-                  className="h-9 w-full shadow"
+        <div className="overflow-x-auto rounded-md border">
+          <table className="min-w-full text-sm">
+            <thead className="bg-muted/40">
+              <tr className="border-b">
+                <th className="px-3 py-2 text-left font-medium text-muted-foreground">
+                  Year
+                </th>
+                <th className="px-3 py-2 text-left font-medium text-muted-foreground">
+                  Month
+                </th>
+                <th className="px-3 py-2 text-left font-medium text-muted-foreground">
+                  Target Value
+                </th>
+                <th className="px-3 py-2 text-left font-medium text-muted-foreground">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {rows.map((row) => (
+                <tr
+                  key={row.id}
+                  className="border-b align-top last:border-0"
                 >
-                  <SelectValue placeholder="Financial Year Only" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="fy">Financial Year Only</SelectItem>
-                  {MONTHS.map((month) => (
-                    <SelectItem
-                      key={month.value}
-                      value={month.value}
+                  <td className="px-3 py-2 min-w-32">
+                    <Input
+                      id={`kpi-target-year-${row.id}`}
+                      type="number"
+                      placeholder="Year"
+                      value={row.year}
+                      disabled={!props.canEditTargets || isSaving}
+                      onChange={(event) =>
+                        updateRow(row.id, { year: event.target.value })
+                      }
+                    />
+                  </td>
+                  <td className="px-3 py-2 min-w-56">
+                    <Select
+                      value={row.month}
+                      onValueChange={(value) =>
+                        updateRow(row.id, { month: value })
+                      }
+                      disabled={!props.canEditTargets || isSaving}
                     >
-                      {month.label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              <Input
-                id={`kpi-target-value-${row.id}`}
-                type="text"
-                placeholder="Target value"
-                value={row.targetValue}
-                disabled={!props.canEditTargets || isSaving}
-                onChange={(event) =>
-                  updateRow(row.id, { targetValue: event.target.value })
-                }
-              />
-              <Button
-                type="button"
-                variant="outline"
-                disabled={!props.canEditTargets || isSaving}
-                className="w-full sm:w-auto lg:col-span-2"
-                onClick={() => removeRow(row.id)}
-              >
-                Remove
-              </Button>
-            </div>
-          ))}
+                      <SelectTrigger
+                        id={`kpi-target-month-${row.id}`}
+                        className="h-9 w-full shadow"
+                      >
+                        <SelectValue placeholder="Financial Year Only" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="fy">Financial Year Only</SelectItem>
+                        {MONTHS.map((month) => (
+                          <SelectItem
+                            key={month.value}
+                            value={month.value}
+                          >
+                            {month.label}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </td>
+                  <td className="px-3 py-2 min-w-56">
+                    <Input
+                      id={`kpi-target-value-${row.id}`}
+                      type="text"
+                      placeholder="Target value"
+                      value={row.targetValue}
+                      disabled={!props.canEditTargets || isSaving}
+                      onChange={(event) =>
+                        updateRow(row.id, { targetValue: event.target.value })
+                      }
+                    />
+                  </td>
+                  <td className="px-3 py-2 w-32">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      disabled={!props.canEditTargets || isSaving}
+                      className="w-full"
+                      onClick={() => removeRow(row.id)}
+                    >
+                      Remove
+                    </Button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
 
         <div className="flex justify-between flex-col gap-2 sm:flex-row sm:items-center">

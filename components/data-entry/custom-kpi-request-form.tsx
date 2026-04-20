@@ -66,7 +66,7 @@ const INITIAL_STATE: FormState = {
   selectedInputDefinitionIds: [],
 };
 
-const FORMULA_OPERATORS = ["+", "-", "*", "/", "(", ")"];
+const FORMULA_OPERATORS = ["+", "-", "*", "/", "(", ")", "AND", "OR"];
 const CUSTOM_KPI_SUBMIT_TOAST_ID = "custom-kpi-request-submit";
 
 export function CustomKpiRequestForm(props: {

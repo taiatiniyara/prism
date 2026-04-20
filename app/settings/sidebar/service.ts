@@ -8,10 +8,13 @@ import {
   sidebarAccess,
 } from "@/db/schema/rls";
 import { createUUID } from "@/lib/utils";
-import { eq } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 export async function getSidebarAccessList() {
-  const sideBarList = await db.select().from(sidebarAccess);
+  const sideBarList = await db
+    .select()
+    .from(sidebarAccess)
+    .orderBy(asc(sidebarAccess.order), asc(sidebarAccess.name));
   return sideBarList;
 }
 
@@ -48,5 +51,27 @@ export async function updateSidebarAccess(
     message: "Sidebar Access updated successfully",
     data: result,
     success: true,
+  };
+}
+
+export async function reorderSidebarAccess(
+  rows: {
+    id: SidebarAccess["id"];
+    order: number;
+  }[],
+): Promise<{ success: boolean; message: string }> {
+  await db.transaction(async (tx) => {
+    for (const row of rows) {
+      await tx
+        .update(sidebarAccess)
+        .set({ order: row.order })
+        .where(eq(sidebarAccess.id, row.id));
+    }
+  });
+
+  revalidatePath("/settings/sidebar");
+  return {
+    success: true,
+    message: "Sidebar order updated successfully",
   };
 }

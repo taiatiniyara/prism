@@ -14,6 +14,7 @@ import {
   organisations,
   serviceAreas,
 } from "@/db/schema/utility";
+import { formatReportPeriodDisplay } from "@/lib/formatters";
 import { buildManagedListNameMap } from "@/lib/managed-list-utils";
 import { CurrentUser } from "@/lib/user.service";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
@@ -248,7 +249,10 @@ export async function GetReportPeriods(
 
     return {
       Id: item.report_periods.id,
-      Period: item.report_periods.report_date.toISOString().slice(0, 7),
+      Period: formatReportPeriodDisplay(
+        item.report_periods.report_date,
+        reportTypeNameById.get(item.report_periods.report_type_id ?? -1),
+      ),
       Utility: item.organisations?.acronym || "",
       Report_Type:
         reportTypeNameById.get(item.report_periods.report_type_id ?? -1) || "",

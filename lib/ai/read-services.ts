@@ -8,6 +8,7 @@ import { managedListItems } from "@/db/schema/managedLists";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { organisations, energyResources } from "@/db/schema/utility";
 import type { AiUserRole, QueryFilterContext } from "@/lib/ai/types";
+import { formatReportPeriodDisplay } from "@/lib/formatters";
 import { and, eq, inArray, isNotNull, ne, sql } from "drizzle-orm";
 
 interface ReadScope {
@@ -455,6 +456,7 @@ export const getRenewableGenerationByUtilityYear = async (
     .select({
       reportPeriodId: reportPeriods.id,
       reportDate: reportPeriods.report_date,
+      reportTypeId: reportPeriods.report_type_id,
       value: dataEntries.value,
       sourceId: sql<
         number | null
@@ -488,6 +490,9 @@ export const getRenewableGenerationByUtilityYear = async (
     }
     if (row.unitId != null) {
       managedListIds.add(row.unitId);
+    }
+    if (row.reportTypeId != null) {
+      managedListIds.add(row.reportTypeId);
     }
   }
 
@@ -567,7 +572,12 @@ export const getRenewableGenerationByUtilityYear = async (
 
   const byPeriod = new Map<string, number>();
   for (const row of numericRows) {
-    const periodLabel = row.reportDate.toISOString().slice(0, 7);
+    const periodLabel = formatReportPeriodDisplay(
+      row.reportDate,
+      row.reportTypeId != null
+        ? managedItemNames.get(row.reportTypeId)
+        : undefined,
+    );
     byPeriod.set(
       periodLabel,
       (byPeriod.get(periodLabel) ?? 0) + row.numericValue,

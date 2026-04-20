@@ -6,6 +6,7 @@ import {
   energyResources,
   NewEnergyResource,
   organisations,
+  powerStations,
   serviceAreas,
 } from "@/db/schema/utility";
 import { getCurrentUser } from "@/lib/user.service";
@@ -18,6 +19,7 @@ import {
   buildManagedListNameMap,
   resolveManagedListName,
 } from "@/lib/managed-list-utils";
+import { formatReportPeriodDisplay } from "@/lib/formatters";
 
 export async function GetAllEnergyResources(): Promise<EnergyResource[]> {
   const user = await getCurrentUser();
@@ -35,6 +37,10 @@ export async function GetAllEnergyResources(): Promise<EnergyResource[]> {
     .leftJoin(
       serviceAreas,
       eq(energyResources.service_area_id, serviceAreas.id),
+    )
+    .leftJoin(
+      powerStations,
+      eq(energyResources.power_station_id, powerStations.id),
     );
   if (user?.role !== "DEV") {
     query.where(
@@ -50,9 +56,17 @@ export async function GetAllEnergyResources(): Promise<EnergyResource[]> {
     return {
       ...item.energy_resources,
       utility: item.organisations?.name,
+      power_station: item.power_stations?.name,
       service_area: item.service_areas?.name,
       report_period: item.report_periods?.report_date
-        ? item.report_periods?.report_date.toISOString().slice(0, 7)
+        ? formatReportPeriodDisplay(
+            item.report_periods.report_date,
+            resolveManagedListName(
+              managedListNamesById,
+              item.report_periods.report_type_id,
+              null,
+            ),
+          )
         : "",
       energy_provider: resolveManagedListName(
         managedListNamesById,

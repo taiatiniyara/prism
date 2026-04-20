@@ -110,8 +110,14 @@ export const powerStations = pgTable("power_stations", {
   utility_id: integer("utility_id")
     .notNull()
     .references(() => organisations.id),
+  commissioned_date: varchar("commissioned_date", { length: 255 }),
+  decommissioned_date: varchar("decommissioned_date", { length: 255 }),
+  is_active: boolean("is_active").notNull().default(true),
 });
-export type PowerStation = typeof powerStations.$inferSelect;
+export type PowerStation = typeof powerStations.$inferSelect & {
+  service_area?: string | null;
+  utility?: string | null;
+};
 export type NewPowerStation = typeof powerStations.$inferInsert;
 
 export const energyResources = pgTable(

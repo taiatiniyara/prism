@@ -4,6 +4,7 @@ import { SidebarAccess } from "@/db/schema/rls";
 import {
   addSidebarAccess,
   getSidebarAccessList,
+  reorderSidebarAccess,
   updateSidebarAccess,
 } from "./service";
 
@@ -56,6 +57,10 @@ async function SidebarTable() {
           },
         ],
         formAction: updateSidebarAccess,
+      }}
+      reorderRowsProps={{
+        orderKey: "order",
+        formAction: reorderSidebarAccess,
       }}
     />
   );

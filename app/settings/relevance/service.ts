@@ -14,6 +14,7 @@ import { kpiDefinitions } from "@/db/schema/kpi";
 import { managedListItems, managedLists } from "@/db/schema/managedLists";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { getCurrentUser } from "@/lib/user.service";
+import { formatReportPeriodDisplay } from "@/lib/formatters";
 import { and, asc, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { GetManagedListItemByName } from "../managed-lists/service";
@@ -242,8 +243,13 @@ const getUtilityRelevanceFilterContext = async (
     .select({
       id: reportPeriods.id,
       reportDate: reportPeriods.report_date,
+      reportTypeName: managedListItems.name,
     })
     .from(reportPeriods)
+    .leftJoin(
+      managedListItems,
+      eq(reportPeriods.report_type_id, managedListItems.id),
+    )
     .where(eq(reportPeriods.utility_id, utilityId))
     .orderBy(desc(reportPeriods.report_date));
 
@@ -257,7 +263,7 @@ const getUtilityRelevanceFilterContext = async (
   const reportPeriodOptions: RelevanceFilterOption[] = reportPeriodList.map(
     (item) => ({
       id: item.id,
-      name: item.reportDate.toISOString().slice(0, 7),
+      name: formatReportPeriodDisplay(item.reportDate, item.reportTypeName),
     }),
   );
 

@@ -30,6 +30,7 @@ import InputAlternativeNamesEditor from "./input-alternative-names-editor";
 
 export type FieldType =
   | "text"
+  | "date"
   | "number"
   | "select"
   | "checkbox"

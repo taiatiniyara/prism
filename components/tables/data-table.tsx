@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { Heading } from "../heading";
 import { cn } from "@/lib/utils";
 import { Input } from "../ui/input";
@@ -21,15 +21,22 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuRadioGroup,
-  DropdownMenuRadioItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "../ui/dropdown-menu";
-import { FilterIcon } from "lucide-react";
+import { Checkbox } from "../ui/checkbox";
+import {
+  ArrowDownIcon,
+  ArrowUpIcon,
+  CheckIcon,
+  FilterIcon,
+  GripVertical,
+  Loader2Icon,
+} from "lucide-react";
+import { toast } from "sonner";
 
-interface DataTableProps<T> {
-  columns: (keyof T)[];
+interface DataTableProps<T extends DataTableRecord> {
+  columns: DataTableColumn<T>[];
   title: string;
   data: T[];
   createFormProps?: DataTableCreateFormProps<T>;
@@ -47,23 +54,70 @@ interface DataTableProps<T> {
       managedListName?: string;
     }[];
   };
+  reorderRowsProps?: {
+    orderKey: keyof T;
+    formAction: (
+      rows: {
+        id: T["id"];
+        order: number;
+      }[],
+    ) => Promise<{ success: boolean; message: string }>;
+  };
 }
 
 type SortDirection = "asc" | "desc" | null;
+type ColumnFilter = { search: string; selectedValues: string[] };
 
 type DataTableRecord = { id: string | number } & Record<string, unknown>;
+
+type DataTableColumn<T> =
+  | keyof T
+  | {
+      name: keyof T;
+      display: string;
+    };
 
 export default function DataTable<T extends DataTableRecord>(
   props: DataTableProps<T>,
 ) {
-  const { columns, title, data, createFormProps, updateFormProps } = props;
+  const {
+    columns,
+    data,
+    title,
+    createFormProps,
+    updateFormProps,
+    reorderRowsProps,
+  } = props;
 
   const [search, setSearch] = useState("");
   const [sortColumn, setSortColumn] = useState<keyof T | null>(null);
   const [sortDirection, setSortDirection] = useState<SortDirection>(null);
-  const [columnFilters, setColumnFilters] = useState<Record<string, string>>(
-    {},
+  const [columnFilters, setColumnFilters] = useState<
+    Record<string, ColumnFilter>
+  >({});
+  const [rows, setRows] = useState<T[]>(data);
+  const [draggedRowId, setDraggedRowId] = useState<T["id"] | null>(null);
+  const [dragOverRowId, setDragOverRowId] = useState<T["id"] | null>(null);
+  const [savingOrder, setSavingOrder] = useState(false);
+
+  const normalizedColumns = useMemo(
+    () =>
+      columns.map((column) => {
+        if (typeof column === "object") {
+          return column;
+        }
+
+        return {
+          name: column,
+          display: formatLabel(String(column)),
+        };
+      }),
+    [columns],
   );
+
+  useEffect(() => {
+    setRows(data);
+  }, [data]);
 
   function handleSort(column: keyof T) {
     if (sortColumn === column) {
@@ -86,36 +140,153 @@ export default function DataTable<T extends DataTableRecord>(
     return typeof firstValue === "boolean" ? "boolean" : "text";
   }
 
-  function setColumnFilter(column: keyof T, value: string) {
+  function normalizeFilterValue(
+    value: unknown,
+    columnType: "boolean" | "text",
+  ): string {
+    if (columnType === "boolean") {
+      return String(Boolean(value));
+    }
+
+    const normalized = String(value ?? "").trim();
+    return normalized.length === 0 ? "__empty__" : normalized;
+  }
+
+  function displayFilterValue(
+    value: string,
+    columnType: "boolean" | "text",
+  ): string {
+    if (columnType === "boolean") {
+      return value === "true" ? "Yes" : "No";
+    }
+
+    return value === "__empty__" ? "(Empty)" : value;
+  }
+
+  function setColumnSearchFilter(column: keyof T, value: string) {
     const key = String(column);
     setColumnFilters((prev) => {
-      if (value === "" || value === "all") {
+      const nextFilter: ColumnFilter = {
+        search: value,
+        selectedValues: prev[key]?.selectedValues ?? [],
+      };
+      const hasSearch = nextFilter.search.trim().length > 0;
+      const hasSelections = nextFilter.selectedValues.length > 0;
+
+      if (!hasSearch && !hasSelections) {
         const { [key]: _removed, ...rest } = prev;
         return rest;
       }
+
       return {
         ...prev,
-        [key]: value,
+        [key]: nextFilter,
       };
+    });
+  }
+
+  function setColumnValueFilter(
+    column: keyof T,
+    value: string,
+    checked: boolean,
+  ) {
+    const key = String(column);
+
+    setColumnFilters((prev) => {
+      const current = prev[key] ?? { search: "", selectedValues: [] };
+      const currentSet = new Set(current.selectedValues);
+
+      if (checked) {
+        currentSet.add(value);
+      } else {
+        currentSet.delete(value);
+      }
+
+      const nextFilter: ColumnFilter = {
+        search: current.search,
+        selectedValues: Array.from(currentSet),
+      };
+      const hasSearch = nextFilter.search.trim().length > 0;
+      const hasSelections = nextFilter.selectedValues.length > 0;
+
+      if (!hasSearch && !hasSelections) {
+        const { [key]: _removed, ...rest } = prev;
+        return rest;
+      }
+
+      return {
+        ...prev,
+        [key]: nextFilter,
+      };
+    });
+  }
+
+  function clearColumnFilter(column: keyof T) {
+    const key = String(column);
+    setColumnFilters((prev) => {
+      const { [key]: _removed, ...rest } = prev;
+      return rest;
     });
   }
 
   const activeFilters = useMemo(
     () =>
-      Object.entries(columnFilters).filter(([, value]) =>
-        value === "all" ? false : value.trim().length > 0,
-      ),
+      Object.entries(columnFilters).filter(([, filter]) => {
+        const hasSearch = filter.search.trim().length > 0;
+        const hasSelections = filter.selectedValues.length > 0;
+        return hasSearch || hasSelections;
+      }),
     [columnFilters],
   );
 
+  const aggregatedColumnValues = useMemo(() => {
+    const valueCountsByColumn = new Map<string, Map<string, number>>();
+
+    for (const row of rows) {
+      for (const column of normalizedColumns) {
+        const key = String(column.name);
+        const columnType = inferColumnType(column.name);
+        const normalizedValue = normalizeFilterValue(
+          row[column.name],
+          columnType,
+        );
+        const columnValues =
+          valueCountsByColumn.get(key) ?? new Map<string, number>();
+
+        columnValues.set(
+          normalizedValue,
+          (columnValues.get(normalizedValue) ?? 0) + 1,
+        );
+        valueCountsByColumn.set(key, columnValues);
+      }
+    }
+
+    return valueCountsByColumn;
+  }, [normalizedColumns, rows]);
+
+  const canReorderRows =
+    Boolean(reorderRowsProps) &&
+    search.trim().length === 0 &&
+    !sortColumn &&
+    !sortDirection &&
+    activeFilters.length === 0;
+
+  const isOrderDirty = useMemo(() => {
+    if (!reorderRowsProps || rows.length !== data.length) {
+      return false;
+    }
+
+    return rows.some((row, index) => row.id !== data[index]?.id);
+  }, [data, reorderRowsProps, rows]);
+
   const processedData = useMemo(() => {
-    let result = [...data];
+    let result = [...rows];
 
     if (search.trim()) {
       const lower = search.toLowerCase();
       result = result.filter((row) =>
-        columns.some((col) =>
-          String(row[col] ?? "")
+        normalizedColumns.some((col) =>
+          String(row[col.name] ?? "")
             .toLowerCase()
             .includes(lower),
         ),
@@ -125,21 +296,38 @@ export default function DataTable<T extends DataTableRecord>(
     if (activeFilters.length > 0) {
       result = result.filter((row) => {
         return activeFilters.every(([columnKey, filterValue]) => {
-          const column = columns.find((col) => String(col) === columnKey);
+          const column = normalizedColumns.find(
+            (col) => String(col.name) === columnKey,
+          );
           if (!column) {
             return true;
           }
 
-          const columnType = inferColumnType(column);
-          const rowValue = row[column];
+          const columnType = inferColumnType(column.name);
+          const rowValue = row[column.name];
+          const normalizedRowValue = normalizeFilterValue(rowValue, columnType);
+          const searchFilter = filterValue.search.trim().toLowerCase();
+          const hasValueSelections = filterValue.selectedValues.length > 0;
 
-          if (columnType === "boolean") {
-            return Boolean(rowValue) === (filterValue === "true");
+          if (searchFilter.length > 0) {
+            const searchTarget =
+              columnType === "boolean"
+                ? displayFilterValue(normalizedRowValue, columnType)
+                : String(rowValue ?? "");
+
+            if (!searchTarget.toLowerCase().includes(searchFilter)) {
+              return false;
+            }
           }
 
-          return String(rowValue ?? "")
-            .toLowerCase()
-            .includes(filterValue.toLowerCase());
+          if (hasValueSelections) {
+            const selectedSet = new Set(filterValue.selectedValues);
+            if (!selectedSet.has(normalizedRowValue)) {
+              return false;
+            }
+          }
+
+          return true;
         });
       });
     }
@@ -154,7 +342,89 @@ export default function DataTable<T extends DataTableRecord>(
     }
 
     return result;
-  }, [activeFilters, columns, data, search, sortColumn, sortDirection]);
+  }, [
+    activeFilters,
+    normalizedColumns,
+    rows,
+    search,
+    sortColumn,
+    sortDirection,
+  ]);
+
+  function reorderRowsById(fromId: T["id"], toId: T["id"]) {
+    setRows((prev) => {
+      const fromIndex = prev.findIndex((row) => row.id === fromId);
+      const toIndex = prev.findIndex((row) => row.id === toId);
+
+      if (fromIndex === -1 || toIndex === -1 || fromIndex === toIndex) {
+        return prev;
+      }
+
+      const next = [...prev];
+      const [moved] = next.splice(fromIndex, 1);
+      next.splice(toIndex, 0, moved);
+
+      if (!reorderRowsProps) {
+        return next;
+      }
+
+      return next.map((row, index) => ({
+        ...row,
+        [reorderRowsProps.orderKey]: index,
+      }));
+    });
+  }
+
+  function moveRowByOffset(rowId: T["id"], offset: -1 | 1) {
+    setRows((prev) => {
+      const currentIndex = prev.findIndex((row) => row.id === rowId);
+      if (currentIndex === -1) {
+        return prev;
+      }
+
+      const targetIndex = currentIndex + offset;
+      if (targetIndex < 0 || targetIndex >= prev.length) {
+        return prev;
+      }
+
+      const next = [...prev];
+      const [moved] = next.splice(currentIndex, 1);
+      next.splice(targetIndex, 0, moved);
+
+      if (!reorderRowsProps) {
+        return next;
+      }
+
+      return next.map((row, index) => ({
+        ...row,
+        [reorderRowsProps.orderKey]: index,
+      }));
+    });
+  }
+
+  async function saveOrder() {
+    if (!reorderRowsProps || !isOrderDirty || savingOrder) {
+      return;
+    }
+
+    setSavingOrder(true);
+    try {
+      const payload = rows.map((row, index) => ({
+        id: row.id as T["id"],
+        order: Number(row[reorderRowsProps.orderKey] ?? index),
+      }));
+      const response = await reorderRowsProps.formAction(payload);
+      if (response.success) {
+        toast.success(response.message);
+        return;
+      }
+      toast.error(response.message);
+    } catch {
+      toast.error("Unable to save row order");
+    } finally {
+      setSavingOrder(false);
+    }
+  }
 
   function SortIcon({ column }: { column: keyof T }) {
     const isActive = sortColumn === column;
@@ -224,10 +494,24 @@ export default function DataTable<T extends DataTableRecord>(
     return String(row[col] ?? "");
   }
 
-  function columnFilterMenu(column: keyof T) {
+  function columnFilterMenu(column: keyof T, display: string) {
     const columnType = inferColumnType(column);
     const key = String(column);
     const hasFilter = key in columnFilters;
+    const filter = columnFilters[key] ?? { search: "", selectedValues: [] };
+    const valueCounts =
+      aggregatedColumnValues.get(key) ?? new Map<string, number>();
+    const options = Array.from(valueCounts.entries()).sort(([a], [b]) => {
+      if (columnType === "boolean") {
+        if (a === b) return 0;
+        if (a === "true") return -1;
+        if (b === "true") return 1;
+      }
+
+      if (a === "__empty__") return 1;
+      if (b === "__empty__") return -1;
+      return a.localeCompare(b, undefined, { numeric: true });
+    });
 
     return (
       <DropdownMenu>
@@ -236,7 +520,7 @@ export default function DataTable<T extends DataTableRecord>(
             variant="ghost"
             size="icon-xs"
             className={cn("ml-1", hasFilter && "text-primary")}
-            aria-label={`Filter ${formatLabel(key)}`}
+            aria-label={`Filter ${display}`}
             onClick={(e) => e.stopPropagation()}
           >
             <FilterIcon className="size-3" />
@@ -244,37 +528,59 @@ export default function DataTable<T extends DataTableRecord>(
         </DropdownMenuTrigger>
         <DropdownMenuContent
           align="start"
-          className="w-56"
+          className="w-72"
           onClick={(e) => e.stopPropagation()}
         >
-          <DropdownMenuLabel>{formatLabel(key)} filter</DropdownMenuLabel>
+          <DropdownMenuLabel>{display} filter</DropdownMenuLabel>
           <DropdownMenuSeparator />
 
-          {columnType === "boolean" ? (
-            <DropdownMenuRadioGroup
-              value={columnFilters[key] ?? "all"}
-              onValueChange={(value) => setColumnFilter(column, value)}
-            >
-              <DropdownMenuRadioItem value="all">All</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="true">Yes</DropdownMenuRadioItem>
-              <DropdownMenuRadioItem value="false">No</DropdownMenuRadioItem>
-            </DropdownMenuRadioGroup>
-          ) : (
-            <div className="px-2 py-1">
-              <Input
-                value={columnFilters[key] ?? ""}
-                onChange={(e) => setColumnFilter(column, e.target.value)}
-                className="h-8 text-xs"
-                placeholder={`Filter ${formatLabel(key)}`}
-                onClick={(e) => e.stopPropagation()}
-              />
-            </div>
-          )}
+          <div className="px-2 py-1">
+            <Input
+              value={filter.search}
+              onChange={(e) => setColumnSearchFilter(column, e.target.value)}
+              className="h-8 text-xs"
+              placeholder={`Search ${display}`}
+              onClick={(e) => e.stopPropagation()}
+            />
+          </div>
+
+          <DropdownMenuSeparator />
+
+          <div className="max-h-56 overflow-y-auto px-1">
+            {options.length === 0 ? (
+              <p className="px-2 py-2 text-xs text-muted-foreground">
+                No values
+              </p>
+            ) : (
+              options.map(([value]) => (
+                <DropdownMenuItem
+                  key={value}
+                  onClick={() =>
+                    setColumnValueFilter(
+                      column,
+                      value,
+                      !filter.selectedValues.includes(value),
+                    )
+                  }
+                  onSelect={(e) => e.preventDefault()}
+                  className="gap-2"
+                >
+                  <Checkbox
+                    checked={filter.selectedValues.includes(value)}
+                    className="size-4 border border-border"
+                  />
+                  <span className="truncate">
+                    {displayFilterValue(value, columnType)}
+                  </span>
+                </DropdownMenuItem>
+              ))
+            )}
+          </div>
 
           {hasFilter && (
             <>
               <DropdownMenuSeparator />
-              <DropdownMenuItem onClick={() => setColumnFilter(column, "")}>
+              <DropdownMenuItem onClick={() => clearColumnFilter(column)}>
                 Clear filter
               </DropdownMenuItem>
             </>
@@ -296,6 +602,31 @@ export default function DataTable<T extends DataTableRecord>(
             {title}
           </Heading>
           {createFormProps && <DataTableCreateForm {...createFormProps} />}
+          {reorderRowsProps && isOrderDirty && (
+            <Button
+              size="sm"
+              className="h-7 text-xs"
+              onClick={saveOrder}
+              disabled={savingOrder}
+            >
+              {savingOrder ? (
+                <>
+                  <Loader2Icon className="mr-1.5 size-3 animate-spin" />
+                  Saving order
+                </>
+              ) : (
+                <>
+                  <CheckIcon className="mr-1.5 size-3" />
+                  Save order
+                </>
+              )}
+            </Button>
+          )}
+          {reorderRowsProps && !canReorderRows && (
+            <span className="text-[11px] text-muted-foreground">
+              Clear search, sorting, and filters to reorder rows.
+            </span>
+          )}
         </div>
 
         <div className="flex w-full items-center gap-2 sm:w-auto">
@@ -338,21 +669,26 @@ export default function DataTable<T extends DataTableRecord>(
         <table className="w-full min-w-max text-xs">
           <thead className="sticky top-0 bg-muted z-50">
             <tr>
-              {columns.map((column) => (
+              {reorderRowsProps && (
+                <th className="w-20 px-2 py-2.5 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Move
+                </th>
+              )}
+              {normalizedColumns.map((column) => (
                 <th
-                  key={column as string}
-                  onClick={() => handleSort(column)}
+                  key={String(column.name)}
+                  onClick={() => handleSort(column.name)}
                   className={cn(
                     "whitespace-nowrap px-4 py-2.5 text-left font-semibold uppercase tracking-wider",
                     "text-muted-foreground select-none cursor-pointer",
                     "transition-colors hover:text-foreground hover:bg-muted",
-                    sortColumn === column && "text-foreground bg-muted",
+                    sortColumn === column.name && "text-foreground bg-muted",
                   )}
                 >
                   <span className="inline-flex items-center">
-                    {formatLabel(column as string)}
-                    <SortIcon column={column} />
-                    {columnFilterMenu(column)}
+                    {column.display}
+                    <SortIcon column={column.name} />
+                    {columnFilterMenu(column.name, column.display)}
                   </span>
                 </th>
               ))}
@@ -367,7 +703,11 @@ export default function DataTable<T extends DataTableRecord>(
             {processedData.length === 0 ? (
               <tr>
                 <td
-                  colSpan={columns.length + (updateFormProps ? 1 : 0)}
+                  colSpan={
+                    normalizedColumns.length +
+                    (updateFormProps ? 1 : 0) +
+                    (reorderRowsProps ? 1 : 0)
+                  }
                   className="py-12 text-center text-sm text-muted-foreground"
                 >
                   <div className="flex flex-col items-center gap-1">
@@ -394,18 +734,88 @@ export default function DataTable<T extends DataTableRecord>(
                 </td>
               </tr>
             ) : (
-              processedData.map((record: T, i) => {
+              processedData.map((record: T) => {
                 return (
                   <tr
-                    key={i}
-                    className="group transition-colors hover:bg-muted/40"
+                    key={String(record.id)}
+                    draggable={canReorderRows}
+                    onDragStart={() => setDraggedRowId(record.id as T["id"])}
+                    onDragOver={(event) => {
+                      if (!canReorderRows) {
+                        return;
+                      }
+                      event.preventDefault();
+                      if (dragOverRowId !== record.id) {
+                        setDragOverRowId(record.id as T["id"]);
+                      }
+                    }}
+                    onDrop={(event) => {
+                      if (!canReorderRows || !draggedRowId) {
+                        return;
+                      }
+                      event.preventDefault();
+                      reorderRowsById(draggedRowId, record.id as T["id"]);
+                      setDraggedRowId(null);
+                      setDragOverRowId(null);
+                    }}
+                    onDragEnd={() => {
+                      setDraggedRowId(null);
+                      setDragOverRowId(null);
+                    }}
+                    className={cn(
+                      "group transition-colors hover:bg-muted/40",
+                      draggedRowId === record.id && "opacity-60",
+                      dragOverRowId === record.id && "bg-muted/70",
+                      canReorderRows && "cursor-move",
+                    )}
                   >
-                    {columns.map((column) => (
+                    {reorderRowsProps && (
+                      <td className="px-2 text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-xs"
+                            aria-label="Move row up"
+                            disabled={
+                              !canReorderRows || rows[0]?.id === record.id
+                            }
+                            onClick={() =>
+                              moveRowByOffset(record.id as T["id"], -1)
+                            }
+                          >
+                            <ArrowUpIcon className="size-3.5" />
+                          </Button>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon-xs"
+                            aria-label="Move row down"
+                            disabled={
+                              !canReorderRows ||
+                              rows[rows.length - 1]?.id === record.id
+                            }
+                            onClick={() =>
+                              moveRowByOffset(record.id as T["id"], 1)
+                            }
+                          >
+                            <ArrowDownIcon className="size-3.5" />
+                          </Button>
+                          <GripVertical
+                            className={cn(
+                              "size-3.5",
+                              canReorderRows ? "opacity-80" : "opacity-30",
+                            )}
+                          />
+                        </div>
+                      </td>
+                    )}
+                    {normalizedColumns.map((column) => (
                       <td
-                        key={column as string}
+                        key={String(column.name)}
                         className="whitespace-nowrap px-4 py-2.5 text-foreground"
                       >
-                        {cell(column, record)}
+                        {cell(column.name, record)}
                       </td>
                     ))}
                     {updateFormProps && (

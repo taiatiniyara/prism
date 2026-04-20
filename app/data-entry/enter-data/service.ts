@@ -68,6 +68,7 @@ import {
   triggerKpiWorker,
   type KpiWorkerRunResult,
 } from "@/app/data-entry/kpi-worker";
+import { formatReportPeriodDisplay } from "@/lib/formatters";
 
 const isGlobalRole = (role: string) => role === "DEV" || role === "BMO";
 
@@ -1166,13 +1167,21 @@ export const getReportPeriodOptions = async (
     .select({
       id: reportPeriods.id,
       reportDate: reportPeriods.report_date,
+      reportTypeName: managedListItems.name,
     })
     .from(reportPeriods)
+    .leftJoin(
+      managedListItems,
+      eq(reportPeriods.report_type_id, managedListItems.id),
+    )
     .where(and(...conditions))
     .orderBy(asc(reportPeriods.report_date));
 
   return rows.map((row) =>
-    mapOption(row.id, row.reportDate.toISOString().slice(0, 7)),
+    mapOption(
+      row.id,
+      formatReportPeriodDisplay(row.reportDate, row.reportTypeName),
+    ),
   );
 };
 

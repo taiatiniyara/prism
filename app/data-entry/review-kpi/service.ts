@@ -24,6 +24,7 @@ import { serviceAreas } from "@/db/schema/utility";
 import { user as authUsers } from "@/db/schema/auth-schema";
 import { triggerKpiWorkerAsync } from "@/app/data-entry/kpi-worker";
 import { publishSyncEvent } from "@/app/data-entry/review-kpi/sync-store";
+import { formatReportPeriodDisplay } from "@/lib/formatters";
 import { CurrentUser, getCurrentUser } from "@/lib/user.service";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import {
@@ -184,9 +185,14 @@ export const getReviewKpiFilterOptions = async (
       db
         .select({
           id: reportPeriods.id,
-          name: sql<string>`to_char(${reportPeriods.report_date}, 'YYYY-MM')`,
+          reportDate: reportPeriods.report_date,
+          reportTypeName: managedListItems.name,
         })
         .from(reportPeriods)
+        .leftJoin(
+          managedListItems,
+          eq(reportPeriods.report_type_id, managedListItems.id),
+        )
         .where(and(...reportPeriodWhere))
         .orderBy(asc(reportPeriods.report_date), asc(reportPeriods.id)),
       db
@@ -285,7 +291,12 @@ export const getReviewKpiFilterOptions = async (
 
   return {
     reportTypes: reportTypeRows.map((row) => mapOption(row.id, row.name)),
-    reportPeriods: reportPeriodRows.map((row) => mapOption(row.id, row.name)),
+    reportPeriods: reportPeriodRows.map((row) =>
+      mapOption(
+        row.id,
+        formatReportPeriodDisplay(row.reportDate, row.reportTypeName),
+      ),
+    ),
     kpiCategories: filteredKpiCategoryRows.map((row) => ({
       id: row.id,
       name: row.name,

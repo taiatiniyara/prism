@@ -4,28 +4,57 @@ import {
   GetAllEnergyResources,
   UpdateEnergyResource,
 } from "./service";
+import { AllPowerStations } from "../power-stations/service";
+import { AllServiceAreas } from "../service-areas/service";
 import { EnergyResource } from "@/db/schema/utility";
 
 export default async function EnergyResourcesSettingsPage() {
+  const [energyResources, powerStations, serviceAreas] = await Promise.all([
+    GetAllEnergyResources(),
+    AllPowerStations(),
+    AllServiceAreas(),
+  ]);
+
   return (
     <DataTable<EnergyResource>
       columns={[
         "report_period",
+        "service_area",
+        "power_station",
         "name",
-        "type",
+        {
+          name: "type",
+          display: "Resource Type",
+        },
         "energy_provider",
         "energy_source",
         "capacity_mw",
         "is_active",
       ]}
       title="Energy Resources"
-      data={await GetAllEnergyResources()}
+      data={energyResources}
       createFormProps={{
         formAction: CreateEnergyResource,
         fields: [
           {
             key: "name",
             type: "text",
+          },
+          {
+            key: "power_station_id",
+            type: "select",
+            selectList: powerStations.map((powerStation) => ({
+              value: powerStation.id,
+              label: powerStation.name,
+            })),
+          },
+          {
+            key: "service_area_id",
+            type: "select",
+            selectList: serviceAreas.map((serviceArea) => ({
+              value: serviceArea.id,
+              label: serviceArea.name,
+            })),
           },
           {
             key: "capacity_mw",
@@ -59,6 +88,22 @@ export default async function EnergyResourcesSettingsPage() {
           {
             key: "name",
             type: "text",
+          },
+          {
+            key: "power_station_id",
+            type: "select",
+            selectList: powerStations.map((powerStation) => ({
+              value: powerStation.id,
+              label: powerStation.name,
+            })),
+          },
+          {
+            key: "service_area_id",
+            type: "select",
+            selectList: serviceAreas.map((serviceArea) => ({
+              value: serviceArea.id,
+              label: serviceArea.name,
+            })),
           },
           {
             key: "capacity_mw",
