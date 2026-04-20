@@ -30,6 +30,7 @@ export type InputDefinitionAlternativeNames = Record<string, string>;
 export const inputDefinitions = pgTable("input_definitions", {
   id: serial("id").primaryKey().notNull(),
   name: varchar("name", { length: 255 }).notNull(),
+  sort_order: integer("sort_order").default(0).notNull(),
   description: varchar("description", { length: 255 }),
   variable_name: varchar("variable_name", { length: 255 }),
   alternative_names:

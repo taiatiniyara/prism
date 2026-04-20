@@ -43,7 +43,14 @@ export default async function InputsSettingsPage(props: {
         <TabsContent value="definitions">
           <SectionContainer>
             <DataTable<InputDefinition>
-              columns={["name", "data_type", "unit", "formula", "is_active"]}
+              columns={[
+                "name",
+                "sort_order",
+                "data_type",
+                "unit",
+                "formula",
+                "is_active",
+              ]}
               title="Inputs"
               data={inputDefinitions}
               createFormProps={{
@@ -56,6 +63,11 @@ export default async function InputsSettingsPage(props: {
                   {
                     key: "description",
                     type: "textarea",
+                  },
+                  {
+                    key: "sort_order",
+                    type: "number",
+                    required: false,
                   },
                   {
                     key: "alternative_names",
@@ -94,6 +106,11 @@ export default async function InputsSettingsPage(props: {
                   {
                     key: "description",
                     type: "textarea",
+                    required: false,
+                  },
+                  {
+                    key: "sort_order",
+                    type: "number",
                     required: false,
                   },
                   {

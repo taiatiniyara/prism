@@ -322,7 +322,7 @@ const getInputDefinitionsForContext = async (
       eq(inputDefinitions.data_type_id, managedListItems.id),
     )
     .where(and(...conditions))
-    .orderBy(asc(inputDefinitions.id));
+    .orderBy(asc(inputDefinitions.sort_order), asc(inputDefinitions.id));
 
   return rows
     .filter(

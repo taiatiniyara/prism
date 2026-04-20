@@ -50,6 +50,7 @@ export interface SaveInputFormulaPayload {
 
 interface CreateInputDefinitionPayload {
   name: string;
+  sort_order?: string | number | null;
   description?: string | null;
   alternative_names?: InputDefinitionAlternativeNames | string | null;
   data_type_id: string | number;
@@ -62,6 +63,7 @@ interface CreateInputDefinitionPayload {
 interface UpdateInputDefinitionPayload {
   id: string | number;
   name?: string;
+  sort_order?: string | number;
   description?: string | null;
   alternative_names?: InputDefinitionAlternativeNames | string | null;
   data_type_id?: string | number;
@@ -194,6 +196,10 @@ export async function CreateInputDefinition(
 
   const payload = {
     name,
+    sort_order:
+      data.sort_order == null || data.sort_order === ""
+        ? 0
+        : Number(data.sort_order),
     description: data.description?.trim() || null,
     variable_name: createVariableName(name),
     alternative_names: alternativeNames,
@@ -206,6 +212,7 @@ export async function CreateInputDefinition(
   };
 
   const hasInvalidId = [
+    payload.sort_order,
     payload.data_type_id,
     payload.category_id,
     payload.subcategory_id,
@@ -307,6 +314,7 @@ export async function UpdateInputDefinition(
       | "subcategory_id"
       | "unit_id"
       | "utility_service_id"
+      | "sort_order"
     >,
   ) => {
     if (data[key] == null || data[key] === "") {
@@ -320,6 +328,7 @@ export async function UpdateInputDefinition(
   };
 
   try {
+    assignNumericField("sort_order");
     assignNumericField("data_type_id");
     assignNumericField("category_id");
     assignNumericField("subcategory_id");
@@ -400,6 +409,7 @@ export async function UpdateInputDefinitionFromExcel(
   const createList: InputDefinition[] = filteredExisting.map((item) => ({
     id: item.input_id,
     name: item.name,
+    sort_order: 0,
     description: item.description,
     alternative_names: null,
     data_type_id: item.data_type_id,
