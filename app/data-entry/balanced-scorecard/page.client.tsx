@@ -12,6 +12,7 @@ import {
   fetchScorecardKpiOptions,
   isLatestRequest,
   saveScorecardConfig,
+  saveScorecardDraft,
 } from "@/app/data-entry/balanced-scorecard/client";
 import type {
   ScorecardFilterContext,
@@ -36,7 +37,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { generateRandomNumber } from "@/lib/utils";
 import ScorecardBuilderTree from "@/components/data-entry/scorecard-builder-tree";
-import { Download, Upload } from "lucide-react";
+import { Download, Save, Upload } from "lucide-react";
 
 type TrackingFrequency = "monthly" | "annually";
 type TemplateTrackingMode = "monthly" | "financial_year";
@@ -900,6 +901,60 @@ export default function ScorecardPageClient({
     await uploadTemplateFile(templateUploadFile);
   };
 
+  const handleTemplateSave = async () => {
+    setSaveMessage(null);
+    setIsSaving(true);
+
+    try {
+      const perspectiveLevels: PerspectiveLevel[] = [1, 2, 3, 4];
+
+      for (const level of perspectiveLevels) {
+        const objectives = draftObjectivesByPerspective[level]
+          .map((objective) => ({
+            description: objective.description.trim(),
+            keyInitiatives: objective.keyInitiatives
+              .map((initiative) => ({
+                description: initiative.description.trim(),
+                kpis: initiative.kpis.map((kpi) => ({
+                  kpiDefinitionId: kpi.kpiDefinitionId,
+                  trackingFrequency: kpi.trackingFrequency,
+                })),
+              }))
+              .filter(
+                (initiative) =>
+                  initiative.description.length > 0 &&
+                  initiative.kpis.length > 0,
+              ),
+          }))
+          .filter(
+            (objective) =>
+              objective.description.length > 0 &&
+              objective.keyInitiatives.length > 0,
+          );
+
+        if (objectives.length === 0) {
+          continue;
+        }
+
+        await saveScorecardDraft({
+          reportPeriodId: context.reportPeriodId,
+          perspectiveLevel: level,
+          perspectiveDescription: PERSPECTIVE_LABELS[level],
+          objectives,
+        });
+      }
+
+      setSaveMessage("Template hierarchy saved successfully.");
+      setContext((current) => ({ ...current }));
+    } catch (err) {
+      setSaveMessage(
+        err instanceof Error ? err.message : "Unable to save template.",
+      );
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   const perspectiveLabel = PERSPECTIVE_LABELS[perspectiveLevel];
   const objectiveName = strategicObjective.trim();
   const initiativeName = keyInitiative.trim();
@@ -912,6 +967,9 @@ export default function ScorecardPageClient({
     !isProcessingTemplate &&
     templateYearRangeIsValid &&
     templateRows.length > 0;
+  const canSaveTemplate = Object.values(draftObjectivesByPerspective).some(
+    (objectives) => objectives.length > 0,
+  );
   const step1CardClass =
     "rounded border border-sky-300 bg-sky-50 px-1.5 py-1 text-[11px]";
   const step2CardClass =
@@ -944,9 +1002,9 @@ export default function ScorecardPageClient({
           }
           className="space-y-0"
         >
-          <TabsList variant="line">
+          <TabsList>
             <TabsTrigger value="builder">BSC Template Builder</TabsTrigger>
-            <TabsTrigger value="strategic-map">Strategic Map</TabsTrigger>
+            <TabsTrigger value="strategic-map">BSC Strategy Map</TabsTrigger>
           </TabsList>
         </Tabs>
       ) : null}
@@ -982,18 +1040,18 @@ export default function ScorecardPageClient({
 
       {mode === "builder" || activeMainTab === "builder" ? (
         <div className="space-y-3 rounded-md border bg-background p-3 sm:p-4">
-          <div className="grid gap-4 lg:gap-12 md:gap-2 md:grid-cols-1 lg:grid-cols-3 items-end">
+          <div className="flex items-end gap-8">
             <div>
               <div>
                 <h2 className="text-sm font-semibold">Targets Tracking</h2>
-                <div className="flex flex-wrap gap-2">
-                  <div className="min-w-32 flex-1 space-y-0.5">
+                <div className="flex mt-2 gap-2">
+                  <div className="flex-col flex space-y-1">
                     <label className="text-[11px] font-medium">
                       Start Year
                     </label>
                     <Input
                       type="number"
-                      className="h-8 bg-white text-xs"
+                      className="bg-white w-20 text-xs"
                       value={templateStartYear}
                       onChange={(event) =>
                         setTemplateStartYear(Number(event.target.value) || 0)
@@ -1002,11 +1060,11 @@ export default function ScorecardPageClient({
                     />
                   </div>
 
-                  <div className="min-w-32 flex-1 space-y-0.5">
+                  <div className="flex-col flex space-y-1">
                     <label className="text-[11px] font-medium">End Year</label>
                     <Input
                       type="number"
-                      className="h-8 bg-white text-xs"
+                      className="bg-white w-20 text-xs"
                       value={templateEndYear}
                       onChange={(event) =>
                         setTemplateEndYear(Number(event.target.value) || 0)
@@ -1015,9 +1073,9 @@ export default function ScorecardPageClient({
                     />
                   </div>
 
-                  <div className="min-w-40 flex-1 space-y-0.5">
+                  <div className="flex-col flex space-y-1">
                     <label className="text-[11px] font-medium">
-                      Tracking Freqency
+                      Tracking Frequency
                     </label>
                     <Select
                       value={templateTrackingMode}
@@ -1026,7 +1084,7 @@ export default function ScorecardPageClient({
                       }
                       disabled={isProcessingTemplate}
                     >
-                      <SelectTrigger className="bg-white text-xs">
+                      <SelectTrigger className="bg-white shadow text-xs">
                         <SelectValue placeholder="Select tracking" />
                       </SelectTrigger>
                       <SelectContent>
@@ -1045,8 +1103,18 @@ export default function ScorecardPageClient({
               <Button
                 type="button"
                 size="sm"
+                className="text-xs"
                 variant={"outline"}
-                className="h-8 px-2 text-xs"
+                onClick={() => void handleTemplateSave()}
+                disabled={isSaving || isProcessingTemplate || !canSaveTemplate}
+              >
+                <Save /> {isSaving ? "Saving..." : "Save Draft Template"}
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="text-xs"
+                variant={"outline"}
                 onClick={() => void handleTemplateDownload()}
                 disabled={!canDownloadTemplate}
               >
@@ -1056,7 +1124,7 @@ export default function ScorecardPageClient({
                 type="button"
                 size="sm"
                 variant={"outline"}
-                className="h-8 px-2 text-xs"
+                className="text-xs"
                 onClick={() => {
                   if (templateUploadFile == null) {
                     quickTemplateUploadInputRef.current?.click();
