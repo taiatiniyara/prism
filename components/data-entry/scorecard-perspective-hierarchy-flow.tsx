@@ -377,11 +377,14 @@ const buildHierarchy = (
       .sort((a, b) => a[0].localeCompare(b[0]))
       .map(([objectiveLabel, objectiveRows], objectiveIndex) => {
         const objectiveId = `objective:${perspective.level}:${slug(objectiveLabel)}:${objectiveIndex}`;
+        const namedInitiativeRows = objectiveRows.filter(
+          (row) => clean(row.keyInitiative).length > 0,
+        );
+        const hasNamedInitiatives = namedInitiativeRows.length > 0;
 
         const initiativeGroups = new Map<string, ScorecardInputRow[]>();
-        for (const row of objectiveRows) {
-          const initiativeName =
-            clean(row.keyInitiative) || "Unassigned Initiative";
+        for (const row of namedInitiativeRows) {
+          const initiativeName = clean(row.keyInitiative);
           const bucket = initiativeGroups.get(initiativeName);
           if (bucket == null) {
             initiativeGroups.set(initiativeName, [row]);
@@ -418,6 +421,14 @@ const buildHierarchy = (
               kpis,
             };
           });
+
+        if (!hasNamedInitiatives) {
+          initiatives.push({
+            id: `initiative:${perspective.level}:${slug(objectiveLabel)}:unassigned`,
+            label: "Unassigned Initiative",
+            kpis: [],
+          });
+        }
 
         return {
           id: objectiveId,
