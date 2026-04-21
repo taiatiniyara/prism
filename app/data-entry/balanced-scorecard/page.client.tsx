@@ -1,12 +1,7 @@
 "use client";
 
-import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import readXlsxFile from "read-excel-file/browser";
-import ScorecardSummary from "@/components/data-entry/scorecard-summary";
-import ScorecardDetailPanel from "@/components/data-entry/scorecard-detail-panel";
-import ScorecardEmptyState from "@/components/data-entry/scorecard-empty-state";
-import ScorecardTree from "@/components/data-entry/scorecard-tree";
 import {
   fetchScorecardDrafts,
   fetchScorecard,
@@ -24,10 +19,7 @@ import type {
 } from "@/app/data-entry/balanced-scorecard/types";
 import type { ReviewKpiFilterOptions } from "@/app/data-entry/review-kpi/types";
 import { Button } from "@/components/ui/button";
-import BorderedPanel from "@/components/ui/bordered-panel";
-import BorderedGrid from "@/components/ui/bordered-grid";
 import { Input } from "@/components/ui/input";
-import { SearchableSelect } from "@/components/ui/searchable-select";
 import {
   Select,
   SelectContent,
@@ -38,6 +30,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { generateRandomNumber } from "@/lib/utils";
 import ScorecardBuilderTree from "@/components/data-entry/scorecard-builder-tree";
+import ScorecardPerspectiveHierarchyFlow from "@/components/data-entry/scorecard-perspective-hierarchy-flow";
 import { Download, Save, Upload } from "lucide-react";
 
 type TrackingFrequency = "monthly" | "annually";
@@ -49,6 +42,7 @@ type DraftObjectiveKpi = {
   kpiName: string;
   kpiCategoryId: number | null;
   kpiSubcategoryId: number | null;
+  result: "increase" | "decrease" | "completed";
   targetValue: string;
   trackingFrequency: TrackingFrequency;
   isSaved: boolean;
@@ -160,29 +154,13 @@ export default function ScorecardPageClient({
     useState<ScorecardFilterContext>(initialContext);
   const [snapshot, setSnapshot] = useState<ScorecardSnapshot | null>(null);
   const [scorecardRows, setScorecardRows] = useState<ScorecardInputRow[]>([]);
-  const [scorecardRelationships, setScorecardRelationships] = useState<
-    ScorecardRelationship[]
-  >([]);
+  const [, setScorecardRelationships] = useState<ScorecardRelationship[]>([]);
   const [error, setError] = useState<string | null>(null);
-  const [selectedPerspective, setSelectedPerspective] = useState<number | null>(
-    null,
-  );
   const [availableKpiOptions, setAvailableKpiOptions] =
     useState<ScorecardKpiOption[]>(kpiOptions);
   const [kpiDefinitionId, setKpiDefinitionId] = useState<number | null>(
     kpiOptions[0]?.kpiDefinitionId ?? null,
   );
-  const [perspectiveLevel, setPerspectiveLevel] = useState<PerspectiveLevel>(1);
-  const [strategicObjective, setStrategicObjective] = useState("");
-  const [keyInitiative, setKeyInitiative] = useState("");
-  const [trackingFrequency, setTrackingFrequency] =
-    useState<TrackingFrequency>("monthly");
-  const [targetValue, setTargetValue] = useState("");
-  const [currentInitiativeKpis, setCurrentInitiativeKpis] = useState<
-    DraftObjectiveKpi[]
-  >([]);
-  const [currentObjectiveInitiatives, setCurrentObjectiveInitiatives] =
-    useState<DraftKeyInitiative[]>([]);
   const [draftObjectivesByPerspective, setDraftObjectivesByPerspective] =
     useState<DraftObjectivesByPerspective>({
       1: [],
@@ -190,16 +168,10 @@ export default function ScorecardPageClient({
       3: [],
       4: [],
     });
-  const [selectedExistingObjective, setSelectedExistingObjective] = useState<
-    string | null
-  >(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [hasHydratedDraftHierarchy, setHasHydratedDraftHierarchy] =
     useState(false);
-  const [autoSaveStatus, setAutoSaveStatus] = useState<
-    "idle" | "saving" | "saved" | "error"
-  >("idle");
   const [templateStartYear, setTemplateStartYear] = useState(
     new Date().getFullYear(),
   );
@@ -213,22 +185,11 @@ export default function ScorecardPageClient({
   );
   const [isProcessingTemplate, setIsProcessingTemplate] = useState(false);
   const [activeMainTab, setActiveMainTab] = useState<
-    "strategic-map" | "builder"
+    "strategic-map" | "builder" | "strategy-tracker" | "tree-view"
   >("builder");
   const quickTemplateUploadInputRef = useRef<HTMLInputElement | null>(null);
   const autoSaveWorkerRef = useRef<Worker | null>(null);
   const lastSavedFingerprintRef = useRef<string>("");
-
-  const draftObjectives = draftObjectivesByPerspective[perspectiveLevel];
-
-  const updateDraftObjectivesForPerspective = (
-    updater: (prev: DraftObjective[]) => DraftObjective[],
-  ) => {
-    setDraftObjectivesByPerspective((prev) => ({
-      ...prev,
-      [perspectiveLevel]: updater(prev[perspectiveLevel]),
-    }));
-  };
 
   const normalizedContext = useMemo(
     () => ({ ...context, kpiCategoryId: null, kpiSubcategoryId: null }),
@@ -369,6 +330,7 @@ export default function ScorecardPageClient({
                         kpiOption?.kpiName ?? `KPI ${kpi.kpiDefinitionId}`,
                       kpiCategoryId: kpiOption?.categoryId ?? null,
                       kpiSubcategoryId: kpiOption?.subcategoryId ?? null,
+                      result: "increase",
                       targetValue: "",
                       trackingFrequency:
                         kpi.trackingFrequency === "annually"
@@ -394,14 +356,12 @@ export default function ScorecardPageClient({
           });
           setDraftObjectivesByPerspective(nextByPerspective);
           setHasHydratedDraftHierarchy(true);
-          setAutoSaveStatus("saved");
         }
       } catch (err) {
         logAutoSaveError("loadSavedBuilds:error", err);
         setSaveMessage(
           err instanceof Error ? err.message : "Unable to load saved builds.",
         );
-        setAutoSaveStatus("error");
       }
     },
     [availableKpiOptions, buildHierarchyFingerprint],
@@ -426,8 +386,6 @@ export default function ScorecardPageClient({
       }
 
       logAutoSave("worker:status", message);
-
-      setAutoSaveStatus(message.status);
 
       if (
         message.status === "saved" &&
@@ -513,14 +471,6 @@ export default function ScorecardPageClient({
     };
   }, [normalizedContext]);
 
-  const selected = useMemo(
-    () =>
-      snapshot?.perspectiveScores.find(
-        (item) => item.perspectiveLevel === selectedPerspective,
-      ) ?? null,
-    [snapshot, selectedPerspective],
-  );
-
   const selectedKpiOption = useMemo(
     () =>
       kpiDefinitionId == null
@@ -541,120 +491,6 @@ export default function ScorecardPageClient({
       ),
     [availableKpiOptions],
   );
-
-  const kpiOptionByDefinitionId = useMemo(
-    () =>
-      new Map(
-        availableKpiOptions.map((option) => [option.kpiDefinitionId, option]),
-      ),
-    [availableKpiOptions],
-  );
-
-  const existingObjectiveRows = useMemo(
-    () =>
-      scorecardRows.filter(
-        (row) =>
-          row.perspectiveLevel === perspectiveLevel &&
-          row.objective != null &&
-          row.objective.trim().length > 0,
-      ),
-    [scorecardRows, perspectiveLevel],
-  );
-
-  const existingObjectiveItems = useMemo(
-    () =>
-      Array.from(
-        new Set(existingObjectiveRows.map((row) => row.objective!.trim())),
-      ).sort((a, b) => a.localeCompare(b)),
-    [existingObjectiveRows],
-  );
-
-  const loadObjectiveIntoEditor = (objectiveName: string) => {
-    const normalizedObjective = objectiveName.trim();
-    if (normalizedObjective.length === 0) {
-      return;
-    }
-
-    const matchingRows = existingObjectiveRows.filter(
-      (row) =>
-        row.objective?.trim().toLowerCase() ===
-        normalizedObjective.toLowerCase(),
-    );
-
-    const initiativeMap = new Map<string, DraftKeyInitiative>();
-    for (const row of matchingRows) {
-      const initiativeDescription = row.keyInitiative?.trim() || "Unspecified";
-      const initiativeKey = initiativeDescription.toLowerCase();
-
-      let initiative = initiativeMap.get(initiativeKey);
-      if (initiative == null) {
-        initiative = {
-          id: `${Date.now()}-${Math.random()}-${initiativeMap.size}`,
-          description: initiativeDescription,
-          kpis: [],
-          isSaved: true,
-        };
-        initiativeMap.set(initiativeKey, initiative);
-      }
-
-      const alreadyHasKpi = initiative.kpis.some(
-        (item) => item.kpiDefinitionId === row.kpiDefinitionId,
-      );
-      if (alreadyHasKpi) {
-        continue;
-      }
-
-      initiative.kpis.push({
-        kpiId: row.kpiId,
-        kpiDefinitionId: row.kpiDefinitionId,
-        kpiName:
-          row.kpiName?.trim() ||
-          kpiNameByDefinitionId.get(row.kpiDefinitionId) ||
-          `KPI ${row.kpiDefinitionId}`,
-        kpiCategoryId:
-          kpiOptionByDefinitionId.get(row.kpiDefinitionId)?.categoryId ?? null,
-        kpiSubcategoryId:
-          kpiOptionByDefinitionId.get(row.kpiDefinitionId)?.subcategoryId ??
-          null,
-        targetValue: row.targetValue == null ? "" : String(row.targetValue),
-        trackingFrequency:
-          row.trackingFrequency === "annually" ? "annually" : "monthly",
-        isSaved: true,
-      });
-    }
-
-    const loadedInitiatives = Array.from(initiativeMap.values());
-
-    setStrategicObjective(normalizedObjective);
-    setKeyInitiative("");
-    setCurrentInitiativeKpis([]);
-    setCurrentObjectiveInitiatives(loadedInitiatives);
-    const loadedKpiCount = loadedInitiatives.reduce(
-      (sum, initiative) => sum + initiative.kpis.length,
-      0,
-    );
-    setSaveMessage(
-      `Loaded ${loadedInitiatives.length} initiative(s) and ${loadedKpiCount} KPI record(s) for update.`,
-    );
-  };
-
-  const handleExistingObjectiveSelect = (value: string | null) => {
-    if (value == null) {
-      setSelectedExistingObjective(null);
-      return;
-    }
-
-    const normalized = value.trim().toLowerCase();
-    const matchedObjective = existingObjectiveItems.find(
-      (item) => item.trim().toLowerCase() === normalized,
-    );
-
-    setSelectedExistingObjective(matchedObjective ?? value);
-
-    if (matchedObjective != null) {
-      loadObjectiveIntoEditor(matchedObjective);
-    }
-  };
 
   const createDraftId = () => `${Date.now()}-${Math.random()}`;
 
@@ -783,6 +619,7 @@ export default function ScorecardPageClient({
                   kpiName: defaultKpi.kpiName,
                   kpiCategoryId: defaultKpi.categoryId,
                   kpiSubcategoryId: defaultKpi.subcategoryId,
+                  result: "increase",
                   targetValue: "",
                   trackingFrequency: "monthly",
                   isSaved: false,
@@ -896,8 +733,6 @@ export default function ScorecardPageClient({
       prev.filter((item) => item.id !== objectiveId),
     );
   };
-
-  const templateBuilderOnly = true;
 
   const templateSeeds = useMemo(() => {
     const seeds = new Map<string, TemplateSeed>();
@@ -1206,7 +1041,6 @@ export default function ScorecardPageClient({
         setSaveMessage(null);
       }
       setIsSaving(true);
-      setAutoSaveStatus("saving");
 
       try {
         for (const item of persistableByLevel) {
@@ -1229,13 +1063,11 @@ export default function ScorecardPageClient({
           type: "setSavedFingerprint",
           fingerprint: lastSavedFingerprintRef.current,
         });
-        setAutoSaveStatus("saved");
         if (!silent) {
           setSaveMessage("Template hierarchy saved successfully.");
         }
         setContext((current) => ({ ...current }));
       } catch (err) {
-        setAutoSaveStatus("error");
         setSaveMessage(
           err instanceof Error ? err.message : "Unable to save template.",
         );
@@ -1293,15 +1125,6 @@ export default function ScorecardPageClient({
   const handleTemplateSave = async () => {
     await persistTemplateHierarchy();
   };
-
-  const perspectiveLabel = PERSPECTIVE_LABELS[perspectiveLevel];
-  const objectiveName = strategicObjective.trim();
-  const initiativeName = keyInitiative.trim();
-  const hasObjectiveContext =
-    objectiveName.length > 0 || currentObjectiveInitiatives.length > 0;
-  const hasInitiativeContext =
-    initiativeName.length > 0 || currentInitiativeKpis.length > 0;
-  const hasDraftedObjective = draftObjectives.length > 0;
   const canDownloadTemplate =
     !isProcessingTemplate &&
     templateYearRangeIsValid &&
@@ -1309,18 +1132,6 @@ export default function ScorecardPageClient({
   const canSaveTemplate = Object.values(draftObjectivesByPerspective).some(
     (objectives) => objectives.length > 0,
   );
-  const hasUnsavedHierarchyChanges =
-    canSaveTemplate && hierarchyFingerprint !== lastSavedFingerprintRef.current;
-  const step1CardClass =
-    "rounded border border-white bg-slate-50 px-1.5 py-1 text-[11px]";
-  const step2CardClass =
-    "rounded border border-white bg-indigo-50 px-1.5 py-1 text-[11px]";
-  const step3CardClass =
-    "rounded border border-white bg-amber-50 px-1.5 py-1 text-[11px]";
-  const step4CardClass =
-    "rounded border border-white bg-cyan-50 px-1.5 py-1 text-[11px]";
-  const step5CardClass =
-    "rounded border border-white bg-lime-50 px-1.5 py-1 text-[11px]";
 
   return (
     <div className="space-y-2 p-1.5 sm:p-2">
@@ -1339,13 +1150,23 @@ export default function ScorecardPageClient({
         <Tabs
           value={activeMainTab}
           onValueChange={(value) =>
-            setActiveMainTab(value as "strategic-map" | "builder")
+            setActiveMainTab(
+              value as
+                | "strategic-map"
+                | "builder"
+                | "strategy-tracker"
+                | "tree-view",
+            )
           }
           className="space-y-0"
         >
           <TabsList>
-            <TabsTrigger value="builder">BSC Template Builder</TabsTrigger>
+            <TabsTrigger value="builder">BSC Strategy Builder</TabsTrigger>
             <TabsTrigger value="strategic-map">BSC Strategy Map</TabsTrigger>
+            <TabsTrigger value="tree-view">BSC Tree View</TabsTrigger>
+            <TabsTrigger value="strategy-tracker">
+              BSC Strategy Tracker
+            </TabsTrigger>
           </TabsList>
         </Tabs>
       ) : null}
@@ -1365,44 +1186,18 @@ export default function ScorecardPageClient({
         }}
       />
 
-      {mode === "builder" ? (
-        <div className="flex items-center justify-end gap-1.5">
-          <Button
-            asChild
-            type="button"
-            size="sm"
-            variant="outline"
-            className="h-8 px-2 text-xs"
-          >
-            <Link href="/data-entry/balanced-scorecard">Back to Scorecard</Link>
-          </Button>
-        </div>
-      ) : null}
-
       {mode === "builder" || activeMainTab === "builder" ? (
         <div className="space-y-3 rounded-md border bg-background p-3 sm:p-4">
-          <div className="flex flex-wrap items-center justify-between gap-1.5">
-            <p className="mt-1 text-[11px] text-muted-foreground">
+          <div className="flex flex-col gap-2 lg:flex-row lg:items-end lg:justify-between">
+            <p className="text-[11px] text-muted-foreground lg:max-w-sm">
               Build top-down: add objective rows, then initiatives, then KPIs
               under each initiative.
             </p>
-            <div className="flex flex-wrap gap-1 text-[10px]">
-              <span className="rounded border border-white bg-slate-100 px-1.5 py-0.5 text-slate-800">
-                Objective
-              </span>
-              <span className="rounded border border-white bg-amber-100 px-1.5 py-0.5 text-amber-800">
-                Initiative
-              </span>
-              <span className="rounded border border-white bg-lime-100 px-1.5 py-0.5 text-lime-800">
-                KPI
-              </span>
-            </div>
-          </div>
-          <div className="flex flex-wrap items-end justify-between gap-3">
-            <div>
+
+            <div className="flex flex-wrap items-end justify-end gap-8 lg:ml-auto">
               <div>
                 <h2 className="text-sm font-semibold">Targets Tracking</h2>
-                <div className="flex mt-2 gap-2">
+                <div className="mt-2 flex gap-2">
                   <div className="flex-col flex space-y-1">
                     <label className="text-[11px] font-medium">
                       Start Year
@@ -1455,789 +1250,81 @@ export default function ScorecardPageClient({
                   </div>
                 </div>
               </div>
-            </div>
 
-            <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
-              <Button
-                type="button"
-                size="sm"
-                className="text-xs"
-                variant={"outline"}
-                onClick={() => void handleTemplateDownload()}
-                disabled={!canDownloadTemplate}
-              >
-                <Download /> Download Excel Template
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                variant={"outline"}
-                className="text-xs"
-                onClick={() => {
-                  if (templateUploadFile == null) {
-                    quickTemplateUploadInputRef.current?.click();
-                    return;
-                  }
-
-                  void handleTemplateUpload();
-                }}
-                disabled={isProcessingTemplate || templateRows.length === 0}
-              >
-                <Upload />
-                {isProcessingTemplate
-                  ? "Uploading..."
-                  : "Upload Excel Template"}
-              </Button>
-              <p className="self-center text-[11px] text-muted-foreground">
-                {autoSaveStatus === "saving"
-                  ? "Autosaving..."
-                  : autoSaveStatus === "error"
-                    ? "Autosave failed"
-                    : hasUnsavedHierarchyChanges
-                      ? "Unsaved changes"
-                      : "All changes saved"}
-              </p>
-              <Button
-                type="button"
-                size="sm"
-                className="text-xs"
-                variant={"outline"}
-                onClick={() => void handleTemplateSave()}
-                disabled={isSaving || isProcessingTemplate || !canSaveTemplate}
-              >
-                <Save /> {isSaving ? "Saving..." : "Save"}
-              </Button>
-            </div>
-          </div>
-
-          {templateBuilderOnly ? (
-            <div className="space-y-4">
-              <div className="space-y-4">
-                <div className="rounded-md border border-white bg-slate-50/50 p-3">
-                  <div className="mt-2">
-                    <ScorecardBuilderTree
-                      perspectiveLabels={PERSPECTIVE_LABELS}
-                      draftObjectivesByPerspective={
-                        draftObjectivesByPerspective
-                      }
-                      filterOptions={filterOptions}
-                      availableKpiOptions={availableKpiOptions}
-                      isProcessingTemplate={isProcessingTemplate}
-                      onAddObjective={addObjectiveForLevel}
-                      onUpdateObjectiveDescription={
-                        updateObjectiveDescriptionForLevel
-                      }
-                      onRemoveObjective={removeObjectiveForLevel}
-                      onAddInitiative={addInitiativeForLevel}
-                      onUpdateInitiativeDescription={
-                        updateInitiativeDescriptionForLevel
-                      }
-                      onRemoveInitiative={removeInitiativeForLevel}
-                      onAddKpi={addKpiForLevel}
-                      onUpdateKpi={updateKpiForLevel}
-                      onRemoveKpi={removeKpiForLevel}
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-          ) : null}
-
-          <div className={templateBuilderOnly ? "hidden" : "block"}>
-            <div className="rounded-md border bg-muted/30 p-2">
-              <p className="text-[11px] font-medium">Current Build Path</p>
-              <p className="mt-0.5 text-[11px] text-muted-foreground">
-                {perspectiveLabel} {" -> "}
-                {objectiveName.length > 0
-                  ? objectiveName
-                  : "Objective not set"}{" "}
-                {" -> "}
-                {initiativeName.length > 0
-                  ? initiativeName
-                  : "Initiative not set"}
-              </p>
-              <div className="mt-1 grid gap-1 md:grid-cols-5">
-                <div className={step1CardClass}>
-                  <p className="font-medium">1. Perspective</p>
-                  <p className="text-muted-foreground">Done</p>
-                </div>
-                <div className={step2CardClass}>
-                  <p className="font-medium">2. Objective</p>
-                  <p className="text-muted-foreground">
-                    {hasObjectiveContext ? "In progress" : "Start here"}
-                  </p>
-                </div>
-                <div className={step3CardClass}>
-                  <p className="font-medium">3. Initiative</p>
-                  <p className="text-muted-foreground">
-                    {hasInitiativeContext ? "In progress" : "Waiting"}
-                  </p>
-                </div>
-                <div className={step4CardClass}>
-                  <p className="font-medium">4. KPI</p>
-                  <p className="text-muted-foreground">
-                    {currentInitiativeKpis.length > 0
-                      ? "In progress"
-                      : "Waiting"}
-                  </p>
-                </div>
-                <div className={step5CardClass}>
-                  <p className="font-medium">5. Save</p>
-                  <p className="text-muted-foreground">
-                    {hasDraftedObjective ? "Ready" : "Waiting"}
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            <div className="grid gap-1.5 md:grid-cols-2">
-              <div className="space-y-0.5 rounded-md border border-white bg-slate-50 p-2">
-                <label className="text-[11px] font-medium">
-                  Step 1: Perspective
-                </label>
-                <Select
-                  value={String(perspectiveLevel)}
-                  onValueChange={(value) => {
-                    setPerspectiveLevel(Number(value) as 1 | 2 | 3 | 4);
-                    setSelectedExistingObjective(null);
-                  }}
-                  disabled={isSaving}
+              <div className="flex flex-wrap items-center justify-end gap-2">
+                <Button
+                  type="button"
+                  size="sm"
+                  className="text-xs"
+                  variant={"outline"}
+                  onClick={() => void handleTemplateDownload()}
+                  disabled={!canDownloadTemplate}
                 >
-                  <SelectTrigger className="bg-white text-xs">
-                    <SelectValue placeholder="Select perspective" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="1">Financial</SelectItem>
-                    <SelectItem value="2">Customer</SelectItem>
-                    <SelectItem value="3">Operation</SelectItem>
-                    <SelectItem value="4">Development</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5 rounded-md border border-white bg-indigo-50 p-2 md:col-span-2">
-                <div className="space-y-0.5">
-                  <label className="text-[11px] font-medium">
-                    Step 2 (Optional): Load Existing Objective
-                  </label>
-                  <p className="text-[11px] text-muted-foreground">
-                    Select an existing objective to edit its initiatives and KPI
-                    targets.
-                  </p>
-                  <SearchableSelect
-                    value={selectedExistingObjective ?? ""}
-                    onValueChange={(value) =>
-                      handleExistingObjectiveSelect(
-                        value.length === 0 ? null : value,
-                      )
-                    }
-                    disabled={existingObjectiveItems.length === 0 || isSaving}
-                    options={existingObjectiveItems.map((item) => ({
-                      value: item,
-                      label: item,
-                    }))}
-                    placeholder="Select an objective"
-                    searchPlaceholder="Search objective"
-                    emptyLabel="No objectives found."
-                    triggerClassName="bg-white text-xs"
-                    searchContainerClassName="sticky top-0 z-10 bg-popover p-1"
-                    searchInputClassName="h-8 bg-white text-xs"
-                    allowEscapeKeyPropagation={false}
-                  />
-                </div>
-
-                <div className="space-y-0.5">
-                  <label className="text-[11px] font-medium">
-                    Step 2: Strategic Objective
-                  </label>
-                  <Input
-                    name="strategicObjective"
-                    value={strategicObjective}
-                    maxLength={50}
-                    onChange={(event) =>
-                      setStrategicObjective(event.target.value)
-                    }
-                    className="h-8 bg-white text-xs"
-                    disabled={isSaving}
-                  />
-                </div>
-              </div>
-
-              <div className="space-y-0.5 rounded-md border border-white bg-amber-50 p-2 md:col-span-2">
-                <label className="text-[11px] font-medium">
-                  Step 3: Key Initiative
-                </label>
-                <p className="text-[11px] text-muted-foreground">
-                  Add one initiative at a time under the objective above.
-                </p>
-                <Input
-                  name="keyInitiative"
-                  value={keyInitiative}
-                  maxLength={50}
-                  onChange={(event) => setKeyInitiative(event.target.value)}
-                  className="h-8 bg-white text-xs"
-                  disabled={isSaving || !hasObjectiveContext}
-                />
-                {!hasObjectiveContext ? (
-                  <p className="text-[11px] text-amber-700">
-                    Define or load a strategic objective first.
-                  </p>
-                ) : null}
-              </div>
-
-              <div className="md:col-span-2 mt-1 rounded-md border border-white bg-cyan-50 p-2">
-                <p className="text-[11px] font-medium">
-                  Step 4: KPIs Under This Key Initiative
-                </p>
-                <p className="mt-0.5 text-[11px] text-muted-foreground">
-                  Each KPI here belongs to the initiative above.
-                </p>
-                {!hasInitiativeContext ? (
-                  <p className="mt-1 text-[11px] text-amber-700">
-                    Enter a key initiative before adding KPIs.
-                  </p>
-                ) : null}
-
-                <div className="mt-1 grid gap-1.5 md:grid-cols-4">
-                  <div className="space-y-0.5 md:col-span-2">
-                    <label className="text-[11px] font-medium">KPI</label>
-                    <SearchableSelect
-                      value={
-                        kpiDefinitionId == null ? "" : String(kpiDefinitionId)
-                      }
-                      onValueChange={(value) => {
-                        setKpiDefinitionId(Number(value));
-                      }}
-                      disabled={
-                        availableKpiOptions.length === 0 ||
-                        isSaving ||
-                        !hasInitiativeContext
-                      }
-                      options={availableKpiOptions.map((option) => ({
-                        value: String(option.kpiDefinitionId),
-                        label: option.kpiName,
-                      }))}
-                      placeholder="Select KPI"
-                      searchPlaceholder="Search KPI"
-                      emptyLabel="No KPIs found."
-                      triggerClassName="bg-white text-xs"
-                      searchContainerClassName="sticky top-0 z-10 bg-popover p-1"
-                      searchInputClassName="h-8 bg-white text-xs"
-                      allowEscapeKeyPropagation={false}
-                    />
-                  </div>
-
-                  <div className="space-y-0.5">
-                    <label className="text-[11px] font-medium">Target</label>
-                    <Input
-                      name="targetValue"
-                      value={targetValue}
-                      onChange={(event) => setTargetValue(event.target.value)}
-                      className="h-8 bg-white text-xs"
-                      disabled={isSaving || !hasInitiativeContext}
-                    />
-                  </div>
-
-                  <div className="space-y-0.5">
-                    <label className="text-[11px] font-medium">Tracking</label>
-                    <Select
-                      value={trackingFrequency}
-                      onValueChange={(value) =>
-                        setTrackingFrequency(value as TrackingFrequency)
-                      }
-                      disabled={isSaving || !hasInitiativeContext}
-                    >
-                      <SelectTrigger className="bg-white text-xs">
-                        <SelectValue placeholder="Select tracking frequency" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="monthly">Monthly</SelectItem>
-                        <SelectItem value="annually">Annually</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
-
-                <div className="mt-1.5 flex gap-1.5">
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="h-8 px-2 text-xs"
-                    disabled={
-                      isSaving ||
-                      selectedKpiOption == null ||
-                      !hasInitiativeContext
-                    }
-                    onClick={() => {
-                      if (selectedKpiOption == null) {
-                        setSaveMessage("Select a KPI first.");
-                        return;
-                      }
-
-                      if (targetValue.trim().length === 0) {
-                        setSaveMessage("Enter a KPI target value first.");
-                        return;
-                      }
-
-                      const nextKpi: DraftObjectiveKpi = {
-                        kpiId: selectedKpiOption.kpiId,
-                        kpiDefinitionId: selectedKpiOption.kpiDefinitionId,
-                        kpiName: selectedKpiOption.kpiName,
-                        kpiCategoryId: selectedKpiOption.categoryId,
-                        kpiSubcategoryId: selectedKpiOption.subcategoryId,
-                        targetValue: targetValue.trim(),
-                        trackingFrequency,
-                        isSaved: false,
-                      };
-
-                      setCurrentInitiativeKpis((prev) => [...prev, nextKpi]);
-                      setTargetValue("");
-                      setSaveMessage(null);
-                    }}
-                  >
-                    Add KPI To Initiative
-                  </Button>
-                </div>
-
-                {currentInitiativeKpis.length > 0 ? (
-                  <div className="mt-1.5 overflow-hidden rounded-md border border-white bg-white">
-                    <table className="w-full text-left text-[11px]">
-                      <thead className="bg-slate-100 text-slate-700">
-                        <tr>
-                          <th className="px-2 py-1 font-medium">KPI</th>
-                          <th className="px-2 py-1 font-medium">Target</th>
-                          <th className="px-2 py-1 font-medium">Tracking</th>
-                          <th className="px-2 py-1 text-right font-medium">
-                            Action
-                          </th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {currentInitiativeKpis.map((item, index) => (
-                          <tr
-                            key={`${item.kpiDefinitionId}-${index}`}
-                            className="border-t border-slate-200"
-                          >
-                            <td className="px-2 py-1.5">{item.kpiName}</td>
-                            <td className="px-2 py-1.5">{item.targetValue}</td>
-                            <td className="px-2 py-1.5 capitalize">
-                              {item.trackingFrequency}
-                            </td>
-                            <td className="px-2 py-1.5 text-right">
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 px-1.5 text-[11px]"
-                                onClick={() =>
-                                  setCurrentInitiativeKpis((prev) =>
-                                    prev.filter(
-                                      (_, itemIndex) => itemIndex !== index,
-                                    ),
-                                  )
-                                }
-                              >
-                                Remove
-                              </Button>
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                ) : (
-                  <p className="mt-1.5 text-[11px] text-muted-foreground">
-                    No KPIs added for this initiative yet.
-                  </p>
-                )}
-
-                <div className="mt-1.5">
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="h-8 px-2 text-xs"
-                    disabled={isSaving}
-                    onClick={() => {
-                      const initiativeDescription = keyInitiative.trim();
-                      if (initiativeDescription.length === 0) {
-                        setSaveMessage("Enter a key initiative.");
-                        return;
-                      }
-
-                      if (currentInitiativeKpis.length === 0) {
-                        setSaveMessage(
-                          "Add at least one KPI to the key initiative.",
-                        );
-                        return;
-                      }
-
-                      const nextInitiative: DraftKeyInitiative = {
-                        id: `${Date.now()}-${Math.random()}`,
-                        description: initiativeDescription,
-                        kpis: [...currentInitiativeKpis],
-                        isSaved: false,
-                      };
-
-                      setCurrentObjectiveInitiatives((prev) => {
-                        const existingIndex = prev.findIndex(
-                          (item) =>
-                            item.description.trim().toLowerCase() ===
-                            initiativeDescription.toLowerCase(),
-                        );
-
-                        if (existingIndex < 0) {
-                          return [...prev, nextInitiative];
-                        }
-
-                        const next = [...prev];
-                        next[existingIndex] = {
-                          ...nextInitiative,
-                          id: prev[existingIndex].id,
-                        };
-                        return next;
-                      });
-
-                      setKeyInitiative("");
-                      setCurrentInitiativeKpis([]);
-                      setSaveMessage(
-                        "Key initiative added/updated on objective.",
-                      );
-                    }}
-                  >
-                    Add Initiative To Objective
-                  </Button>
-                </div>
-
-                <BorderedPanel className="mt-2 p-2">
-                  <p className="text-[11px] font-medium">
-                    Key Initiatives Under Objective
-                  </p>
-                  {currentObjectiveInitiatives.length === 0 ? (
-                    <p className="mt-1 text-[11px] text-muted-foreground">
-                      No key initiatives added yet.
-                    </p>
-                  ) : (
-                    <ul className="mt-1 space-y-1.5">
-                      {currentObjectiveInitiatives.map(
-                        (initiative, initiativeIndex) => (
-                          <BorderedGrid key={initiative.id}>
-                            <div className="flex items-center justify-between gap-1.5">
-                              <p className="text-[11px] font-medium">
-                                Initiative {initiativeIndex + 1}:{" "}
-                                {initiative.description}
-                              </p>
-                              <Button
-                                type="button"
-                                variant="ghost"
-                                size="sm"
-                                className="h-6 px-1.5 text-[11px]"
-                                onClick={() =>
-                                  setCurrentObjectiveInitiatives((prev) =>
-                                    prev.filter(
-                                      (item) => item.id !== initiative.id,
-                                    ),
-                                  )
-                                }
-                              >
-                                Remove
-                              </Button>
-                            </div>
-                            <div className="mt-1 overflow-hidden rounded border border-white bg-white">
-                              <table className="w-full text-left text-[11px] text-slate-700">
-                                <thead className="bg-slate-100">
-                                  <tr>
-                                    <th className="px-2 py-1 font-medium">
-                                      KPI
-                                    </th>
-                                    <th className="px-2 py-1 font-medium">
-                                      Target
-                                    </th>
-                                    <th className="px-2 py-1 font-medium">
-                                      Tracking
-                                    </th>
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {initiative.kpis.map((kpi, index) => (
-                                    <tr
-                                      key={`${initiative.id}-${kpi.kpiDefinitionId}-${index}`}
-                                      className="border-t border-slate-200"
-                                    >
-                                      <td className="px-2 py-1.5">
-                                        {kpi.kpiName}
-                                      </td>
-                                      <td className="px-2 py-1.5">
-                                        {kpi.targetValue}
-                                      </td>
-                                      <td className="px-2 py-1.5 capitalize">
-                                        {kpi.trackingFrequency}
-                                      </td>
-                                    </tr>
-                                  ))}
-                                </tbody>
-                              </table>
-                            </div>
-                          </BorderedGrid>
-                        ),
-                      )}
-                    </ul>
-                  )}
-                </BorderedPanel>
-
-                <div className="mt-1.5 rounded-md border border-white bg-lime-50 p-2">
-                  <p className="text-[11px] font-medium">
-                    Step 5: Add/Update Objective In Perspective
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    This commits all initiatives and KPIs above into the draft
-                    objective list.
-                  </p>
-                  <Button
-                    type="button"
-                    size="sm"
-                    className="mt-1 h-8 px-2 text-xs"
-                    disabled={isSaving}
-                    onClick={() => {
-                      const description = strategicObjective.trim();
-                      if (description.length === 0) {
-                        setSaveMessage(
-                          "Enter a strategic objective description.",
-                        );
-                        return;
-                      }
-
-                      if (currentObjectiveInitiatives.length === 0) {
-                        setSaveMessage(
-                          "Add at least one key initiative to the objective.",
-                        );
-                        return;
-                      }
-
-                      const nextObjective: DraftObjective = {
-                        id: `${Date.now()}-${Math.random()}`,
-                        description,
-                        keyInitiatives: [...currentObjectiveInitiatives],
-                        isSaved: false,
-                      };
-
-                      updateDraftObjectivesForPerspective((prev) => {
-                        const existingIndex = prev.findIndex(
-                          (item) =>
-                            item.description.trim().toLowerCase() ===
-                            description.toLowerCase(),
-                        );
-
-                        if (existingIndex < 0) {
-                          return [...prev, nextObjective];
-                        }
-
-                        const next = [...prev];
-                        next[existingIndex] = {
-                          ...nextObjective,
-                          id: prev[existingIndex].id,
-                        };
-                        return next;
-                      });
-                      setStrategicObjective("");
-                      setKeyInitiative("");
-                      setCurrentInitiativeKpis([]);
-                      setCurrentObjectiveInitiatives([]);
-                      setSelectedExistingObjective(null);
-                      setSaveMessage("Objective added/updated in draft list.");
-                    }}
-                  >
-                    Step 5: Add/Update Objective In Perspective
-                  </Button>
-                </div>
-              </div>
-
-              <BorderedPanel className="mt-2 p-2">
-                <p className="text-[11px] font-medium">Draft Objectives</p>
-                {draftObjectives.length === 0 ? (
-                  <p className="mt-1 text-[11px] text-muted-foreground">
-                    No objectives added yet.
-                  </p>
-                ) : (
-                  <ul className="mt-1 space-y-1.5">
-                    {draftObjectives.map((objective, objectiveIndex) => (
-                      <BorderedGrid key={objective.id}>
-                        <div className="flex items-center justify-between gap-1.5">
-                          <p className="text-[11px] font-medium">
-                            Objective {objectiveIndex + 1}:{" "}
-                            {objective.description}
-                          </p>
-                          <Button
-                            type="button"
-                            variant="ghost"
-                            size="sm"
-                            className="h-6 px-1.5 text-[11px]"
-                            onClick={() =>
-                              updateDraftObjectivesForPerspective((prev) =>
-                                prev.filter((item) => item.id !== objective.id),
-                              )
-                            }
-                          >
-                            Remove
-                          </Button>
-                        </div>
-                        <div className="mt-1 space-y-1 text-[11px] text-muted-foreground">
-                          {objective.keyInitiatives.map(
-                            (initiative, initiativeIndex) => (
-                              <div
-                                key={`${objective.id}-${initiative.id}`}
-                                className="rounded border p-1.5"
-                              >
-                                <p className="font-medium text-foreground">
-                                  Initiative {initiativeIndex + 1}:{" "}
-                                  {initiative.description}
-                                </p>
-                                <div className="mt-0.5 overflow-hidden rounded border border-white bg-white">
-                                  <table className="w-full text-left text-[11px] text-slate-700">
-                                    <thead className="bg-slate-100">
-                                      <tr>
-                                        <th className="px-2 py-1 font-medium">
-                                          KPI
-                                        </th>
-                                        <th className="px-2 py-1 font-medium">
-                                          Target
-                                        </th>
-                                        <th className="px-2 py-1 font-medium">
-                                          Tracking
-                                        </th>
-                                      </tr>
-                                    </thead>
-                                    <tbody>
-                                      {initiative.kpis.map((kpi, index) => (
-                                        <tr
-                                          key={`${initiative.id}-${kpi.kpiDefinitionId}-${index}`}
-                                          className="border-t border-slate-200"
-                                        >
-                                          <td className="px-2 py-1.5">
-                                            {kpi.kpiName}
-                                          </td>
-                                          <td className="px-2 py-1.5">
-                                            {kpi.targetValue}
-                                          </td>
-                                          <td className="px-2 py-1.5 capitalize">
-                                            {kpi.trackingFrequency}
-                                          </td>
-                                        </tr>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              </div>
-                            ),
-                          )}
-                        </div>
-                      </BorderedGrid>
-                    ))}
-                  </ul>
-                )}
-              </BorderedPanel>
-            </div>
-
-            <div className="mt-2 flex items-center gap-1.5">
-              <Button
-                type="button"
-                size="sm"
-                className="h-8 px-2 text-xs"
-                disabled={isSaving || draftObjectives.length === 0}
-                onClick={async () => {
-                  setSaveMessage(null);
-                  setIsSaving(true);
-
-                  try {
-                    if (draftObjectives.length === 0) {
-                      throw new Error(
-                        "Add at least one objective before saving.",
-                      );
+                  <Download /> Download Excel Template
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  variant={"outline"}
+                  className="text-xs"
+                  onClick={() => {
+                    if (templateUploadFile == null) {
+                      quickTemplateUploadInputRef.current?.click();
+                      return;
                     }
 
-                    for (const objective of draftObjectives) {
-                      for (const initiative of objective.keyInitiatives) {
-                        for (const objectiveKpi of initiative.kpis) {
-                          await saveScorecardConfig({
-                            reportPeriodId: context.reportPeriodId,
-                            kpiId: objectiveKpi.kpiId,
-                            kpiDefinitionId: objectiveKpi.kpiDefinitionId,
-                            perspectiveLevel,
-                            perspectiveDescription:
-                              PERSPECTIVE_LABELS[perspectiveLevel],
-                            strategicObjective: objective.description,
-                            keyInitiative: initiative.description,
-                            trackingFrequency: objectiveKpi.trackingFrequency,
-                            target: {
-                              targetValue: objectiveKpi.targetValue,
-                            },
-                          });
-                        }
-                      }
-                    }
-
-                    setSaveMessage(
-                      "Perspective objectives saved successfully.",
-                    );
-                    updateDraftObjectivesForPerspective(() => []);
-                    setCurrentInitiativeKpis([]);
-                    setCurrentObjectiveInitiatives([]);
-                    setStrategicObjective("");
-                    setKeyInitiative("");
-                    setTargetValue("");
-                    setContext((current) => ({ ...current }));
-                  } catch (err) {
-                    setSaveMessage(
-                      err instanceof Error
-                        ? err.message
-                        : "Unable to save KPI target.",
-                    );
-                  } finally {
-                    setIsSaving(false);
+                    void handleTemplateUpload();
+                  }}
+                  disabled={isProcessingTemplate || templateRows.length === 0}
+                >
+                  <Upload />
+                  {isProcessingTemplate
+                    ? "Uploading..."
+                    : "Upload Excel Template"}
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  className="text-xs w-20"
+                  onClick={() => void handleTemplateSave()}
+                  disabled={
+                    isSaving || isProcessingTemplate || !canSaveTemplate
                   }
-                }}
-              >
-                {isSaving ? "Saving..." : "Save Perspective"}
-              </Button>
-              {saveMessage ? (
-                <span className="text-[11px] text-muted-foreground">
-                  {saveMessage}
-                </span>
-              ) : null}
+                >
+                  <Save /> {isSaving ? "Saving..." : "Save"}
+                </Button>
+              </div>
             </div>
-
-            {availableKpiOptions.length === 0 ? (
-              <p className="mt-2 text-xs text-muted-foreground">
-                No KPI options available for this filter context.
-              </p>
-            ) : null}
           </div>
+          <ScorecardBuilderTree
+            perspectiveLabels={PERSPECTIVE_LABELS}
+            draftObjectivesByPerspective={draftObjectivesByPerspective}
+            filterOptions={filterOptions}
+            availableKpiOptions={availableKpiOptions}
+            isProcessingTemplate={isProcessingTemplate}
+            onAddObjective={addObjectiveForLevel}
+            onUpdateObjectiveDescription={updateObjectiveDescriptionForLevel}
+            onRemoveObjective={removeObjectiveForLevel}
+            onAddInitiative={addInitiativeForLevel}
+            onUpdateInitiativeDescription={updateInitiativeDescriptionForLevel}
+            onRemoveInitiative={removeInitiativeForLevel}
+            onAddKpi={addKpiForLevel}
+            onUpdateKpi={updateKpiForLevel}
+            onRemoveKpi={removeKpiForLevel}
+          />
+
+          {saveMessage ? (
+            <p className="text-[11px] text-muted-foreground">{saveMessage}</p>
+          ) : null}
         </div>
       ) : null}
 
-      {mode !== "builder" &&
-      activeMainTab === "strategic-map" &&
-      snapshot &&
-      snapshot.perspectiveScores.length > 0 ? (
-        <>
-          <ScorecardTree
-            rows={scorecardRows}
-            relationships={scorecardRelationships}
-          />
-          <ScorecardSummary
-            overallScore={snapshot.overallScore}
-            perspectiveScores={snapshot.perspectiveScores}
-            onSelect={setSelectedPerspective}
-          />
-          <ScorecardDetailPanel perspective={selected} />
-        </>
-      ) : null}
-
-      {mode !== "builder" &&
-      activeMainTab === "strategic-map" &&
-      !error &&
-      snapshot &&
-      snapshot.perspectiveScores.length === 0 ? (
-        <ScorecardEmptyState />
+      {mode !== "builder" && activeMainTab === "tree-view" ? (
+        <ScorecardPerspectiveHierarchyFlow
+          snapshot={snapshot}
+          rows={scorecardRows}
+          isLoading={!snapshot && !error}
+        />
       ) : null}
     </div>
   );
