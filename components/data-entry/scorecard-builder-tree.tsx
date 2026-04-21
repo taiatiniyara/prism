@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import type { ReviewKpiFilterOptions } from "@/app/data-entry/review-kpi/types";
 import type { ScorecardKpiOption } from "@/app/data-entry/balanced-scorecard/types";
@@ -199,42 +199,41 @@ export default function ScorecardBuilderTree({
     return subcategory.parent_id ?? legacyCategoryId ?? null;
   };
 
-  const perspectiveCounts = useMemo(() => {
-    return perspectiveLevels.reduce(
-      (acc, level) => {
-        const objectives = draftObjectivesByPerspective[level];
-        const objectiveCount = objectives.length;
-        const initiativeCount = objectives.reduce(
-          (sum, objective) => sum + objective.keyInitiatives.length,
-          0,
-        );
-        const kpiCount = objectives.reduce(
-          (sum, objective) =>
-            sum +
-            objective.keyInitiatives.reduce(
-              (inner, initiative) => inner + initiative.kpis.length,
-              0,
-            ),
-          0,
-        );
+  const summarizeFilledNames = (
+    names: string[],
+    { emptyLabel, maxItems = 3 }: { emptyLabel: string; maxItems?: number },
+  ) => {
+    const filledNames = names
+      .map((name) => name.trim())
+      .filter((name) => name.length > 0);
 
-        acc[level] = { objectiveCount, initiativeCount, kpiCount };
-        return acc;
-      },
-      {} as Record<
-        PerspectiveLevel,
-        { objectiveCount: number; initiativeCount: number; kpiCount: number }
-      >,
-    );
-  }, [draftObjectivesByPerspective]);
+    if (filledNames.length === 0) {
+      return emptyLabel;
+    }
+
+    const preview = filledNames.slice(0, maxItems).join(", ");
+    const remaining = filledNames.length - maxItems;
+    return remaining > 0 ? `${preview} +${remaining} more` : preview;
+  };
 
   return (
     <TooltipProvider>
       <div className="max-h-160 space-y-2 overflow-y-auto rounded-md border border-slate-300 bg-slate-50/60 p-2">
         {perspectiveLevels.map((level) => {
           const objectives = draftObjectivesByPerspective[level];
-          const counts = perspectiveCounts[level];
           const perspectiveExpanded = expandedPerspectives[level] ?? true;
+          const objectiveNamesSummary = summarizeFilledNames(
+            objectives.map((objective) => objective.description),
+            { emptyLabel: "No objectives filled" },
+          );
+          const initiativeNamesSummary = summarizeFilledNames(
+            objectives.flatMap((objective) =>
+              objective.keyInitiatives.map(
+                (initiative) => initiative.description,
+              ),
+            ),
+            { emptyLabel: "No initiatives filled" },
+          );
 
           return (
             <details
@@ -278,25 +277,28 @@ export default function ScorecardBuilderTree({
                       )}
                     </Button>
 
-                    <div>
-                      <p className="text-xs font-semibold text-sky-900">
-                        {perspectiveLabels[level]}
-                      </p>
-                      <p className="text-[11px] text-sky-800">
-                        Objectives: {counts.objectiveCount} | Initiatives:{" "}
-                        {counts.initiativeCount} | KPIs: {counts.kpiCount}
-                      </p>
-                    </div>
+                    <div className="space-y-2">
+                      <div className="flex gap-2 items-center">
+                        <p className="text-xs font-semibold text-sky-900">
+                          {perspectiveLabels[level]}
+                        </p>
+                        <AddIconButton
+                          tooltip="Add strategic objective"
+                          onClick={(event) => {
+                            event.preventDefault();
+                            event.stopPropagation();
+                            onAddObjective(level);
+                          }}
+                          disabled={isProcessingTemplate}
+                        />
+                      </div>
 
-                    <AddIconButton
-                      tooltip="Add strategic objective"
-                      onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        onAddObjective(level);
-                      }}
-                      disabled={isProcessingTemplate}
-                    />
+                      {!perspectiveExpanded ? (
+                        <p className="text-[11px] text-sky-800/90">
+                          {`Objectives: ${objectiveNamesSummary} | Initiatives: ${initiativeNamesSummary}`}
+                        </p>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               </summary>
@@ -317,48 +319,75 @@ export default function ScorecardBuilderTree({
                         key={objective.id}
                         className="ml-2 space-y-2 rounded-sm border border-sky-200 bg-sky-50/40 p-2"
                       >
-                        <div className="flex flex-wrap items-center justify-between gap-2">
-                          <div className="flex items-center gap-2">
-                            <Button
-                              type="button"
-                              size="sm"
-                              variant="ghost"
-                              className="h-7 w-7 p-0"
-                              onClick={() =>
-                                setExpandedObjectives((prev) => ({
-                                  ...prev,
-                                  [objectiveKey]: !objectiveExpanded,
-                                }))
-                              }
-                              aria-label={
-                                objectiveExpanded
-                                  ? "Collapse objective"
-                                  : "Expand objective"
-                              }
-                            >
-                              {objectiveExpanded ? (
-                                <ChevronDownIcon className="h-4 w-4" />
-                              ) : (
-                                <ChevronRightIcon className="h-4 w-4" />
-                              )}
-                            </Button>
+                        <div className="flex flex-wrap items-start gap-2">
+                          {(() => {
+                            const objectiveName = objective.description.trim();
+                            const objectiveTitle =
+                              objectiveName.length > 0
+                                ? objectiveName
+                                : "Untitled objective";
+                            const initiativeNamesSummary = summarizeFilledNames(
+                              objective.keyInitiatives.map(
+                                (initiative) => initiative.description,
+                              ),
+                              { emptyLabel: "No initiatives filled" },
+                            );
 
-                            <AddIconButton
-                              tooltip="Add initiative"
-                              onClick={() =>
-                                onAddInitiative(level, objective.id)
-                              }
-                              disabled={isProcessingTemplate}
-                            />
+                            return (
+                              <div className="flex items-center gap-2">
+                                <Button
+                                  type="button"
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-7 w-7 p-0"
+                                  onClick={() =>
+                                    setExpandedObjectives((prev) => ({
+                                      ...prev,
+                                      [objectiveKey]: !objectiveExpanded,
+                                    }))
+                                  }
+                                  aria-label={
+                                    objectiveExpanded
+                                      ? "Collapse objective"
+                                      : "Expand objective"
+                                  }
+                                >
+                                  {objectiveExpanded ? (
+                                    <ChevronDownIcon className="h-4 w-4" />
+                                  ) : (
+                                    <ChevronRightIcon className="h-4 w-4" />
+                                  )}
+                                </Button>
 
-                            <RemoveIconButton
-                              tooltip="Remove objective"
-                              onClick={() =>
-                                onRemoveObjective(level, objective.id)
-                              }
-                              disabled={isProcessingTemplate}
-                            />
-                          </div>
+                                <AddIconButton
+                                  tooltip="Add initiative"
+                                  onClick={() =>
+                                    onAddInitiative(level, objective.id)
+                                  }
+                                  disabled={isProcessingTemplate}
+                                />
+
+                                <RemoveIconButton
+                                  tooltip="Remove objective"
+                                  onClick={() =>
+                                    onRemoveObjective(level, objective.id)
+                                  }
+                                  disabled={isProcessingTemplate}
+                                />
+
+                                <div className="min-w-0">
+                                  <p className="truncate text-[11px] font-medium text-sky-900">
+                                    {objectiveTitle}
+                                  </p>
+                                  {!objectiveExpanded ? (
+                                    <p className="text-[11px] text-sky-800/90">
+                                      {`Initiatives: ${initiativeNamesSummary}`}
+                                    </p>
+                                  ) : null}
+                                </div>
+                              </div>
+                            );
+                          })()}
                         </div>
 
                         {objectiveExpanded ? (
@@ -395,59 +424,88 @@ export default function ScorecardBuilderTree({
                                       key={initiative.id}
                                       className="ml-3 space-y-2 rounded-sm border border-amber-200 bg-amber-50/40 p-2"
                                     >
-                                      <div className="flex flex-wrap items-center justify-between gap-2">
-                                        <div className="flex items-center gap-2">
-                                          <Button
-                                            type="button"
-                                            size="sm"
-                                            variant="ghost"
-                                            className="h-7 w-7 p-0"
-                                            onClick={() =>
-                                              setExpandedInitiatives(
-                                                (prev) => ({
-                                                  ...prev,
-                                                  [initiativeKey]:
-                                                    !initiativeExpanded,
-                                                }),
-                                              )
-                                            }
-                                            aria-label={
-                                              initiativeExpanded
-                                                ? "Collapse initiative"
-                                                : "Expand initiative"
-                                            }
-                                          >
-                                            {initiativeExpanded ? (
-                                              <ChevronDownIcon className="h-4 w-4" />
-                                            ) : (
-                                              <ChevronRightIcon className="h-4 w-4" />
-                                            )}
-                                          </Button>
+                                      <div className="flex flex-wrap items-start gap-2">
+                                        {(() => {
+                                          const initiativeName =
+                                            initiative.description.trim();
+                                          const initiativeTitle =
+                                            initiativeName.length > 0
+                                              ? initiativeName
+                                              : "Untitled initiative";
+                                          const kpiNamesSummary =
+                                            summarizeFilledNames(
+                                              initiative.kpis.map(
+                                                (kpi) => kpi.kpiName,
+                                              ),
+                                              { emptyLabel: "No KPIs filled" },
+                                            );
 
-                                          <AddIconButton
-                                            tooltip="Add KPI"
-                                            onClick={() =>
-                                              onAddKpi(
-                                                level,
-                                                objective.id,
-                                                initiative.id,
-                                              )
-                                            }
-                                            disabled={isProcessingTemplate}
-                                          />
+                                          return (
+                                            <div className="flex items-center gap-2">
+                                              <Button
+                                                type="button"
+                                                size="sm"
+                                                variant="ghost"
+                                                className="h-7 w-7 p-0"
+                                                onClick={() =>
+                                                  setExpandedInitiatives(
+                                                    (prev) => ({
+                                                      ...prev,
+                                                      [initiativeKey]:
+                                                        !initiativeExpanded,
+                                                    }),
+                                                  )
+                                                }
+                                                aria-label={
+                                                  initiativeExpanded
+                                                    ? "Collapse initiative"
+                                                    : "Expand initiative"
+                                                }
+                                              >
+                                                {initiativeExpanded ? (
+                                                  <ChevronDownIcon className="h-4 w-4" />
+                                                ) : (
+                                                  <ChevronRightIcon className="h-4 w-4" />
+                                                )}
+                                              </Button>
 
-                                          <RemoveIconButton
-                                            tooltip="Remove initiative"
-                                            onClick={() =>
-                                              onRemoveInitiative(
-                                                level,
-                                                objective.id,
-                                                initiative.id,
-                                              )
-                                            }
-                                            disabled={isProcessingTemplate}
-                                          />
-                                        </div>
+                                              <AddIconButton
+                                                tooltip="Add KPI"
+                                                onClick={() =>
+                                                  onAddKpi(
+                                                    level,
+                                                    objective.id,
+                                                    initiative.id,
+                                                  )
+                                                }
+                                                disabled={isProcessingTemplate}
+                                              />
+
+                                              <RemoveIconButton
+                                                tooltip="Remove initiative"
+                                                onClick={() =>
+                                                  onRemoveInitiative(
+                                                    level,
+                                                    objective.id,
+                                                    initiative.id,
+                                                  )
+                                                }
+                                                disabled={isProcessingTemplate}
+                                              />
+
+                                              <div className="min-w-0">
+                                                <p className="truncate text-[11px] font-medium text-amber-900">
+                                                  {initiativeTitle}
+                                                </p>
+                                                {!initiativeExpanded ? (
+                                                  <p className="text-[11px] text-amber-800/90">
+                                                    {`KPIs: ${kpiNamesSummary}`}
+                                                  </p>
+                                                ) : null}
+                                              </div>
+                                            </div>
+                                          );
+                                        })()}
                                       </div>
 
                                       {initiativeExpanded ? (
@@ -560,24 +618,6 @@ export default function ScorecardBuilderTree({
                                                       key={`${initiative.id}-${index}`}
                                                       className="ml-4 space-y-2 rounded-sm border border-lime-200 bg-lime-50/40 p-2"
                                                     >
-                                                      <div className="flex items-center justify-between gap-2">
-                                                        <span />
-                                                        <RemoveIconButton
-                                                          tooltip="Remove KPI"
-                                                          onClick={() =>
-                                                            onRemoveKpi(
-                                                              level,
-                                                              objective.id,
-                                                              initiative.id,
-                                                              index,
-                                                            )
-                                                          }
-                                                          disabled={
-                                                            isProcessingTemplate
-                                                          }
-                                                        />
-                                                      </div>
-
                                                       <div className="flex flex-wrap items-end gap-4">
                                                         <div className="min-w-40 flex-1 space-y-1">
                                                           <label className="text-[11px] font-medium text-lime-900">
@@ -734,7 +774,7 @@ export default function ScorecardBuilderTree({
                                                         </div>
 
                                                         <div className="min-w-56 flex-2 space-y-1">
-                                                          <label className="text-[11px] font-medium text-lime-900">
+                                                          <label className="text-[11px] font-medium text-cyan-900">
                                                             KPI
                                                           </label>
                                                           <Select
@@ -781,7 +821,7 @@ export default function ScorecardBuilderTree({
                                                               isProcessingTemplate
                                                             }
                                                           >
-                                                            <SelectTrigger className="h-9 w-full rounded-none border-0 border-b border-lime-300 bg-transparent px-0 text-xs shadow-none focus-visible:border-lime-500 focus-visible:ring-0">
+                                                            <SelectTrigger className="h-9 w-full rounded-none border-0 border-b border-cyan-400 bg-cyan-50/60 px-0 text-xs shadow-none focus-visible:border-cyan-600 focus-visible:ring-0">
                                                               <SelectValue placeholder="KPI" />
                                                             </SelectTrigger>
                                                             <SelectContent>
@@ -805,44 +845,21 @@ export default function ScorecardBuilderTree({
                                                           </Select>
                                                         </div>
 
-                                                        <div className="min-w-40 flex-1 space-y-1">
-                                                          <label className="text-[11px] font-medium text-lime-900">
-                                                            Tracking
-                                                          </label>
-                                                          <Select
-                                                            value={
-                                                              kpi.trackingFrequency
-                                                            }
-                                                            onValueChange={(
-                                                              value,
-                                                            ) =>
-                                                              onUpdateKpi(
+                                                        <div className="shrink-0">
+                                                          <RemoveIconButton
+                                                            tooltip="Remove KPI"
+                                                            onClick={() =>
+                                                              onRemoveKpi(
                                                                 level,
                                                                 objective.id,
                                                                 initiative.id,
                                                                 index,
-                                                                {
-                                                                  trackingFrequency:
-                                                                    value as TrackingFrequency,
-                                                                },
                                                               )
                                                             }
                                                             disabled={
                                                               isProcessingTemplate
                                                             }
-                                                          >
-                                                            <SelectTrigger className="h-9 w-full rounded-none border-0 border-b border-lime-300 bg-transparent px-0 text-xs shadow-none focus-visible:border-lime-500 focus-visible:ring-0">
-                                                              <SelectValue placeholder="Tracking" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                              <SelectItem value="monthly">
-                                                                Monthly
-                                                              </SelectItem>
-                                                              <SelectItem value="annually">
-                                                                Annually
-                                                              </SelectItem>
-                                                            </SelectContent>
-                                                          </Select>
+                                                          />
                                                         </div>
                                                       </div>
                                                     </div>

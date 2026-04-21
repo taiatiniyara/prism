@@ -33,6 +33,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { generateRandomNumber } from "@/lib/utils";
 import ScorecardBuilderTree from "@/components/data-entry/scorecard-builder-tree";
 
@@ -155,6 +156,9 @@ export default function ScorecardPageClient({
     null,
   );
   const [isProcessingTemplate, setIsProcessingTemplate] = useState(false);
+  const [activeMainTab, setActiveMainTab] = useState<
+    "strategic-map" | "builder"
+  >(mode === "builder" ? "builder" : "strategic-map");
   const quickTemplateUploadInputRef = useRef<HTMLInputElement | null>(null);
 
   const draftObjectives = draftObjectivesByPerspective[perspectiveLevel];
@@ -903,38 +907,6 @@ export default function ScorecardPageClient({
   const hasInitiativeContext =
     initiativeName.length > 0 || currentInitiativeKpis.length > 0;
   const hasDraftedObjective = draftObjectives.length > 0;
-  const totalObjectiveCount = (
-    Object.values(draftObjectivesByPerspective) as DraftObjective[][]
-  ).reduce((sum, objectives) => sum + objectives.length, 0);
-  const totalInitiativeCount = (
-    Object.values(draftObjectivesByPerspective) as DraftObjective[][]
-  ).reduce(
-    (sum, objectives) =>
-      sum +
-      objectives.reduce(
-        (objectiveSum, objective) =>
-          objectiveSum + objective.keyInitiatives.length,
-        0,
-      ),
-    0,
-  );
-  const totalKpiCount = (
-    Object.values(draftObjectivesByPerspective) as DraftObjective[][]
-  ).reduce(
-    (sum, objectives) =>
-      sum +
-      objectives.reduce(
-        (objectiveSum, objective) =>
-          objectiveSum +
-          objective.keyInitiatives.reduce(
-            (initiativeSum, initiative) =>
-              initiativeSum + initiative.kpis.length,
-            0,
-          ),
-        0,
-      ),
-    0,
-  );
   const canDownloadTemplate =
     !isProcessingTemplate &&
     templateYearRangeIsValid &&
@@ -963,32 +935,38 @@ export default function ScorecardPageClient({
         </div>
       ) : null}
 
-      <div className="flex items-center justify-end gap-1.5">
-        <input
-          ref={quickTemplateUploadInputRef}
-          type="file"
-          accept=".xlsx"
-          className="hidden"
-          onChange={(event) => {
-            const file = event.target.files?.[0] ?? null;
-            if (file != null) {
-              void uploadTemplateFile(file);
-            }
-
-            event.currentTarget.value = "";
-          }}
-        />
-        <Button
-          type="button"
-          size="sm"
-          variant="outline"
-          className="h-8 px-2 text-xs"
-          onClick={() => quickTemplateUploadInputRef.current?.click()}
-          disabled={isProcessingTemplate}
+      {mode !== "builder" ? (
+        <Tabs
+          value={activeMainTab}
+          onValueChange={(value) =>
+            setActiveMainTab(value as "strategic-map" | "builder")
+          }
+          className="space-y-0"
         >
-          {isProcessingTemplate ? "Uploading..." : "Upload Filled Template"}
-        </Button>
-        {mode === "builder" ? (
+          <TabsList variant="line">
+            <TabsTrigger value="builder">BSC Template Builder</TabsTrigger>
+            <TabsTrigger value="strategic-map">Strategic Map</TabsTrigger>
+          </TabsList>
+        </Tabs>
+      ) : null}
+
+      <input
+        ref={quickTemplateUploadInputRef}
+        type="file"
+        accept=".xlsx"
+        className="hidden"
+        onChange={(event) => {
+          const file = event.target.files?.[0] ?? null;
+          if (file != null) {
+            void uploadTemplateFile(file);
+          }
+
+          event.currentTarget.value = "";
+        }}
+      />
+
+      {mode === "builder" ? (
+        <div className="flex items-center justify-end gap-1.5">
           <Button
             asChild
             type="button"
@@ -998,41 +976,109 @@ export default function ScorecardPageClient({
           >
             <Link href="/data-entry/balanced-scorecard">Back to Scorecard</Link>
           </Button>
-        ) : (
-          <Button
-            asChild
-            type="button"
-            size="sm"
-            className="h-8 px-2 text-xs"
-          >
-            <Link href="/data-entry/balanced-scorecard/builder">
-              Build / Edit BSC
-            </Link>
-          </Button>
-        )}
-      </div>
+        </div>
+      ) : null}
 
-      {mode === "builder" ? (
+      {mode === "builder" || activeMainTab === "builder" ? (
         <div className="space-y-3 rounded-md border bg-background p-3 sm:p-4">
-          <div>
-            <h2 className="text-sm font-semibold">BSC Template Builder</h2>
-            <p className="text-xs text-muted-foreground">
-              Build hierarchy first, then download, fill, and upload the Excel
-              template.
-            </p>
+          <div className="grid gap-4 lg:gap-12 md:gap-2 md:grid-cols-1 lg:grid-cols-3 items-end">
+            <div>
+              <div>
+                <h2 className="text-sm font-semibold">Targets Tracking</h2>
+                <div className="flex flex-wrap gap-2">
+                  <div className="min-w-32 flex-1 space-y-0.5">
+                    <label className="text-[11px] font-medium">
+                      Start Year
+                    </label>
+                    <Input
+                      type="number"
+                      className="h-8 bg-white text-xs"
+                      value={templateStartYear}
+                      onChange={(event) =>
+                        setTemplateStartYear(Number(event.target.value) || 0)
+                      }
+                      disabled={isProcessingTemplate}
+                    />
+                  </div>
+
+                  <div className="min-w-32 flex-1 space-y-0.5">
+                    <label className="text-[11px] font-medium">End Year</label>
+                    <Input
+                      type="number"
+                      className="h-8 bg-white text-xs"
+                      value={templateEndYear}
+                      onChange={(event) =>
+                        setTemplateEndYear(Number(event.target.value) || 0)
+                      }
+                      disabled={isProcessingTemplate}
+                    />
+                  </div>
+
+                  <div className="min-w-40 flex-1 space-y-0.5">
+                    <label className="text-[11px] font-medium">
+                      Tracking Freqency
+                    </label>
+                    <Select
+                      value={templateTrackingMode}
+                      onValueChange={(value) =>
+                        setTemplateTrackingMode(value as TemplateTrackingMode)
+                      }
+                      disabled={isProcessingTemplate}
+                    >
+                      <SelectTrigger className="bg-white text-xs">
+                        <SelectValue placeholder="Select tracking" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="financial_year">
+                          Financial Year
+                        </SelectItem>
+                        <SelectItem value="monthly">Monthly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex gap-2">
+              <Button
+                type="button"
+                size="sm"
+                variant={"outline"}
+                className="h-8 px-2 text-xs"
+                onClick={() => void handleTemplateDownload()}
+                disabled={!canDownloadTemplate}
+              >
+                Download Template
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                variant={"outline"}
+                className="h-8 px-2 text-xs"
+                onClick={() => {
+                  if (templateUploadFile == null) {
+                    quickTemplateUploadInputRef.current?.click();
+                    return;
+                  }
+
+                  void handleTemplateUpload();
+                }}
+                disabled={isProcessingTemplate || templateRows.length === 0}
+              >
+                {isProcessingTemplate ? "Uploading..." : "Upload Template"}
+              </Button>
+            </div>
           </div>
 
           {templateBuilderOnly ? (
             <div className="space-y-4">
               <div className="space-y-4">
-                <p className="text-[11px] text-muted-foreground">
-                  Use the hierarchy tree below to add objectives, initiatives,
-                  and KPIs under any perspective node.
-                </p>
                 <div className="rounded-md border border-slate-300 bg-slate-50/50 p-3">
                   <div className="flex flex-wrap items-center justify-between gap-1.5">
-                    <p className="text-[11px] font-semibold tracking-wide text-slate-800">
-                      Hierarchy Ready (All Perspectives)
+                    <p className="mt-1 text-[11px] text-muted-foreground">
+                      Build top-down: add objective rows, then initiatives, then
+                      KPIs under each initiative.
                     </p>
                     <div className="flex flex-wrap gap-1 text-[10px]">
                       <span className="rounded border border-sky-300 bg-sky-100 px-1.5 py-0.5 text-sky-800">
@@ -1045,21 +1091,6 @@ export default function ScorecardPageClient({
                         KPI
                       </span>
                     </div>
-                  </div>
-                  <p className="mt-1 text-[11px] text-muted-foreground">
-                    Build top-down: add objective rows, then initiatives, then
-                    KPIs under each initiative.
-                  </p>
-                  <div className="mt-1.5 flex flex-wrap gap-1 text-[11px] text-muted-foreground">
-                    <span className="rounded border border-slate-300 bg-white px-1.5 py-0.5">
-                      Objectives: {totalObjectiveCount}
-                    </span>
-                    <span className="rounded border border-slate-300 bg-white px-1.5 py-0.5">
-                      Initiatives: {totalInitiativeCount}
-                    </span>
-                    <span className="rounded border border-slate-300 bg-white px-1.5 py-0.5">
-                      KPIs: {totalKpiCount}
-                    </span>
                   </div>
 
                   <div className="mt-2">
@@ -1088,113 +1119,13 @@ export default function ScorecardPageClient({
                   </div>
                 </div>
 
-                <BorderedPanel className="p-3">
-                  <p className="text-[11px] font-medium">
-                    Template Period Setup
-                  </p>
-                  <p className="mt-0.5 text-[11px] text-muted-foreground">
-                    Set a year range and choose whether rows should be monthly
-                    or financial-year based.
-                  </p>
-
-                  <div className="flex flex-wrap gap-2">
-                    <div className="min-w-36 flex-1 space-y-0.5">
-                      <label className="text-[11px] font-medium">
-                        Start Year
-                      </label>
-                      <Input
-                        type="number"
-                        className="h-8 bg-white text-xs"
-                        value={templateStartYear}
-                        onChange={(event) =>
-                          setTemplateStartYear(Number(event.target.value) || 0)
-                        }
-                        disabled={isProcessingTemplate}
-                      />
-                    </div>
-
-                    <div className="min-w-36 flex-1 space-y-0.5">
-                      <label className="text-[11px] font-medium">
-                        End Year
-                      </label>
-                      <Input
-                        type="number"
-                        className="h-8 bg-white text-xs"
-                        value={templateEndYear}
-                        onChange={(event) =>
-                          setTemplateEndYear(Number(event.target.value) || 0)
-                        }
-                        disabled={isProcessingTemplate}
-                      />
-                    </div>
-
-                    <div className="min-w-44 flex-1 space-y-0.5">
-                      <label className="text-[11px] font-medium">
-                        Tracking
-                      </label>
-                      <Select
-                        value={templateTrackingMode}
-                        onValueChange={(value) =>
-                          setTemplateTrackingMode(value as TemplateTrackingMode)
-                        }
-                        disabled={isProcessingTemplate}
-                      >
-                        <SelectTrigger className="bg-white text-xs">
-                          <SelectValue placeholder="Select tracking" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="financial_year">
-                            Financial Year
-                          </SelectItem>
-                          <SelectItem value="monthly">Monthly</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="flex min-w-44 items-end">
-                      <Button
-                        type="button"
-                        size="sm"
-                        className="h-8 px-2 text-xs"
-                        onClick={() => void handleTemplateDownload()}
-                        disabled={!canDownloadTemplate}
-                      >
-                        Download Excel Template
-                      </Button>
-                    </div>
-                  </div>
-                </BorderedPanel>
-
                 <div className="rounded-md border p-2">
                   <p className="text-[11px] font-medium">
                     Upload Filled Template
                   </p>
-                  <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                    <Input
-                      type="file"
-                      accept=".xlsx"
-                      className="h-8 bg-white text-xs"
-                      onChange={(event) =>
-                        setTemplateUploadFile(event.target.files?.[0] ?? null)
-                      }
-                      disabled={isProcessingTemplate}
-                    />
-                    <Button
-                      type="button"
-                      size="sm"
-                      className="h-8 px-2 text-xs"
-                      onClick={() => void handleTemplateUpload()}
-                      disabled={
-                        isProcessingTemplate ||
-                        templateUploadFile == null ||
-                        templateRows.length === 0
-                      }
-                    >
-                      {isProcessingTemplate
-                        ? "Uploading..."
-                        : "Upload Template"}
-                    </Button>
-                  </div>
+                  <p className="mt-1 text-[11px] text-muted-foreground">
+                    Use the upload action button to select a file.
+                  </p>
                 </div>
 
                 <div className="rounded-md border p-2 text-[11px] text-muted-foreground">
@@ -1810,6 +1741,7 @@ export default function ScorecardPageClient({
       ) : null}
 
       {mode !== "builder" &&
+      activeMainTab === "strategic-map" &&
       snapshot &&
       snapshot.perspectiveScores.length > 0 ? (
         <>
@@ -1827,6 +1759,7 @@ export default function ScorecardPageClient({
       ) : null}
 
       {mode !== "builder" &&
+      activeMainTab === "strategic-map" &&
       !error &&
       snapshot &&
       snapshot.perspectiveScores.length === 0 ? (
