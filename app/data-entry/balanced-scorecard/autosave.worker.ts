@@ -1,8 +1,16 @@
 type TrackingFrequency = "monthly" | "annually";
 
 type PersistableKpi = {
-  kpiDefinitionId: number;
+  kpiDefinitionId: number | null;
   trackingFrequency: TrackingFrequency;
+  pendingCustomKpiRequestId?: string | null;
+  pendingCustomKpiTitle?: string | null;
+  pendingCustomKpiStatus?:
+    | "PENDING_REVIEW"
+    | "APPROVED"
+    | "REJECTED"
+    | "REPLACED";
+  approvedKpiDefinitionId?: number | null;
 };
 
 type PersistableInitiative = {

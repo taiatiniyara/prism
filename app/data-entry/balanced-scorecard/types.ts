@@ -100,8 +100,23 @@ export type ScorecardRelationshipsUpdatePayload = {
 };
 
 export type ScorecardDraftKpiInput = {
-  kpiDefinitionId: number;
+  kpiDefinitionId: number | null;
   trackingFrequency: "monthly" | "annually";
+  pendingCustomKpiRequestId?: string | null;
+  pendingCustomKpiTitle?: string | null;
+  pendingCustomKpiStatus?:
+    | "PENDING_REVIEW"
+    | "APPROVED"
+    | "REJECTED"
+    | "REPLACED";
+  approvedKpiDefinitionId?: number | null;
+};
+
+export type ScorecardCustomKpiRequest = {
+  id: string;
+  title: string;
+  status: "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "REPLACED";
+  replacementKpiDefinitionId: number | null;
 };
 
 export type ScorecardDraftInitiativeInput = {
@@ -151,6 +166,25 @@ export type ScorecardKpiOption = {
   categoryId: number | null;
   subcategoryId: number | null;
   targetValue: string | null;
+};
+
+export type CustomKpiReferenceOptions = {
+  availableInputDefinitions: Array<{
+    id: number;
+    name: string;
+    variableName: string | null;
+    unit: string | null;
+    category: string | null;
+    subcategory: string | null;
+  }>;
+  availableUnits: Array<{
+    id: number;
+    name: string;
+  }>;
+  availableDataTypes: Array<{
+    id: number;
+    name: string;
+  }>;
 };
 
 export type ScorecardInputRow = {

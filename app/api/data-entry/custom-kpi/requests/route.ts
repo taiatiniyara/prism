@@ -49,7 +49,10 @@ export async function POST(request: Request) {
       requestId: item.id,
     });
 
-    return Response.json({ id: item.id }, { status: 201 });
+    return Response.json(
+      { id: item.id, title: item.title, status: item.status },
+      { status: 201 },
+    );
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected error";
     console.error("Failed to submit custom KPI request", {

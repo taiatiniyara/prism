@@ -9,8 +9,12 @@ import {
   isLatestRequest,
   saveScorecardConfig,
   saveScorecardDraft,
+  saveScorecardRelationships,
 } from "@/app/data-entry/balanced-scorecard/client";
 import type {
+  CustomKpiReferenceOptions,
+  ScorecardDraftObjectiveInput,
+  ScorecardCustomKpiRequest,
   ScorecardFilterContext,
   ScorecardInputRow,
   ScorecardKpiOption,
@@ -31,6 +35,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { generateRandomNumber } from "@/lib/utils";
 import ScorecardBuilderTree from "@/components/data-entry/scorecard-builder-tree";
 import ScorecardPerspectiveHierarchyFlow from "@/components/data-entry/scorecard-perspective-hierarchy-flow";
+import ScorecardStrategyMap from "@/components/data-entry/scorecard-strategy-map";
 import { Download, Save, Upload } from "lucide-react";
 
 type TrackingFrequency = "monthly" | "annually";
@@ -38,10 +43,19 @@ type TemplateTrackingMode = "monthly" | "financial_year";
 
 type DraftObjectiveKpi = {
   kpiId: string | null;
-  kpiDefinitionId: number;
+  kpiDefinitionId: number | null;
   kpiName: string;
   kpiCategoryId: number | null;
   kpiSubcategoryId: number | null;
+  pendingCustomKpiRequestId: string | null;
+  pendingCustomKpiTitle: string | null;
+  pendingCustomKpiStatus:
+    | "PENDING_REVIEW"
+    | "APPROVED"
+    | "REJECTED"
+    | "REPLACED"
+    | null;
+  approvedKpiDefinitionId: number | null;
   result: "increase" | "decrease" | "completed";
   targetValue: string;
   trackingFrequency: TrackingFrequency;
@@ -87,20 +101,7 @@ type TemplateRow = {
   target_value: string;
 };
 
-type PersistableKpi = {
-  kpiDefinitionId: number;
-  trackingFrequency: TrackingFrequency;
-};
-
-type PersistableInitiative = {
-  description: string;
-  kpis: PersistableKpi[];
-};
-
-type PersistableObjective = {
-  description: string;
-  keyInitiatives: PersistableInitiative[];
-};
+type PersistableObjective = ScorecardDraftObjectiveInput;
 
 type PersistableByLevel = {
   perspectiveLevel: PerspectiveLevel;
@@ -143,18 +144,22 @@ export default function ScorecardPageClient({
   initialContext,
   filterOptions,
   kpiOptions,
+  customKpiReferenceOptions,
   mode = "default",
 }: {
   initialContext: ScorecardFilterContext;
   filterOptions: ReviewKpiFilterOptions;
   kpiOptions: ScorecardKpiOption[];
+  customKpiReferenceOptions: CustomKpiReferenceOptions;
   mode?: "default" | "builder";
 }) {
   const [context, setContext] =
     useState<ScorecardFilterContext>(initialContext);
   const [snapshot, setSnapshot] = useState<ScorecardSnapshot | null>(null);
   const [scorecardRows, setScorecardRows] = useState<ScorecardInputRow[]>([]);
-  const [, setScorecardRelationships] = useState<ScorecardRelationship[]>([]);
+  const [scorecardRelationships, setScorecardRelationships] = useState<
+    ScorecardRelationship[]
+  >([]);
   const [error, setError] = useState<string | null>(null);
   const [availableKpiOptions, setAvailableKpiOptions] =
     useState<ScorecardKpiOption[]>(kpiOptions);
@@ -169,6 +174,25 @@ export default function ScorecardPageClient({
       4: [],
     });
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
+  const [customKpiRequests, setCustomKpiRequests] = useState<
+    ScorecardCustomKpiRequest[]
+  >([]);
+  const approvedCustomKpiDefinitionIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          customKpiRequests
+            .filter(
+              (request) =>
+                request.status === "APPROVED" &&
+                request.replacementKpiDefinitionId != null,
+            )
+            .map((request) => request.replacementKpiDefinitionId!)
+            .filter((id): id is number => Number.isInteger(id) && id > 0),
+        ),
+      ),
+    [customKpiRequests],
+  );
   const [isSaving, setIsSaving] = useState(false);
   const [hasHydratedDraftHierarchy, setHasHydratedDraftHierarchy] =
     useState(false);
@@ -197,17 +221,27 @@ export default function ScorecardPageClient({
   );
 
   const toPersistableObjectives = useCallback(
-    (objectives: DraftObjective[]) => {
+    (objectives: DraftObjective[]): PersistableObjective[] => {
       return objectives
         .map((objective) => ({
           description: objective.description.trim(),
           keyInitiatives: objective.keyInitiatives
             .map((initiative) => ({
               description: initiative.description.trim(),
-              kpis: initiative.kpis.map((kpi) => ({
-                kpiDefinitionId: kpi.kpiDefinitionId,
-                trackingFrequency: kpi.trackingFrequency,
-              })),
+              kpis: initiative.kpis
+                .filter(
+                  (kpi) =>
+                    kpi.kpiDefinitionId != null ||
+                    kpi.pendingCustomKpiRequestId != null,
+                )
+                .map((kpi) => ({
+                  kpiDefinitionId: kpi.kpiDefinitionId,
+                  trackingFrequency: kpi.trackingFrequency,
+                  pendingCustomKpiRequestId: kpi.pendingCustomKpiRequestId,
+                  pendingCustomKpiTitle: kpi.pendingCustomKpiTitle,
+                  pendingCustomKpiStatus: kpi.pendingCustomKpiStatus ?? undefined,
+                  approvedKpiDefinitionId: kpi.approvedKpiDefinitionId,
+                })),
             }))
             .filter(
               (initiative) =>
@@ -292,6 +326,61 @@ export default function ScorecardPageClient({
     };
   }, [normalizedContext]);
 
+  useEffect(() => {
+    let active = true;
+
+    const loadCustomKpiRequests = () => {
+      return fetch("/api/data-entry/custom-kpi/requests", {
+        method: "GET",
+        cache: "no-store",
+      })
+        .then(async (response) => {
+          if (!response.ok) {
+            throw new Error("Unable to load pending custom KPI requests.");
+          }
+
+          const payload = (await response.json()) as {
+            items?: Array<{
+              id: string;
+              title: string;
+              status: "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "REPLACED";
+              replacement_kpi_def_id: number | null;
+            }>;
+          };
+
+          if (!active) {
+            return;
+          }
+
+          const nextRequests = (payload.items ?? []).map((item) => ({
+            id: item.id,
+            title: item.title,
+            status: item.status,
+            replacementKpiDefinitionId: item.replacement_kpi_def_id,
+          }));
+
+          setCustomKpiRequests(nextRequests);
+        })
+        .catch(() => {
+          if (!active) {
+            return;
+          }
+
+          setCustomKpiRequests([]);
+        });
+    };
+
+    void loadCustomKpiRequests();
+    const pollId = window.setInterval(() => {
+      void loadCustomKpiRequests();
+    }, 30000);
+
+    return () => {
+      active = false;
+      window.clearInterval(pollId);
+    };
+  }, []);
+
   const loadSavedBuilds = useCallback(
     async (hydrateHierarchy = false) => {
       try {
@@ -320,16 +409,53 @@ export default function ScorecardPageClient({
                   id: `${Date.now()}-${Math.random()}`,
                   description: initiative.description,
                   kpis: initiative.kpis.map((kpi) => {
-                    const kpiOption = kpiByDefinitionId.get(
-                      kpi.kpiDefinitionId,
-                    );
+                    const requestMatch =
+                      kpi.pendingCustomKpiRequestId == null
+                        ? null
+                        : (customKpiRequests.find(
+                            (request) =>
+                              request.id === kpi.pendingCustomKpiRequestId,
+                          ) ?? null);
+                    const resolvedDefinitionId =
+                      kpi.kpiDefinitionId ??
+                      kpi.approvedKpiDefinitionId ??
+                      requestMatch?.replacementKpiDefinitionId ??
+                      null;
+                    const kpiOption =
+                      resolvedDefinitionId == null
+                        ? null
+                        : (kpiByDefinitionId.get(resolvedDefinitionId) ?? null);
                     return {
                       kpiId: kpiOption?.kpiId ?? null,
-                      kpiDefinitionId: kpi.kpiDefinitionId,
+                      kpiDefinitionId: resolvedDefinitionId,
                       kpiName:
-                        kpiOption?.kpiName ?? `KPI ${kpi.kpiDefinitionId}`,
+                        kpiOption?.kpiName ??
+                        kpi.pendingCustomKpiTitle ??
+                        (resolvedDefinitionId == null
+                          ? "Pending custom KPI"
+                          : `KPI ${resolvedDefinitionId}`),
                       kpiCategoryId: kpiOption?.categoryId ?? null,
                       kpiSubcategoryId: kpiOption?.subcategoryId ?? null,
+                      pendingCustomKpiRequestId:
+                        resolvedDefinitionId == null
+                          ? (kpi.pendingCustomKpiRequestId ?? null)
+                          : null,
+                      pendingCustomKpiTitle:
+                        resolvedDefinitionId == null
+                          ? (kpi.pendingCustomKpiTitle ?? null)
+                          : null,
+                      pendingCustomKpiStatus:
+                        resolvedDefinitionId == null
+                          ? (kpi.pendingCustomKpiStatus ??
+                            requestMatch?.status ??
+                            "PENDING_REVIEW")
+                          : null,
+                      approvedKpiDefinitionId:
+                        resolvedDefinitionId == null
+                          ? (kpi.approvedKpiDefinitionId ??
+                            requestMatch?.replacementKpiDefinitionId ??
+                            null)
+                          : null,
                       result: "increase",
                       targetValue: "",
                       trackingFrequency:
@@ -364,8 +490,80 @@ export default function ScorecardPageClient({
         );
       }
     },
-    [availableKpiOptions, buildHierarchyFingerprint],
+    [availableKpiOptions, buildHierarchyFingerprint, customKpiRequests],
   );
+
+  useEffect(() => {
+    if (customKpiRequests.length === 0) {
+      return;
+    }
+
+    const approvedDefinitionByRequestId = new Map(
+      customKpiRequests
+        .filter((request) => request.replacementKpiDefinitionId != null)
+        .map((request) => [request.id, request.replacementKpiDefinitionId]),
+    );
+
+    if (approvedDefinitionByRequestId.size === 0) {
+      return;
+    }
+
+    setDraftObjectivesByPerspective((prev) => {
+      let changed = false;
+      const next: DraftObjectivesByPerspective = {
+        1: [],
+        2: [],
+        3: [],
+        4: [],
+      };
+
+      for (const level of [1, 2, 3, 4] as const) {
+        next[level] = prev[level].map((objective) => ({
+          ...objective,
+          keyInitiatives: objective.keyInitiatives.map((initiative) => ({
+            ...initiative,
+            kpis: initiative.kpis.map((entry) => {
+              const requestId = entry.pendingCustomKpiRequestId;
+              if (!requestId) {
+                return entry;
+              }
+
+              const approvedDefinitionId =
+                approvedDefinitionByRequestId.get(requestId) ?? null;
+              if (approvedDefinitionId == null) {
+                return entry;
+              }
+
+              const approvedOption =
+                availableKpiOptions.find(
+                  (option) => option.kpiDefinitionId === approvedDefinitionId,
+                ) ?? null;
+
+              changed = true;
+              return {
+                ...entry,
+                kpiId: approvedOption?.kpiId ?? null,
+                kpiDefinitionId: approvedDefinitionId,
+                kpiName:
+                  approvedOption?.kpiName ??
+                  entry.kpiName ??
+                  `KPI ${approvedDefinitionId}`,
+                kpiCategoryId: approvedOption?.categoryId ?? null,
+                kpiSubcategoryId: approvedOption?.subcategoryId ?? null,
+                pendingCustomKpiRequestId: null,
+                pendingCustomKpiTitle: null,
+                pendingCustomKpiStatus: null,
+                approvedKpiDefinitionId: approvedDefinitionId,
+                isSaved: false,
+              };
+            }),
+          })),
+        }));
+      }
+
+      return changed ? next : prev;
+    });
+  }, [availableKpiOptions, customKpiRequests]);
 
   useEffect(() => {
     if (typeof Worker === "undefined") {
@@ -589,11 +787,6 @@ export default function ScorecardPageClient({
   ) => {
     const defaultKpi = selectedKpiOption ?? availableKpiOptions[0] ?? null;
 
-    if (defaultKpi == null) {
-      setSaveMessage("No KPI options available to add a placeholder row.");
-      return;
-    }
-
     updateDraftObjectivesForLevel(level, (prev) =>
       prev.map((objective) => {
         if (objective.id !== objectiveId) {
@@ -614,11 +807,15 @@ export default function ScorecardPageClient({
               kpis: [
                 ...initiative.kpis,
                 {
-                  kpiId: defaultKpi.kpiId,
-                  kpiDefinitionId: defaultKpi.kpiDefinitionId,
-                  kpiName: defaultKpi.kpiName,
-                  kpiCategoryId: defaultKpi.categoryId,
-                  kpiSubcategoryId: defaultKpi.subcategoryId,
+                  kpiId: defaultKpi?.kpiId ?? null,
+                  kpiDefinitionId: defaultKpi?.kpiDefinitionId ?? null,
+                  kpiName: defaultKpi?.kpiName ?? "Pending custom KPI",
+                  kpiCategoryId: defaultKpi?.categoryId ?? null,
+                  kpiSubcategoryId: defaultKpi?.subcategoryId ?? null,
+                  pendingCustomKpiRequestId: null,
+                  pendingCustomKpiTitle: null,
+                  pendingCustomKpiStatus: null,
+                  approvedKpiDefinitionId: null,
                   result: "increase",
                   targetValue: "",
                   trackingFrequency: "monthly",
@@ -754,9 +951,11 @@ export default function ScorecardPageClient({
           }
 
           for (const kpi of initiative.kpis) {
+            const kpiDefinitionId = kpi.kpiDefinitionId;
             if (
-              !Number.isInteger(kpi.kpiDefinitionId) ||
-              kpi.kpiDefinitionId <= 0
+              typeof kpiDefinitionId !== "number" ||
+              !Number.isInteger(kpiDefinitionId) ||
+              kpiDefinitionId <= 0
             ) {
               continue;
             }
@@ -765,7 +964,7 @@ export default function ScorecardPageClient({
               level,
               objectiveDescription.toLowerCase(),
               initiativeDescription.toLowerCase(),
-              kpi.kpiDefinitionId,
+              kpiDefinitionId,
             ].join("|");
 
             if (seeds.has(key)) {
@@ -778,11 +977,11 @@ export default function ScorecardPageClient({
               keyInitiative: initiativeDescription,
               trackingFrequency:
                 kpi.trackingFrequency === "annually" ? "annually" : "monthly",
-              kpiDefinitionId: kpi.kpiDefinitionId,
+              kpiDefinitionId,
               kpiName:
                 kpi.kpiName.trim() ||
-                kpiNameByDefinitionId.get(kpi.kpiDefinitionId) ||
-                `KPI ${kpi.kpiDefinitionId}`,
+                kpiNameByDefinitionId.get(kpiDefinitionId) ||
+                `KPI ${kpiDefinitionId}`,
             });
           }
         }
@@ -1133,6 +1332,92 @@ export default function ScorecardPageClient({
     (objectives) => objectives.length > 0,
   );
 
+  const strategyMapHierarchy = useMemo(
+    () => ({
+      1: draftObjectivesByPerspective[1].map((objective) => ({
+        description: objective.description,
+        keyInitiatives: objective.keyInitiatives.map((initiative) => ({
+          description: initiative.description,
+          kpis: initiative.kpis.map((kpi) => kpi.kpiName),
+        })),
+      })),
+      2: draftObjectivesByPerspective[2].map((objective) => ({
+        description: objective.description,
+        keyInitiatives: objective.keyInitiatives.map((initiative) => ({
+          description: initiative.description,
+          kpis: initiative.kpis.map((kpi) => kpi.kpiName),
+        })),
+      })),
+      3: draftObjectivesByPerspective[3].map((objective) => ({
+        description: objective.description,
+        keyInitiatives: objective.keyInitiatives.map((initiative) => ({
+          description: initiative.description,
+          kpis: initiative.kpis.map((kpi) => kpi.kpiName),
+        })),
+      })),
+      4: draftObjectivesByPerspective[4].map((objective) => ({
+        description: objective.description,
+        keyInitiatives: objective.keyInitiatives.map((initiative) => ({
+          description: initiative.description,
+          kpis: initiative.kpis.map((kpi) => kpi.kpiName),
+        })),
+      })),
+    }),
+    [draftObjectivesByPerspective],
+  );
+
+  const handleCreateRelationship = useCallback(
+    async (input: Omit<ScorecardRelationship, "id">) => {
+      let nextRelationships: ScorecardRelationship[] = [];
+
+      setScorecardRelationships((prev) => {
+        const duplicate = prev.some(
+          (relationship) =>
+            relationship.relationshipType === input.relationshipType &&
+            JSON.stringify(relationship.source) ===
+              JSON.stringify(input.source) &&
+            JSON.stringify(relationship.target) ===
+              JSON.stringify(input.target),
+        );
+
+        if (duplicate) {
+          nextRelationships = prev;
+          return prev;
+        }
+
+        const next: ScorecardRelationship[] = [
+          ...prev,
+          {
+            id: `rel-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            ...input,
+          },
+        ];
+
+        nextRelationships = next;
+        return next;
+      });
+
+      if (nextRelationships.length === 0) {
+        return;
+      }
+
+      try {
+        await saveScorecardRelationships({
+          reportPeriodId: context.reportPeriodId,
+          relationships: nextRelationships,
+        });
+        setSaveMessage("Relationship saved.");
+      } catch (error) {
+        setSaveMessage(
+          error instanceof Error
+            ? error.message
+            : "Unable to persist relationship.",
+        );
+      }
+    },
+    [context.reportPeriodId],
+  );
+
   return (
     <div className="space-y-2 p-1.5 sm:p-2">
       {!snapshot && !error ? (
@@ -1301,6 +1586,8 @@ export default function ScorecardPageClient({
             draftObjectivesByPerspective={draftObjectivesByPerspective}
             filterOptions={filterOptions}
             availableKpiOptions={availableKpiOptions}
+            customKpiReferenceOptions={customKpiReferenceOptions}
+            approvedCustomKpiDefinitionIds={approvedCustomKpiDefinitionIds}
             isProcessingTemplate={isProcessingTemplate}
             onAddObjective={addObjectiveForLevel}
             onUpdateObjectiveDescription={updateObjectiveDescriptionForLevel}
@@ -1317,6 +1604,15 @@ export default function ScorecardPageClient({
             <p className="text-[11px] text-muted-foreground">{saveMessage}</p>
           ) : null}
         </div>
+      ) : null}
+
+      {mode !== "builder" && activeMainTab === "strategic-map" ? (
+        <ScorecardStrategyMap
+          rows={scorecardRows}
+          relationships={scorecardRelationships}
+          hierarchyByPerspective={strategyMapHierarchy}
+          onCreateRelationship={handleCreateRelationship}
+        />
       ) : null}
 
       {mode !== "builder" && activeMainTab === "tree-view" ? (

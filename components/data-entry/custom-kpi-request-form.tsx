@@ -73,7 +73,11 @@ export function CustomKpiRequestForm(props: {
   inputOptions: InputOption[];
   unitOptions: UnitOption[];
   dataTypeOptions: UnitOption[];
-  onSubmitted?: () => void | Promise<void>;
+  onSubmitted?: (request: {
+    id: string;
+    title: string;
+    status: "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "REPLACED";
+  }) => void | Promise<void>;
 }) {
   const formulaTextareaRef = useRef<HTMLTextAreaElement | null>(null);
   const [form, setForm] = useState<FormState>(INITIAL_STATE);
@@ -415,6 +419,9 @@ export function CustomKpiRequestForm(props: {
       });
 
       const payload = (await response.json().catch(() => ({}))) as {
+        id?: string;
+        title?: string;
+        status?: "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "REPLACED";
         message?: string;
       };
       console.info("custom_kpi_submit:response", {
@@ -454,7 +461,11 @@ export function CustomKpiRequestForm(props: {
         console.info("custom_kpi_submit:callback_start", {
           submitDebugId,
         });
-        await props.onSubmitted?.();
+        await props.onSubmitted?.({
+          id: payload.id ?? "",
+          title: payload.title ?? title,
+          status: payload.status ?? "PENDING_REVIEW",
+        });
         console.info("custom_kpi_submit:callback_done", {
           submitDebugId,
         });

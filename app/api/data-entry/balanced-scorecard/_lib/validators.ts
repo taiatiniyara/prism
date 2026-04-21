@@ -1,4 +1,5 @@
 import type {
+  ScorecardDraftKpiInput,
   ScorecardDraftSavePayload,
   ScorecardFilterContext,
   ScorecardRelationship,
@@ -394,12 +395,55 @@ export const parseScorecardDraftSavePayload = (
             );
           }
 
-          const kpiDefinitionId = Number(kpiItem.kpiDefinitionId);
-          if (!Number.isInteger(kpiDefinitionId) || kpiDefinitionId <= 0) {
+          const rawKpiDefinitionId =
+            kpiItem.kpiDefinitionId == null || kpiItem.kpiDefinitionId === ""
+              ? null
+              : Number(kpiItem.kpiDefinitionId);
+          const kpiDefinitionId =
+            rawKpiDefinitionId != null &&
+            Number.isInteger(rawKpiDefinitionId) &&
+            rawKpiDefinitionId > 0
+              ? rawKpiDefinitionId
+              : null;
+
+          const pendingCustomKpiRequestId =
+            typeof kpiItem.pendingCustomKpiRequestId === "string" &&
+            kpiItem.pendingCustomKpiRequestId.trim().length > 0
+              ? kpiItem.pendingCustomKpiRequestId.trim()
+              : null;
+
+          if (kpiDefinitionId == null && pendingCustomKpiRequestId == null) {
             throw new Error(
-              `VALIDATION:objectives[${objectiveIndex}].keyInitiatives[${initiativeIndex}].kpis[${kpiIndex}].kpiDefinitionId must be a positive integer.`,
+              `VALIDATION:objectives[${objectiveIndex}].keyInitiatives[${initiativeIndex}].kpis[${kpiIndex}] must provide either kpiDefinitionId or pendingCustomKpiRequestId.`,
             );
           }
+
+          const pendingCustomKpiStatus: ScorecardDraftKpiInput["pendingCustomKpiStatus"] =
+            kpiItem.pendingCustomKpiStatus === "APPROVED" ||
+            kpiItem.pendingCustomKpiStatus === "REJECTED" ||
+            kpiItem.pendingCustomKpiStatus === "REPLACED" ||
+            kpiItem.pendingCustomKpiStatus === "PENDING_REVIEW"
+              ? kpiItem.pendingCustomKpiStatus
+              : undefined;
+
+          const pendingCustomKpiTitle =
+            typeof kpiItem.pendingCustomKpiTitle === "string" &&
+            kpiItem.pendingCustomKpiTitle.trim().length > 0
+              ? kpiItem.pendingCustomKpiTitle.trim()
+              : undefined;
+
+          const approvedKpiDefinitionId =
+            kpiItem.approvedKpiDefinitionId == null ||
+            kpiItem.approvedKpiDefinitionId === ""
+              ? undefined
+              : Number.isInteger(Number(kpiItem.approvedKpiDefinitionId)) &&
+                  Number(kpiItem.approvedKpiDefinitionId) > 0
+                ? Number(kpiItem.approvedKpiDefinitionId)
+                : (() => {
+                    throw new Error(
+                      `VALIDATION:objectives[${objectiveIndex}].keyInitiatives[${initiativeIndex}].kpis[${kpiIndex}].approvedKpiDefinitionId must be a positive integer when provided.`,
+                    );
+                  })();
 
           const trackingFrequency: "monthly" | "annually" =
             kpiItem.trackingFrequency === "annually" ? "annually" : "monthly";
@@ -407,6 +451,10 @@ export const parseScorecardDraftSavePayload = (
           return {
             kpiDefinitionId,
             trackingFrequency,
+            pendingCustomKpiRequestId,
+            pendingCustomKpiTitle,
+            pendingCustomKpiStatus,
+            approvedKpiDefinitionId,
           };
         });
 

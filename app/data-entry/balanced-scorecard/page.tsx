@@ -2,6 +2,7 @@ import ScorecardPageClient from "./page.client";
 import type { ScorecardFilterContext } from "@/app/data-entry/balanced-scorecard/types";
 import { bootstrapReviewKpiContextAndOptions } from "@/app/data-entry/review-kpi/service";
 import { getScorecardKpiOptions } from "@/app/data-entry/balanced-scorecard/service";
+import { listCustomKpiProposalReferenceOptions } from "@/app/settings/kpi/custom-kpi/service";
 import { getCurrentUser } from "@/lib/user.service";
 
 const toScorecardContext = (
@@ -32,13 +33,21 @@ export default async function BalancedScorecardPage() {
       context,
       fallbackReportPeriodId,
     );
-    const kpiOptions = await getScorecardKpiOptions(user, scorecardContext);
+    const [kpiOptions, customKpiReferenceOptions] = await Promise.all([
+      getScorecardKpiOptions(user, scorecardContext),
+      listCustomKpiProposalReferenceOptions().catch(() => ({
+        availableInputDefinitions: [],
+        availableUnits: [],
+        availableDataTypes: [],
+      })),
+    ]);
 
     return (
       <ScorecardPageClient
         initialContext={scorecardContext}
         filterOptions={options}
         kpiOptions={kpiOptions}
+        customKpiReferenceOptions={customKpiReferenceOptions}
       />
     );
   } catch {

@@ -53,6 +53,26 @@ const perspectiveLabel = (value: number | null): string => {
   }
 };
 
+const buildDraftKpiKey = (input: {
+  kpiDefinitionId?: number | null;
+  pendingCustomKpiRequestId?: string | null;
+  trackingFrequency: "monthly" | "annually";
+}): string => {
+  if (
+    Number.isInteger(input.kpiDefinitionId) &&
+    (input.kpiDefinitionId ?? 0) > 0
+  ) {
+    return `${input.kpiDefinitionId}|${input.trackingFrequency}`;
+  }
+
+  const pendingId = input.pendingCustomKpiRequestId?.trim();
+  if (pendingId) {
+    return `pending:${pendingId}|${input.trackingFrequency}`;
+  }
+
+  return `pending:unknown|${input.trackingFrequency}`;
+};
+
 const parseMetric = (value: string | null): number | null => {
   if (value == null || value.trim() === "") {
     return null;
@@ -179,15 +199,16 @@ const flattenHierarchy = (
   for (const objective of perspective.strategic_objective ?? []) {
     for (const initiative of objective.key_initiatives ?? []) {
       for (const linkedKpi of initiative.kpis ?? []) {
-        if (!Number.isInteger(linkedKpi.kpi_id) || linkedKpi.kpi_id <= 0) {
+        const kpiId = linkedKpi.kpi_id;
+        if (typeof kpiId !== "number" || !Number.isInteger(kpiId) || kpiId <= 0) {
           continue;
         }
 
-        if (assignments.has(linkedKpi.kpi_id)) {
+        if (assignments.has(kpiId)) {
           continue;
         }
 
-        assignments.set(linkedKpi.kpi_id, {
+        assignments.set(kpiId, {
           perspectiveLevel: perspective.perspective_level,
           perspectiveLabel: perspectiveLabel(perspective.perspective_level),
           strategicObjective: objective.description,
@@ -517,18 +538,41 @@ export const listScorecardDraftHierarchies = async (
           objective.key_initiatives ?? []
         )
           .map((initiative) => {
-            const kpis: ScorecardDraftKpiInput[] = (initiative.kpis ?? [])
+            const kpis = (initiative.kpis ?? [])
+              .map((kpiEntry): ScorecardDraftKpiInput | null => {
+                const pendingCustomKpi = kpiEntry.pending_custom_kpi;
+                const hasLinkedDefinition =
+                  Number.isInteger(kpiEntry.kpi_id) &&
+                  (kpiEntry.kpi_id ?? 0) > 0;
+
+                if (
+                  !hasLinkedDefinition &&
+                  (!pendingCustomKpi || !pendingCustomKpi.request_id)
+                ) {
+                  return null;
+                }
+
+                return {
+                  kpiDefinitionId: hasLinkedDefinition
+                    ? (kpiEntry.kpi_id ?? null)
+                    : null,
+                  trackingFrequency:
+                    kpiEntry.tracking_frequency === "annually"
+                      ? "annually"
+                      : "monthly",
+                  pendingCustomKpiRequestId:
+                    pendingCustomKpi?.request_id ?? null,
+                  pendingCustomKpiTitle: pendingCustomKpi?.title ?? null,
+                  pendingCustomKpiStatus:
+                    pendingCustomKpi?.status ?? "PENDING_REVIEW",
+                  approvedKpiDefinitionId:
+                    pendingCustomKpi?.approved_kpi_definition_id ?? null,
+                };
+              })
               .filter(
-                (kpiEntry) =>
-                  Number.isInteger(kpiEntry.kpi_id) && kpiEntry.kpi_id > 0,
-              )
-              .map((kpiEntry) => ({
-                kpiDefinitionId: kpiEntry.kpi_id,
-                trackingFrequency:
-                  kpiEntry.tracking_frequency === "annually"
-                    ? "annually"
-                    : "monthly",
-              }));
+                (kpiEntry): kpiEntry is ScorecardDraftKpiInput =>
+                  kpiEntry != null,
+              );
 
             return {
               description: initiative.description,
@@ -955,7 +999,14 @@ export const upsertScorecardDraft = async (
   for (const objective of currentPerspective.strategic_objective ?? []) {
     for (const initiative of objective.key_initiatives ?? []) {
       for (const linkedKpi of initiative.kpis ?? []) {
-        const key = `${linkedKpi.kpi_id}|${linkedKpi.tracking_frequency}`;
+        const key = buildDraftKpiKey({
+          kpiDefinitionId: linkedKpi.kpi_id,
+          pendingCustomKpiRequestId: linkedKpi.pending_custom_kpi?.request_id,
+          trackingFrequency:
+            linkedKpi.tracking_frequency === "annually"
+              ? "annually"
+              : "monthly",
+        });
         if (!existingTargetsByKpiAndFrequency.has(key)) {
           existingTargetsByKpiAndFrequency.set(key, [
             ...(linkedKpi.targets ?? []),
@@ -976,9 +1027,31 @@ export const upsertScorecardDraft = async (
       key_initiatives: objective.keyInitiatives.map((initiative) => ({
         description: initiative.description,
         kpis: initiative.kpis.map((kpiItem) => {
-          const key = `${kpiItem.kpiDefinitionId}|${kpiItem.trackingFrequency}`;
+          const resolvedKpiDefinitionId =
+            kpiItem.kpiDefinitionId ?? kpiItem.approvedKpiDefinitionId ?? null;
+          const key = buildDraftKpiKey({
+            kpiDefinitionId: resolvedKpiDefinitionId,
+            pendingCustomKpiRequestId: kpiItem.pendingCustomKpiRequestId,
+            trackingFrequency: kpiItem.trackingFrequency,
+          });
+          const hasLinkedDefinition =
+            Number.isInteger(resolvedKpiDefinitionId) &&
+            (resolvedKpiDefinitionId ?? 0) > 0;
+          const hasPendingRequestLink =
+            (kpiItem.pendingCustomKpiRequestId?.trim().length ?? 0) > 0;
           return {
-            kpi_id: kpiItem.kpiDefinitionId,
+            kpi_id: hasLinkedDefinition ? resolvedKpiDefinitionId : null,
+            pending_custom_kpi:
+              hasLinkedDefinition || !hasPendingRequestLink
+                ? undefined
+                : {
+                    request_id: kpiItem.pendingCustomKpiRequestId!,
+                    title:
+                      kpiItem.pendingCustomKpiTitle ?? "Pending custom KPI",
+                    status: kpiItem.pendingCustomKpiStatus ?? "PENDING_REVIEW",
+                    approved_kpi_definition_id:
+                      kpiItem.approvedKpiDefinitionId ?? null,
+                  },
             tracking_frequency: kpiItem.trackingFrequency,
             targets: existingTargetsByKpiAndFrequency.get(key) ?? [],
           };
@@ -991,7 +1064,17 @@ export const upsertScorecardDraft = async (
     new Set(
       payload.objectives.flatMap((objective) =>
         objective.keyInitiatives.flatMap((initiative) =>
-          initiative.kpis.map((item) => item.kpiDefinitionId),
+          initiative.kpis
+            .map(
+              (item) =>
+                item.kpiDefinitionId ?? item.approvedKpiDefinitionId ?? null,
+            )
+            .filter(
+              (kpiDefinitionId): kpiDefinitionId is number =>
+                typeof kpiDefinitionId === "number" &&
+                Number.isInteger(kpiDefinitionId) &&
+                kpiDefinitionId > 0,
+            ),
         ),
       ),
     ),

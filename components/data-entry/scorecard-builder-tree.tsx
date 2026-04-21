@@ -1,9 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 
 import type { ReviewKpiFilterOptions } from "@/app/data-entry/review-kpi/types";
-import type { ScorecardKpiOption } from "@/app/data-entry/balanced-scorecard/types";
+import type {
+  CustomKpiReferenceOptions,
+  ScorecardKpiOption,
+} from "@/app/data-entry/balanced-scorecard/types";
+import { CustomKpiRequestDialog } from "@/components/data-entry/custom-kpi-request-dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -31,10 +35,19 @@ type TrackingFrequency = "monthly" | "annually";
 
 type DraftObjectiveKpi = {
   kpiId: string | null;
-  kpiDefinitionId: number;
+  kpiDefinitionId: number | null;
   kpiName: string;
   kpiCategoryId: number | null;
   kpiSubcategoryId: number | null;
+  pendingCustomKpiRequestId: string | null;
+  pendingCustomKpiTitle: string | null;
+  pendingCustomKpiStatus:
+    | "PENDING_REVIEW"
+    | "APPROVED"
+    | "REJECTED"
+    | "REPLACED"
+    | null;
+  approvedKpiDefinitionId: number | null;
   result: "increase" | "decrease" | "completed";
   targetValue: string;
   trackingFrequency: TrackingFrequency;
@@ -65,6 +78,8 @@ type Props = {
   draftObjectivesByPerspective: DraftObjectivesByPerspective;
   filterOptions: ReviewKpiFilterOptions;
   availableKpiOptions: ScorecardKpiOption[];
+  customKpiReferenceOptions: CustomKpiReferenceOptions;
+  approvedCustomKpiDefinitionIds: number[];
   isProcessingTemplate: boolean;
   onAddObjective: (perspectiveLevel: PerspectiveLevel) => void;
   onUpdateObjectiveDescription: (
@@ -186,6 +201,8 @@ export default function ScorecardBuilderTree({
   draftObjectivesByPerspective,
   filterOptions,
   availableKpiOptions,
+  customKpiReferenceOptions,
+  approvedCustomKpiDefinitionIds,
   isProcessingTemplate,
   onAddObjective,
   onUpdateObjectiveDescription,
@@ -213,7 +230,10 @@ export default function ScorecardBuilderTree({
   });
 
   const perspectiveLevels: PerspectiveLevel[] = [1, 2, 3, 4];
-
+  const approvedCustomKpiDefinitionIdSet = useMemo(
+    () => new Set(approvedCustomKpiDefinitionIds),
+    [approvedCustomKpiDefinitionIds],
+  );
   const getSubcategoryParentCategoryId = (
     subcategory: ReviewKpiFilterOptions["kpiSubcategories"][number],
   ) => {
@@ -584,7 +604,7 @@ export default function ScorecardBuilderTree({
                                           <div className="ml-8 overflow-hidden border border-white bg-white">
                                             {initiative.kpis.length ===
                                             0 ? null : (
-                                              <div className="grid grid-cols-14 items-center gap-3 bg-slate-100 px-3 py-1.5 text-[11px] font-medium text-slate-700">
+                                              <div className="grid grid-cols-15 items-center gap-3 bg-slate-100 px-3 py-1.5 text-[11px] font-medium text-slate-700">
                                                 <div className="col-span-3">
                                                   Category
                                                 </div>
@@ -599,6 +619,9 @@ export default function ScorecardBuilderTree({
                                                 </div>
                                                 <div className="col-span-1 text-center">
                                                   Saved
+                                                </div>
+                                                <div className="col-span-1 text-center">
+                                                  Custom KPI
                                                 </div>
                                                 <div className="col-span-1 text-center">
                                                   Action
@@ -693,7 +716,7 @@ export default function ScorecardBuilderTree({
                                                         key={`${initiative.id}-${index}`}
                                                         className="border-t border-slate-200 px-3 py-2"
                                                       >
-                                                        <div className="grid grid-cols-14 items-center gap-3">
+                                                        <div className="grid grid-cols-15 items-center gap-3">
                                                           <div className="col-span-3">
                                                             <Select
                                                               value={
@@ -846,14 +869,26 @@ export default function ScorecardBuilderTree({
                                                             </Select>
                                                           </div>
 
-                                                          <div className="col-span-3">
+                                                          <div className="col-span-3 flex items-center gap-2">
                                                             <Select
-                                                              value={String(
-                                                                kpi.kpiDefinitionId,
-                                                              )}
+                                                              value={
+                                                                kpi.kpiDefinitionId ==
+                                                                null
+                                                                  ? "__pending__"
+                                                                  : String(
+                                                                      kpi.kpiDefinitionId,
+                                                                    )
+                                                              }
                                                               onValueChange={(
                                                                 value,
                                                               ) => {
+                                                                if (
+                                                                  value ===
+                                                                  "__pending__"
+                                                                ) {
+                                                                  return;
+                                                                }
+
                                                                 const selected =
                                                                   availableKpiOptions.find(
                                                                     (option) =>
@@ -885,6 +920,14 @@ export default function ScorecardBuilderTree({
                                                                       selected.categoryId,
                                                                     kpiSubcategoryId:
                                                                       selected.subcategoryId,
+                                                                    pendingCustomKpiRequestId:
+                                                                      null,
+                                                                    pendingCustomKpiTitle:
+                                                                      null,
+                                                                    pendingCustomKpiStatus:
+                                                                      null,
+                                                                    approvedKpiDefinitionId:
+                                                                      null,
                                                                   },
                                                                 );
                                                               }}
@@ -896,6 +939,16 @@ export default function ScorecardBuilderTree({
                                                                 <SelectValue placeholder="KPI" />
                                                               </SelectTrigger>
                                                               <SelectContent>
+                                                                {kpi.kpiDefinitionId ==
+                                                                null ? (
+                                                                  <SelectItem
+                                                                    value="__pending__"
+                                                                    disabled
+                                                                  >
+                                                                    {kpi.pendingCustomKpiTitle ??
+                                                                      "Pending custom KPI"}
+                                                                  </SelectItem>
+                                                                ) : null}
                                                                 {filteredOptions.map(
                                                                   (option) => (
                                                                     <SelectItem
@@ -914,6 +967,25 @@ export default function ScorecardBuilderTree({
                                                                 )}
                                                               </SelectContent>
                                                             </Select>
+
+                                                            {kpi.kpiDefinitionId ==
+                                                              null &&
+                                                            kpi.pendingCustomKpiRequestId !=
+                                                              null ? (
+                                                              <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-amber-100 px-2 text-[10px] font-medium text-amber-800">
+                                                                Pending
+                                                              </span>
+                                                            ) : null}
+
+                                                            {kpi.kpiDefinitionId !=
+                                                              null &&
+                                                            approvedCustomKpiDefinitionIdSet.has(
+                                                              kpi.kpiDefinitionId,
+                                                            ) ? (
+                                                              <span className="inline-flex h-6 shrink-0 items-center rounded-full bg-lime-100 px-2 text-[10px] font-medium text-lime-800">
+                                                                Approved
+                                                              </span>
+                                                            ) : null}
                                                           </div>
 
                                                           <div className="col-span-3">
@@ -966,6 +1038,59 @@ export default function ScorecardBuilderTree({
                                                                 kpi.isSaved
                                                               }
                                                             />
+                                                          </div>
+
+                                                          <div className="col-span-1 flex justify-center">
+                                                            <div className="flex flex-col items-center gap-1">
+                                                              <CustomKpiRequestDialog
+                                                                inputOptions={
+                                                                  customKpiReferenceOptions.availableInputDefinitions
+                                                                }
+                                                                unitOptions={
+                                                                  customKpiReferenceOptions.availableUnits
+                                                                }
+                                                                dataTypeOptions={
+                                                                  customKpiReferenceOptions.availableDataTypes
+                                                                }
+                                                                triggerLabel="Add"
+                                                                triggerSize="sm"
+                                                                triggerVariant="ghost"
+                                                                triggerClassName="h-7 px-1 text-[10px] text-slate-600 hover:text-slate-900"
+                                                                triggerDisabled={
+                                                                  isProcessingTemplate
+                                                                }
+                                                                onRequestSubmitted={async (
+                                                                  request,
+                                                                ) => {
+                                                                  onUpdateKpi(
+                                                                    level,
+                                                                    objective.id,
+                                                                    initiative.id,
+                                                                    index,
+                                                                    {
+                                                                      kpiId:
+                                                                        null,
+                                                                      kpiDefinitionId:
+                                                                        null,
+                                                                      kpiName:
+                                                                        request.title,
+                                                                      kpiCategoryId:
+                                                                        null,
+                                                                      kpiSubcategoryId:
+                                                                        null,
+                                                                      pendingCustomKpiRequestId:
+                                                                        request.id,
+                                                                      pendingCustomKpiTitle:
+                                                                        request.title,
+                                                                      pendingCustomKpiStatus:
+                                                                        request.status,
+                                                                      approvedKpiDefinitionId:
+                                                                        null,
+                                                                    },
+                                                                  );
+                                                                }}
+                                                              />
+                                                            </div>
                                                           </div>
 
                                                           <div className="col-span-1 flex justify-center">
