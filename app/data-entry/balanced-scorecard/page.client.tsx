@@ -93,11 +93,56 @@ type TemplateRow = {
   target_value: string;
 };
 
+type PersistableKpi = {
+  kpiDefinitionId: number;
+  trackingFrequency: TrackingFrequency;
+};
+
+type PersistableInitiative = {
+  description: string;
+  kpis: PersistableKpi[];
+};
+
+type PersistableObjective = {
+  description: string;
+  keyInitiatives: PersistableInitiative[];
+};
+
+type PersistableByLevel = {
+  perspectiveLevel: PerspectiveLevel;
+  objectives: PersistableObjective[];
+};
+
+type AutoSaveWorkerMessage = {
+  type: "status";
+  status: "idle" | "saving" | "saved" | "error";
+  fingerprint?: string;
+  message?: string;
+};
+
+const AUTO_SAVE_DEBOUNCE_MS = 3000;
+const AUTO_SAVE_MIN_CHANGE_COUNT = 1;
+const AUTO_SAVE_DEBUG = true;
+
 const PERSPECTIVE_LABELS: Record<PerspectiveLevel, string> = {
   1: "Financial",
   2: "Customer",
-  3: "Operation",
+  3: "Operations",
   4: "Development",
+};
+
+const logAutoSave = (...args: unknown[]) => {
+  if (!AUTO_SAVE_DEBUG) {
+    return;
+  }
+  console.info("[bsc-autosave-page]", ...args);
+};
+
+const logAutoSaveError = (...args: unknown[]) => {
+  if (!AUTO_SAVE_DEBUG) {
+    return;
+  }
+  console.error("[bsc-autosave-page]", ...args);
 };
 
 export default function ScorecardPageClient({
@@ -171,7 +216,7 @@ export default function ScorecardPageClient({
     "strategic-map" | "builder"
   >("builder");
   const quickTemplateUploadInputRef = useRef<HTMLInputElement | null>(null);
-  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const autoSaveWorkerRef = useRef<Worker | null>(null);
   const lastSavedFingerprintRef = useRef<string>("");
 
   const draftObjectives = draftObjectivesByPerspective[perspectiveLevel];
@@ -190,28 +235,59 @@ export default function ScorecardPageClient({
     [context],
   );
 
-  const toPersistableObjectives = useCallback((objectives: DraftObjective[]) => {
-    return objectives
-      .map((objective) => ({
-        description: objective.description.trim(),
-        keyInitiatives: objective.keyInitiatives
-          .map((initiative) => ({
-            description: initiative.description.trim(),
+  const toPersistableObjectives = useCallback(
+    (objectives: DraftObjective[]) => {
+      return objectives
+        .map((objective) => ({
+          description: objective.description.trim(),
+          keyInitiatives: objective.keyInitiatives
+            .map((initiative) => ({
+              description: initiative.description.trim(),
+              kpis: initiative.kpis.map((kpi) => ({
+                kpiDefinitionId: kpi.kpiDefinitionId,
+                trackingFrequency: kpi.trackingFrequency,
+              })),
+            }))
+            .filter(
+              (initiative) =>
+                initiative.description.length > 0 && initiative.kpis.length > 0,
+            ),
+        }))
+        .filter(
+          (objective) =>
+            objective.description.length > 0 &&
+            objective.keyInitiatives.length > 0,
+        );
+    },
+    [],
+  );
+
+  const markHierarchyAsSaved = useCallback(() => {
+    setDraftObjectivesByPerspective((prev) => {
+      const next: DraftObjectivesByPerspective = {
+        1: [],
+        2: [],
+        3: [],
+        4: [],
+      };
+
+      for (const level of [1, 2, 3, 4] as const) {
+        next[level] = prev[level].map((objective) => ({
+          ...objective,
+          isSaved: true,
+          keyInitiatives: objective.keyInitiatives.map((initiative) => ({
+            ...initiative,
+            isSaved: true,
             kpis: initiative.kpis.map((kpi) => ({
-              kpiDefinitionId: kpi.kpiDefinitionId,
-              trackingFrequency: kpi.trackingFrequency,
+              ...kpi,
+              isSaved: true,
             })),
-          }))
-          .filter(
-            (initiative) =>
-              initiative.description.length > 0 && initiative.kpis.length > 0,
-          ),
-      }))
-      .filter(
-        (objective) =>
-          objective.description.length > 0 &&
-          objective.keyInitiatives.length > 0,
-      );
+          })),
+        }));
+      }
+
+      return next;
+    });
   }, []);
 
   const buildHierarchyFingerprint = useCallback(
@@ -255,65 +331,144 @@ export default function ScorecardPageClient({
     };
   }, [normalizedContext]);
 
-  const loadSavedBuilds = useCallback(async (hydrateHierarchy = false) => {
-    try {
-      const { hierarchies } = await fetchScorecardDrafts();
+  const loadSavedBuilds = useCallback(
+    async (hydrateHierarchy = false) => {
+      try {
+        const { hierarchies } = await fetchScorecardDrafts();
 
-      if (hydrateHierarchy) {
-        const kpiByDefinitionId = new Map(
-          availableKpiOptions.map((option) => [option.kpiDefinitionId, option]),
-        );
-        const nextByPerspective: DraftObjectivesByPerspective = {
-          1: [],
-          2: [],
-          3: [],
-          4: [],
-        };
+        if (hydrateHierarchy) {
+          const kpiByDefinitionId = new Map(
+            availableKpiOptions.map((option) => [
+              option.kpiDefinitionId,
+              option,
+            ]),
+          );
+          const nextByPerspective: DraftObjectivesByPerspective = {
+            1: [],
+            2: [],
+            3: [],
+            4: [],
+          };
 
-        for (const perspective of hierarchies) {
-          nextByPerspective[perspective.perspectiveLevel] =
-            perspective.objectives.map((objective) => ({
-              id: `${Date.now()}-${Math.random()}`,
-              description: objective.description,
-              keyInitiatives: objective.keyInitiatives.map((initiative) => ({
+          for (const perspective of hierarchies) {
+            nextByPerspective[perspective.perspectiveLevel] =
+              perspective.objectives.map((objective) => ({
                 id: `${Date.now()}-${Math.random()}`,
-                description: initiative.description,
-                kpis: initiative.kpis.map((kpi) => {
-                  const kpiOption = kpiByDefinitionId.get(kpi.kpiDefinitionId);
-                  return {
-                    kpiId: kpiOption?.kpiId ?? null,
-                    kpiDefinitionId: kpi.kpiDefinitionId,
-                    kpiName:
-                      kpiOption?.kpiName ?? `KPI ${kpi.kpiDefinitionId}`,
-                    kpiCategoryId: kpiOption?.categoryId ?? null,
-                    kpiSubcategoryId: kpiOption?.subcategoryId ?? null,
-                    targetValue: "",
-                    trackingFrequency:
-                      kpi.trackingFrequency === "annually"
-                        ? "annually"
-                        : "monthly",
-                    isSaved: true,
-                  };
-                }),
+                description: objective.description,
+                keyInitiatives: objective.keyInitiatives.map((initiative) => ({
+                  id: `${Date.now()}-${Math.random()}`,
+                  description: initiative.description,
+                  kpis: initiative.kpis.map((kpi) => {
+                    const kpiOption = kpiByDefinitionId.get(
+                      kpi.kpiDefinitionId,
+                    );
+                    return {
+                      kpiId: kpiOption?.kpiId ?? null,
+                      kpiDefinitionId: kpi.kpiDefinitionId,
+                      kpiName:
+                        kpiOption?.kpiName ?? `KPI ${kpi.kpiDefinitionId}`,
+                      kpiCategoryId: kpiOption?.categoryId ?? null,
+                      kpiSubcategoryId: kpiOption?.subcategoryId ?? null,
+                      targetValue: "",
+                      trackingFrequency:
+                        kpi.trackingFrequency === "annually"
+                          ? "annually"
+                          : "monthly",
+                      isSaved: true,
+                    };
+                  }),
+                  isSaved: true,
+                })),
                 isSaved: true,
-              })),
-              isSaved: true,
-            }));
-        }
+              }));
+          }
 
-        lastSavedFingerprintRef.current =
-          buildHierarchyFingerprint(nextByPerspective);
-        setDraftObjectivesByPerspective(nextByPerspective);
-        setHasHydratedDraftHierarchy(true);
-        setAutoSaveStatus("saved");
+          lastSavedFingerprintRef.current =
+            buildHierarchyFingerprint(nextByPerspective);
+          logAutoSave("loadSavedBuilds:set-fingerprint", {
+            fingerprint: lastSavedFingerprintRef.current,
+          });
+          autoSaveWorkerRef.current?.postMessage({
+            type: "setSavedFingerprint",
+            fingerprint: lastSavedFingerprintRef.current,
+          });
+          setDraftObjectivesByPerspective(nextByPerspective);
+          setHasHydratedDraftHierarchy(true);
+          setAutoSaveStatus("saved");
+        }
+      } catch (err) {
+        logAutoSaveError("loadSavedBuilds:error", err);
+        setSaveMessage(
+          err instanceof Error ? err.message : "Unable to load saved builds.",
+        );
+        setAutoSaveStatus("error");
       }
-    } catch (err) {
-      setSaveMessage(
-        err instanceof Error ? err.message : "Unable to load saved builds.",
-      );
-      setAutoSaveStatus("error");
+    },
+    [availableKpiOptions, buildHierarchyFingerprint],
+  );
+
+  useEffect(() => {
+    if (typeof Worker === "undefined") {
+      return;
     }
-  }, [availableKpiOptions, buildHierarchyFingerprint]);
+
+    const worker = new Worker(
+      new URL("./autosave.worker.ts", import.meta.url),
+      { type: "module" },
+    );
+    autoSaveWorkerRef.current = worker;
+    logAutoSave("worker:created");
+
+    const onMessage = (event: MessageEvent<AutoSaveWorkerMessage>) => {
+      const message = event.data;
+      if (message.type !== "status") {
+        return;
+      }
+
+      logAutoSave("worker:status", message);
+
+      setAutoSaveStatus(message.status);
+
+      if (
+        message.status === "saved" &&
+        message.fingerprint != null &&
+        message.fingerprint !== lastSavedFingerprintRef.current
+      ) {
+        lastSavedFingerprintRef.current = message.fingerprint;
+        markHierarchyAsSaved();
+        setContext((current) => ({ ...current }));
+      }
+
+      if (message.status === "error") {
+        logAutoSaveError("worker:status:error", message);
+        setSaveMessage(message.message ?? "Unable to save template.");
+      }
+    };
+
+    worker.addEventListener("message", onMessage);
+    worker.postMessage({
+      type: "init",
+      debounceMs: AUTO_SAVE_DEBOUNCE_MS,
+      minChangeCount: AUTO_SAVE_MIN_CHANGE_COUNT,
+      lastSavedFingerprint: lastSavedFingerprintRef.current,
+      apiOrigin: window.location.origin,
+    });
+    logAutoSave("worker:init-posted", {
+      debounceMs: AUTO_SAVE_DEBOUNCE_MS,
+      minChangeCount: AUTO_SAVE_MIN_CHANGE_COUNT,
+      lastSavedFingerprint: lastSavedFingerprintRef.current,
+    });
+
+    return () => {
+      logAutoSave("worker:teardown");
+      worker.postMessage({ type: "stop" });
+      worker.removeEventListener("message", onMessage);
+      worker.terminate();
+      if (autoSaveWorkerRef.current === worker) {
+        autoSaveWorkerRef.current = null;
+      }
+    };
+  }, [markHierarchyAsSaved]);
 
   useEffect(() => {
     if (mode !== "builder" && activeMainTab !== "builder") {
@@ -1030,17 +1185,22 @@ export default function ScorecardPageClient({
     await uploadTemplateFile(templateUploadFile);
   };
 
+  const persistableByLevel = useMemo<PersistableByLevel[]>(
+    () =>
+      ([1, 2, 3, 4] as const).map((level) => ({
+        perspectiveLevel: level,
+        objectives: toPersistableObjectives(
+          draftObjectivesByPerspective[level],
+        ),
+      })),
+    [draftObjectivesByPerspective, toPersistableObjectives],
+  );
+
   const persistTemplateHierarchy = useCallback(
     async ({ silent = false }: { silent?: boolean } = {}) => {
       if (isProcessingTemplate) {
         return;
       }
-
-      const perspectiveLevels: PerspectiveLevel[] = [1, 2, 3, 4];
-      const persistableByLevel = perspectiveLevels.map((level) => ({
-        perspectiveLevel: level,
-        objectives: toPersistableObjectives(draftObjectivesByPerspective[level]),
-      }));
 
       if (!silent) {
         setSaveMessage(null);
@@ -1062,33 +1222,13 @@ export default function ScorecardPageClient({
           });
         }
 
-        setDraftObjectivesByPerspective((prev) => {
-          const next: DraftObjectivesByPerspective = {
-            1: [],
-            2: [],
-            3: [],
-            4: [],
-          };
-
-          for (const level of [1, 2, 3, 4] as const) {
-            next[level] = prev[level].map((objective) => ({
-              ...objective,
-              isSaved: true,
-              keyInitiatives: objective.keyInitiatives.map((initiative) => ({
-                ...initiative,
-                isSaved: true,
-                kpis: initiative.kpis.map((kpi) => ({
-                  ...kpi,
-                  isSaved: true,
-                })),
-              })),
-            }));
-          }
-
-          return next;
-        });
+        markHierarchyAsSaved();
 
         lastSavedFingerprintRef.current = JSON.stringify(persistableByLevel);
+        autoSaveWorkerRef.current?.postMessage({
+          type: "setSavedFingerprint",
+          fingerprint: lastSavedFingerprintRef.current,
+        });
         setAutoSaveStatus("saved");
         if (!silent) {
           setSaveMessage("Template hierarchy saved successfully.");
@@ -1105,9 +1245,9 @@ export default function ScorecardPageClient({
     },
     [
       context.reportPeriodId,
-      draftObjectivesByPerspective,
       isProcessingTemplate,
-      toPersistableObjectives,
+      markHierarchyAsSaved,
+      persistableByLevel,
     ],
   );
 
@@ -1125,33 +1265,29 @@ export default function ScorecardPageClient({
       return;
     }
 
-    if (hierarchyFingerprint === lastSavedFingerprintRef.current) {
-      return;
-    }
-
-    setAutoSaveStatus("idle");
-    if (autoSaveTimerRef.current != null) {
-      clearTimeout(autoSaveTimerRef.current);
-    }
-
-    autoSaveTimerRef.current = setTimeout(() => {
-      void persistTemplateHierarchy({ silent: true });
-    }, 1200);
-
-    return () => {
-      if (autoSaveTimerRef.current != null) {
-        clearTimeout(autoSaveTimerRef.current);
-        autoSaveTimerRef.current = null;
-      }
-    };
+    autoSaveWorkerRef.current?.postMessage({
+      type: "change",
+      fingerprint: hierarchyFingerprint,
+      reportPeriodId: context.reportPeriodId,
+      persistableByLevel,
+    });
+    logAutoSave("worker:change-posted", {
+      fingerprint: hierarchyFingerprint,
+      reportPeriodId: context.reportPeriodId,
+      levelObjectiveCounts: persistableByLevel.map((item) => ({
+        perspectiveLevel: item.perspectiveLevel,
+        objectiveCount: item.objectives.length,
+      })),
+    });
   }, [
     activeMainTab,
+    context.reportPeriodId,
     hasHydratedDraftHierarchy,
     hierarchyFingerprint,
     isProcessingTemplate,
     isSaving,
     mode,
-    persistTemplateHierarchy,
+    persistableByLevel,
   ]);
 
   const handleTemplateSave = async () => {
@@ -1176,15 +1312,15 @@ export default function ScorecardPageClient({
   const hasUnsavedHierarchyChanges =
     canSaveTemplate && hierarchyFingerprint !== lastSavedFingerprintRef.current;
   const step1CardClass =
-    "rounded border border-sky-300 bg-sky-50 px-1.5 py-1 text-[11px]";
+    "rounded border border-white bg-slate-50 px-1.5 py-1 text-[11px]";
   const step2CardClass =
-    "rounded border border-indigo-300 bg-indigo-50 px-1.5 py-1 text-[11px]";
+    "rounded border border-white bg-indigo-50 px-1.5 py-1 text-[11px]";
   const step3CardClass =
-    "rounded border border-amber-300 bg-amber-50 px-1.5 py-1 text-[11px]";
+    "rounded border border-white bg-amber-50 px-1.5 py-1 text-[11px]";
   const step4CardClass =
-    "rounded border border-cyan-300 bg-cyan-50 px-1.5 py-1 text-[11px]";
+    "rounded border border-white bg-cyan-50 px-1.5 py-1 text-[11px]";
   const step5CardClass =
-    "rounded border border-lime-300 bg-lime-50 px-1.5 py-1 text-[11px]";
+    "rounded border border-white bg-lime-50 px-1.5 py-1 text-[11px]";
 
   return (
     <div className="space-y-2 p-1.5 sm:p-2">
@@ -1194,7 +1330,7 @@ export default function ScorecardPageClient({
         </div>
       ) : null}
       {error ? (
-        <div className="rounded-md border border-rose-200 bg-rose-50 p-2 text-xs text-rose-800">
+        <div className="rounded-md border border-white bg-rose-50 p-2 text-xs text-rose-800">
           {error}
         </div>
       ) : null}
@@ -1245,7 +1381,24 @@ export default function ScorecardPageClient({
 
       {mode === "builder" || activeMainTab === "builder" ? (
         <div className="space-y-3 rounded-md border bg-background p-3 sm:p-4">
-          <div className="flex items-end gap-8">
+          <div className="flex flex-wrap items-center justify-between gap-1.5">
+            <p className="mt-1 text-[11px] text-muted-foreground">
+              Build top-down: add objective rows, then initiatives, then KPIs
+              under each initiative.
+            </p>
+            <div className="flex flex-wrap gap-1 text-[10px]">
+              <span className="rounded border border-white bg-slate-100 px-1.5 py-0.5 text-slate-800">
+                Objective
+              </span>
+              <span className="rounded border border-white bg-amber-100 px-1.5 py-0.5 text-amber-800">
+                Initiative
+              </span>
+              <span className="rounded border border-white bg-lime-100 px-1.5 py-0.5 text-lime-800">
+                KPI
+              </span>
+            </div>
+          </div>
+          <div className="flex flex-wrap items-end justify-between gap-3">
             <div>
               <div>
                 <h2 className="text-sm font-semibold">Targets Tracking</h2>
@@ -1304,7 +1457,7 @@ export default function ScorecardPageClient({
               </div>
             </div>
 
-            <div className="flex gap-2">
+            <div className="ml-auto flex flex-wrap items-center justify-end gap-2">
               <Button
                 type="button"
                 size="sm"
@@ -1360,25 +1513,7 @@ export default function ScorecardPageClient({
           {templateBuilderOnly ? (
             <div className="space-y-4">
               <div className="space-y-4">
-                <div className="rounded-md border border-slate-300 bg-slate-50/50 p-3">
-                  <div className="flex flex-wrap items-center justify-between gap-1.5">
-                    <p className="mt-1 text-[11px] text-muted-foreground">
-                      Build top-down: add objective rows, then initiatives, then
-                      KPIs under each initiative.
-                    </p>
-                    <div className="flex flex-wrap gap-1 text-[10px]">
-                      <span className="rounded border border-sky-300 bg-sky-100 px-1.5 py-0.5 text-sky-800">
-                        Objective
-                      </span>
-                      <span className="rounded border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-amber-800">
-                        Initiative
-                      </span>
-                      <span className="rounded border border-lime-300 bg-lime-100 px-1.5 py-0.5 text-lime-800">
-                        KPI
-                      </span>
-                    </div>
-                  </div>
-
+                <div className="rounded-md border border-white bg-slate-50/50 p-3">
                   <div className="mt-2">
                     <ScorecardBuilderTree
                       perspectiveLabels={PERSPECTIVE_LABELS}
@@ -1456,7 +1591,7 @@ export default function ScorecardPageClient({
             </div>
 
             <div className="grid gap-1.5 md:grid-cols-2">
-              <div className="space-y-0.5 rounded-md border border-sky-300 bg-sky-50 p-2">
+              <div className="space-y-0.5 rounded-md border border-white bg-slate-50 p-2">
                 <label className="text-[11px] font-medium">
                   Step 1: Perspective
                 </label>
@@ -1480,7 +1615,7 @@ export default function ScorecardPageClient({
                 </Select>
               </div>
 
-              <div className="space-y-1.5 rounded-md border border-indigo-300 bg-indigo-50 p-2 md:col-span-2">
+              <div className="space-y-1.5 rounded-md border border-white bg-indigo-50 p-2 md:col-span-2">
                 <div className="space-y-0.5">
                   <label className="text-[11px] font-medium">
                     Step 2 (Optional): Load Existing Objective
@@ -1518,6 +1653,7 @@ export default function ScorecardPageClient({
                   <Input
                     name="strategicObjective"
                     value={strategicObjective}
+                    maxLength={50}
                     onChange={(event) =>
                       setStrategicObjective(event.target.value)
                     }
@@ -1527,7 +1663,7 @@ export default function ScorecardPageClient({
                 </div>
               </div>
 
-              <div className="space-y-0.5 rounded-md border border-amber-300 bg-amber-50 p-2 md:col-span-2">
+              <div className="space-y-0.5 rounded-md border border-white bg-amber-50 p-2 md:col-span-2">
                 <label className="text-[11px] font-medium">
                   Step 3: Key Initiative
                 </label>
@@ -1537,6 +1673,7 @@ export default function ScorecardPageClient({
                 <Input
                   name="keyInitiative"
                   value={keyInitiative}
+                  maxLength={50}
                   onChange={(event) => setKeyInitiative(event.target.value)}
                   className="h-8 bg-white text-xs"
                   disabled={isSaving || !hasObjectiveContext}
@@ -1548,7 +1685,7 @@ export default function ScorecardPageClient({
                 ) : null}
               </div>
 
-              <div className="md:col-span-2 mt-1 rounded-md border border-cyan-300 bg-cyan-50 p-2">
+              <div className="md:col-span-2 mt-1 rounded-md border border-white bg-cyan-50 p-2">
                 <p className="text-[11px] font-medium">
                   Step 4: KPIs Under This Key Initiative
                 </p>
@@ -1663,34 +1800,51 @@ export default function ScorecardPageClient({
                 </div>
 
                 {currentInitiativeKpis.length > 0 ? (
-                  <ul className="mt-1.5 space-y-1">
-                    {currentInitiativeKpis.map((item, index) => (
-                      <li
-                        key={`${item.kpiDefinitionId}-${index}`}
-                        className="flex items-center justify-between rounded border px-2 py-1 text-[11px]"
-                      >
-                        <span>
-                          {item.kpiName} | Target {item.targetValue} |{" "}
-                          {item.trackingFrequency}
-                        </span>
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          className="h-6 px-1.5 text-[11px]"
-                          onClick={() =>
-                            setCurrentInitiativeKpis((prev) =>
-                              prev.filter(
-                                (_, itemIndex) => itemIndex !== index,
-                              ),
-                            )
-                          }
-                        >
-                          Remove
-                        </Button>
-                      </li>
-                    ))}
-                  </ul>
+                  <div className="mt-1.5 overflow-hidden rounded-md border border-white bg-white">
+                    <table className="w-full text-left text-[11px]">
+                      <thead className="bg-slate-100 text-slate-700">
+                        <tr>
+                          <th className="px-2 py-1 font-medium">KPI</th>
+                          <th className="px-2 py-1 font-medium">Target</th>
+                          <th className="px-2 py-1 font-medium">Tracking</th>
+                          <th className="px-2 py-1 text-right font-medium">
+                            Action
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {currentInitiativeKpis.map((item, index) => (
+                          <tr
+                            key={`${item.kpiDefinitionId}-${index}`}
+                            className="border-t border-slate-200"
+                          >
+                            <td className="px-2 py-1.5">{item.kpiName}</td>
+                            <td className="px-2 py-1.5">{item.targetValue}</td>
+                            <td className="px-2 py-1.5 capitalize">
+                              {item.trackingFrequency}
+                            </td>
+                            <td className="px-2 py-1.5 text-right">
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="sm"
+                                className="h-6 px-1.5 text-[11px]"
+                                onClick={() =>
+                                  setCurrentInitiativeKpis((prev) =>
+                                    prev.filter(
+                                      (_, itemIndex) => itemIndex !== index,
+                                    ),
+                                  )
+                                }
+                              >
+                                Remove
+                              </Button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
                 ) : (
                   <p className="mt-1.5 text-[11px] text-muted-foreground">
                     No KPIs added for this initiative yet.
@@ -1788,16 +1942,41 @@ export default function ScorecardPageClient({
                                 Remove
                               </Button>
                             </div>
-                            <ul className="mt-1 space-y-0.5 text-[11px] text-muted-foreground">
-                              {initiative.kpis.map((kpi, index) => (
-                                <li
-                                  key={`${initiative.id}-${kpi.kpiDefinitionId}-${index}`}
-                                >
-                                  {kpi.kpiName}: {kpi.targetValue} (
-                                  {kpi.trackingFrequency})
-                                </li>
-                              ))}
-                            </ul>
+                            <div className="mt-1 overflow-hidden rounded border border-white bg-white">
+                              <table className="w-full text-left text-[11px] text-slate-700">
+                                <thead className="bg-slate-100">
+                                  <tr>
+                                    <th className="px-2 py-1 font-medium">
+                                      KPI
+                                    </th>
+                                    <th className="px-2 py-1 font-medium">
+                                      Target
+                                    </th>
+                                    <th className="px-2 py-1 font-medium">
+                                      Tracking
+                                    </th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {initiative.kpis.map((kpi, index) => (
+                                    <tr
+                                      key={`${initiative.id}-${kpi.kpiDefinitionId}-${index}`}
+                                      className="border-t border-slate-200"
+                                    >
+                                      <td className="px-2 py-1.5">
+                                        {kpi.kpiName}
+                                      </td>
+                                      <td className="px-2 py-1.5">
+                                        {kpi.targetValue}
+                                      </td>
+                                      <td className="px-2 py-1.5 capitalize">
+                                        {kpi.trackingFrequency}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
                           </BorderedGrid>
                         ),
                       )}
@@ -1805,7 +1984,7 @@ export default function ScorecardPageClient({
                   )}
                 </BorderedPanel>
 
-                <div className="mt-1.5 rounded-md border border-lime-300 bg-lime-50 p-2">
+                <div className="mt-1.5 rounded-md border border-white bg-lime-50 p-2">
                   <p className="text-[11px] font-medium">
                     Step 5: Add/Update Objective In Perspective
                   </p>
@@ -1912,16 +2091,41 @@ export default function ScorecardPageClient({
                                   Initiative {initiativeIndex + 1}:{" "}
                                   {initiative.description}
                                 </p>
-                                <ul className="mt-0.5 space-y-0.5">
-                                  {initiative.kpis.map((kpi, index) => (
-                                    <li
-                                      key={`${initiative.id}-${kpi.kpiDefinitionId}-${index}`}
-                                    >
-                                      {kpi.kpiName}: {kpi.targetValue} (
-                                      {kpi.trackingFrequency})
-                                    </li>
-                                  ))}
-                                </ul>
+                                <div className="mt-0.5 overflow-hidden rounded border border-white bg-white">
+                                  <table className="w-full text-left text-[11px] text-slate-700">
+                                    <thead className="bg-slate-100">
+                                      <tr>
+                                        <th className="px-2 py-1 font-medium">
+                                          KPI
+                                        </th>
+                                        <th className="px-2 py-1 font-medium">
+                                          Target
+                                        </th>
+                                        <th className="px-2 py-1 font-medium">
+                                          Tracking
+                                        </th>
+                                      </tr>
+                                    </thead>
+                                    <tbody>
+                                      {initiative.kpis.map((kpi, index) => (
+                                        <tr
+                                          key={`${initiative.id}-${kpi.kpiDefinitionId}-${index}`}
+                                          className="border-t border-slate-200"
+                                        >
+                                          <td className="px-2 py-1.5">
+                                            {kpi.kpiName}
+                                          </td>
+                                          <td className="px-2 py-1.5">
+                                            {kpi.targetValue}
+                                          </td>
+                                          <td className="px-2 py-1.5 capitalize">
+                                            {kpi.trackingFrequency}
+                                          </td>
+                                        </tr>
+                                      ))}
+                                    </tbody>
+                                  </table>
+                                </div>
                               </div>
                             ),
                           )}

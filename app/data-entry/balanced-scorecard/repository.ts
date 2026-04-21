@@ -45,7 +45,7 @@ const perspectiveLabel = (value: number | null): string => {
     case PerspectiveLevel.Customer:
       return "Customer";
     case PerspectiveLevel.Operation:
-      return "Operation";
+      return "Operations";
     case PerspectiveLevel.Development:
       return "Development";
     default:
