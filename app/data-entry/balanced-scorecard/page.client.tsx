@@ -36,6 +36,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { generateRandomNumber } from "@/lib/utils";
 import ScorecardBuilderTree from "@/components/data-entry/scorecard-builder-tree";
+import { Download, Upload } from "lucide-react";
 
 type TrackingFrequency = "monthly" | "annually";
 type TemplateTrackingMode = "monthly" | "financial_year";
@@ -158,7 +159,7 @@ export default function ScorecardPageClient({
   const [isProcessingTemplate, setIsProcessingTemplate] = useState(false);
   const [activeMainTab, setActiveMainTab] = useState<
     "strategic-map" | "builder"
-  >(mode === "builder" ? "builder" : "strategic-map");
+  >("builder");
   const quickTemplateUploadInputRef = useRef<HTMLInputElement | null>(null);
 
   const draftObjectives = draftObjectivesByPerspective[perspectiveLevel];
@@ -1049,7 +1050,7 @@ export default function ScorecardPageClient({
                 onClick={() => void handleTemplateDownload()}
                 disabled={!canDownloadTemplate}
               >
-                Download Template
+                <Download /> Download Excel Template
               </Button>
               <Button
                 type="button"
@@ -1066,7 +1067,10 @@ export default function ScorecardPageClient({
                 }}
                 disabled={isProcessingTemplate || templateRows.length === 0}
               >
-                {isProcessingTemplate ? "Uploading..." : "Upload Template"}
+                <Upload />
+                {isProcessingTemplate
+                  ? "Uploading..."
+                  : "Upload Excel Template"}
               </Button>
             </div>
           </div>
@@ -1118,25 +1122,6 @@ export default function ScorecardPageClient({
                     />
                   </div>
                 </div>
-
-                <div className="rounded-md border p-2">
-                  <p className="text-[11px] font-medium">
-                    Upload Filled Template
-                  </p>
-                  <p className="mt-1 text-[11px] text-muted-foreground">
-                    Use the upload action button to select a file.
-                  </p>
-                </div>
-
-                <div className="rounded-md border p-2 text-[11px] text-muted-foreground">
-                  Template rows to generate: {templateRows.length}
-                </div>
-
-                {saveMessage ? (
-                  <div className="rounded-md border p-2 text-[11px] text-muted-foreground">
-                    {saveMessage}
-                  </div>
-                ) : null}
               </div>
             </div>
           ) : null}
