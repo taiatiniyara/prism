@@ -21,6 +21,15 @@ import { listCustomKpiApprovalTaxonomyOptions } from "@/app/data-entry/review-kp
 import KpiLimitsEditor from "./limitsEditor";
 import KpiTargetsEditor from "./targetsEditor";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import SectionContainer from "@/components/layout/section-container";
 import StateMessage from "@/components/ui/state-message";
 import DetailsExpandIndicator from "@/components/ui/details-expand-indicator";
@@ -82,33 +91,48 @@ export default async function KpiSettingsPage() {
               data-testid="custom-kpi-requests-list"
             >
               {customKpiViewModel.requests.map((request) => (
-                <details
-                  key={request.id}
-                  data-custom-kpi-request-details="true"
-                  className="group rounded-md border bg-background p-3 text-sm"
-                >
-                  <summary className="flex cursor-pointer list-none items-center justify-between gap-3">
+                <Dialog key={request.id}>
+                  <div className="rounded-md border bg-background p-3 text-sm">
                     <div>
                       <div className="font-medium">{request.title}</div>
                       <div className="mt-1 text-xs text-muted-foreground">
                         Submitted {request.created_at.toLocaleString()}
                       </div>
                     </div>
-                    <DetailsExpandIndicator>
+                    <div className="mt-3 flex items-center justify-between gap-2">
                       <CustomKpiRequestStatusBadge status={request.status} />
-                    </DetailsExpandIndicator>
-                  </summary>
-
-                  <div className="mt-3 border-t pt-3 text-xs text-muted-foreground sm:text-sm">
-                    <div>
-                      Last updated {request.updated_at.toLocaleString()}
+                      <DialogTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                        >
+                          View details
+                        </Button>
+                      </DialogTrigger>
                     </div>
-                    <div className="mt-1">
-                      Selected inputs:{" "}
-                      {request.selected_input_definition_ids.length}
+                  </div>
+
+                  <DialogContent className="max-h-[85vh] max-w-3xl overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>{request.title}</DialogTitle>
+                      <DialogDescription>
+                        Submitted {request.created_at.toLocaleString()} by{" "}
+                        {currentUser.name || "Unknown user"}
+                      </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="border-t pt-3 text-xs text-muted-foreground sm:text-sm">
+                      <div>
+                        Last updated {request.updated_at.toLocaleString()}
+                      </div>
+                      <div className="mt-1">
+                        Selected inputs:{" "}
+                        {request.selected_input_definition_ids.length}
+                      </div>
                     </div>
 
-                    <div className="mt-3 space-y-3 text-foreground">
+                    <div className="space-y-3 text-foreground">
                       <LabeledContentBlock label="Formula expression">
                         <div className="whitespace-pre-wrap rounded border bg-muted/20 p-2 font-mono text-[11px] sm:text-xs">
                           {request.formula_expression}
@@ -143,8 +167,8 @@ export default async function KpiSettingsPage() {
                         )}
                       </LabeledContentBlock>
                     </div>
-                  </div>
-                </details>
+                  </DialogContent>
+                </Dialog>
               ))}
             </div>
           )}

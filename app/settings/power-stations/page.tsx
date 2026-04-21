@@ -24,8 +24,15 @@ export default async function PowerStationsSettingsPage() {
           "service_area",
           "commissioned_date",
           "decommissioned_date",
+          "is_active",
         ]
-      : ["name", "service_area", "commissioned_date", "decommissioned_date"];
+      : [
+          "name",
+          "service_area",
+          "commissioned_date",
+          "decommissioned_date",
+          "is_active",
+        ];
 
   return (
     <DataTable<PowerStation>
