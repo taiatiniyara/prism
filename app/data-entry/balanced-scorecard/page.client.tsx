@@ -1,13 +1,14 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import readXlsxFile from "read-excel-file/browser";
 import ScorecardSummary from "@/components/data-entry/scorecard-summary";
 import ScorecardDetailPanel from "@/components/data-entry/scorecard-detail-panel";
 import ScorecardEmptyState from "@/components/data-entry/scorecard-empty-state";
 import ScorecardTree from "@/components/data-entry/scorecard-tree";
 import {
+  fetchScorecardDrafts,
   fetchScorecard,
   fetchScorecardKpiOptions,
   isLatestRequest,
@@ -50,18 +51,21 @@ type DraftObjectiveKpi = {
   kpiSubcategoryId: number | null;
   targetValue: string;
   trackingFrequency: TrackingFrequency;
+  isSaved: boolean;
 };
 
 type DraftKeyInitiative = {
   id: string;
   description: string;
   kpis: DraftObjectiveKpi[];
+  isSaved: boolean;
 };
 
 type DraftObjective = {
   id: string;
   description: string;
   keyInitiatives: DraftKeyInitiative[];
+  isSaved: boolean;
 };
 
 type PerspectiveLevel = 1 | 2 | 3 | 4;
@@ -146,6 +150,11 @@ export default function ScorecardPageClient({
   >(null);
   const [saveMessage, setSaveMessage] = useState<string | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [hasHydratedDraftHierarchy, setHasHydratedDraftHierarchy] =
+    useState(false);
+  const [autoSaveStatus, setAutoSaveStatus] = useState<
+    "idle" | "saving" | "saved" | "error"
+  >("idle");
   const [templateStartYear, setTemplateStartYear] = useState(
     new Date().getFullYear(),
   );
@@ -162,6 +171,8 @@ export default function ScorecardPageClient({
     "strategic-map" | "builder"
   >("builder");
   const quickTemplateUploadInputRef = useRef<HTMLInputElement | null>(null);
+  const autoSaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastSavedFingerprintRef = useRef<string>("");
 
   const draftObjectives = draftObjectivesByPerspective[perspectiveLevel];
 
@@ -177,6 +188,41 @@ export default function ScorecardPageClient({
   const normalizedContext = useMemo(
     () => ({ ...context, kpiCategoryId: null, kpiSubcategoryId: null }),
     [context],
+  );
+
+  const toPersistableObjectives = useCallback((objectives: DraftObjective[]) => {
+    return objectives
+      .map((objective) => ({
+        description: objective.description.trim(),
+        keyInitiatives: objective.keyInitiatives
+          .map((initiative) => ({
+            description: initiative.description.trim(),
+            kpis: initiative.kpis.map((kpi) => ({
+              kpiDefinitionId: kpi.kpiDefinitionId,
+              trackingFrequency: kpi.trackingFrequency,
+            })),
+          }))
+          .filter(
+            (initiative) =>
+              initiative.description.length > 0 && initiative.kpis.length > 0,
+          ),
+      }))
+      .filter(
+        (objective) =>
+          objective.description.length > 0 &&
+          objective.keyInitiatives.length > 0,
+      );
+  }, []);
+
+  const buildHierarchyFingerprint = useCallback(
+    (source: DraftObjectivesByPerspective): string => {
+      const normalized = ([1, 2, 3, 4] as const).map((level) => ({
+        perspectiveLevel: level,
+        objectives: toPersistableObjectives(source[level]),
+      }));
+      return JSON.stringify(normalized);
+    },
+    [toPersistableObjectives],
   );
 
   useEffect(() => {
@@ -208,6 +254,74 @@ export default function ScorecardPageClient({
       active = false;
     };
   }, [normalizedContext]);
+
+  const loadSavedBuilds = useCallback(async (hydrateHierarchy = false) => {
+    try {
+      const { hierarchies } = await fetchScorecardDrafts();
+
+      if (hydrateHierarchy) {
+        const kpiByDefinitionId = new Map(
+          availableKpiOptions.map((option) => [option.kpiDefinitionId, option]),
+        );
+        const nextByPerspective: DraftObjectivesByPerspective = {
+          1: [],
+          2: [],
+          3: [],
+          4: [],
+        };
+
+        for (const perspective of hierarchies) {
+          nextByPerspective[perspective.perspectiveLevel] =
+            perspective.objectives.map((objective) => ({
+              id: `${Date.now()}-${Math.random()}`,
+              description: objective.description,
+              keyInitiatives: objective.keyInitiatives.map((initiative) => ({
+                id: `${Date.now()}-${Math.random()}`,
+                description: initiative.description,
+                kpis: initiative.kpis.map((kpi) => {
+                  const kpiOption = kpiByDefinitionId.get(kpi.kpiDefinitionId);
+                  return {
+                    kpiId: kpiOption?.kpiId ?? null,
+                    kpiDefinitionId: kpi.kpiDefinitionId,
+                    kpiName:
+                      kpiOption?.kpiName ?? `KPI ${kpi.kpiDefinitionId}`,
+                    kpiCategoryId: kpiOption?.categoryId ?? null,
+                    kpiSubcategoryId: kpiOption?.subcategoryId ?? null,
+                    targetValue: "",
+                    trackingFrequency:
+                      kpi.trackingFrequency === "annually"
+                        ? "annually"
+                        : "monthly",
+                    isSaved: true,
+                  };
+                }),
+                isSaved: true,
+              })),
+              isSaved: true,
+            }));
+        }
+
+        lastSavedFingerprintRef.current =
+          buildHierarchyFingerprint(nextByPerspective);
+        setDraftObjectivesByPerspective(nextByPerspective);
+        setHasHydratedDraftHierarchy(true);
+        setAutoSaveStatus("saved");
+      }
+    } catch (err) {
+      setSaveMessage(
+        err instanceof Error ? err.message : "Unable to load saved builds.",
+      );
+      setAutoSaveStatus("error");
+    }
+  }, [availableKpiOptions, buildHierarchyFingerprint]);
+
+  useEffect(() => {
+    if (mode !== "builder" && activeMainTab !== "builder") {
+      return;
+    }
+
+    void loadSavedBuilds(!hasHydratedDraftHierarchy);
+  }, [activeMainTab, hasHydratedDraftHierarchy, loadSavedBuilds, mode]);
 
   useEffect(() => {
     let active = true;
@@ -323,6 +437,7 @@ export default function ScorecardPageClient({
           id: `${Date.now()}-${Math.random()}-${initiativeMap.size}`,
           description: initiativeDescription,
           kpis: [],
+          isSaved: true,
         };
         initiativeMap.set(initiativeKey, initiative);
       }
@@ -349,6 +464,7 @@ export default function ScorecardPageClient({
         targetValue: row.targetValue == null ? "" : String(row.targetValue),
         trackingFrequency:
           row.trackingFrequency === "annually" ? "annually" : "monthly",
+        isSaved: true,
       });
     }
 
@@ -404,6 +520,7 @@ export default function ScorecardPageClient({
         id: createDraftId(),
         description: "",
         keyInitiatives: [],
+        isSaved: false,
       },
     ]);
   };
@@ -416,7 +533,7 @@ export default function ScorecardPageClient({
     updateDraftObjectivesForLevel(level, (prev) =>
       prev.map((objective) =>
         objective.id === objectiveId
-          ? { ...objective, description: value }
+          ? { ...objective, description: value, isSaved: false }
           : objective,
       ),
     );
@@ -434,12 +551,14 @@ export default function ScorecardPageClient({
 
         return {
           ...objective,
+          isSaved: false,
           keyInitiatives: [
             ...objective.keyInitiatives,
             {
               id: createDraftId(),
               description: "",
               kpis: [],
+              isSaved: false,
             },
           ],
         };
@@ -461,9 +580,10 @@ export default function ScorecardPageClient({
 
         return {
           ...objective,
+          isSaved: false,
           keyInitiatives: objective.keyInitiatives.map((initiative) =>
             initiative.id === initiativeId
-              ? { ...initiative, description: value }
+              ? { ...initiative, description: value, isSaved: false }
               : initiative,
           ),
         };
@@ -491,6 +611,7 @@ export default function ScorecardPageClient({
 
         return {
           ...objective,
+          isSaved: false,
           keyInitiatives: objective.keyInitiatives.map((initiative) => {
             if (initiative.id !== initiativeId) {
               return initiative;
@@ -498,6 +619,7 @@ export default function ScorecardPageClient({
 
             return {
               ...initiative,
+              isSaved: false,
               kpis: [
                 ...initiative.kpis,
                 {
@@ -508,6 +630,7 @@ export default function ScorecardPageClient({
                   kpiSubcategoryId: defaultKpi.subcategoryId,
                   targetValue: "",
                   trackingFrequency: "monthly",
+                  isSaved: false,
                 },
               ],
             };
@@ -532,6 +655,7 @@ export default function ScorecardPageClient({
 
         return {
           ...objective,
+          isSaved: false,
           keyInitiatives: objective.keyInitiatives.map((initiative) => {
             if (initiative.id !== initiativeId) {
               return initiative;
@@ -539,11 +663,13 @@ export default function ScorecardPageClient({
 
             return {
               ...initiative,
+              isSaved: false,
               kpis: initiative.kpis.map((kpi, kpiIndex) =>
                 kpiIndex === index
                   ? {
                       ...kpi,
                       ...patch,
+                      isSaved: false,
                     }
                   : kpi,
               ),
@@ -567,6 +693,7 @@ export default function ScorecardPageClient({
 
         return {
           ...objective,
+          isSaved: false,
           keyInitiatives: objective.keyInitiatives.filter(
             (initiative) => initiative.id !== initiativeId,
           ),
@@ -589,6 +716,7 @@ export default function ScorecardPageClient({
 
         return {
           ...objective,
+          isSaved: false,
           keyInitiatives: objective.keyInitiatives.map((initiative) => {
             if (initiative.id !== initiativeId) {
               return initiative;
@@ -596,6 +724,7 @@ export default function ScorecardPageClient({
 
             return {
               ...initiative,
+              isSaved: false,
               kpis: initiative.kpis.filter((_, kpiIndex) => kpiIndex !== index),
             };
           }),
@@ -901,58 +1030,132 @@ export default function ScorecardPageClient({
     await uploadTemplateFile(templateUploadFile);
   };
 
-  const handleTemplateSave = async () => {
-    setSaveMessage(null);
-    setIsSaving(true);
-
-    try {
-      const perspectiveLevels: PerspectiveLevel[] = [1, 2, 3, 4];
-
-      for (const level of perspectiveLevels) {
-        const objectives = draftObjectivesByPerspective[level]
-          .map((objective) => ({
-            description: objective.description.trim(),
-            keyInitiatives: objective.keyInitiatives
-              .map((initiative) => ({
-                description: initiative.description.trim(),
-                kpis: initiative.kpis.map((kpi) => ({
-                  kpiDefinitionId: kpi.kpiDefinitionId,
-                  trackingFrequency: kpi.trackingFrequency,
-                })),
-              }))
-              .filter(
-                (initiative) =>
-                  initiative.description.length > 0 &&
-                  initiative.kpis.length > 0,
-              ),
-          }))
-          .filter(
-            (objective) =>
-              objective.description.length > 0 &&
-              objective.keyInitiatives.length > 0,
-          );
-
-        if (objectives.length === 0) {
-          continue;
-        }
-
-        await saveScorecardDraft({
-          reportPeriodId: context.reportPeriodId,
-          perspectiveLevel: level,
-          perspectiveDescription: PERSPECTIVE_LABELS[level],
-          objectives,
-        });
+  const persistTemplateHierarchy = useCallback(
+    async ({ silent = false }: { silent?: boolean } = {}) => {
+      if (isProcessingTemplate) {
+        return;
       }
 
-      setSaveMessage("Template hierarchy saved successfully.");
-      setContext((current) => ({ ...current }));
-    } catch (err) {
-      setSaveMessage(
-        err instanceof Error ? err.message : "Unable to save template.",
-      );
-    } finally {
-      setIsSaving(false);
+      const perspectiveLevels: PerspectiveLevel[] = [1, 2, 3, 4];
+      const persistableByLevel = perspectiveLevels.map((level) => ({
+        perspectiveLevel: level,
+        objectives: toPersistableObjectives(draftObjectivesByPerspective[level]),
+      }));
+
+      if (!silent) {
+        setSaveMessage(null);
+      }
+      setIsSaving(true);
+      setAutoSaveStatus("saving");
+
+      try {
+        for (const item of persistableByLevel) {
+          if (item.objectives.length === 0) {
+            continue;
+          }
+
+          await saveScorecardDraft({
+            reportPeriodId: context.reportPeriodId,
+            perspectiveLevel: item.perspectiveLevel,
+            perspectiveDescription: PERSPECTIVE_LABELS[item.perspectiveLevel],
+            objectives: item.objectives,
+          });
+        }
+
+        setDraftObjectivesByPerspective((prev) => {
+          const next: DraftObjectivesByPerspective = {
+            1: [],
+            2: [],
+            3: [],
+            4: [],
+          };
+
+          for (const level of [1, 2, 3, 4] as const) {
+            next[level] = prev[level].map((objective) => ({
+              ...objective,
+              isSaved: true,
+              keyInitiatives: objective.keyInitiatives.map((initiative) => ({
+                ...initiative,
+                isSaved: true,
+                kpis: initiative.kpis.map((kpi) => ({
+                  ...kpi,
+                  isSaved: true,
+                })),
+              })),
+            }));
+          }
+
+          return next;
+        });
+
+        lastSavedFingerprintRef.current = JSON.stringify(persistableByLevel);
+        setAutoSaveStatus("saved");
+        if (!silent) {
+          setSaveMessage("Template hierarchy saved successfully.");
+        }
+        setContext((current) => ({ ...current }));
+      } catch (err) {
+        setAutoSaveStatus("error");
+        setSaveMessage(
+          err instanceof Error ? err.message : "Unable to save template.",
+        );
+      } finally {
+        setIsSaving(false);
+      }
+    },
+    [
+      context.reportPeriodId,
+      draftObjectivesByPerspective,
+      isProcessingTemplate,
+      toPersistableObjectives,
+    ],
+  );
+
+  const hierarchyFingerprint = useMemo(
+    () => buildHierarchyFingerprint(draftObjectivesByPerspective),
+    [buildHierarchyFingerprint, draftObjectivesByPerspective],
+  );
+
+  useEffect(() => {
+    if (mode !== "builder" && activeMainTab !== "builder") {
+      return;
     }
+
+    if (!hasHydratedDraftHierarchy || isProcessingTemplate || isSaving) {
+      return;
+    }
+
+    if (hierarchyFingerprint === lastSavedFingerprintRef.current) {
+      return;
+    }
+
+    setAutoSaveStatus("idle");
+    if (autoSaveTimerRef.current != null) {
+      clearTimeout(autoSaveTimerRef.current);
+    }
+
+    autoSaveTimerRef.current = setTimeout(() => {
+      void persistTemplateHierarchy({ silent: true });
+    }, 1200);
+
+    return () => {
+      if (autoSaveTimerRef.current != null) {
+        clearTimeout(autoSaveTimerRef.current);
+        autoSaveTimerRef.current = null;
+      }
+    };
+  }, [
+    activeMainTab,
+    hasHydratedDraftHierarchy,
+    hierarchyFingerprint,
+    isProcessingTemplate,
+    isSaving,
+    mode,
+    persistTemplateHierarchy,
+  ]);
+
+  const handleTemplateSave = async () => {
+    await persistTemplateHierarchy();
   };
 
   const perspectiveLabel = PERSPECTIVE_LABELS[perspectiveLevel];
@@ -970,6 +1173,8 @@ export default function ScorecardPageClient({
   const canSaveTemplate = Object.values(draftObjectivesByPerspective).some(
     (objectives) => objectives.length > 0,
   );
+  const hasUnsavedHierarchyChanges =
+    canSaveTemplate && hierarchyFingerprint !== lastSavedFingerprintRef.current;
   const step1CardClass =
     "rounded border border-sky-300 bg-sky-50 px-1.5 py-1 text-[11px]";
   const step2CardClass =
@@ -1105,16 +1310,6 @@ export default function ScorecardPageClient({
                 size="sm"
                 className="text-xs"
                 variant={"outline"}
-                onClick={() => void handleTemplateSave()}
-                disabled={isSaving || isProcessingTemplate || !canSaveTemplate}
-              >
-                <Save /> {isSaving ? "Saving..." : "Save Draft Template"}
-              </Button>
-              <Button
-                type="button"
-                size="sm"
-                className="text-xs"
-                variant={"outline"}
                 onClick={() => void handleTemplateDownload()}
                 disabled={!canDownloadTemplate}
               >
@@ -1139,6 +1334,25 @@ export default function ScorecardPageClient({
                 {isProcessingTemplate
                   ? "Uploading..."
                   : "Upload Excel Template"}
+              </Button>
+              <p className="self-center text-[11px] text-muted-foreground">
+                {autoSaveStatus === "saving"
+                  ? "Autosaving..."
+                  : autoSaveStatus === "error"
+                    ? "Autosave failed"
+                    : hasUnsavedHierarchyChanges
+                      ? "Unsaved changes"
+                      : "All changes saved"}
+              </p>
+              <Button
+                type="button"
+                size="sm"
+                className="text-xs"
+                variant={"outline"}
+                onClick={() => void handleTemplateSave()}
+                disabled={isSaving || isProcessingTemplate || !canSaveTemplate}
+              >
+                <Save /> {isSaving ? "Saving..." : "Save"}
               </Button>
             </div>
           </div>
@@ -1436,6 +1650,7 @@ export default function ScorecardPageClient({
                         kpiSubcategoryId: selectedKpiOption.subcategoryId,
                         targetValue: targetValue.trim(),
                         trackingFrequency,
+                        isSaved: false,
                       };
 
                       setCurrentInitiativeKpis((prev) => [...prev, nextKpi]);
@@ -1506,6 +1721,7 @@ export default function ScorecardPageClient({
                         id: `${Date.now()}-${Math.random()}`,
                         description: initiativeDescription,
                         kpis: [...currentInitiativeKpis],
+                        isSaved: false,
                       };
 
                       setCurrentObjectiveInitiatives((prev) => {
@@ -1622,6 +1838,7 @@ export default function ScorecardPageClient({
                         id: `${Date.now()}-${Math.random()}`,
                         description,
                         keyInitiatives: [...currentObjectiveInitiatives],
+                        isSaved: false,
                       };
 
                       updateDraftObjectivesForPerspective((prev) => {

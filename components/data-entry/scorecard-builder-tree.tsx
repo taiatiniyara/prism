@@ -20,6 +20,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import {
+  CheckIcon,
   ChevronDownIcon,
   ChevronRightIcon,
   PlusIcon,
@@ -36,18 +37,21 @@ type DraftObjectiveKpi = {
   kpiSubcategoryId: number | null;
   targetValue: string;
   trackingFrequency: TrackingFrequency;
+  isSaved: boolean;
 };
 
 type DraftKeyInitiative = {
   id: string;
   description: string;
   kpis: DraftObjectiveKpi[];
+  isSaved: boolean;
 };
 
 type DraftObjective = {
   id: string;
   description: string;
   keyInitiatives: DraftKeyInitiative[];
+  isSaved: boolean;
 };
 
 type PerspectiveLevel = 1 | 2 | 3 | 4;
@@ -157,6 +161,22 @@ const RemoveIconButton = ({
     <TooltipContent>{tooltip}</TooltipContent>
   </Tooltip>
 );
+
+const SaveStateChip = ({ saved }: { saved: boolean }) => {
+  if (!saved) {
+    return null;
+  }
+
+  return (
+    <span
+      className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-emerald-100 text-emerald-700"
+      title="Saved"
+      aria-label="Saved"
+    >
+      <CheckIcon className="h-3.5 w-3.5" />
+    </span>
+  );
+};
 
 export default function ScorecardBuilderTree({
   perspectiveLabels,
@@ -291,6 +311,11 @@ export default function ScorecardBuilderTree({
                           }}
                           disabled={isProcessingTemplate}
                         />
+                        {perspectiveExpanded && objectives.length === 0 ? (
+                          <p className="text-[11px] text-muted-foreground">
+                            No objectives yet.
+                          </p>
+                        ) : null}
                       </div>
 
                       {!perspectiveExpanded ? (
@@ -304,583 +329,635 @@ export default function ScorecardBuilderTree({
               </summary>
 
               <div className="space-y-2 border-t border-sky-200 p-2">
-                {objectives.length === 0 ? (
-                  <p className="text-[11px] text-muted-foreground">
-                    No objectives yet for this perspective.
-                  </p>
-                ) : (
-                  objectives.map((objective) => {
-                    const objectiveKey = `${level}-${objective.id}`;
-                    const objectiveExpanded =
-                      expandedObjectives[objectiveKey] ?? true;
+                {objectives.length === 0
+                  ? null
+                  : objectives.map((objective) => {
+                      const objectiveKey = `${level}-${objective.id}`;
+                      const objectiveExpanded =
+                        expandedObjectives[objectiveKey] ?? true;
 
-                    return (
-                      <div
-                        key={objective.id}
-                        className="ml-2 space-y-2 rounded-sm border border-sky-200 bg-sky-50/40 p-2"
-                      >
-                        <div className="flex flex-wrap items-start gap-2">
-                          {(() => {
-                            const objectiveName = objective.description.trim();
-                            const objectiveTitle =
-                              objectiveName.length > 0
-                                ? objectiveName
-                                : "Untitled objective";
-                            const initiativeNamesSummary = summarizeFilledNames(
-                              objective.keyInitiatives.map(
-                                (initiative) => initiative.description,
-                              ),
-                              { emptyLabel: "No initiatives filled" },
-                            );
+                      return (
+                        <div
+                          key={objective.id}
+                          className="ml-2 space-y-2 rounded-sm border border-sky-200 bg-sky-50/40 p-2"
+                        >
+                          <div className="flex flex-wrap items-start gap-2">
+                            {(() => {
+                              const objectiveName =
+                                objective.description.trim();
+                              const objectiveTitle =
+                                objectiveName.length > 0
+                                  ? objectiveName
+                                  : "Untitled objective";
+                              const initiativeNamesSummary =
+                                summarizeFilledNames(
+                                  objective.keyInitiatives.map(
+                                    (initiative) => initiative.description,
+                                  ),
+                                  { emptyLabel: "No initiatives filled" },
+                                );
 
-                            return (
-                              <div className="flex items-center gap-2">
-                                <Button
-                                  type="button"
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-7 w-7 p-0"
-                                  onClick={() =>
-                                    setExpandedObjectives((prev) => ({
-                                      ...prev,
-                                      [objectiveKey]: !objectiveExpanded,
-                                    }))
-                                  }
-                                  aria-label={
-                                    objectiveExpanded
-                                      ? "Collapse objective"
-                                      : "Expand objective"
-                                  }
-                                >
-                                  {objectiveExpanded ? (
-                                    <ChevronDownIcon className="h-4 w-4" />
-                                  ) : (
-                                    <ChevronRightIcon className="h-4 w-4" />
-                                  )}
-                                </Button>
+                              return (
+                                <div className="flex items-center gap-2">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-7 w-7 p-0"
+                                    onClick={() =>
+                                      setExpandedObjectives((prev) => ({
+                                        ...prev,
+                                        [objectiveKey]: !objectiveExpanded,
+                                      }))
+                                    }
+                                    aria-label={
+                                      objectiveExpanded
+                                        ? "Collapse objective"
+                                        : "Expand objective"
+                                    }
+                                  >
+                                    {objectiveExpanded ? (
+                                      <ChevronDownIcon className="h-4 w-4" />
+                                    ) : (
+                                      <ChevronRightIcon className="h-4 w-4" />
+                                    )}
+                                  </Button>
 
-                                <AddIconButton
-                                  tooltip="Add initiative"
-                                  onClick={() =>
-                                    onAddInitiative(level, objective.id)
-                                  }
-                                  disabled={isProcessingTemplate}
-                                />
+                                  <AddIconButton
+                                    tooltip="Add initiative"
+                                    onClick={() =>
+                                      onAddInitiative(level, objective.id)
+                                    }
+                                    disabled={isProcessingTemplate}
+                                  />
 
-                                <RemoveIconButton
-                                  tooltip="Remove objective"
-                                  onClick={() =>
-                                    onRemoveObjective(level, objective.id)
-                                  }
-                                  disabled={isProcessingTemplate}
-                                />
+                                  <RemoveIconButton
+                                    tooltip="Remove objective"
+                                    onClick={() =>
+                                      onRemoveObjective(level, objective.id)
+                                    }
+                                    disabled={isProcessingTemplate}
+                                  />
 
-                                <div className="min-w-0">
-                                  <p className="truncate text-[11px] font-medium text-sky-900">
-                                    {objectiveTitle}
-                                  </p>
-                                  {!objectiveExpanded ? (
-                                    <p className="text-[11px] text-sky-800/90">
-                                      {`Initiatives: ${initiativeNamesSummary}`}
-                                    </p>
-                                  ) : null}
+                                  <SaveStateChip saved={objective.isSaved} />
+
+                                  <div className="min-w-0">
+                                    {!objectiveExpanded ? (
+                                      <p className="truncate text-[11px] font-medium text-sky-900">
+                                        {objectiveTitle}
+                                      </p>
+                                    ) : null}
+                                    {objectiveExpanded &&
+                                    objective.keyInitiatives.length === 0 ? (
+                                      <p className="text-[11px] text-muted-foreground">
+                                        No initiatives yet.
+                                      </p>
+                                    ) : null}
+                                    {!objectiveExpanded ? (
+                                      <p className="text-[11px] text-sky-800/90">
+                                        {`Initiatives: ${initiativeNamesSummary}`}
+                                      </p>
+                                    ) : null}
+                                  </div>
                                 </div>
-                              </div>
-                            );
-                          })()}
-                        </div>
+                              );
+                            })()}
+                          </div>
 
-                        {objectiveExpanded ? (
-                          <div className="space-y-2">
-                            <div>
-                              <Input
-                                value={objective.description}
-                                onChange={(event) =>
-                                  onUpdateObjectiveDescription(
-                                    level,
-                                    objective.id,
-                                    event.target.value,
-                                  )
-                                }
-                                placeholder="Objective description"
-                                className="h-9 rounded-none border-0 border-b border-sky-300 bg-transparent px-0 text-xs shadow-none focus-visible:border-sky-500 focus-visible:ring-0"
-                                disabled={isProcessingTemplate}
-                              />
-                            </div>
-
+                          {objectiveExpanded ? (
                             <div className="space-y-2">
-                              {objective.keyInitiatives.length === 0 ? (
-                                <p className="text-[11px] text-muted-foreground">
-                                  No initiatives yet.
-                                </p>
-                              ) : (
-                                objective.keyInitiatives.map((initiative) => {
-                                  const initiativeKey = `${level}-${objective.id}-${initiative.id}`;
-                                  const initiativeExpanded =
-                                    expandedInitiatives[initiativeKey] ?? true;
+                              <div>
+                                <Input
+                                  value={objective.description}
+                                  onChange={(event) =>
+                                    onUpdateObjectiveDescription(
+                                      level,
+                                      objective.id,
+                                      event.target.value,
+                                    )
+                                  }
+                                  placeholder="Objective description"
+                                  className="h-9 rounded-none border-0 border-b border-sky-300 bg-transparent px-0 text-xs shadow-none focus-visible:border-sky-500 focus-visible:ring-0"
+                                  disabled={isProcessingTemplate}
+                                />
+                              </div>
 
-                                  return (
-                                    <div
-                                      key={initiative.id}
-                                      className="ml-3 space-y-2 rounded-sm border border-amber-200 bg-amber-50/40 p-2"
-                                    >
-                                      <div className="flex flex-wrap items-start gap-2">
-                                        {(() => {
-                                          const initiativeName =
-                                            initiative.description.trim();
-                                          const initiativeTitle =
-                                            initiativeName.length > 0
-                                              ? initiativeName
-                                              : "Untitled initiative";
-                                          const kpiNamesSummary =
-                                            summarizeFilledNames(
-                                              initiative.kpis.map(
-                                                (kpi) => kpi.kpiName,
-                                              ),
-                                              { emptyLabel: "No KPIs filled" },
-                                            );
+                              <div className="space-y-2">
+                                {objective.keyInitiatives.length === 0
+                                  ? null
+                                  : objective.keyInitiatives.map(
+                                      (initiative) => {
+                                        const initiativeKey = `${level}-${objective.id}-${initiative.id}`;
+                                        const initiativeExpanded =
+                                          expandedInitiatives[initiativeKey] ??
+                                          true;
 
-                                          return (
-                                            <div className="flex items-center gap-2">
-                                              <Button
-                                                type="button"
-                                                size="sm"
-                                                variant="ghost"
-                                                className="h-7 w-7 p-0"
-                                                onClick={() =>
-                                                  setExpandedInitiatives(
-                                                    (prev) => ({
-                                                      ...prev,
-                                                      [initiativeKey]:
-                                                        !initiativeExpanded,
-                                                    }),
-                                                  )
-                                                }
-                                                aria-label={
-                                                  initiativeExpanded
-                                                    ? "Collapse initiative"
-                                                    : "Expand initiative"
-                                                }
-                                              >
-                                                {initiativeExpanded ? (
-                                                  <ChevronDownIcon className="h-4 w-4" />
-                                                ) : (
-                                                  <ChevronRightIcon className="h-4 w-4" />
-                                                )}
-                                              </Button>
+                                        return (
+                                          <div
+                                            key={initiative.id}
+                                            className="ml-3 space-y-2 rounded-sm border border-amber-200 bg-amber-50/40 p-2"
+                                          >
+                                            <div className="flex flex-wrap items-start gap-2">
+                                              {(() => {
+                                                const initiativeName =
+                                                  initiative.description.trim();
+                                                const initiativeTitle =
+                                                  initiativeName.length > 0
+                                                    ? initiativeName
+                                                    : "Untitled initiative";
+                                                const kpiNamesSummary =
+                                                  summarizeFilledNames(
+                                                    initiative.kpis.map(
+                                                      (kpi) => kpi.kpiName,
+                                                    ),
+                                                    {
+                                                      emptyLabel:
+                                                        "No KPIs filled",
+                                                    },
+                                                  );
 
-                                              <AddIconButton
-                                                tooltip="Add KPI"
-                                                onClick={() =>
-                                                  onAddKpi(
-                                                    level,
-                                                    objective.id,
-                                                    initiative.id,
-                                                  )
-                                                }
-                                                disabled={isProcessingTemplate}
-                                              />
-
-                                              <RemoveIconButton
-                                                tooltip="Remove initiative"
-                                                onClick={() =>
-                                                  onRemoveInitiative(
-                                                    level,
-                                                    objective.id,
-                                                    initiative.id,
-                                                  )
-                                                }
-                                                disabled={isProcessingTemplate}
-                                              />
-
-                                              <div className="min-w-0">
-                                                <p className="truncate text-[11px] font-medium text-amber-900">
-                                                  {initiativeTitle}
-                                                </p>
-                                                {!initiativeExpanded ? (
-                                                  <p className="text-[11px] text-amber-800/90">
-                                                    {`KPIs: ${kpiNamesSummary}`}
-                                                  </p>
-                                                ) : null}
-                                              </div>
-                                            </div>
-                                          );
-                                        })()}
-                                      </div>
-
-                                      {initiativeExpanded ? (
-                                        <div className="space-y-2">
-                                          <div>
-                                            <Input
-                                              value={initiative.description}
-                                              onChange={(event) =>
-                                                onUpdateInitiativeDescription(
-                                                  level,
-                                                  objective.id,
-                                                  initiative.id,
-                                                  event.target.value,
-                                                )
-                                              }
-                                              placeholder="Initiative description"
-                                              className="h-9 rounded-none border-0 border-b border-amber-300 bg-transparent px-0 text-xs shadow-none focus-visible:border-amber-500 focus-visible:ring-0"
-                                              disabled={isProcessingTemplate}
-                                            />
-                                          </div>
-
-                                          <div className="space-y-2">
-                                            {initiative.kpis.length === 0 ? (
-                                              <p className="text-[11px] text-muted-foreground">
-                                                No KPIs yet.
-                                              </p>
-                                            ) : (
-                                              initiative.kpis.map(
-                                                (kpi, index) => {
-                                                  const filteredOptions =
-                                                    availableKpiOptions.filter(
-                                                      (option) => {
-                                                        const categoryMatch =
-                                                          kpi.kpiCategoryId ==
-                                                            null ||
-                                                          option.categoryId ===
-                                                            kpi.kpiCategoryId;
-                                                        const subcategoryMatch =
-                                                          kpi.kpiSubcategoryId ==
-                                                            null ||
-                                                          option.subcategoryId ===
-                                                            kpi.kpiSubcategoryId;
-                                                        return (
-                                                          categoryMatch &&
-                                                          subcategoryMatch
-                                                        );
-                                                      },
-                                                    );
-
-                                                  const syncKpiSelection = (
-                                                    categoryId: number | null,
-                                                    subcategoryId:
-                                                      | number
-                                                      | null,
-                                                  ) => {
-                                                    const nextOptions =
-                                                      availableKpiOptions.filter(
-                                                        (option) => {
-                                                          const categoryMatch =
-                                                            categoryId ==
-                                                              null ||
-                                                            option.categoryId ===
-                                                              categoryId;
-                                                          const subcategoryMatch =
-                                                            subcategoryId ==
-                                                              null ||
-                                                            option.subcategoryId ===
-                                                              subcategoryId;
-                                                          return (
-                                                            categoryMatch &&
-                                                            subcategoryMatch
-                                                          );
-                                                        },
-                                                      );
-
-                                                    const currentStillValid =
-                                                      nextOptions.find(
-                                                        (option) =>
-                                                          option.kpiDefinitionId ===
-                                                          kpi.kpiDefinitionId,
-                                                      );
-                                                    const selected =
-                                                      currentStillValid ??
-                                                      nextOptions[0] ??
-                                                      null;
-
-                                                    if (selected == null) {
-                                                      return {
-                                                        kpiCategoryId:
-                                                          categoryId,
-                                                        kpiSubcategoryId:
-                                                          subcategoryId,
-                                                      } satisfies Partial<DraftObjectiveKpi>;
-                                                    }
-
-                                                    return {
-                                                      kpiDefinitionId:
-                                                        selected.kpiDefinitionId,
-                                                      kpiId: selected.kpiId,
-                                                      kpiName: selected.kpiName,
-                                                      kpiCategoryId:
-                                                        selected.categoryId,
-                                                      kpiSubcategoryId:
-                                                        selected.subcategoryId,
-                                                    } satisfies Partial<DraftObjectiveKpi>;
-                                                  };
-
-                                                  return (
-                                                    <div
-                                                      key={`${initiative.id}-${index}`}
-                                                      className="ml-4 space-y-2 rounded-sm border border-lime-200 bg-lime-50/40 p-2"
+                                                return (
+                                                  <div className="flex items-center gap-2">
+                                                    <Button
+                                                      type="button"
+                                                      size="sm"
+                                                      variant="ghost"
+                                                      className="h-7 w-7 p-0"
+                                                      onClick={() =>
+                                                        setExpandedInitiatives(
+                                                          (prev) => ({
+                                                            ...prev,
+                                                            [initiativeKey]:
+                                                              !initiativeExpanded,
+                                                          }),
+                                                        )
+                                                      }
+                                                      aria-label={
+                                                        initiativeExpanded
+                                                          ? "Collapse initiative"
+                                                          : "Expand initiative"
+                                                      }
                                                     >
-                                                      <div className="flex flex-wrap items-end gap-4">
-                                                        <div className="min-w-40 flex-1 space-y-1">
-                                                          <label className="text-[11px] font-medium text-lime-900">
-                                                            Category
-                                                          </label>
-                                                          <Select
-                                                            value={
-                                                              kpi.kpiCategoryId ==
-                                                              null
-                                                                ? "all"
-                                                                : String(
-                                                                    kpi.kpiCategoryId,
-                                                                  )
-                                                            }
-                                                            onValueChange={(
-                                                              value,
-                                                            ) => {
-                                                              const nextCategoryId =
-                                                                value === "all"
-                                                                  ? null
-                                                                  : Number(
-                                                                      value,
-                                                                    );
-                                                              const patch =
-                                                                syncKpiSelection(
-                                                                  nextCategoryId,
-                                                                  null,
-                                                                );
-                                                              onUpdateKpi(
-                                                                level,
-                                                                objective.id,
-                                                                initiative.id,
-                                                                index,
-                                                                patch,
-                                                              );
-                                                            }}
-                                                            disabled={
-                                                              isProcessingTemplate
-                                                            }
-                                                          >
-                                                            <SelectTrigger className="h-9 w-full rounded-none border-0 border-b border-lime-300 bg-transparent px-0 text-xs shadow-none focus-visible:border-lime-500 focus-visible:ring-0">
-                                                              <SelectValue placeholder="Category" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                              <SelectItem value="all">
-                                                                All categories
-                                                              </SelectItem>
-                                                              {filterOptions.kpiCategories.map(
-                                                                (category) => (
-                                                                  <SelectItem
-                                                                    key={
-                                                                      category.id
-                                                                    }
-                                                                    value={String(
-                                                                      category.id,
-                                                                    )}
-                                                                  >
-                                                                    {
-                                                                      category.name
-                                                                    }
-                                                                  </SelectItem>
-                                                                ),
-                                                              )}
-                                                            </SelectContent>
-                                                          </Select>
-                                                        </div>
+                                                      {initiativeExpanded ? (
+                                                        <ChevronDownIcon className="h-4 w-4" />
+                                                      ) : (
+                                                        <ChevronRightIcon className="h-4 w-4" />
+                                                      )}
+                                                    </Button>
 
-                                                        <div className="min-w-40 flex-1 space-y-1">
-                                                          <label className="text-[11px] font-medium text-lime-900">
-                                                            Subcategory
-                                                          </label>
-                                                          <Select
-                                                            value={
-                                                              kpi.kpiSubcategoryId ==
-                                                              null
-                                                                ? "all"
-                                                                : String(
-                                                                    kpi.kpiSubcategoryId,
-                                                                  )
-                                                            }
-                                                            onValueChange={(
-                                                              value,
-                                                            ) => {
-                                                              const nextSubcategoryId =
-                                                                value === "all"
-                                                                  ? null
-                                                                  : Number(
-                                                                      value,
-                                                                    );
-                                                              const patch =
-                                                                syncKpiSelection(
-                                                                  kpi.kpiCategoryId,
-                                                                  nextSubcategoryId,
+                                                    <AddIconButton
+                                                      tooltip="Add KPI"
+                                                      onClick={() =>
+                                                        onAddKpi(
+                                                          level,
+                                                          objective.id,
+                                                          initiative.id,
+                                                        )
+                                                      }
+                                                      disabled={
+                                                        isProcessingTemplate
+                                                      }
+                                                    />
+
+                                                    <RemoveIconButton
+                                                      tooltip="Remove initiative"
+                                                      onClick={() =>
+                                                        onRemoveInitiative(
+                                                          level,
+                                                          objective.id,
+                                                          initiative.id,
+                                                        )
+                                                      }
+                                                      disabled={
+                                                        isProcessingTemplate
+                                                      }
+                                                    />
+
+                                                    <SaveStateChip
+                                                      saved={initiative.isSaved}
+                                                    />
+
+                                                    <div className="min-w-0">
+                                                      {!initiativeExpanded ? (
+                                                        <p className="truncate text-[11px] font-medium text-amber-900">
+                                                          {initiativeTitle}
+                                                        </p>
+                                                      ) : null}
+                                                      {initiativeExpanded &&
+                                                      initiative.kpis.length ===
+                                                        0 ? (
+                                                        <p className="text-[11px] text-muted-foreground">
+                                                          No KPIs yet.
+                                                        </p>
+                                                      ) : null}
+                                                      {!initiativeExpanded ? (
+                                                        <p className="text-[11px] text-amber-800/90">
+                                                          {`KPIs: ${kpiNamesSummary}`}
+                                                        </p>
+                                                      ) : null}
+                                                    </div>
+                                                  </div>
+                                                );
+                                              })()}
+                                            </div>
+
+                                            {initiativeExpanded ? (
+                                              <div className="space-y-2">
+                                                <div>
+                                                  <Input
+                                                    value={
+                                                      initiative.description
+                                                    }
+                                                    onChange={(event) =>
+                                                      onUpdateInitiativeDescription(
+                                                        level,
+                                                        objective.id,
+                                                        initiative.id,
+                                                        event.target.value,
+                                                      )
+                                                    }
+                                                    placeholder="Initiative description"
+                                                    className="h-9 rounded-none border-0 border-b border-amber-300 bg-transparent px-0 text-xs shadow-none focus-visible:border-amber-500 focus-visible:ring-0"
+                                                    disabled={
+                                                      isProcessingTemplate
+                                                    }
+                                                  />
+                                                </div>
+
+                                                <div className="space-y-2">
+                                                  {initiative.kpis.length === 0
+                                                    ? null
+                                                    : initiative.kpis.map(
+                                                        (kpi, index) => {
+                                                          const filteredOptions =
+                                                            availableKpiOptions.filter(
+                                                              (option) => {
+                                                                const categoryMatch =
+                                                                  kpi.kpiCategoryId ==
+                                                                    null ||
+                                                                  option.categoryId ===
+                                                                    kpi.kpiCategoryId;
+                                                                const subcategoryMatch =
+                                                                  kpi.kpiSubcategoryId ==
+                                                                    null ||
+                                                                  option.subcategoryId ===
+                                                                    kpi.kpiSubcategoryId;
+                                                                return (
+                                                                  categoryMatch &&
+                                                                  subcategoryMatch
                                                                 );
-                                                              onUpdateKpi(
-                                                                level,
-                                                                objective.id,
-                                                                initiative.id,
-                                                                index,
-                                                                patch,
-                                                              );
-                                                            }}
-                                                            disabled={
-                                                              isProcessingTemplate
-                                                            }
-                                                          >
-                                                            <SelectTrigger className="h-9 w-full rounded-none border-0 border-b border-lime-300 bg-transparent px-0 text-xs shadow-none focus-visible:border-lime-500 focus-visible:ring-0">
-                                                              <SelectValue placeholder="Subcategory" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                              <SelectItem value="all">
-                                                                All
-                                                                subcategories
-                                                              </SelectItem>
-                                                              {filterOptions.kpiSubcategories
-                                                                .filter(
-                                                                  (
-                                                                    subcategory,
-                                                                  ) => {
-                                                                    if (
-                                                                      kpi.kpiCategoryId ==
-                                                                      null
-                                                                    ) {
-                                                                      return true;
-                                                                    }
+                                                              },
+                                                            );
+
+                                                          const syncKpiSelection =
+                                                            (
+                                                              categoryId:
+                                                                | number
+                                                                | null,
+                                                              subcategoryId:
+                                                                | number
+                                                                | null,
+                                                            ) => {
+                                                              const nextOptions =
+                                                                availableKpiOptions.filter(
+                                                                  (option) => {
+                                                                    const categoryMatch =
+                                                                      categoryId ==
+                                                                        null ||
+                                                                      option.categoryId ===
+                                                                        categoryId;
+                                                                    const subcategoryMatch =
+                                                                      subcategoryId ==
+                                                                        null ||
+                                                                      option.subcategoryId ===
+                                                                        subcategoryId;
                                                                     return (
-                                                                      getSubcategoryParentCategoryId(
-                                                                        subcategory,
-                                                                      ) ===
-                                                                      kpi.kpiCategoryId
+                                                                      categoryMatch &&
+                                                                      subcategoryMatch
                                                                     );
                                                                   },
-                                                                )
-                                                                .map(
-                                                                  (
-                                                                    subcategory,
-                                                                  ) => (
-                                                                    <SelectItem
-                                                                      key={
-                                                                        subcategory.id
-                                                                      }
-                                                                      value={String(
-                                                                        subcategory.id,
-                                                                      )}
-                                                                    >
-                                                                      {
-                                                                        subcategory.name
-                                                                      }
-                                                                    </SelectItem>
-                                                                  ),
-                                                                )}
-                                                            </SelectContent>
-                                                          </Select>
-                                                        </div>
+                                                                );
 
-                                                        <div className="min-w-56 flex-2 space-y-1">
-                                                          <label className="text-[11px] font-medium text-cyan-900">
-                                                            KPI
-                                                          </label>
-                                                          <Select
-                                                            value={String(
-                                                              kpi.kpiDefinitionId,
-                                                            )}
-                                                            onValueChange={(
-                                                              value,
-                                                            ) => {
-                                                              const selected =
-                                                                availableKpiOptions.find(
+                                                              const currentStillValid =
+                                                                nextOptions.find(
                                                                   (option) =>
                                                                     option.kpiDefinitionId ===
-                                                                    Number(
-                                                                      value,
-                                                                    ),
+                                                                    kpi.kpiDefinitionId,
                                                                 );
+                                                              const selected =
+                                                                currentStillValid ??
+                                                                nextOptions[0] ??
+                                                                null;
+
                                                               if (
                                                                 selected == null
                                                               ) {
-                                                                return;
+                                                                return {
+                                                                  kpiCategoryId:
+                                                                    categoryId,
+                                                                  kpiSubcategoryId:
+                                                                    subcategoryId,
+                                                                } satisfies Partial<DraftObjectiveKpi>;
                                                               }
 
-                                                              onUpdateKpi(
-                                                                level,
-                                                                objective.id,
-                                                                initiative.id,
-                                                                index,
-                                                                {
-                                                                  kpiDefinitionId:
-                                                                    selected.kpiDefinitionId,
-                                                                  kpiId:
-                                                                    selected.kpiId,
-                                                                  kpiName:
-                                                                    selected.kpiName,
-                                                                  kpiCategoryId:
-                                                                    selected.categoryId,
-                                                                  kpiSubcategoryId:
-                                                                    selected.subcategoryId,
-                                                                },
-                                                              );
-                                                            }}
-                                                            disabled={
-                                                              isProcessingTemplate
-                                                            }
-                                                          >
-                                                            <SelectTrigger className="h-9 w-full rounded-none border-0 border-b border-cyan-400 bg-cyan-50/60 px-0 text-xs shadow-none focus-visible:border-cyan-600 focus-visible:ring-0">
-                                                              <SelectValue placeholder="KPI" />
-                                                            </SelectTrigger>
-                                                            <SelectContent>
-                                                              {filteredOptions.map(
-                                                                (option) => (
-                                                                  <SelectItem
-                                                                    key={
-                                                                      option.kpiDefinitionId
-                                                                    }
-                                                                    value={String(
-                                                                      option.kpiDefinitionId,
-                                                                    )}
-                                                                  >
-                                                                    {
-                                                                      option.kpiName
-                                                                    }
-                                                                  </SelectItem>
-                                                                ),
-                                                              )}
-                                                            </SelectContent>
-                                                          </Select>
-                                                        </div>
+                                                              return {
+                                                                kpiDefinitionId:
+                                                                  selected.kpiDefinitionId,
+                                                                kpiId:
+                                                                  selected.kpiId,
+                                                                kpiName:
+                                                                  selected.kpiName,
+                                                                kpiCategoryId:
+                                                                  selected.categoryId,
+                                                                kpiSubcategoryId:
+                                                                  selected.subcategoryId,
+                                                              } satisfies Partial<DraftObjectiveKpi>;
+                                                            };
 
-                                                        <div className="shrink-0">
-                                                          <RemoveIconButton
-                                                            tooltip="Remove KPI"
-                                                            onClick={() =>
-                                                              onRemoveKpi(
-                                                                level,
-                                                                objective.id,
-                                                                initiative.id,
-                                                                index,
-                                                              )
-                                                            }
-                                                            disabled={
-                                                              isProcessingTemplate
-                                                            }
-                                                          />
-                                                        </div>
-                                                      </div>
-                                                    </div>
-                                                  );
-                                                },
-                                              )
-                                            )}
+                                                          return (
+                                                            <div
+                                                              key={`${initiative.id}-${index}`}
+                                                              className="ml-4 space-y-2 rounded-sm border border-lime-200 bg-lime-50/40 p-2"
+                                                            >
+                                                              <div className="flex flex-wrap items-end gap-4">
+                                                                <div className="min-w-40 flex-1 space-y-1">
+                                                                  <label className="text-[11px] font-medium text-lime-900">
+                                                                    Category
+                                                                  </label>
+                                                                  <Select
+                                                                    value={
+                                                                      kpi.kpiCategoryId ==
+                                                                      null
+                                                                        ? "all"
+                                                                        : String(
+                                                                            kpi.kpiCategoryId,
+                                                                          )
+                                                                    }
+                                                                    onValueChange={(
+                                                                      value,
+                                                                    ) => {
+                                                                      const nextCategoryId =
+                                                                        value ===
+                                                                        "all"
+                                                                          ? null
+                                                                          : Number(
+                                                                              value,
+                                                                            );
+                                                                      const patch =
+                                                                        syncKpiSelection(
+                                                                          nextCategoryId,
+                                                                          null,
+                                                                        );
+                                                                      onUpdateKpi(
+                                                                        level,
+                                                                        objective.id,
+                                                                        initiative.id,
+                                                                        index,
+                                                                        patch,
+                                                                      );
+                                                                    }}
+                                                                    disabled={
+                                                                      isProcessingTemplate
+                                                                    }
+                                                                  >
+                                                                    <SelectTrigger className="h-9 w-full rounded-none border-0 border-b border-lime-300 bg-transparent px-0 text-xs shadow-none focus-visible:border-lime-500 focus-visible:ring-0">
+                                                                      <SelectValue placeholder="Category" />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                      <SelectItem value="all">
+                                                                        All
+                                                                        categories
+                                                                      </SelectItem>
+                                                                      {filterOptions.kpiCategories.map(
+                                                                        (
+                                                                          category,
+                                                                        ) => (
+                                                                          <SelectItem
+                                                                            key={
+                                                                              category.id
+                                                                            }
+                                                                            value={String(
+                                                                              category.id,
+                                                                            )}
+                                                                          >
+                                                                            {
+                                                                              category.name
+                                                                            }
+                                                                          </SelectItem>
+                                                                        ),
+                                                                      )}
+                                                                    </SelectContent>
+                                                                  </Select>
+                                                                </div>
+
+                                                                <div className="min-w-40 flex-1 space-y-1">
+                                                                  <label className="text-[11px] font-medium text-lime-900">
+                                                                    Subcategory
+                                                                  </label>
+                                                                  <Select
+                                                                    value={
+                                                                      kpi.kpiSubcategoryId ==
+                                                                      null
+                                                                        ? "all"
+                                                                        : String(
+                                                                            kpi.kpiSubcategoryId,
+                                                                          )
+                                                                    }
+                                                                    onValueChange={(
+                                                                      value,
+                                                                    ) => {
+                                                                      const nextSubcategoryId =
+                                                                        value ===
+                                                                        "all"
+                                                                          ? null
+                                                                          : Number(
+                                                                              value,
+                                                                            );
+                                                                      const patch =
+                                                                        syncKpiSelection(
+                                                                          kpi.kpiCategoryId,
+                                                                          nextSubcategoryId,
+                                                                        );
+                                                                      onUpdateKpi(
+                                                                        level,
+                                                                        objective.id,
+                                                                        initiative.id,
+                                                                        index,
+                                                                        patch,
+                                                                      );
+                                                                    }}
+                                                                    disabled={
+                                                                      isProcessingTemplate
+                                                                    }
+                                                                  >
+                                                                    <SelectTrigger className="h-9 w-full rounded-none border-0 border-b border-lime-300 bg-transparent px-0 text-xs shadow-none focus-visible:border-lime-500 focus-visible:ring-0">
+                                                                      <SelectValue placeholder="Subcategory" />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                      <SelectItem value="all">
+                                                                        All
+                                                                        subcategories
+                                                                      </SelectItem>
+                                                                      {filterOptions.kpiSubcategories
+                                                                        .filter(
+                                                                          (
+                                                                            subcategory,
+                                                                          ) => {
+                                                                            if (
+                                                                              kpi.kpiCategoryId ==
+                                                                              null
+                                                                            ) {
+                                                                              return true;
+                                                                            }
+                                                                            return (
+                                                                              getSubcategoryParentCategoryId(
+                                                                                subcategory,
+                                                                              ) ===
+                                                                              kpi.kpiCategoryId
+                                                                            );
+                                                                          },
+                                                                        )
+                                                                        .map(
+                                                                          (
+                                                                            subcategory,
+                                                                          ) => (
+                                                                            <SelectItem
+                                                                              key={
+                                                                                subcategory.id
+                                                                              }
+                                                                              value={String(
+                                                                                subcategory.id,
+                                                                              )}
+                                                                            >
+                                                                              {
+                                                                                subcategory.name
+                                                                              }
+                                                                            </SelectItem>
+                                                                          ),
+                                                                        )}
+                                                                    </SelectContent>
+                                                                  </Select>
+                                                                </div>
+
+                                                                <div className="min-w-56 flex-2 space-y-1">
+                                                                  <label className="text-[11px] font-medium text-cyan-900">
+                                                                    KPI
+                                                                  </label>
+                                                                  <Select
+                                                                    value={String(
+                                                                      kpi.kpiDefinitionId,
+                                                                    )}
+                                                                    onValueChange={(
+                                                                      value,
+                                                                    ) => {
+                                                                      const selected =
+                                                                        availableKpiOptions.find(
+                                                                          (
+                                                                            option,
+                                                                          ) =>
+                                                                            option.kpiDefinitionId ===
+                                                                            Number(
+                                                                              value,
+                                                                            ),
+                                                                        );
+                                                                      if (
+                                                                        selected ==
+                                                                        null
+                                                                      ) {
+                                                                        return;
+                                                                      }
+
+                                                                      onUpdateKpi(
+                                                                        level,
+                                                                        objective.id,
+                                                                        initiative.id,
+                                                                        index,
+                                                                        {
+                                                                          kpiDefinitionId:
+                                                                            selected.kpiDefinitionId,
+                                                                          kpiId:
+                                                                            selected.kpiId,
+                                                                          kpiName:
+                                                                            selected.kpiName,
+                                                                          kpiCategoryId:
+                                                                            selected.categoryId,
+                                                                          kpiSubcategoryId:
+                                                                            selected.subcategoryId,
+                                                                        },
+                                                                      );
+                                                                    }}
+                                                                    disabled={
+                                                                      isProcessingTemplate
+                                                                    }
+                                                                  >
+                                                                    <SelectTrigger className="h-9 w-full rounded-none border-0 border-b border-cyan-400 bg-cyan-50/60 px-0 text-xs shadow-none focus-visible:border-cyan-600 focus-visible:ring-0">
+                                                                      <SelectValue placeholder="KPI" />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                      {filteredOptions.map(
+                                                                        (
+                                                                          option,
+                                                                        ) => (
+                                                                          <SelectItem
+                                                                            key={
+                                                                              option.kpiDefinitionId
+                                                                            }
+                                                                            value={String(
+                                                                              option.kpiDefinitionId,
+                                                                            )}
+                                                                          >
+                                                                            {
+                                                                              option.kpiName
+                                                                            }
+                                                                          </SelectItem>
+                                                                        ),
+                                                                      )}
+                                                                    </SelectContent>
+                                                                  </Select>
+                                                                </div>
+
+                                                                <div className="shrink-0">
+                                                                  <SaveStateChip
+                                                                    saved={
+                                                                      kpi.isSaved
+                                                                    }
+                                                                  />
+                                                                </div>
+
+                                                                <div className="shrink-0">
+                                                                  <RemoveIconButton
+                                                                    tooltip="Remove KPI"
+                                                                    onClick={() =>
+                                                                      onRemoveKpi(
+                                                                        level,
+                                                                        objective.id,
+                                                                        initiative.id,
+                                                                        index,
+                                                                      )
+                                                                    }
+                                                                    disabled={
+                                                                      isProcessingTemplate
+                                                                    }
+                                                                  />
+                                                                </div>
+                                                              </div>
+                                                            </div>
+                                                          );
+                                                        },
+                                                      )}
+                                                </div>
+                                              </div>
+                                            ) : null}
                                           </div>
-                                        </div>
-                                      ) : null}
-                                    </div>
-                                  );
-                                })
-                              )}
+                                        );
+                                      },
+                                    )}
+                              </div>
                             </div>
-                          </div>
-                        ) : null}
-                      </div>
-                    );
-                  })
-                )}
+                          ) : null}
+                        </div>
+                      );
+                    })}
               </div>
             </details>
           );

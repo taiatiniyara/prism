@@ -1,8 +1,13 @@
 import type {
+  ScorecardDraftInitiativeInput,
+  ScorecardDraftKpiInput,
+  ScorecardDraftObjectiveInput,
   ScorecardDraftSavePayload,
   ScorecardFilterContext,
   ScorecardInputRow,
   ScorecardKpiOption,
+  ScorecardSavedDraftPerspective,
+  ScorecardSavedBuild,
   ScorecardRelationshipsUpdatePayload,
   ScorecardRelationship,
   ScorecardUpdatePayload,
@@ -419,6 +424,146 @@ export const listScorecardRelationships = async (
   }
 
   return [...relationshipById.values()];
+};
+
+export const listScorecardDrafts = async (
+  utilityId: number,
+): Promise<ScorecardSavedBuild[]> => {
+  const rows = await db
+    .select({
+      id: bsc.id,
+      perspective: bsc.perspective,
+      updatedAt: bsc.updated_at,
+    })
+    .from(bsc)
+    .where(eq(bsc.utility_id, utilityId))
+    .orderBy(desc(bsc.updated_at));
+
+  return rows
+    .filter((row) => row.perspective != null)
+    .map((row) => {
+      const perspective = row.perspective!;
+      const objectives = perspective.strategic_objective ?? [];
+      const objectiveNames = objectives
+        .map((objective) => objective.description.trim())
+        .filter((description) => description.length > 0);
+      const initiativeCount = objectives.reduce(
+        (sum, objective) => sum + (objective.key_initiatives?.length ?? 0),
+        0,
+      );
+      const kpiCount = objectives.reduce(
+        (sum, objective) =>
+          sum +
+          (objective.key_initiatives ?? []).reduce(
+            (initiativeSum, initiative) =>
+              initiativeSum + (initiative.kpis?.length ?? 0),
+            0,
+          ),
+        0,
+      );
+
+      return {
+        id: row.id,
+        perspectiveLevel: perspective.perspective_level,
+        perspectiveDescription:
+          perspective.description ||
+          perspectiveLabel(perspective.perspective_level),
+        objectiveCount: objectives.length,
+        initiativeCount,
+        kpiCount,
+        objectiveNames,
+        updatedAt: row.updatedAt.toISOString(),
+      } satisfies ScorecardSavedBuild;
+    });
+};
+
+export const listScorecardDraftHierarchies = async (
+  utilityId: number,
+): Promise<ScorecardSavedDraftPerspective[]> => {
+  const rows = await db
+    .select({
+      perspective: bsc.perspective,
+      updatedAt: bsc.updated_at,
+    })
+    .from(bsc)
+    .where(eq(bsc.utility_id, utilityId))
+    .orderBy(desc(bsc.updated_at));
+
+  const latestByPerspective = new Map<
+    1 | 2 | 3 | 4,
+    ScorecardSavedDraftPerspective
+  >();
+
+  for (const row of rows) {
+    if (row.perspective == null) {
+      continue;
+    }
+
+    const perspective = row.perspective;
+    if (!isPerspectiveLevel(perspective.perspective_level)) {
+      continue;
+    }
+
+    const level = perspective.perspective_level;
+    if (latestByPerspective.has(level)) {
+      continue;
+    }
+
+    const objectives: ScorecardDraftObjectiveInput[] = (
+      perspective.strategic_objective ?? []
+    )
+      .map((objective) => {
+        const keyInitiatives: ScorecardDraftInitiativeInput[] = (
+          objective.key_initiatives ?? []
+        )
+          .map((initiative) => {
+            const kpis: ScorecardDraftKpiInput[] = (initiative.kpis ?? [])
+              .filter(
+                (kpiEntry) =>
+                  Number.isInteger(kpiEntry.kpi_id) && kpiEntry.kpi_id > 0,
+              )
+              .map((kpiEntry) => ({
+                kpiDefinitionId: kpiEntry.kpi_id,
+                trackingFrequency:
+                  kpiEntry.tracking_frequency === "annually"
+                    ? "annually"
+                    : "monthly",
+              }));
+
+            return {
+              description: initiative.description,
+              kpis,
+            };
+          })
+          .filter(
+            (initiative) =>
+              initiative.description.trim().length > 0 &&
+              initiative.kpis.length > 0,
+          );
+
+        return {
+          description: objective.description,
+          keyInitiatives,
+        };
+      })
+      .filter(
+        (objective) =>
+          objective.description.trim().length > 0 &&
+          objective.keyInitiatives.length > 0,
+      );
+
+    latestByPerspective.set(level, {
+      perspectiveLevel: level,
+      perspectiveDescription:
+        perspective.description ||
+        perspectiveLabel(perspective.perspective_level),
+      objectives,
+    });
+  }
+
+  return [1, 2, 3, 4]
+    .map((level) => latestByPerspective.get(level as 1 | 2 | 3 | 4) ?? null)
+    .filter((entry): entry is ScorecardSavedDraftPerspective => entry != null);
 };
 
 export const upsertScorecardConfiguration = async (

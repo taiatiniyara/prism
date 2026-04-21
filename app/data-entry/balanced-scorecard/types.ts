@@ -121,6 +121,28 @@ export type ScorecardDraftSavePayload = {
   objectives: ScorecardDraftObjectiveInput[];
 };
 
+export type ScorecardSavedBuild = {
+  id: string;
+  perspectiveLevel: 1 | 2 | 3 | 4;
+  perspectiveDescription: string;
+  objectiveCount: number;
+  initiativeCount: number;
+  kpiCount: number;
+  objectiveNames: string[];
+  updatedAt: string;
+};
+
+export type ScorecardSavedDraftPerspective = {
+  perspectiveLevel: 1 | 2 | 3 | 4;
+  perspectiveDescription: string;
+  objectives: ScorecardDraftObjectiveInput[];
+};
+
+export type ScorecardDraftsResponse = {
+  drafts: ScorecardSavedBuild[];
+  hierarchies: ScorecardSavedDraftPerspective[];
+};
+
 export type ScorecardKpiOption = {
   kpiId: string | null;
   kpiDefinitionId: number;

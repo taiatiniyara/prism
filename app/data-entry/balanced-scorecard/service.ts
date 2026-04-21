@@ -6,6 +6,8 @@ import {
 import { sanitizeScorecardFilterContext } from "@/app/data-entry/balanced-scorecard/context";
 import { toScorecardResponse } from "@/app/data-entry/balanced-scorecard/mapper";
 import {
+  listScorecardDraftHierarchies,
+  listScorecardDrafts,
   listScorecardRelationships,
   listScorecardKpiOptions,
   listScorecardInputRows,
@@ -17,6 +19,8 @@ import type {
   ScorecardDraftSavePayload,
   ScorecardFilterContext,
   ScorecardKpiOption,
+  ScorecardSavedDraftPerspective,
+  ScorecardSavedBuild,
   ScorecardRelationshipsUpdatePayload,
   ScorecardResponse,
   ScorecardUpdatePayload,
@@ -84,4 +88,25 @@ export const saveScorecardDraft = async (
   }
 
   return upsertScorecardDraft(user.org_id, user.id, payload);
+};
+
+export const getScorecardDrafts = async (
+  user: CurrentUser,
+): Promise<{
+  drafts: ScorecardSavedBuild[];
+  hierarchies: ScorecardSavedDraftPerspective[];
+}> => {
+  assertScorecardReadAccess(user);
+  if (user.org_id == null) {
+    throw new Error(
+      "VALIDATION:Your account is not scoped to a utility for scorecard reads.",
+    );
+  }
+
+  const [drafts, hierarchies] = await Promise.all([
+    listScorecardDrafts(user.org_id),
+    listScorecardDraftHierarchies(user.org_id),
+  ]);
+
+  return { drafts, hierarchies };
 };

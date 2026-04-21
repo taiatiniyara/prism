@@ -1,9 +1,11 @@
 import type {
+  ScorecardDraftsResponse,
   ScorecardDraftSavePayload,
   ScorecardFilterContext,
   ScorecardKpiOption,
   ScorecardRelationshipsUpdatePayload,
   ScorecardResponse,
+  ScorecardSavedBuild,
   ScorecardUpdatePayload,
 } from "@/app/data-entry/balanced-scorecard/types";
 
@@ -123,6 +125,29 @@ export const saveScorecardDraft = async (
     throw new Error(result.message ?? "Unable to save scorecard draft.");
   }
 };
+
+export const fetchScorecardDrafts =
+  async (): Promise<ScorecardDraftsResponse> => {
+    const response = await fetch(`/api/data-entry/balanced-scorecard/draft`, {
+      method: "GET",
+      cache: "no-store",
+    });
+
+    const result = (await response.json()) as {
+      drafts?: ScorecardSavedBuild[];
+      hierarchies?: ScorecardDraftsResponse["hierarchies"];
+      message?: string;
+    };
+
+    if (!response.ok) {
+      throw new Error(result.message ?? "Unable to load scorecard drafts.");
+    }
+
+    return {
+      drafts: result.drafts ?? [],
+      hierarchies: result.hierarchies ?? [],
+    };
+  };
 
 export const fetchScorecardKpiOptions = async (
   context: ScorecardFilterContext,
