@@ -1,0 +1,560 @@
+PRISM Chatbot Question Bank
+Platform: Pacific Power Association benchmarking data platform for electricity utilities in the South Pacific.
+Primary personas: utility user, donor, regulator.
+
+UTILITY USER QUESTIONS
+
+Getting started
+- What can I do in PRISM as a utility user?
+- Where do I start for this reporting cycle?
+- Which page should I use for data entry versus review?
+- What is the difference between Enter Data, Review KPI, and Balanced Scorecard?
+- What report periods are available to my utility?
+- Which service areas are available to my utility?
+- Which KPIs am I responsible for this month?
+
+Data submission and completeness
+- What data is still missing for my utility in the current report period?
+- Which inputs are incomplete for my utility?
+- Which service areas still have missing entries?
+- Which KPI categories are least complete?
+- How complete is our data submission overall?
+- What percentage of required inputs have been submitted?
+- Which report period has the biggest data gap?
+- Which data-entry rows were updated most recently?
+- Who last updated this input?
+- When was this input last changed?
+- Which values are marked data not available?
+- Which input fields are overdue?
+- Which records still need comments or clarification?
+
+Validation and data quality
+- Which submitted values look inconsistent or suspicious?
+- Which data points failed validation?
+- Which values are outside normal ranges?
+- Which KPIs are blocked because of bad source data?
+- Which inputs are causing data-quality issues?
+- What are the top data-quality issues for my utility?
+- What should I fix first before review?
+- Which entries are likely duplicates or superseded?
+
+KPI status and review
+- Which KPIs are calculated for my utility right now?
+- Which KPIs are stale?
+- Which KPIs have missing inputs?
+- Which KPIs have errors?
+- Why is this KPI stale?
+- Why is this KPI missing input?
+- Why did this KPI calculation fail?
+- Which formula inputs feed this KPI?
+- What is the formula for this KPI?
+- Which comments were added to this KPI?
+- Which KPI rows have unresolved review comments?
+- Which KPIs are waiting for review?
+- Which KPIs are most problematic this period?
+
+Targets, trends, and performance
+- What is the target for this KPI?
+- What is the actual value versus target for this KPI?
+- Which KPIs are on track, at risk, or off track?
+- Which KPIs improved compared with last period?
+- Which KPIs worsened compared with last period?
+- Which KPIs have the strongest positive trend?
+- Which KPIs have the weakest trend?
+- Compare this period to the previous period for my utility.
+- Compare this year to last year for my utility.
+- Summarize my utility's KPI performance this period.
+- Which KPIs need urgent management attention?
+
+Balanced scorecard
+- What is my utility's balanced scorecard score?
+- How is our score calculated?
+- What is our score by perspective?
+- Which perspective is weakest?
+- Which objective contributes most to poor performance?
+- Which initiative contributes most to poor performance?
+- Why was this KPI excluded from the scorecard?
+- What does MISSING_TARGET mean?
+- What does MISSING_ACTUAL mean?
+- What does INVALID_RANGE mean?
+- What does NOT_APPROVED mean?
+- What does DUPLICATE_SUPERSEDED mean?
+- Which KPIs are excluded from the scorecard right now?
+- Which scorecard relationships are blocking improvement?
+
+Custom KPI requests
+- How do I request a custom KPI?
+- What happened to my custom KPI request?
+- Why was my custom KPI request rejected?
+- Which custom KPI requests are still pending?
+- Has my custom KPI been approved?
+- Has my custom KPI been promoted into the KPI library?
+
+Operational guidance
+- What should I do next to improve completeness?
+- What should I do next to resolve stale KPIs?
+- What should I do before finalizing submissions?
+- Draft a summary of my utility's current KPI status.
+- Draft an executive summary of this period's utility performance.
+
+Operational reliability
+- Which service areas had the worst reliability this period?
+- Where are outages increasing fastest?
+- Which KPIs suggest emerging operational risk?
+- Which areas show deteriorating restoration performance?
+- Which service areas have the highest technical losses?
+- Which reliability KPIs need urgent operational attention?
+
+Financial and commercial performance
+- Which KPIs show the biggest revenue-collection problems?
+- Where are operating costs rising fastest?
+- Which service areas have poor cost recovery?
+- Which indicators suggest billing or collections risk?
+- How does our financial performance compare with peer utilities?
+- Which financial KPIs need immediate management review?
+
+Customer and service quality
+- Which KPIs show weakening customer service performance?
+- Where are complaints or service delays getting worse?
+- Which areas have the biggest gap between service quality and target?
+- What customer-facing KPIs need management attention first?
+- Which service-quality measures are improving versus worsening?
+
+Asset and infrastructure planning
+- Which KPIs suggest underinvestment in network assets?
+- Which service areas may need capital upgrades first?
+- Which performance trends point to maintenance backlog risk?
+- What asset-related KPIs are worsening over time?
+- Which infrastructure-related issues should we escalate first?
+
+Root-cause and driver analysis
+- What are the likely drivers behind this KPI decline?
+- Which inputs are contributing most to poor scorecard results?
+- Which related KPIs are moving together?
+- Is this problem isolated or system-wide?
+- What are the most likely root causes of this underperformance?
+- Which contributing factors should we investigate first?
+
+Forecasting and scenario questions
+- If current trends continue, which KPIs will miss target next period?
+- Which areas are likely to worsen if nothing changes?
+- What is the projected scorecard impact if this KPI remains off track?
+- Which improvements would have the biggest scorecard effect?
+- What should we expect next period if current performance continues?
+
+Management and board reporting
+- Prepare a general manager summary for this reporting period.
+- Turn this utility performance summary into board talking points.
+- What are the top 5 messages management should take from this data?
+- What should we present to the board this quarter?
+- Draft a leadership-ready performance narrative for this period.
+
+Action planning and intervention design
+- What actions should we take to improve this KPI?
+- Which weak KPIs can be improved quickly?
+- Which issues need operational fixes versus policy fixes?
+- What should each department focus on next?
+- Which interventions would likely have the biggest near-term impact?
+- What is the best action plan for our weakest KPIs?
+
+Peer learning and best-practice questions
+- Which peer utilities are strongest in this KPI?
+- What can we learn from higher-performing utilities?
+- Which utilities improved this KPI most, and what should we examine?
+- Which peer group is most relevant for comparison?
+- Which utilities are the best benchmark for our current context?
+
+Confidence and evidence quality
+- How reliable is this result given missing or weak inputs?
+- Which KPI conclusions should be treated cautiously?
+- Which trends may be distorted by data gaps?
+- What is safe to present externally versus internally only?
+- Which results have the weakest evidence quality?
+
+Workflow ownership and accountability
+- Which team should own fixing this KPI issue?
+- Which unresolved items are assigned to me?
+- What should data-entry users do next versus reviewers?
+- Which approvals are still blocking closure?
+- Who needs to act next to move this KPI forward?
+
+Presentation and storytelling
+- Show our weakest KPIs in an executive dashboard.
+- Build a utility performance table for management review.
+- Which chart best explains this problem to the board?
+- Turn this analysis into a presentation-ready summary.
+- Show this KPI story as a board-friendly visual.
+
+DONOR QUESTIONS
+
+Regional and cross-utility benchmarking
+- Which utilities improved most this year?
+- Which utilities deteriorated most this year?
+- Which utilities are highest performing overall?
+- Which utilities are lowest performing overall?
+- Rank utilities by a selected KPI.
+- Rank utilities by balanced scorecard score.
+- Compare utilities of similar size.
+- Compare utilities of similar type.
+- Which utilities are above the regional benchmark median?
+- Which utilities are below the regional benchmark median?
+- Which utilities are outliers on this KPI?
+- Which countries or subregions are improving fastest?
+- Which countries or subregions are lagging?
+
+Funding and impact prioritization
+- Which utilities need support most urgently?
+- Which utilities show the biggest operational gaps?
+- Which utilities show the biggest financial gaps?
+- Which utilities would benefit most from donor support?
+- Which utilities improved after prior interventions?
+- Which utilities did not improve after support?
+- Which KPIs should donors prioritize?
+- Which utilities have the greatest need for technical assistance?
+- Which utilities have persistent data-quality challenges?
+- Which utilities have poor reporting compliance?
+- Which utilities are not submitting complete data?
+- Which areas of performance should future funding target?
+
+Reporting and summaries
+- Summarize the regional utility performance picture this year.
+- Draft a donor briefing on utility performance trends.
+- Draft a donor note highlighting top-performing and at-risk utilities.
+- Show year-on-year progress for donor-priority KPIs.
+- Show donor-priority KPIs as a chart.
+- Build a benchmarking table for the utilities most relevant to this funding program.
+- Present the highest-risk utilities in a visual ranking.
+- Which utilities require follow-up engagement?
+
+REGULATOR QUESTIONS
+
+Compliance and oversight
+- Which utilities are meeting required performance thresholds?
+- Which utilities are below threshold on key KPIs?
+- Which utilities are consistently underperforming?
+- Which utilities failed to submit required data on time?
+- Which utilities have poor reporting compliance?
+- Which utilities have repeated missing data issues?
+- Which utilities have unresolved review comments?
+- Which utilities have recurrent KPI failures?
+- Which utilities should be prioritized for regulatory follow-up?
+
+Risk and intervention
+- Which utilities show high operational risk?
+- Which utilities show high financial risk?
+- Which utilities have worsening service reliability?
+- Which utilities have worsening losses?
+- Which utilities have worsening customer service performance?
+- Which utilities remain non-compliant after prior action?
+- Which utilities improved after regulatory intervention?
+- Which utilities require clarification requests?
+
+Regulatory comparison and summaries
+- Compare Utility A against peer utilities.
+- Compare Utility A against its own historical trend.
+- Summarize this utility's performance for a regulator.
+- Draft a compliance-style performance note for this period.
+- Present this utility's compliance trend as a chart.
+- Show the weakest compliance KPIs in a regulator-friendly table.
+- Which KPI exclusions reduce confidence in the regulatory view?
+
+Enforcement and escalation
+- Which utilities should receive formal follow-up this period?
+- Which utilities are worsening despite prior intervention?
+- Which utilities have repeated non-compliance across multiple periods?
+- Which utilities should be escalated from monitoring to enforcement?
+- Which KPI failures are serious enough to justify regulatory action?
+- What are the top enforcement priorities this quarter?
+
+Consumer protection and service standards
+- Which utilities are falling short on customer-facing service standards?
+- Which utilities have worsening service quality for consumers?
+- Which KPIs suggest customers are experiencing declining service?
+- Which utilities show the largest gap between service obligations and actual delivery?
+- Which utilities require closer review on customer service performance?
+
+Financial resilience and sector stability
+- Which utilities show signs of financial instability?
+- Which utilities may struggle to sustain operations under current trends?
+- Which financial KPIs present the highest regulatory concern?
+- Which utilities combine weak financial performance with weak service outcomes?
+- Which utilities pose the greatest sector-stability risk?
+
+Operational resilience and continuity
+- Which utilities are least resilient to operational shocks?
+- Which utilities show deteriorating reliability trends over multiple periods?
+- Which utilities have the most persistent outage-related weakness?
+- Which utilities show signs of infrastructure stress or capacity pressure?
+- Which service areas require resilience-focused regulatory attention?
+
+Governance and accountability
+- Which utilities show poor follow-through after previous regulatory actions?
+- Which utilities have unresolved governance or approval issues?
+- Which utilities are repeatedly late in submission or response?
+- Which performance issues appear linked to weak internal accountability?
+- Which utilities require stronger management oversight?
+
+Data confidence and evidence quality
+- Which utility results should be treated cautiously because of missing data?
+- Which regulatory conclusions are least reliable because of evidence gaps?
+- Which utilities have data-quality issues that limit regulatory confidence?
+- Which KPIs are too weakly supported for enforcement use?
+- What evidence gaps should be closed before regulatory action is taken?
+
+Tariff and affordability relevance
+- Which utilities show performance issues that may affect tariff decisions?
+- Which utilities are underperforming despite cost or tariff pressure?
+- Which KPIs are most relevant when assessing affordability and service balance?
+- Which utilities have worsening service outcomes alongside financial stress?
+- What performance trends should regulators consider before tariff review?
+
+Regulatory planning and prioritization
+- Which utilities should regulators review first this month?
+- Which KPI themes deserve the most regulatory attention this quarter?
+- Where should limited regulatory oversight resources be focused first?
+- Which combinations of risk, non-compliance, and poor data quality require immediate attention?
+- What are the highest-priority regulatory issues across the sector right now?
+
+Public reporting and briefing support
+- Draft a regulator briefing on sector performance this period.
+- Draft a note on the most concerning underperforming utilities.
+- Summarize the main sector-wide compliance risks for leadership.
+- Turn this regulatory assessment into a board or ministerial briefing.
+- Show the most important regulatory risks in a presentation-ready format.
+
+OUTSIDE STAKEHOLDER QUESTIONS
+
+Government and policy stakeholders
+- Which utilities are most critical to national energy security?
+- Which utility performance issues should ministries monitor most closely?
+- Which trends suggest a need for government intervention or support?
+- Which utilities pose the greatest risk to service continuity at national level?
+- Which performance gaps are most relevant to national energy policy goals?
+- How does utility performance vary across countries or territories?
+- What should a minister know about current utility-sector performance?
+- Draft a ministerial briefing on the most important utility performance issues.
+
+Lenders, investors, and development finance institutions
+- Which utilities appear financially fragile?
+- Which utilities show the strongest case for investment readiness?
+- Which utilities combine operational weakness with financial risk?
+- Which performance indicators should lenders review before financing?
+- Which utilities have improving trends that support investment confidence?
+- Which utilities show risks that could threaten repayment or project success?
+- What are the biggest performance risks for a prospective infrastructure investment?
+- Draft an investment-risk summary for this utility or utility group.
+
+Auditors and assurance stakeholders
+- Which KPIs have the weakest underlying evidence?
+- Which results rely on incomplete or low-confidence inputs?
+- Which utilities have persistent data-quality issues?
+- Which records should be reviewed first in an audit?
+- Which submissions changed materially since the last reporting cycle?
+- Which KPIs have unusual movements that require verification?
+- Where are approval, review, or governance controls weakest?
+- Draft an audit-focused summary of the highest-risk data issues.
+
+Board members and governance stakeholders
+- What are the top risks the board should be aware of this period?
+- Which KPIs most clearly show whether management is improving performance?
+- Which strategic objectives are underperforming most severely?
+- Which trends should shape the board agenda this quarter?
+- Which initiatives appear to be improving outcomes versus failing to deliver?
+- What should board members ask management about these results?
+- Draft board-level talking points based on current utility performance.
+- Show the biggest governance concerns in a board-ready summary.
+
+Community, customer, and civil society stakeholders
+- Which utilities show worsening service outcomes for customers?
+- Which utilities appear to be struggling with reliability or affordability?
+- Which KPIs are most relevant to the public interest?
+- Which areas may be most affected by declining utility performance?
+- Which service-quality indicators should community groups pay attention to?
+- How should these results be explained in plain language for the public?
+- Draft a public-facing summary of utility service performance.
+- Show the most important customer-impact issues in a simple visual format.
+
+Project and implementation partners
+- Which utilities need technical assistance most urgently?
+- Which performance gaps should implementation partners target first?
+- Which areas are most likely to benefit from capability-building support?
+- Which weak KPIs appear fixable through training, systems, or process improvements?
+- Which utilities have improved after earlier partner support?
+- Which utilities still have unresolved issues despite previous assistance?
+- What should a delivery partner focus on in the next support cycle?
+- Draft a partner briefing on high-priority support needs.
+
+Media and public communication support
+- What are the most newsworthy utility performance trends this period?
+- Which positive performance stories are supported by the data?
+- Which areas of concern should be communicated carefully because evidence is weak?
+- How should a non-technical audience understand these results?
+- What are the top public-interest insights from this dataset?
+- Draft a plain-English summary of sector performance.
+- Turn this analysis into a media-safe summary with clear caveats.
+
+CROSS-CUTTING QUESTION TYPES
+
+Time-window and change detection
+- What changed most since the last reporting cycle?
+- Which KPIs moved enough to require explanation?
+- Which results changed suddenly compared with the normal pattern?
+- What are the biggest month-over-month changes?
+- What are the biggest quarter-over-quarter changes?
+- Which performance shifts are most significant this period?
+
+Exception and anomaly detection
+- Which results look abnormal compared with historical performance?
+- Which utilities are outliers for this KPI?
+- Which values are surprising given peer performance?
+- What looks inconsistent across related KPIs?
+- Which results deserve investigation because they break the expected pattern?
+
+Confidence, caveats, and interpretability
+- How confident should I be in this result?
+- What assumptions should I keep in mind when reading this KPI?
+- What missing context could change this interpretation?
+- Which conclusions are strong versus tentative?
+- What caveats should be included when presenting this analysis?
+
+Causality and contributing factors
+- What likely explains this deterioration?
+- Which factors are most associated with this result?
+- What else should I examine before concluding this is a real problem?
+- Which related indicators may explain this KPI outcome?
+- What are the most likely contributing factors behind this trend?
+
+Decision support and prioritization
+- If we can only address three issues, which should we prioritize?
+- Which improvements would deliver the biggest performance gain?
+- Which risks are urgent versus important?
+- What should leadership decide based on this data?
+- Which issues are most actionable right now?
+
+Dependencies and relationships
+- Which KPIs depend on this input?
+- Which scorecard results are affected by this KPI?
+- If this input is wrong, what else becomes unreliable?
+- Which weak KPIs are likely connected?
+- What downstream results are influenced by this issue?
+
+Segmentation and drill-down
+- Break this issue down by service area.
+- Break this performance pattern down by utility type.
+- Which segments are driving the overall result?
+- Where is the problem concentrated?
+- Which subgroup explains most of the change?
+
+Benchmark method and peer-group logic
+- What is the right peer group for this comparison?
+- Why is this utility being compared to these peers?
+- Is this benchmark median, average, or best performer?
+- Which benchmark is most fair for this KPI?
+- Which comparison method should be used for this question?
+
+Thresholds, alerts, and watchlists
+- Which KPIs crossed a critical threshold this period?
+- Which results should trigger follow-up?
+- What should be flagged as red this month?
+- Which utilities moved from watchlist to high risk?
+- Which indicators should be monitored most closely next period?
+
+Workflow and handoffs
+- What is waiting on me right now?
+- What is blocked by missing review?
+- What should happen before this KPI is approved?
+- Who needs to act next?
+- What is the next workflow step for this issue?
+
+Audience-aware narrative support
+- Explain this result for a board audience.
+- Explain this result for a technical operations audience.
+- Give me a plain-language version of this analysis.
+- What are the three key messages for senior leadership?
+- How should this result be framed for a non-technical stakeholder?
+
+Scenario and what-if analysis
+- If this KPI improved by 10%, what would happen to the scorecard?
+- If missing inputs are completed, which results are most likely to change?
+- What would improve most if this service area recovered?
+- Which KPI change would have the biggest downstream impact?
+- What is the likely effect if current conditions continue?
+
+Data governance and provenance
+- Where did this result come from?
+- Which source inputs support this KPI?
+- What was manually entered versus calculated?
+- Has this value been revised since first submission?
+- What audit trail supports this result?
+
+Audience-personalized recommendations
+- What should a CEO focus on here?
+- What should an operations manager focus on here?
+- What should a regulator focus on here?
+- What should a donor take away from this trend?
+- What should this audience do next based on the evidence?
+
+VISUAL PRESENTATION QUESTIONS
+
+- Show this answer as a table.
+- Show this answer as a bar chart.
+- Show this answer as a line chart.
+- Show this answer as a trend chart over time.
+- Show this answer as a ranked leaderboard.
+- Show this answer as a dashboard summary.
+- Visualize KPI performance by service area.
+- Visualize balanced scorecard performance by perspective.
+- Present actual versus target as a chart.
+- Present the top and bottom performers visually.
+- Build a comparison table for selected utilities.
+- Build a heatmap-style summary of KPI status by utility.
+- Show which KPIs are on track, at risk, or off track in a visual summary.
+- Show missing versus complete submissions visually.
+- Turn this donor summary into a board-ready chart pack.
+- Turn this regulator summary into a compliance dashboard view.
+- Turn this utility summary into an executive dashboard.
+- Which chart type best fits this KPI question?
+- Which metrics should be grouped together in one chart?
+- How should this result be displayed for an executive audience?
+- How should this result be displayed for donors?
+- How should this result be displayed for regulators?
+
+SHARED EXPLANATION QUESTIONS
+
+- What does this KPI mean?
+- How is this KPI calculated?
+- What does this status mean?
+- What does this error mean?
+- What is a report period?
+- What is a service area?
+- What is an energy resource?
+- What is the difference between actual and target?
+- What is the difference between a KPI definition and KPI result?
+- What is the difference between report date and request date?
+- What does on track, at risk, and off track mean?
+- What does completeness mean in this system?
+- What does stale mean in this system?
+- What does not approved mean in this system?
+
+SHARED TROUBLESHOOTING QUESTIONS
+
+- Why am I seeing no rows for these filters?
+- Why can I not access this page or data?
+- Why am I unauthorized?
+- Why is this action forbidden?
+- Why is the chatbot timing out?
+- Why did the API return a validation error?
+- What context should I provide to debug this issue?
+- What should I check first before reporting a bug?
+
+QUESTION PATTERN TEMPLATES
+
+- What is the current status of [KPI] for [utility] in [period]?
+- Why is [KPI/input/result] marked [status]?
+- Compare [utility/group] across [period range] for [metric].
+- Which [utilities/service areas/KPIs] have the highest [risk/improvement/gap]?
+- What should [persona] do next to improve [goal]?
+- Draft a [utility/donor/regulator] summary for [scope].
+- Show [metric/scope] as a [table/bar chart/line chart/leaderboard/dashboard].
+- Visualize [utility/group] across [period range] for [metric].
+- Build an executive-ready visual summary for [persona] about [scope].

@@ -8,6 +8,7 @@ import { Suspense } from "react";
 import { Noto_Sans } from "next/font/google";
 import Footer from "@/components/layout/footer";
 import BlockedAccessOverlay from "@/components/auth/blocked-access-overlay";
+import { FloatingChatbot } from "@/components/chatbot/floating-chatbot";
 
 const notoSans = Noto_Sans({
   subsets: ["latin"],
@@ -44,6 +45,10 @@ export default function RootLayout({
             </Suspense>
           </main>
         </div>
+
+        <Suspense fallback={null}>
+          <FloatingChatbotWrapper />
+        </Suspense>
 
         <Toaster
           duration={6000}
@@ -101,4 +106,18 @@ async function AccessGate({ children }: { children: React.ReactNode }) {
   }
 
   return <>{children}</>;
+}
+
+async function FloatingChatbotWrapper() {
+  const session = await getSession();
+
+  if (!session?.user) {
+    return null;
+  }
+
+  if (session.blockedState?.blocked) {
+    return null;
+  }
+
+  return <FloatingChatbot />;
 }

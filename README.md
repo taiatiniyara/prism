@@ -89,6 +89,25 @@ Set these values in `.env` before running the app.
 - `POWERBI_EMBED_URL`
 - `POWERBI_DATASET_ID`
 
+### Chatbot Integration
+
+- `OPENAI_API_KEY`
+- Chatbot model is fixed to `gpt-5`
+- `CHATBOT_TIMEOUT_MS` (optional, defaults to `45000`)
+- `CHATBOT_MAX_OUTPUT_TOKENS` (optional, defaults to `2500`)
+
+The chatbot route `POST /api/chatbot` supports capability-grounded responses and
+may return:
+
+- `capabilitiesUsed`: resolved backend capability names used to ground the reply
+- `recommendedView`: rendering hint (`text`, `table`, `bar-chart`, `line-chart`,
+  `leaderboard`, `sankey`, `heatmap`, `radar`, `scatter`, `dashboard`)
+
+Current capability domains include report-period status, performance snapshots,
+scorecard snapshots, review-KPI diagnostics, benchmarking, trend signals,
+governance/audit context, configuration/setup options, and visual presentation
+hints.
+
 ## Scripts
 
 - `npm run dev`: start Next.js dev server on port `3554`
