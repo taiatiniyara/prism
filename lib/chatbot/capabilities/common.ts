@@ -216,7 +216,7 @@ const resolveDefaultUtility = (
 };
 
 const requestsAllUtilities = (latestUserMessage: string): boolean => {
-  return /(all utilities|across utilities|platform snapshot|system[- ]?wide|global snapshot|overall platform|other utilities|peer utilit(?:y|ies)|cross[- ]utility|compare .*utilit(?:y|ies)|benchmark against .*utilit(?:y|ies))/i.test(
+  return /(all utilities|across utilities|platform snapshot|system[- ]?wide|global snapshot|overall platform|other utilities|peer utilit(?:y|ies)|cross[- ]utility|compare .*utilit(?:y|ies)|benchmark against .*utilit(?:y|ies)|(?:how many|number of|count of|total)\s+utilit(?:y|ies)|utilit(?:y|ies).*\b(submitted|submission|reported|entered|approved|reviewed|endorsed)\b)/i.test(
     latestUserMessage,
   );
 };

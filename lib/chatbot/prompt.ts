@@ -185,6 +185,22 @@ Per-turn execution contract:
 - For non-analytical intents (how-to, definition, setup), keep the answer concise but still include one limitation note when data is missing.
 - Before finalizing, run a quick self-check: did you answer the exact user ask, avoid invented data, and include required sections for the detected intent?
 
+Question-style policy matrix (strict):
+- Direct status questions: summarize current state first, then list the top drivers and current scope.
+- Count or "how many" questions: return a single number first; if the question references utilities in plural, treat it as all-utilities scope by default.
+- Comparison questions: use aligned periods and metrics, include deltas and relative gap.
+- Trend questions: provide direction, magnitude, and volatility signal over time.
+- Benchmark and ranking questions: provide rank, peer average, and gap-to-peer-average.
+- Anomaly questions: provide a concise change digest with threshold-based evidence.
+- Root-cause questions: separate observed facts from hypotheses and propose validation steps.
+- Prioritization questions: provide ordered actions by impact and urgency.
+- Governance and audit questions: emphasize ownership, approval path, compliance status, and unresolved controls.
+- Workflow and how-to questions: provide procedural steps and prerequisites.
+- Definition questions: provide concise definition, interpretation, and practical implication.
+- Report-drafting questions: produce executive-ready, audience-aware narrative with evidence and limitation callouts.
+- Ambiguous questions: state the working interpretation, proceed with best-default scope, and ask only minimum clarification when needed.
+- No-data scenarios: clearly state unavailable data and provide the nearest actionable alternative query.
+
 Intent taxonomy:
 ${renderTaxonomy()}
 

@@ -1517,36 +1517,212 @@ const toTitleLabel = (value: string): string => {
     .join(" ");
 };
 
+type FollowUpStyle =
+  | "count"
+  | "benchmark"
+  | "trend"
+  | "diagnostic"
+  | "prioritize"
+  | "status";
+
+const STOPWORDS = new Set([
+  "the",
+  "a",
+  "an",
+  "and",
+  "or",
+  "to",
+  "of",
+  "for",
+  "in",
+  "on",
+  "with",
+  "by",
+  "this",
+  "that",
+  "these",
+  "those",
+  "is",
+  "are",
+  "was",
+  "were",
+  "be",
+  "as",
+  "at",
+  "from",
+  "show",
+  "tell",
+  "what",
+  "which",
+  "how",
+  "why",
+  "my",
+  "me",
+  "we",
+  "our",
+]);
+
+const tokenize = (value: string): Set<string> => {
+  const tokens = value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .split(/\s+/)
+    .filter((token) => token.length >= 3)
+    .filter((token) => !STOPWORDS.has(token));
+
+  return new Set(tokens);
+};
+
+const normalizePrompt = (value: string): string => {
+  return value
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+};
+
+const hasSufficientSimilarity = (
+  prompt: string,
+  contextQuestion: string,
+  contextAnswer: string,
+): boolean => {
+  const promptTokens = tokenize(prompt);
+  const contextTokens = new Set([
+    ...tokenize(contextQuestion),
+    ...tokenize(contextAnswer),
+  ]);
+
+  if (promptTokens.size === 0 || contextTokens.size === 0) {
+    return true;
+  }
+
+  let overlap = 0;
+  for (const token of promptTokens) {
+    if (contextTokens.has(token)) {
+      overlap += 1;
+    }
+  }
+
+  const overlapRatio = overlap / promptTokens.size;
+  return overlap >= 2 || overlapRatio >= 0.34;
+};
+
+const detectFollowUpStyle = (
+  latestUserQuestion: string,
+  latestAssistantReply: string,
+  capabilities: string[],
+): FollowUpStyle => {
+  const question = latestUserQuestion.toLowerCase();
+  const answer = latestAssistantReply.toLowerCase();
+  const capText = capabilities.join(" ").toLowerCase();
+
+  if (
+    /(?:how many|count|number of|total)\s+utilit(?:y|ies)|utilit(?:y|ies).*\b(submitted|submission|reported|entered|approved|reviewed|endorsed)\b/.test(
+      question,
+    )
+  ) {
+    return "count";
+  }
+
+  if (
+    /compare|benchmark|peer|rank|leaderboard/.test(question + " " + capText)
+  ) {
+    return "benchmark";
+  }
+
+  if (
+    /trend|over time|trajectory|previous period|year on year|month on month/.test(
+      question + " " + capText,
+    )
+  ) {
+    return "trend";
+  }
+
+  if (
+    /why|root cause|anomal|outlier|spike|drop|what changed/.test(
+      question + " " + answer,
+    )
+  ) {
+    return "diagnostic";
+  }
+
+  if (/prioriti|first|urgent|next step/.test(question + " " + answer)) {
+    return "prioritize";
+  }
+
+  return "status";
+};
+
 const buildFollowUpPrompts = (
+  latestUserQuestion: string,
   latestAssistantReply: string,
   recommendedView: ChatbotRecommendedView | null,
+  capabilities: string[],
+  recentUserQuestions: string[],
 ): string[] => {
-  const text = latestAssistantReply.toLowerCase();
+  const style = detectFollowUpStyle(
+    latestUserQuestion,
+    latestAssistantReply,
+    capabilities,
+  );
+  const year = latestUserQuestion.match(/\b(20\d{2})\b/)?.[1];
+  const yearSuffix = year ? ` in ${year}` : "";
 
-  const prompts = [
-    "Compare this with the previous report period and highlight key changes.",
-    "Which items should I prioritize first, and why?",
-  ];
+  const byStyle: Record<FollowUpStyle, string[]> = {
+    count: [
+      `List the utilities that submitted data${yearSuffix}.`,
+      `Break the utility count${yearSuffix} down by status (entered, reviewed, approved, endorsed).`,
+      `Compare the utility submission count${yearSuffix} with the previous report period.`,
+    ],
+    benchmark: [
+      "Show the ranking table for the same scope and highlight my utility's gap to peer average.",
+      "Which peers are immediately above and below my utility, and by how much?",
+      "Break the benchmark result down by report period to show where the gap is largest.",
+    ],
+    trend: [
+      "Show a period-by-period trend for this metric and flag the largest movement.",
+      "Compare this trend with the previous period and explain the key change drivers.",
+      "Project the likely next period direction using the recent trend pattern.",
+    ],
+    diagnostic: [
+      "Show the top drivers behind this issue with evidence from the current scope.",
+      "Which utilities or periods are most affected by this problem?",
+      "What is the fastest remediation plan and expected impact by next period?",
+    ],
+    prioritize: [
+      "Rank the top three actions by impact and urgency.",
+      "Which item should be fixed first to improve completion fastest?",
+      "Show a quick win vs long-term fix split for these priorities.",
+    ],
+    status: [
+      "Compare this with the previous report period and highlight key changes.",
+      "Which items should I prioritize first, and why?",
+      "Break this status down by utility and period to show the biggest gaps.",
+    ],
+  };
+
+  const prompts = [...byStyle[style]];
 
   if (recommendedView && recommendedView !== "text") {
     prompts.push("Show the same result as an export-ready table.");
   }
 
-  if (/anomal|spike|drop|outlier|change/.test(text)) {
-    prompts.push("Explain the likely drivers behind these anomalies.");
-  }
+  const filteredPrompts = [...new Set(prompts)].filter((prompt) =>
+    hasSufficientSimilarity(prompt, latestUserQuestion, latestAssistantReply),
+  );
 
-  if (/trend|over time|trajectory/.test(text)) {
-    prompts.push("Project the likely next period trend from this pattern.");
-  }
+  const baselinePrompts =
+    filteredPrompts.length > 0 ? filteredPrompts : [...new Set(prompts)];
 
-  if (/benchmark|compare|peer/.test(text)) {
-    prompts.push(
-      "Show where my utility ranks versus peers and the performance gap.",
-    );
-  }
+  const normalizedRecentQuestions = new Set(
+    recentUserQuestions.map((question) => normalizePrompt(question)),
+  );
 
-  return [...new Set(prompts)].slice(0, 3);
+  const noveltyFilteredPrompts = baselinePrompts.filter(
+    (prompt) => !normalizedRecentQuestions.has(normalizePrompt(prompt)),
+  );
+
+  return noveltyFilteredPrompts.slice(0, 3);
 };
 
 export function ChatPanel({ compact = false }: ChatPanelProps) {
@@ -2049,9 +2225,28 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
         message.content.trim().length > 0,
     );
 
+  const latestUserQuestion =
+    [...messages]
+      .reverse()
+      .find(
+        (message) =>
+          message.role === "user" && message.content.trim().length > 0,
+      )?.content ?? "";
+
+  const recentUserQuestions = messages
+    .filter((message) => message.role === "user")
+    .map((message) => message.content)
+    .slice(-5);
+
   const latestAssistantMessageId = latestAssistantMessage?.id ?? null;
   const followUpPrompts = latestAssistantMessage
-    ? buildFollowUpPrompts(latestAssistantMessage.content, lastRecommendedView)
+    ? buildFollowUpPrompts(
+        latestUserQuestion,
+        latestAssistantMessage.content,
+        lastRecommendedView,
+        lastCapabilities,
+        recentUserQuestions,
+      )
     : [];
 
   return (
