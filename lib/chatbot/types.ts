@@ -2,6 +2,7 @@ export type ChatRole = "user" | "assistant";
 
 export type ChatbotCapabilityName =
   | "report-period-overview"
+  | "anomaly-insights"
   | "performance-snapshot"
   | "scorecard-snapshot"
   | "review-kpi-diagnostics"
@@ -30,6 +31,7 @@ export interface ChatMessageInput {
 
 export interface ChatbotQueryInput {
   messages: ChatMessageInput[];
+  sessionId?: number | null;
 }
 
 export interface ChatbotQueryResponse {
@@ -43,6 +45,7 @@ export type ChatbotStreamEvent =
   | {
       type: "meta";
       model: string;
+      sessionId?: number;
       capabilitiesUsed?: ChatbotCapabilityName[];
       recommendedView?: ChatbotRecommendedView;
     }

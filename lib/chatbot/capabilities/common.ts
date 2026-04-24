@@ -33,7 +33,12 @@ export const CAPABILITY_PATTERNS: Array<{
   {
     capability: "report-period-overview",
     pattern:
-      /report period|completeness|complete|incomplete|pending|approved|reviewed|endorsed|not available|submission|data entry|status/i,
+      /report period|multiple report periods|across report periods|completeness|complete|incomplete|pending|approved|reviewed|endorsed|not available|submission|data entry|status|general kpi values|kpi values/i,
+  },
+  {
+    capability: "anomaly-insights",
+    pattern:
+      /anomal|outlier|spike|drop|sudden|unexpected|what changed|change digest|exception|alert|watchlist/i,
   },
   {
     capability: "performance-snapshot",
@@ -115,6 +120,14 @@ export const resolveRecommendedView = (
   latestUserMessage: string,
 ): ChatbotRecommendedView => {
   const msg = latestUserMessage.toLowerCase();
+
+  if (
+    /compare|benchmark|peer utilit(?:y|ies)|other utilit(?:y|ies)|across utilit(?:y|ies)/i.test(
+      msg,
+    )
+  ) {
+    return "table";
+  }
 
   if (msg.includes("sankey")) {
     return "sankey";
@@ -203,7 +216,7 @@ const resolveDefaultUtility = (
 };
 
 const requestsAllUtilities = (latestUserMessage: string): boolean => {
-  return /(all utilities|across utilities|platform snapshot|system[- ]?wide|global snapshot|overall platform)/i.test(
+  return /(all utilities|across utilities|platform snapshot|system[- ]?wide|global snapshot|overall platform|other utilities|peer utilit(?:y|ies)|cross[- ]utility|compare .*utilit(?:y|ies)|benchmark against .*utilit(?:y|ies))/i.test(
     latestUserMessage,
   );
 };

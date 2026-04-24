@@ -11,7 +11,7 @@ export const buildReportPeriodOverviewContext = async (
   ctx: CapabilityContext,
 ): Promise<CapabilityResolution> => {
   const sourcePeriods = ctx.scopedPeriods;
-  const top = sourcePeriods.slice(0, 5);
+  const multiPeriodWindow = sourcePeriods.slice(0, 12);
 
   const aggregate = sourcePeriods.reduce(
     (acc, item) => {
@@ -35,8 +35,19 @@ export const buildReportPeriodOverviewContext = async (
     },
   );
 
-  const lines = top.map((row) => {
+  const lines = multiPeriodWindow.map((row) => {
     return `- ${row.Period} (${row.Utility || "N/A"}): Requested=${row.Requested}, Pending=${row.Pending}, Entered=${row.Entered}, Reviewed=${row.Reviewed}, Approved=${row.Approved}, Endorsed=${row.Endorsed}, Not_Available=${row.Not_Available}`;
+  });
+
+  const completionLines = multiPeriodWindow.map((row) => {
+    const completionCount =
+      row.Entered + row.Reviewed + row.Approved + row.Endorsed;
+    const completionRate =
+      row.Requested > 0
+        ? Math.round((completionCount / row.Requested) * 100)
+        : 0;
+
+    return `- ${row.Period}: completion=${completionRate}% (${completionCount}/${row.Requested}), pending=${row.Pending}, not_available=${row.Not_Available}`;
   });
 
   return {
@@ -53,8 +64,125 @@ export const buildReportPeriodOverviewContext = async (
       `Aggregate approved entries: ${aggregate.approved} (${toPercent(aggregate.approved, aggregate.requested)})`,
       `Aggregate endorsed entries: ${aggregate.endorsed} (${toPercent(aggregate.endorsed, aggregate.requested)})`,
       `Aggregate not-available entries: ${aggregate.notAvailable} (${toPercent(aggregate.notAvailable, aggregate.requested)})`,
-      "Most recent periods:",
+      `Multi-period window size: ${multiPeriodWindow.length}`,
+      "KPI status values across report periods:",
+      ...completionLines,
+      "Detailed report periods:",
       ...lines,
+    ].join("\n"),
+  };
+};
+
+export const buildAnomalyInsightsContext = async (
+  ctx: CapabilityContext,
+): Promise<CapabilityResolution> => {
+  const sourcePeriods = ctx.allUtilitiesRequested
+    ? ctx.periods
+    : ctx.scopedPeriods;
+
+  const utilitySeries = new Map<
+    string,
+    Array<{
+      period: string;
+      completionRate: number;
+      pendingRate: number;
+      notAvailableRate: number;
+      pending: number;
+      requested: number;
+    }>
+  >();
+
+  for (const row of sourcePeriods.slice(0, 24)) {
+    const utility = row.Utility || "N/A";
+    const requested = row.Requested;
+    const completionCount =
+      row.Entered + row.Reviewed + row.Approved + row.Endorsed;
+    const completionRate = requested > 0 ? completionCount / requested : 0;
+    const pendingRate = requested > 0 ? row.Pending / requested : 0;
+    const notAvailableRate = requested > 0 ? row.Not_Available / requested : 0;
+
+    const existing = utilitySeries.get(utility) ?? [];
+    existing.push({
+      period: row.Period,
+      completionRate,
+      pendingRate,
+      notAvailableRate,
+      pending: row.Pending,
+      requested,
+    });
+    utilitySeries.set(utility, existing);
+  }
+
+  const anomalies: string[] = [];
+
+  for (const [utility, records] of utilitySeries.entries()) {
+    if (records.length < 2) {
+      continue;
+    }
+
+    const latest = records[0];
+    const previous = records[1];
+    const completionDrop = Math.round(
+      (latest.completionRate - previous.completionRate) * 100,
+    );
+    const pendingJump = Math.round(
+      (latest.pendingRate - previous.pendingRate) * 100,
+    );
+    const notAvailableJump = Math.round(
+      (latest.notAvailableRate - previous.notAvailableRate) * 100,
+    );
+
+    if (completionDrop <= -10) {
+      anomalies.push(
+        `- ${utility}: completion dropped ${Math.abs(completionDrop)}pp (${previous.period} -> ${latest.period}).`,
+      );
+    }
+
+    if (pendingJump >= 10) {
+      anomalies.push(
+        `- ${utility}: pending rate increased ${pendingJump}pp (${previous.period} -> ${latest.period}).`,
+      );
+    }
+
+    if (notAvailableJump >= 5) {
+      anomalies.push(
+        `- ${utility}: not-available rate increased ${notAvailableJump}pp (${previous.period} -> ${latest.period}).`,
+      );
+    }
+  }
+
+  const watchlist = sourcePeriods
+    .map((row) => ({
+      utility: row.Utility || "N/A",
+      period: row.Period,
+      pending: row.Pending,
+      requested: row.Requested,
+      pendingRate:
+        row.Requested > 0 ? Math.round((row.Pending / row.Requested) * 100) : 0,
+    }))
+    .sort((a, b) => b.pending - a.pending)
+    .slice(0, 5)
+    .map(
+      (row) =>
+        `- ${row.utility} (${row.period}): pending=${row.pending}/${row.requested} (${row.pendingRate}%).`,
+    );
+
+  return {
+    capability: "anomaly-insights",
+    contextBlock: [
+      "PRISM data grounding: anomaly and change-digest signals from report-period submission patterns.",
+      `Scope mode: ${ctx.allUtilitiesRequested ? "all-utilities" : "default utility"}`,
+      "Detected anomalies:",
+      ...(anomalies.length
+        ? anomalies.slice(0, 8)
+        : [
+            "- No high-severity anomaly was detected using configured delta thresholds.",
+          ]),
+      "Current pending watchlist (highest pending counts):",
+      ...(watchlist.length
+        ? watchlist
+        : ["- No watchlist records available in current scope."]),
+      "Threshold policy used: completion drop >=10pp, pending increase >=10pp, not-available increase >=5pp period-over-period.",
     ].join("\n"),
   };
 };
@@ -66,7 +194,7 @@ export const buildBenchmarkingSnapshotContext = async (
     ? ctx.periods
     : ctx.scopedPeriods;
 
-  const ranked = [...sourcePeriods]
+  const rankedRecords = [...sourcePeriods]
     .map((period) => {
       const completionRate =
         period.Requested > 0
@@ -84,21 +212,93 @@ export const buildBenchmarkingSnapshotContext = async (
         requested: period.Requested,
       };
     })
-    .sort((a, b) => b.completionRate - a.completionRate)
+    .sort((a, b) => b.completionRate - a.completionRate);
+
+  const ranked = rankedRecords
     .slice(0, 5)
     .map(
       (item) =>
         `- ${item.utility} (${item.period}): completion=${Math.round(item.completionRate * 100)}%, pending=${item.pending}, requested=${item.requested}`,
     );
 
+  const comparisonTableRows = rankedRecords.slice(0, 20).map((item) => {
+    return `- period=${item.period}; utility=${item.utility}; completion_pct=${Math.round(item.completionRate * 100)}; pending=${item.pending}; requested=${item.requested}`;
+  });
+
+  let utilityVsPeersLines: string[] = [];
+
+  if (ctx.defaultUtility && rankedRecords.length > 0) {
+    const defaultUtilityRecords = rankedRecords.filter(
+      (item) => item.utility === ctx.defaultUtility,
+    );
+
+    const selectedPeriodRecord = ctx.selectedPeriod
+      ? defaultUtilityRecords.find(
+          (item) => item.period === ctx.selectedPeriod?.Period,
+        )
+      : null;
+
+    const referenceRecord =
+      selectedPeriodRecord ??
+      defaultUtilityRecords.find(
+        (item) => item.period === rankedRecords[0]?.period,
+      ) ??
+      defaultUtilityRecords[0] ??
+      null;
+
+    if (referenceRecord) {
+      const peerRecords = rankedRecords.filter(
+        (item) =>
+          item.period === referenceRecord.period &&
+          item.utility !== ctx.defaultUtility,
+      );
+
+      const peerAverage =
+        peerRecords.length > 0
+          ? peerRecords.reduce((acc, item) => acc + item.completionRate, 0) /
+            peerRecords.length
+          : null;
+
+      const periodRanking = rankedRecords
+        .filter((item) => item.period === referenceRecord.period)
+        .sort((a, b) => b.completionRate - a.completionRate);
+
+      const utilityRank =
+        periodRanking.findIndex((item) => item.utility === ctx.defaultUtility) +
+        1;
+
+      const gapToPeerAverage =
+        peerAverage == null
+          ? null
+          : Math.round((referenceRecord.completionRate - peerAverage) * 100);
+
+      utilityVsPeersLines = [
+        `- Reference utility: ${ctx.defaultUtility}`,
+        `- Reference period: ${referenceRecord.period}`,
+        `- ${ctx.defaultUtility} completion: ${Math.round(referenceRecord.completionRate * 100)}%`,
+        peerAverage == null
+          ? "- Peer average completion: N/A (no comparable peer records in the same period)."
+          : `- Peer average completion: ${Math.round(peerAverage * 100)}% (gap=${gapToPeerAverage}pp)`,
+        `- Rank in period: ${utilityRank}/${periodRanking.length}`,
+      ];
+    }
+  }
+
   return {
     capability: "benchmarking-snapshot",
     contextBlock: [
       "PRISM data grounding: cross-utility/report-period benchmarking snapshot from submission performance.",
       `Scope mode: ${ctx.allUtilitiesRequested ? "all-utilities" : "default utility"}`,
+      ...(utilityVsPeersLines.length
+        ? ["Default utility vs peers:", ...utilityVsPeersLines]
+        : []),
+      "Structured comparison rows (table-ready):",
+      ...(comparisonTableRows.length
+        ? comparisonTableRows
+        : ["- No table rows available in current scope."]),
       "Top completion records in scope:",
       ...(ranked.length ? ranked : ["- No benchmarkable records in scope."]),
-      "Use cautiously: this benchmark is based on submission/completion indicators, not every KPI metric.",
+      "Important limitation: this benchmark is based on submission/completion indicators at report-period level, not full KPI-definition-level peer values.",
     ].join("\n"),
   };
 };

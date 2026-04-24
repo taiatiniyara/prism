@@ -23,7 +23,7 @@ export function FloatingChatbot() {
         }`}
         aria-hidden={!isOpen}
       >
-        <ChatPanel />
+        <ChatPanel compact />
       </div>
 
       <div className="pointer-events-auto flex justify-end">

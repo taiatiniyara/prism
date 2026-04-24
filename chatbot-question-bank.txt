@@ -63,6 +63,7 @@ Targets, trends, and performance
 - Which KPIs have the weakest trend?
 - Compare this period to the previous period for my utility.
 - Compare this year to last year for my utility.
+- Compare the performance of my utility with other utilities.
 - Summarize my utility's KPI performance this period.
 - Which KPIs need urgent management attention?
 

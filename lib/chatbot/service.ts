@@ -103,7 +103,6 @@ export const runChatbotQuery = async (
       model: openai(prepared.model),
       system: prepared.systemPrompt,
       messages: prepared.safeMessages,
-      temperature: 0.3,
       maxOutputTokens: prepared.maxOutputTokens,
       abortSignal: prepared.abortController.signal,
     });
@@ -148,7 +147,6 @@ export const runChatbotQueryStream = async (
       model: openai(prepared.model),
       system: prepared.systemPrompt,
       messages: prepared.safeMessages,
-      temperature: 0.3,
       maxOutputTokens: prepared.maxOutputTokens,
       abortSignal: prepared.abortController.signal,
     });

@@ -102,11 +102,21 @@ may return:
 - `capabilitiesUsed`: resolved backend capability names used to ground the reply
 - `recommendedView`: rendering hint (`text`, `table`, `bar-chart`, `line-chart`,
   `leaderboard`, `sankey`, `heatmap`, `radar`, `scatter`, `dashboard`)
+- `sessionId` (stream `meta` event): persisted chat session id used for this
+  turn
+
+Chat persistence APIs:
+
+- `GET /api/chatbot/sessions`: list current user's recent chat sessions
+- `POST /api/chatbot/sessions`: create a new chat session
+- `GET /api/chatbot/sessions/[sessionId]/messages`: get messages for a session
+- `PATCH /api/chatbot/sessions/[sessionId]`: rename a session
+- `DELETE /api/chatbot/sessions/[sessionId]`: delete a session
 
 Current capability domains include report-period status, performance snapshots,
 scorecard snapshots, review-KPI diagnostics, benchmarking, trend signals,
-governance/audit context, configuration/setup options, and visual presentation
-hints.
+anomaly/change-digest signals, governance/audit context, configuration/setup
+options, and visual presentation hints.
 
 ## Scripts
 

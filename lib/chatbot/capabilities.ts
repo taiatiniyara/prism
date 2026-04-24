@@ -17,6 +17,7 @@ import {
   buildScorecardSnapshotContext,
 } from "./capabilities/performance";
 import {
+  buildAnomalyInsightsContext,
   buildBenchmarkingSnapshotContext,
   buildConfigurationSetupSnapshotContext,
   buildGovernanceAuditSnapshotContext,
@@ -31,6 +32,7 @@ const capabilityBuilders: Record<
   (ctx: CapabilityContext) => Promise<CapabilityResolution>
 > = {
   "report-period-overview": buildReportPeriodOverviewContext,
+  "anomaly-insights": buildAnomalyInsightsContext,
   "performance-snapshot": buildPerformanceSnapshotContext,
   "scorecard-snapshot": buildScorecardSnapshotContext,
   "review-kpi-diagnostics": buildReviewKpiDiagnosticsContext,
@@ -68,7 +70,7 @@ export const resolveChatbotCapabilities = async (
     return {
       additionalSystemContext: "",
       capabilitiesUsed: [],
-      recommendedView: "text",
+      recommendedView: resolveRecommendedView(latestUserMessage),
     };
   }
 
@@ -106,7 +108,8 @@ export const resolveChatbotCapabilities = async (
     return builder(ctx);
   });
 
-  const resolutions: CapabilityResolution[] = await Promise.all(resolutionTasks);
+  const resolutions: CapabilityResolution[] =
+    await Promise.all(resolutionTasks);
 
   const scopeContext = ctx
     ? [
