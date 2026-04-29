@@ -226,7 +226,7 @@ const getKpiVisibilityFilter = (user: CurrentUser) => {
 
   return or(
     eq(kpiDefinitions.owner_utility_id, user.org_id),
-    sql`coalesce(${kpiDefinitions.utilities}::jsonb, '[]'::jsonb) @> ${JSON.stringify([user.org_id])}::jsonb`,
+    sql`coalesce(${kpiDefinitions.utility_ids}::jsonb, '[]'::jsonb) @> ${JSON.stringify([user.org_id])}::jsonb`,
   );
 };
 

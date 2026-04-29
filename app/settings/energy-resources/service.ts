@@ -12,14 +12,12 @@ import {
 import { getCurrentUser } from "@/lib/user.service";
 import { and, eq } from "drizzle-orm";
 import { DataTableFormResponse } from "@/components/tables/data-table-create-form";
-import { reportPeriods } from "@/db/schema/reportPeriods";
 import { managedListItems } from "@/db/schema/managedLists";
 import { revalidatePath } from "next/cache";
 import {
   buildManagedListNameMap,
   resolveManagedListName,
 } from "@/lib/managed-list-utils";
-import { formatReportPeriodDisplay } from "@/lib/formatters";
 
 export async function GetAllEnergyResources(): Promise<EnergyResource[]> {
   const user = await getCurrentUser();
@@ -29,10 +27,6 @@ export async function GetAllEnergyResources(): Promise<EnergyResource[]> {
   const query = db
     .select()
     .from(energyResources)
-    .leftJoin(
-      reportPeriods,
-      eq(energyResources.report_period_id, reportPeriods.id),
-    )
     .leftJoin(organisations, eq(energyResources.utility_id, organisations.id))
     .leftJoin(
       serviceAreas,
@@ -58,16 +52,7 @@ export async function GetAllEnergyResources(): Promise<EnergyResource[]> {
       utility: item.organisations?.name,
       power_station: item.power_stations?.name,
       service_area: item.service_areas?.name,
-      report_period: item.report_periods?.report_date
-        ? formatReportPeriodDisplay(
-            item.report_periods.report_date,
-            resolveManagedListName(
-              managedListNamesById,
-              item.report_periods.report_type_id,
-              null,
-            ),
-          )
-        : "",
+      report_period: "",
       energy_provider: resolveManagedListName(
         managedListNamesById,
         item.energy_resources.energy_provider_id,
@@ -99,8 +84,8 @@ export async function CreateEnergyResource(
   const query = db.insert(energyResources).values({
     ...data,
     utility_id: user.org_id!,
+    period_entries: data.period_entries ?? [],
     updated_by_id: user.id,
-    is_active: true,
     is_virtual: false,
     agg_level_id: 1,
     updated_at: new Date(),

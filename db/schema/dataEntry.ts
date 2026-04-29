@@ -1,4 +1,5 @@
 import {
+  bigint,
   boolean,
   integer,
   pgTable,
@@ -8,6 +9,7 @@ import {
   varchar,
   json,
   index,
+  uniqueIndex,
   timestamp,
 } from "drizzle-orm/pg-core";
 import { managedListItems } from "./managedLists";
@@ -30,11 +32,8 @@ export type InputDefinitionAlternativeNames = Record<string, string>;
 export const inputDefinitions = pgTable("input_definitions", {
   id: serial("id").primaryKey().notNull(),
   name: varchar("name", { length: 255 }).notNull(),
-  sort_order: integer("sort_order").default(0).notNull(),
   description: varchar("description", { length: 255 }),
   variable_name: varchar("variable_name", { length: 255 }),
-  alternative_names:
-    json("alternative_names").$type<InputDefinitionAlternativeNames>(),
   formula: text("formula"),
   formula_inputs: json("formula_inputs").$type<FormulaInput[]>(),
   category_id: integer("category_id")
@@ -74,6 +73,9 @@ export const inputDefinitions = pgTable("input_definitions", {
   is_kpi: boolean("is_kpi").default(false).notNull(),
   is_kpi_input: boolean("is_kpi_input").default(false).notNull(),
   updated_at: timestamp("updated_at").notNull().defaultNow(),
+  alternative_names:
+    json("alternative_names").$type<InputDefinitionAlternativeNames>(),
+  sort_order: integer("sort_order").default(0).notNull(),
 });
 export type InputDefinition = typeof inputDefinitions.$inferSelect & {
   category?: string | null;
@@ -285,6 +287,46 @@ export type DataEntry = typeof dataEntries.$inferSelect & {
 export type NewDataEntry = typeof dataEntries.$inferInsert;
 export type GenerationRelevance = typeof generationRelevance.$inferSelect;
 export type NewGenerationRelevance = typeof generationRelevance.$inferInsert;
+
+export const inputDlDefMappings = pgTable(
+  "input_dl_def_mappings",
+  {
+    id: serial("id").primaryKey().notNull(),
+    input_def_id: integer("input_def_id")
+      .notNull()
+      .references(() => inputDefinitions.id),
+    training_dl_def_id: bigint("training_dl_def_id", {
+      mode: "number",
+    }).notNull(),
+    training_dl_legacy_id: varchar("training_dl_legacy_id", {
+      length: 64,
+    }).notNull(),
+    training_source_id: integer("training_source_id"),
+    training_dl_name: varchar("training_dl_name", { length: 255 }).notNull(),
+    training_variable_name: varchar("training_variable_name", { length: 255 }),
+    score: integer("score").notNull().default(0),
+    confidence: varchar("confidence", { length: 16 }).notNull(),
+    reasons: json("reasons").$type<string[]>(),
+    is_auto: boolean("is_auto").notNull().default(false),
+    is_approved: boolean("is_approved").notNull().default(true),
+    approved_at: timestamp("approved_at"),
+    approved_by_id: text("approved_by_id").references(() => user.id),
+    created_at: timestamp("created_at").notNull().defaultNow(),
+    updated_at: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("uniq_input_dl_def_mappings_input_training").on(
+      table.input_def_id,
+      table.training_dl_def_id,
+    ),
+    index("idx_input_dl_def_mappings_training_dl_def_id").on(
+      table.training_dl_def_id,
+    ),
+  ],
+);
+
+export type InputDlDefMapping = typeof inputDlDefMappings.$inferSelect;
+export type NewInputDlDefMapping = typeof inputDlDefMappings.$inferInsert;
 
 export const dataEntryLogs = pgTable("data_entry_logs", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),

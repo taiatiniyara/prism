@@ -21,6 +21,14 @@ import { and, desc, eq, inArray, sql } from "drizzle-orm";
 
 const isGlobalRole = (role: string) => role === "DEV" || role === "BMO";
 
+const hasActiveEnergyResourcePeriod = (reportPeriodId: number) =>
+  sql<boolean>`exists (
+    select 1
+    from jsonb_array_elements(${energyResources.period_entries}) as period_entry
+    where (period_entry->>'report_period_id')::int = ${reportPeriodId}
+      and coalesce((period_entry->>'is_active')::boolean, false) = true
+  )`;
+
 const isServiceAreaScopedByDefinition = (
   categoryName: string | null,
   subcategoryName: string | null,
@@ -121,9 +129,8 @@ const getRequestedCountForPeriod = async (
   });
 
   const generatorConditions = [
-    eq(energyResources.is_active, true),
     eq(energyResources.is_virtual, false),
-    eq(energyResources.report_period_id, reportPeriodId),
+    hasActiveEnergyResourcePeriod(reportPeriodId),
   ];
   if (!isGlobalRole(user.role) && user.org_id != null) {
     generatorConditions.push(eq(energyResources.utility_id, user.org_id));

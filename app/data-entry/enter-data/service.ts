@@ -72,6 +72,14 @@ import { formatReportPeriodDisplay } from "@/lib/formatters";
 
 const isGlobalRole = (role: string) => role === "DEV" || role === "BMO";
 
+const hasActiveEnergyResourcePeriod = (reportPeriodId: number) =>
+  sql<boolean>`exists (
+    select 1
+    from jsonb_array_elements(${energyResources.period_entries}) as period_entry
+    where (period_entry->>'report_period_id')::int = ${reportPeriodId}
+      and coalesce((period_entry->>'is_active')::boolean, false) = true
+  )`;
+
 const mapOption = (id: number, name: string): DataEntryFilterOption => ({
   id,
   name,
@@ -559,10 +567,9 @@ const getGenerationGroupsForContext = async (
   }
 
   const generatorConditions = [
-    eq(energyResources.is_active, true),
     eq(energyResources.is_virtual, false),
     eq(energyResources.service_area_id, context.serviceAreaId),
-    eq(energyResources.report_period_id, context.reportPeriodId),
+    hasActiveEnergyResourcePeriod(context.reportPeriodId),
   ];
 
   if (!isGlobalRole(user.role) && user.org_id != null) {
@@ -992,9 +999,8 @@ const getOverallProgressForContext = async (
   });
 
   const generatorConditions = [
-    eq(energyResources.is_active, true),
     eq(energyResources.is_virtual, false),
-    eq(energyResources.report_period_id, context.reportPeriodId),
+    hasActiveEnergyResourcePeriod(context.reportPeriodId),
   ];
 
   if (!isGlobalRole(user.role) && user.org_id != null) {

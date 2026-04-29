@@ -1178,7 +1178,7 @@ export async function GetCustomKpiRelevance(): Promise<
       formula: kpiDefinitions.formula,
       ownerUserId: kpiDefinitions.owner_user_id,
       ownerUtilityId: kpiDefinitions.owner_utility_id,
-      utilities: kpiDefinitions.utilities,
+      utilityIds: kpiDefinitions.utility_ids,
       formulaInputs: kpiDefinitions.formula_inputs,
     })
     .from(kpiDefinitions)
@@ -1295,8 +1295,8 @@ export async function GetCustomKpiRelevance(): Promise<
   );
 
   return kpis.map((kpi) => {
-    const utilityIds = Array.isArray(kpi.utilities)
-      ? kpi.utilities.filter((value): value is number =>
+    const utilityIds = Array.isArray(kpi.utilityIds)
+      ? kpi.utilityIds.filter((value): value is number =>
           Number.isInteger(value),
         )
       : [];
@@ -1368,7 +1368,7 @@ export async function SetCustomKpiRelevance(
     .select({
       id: kpiDefinitions.id,
       type: kpiDefinitions.type,
-      utilities: kpiDefinitions.utilities,
+      utility_ids: kpiDefinitions.utility_ids,
     })
     .from(kpiDefinitions)
     .where(eq(kpiDefinitions.id, payload.kpiDefId))
@@ -1381,8 +1381,10 @@ export async function SetCustomKpiRelevance(
     };
   }
 
-  const currentUtilityIds = Array.isArray(kpi.utilities)
-    ? kpi.utilities.filter((value): value is number => Number.isInteger(value))
+  const currentUtilityIds = Array.isArray(kpi.utility_ids)
+    ? kpi.utility_ids.filter((value): value is number =>
+        Number.isInteger(value),
+      )
     : [];
 
   const nextUtilityIds = payload.isRelevant
@@ -1392,7 +1394,7 @@ export async function SetCustomKpiRelevance(
   await db
     .update(kpiDefinitions)
     .set({
-      utilities: nextUtilityIds,
+      utility_ids: nextUtilityIds,
     })
     .where(eq(kpiDefinitions.id, payload.kpiDefId));
 

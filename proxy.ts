@@ -20,7 +20,6 @@ export const config = {
     "/data-entry/:path*",
     "/settings/:path*",
     "/profile/:path*",
-    "/migration/:path*",
     "/docs/:path*",
   ],
 };

@@ -2,16 +2,16 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgTable,
-  real,
   serial,
   text,
   timestamp,
   varchar,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { countries } from "./country";
 import { managedListItems } from "./managedLists";
-import { reportPeriods } from "./reportPeriods";
 import { user } from "./auth-schema";
 
 export const organisations = pgTable(
@@ -120,13 +120,20 @@ export type PowerStation = typeof powerStations.$inferSelect & {
 };
 export type NewPowerStation = typeof powerStations.$inferInsert;
 
+export interface EnergyResourcePeriodEntry {
+  report_period_id: number;
+  capacity_mw: number | null;
+  is_active: boolean;
+}
+
 export const energyResources = pgTable(
   "energy_resources",
   {
     id: serial("id").primaryKey().notNull(),
-    report_period_id: integer("report_period_id").references(
-      () => reportPeriods.id,
-    ),
+    period_entries: jsonb("period_entries")
+      .$type<EnergyResourcePeriodEntry[]>()
+      .notNull()
+      .default(sql`'[]'::jsonb`),
     name: varchar("name", { length: 255 }).notNull(),
     power_station_id: integer("power_station_id").references(
       () => powerStations.id,
@@ -137,7 +144,6 @@ export const energyResources = pgTable(
     utility_id: integer("utility_id")
       .notNull()
       .references(() => organisations.id),
-    capacity_mw: real("capacity_mw"),
     energy_provider_id: integer("energy_provider_id")
       .notNull()
       .references(() => managedListItems.id),
@@ -152,16 +158,13 @@ export const energyResources = pgTable(
       .references(() => managedListItems.id)
       .default(1),
     is_virtual: boolean("is_virtual").default(false).notNull(),
-    is_active: boolean("is_active").default(true).notNull(),
     agg_level_id: integer("agg_level_id")
       .notNull()
       .references(() => managedListItems.id),
     updated_at: timestamp("updated_at").notNull().defaultNow(),
     updated_by_id: text("updated_by_id").references(() => user.id),
   },
-  (table) => [
-    index("gen_idx").on(table.name, table.report_period_id, table.utility_id),
-  ],
+  (table) => [index("gen_idx").on(table.name, table.utility_id)],
 );
 export type EnergyResource = typeof energyResources.$inferSelect & {
   report_period?: string | null;

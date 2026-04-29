@@ -18,7 +18,6 @@ export default async function EnergyResourcesSettingsPage() {
   return (
     <DataTable<EnergyResource>
       columns={[
-        "report_period",
         "service_area",
         "power_station",
         "name",
@@ -28,8 +27,6 @@ export default async function EnergyResourcesSettingsPage() {
         },
         "energy_provider",
         "energy_source",
-        "capacity_mw",
-        "is_active",
       ]}
       title="Energy Resources"
       data={energyResources}
@@ -55,10 +52,6 @@ export default async function EnergyResourcesSettingsPage() {
               value: serviceArea.id,
               label: serviceArea.name,
             })),
-          },
-          {
-            key: "capacity_mw",
-            type: "number",
           },
           {
             key: "energy_provider_id",
@@ -104,10 +97,6 @@ export default async function EnergyResourcesSettingsPage() {
               value: serviceArea.id,
               label: serviceArea.name,
             })),
-          },
-          {
-            key: "capacity_mw",
-            type: "number",
           },
           {
             key: "energy_provider_id",

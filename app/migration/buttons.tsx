@@ -2,12 +2,15 @@
 
 import { Button } from "@/components/ui/button";
 import {
+  backfillEnergyResourcePeriods,
   retrieveCountries,
   retrieveEnergyResources,
+  retrieveInputDefinitions,
   retrieveKpiDefinitions,
   retrieveManagedLists,
   retrieveReportPeriods,
   retrieveRoles,
+  retrieveUsers,
   retrieveUtilityData,
 } from "./service";
 import { toast } from "sonner";
@@ -29,6 +32,10 @@ const buttonList: {
     fn: retrieveRoles,
   },
   {
+    label: "Migrate Users",
+    fn: retrieveUsers,
+  },
+  {
     label: "Migrate Utility Data",
     fn: retrieveUtilityData,
   },
@@ -41,8 +48,16 @@ const buttonList: {
     fn: retrieveEnergyResources,
   },
   {
+    label: "Backfill Energy Resource Periods",
+    fn: backfillEnergyResourcePeriods,
+  },
+  {
     label: "Migrate KPI Definitions",
     fn: retrieveKpiDefinitions,
+  },
+  {
+    label: "Migrate Input Definitions",
+    fn: retrieveInputDefinitions,
   },
 ];
 

@@ -10,11 +10,17 @@ import {
 import UploadInputsFromExcel from "./uploadFromExcel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SectionContainer from "@/components/layout/section-container";
+import InputDlMapBuilder from "./mapBuilder";
 
-type InputsTab = "definitions" | "formula-builder" | "upload";
+type InputsTab = "definitions" | "formula-builder" | "upload" | "map-builder";
 
 function resolveDefaultTab(tab: string | undefined): InputsTab {
-  if (tab === "formula-builder" || tab === "upload" || tab === "definitions") {
+  if (
+    tab === "formula-builder" ||
+    tab === "upload" ||
+    tab === "definitions" ||
+    tab === "map-builder"
+  ) {
     return tab;
   }
   return "definitions";
@@ -38,6 +44,7 @@ export default async function InputsSettingsPage(props: {
           <TabsTrigger value="definitions">Definitions</TabsTrigger>
           <TabsTrigger value="formula-builder">Formula Builder</TabsTrigger>
           <TabsTrigger value="upload">Upload</TabsTrigger>
+          <TabsTrigger value="map-builder">Map Builder</TabsTrigger>
         </TabsList>
 
         <TabsContent value="definitions">
@@ -164,6 +171,10 @@ export default async function InputsSettingsPage(props: {
           <SectionContainer>
             <UploadInputsFromExcel />
           </SectionContainer>
+        </TabsContent>
+
+        <TabsContent value="map-builder">
+          <InputDlMapBuilder />
         </TabsContent>
       </Tabs>
     </div>

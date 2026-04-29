@@ -43,15 +43,10 @@ interface KpiTarget {
 
 export const kpiDefinitions = pgTable("kpi_definitions", {
   id: serial("id").primaryKey().notNull(),
-  unit_id: integer("unit_id")
-    .notNull()
-    .references(() => managedListItems.id)
-    .default(91),
   name: varchar("name", { length: 255 }).notNull(),
   description: varchar("description", { length: 255 }),
   formula: varchar("formula"),
   formula_inputs: json("formula_inputs").$type<FormulaInput[]>(),
-  limits: json("limits").$type<Limit[]>(),
   category_id: integer("category_id")
     .notNull()
     .references(() => managedListItems.id)
@@ -59,30 +54,37 @@ export const kpiDefinitions = pgTable("kpi_definitions", {
   subcategory_id: integer("subcategory_id")
     .references(() => managedListItems.id)
     .default(600),
-  type: varchar("type")
-    .default("benchmarking")
-    .notNull()
-    .$type<"benchmarking" | "custom">(),
-  utilities: json("utility_ids").$type<number[]>(),
-  owner_user_id: text("owner_user_id").references(() => user.id),
-  owner_utility_id: integer("owner_utility_id").references(
-    () => organisations.id,
-  ),
-  targets: json("targets").$type<KpiTarget[]>(),
-  block: integer("block").default(60),
   agg_level_id: integer("agg_level_id")
     .notNull()
     .references(() => managedListItems.id)
     .default(1),
-  is_kpi_input: boolean("is_kpi_input").default(false).notNull(),
   is_aggregated: boolean("is_aggregated").default(false).notNull(),
+  is_active: boolean("is_active").default(true).notNull(),
+  unit_id: integer("unit_id")
+    .notNull()
+    .references(() => managedListItems.id)
+    .default(91),
+  block: integer("block").default(60),
+
   is_currency: boolean("is_currency").default(false).notNull(),
   is_descriptive: boolean("is_descriptive").default(false).notNull(),
+  utility_ids: json("utility_ids").$type<number[]>(),
+  owner_utility_id: integer("owner_utility_id").references(
+    () => organisations.id,
+  ),
+  type: varchar("type")
+    .default("benchmarking")
+    .notNull()
+    .$type<"benchmarking" | "custom">(),
+
+  limits: json("limits").$type<Limit[]>(),
+  targets: json("targets").$type<KpiTarget[]>(),
+  is_kpi_input: boolean("is_kpi_input").default(true).notNull(),
+  owner_user_id: text("owner_user_id").references(() => user.id),
   updated_at: timestamp("updated_at")
     .defaultNow()
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
-  is_active: boolean("is_active").default(true).notNull(),
 });
 export type KpiDefinition = typeof kpiDefinitions.$inferSelect & {
   type?: string | null;

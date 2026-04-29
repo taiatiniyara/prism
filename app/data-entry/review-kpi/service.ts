@@ -1496,7 +1496,6 @@ export const applyCustomKpiReviewDecision = async (
           type: "custom",
           owner_user_id: request.submitterUserId,
           owner_utility_id: submitter.organisationId,
-          utilities: [submitter.organisationId],
         })
         .returning({ id: kpiDefinitions.id });
 
