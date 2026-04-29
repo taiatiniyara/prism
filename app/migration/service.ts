@@ -1561,7 +1561,7 @@ export async function compareDataEntries(
   const reportPeriodId = toOptionalNumber(filters?.reportPeriodId);
   const categoryId = toOptionalNumber(filters?.categoryId);
   const subcategoryId = toOptionalNumber(filters?.subcategoryId);
-  const maxRows = Math.max(100, Math.min(10000, filters?.maxRows ?? 3000));
+  const maxRows = toOptionalNumber(filters?.maxRows);
 
   const conditions: Array<ReturnType<typeof eq> | ReturnType<typeof inArray>> =
     [];
@@ -1644,7 +1644,7 @@ export async function compareDataEntries(
     );
   }
 
-  const targetRows = await db
+  const targetRowsQuery = db
     .select({
       report_period_id: dataEntries.report_period_id,
       input_def_id: dataEntries.input_def_id,
@@ -1656,14 +1656,18 @@ export async function compareDataEntries(
       payment_mode_id: dataEntries.payment_mode_id,
     })
     .from(dataEntries)
-    .where(conditions.length > 0 ? and(...conditions) : undefined)
-    .limit(maxRows + 1);
+    .where(conditions.length > 0 ? and(...conditions) : undefined);
+
+  const targetRows =
+    maxRows != null
+      ? await targetRowsQuery.limit(maxRows + 1)
+      : await targetRowsQuery;
 
   const sourceRows: SourceDataEntryRow[] = [];
   let cursor: number | null = null;
   let hasMore = true;
 
-  while (hasMore && sourceRows.length < maxRows + 1) {
+  while (hasMore && (maxRows == null || sourceRows.length < maxRows + 1)) {
     const params = new URLSearchParams();
     params.set("limit", "500");
     params.set("includeDeleted", "1");
@@ -1686,10 +1690,12 @@ export async function compareDataEntries(
     hasMore = page.pagination.hasMore === true && cursor != null;
   }
 
-  const sourceTruncated = sourceRows.length > maxRows;
-  const prismTruncated = targetRows.length > maxRows;
-  const boundedSourceRows = sourceRows.slice(0, maxRows);
-  const boundedTargetRows = targetRows.slice(0, maxRows);
+  const sourceTruncated = maxRows != null && sourceRows.length > maxRows;
+  const prismTruncated = maxRows != null && targetRows.length > maxRows;
+  const boundedSourceRows =
+    maxRows != null ? sourceRows.slice(0, maxRows) : sourceRows;
+  const boundedTargetRows =
+    maxRows != null ? targetRows.slice(0, maxRows) : targetRows;
 
   const comparisonInputDefs = await db
     .select({

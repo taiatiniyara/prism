@@ -49,7 +49,6 @@ export default function DataEntryComparisonPanel({ options }: Props) {
         reportPeriodId: reportPeriodId ? Number(reportPeriodId) : undefined,
         categoryId: categoryId ? Number(categoryId) : undefined,
         subcategoryId: subcategoryId ? Number(subcategoryId) : undefined,
-        maxRows: 3000,
       });
 
       setResult(response);
