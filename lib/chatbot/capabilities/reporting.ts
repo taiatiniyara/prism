@@ -54,6 +54,8 @@ export const buildReportPeriodOverviewContext = async (
     capability: "report-period-overview",
     contextBlock: [
       "PRISM data grounding: report period and submission snapshot.",
+      "Available dimensions: period, utility.",
+      "Unavailable dimensions in this grounding: kpi-category, kpi-subcategory, service-area, individual-kpi, balanced-scorecard-perspective. Do not produce breakdowns by these dimensions from this block; if asked, state the dimension is not in the supplied data and recommend the relevant PRISM workflow without inventing UI labels.",
       `Scope mode: ${ctx.allUtilitiesRequested ? "all-utilities" : "default utility"}`,
       `Default utility: ${ctx.defaultUtility ?? "unknown"}`,
       `Total periods in scope: ${sourcePeriods.length}`,
@@ -171,6 +173,8 @@ export const buildAnomalyInsightsContext = async (
     capability: "anomaly-insights",
     contextBlock: [
       "PRISM data grounding: anomaly and change-digest signals from report-period submission patterns.",
+      "Available dimensions: period, utility.",
+      "Unavailable dimensions in this grounding: kpi-category, kpi-subcategory, service-area, individual-kpi.",
       `Scope mode: ${ctx.allUtilitiesRequested ? "all-utilities" : "default utility"}`,
       "Detected anomalies:",
       ...(anomalies.length
@@ -288,6 +292,8 @@ export const buildBenchmarkingSnapshotContext = async (
     capability: "benchmarking-snapshot",
     contextBlock: [
       "PRISM data grounding: cross-utility/report-period benchmarking snapshot from submission performance.",
+      "Available dimensions: period, utility, completion%.",
+      "Unavailable dimensions in this grounding: kpi-category, kpi-subcategory, service-area, individual-kpi-value, balanced-scorecard-perspective.",
       `Scope mode: ${ctx.allUtilitiesRequested ? "all-utilities" : "default utility"}`,
       ...(utilityVsPeersLines.length
         ? ["Default utility vs peers:", ...utilityVsPeersLines]
@@ -362,6 +368,8 @@ export const buildTrendSnapshotContext = async (
     capability: "trend-snapshot",
     contextBlock: [
       "PRISM data grounding: trend snapshot based on first-vs-latest completion rates per utility.",
+      "Available dimensions: period, utility, completion-rate-delta.",
+      "Unavailable dimensions in this grounding: kpi-category, individual-kpi, service-area.",
       `Scope mode: ${ctx.allUtilitiesRequested ? "all-utilities" : "default utility"}`,
       ...(trendLines.length
         ? trendLines
@@ -399,6 +407,8 @@ export const buildGovernanceAuditSnapshotContext = async (
     capability: "governance-audit-snapshot",
     contextBlock: [
       "PRISM data grounding: governance and accountability snapshot.",
+      "Available dimensions: period, utility, approval-state counts.",
+      "Unavailable dimensions in this grounding: individual-reviewer-name, comment-text, kpi-category.",
       `Scope mode: ${ctx.allUtilitiesRequested ? "all-utilities" : "default utility"}`,
       "Pending ownership distribution:",
       ...(ownershipLines.length
@@ -421,6 +431,7 @@ export const buildConfigurationSetupSnapshotContext = async (
     capability: "configuration-setup-snapshot",
     contextBlock: [
       "PRISM data grounding: available filter and setup options for current user scope.",
+      "Available dimensions: filter-options-only (utility list, period list, service-area list, category list as selectable filters). Does not include any KPI values, counts, or completion percentages.",
       `Report types available: ${options.reportTypes.length}`,
       `Report periods available: ${options.reportPeriods.length}`,
       `KPI categories available: ${options.kpiCategories.length}`,

@@ -1,0 +1,398 @@
+PRISM Chatbot Question Bank
+===========================
+
+Platform: Pacific Power Association benchmarking data platform for electricity
+utilities in the South Pacific.
+
+Personas (used as tags, not as primary structure):
+  utility    - utility user (data entry, review, internal management)
+  donor      - regional funder / development partner
+  regulator  - national or regional regulator
+  admin      - PRISM administrator (settings, users, managed lists)
+  external   - government, lender, auditor, board, community, media, partner
+
+This file is the human-readable narrative view. The machine-consumable source
+of truth is `chatbot-question-bank.yaml` in the same folder. Keep them in sync.
+
+-----------------------------------------------------------------------------
+TAXONOMY
+-----------------------------------------------------------------------------
+
+Each canonical intent has:
+  - id              stable identifier (e.g. UTL-COMPLETENESS-MISSING)
+  - canonical       the preferred phrasing
+  - aliases         user paraphrases that should map to the same intent
+  - personas        which personas may legitimately ask it
+  - params          required / optional parameters
+  - capability      backend capability that should be invoked
+  - output          expected default rendering
+  - guardrails      what the answer must NOT do
+
+Sections below are organised by INTENT FAMILY, not by persona. Persona-specific
+framing notes appear under "Persona overlays".
+
+-----------------------------------------------------------------------------
+1. ONBOARDING & NAVIGATION
+-----------------------------------------------------------------------------
+
+- ONB-WHATCANIDO        What can I do in PRISM with my role?
+- ONB-WHEREDOISTART     Where do I start for this reporting cycle?
+- ONB-PAGEPURPOSE       What is the difference between Enter Data, Review KPI,
+                        and Balanced Scorecard?
+- ONB-WHEREISFEATURE    Where do I [approve a custom KPI / export a table /
+                        change my filters]?
+- ONB-MYSCOPE           What can my role see, and why can't I see X?
+
+-----------------------------------------------------------------------------
+2. DATA SUBMISSION & COMPLETENESS
+-----------------------------------------------------------------------------
+
+- DAT-MISSING           What inputs are missing for {utility} in {period}?
+                        (covers: missing inputs, missing service areas,
+                         incomplete categories, % complete, biggest gap)
+- DAT-RECENT            Which data-entry rows changed most recently for
+                        {utility}? Who changed them and when?
+- DAT-NOTAVAILABLE      Which values are marked "data not available"?
+- DAT-OVERDUE           Which input fields are overdue for {period}?
+- DAT-NEEDS-COMMENT     Which records still need comments or clarification?
+- DAT-DRAFT-VS-SUBMIT   What is the difference between saved-draft and
+                        submitted? How do I finalise?
+- DAT-PERIOD-STATE      Is {period} open or closed for entry? When does it
+                        close?
+- DAT-INPUT-CONTROL     What input type does this field expect (number,
+                        percent, currency, dropdown, managed list)?
+
+-----------------------------------------------------------------------------
+3. VALIDATION & DATA QUALITY
+-----------------------------------------------------------------------------
+
+- DQ-SUSPICIOUS         Which submitted values look inconsistent, out of
+                        range, or suspicious for {utility}?
+- DQ-FAILED-VALIDATION  Which data points failed validation, and why?
+- DQ-DUPLICATES         Which entries look like duplicates or have been
+                        superseded?
+- DQ-TOP-ISSUES         What are the top data-quality issues to fix first?
+- DQ-BLOCKING-KPIS      Which KPIs are blocked because of bad source data?
+
+-----------------------------------------------------------------------------
+4. KPI STATUS & REVIEW
+-----------------------------------------------------------------------------
+
+- KPI-STATUS            What is the current status of {kpi} for {utility} in
+                        {period}? (calculated / stale / missing inputs /
+                        error / awaiting review)
+- KPI-WHY-STATUS        Why is {kpi} marked {status}? (single explainer for
+                        stale, missing-input, calculation-failed, etc.)
+- KPI-FORMULA           What is the formula for {kpi}, and which inputs feed
+                        it?
+- KPI-COMMENTS          Which review comments exist on {kpi}? Which are
+                        unresolved?
+- KPI-WORST             Which KPIs are most problematic this period for
+                        {utility}?
+- KPI-RECALC            How do I trigger a recalculation? When was the
+                        kpi-worker last run?
+
+-----------------------------------------------------------------------------
+5. TARGETS, TRENDS & PERFORMANCE
+-----------------------------------------------------------------------------
+
+- PERF-VS-TARGET        What is the actual vs target for {kpi}?
+- PERF-TRACK            Which KPIs are on-track / at-risk / off-track?
+- PERF-CHANGE           Which KPIs improved or worsened vs {previous_period}?
+                        (covers strongest/weakest trend, biggest movers)
+- PERF-COMPARE-PERIOD   Compare {scope} between {period_a} and {period_b}.
+- PERF-COMPARE-PEERS    Compare {utility} against peers / regional median.
+- PERF-SUMMARY          Summarise {utility}'s KPI performance for {period}.
+- PERF-URGENT           Which KPIs need urgent management attention?
+
+-----------------------------------------------------------------------------
+6. BALANCED SCORECARD
+-----------------------------------------------------------------------------
+
+- BSC-SCORE             What is {utility}'s balanced scorecard score for
+                        {period}?
+- BSC-METHOD            How is the scorecard calculated?
+- BSC-BY-PERSPECTIVE    Show score by perspective; which is weakest?
+- BSC-DRIVER            Which objective / initiative / KPI contributes most
+                        to poor performance?
+- BSC-EXCLUSIONS        Which KPIs are excluded from the scorecard, and why?
+- BSC-EXCLUSION-CODE    What does {MISSING_TARGET | MISSING_ACTUAL |
+                        INVALID_RANGE | NOT_APPROVED | DUPLICATE_SUPERSEDED}
+                        mean?
+
+-----------------------------------------------------------------------------
+7. CUSTOM KPI WORKFLOW
+-----------------------------------------------------------------------------
+
+- CKPI-REQUEST          How do I request a custom KPI?
+- CKPI-MY-STATUS        What is the status of my custom KPI request(s)?
+- CKPI-WHY-REJECTED     Why was {request} rejected? (reviewer reason)
+- CKPI-PENDING-REVIEW   Which custom KPI requests are awaiting my review?
+                        (persona: utility reviewer / admin)
+- CKPI-PROMOTE          How is a custom KPI promoted into the KPI library?
+- CKPI-NOTIFY           When am I notified about custom KPI status changes?
+
+-----------------------------------------------------------------------------
+8. DOMAIN THEMES (reliability / financial / customer / asset)
+-----------------------------------------------------------------------------
+
+These are referenced from persona-specific intents below. Each theme answers
+a parameterised question of the form:
+    Which KPIs / utilities / service areas show {theme} weakness in {scope}?
+
+- THM-RELIABILITY       outages, restoration time, technical losses
+- THM-FINANCIAL         revenue collection, cost recovery, billing risk,
+                        operating cost trend
+- THM-CUSTOMER          complaints, service quality vs target, customer-
+                        facing KPIs
+- THM-ASSET             underinvestment, capex backlog, maintenance risk
+- THM-RESILIENCE        outage trend over multiple periods, capacity stress
+
+-----------------------------------------------------------------------------
+9. PEER COMPARISON & BENCHMARKING (donor + regulator + utility)
+-----------------------------------------------------------------------------
+
+- BMK-RANK              Rank utilities by {kpi | scorecard score}.
+- BMK-PEER-GROUP        What is the right peer group for {utility}, and why?
+- BMK-MEDIAN            Which utilities are above / below the regional
+                        median for {kpi}?
+- BMK-OUTLIERS          Which utilities are outliers for {kpi}?
+- BMK-COUNTRY           Which countries / subregions are improving fastest
+                        or lagging?
+- BMK-METHOD            Is this benchmark median, average, or best
+                        performer? Which method is fairest here?
+
+-----------------------------------------------------------------------------
+10. RISK, COMPLIANCE & ESCALATION (regulator-led, shared with external)
+-----------------------------------------------------------------------------
+
+- RISK-THRESHOLD        Which utilities are below required thresholds on
+                        {kpi}?
+- RISK-PERSISTENT       Which utilities are consistently underperforming
+                        across multiple periods?
+- RISK-COMPLIANCE       Which utilities have poor reporting compliance
+                        (late, incomplete, repeated missing data)?
+- RISK-POST-ACTION      Which utilities improved / failed to improve after
+                        prior intervention?
+- RISK-ESCALATE         Which utilities should escalate from monitoring to
+                        enforcement this period?
+- RISK-COMBINED         Which utilities combine weak finance + weak service +
+                        weak data quality? (priority for follow-up)
+
+-----------------------------------------------------------------------------
+11. ROOT-CAUSE & DEPENDENCIES
+-----------------------------------------------------------------------------
+
+- RCA-DRIVERS           What likely explains {kpi} deterioration?
+- RCA-RELATED           Which related KPIs are moving together?
+- RCA-SCOPE             Is this problem isolated or system-wide?
+- DEP-INPUTS            Which inputs feed {kpi}?
+- DEP-DOWNSTREAM        Which scorecard results / KPIs depend on {input|kpi}?
+
+-----------------------------------------------------------------------------
+12. FORECASTING & SCENARIO
+-----------------------------------------------------------------------------
+
+- SCN-PROJECT           If current trends continue, which KPIs miss target
+                        next period?
+- SCN-WHATIF            If {kpi} improved by {x}%, what is the scorecard
+                        impact?
+- SCN-FILL-GAPS         If missing inputs are completed, which results are
+                        most likely to change?
+- SCN-BIGGEST-LEVER     Which improvement would have the biggest downstream
+                        impact?
+
+-----------------------------------------------------------------------------
+13. ACTION PLANNING & RECOMMENDATIONS
+-----------------------------------------------------------------------------
+
+- ACT-NEXT              What should I do next to improve {goal}?
+                        (completeness / stale KPIs / weakest KPIs)
+- ACT-PRIORITISE        If I can only address three issues, which?
+- ACT-OWNERSHIP         Which team should own fixing {issue}? Who acts next?
+- ACT-QUICK-WINS        Which weak KPIs can be improved quickly?
+- ACT-AUDIENCE          What should a {CEO | ops manager | regulator | donor
+                        | board member} focus on here?
+
+-----------------------------------------------------------------------------
+14. CONFIDENCE, EVIDENCE & GOVERNANCE
+-----------------------------------------------------------------------------
+
+- EVID-CONFIDENCE       How reliable is this result given missing or weak
+                        inputs?
+- EVID-CAVEATS          What caveats should I include when presenting this?
+- EVID-PROVENANCE       Where did this value come from? Manual or
+                        calculated? Has it been revised?
+- EVID-AUDIT-TRAIL      What audit trail supports this result?
+- EVID-EXTERNAL-SAFE    What is safe to present externally vs internally?
+
+-----------------------------------------------------------------------------
+15. NARRATIVE & REPORTING (drafting, framing, audience-aware)
+-----------------------------------------------------------------------------
+
+- NAR-SUMMARY           Draft a {utility | donor | regulator | board |
+                        ministerial | partner | media | public} summary for
+                        {scope}.
+- NAR-TALKING-POINTS    Top {n} messages for {audience} from this data.
+- NAR-PLAIN             Give me a plain-language version of this.
+- NAR-FRAME             How should this be framed for {audience}?
+
+-----------------------------------------------------------------------------
+16. VISUALISATION
+-----------------------------------------------------------------------------
+
+- VIZ-AS                Show this as {table | bar | line | trend | leader-
+                        board | heatmap | radar | scatter | dashboard}.
+- VIZ-BEST-FIT          Which chart best fits {question}?
+- VIZ-COMPARE           Build a comparison table / heatmap for {utilities}.
+- VIZ-STATUS            Show on-track / at-risk / off-track visually.
+- VIZ-COMPLETENESS      Show missing vs complete submissions visually.
+- VIZ-GROUPING          Which metrics belong in the same chart?
+
+-----------------------------------------------------------------------------
+17. ANOMALY & CHANGE DETECTION
+-----------------------------------------------------------------------------
+
+- ANO-CHANGE            What changed most since {previous_period}?
+- ANO-SUDDEN            Which results changed suddenly vs the normal pattern?
+- ANO-OUTLIER           Which results look abnormal vs history or peers?
+- ANO-INCONSISTENT      What looks inconsistent across related KPIs?
+
+-----------------------------------------------------------------------------
+18. WORKFLOW & HANDOFFS
+-----------------------------------------------------------------------------
+
+- WF-MINE               What is waiting on me right now?
+- WF-BLOCKED            What is blocked by missing review / approval?
+- WF-NEXT-STEP          What is the next workflow step for {issue}?
+- WF-ACTIVATION         Which users are pending activation? (admin)
+- WF-APPROVALS          Which approvals are still blocking closure?
+
+-----------------------------------------------------------------------------
+19. ADMINISTRATION (settings)
+-----------------------------------------------------------------------------
+
+- ADM-USERS             How do I add / activate / block a user?
+- ADM-ROLES             Which roles exist and what can each do?
+- ADM-ORGS              How do I add or edit an organisation / power station
+                        / country?
+- ADM-MANAGED-LISTS     What are managed lists and how do I edit one?
+- ADM-RELEVANCE         How does relevance configuration affect what users
+                        see?
+- ADM-REPORTING         How do report periods get created and opened?
+- ADM-SERVICE-AREAS     How do I add a service area for a utility?
+- ADM-INPUTS            How do I configure an input definition?
+- ADM-KPI-LIBRARY       How do I add or edit a KPI definition?
+
+-----------------------------------------------------------------------------
+20. TROUBLESHOOTING & ACCESS
+-----------------------------------------------------------------------------
+
+- TRB-NOROWS            Why am I seeing no rows for these filters?
+- TRB-UNAUTHORIZED      Why am I unauthorized? Why is this action forbidden?
+- TRB-BLOCKED           Why is my account blocked? Who do I contact?
+- TRB-TIMEOUT           Why is the chatbot / API timing out?
+- TRB-VALIDATION        Why did the API return a validation error?
+- TRB-DEBUG-CONTEXT     What context should I provide to debug this?
+- TRB-BUG-CHECKLIST     What should I check first before reporting a bug?
+
+-----------------------------------------------------------------------------
+21. GLOSSARY (status vocabulary - single source of truth)
+-----------------------------------------------------------------------------
+
+  report_period         a defined window (monthly / quarterly / annual)
+                        during which utilities submit data
+  service_area          a generation, distribution, or operational segment
+                        a utility reports against
+  energy_resource       a fuel / generation source category
+  input                 a raw value submitted by a utility for a service
+                        area in a period
+  kpi_definition        the formula and metadata describing a KPI
+  kpi_result            a calculated KPI value for {utility, period}
+  actual                most recent calculated value
+  target                expected value for the period
+  on_track / at_risk / off_track
+                        performance bands relative to target
+  stale                 calculated value older than the latest input change
+  not_approved          submitted but not yet approved by reviewer
+  data_not_available    explicitly recorded as unavailable (not the same as
+                        missing)
+  missing               no input recorded
+  Scorecard exclusion codes:
+    MISSING_TARGET      no target defined
+    MISSING_ACTUAL      no actual value calculated
+    INVALID_RANGE       value outside accepted range
+    NOT_APPROVED        actual not yet approved
+    DUPLICATE_SUPERSEDED  another row supersedes this one
+
+-----------------------------------------------------------------------------
+22. PERSONA OVERLAYS
+-----------------------------------------------------------------------------
+
+Persona overlays describe persona-specific framing only. The underlying
+intent is the same as in sections 1-20.
+
+  utility   - first-person scope ("my utility"), default to current period,
+              expose review comments and draft state.
+  donor     - cross-utility scope, never expose utility-private comments,
+              default to year-on-year and regional context, prefer ranked
+              and benchmarking views.
+  regulator - cross-utility scope, expose compliance status and history of
+              non-compliance, prefer threshold and escalation framing.
+  admin     - cross-utility scope plus configuration intents (section 19),
+              expose user / role / managed-list state.
+  external  - read-only, plain-language framing, evidence caveats always
+              attached, no PII, no draft data.
+
+-----------------------------------------------------------------------------
+23. OUT-OF-SCOPE / REFUSAL PATTERNS
+-----------------------------------------------------------------------------
+
+The chatbot should refuse or redirect when asked to:
+  - Reveal another utility's private review comments to a utility user.
+  - Show personal data (email, phone, address) of any user beyond the
+    requester themselves, unless persona = admin.
+  - Provide tariff, investment, or legal advice as if authoritative.
+  - Speculate about individuals' performance or attribute blame.
+  - Export bulk data outside the user's authorised scope.
+  - Generate content based on draft / unapproved values for external
+    audiences without an explicit caveat.
+
+-----------------------------------------------------------------------------
+24. MULTI-TURN / FOLLOW-UP PATTERNS
+-----------------------------------------------------------------------------
+
+Follow-up phrasings the chatbot must resolve against the prior turn:
+
+  - "...and now break that down by service area."
+  - "Same thing but for {previous_period | last year}."
+  - "Just the bottom five."
+  - "Show that as a {chart_type}."
+  - "Why?" / "Why is that?"   (request explanation of last result)
+  - "Compare with {peer | utility}."
+  - "Drill into {row}."
+  - "Export that."
+
+-----------------------------------------------------------------------------
+25. PARAMETER TEMPLATES
+-----------------------------------------------------------------------------
+
+Use these placeholders consistently across intents and aliases:
+
+  {utility}            single utility
+  {utilities}          set of utilities (peer group, country, region)
+  {kpi}                single KPI definition
+  {kpis}               set of KPIs
+  {service_area}       single service area
+  {period}             a single report period
+  {previous_period}    immediately preceding report period
+  {period_a},{period_b}  two periods being compared
+  {scope}              utility, country, region, peer group
+  {audience}           board, ministerial, donor, regulator, public, media
+  {chart_type}         table, bar, line, trend, leaderboard, heatmap, radar,
+                       scatter, dashboard
+  {status}             stale, missing-input, error, not-approved, etc.
+  {n}                  numeric count (top-N, bottom-N)
+  {x}                  numeric magnitude (percent change in scenarios)
+  {goal}               completeness, scorecard score, reliability, etc.
+  {issue}              a specific KPI / input / scorecard problem

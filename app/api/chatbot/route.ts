@@ -1,6 +1,8 @@
 import { db } from "@/db/connection";
 import { chatMessages, chatSessions } from "@/db/schema/chat-history";
-import { runChatbotQueryStream } from "@/lib/chatbot/service";
+import { evaluateChatbotInputGuardrails } from "@/lib/chatbot/guardrails";
+import { consumeChatbotRateLimit } from "@/lib/chatbot/rate-limit";
+import { runChatbotQuery, runChatbotQueryStream } from "@/lib/chatbot/service";
 import type {
   ChatMessageInput,
   ChatbotQueryInput,
@@ -75,6 +77,84 @@ const deriveSessionTitle = (value: string): string => {
   return normalized || "New chat";
 };
 
+const VISUALIZATION_TYPES = new Set([
+  "table",
+  "bar-chart",
+  "line-chart",
+  "leaderboard",
+  "sankey",
+  "heatmap",
+  "radar",
+  "scatter",
+]);
+
+const extractJsonCandidates = (reply: string): string[] => {
+  const candidates: string[] = [];
+  const fencedMatches = reply.matchAll(/```(?:json)?\s*([\s\S]*?)```/gi);
+  for (const match of fencedMatches) {
+    const block = (match[1] ?? "").trim();
+    if (block.startsWith("{") && block.endsWith("}")) {
+      candidates.push(block);
+    }
+  }
+
+  const plainMatch = reply.match(/\{[\s\S]*\}/);
+  if (plainMatch) {
+    candidates.push(plainMatch[0]);
+  }
+
+  return candidates;
+};
+
+const hasValidVisualizationPayload = (reply: string): boolean => {
+  const candidates = extractJsonCandidates(reply);
+
+  for (const candidate of candidates) {
+    try {
+      const parsed = JSON.parse(candidate) as { type?: unknown } | null;
+      const type = parsed?.type;
+
+      if (typeof type === "string" && VISUALIZATION_TYPES.has(type)) {
+        return true;
+      }
+    } catch {
+      // Ignore malformed candidates.
+    }
+  }
+
+  return false;
+};
+
+const hasLikelyBrokenVisualizationPayload = (reply: string): boolean => {
+  const normalized = reply.toLowerCase();
+
+  if (/\{\s*"type"\s*:\s*""\s*\}?\s*$/i.test(reply)) {
+    return true;
+  }
+
+  return (
+    normalized.includes('"type"') &&
+    normalized.includes("{") &&
+    !hasValidVisualizationPayload(reply)
+  );
+};
+
+const buildVisualizationRepairPrompt = (
+  recommendedView: string,
+  previousReply: string,
+): string => {
+  return [
+    "Re-issue your previous answer for the same user question.",
+    "Keep the same scope and figures; do not invent new values.",
+    "Preserve concise narrative sections.",
+    `Append exactly one complete JSON code block with type=\"${recommendedView}\" if supported; otherwise choose the closest valid type from table, bar-chart, line-chart, leaderboard, sankey, heatmap, radar, scatter.`,
+    "The JSON must be valid and parseable, and type must be non-empty.",
+    "Do not output partial or truncated JSON.",
+    "Previous reply to repair:",
+    previousReply,
+  ].join("\n");
+};
+
 export async function POST(request: Request) {
   let currentUser: CurrentUser;
   try {
@@ -105,6 +185,34 @@ export async function POST(request: Request) {
   if (!latestUserMessage) {
     return Response.json(
       { message: "No user message was provided." },
+      { status: 400 },
+    );
+  }
+
+  const rateLimit = consumeChatbotRateLimit(currentUser.id);
+  if (!rateLimit.allowed) {
+    return Response.json(
+      {
+        message:
+          "You have sent too many chat requests. Please wait a moment and try again.",
+      },
+      {
+        status: 429,
+        headers: {
+          "Retry-After": String(rateLimit.retryAfterSeconds),
+          "X-RateLimit-Limit": String(rateLimit.limit),
+          "X-RateLimit-Remaining": "0",
+        },
+      },
+    );
+  }
+
+  const guardrailHit = evaluateChatbotInputGuardrails(
+    latestUserMessage.content,
+  );
+  if (guardrailHit) {
+    return Response.json(
+      { message: guardrailHit.reason, rule: guardrailHit.rule },
       { status: 400 },
     );
   }
@@ -217,31 +325,22 @@ export async function POST(request: Request) {
 
       let fullReply = "";
 
-      try {
-        for await (const delta of streamResult.textStream) {
-          fullReply += delta;
-          sendEvent(controller, { type: "delta", delta });
-        }
-
-        const reply = fullReply.trim();
-        if (!reply) {
-          sendEvent(controller, {
-            type: "error",
-            message: "No chatbot reply returned.",
-          });
-          return;
-        }
-
+      const persistAssistantReply = async (
+        reply: string,
+        model: string,
+        capabilitiesUsed: string[],
+        recommendedView: string,
+      ) => {
         try {
           await db.insert(chatMessages).values({
             session_id: resolvedSessionId,
             role: "assistant",
             content: reply,
-            model: streamResult.model,
-            capabilities_used: streamResult.capabilitiesUsed.length
-              ? JSON.stringify(streamResult.capabilitiesUsed)
+            model,
+            capabilities_used: capabilitiesUsed.length
+              ? JSON.stringify(capabilitiesUsed)
               : null,
-            recommended_view: streamResult.recommendedView,
+            recommended_view: recommendedView,
           });
 
           const now = new Date();
@@ -255,7 +354,87 @@ export async function POST(request: Request) {
         } catch {
           // Do not break chat streaming if persistence fails after generation.
         }
-        sendEvent(controller, { type: "done", reply });
+      };
+
+      try {
+        for await (const delta of streamResult.textStream) {
+          fullReply += delta;
+          sendEvent(controller, { type: "delta", delta });
+        }
+
+        const reply = fullReply.trim();
+        if (!reply) {
+          try {
+            const fallback = await runChatbotQuery(body.messages, currentUser);
+            const fallbackReply = fallback.reply.trim();
+
+            if (fallbackReply) {
+              await persistAssistantReply(
+                fallbackReply,
+                fallback.model,
+                fallback.capabilitiesUsed,
+                fallback.recommendedView,
+              );
+
+              sendEvent(controller, { type: "done", reply: fallbackReply });
+              return;
+            }
+          } catch {
+            // Keep existing behavior below if fallback completion also fails.
+          }
+
+          sendEvent(controller, {
+            type: "error",
+            message: "No chatbot reply returned.",
+          });
+          return;
+        }
+
+        const requiresVisualizationPayload =
+          streamResult.recommendedView != null &&
+          streamResult.recommendedView !== "text";
+
+        let finalizedReply = reply;
+
+        if (
+          requiresVisualizationPayload &&
+          !hasValidVisualizationPayload(finalizedReply) &&
+          hasLikelyBrokenVisualizationPayload(finalizedReply)
+        ) {
+          try {
+            const repaired = await runChatbotQuery(
+              [
+                ...body.messages,
+                { role: "assistant", content: finalizedReply },
+                {
+                  role: "user",
+                  content: buildVisualizationRepairPrompt(
+                    streamResult.recommendedView,
+                    finalizedReply,
+                  ),
+                },
+              ],
+              currentUser,
+            );
+
+            if (
+              repaired.reply.trim().length > 0 &&
+              hasValidVisualizationPayload(repaired.reply)
+            ) {
+              finalizedReply = repaired.reply.trim();
+            }
+          } catch {
+            // Keep the streamed reply if repair generation fails.
+          }
+        }
+
+        await persistAssistantReply(
+          finalizedReply,
+          streamResult.model,
+          streamResult.capabilitiesUsed,
+          streamResult.recommendedView,
+        );
+        sendEvent(controller, { type: "done", reply: finalizedReply });
       } catch (error) {
         const message =
           error instanceof DOMException && error.name === "AbortError"

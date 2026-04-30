@@ -21,6 +21,7 @@ interface PreparedChatbotRequest {
   safeMessages: ChatMessageInput[];
   systemPrompt: string;
   maxOutputTokens: number;
+  providerOptions?: { openai: { reasoningEffort: string } };
   capabilityContext: {
     capabilitiesUsed: ChatbotCapabilityName[];
     recommendedView: ChatbotRecommendedView;
@@ -34,18 +35,37 @@ const prepareChatbotRequest = async (
   user: CurrentUser,
 ): Promise<PreparedChatbotRequest> => {
   const apiKey = process.env.OPENAI_API_KEY;
-  const model = "gpt-5";
+  const model = (process.env.CHATBOT_MODEL ?? "gpt-5").trim() || "gpt-5";
   const timeoutMs = Number(process.env.CHATBOT_TIMEOUT_MS ?? "45000");
   const maxHistory = Number(process.env.CHATBOT_MAX_HISTORY ?? "12");
+  // Reasoning models (gpt-5, o1, o3, o4) consume part of max_output_tokens on
+  // internal reasoning. Default has to be generous enough to leave room for the
+  // visible reply; otherwise the response is empty.
+  const isReasoningModel = /^(gpt-5|o1|o3|o4)/i.test(model);
+  const defaultMaxOutputTokens = isReasoningModel ? 8000 : 2500;
   const maxOutputTokens = Number(
-    process.env.CHATBOT_MAX_OUTPUT_TOKENS ?? "2500",
+    process.env.CHATBOT_MAX_OUTPUT_TOKENS ?? String(defaultMaxOutputTokens),
   );
+  const reasoningEffort = (
+    process.env.CHATBOT_REASONING_EFFORT ?? "low"
+  ).toLowerCase();
   const safeMaxHistory =
     Number.isFinite(maxHistory) && maxHistory > 0 ? Math.floor(maxHistory) : 12;
   const safeMaxOutputTokens =
     Number.isFinite(maxOutputTokens) && maxOutputTokens > 0
       ? Math.floor(maxOutputTokens)
-      : 2500;
+      : defaultMaxOutputTokens;
+
+  const providerOptions: { openai: { reasoningEffort: string } } | undefined =
+    isReasoningModel
+      ? {
+          openai: {
+            reasoningEffort: ["low", "medium", "high"].includes(reasoningEffort)
+              ? reasoningEffort
+              : "low",
+          },
+        }
+      : undefined;
 
   const safeMessages = messages
     .map(normalizeMessage)
@@ -78,6 +98,7 @@ const prepareChatbotRequest = async (
     safeMessages,
     systemPrompt,
     maxOutputTokens: safeMaxOutputTokens,
+    providerOptions,
     capabilityContext: {
       capabilitiesUsed: capabilityContext.capabilitiesUsed,
       recommendedView: capabilityContext.recommendedView,
@@ -105,6 +126,9 @@ export const runChatbotQuery = async (
       messages: prepared.safeMessages,
       maxOutputTokens: prepared.maxOutputTokens,
       abortSignal: prepared.abortController.signal,
+      ...(prepared.providerOptions
+        ? { providerOptions: prepared.providerOptions }
+        : {}),
     });
 
     const reply = result.text.trim();
@@ -149,6 +173,9 @@ export const runChatbotQueryStream = async (
       messages: prepared.safeMessages,
       maxOutputTokens: prepared.maxOutputTokens,
       abortSignal: prepared.abortController.signal,
+      ...(prepared.providerOptions
+        ? { providerOptions: prepared.providerOptions }
+        : {}),
     });
 
     return {

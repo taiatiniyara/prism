@@ -8,7 +8,7 @@ export function FloatingChatbot() {
   const pathname = usePathname();
   const [isOpen, setIsOpen] = useState(false);
 
-  if (pathname.startsWith("/dashboard/ai-assistant")) {
+  if (pathname.startsWith("/prism-ai")) {
     return null;
   }
 

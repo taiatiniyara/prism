@@ -111,6 +111,8 @@ export const buildPerformanceSnapshotContext = async (
     capability: "performance-snapshot",
     contextBlock: [
       "PRISM data grounding: performance snapshot.",
+      "Available dimensions: period, utility, KPI completion/approval counts.",
+      "Unavailable dimensions in this grounding: kpi-category, individual-kpi-value, service-area.",
       `Scope period: ${ctx.selectedPeriod.Period} (${ctx.selectedPeriod.Utility || "N/A"})`,
       `Review KPI rows in scope: ${reviewRows.length}`,
       `Review status counts: ${
@@ -158,6 +160,8 @@ export const buildScorecardSnapshotContext = async (
       capability: "scorecard-snapshot",
       contextBlock: [
         "PRISM data grounding: balanced scorecard snapshot.",
+        "Available dimensions: period, utility, scorecard-perspective, scorecard-score.",
+        "Unavailable dimensions in this grounding: individual-KPI input value, kpi-category-rollup outside scorecard.",
         `Scope period: ${ctx.selectedPeriod.Period}`,
         `Overall score: ${scorecard.snapshot.overallScore ?? "N/A"}`,
         `Total excluded KPI rows: ${scorecard.snapshot.excludedSummary.totalExcluded}`,
@@ -220,6 +224,9 @@ export const buildReviewKpiDiagnosticsContext = async (
     capability: "review-kpi-diagnostics",
     contextBlock: [
       "PRISM data grounding: review KPI diagnostics.",
+      "Available dimensions: period, utility, kpi, exclusion-code, review-status.",
+      "Unavailable dimensions in this grounding: kpi-category-rollup, service-area-rollup, reviewer-comment-text.",
+      ,
       `Scope period: ${ctx.selectedPeriod.Period}`,
       `Rows in scope: ${rows.length}`,
       `Status counts: ${

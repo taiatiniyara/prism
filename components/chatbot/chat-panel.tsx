@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import dynamic from "next/dynamic";
+import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 import type { EChartsOption } from "echarts";
 import {
   Bar,
@@ -1758,6 +1760,8 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
   const [expandedVisualization, setExpandedVisualization] =
     useState<ChatVisualization | null>(null);
   const endOfMessagesRef = useRef<HTMLDivElement | null>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
+  const lastUserPromptRef = useRef<string | null>(null);
 
   const handleDownloadVisualizationCsv = (visualization: ChatVisualization) => {
     try {
@@ -2001,6 +2005,7 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
     setDraft("");
     setError(null);
     setIsLoading(true);
+    lastUserPromptRef.current = content;
 
     const assistantMessageId = nextMessageId();
     setMessages((previous) => [
@@ -2012,6 +2017,9 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
       },
     ]);
 
+    const abortController = new AbortController();
+    abortControllerRef.current = abortController;
+
     try {
       const sessionIdAtSend = selectedSessionId;
       const response = await fetch("/api/chatbot", {
@@ -2021,6 +2029,7 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
           messages: [...historyPayload, { role: "user", content }],
           sessionId: sessionIdAtSend,
         }),
+        signal: abortController.signal,
       });
 
       if (!response.ok) {
@@ -2121,14 +2130,52 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
           return previous;
         });
       }
-    } catch {
-      setError("Unable to complete chatbot response.");
-      setMessages((previous) =>
-        previous.filter((message) => message.id !== assistantMessageId),
-      );
+    } catch (caught) {
+      if (caught instanceof DOMException && caught.name === "AbortError") {
+        // User-initiated stop: keep whatever was streamed so far if non-empty.
+        setMessages((previous) => {
+          const current = previous.find((m) => m.id === assistantMessageId);
+          if (!current || !current.content.trim()) {
+            return previous.filter((m) => m.id !== assistantMessageId);
+          }
+          return previous;
+        });
+      } else {
+        setError("Unable to complete chatbot response.");
+        setMessages((previous) =>
+          previous.filter((message) => message.id !== assistantMessageId),
+        );
+      }
     } finally {
+      abortControllerRef.current = null;
       setIsLoading(false);
     }
+  };
+
+  const handleStop = () => {
+    abortControllerRef.current?.abort();
+  };
+
+  const handleRegenerate = () => {
+    const lastPrompt = lastUserPromptRef.current;
+    if (!lastPrompt || isLoading) {
+      return;
+    }
+    setMessages((previous) => {
+      // Remove the most recent assistant message so the regenerated reply replaces it.
+      const lastAssistantIndex = [...previous]
+        .reverse()
+        .findIndex(
+          (m) =>
+            m.role === "assistant" && m.id !== INITIAL_ASSISTANT_MESSAGE_ID,
+        );
+      if (lastAssistantIndex === -1) {
+        return previous;
+      }
+      const realIndex = previous.length - 1 - lastAssistantIndex;
+      return previous.slice(0, realIndex);
+    });
+    void sendMessage(lastPrompt);
   };
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
@@ -2451,9 +2498,17 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
                       ) : (
                         <>
                           {parsedMessage.text ? (
-                            <p className="whitespace-pre-wrap">
-                              {parsedMessage.text}
-                            </p>
+                            isUser ? (
+                              <p className="whitespace-pre-wrap">
+                                {parsedMessage.text}
+                              </p>
+                            ) : (
+                              <div className="prism-markdown space-y-2 text-sm leading-relaxed">
+                                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                  {parsedMessage.text}
+                                </ReactMarkdown>
+                              </div>
+                            )
                           ) : null}
                           {!isUser && parsedMessage.visualization ? (
                             <VisualizationRenderer
@@ -2478,8 +2533,31 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
                           {!isUser &&
                           !isLoading &&
                           message.id === latestAssistantMessageId &&
-                          followUpPrompts.length > 0 ? (
-                            <div className="mt-3 flex flex-wrap gap-2 border-t border-slate-300/70 pt-2">
+                          message.content.trim().length > 0 ? (
+                            <div className="mt-3 flex flex-wrap items-center gap-2 border-t border-slate-300/70 pt-2">
+                              <button
+                                type="button"
+                                className="rounded-full border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 transition hover:bg-slate-50"
+                                onClick={() => {
+                                  void navigator.clipboard?.writeText(
+                                    message.content,
+                                  );
+                                }}
+                                title="Copy reply"
+                              >
+                                Copy
+                              </button>
+                              <button
+                                type="button"
+                                className="rounded-full border border-slate-300 bg-white px-2.5 py-1 text-[11px] font-medium text-slate-700 transition hover:bg-slate-50 disabled:opacity-60"
+                                onClick={handleRegenerate}
+                                disabled={
+                                  isLoading || !lastUserPromptRef.current
+                                }
+                                title="Regenerate reply"
+                              >
+                                Regenerate
+                              </button>
                               {followUpPrompts.map((prompt) => (
                                 <button
                                   key={prompt}
@@ -2549,13 +2627,22 @@ export function ChatPanel({ compact = false }: ChatPanelProps) {
                           : `Model: ${lastModel}`
                         : ""}
                   </p>
-                  <button
-                    type="submit"
-                    className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:opacity-60"
-                    disabled={isLoading}
-                  >
-                    {isLoading ? "Sending" : "Send"}
-                  </button>
+                  {isLoading ? (
+                    <button
+                      type="button"
+                      onClick={handleStop}
+                      className="rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-xs font-medium text-slate-700 transition hover:bg-slate-50"
+                    >
+                      Stop
+                    </button>
+                  ) : (
+                    <button
+                      type="submit"
+                      className="rounded-lg bg-slate-900 px-3 py-1.5 text-xs font-medium text-white transition hover:-translate-y-0.5 hover:bg-slate-800 disabled:opacity-60"
+                    >
+                      Send
+                    </button>
+                  )}
                 </div>
               </div>
             </form>

@@ -25,6 +25,23 @@ import {
   buildTrendSnapshotContext,
   buildVisualPresentationHintsContext,
 } from "./capabilities/reporting";
+import {
+  buildCategoryCompletenessContext,
+  buildServiceAreaCompletenessContext,
+} from "./capabilities/breakdowns";
+import {
+  buildAggregationLevelCompletenessContext,
+  buildCustomerTypeCompletenessContext,
+  buildEnergyProviderCompletenessContext,
+  buildEnergyResourceCompletenessContext,
+  buildEnergySourceCompletenessContext,
+  buildEnergyTypeCompletenessContext,
+  buildPaymentModeCompletenessContext,
+  buildSubcategoryCompletenessContext,
+} from "./capabilities/dimensions";
+import { buildCustomKpiPipelineContext } from "./capabilities/customKpiPipeline";
+import { buildInputValueLookupContext } from "./capabilities/valueLookup";
+import { emitCapabilityTelemetry } from "./telemetry";
 
 // Builder registry keeps capability routing explicit and easy to extend.
 const capabilityBuilders: Record<
@@ -40,6 +57,38 @@ const capabilityBuilders: Record<
   "trend-snapshot": buildTrendSnapshotContext,
   "governance-audit-snapshot": buildGovernanceAuditSnapshotContext,
   "configuration-setup-snapshot": buildConfigurationSetupSnapshotContext,
+  "category-completeness-snapshot": buildCategoryCompletenessContext,
+  "subcategory-completeness-snapshot": buildSubcategoryCompletenessContext,
+  "service-area-completeness-snapshot": buildServiceAreaCompletenessContext,
+  "energy-source-completeness-snapshot": buildEnergySourceCompletenessContext,
+  "energy-provider-completeness-snapshot":
+    buildEnergyProviderCompletenessContext,
+  "energy-type-completeness-snapshot": buildEnergyTypeCompletenessContext,
+  "energy-resource-completeness-snapshot":
+    buildEnergyResourceCompletenessContext,
+  "aggregation-level-completeness-snapshot":
+    buildAggregationLevelCompletenessContext,
+  "customer-type-completeness-snapshot": buildCustomerTypeCompletenessContext,
+  "payment-mode-completeness-snapshot": buildPaymentModeCompletenessContext,
+  "custom-kpi-pipeline-snapshot": buildCustomKpiPipelineContext,
+  "input-value-lookup": buildInputValueLookupContext,
+};
+
+const isReferentialVisualFollowUp = (latestUserMessage: string): boolean => {
+  const normalized = latestUserMessage.toLowerCase();
+
+  const referencesPriorData =
+    /\b(this|that|same|above|previous|prior|shared)\b/.test(normalized) &&
+    /\b(data|dataset|result|results|table|chart|visual|snapshot)\b/.test(
+      normalized,
+    );
+
+  const asksForVisual =
+    /\b(show|render|plot|visuali[sz]e|display|give|create)\b/.test(
+      normalized,
+    ) && /\b(chart|graph|table|visual|dashboard|plot)\b/.test(normalized);
+
+  return referencesPriorData || asksForVisual;
 };
 
 export const resolveChatbotCapabilities = async (
@@ -66,13 +115,30 @@ export const resolveChatbotCapabilities = async (
     item.pattern.test(latestUserMessage),
   ).map((item) => item.capability);
 
-  if (!requestedCapabilities.length) {
-    return {
-      additionalSystemContext: "",
-      capabilitiesUsed: [],
-      recommendedView: resolveRecommendedView(latestUserMessage),
-    };
-  }
+  const uniqueRequestedCapabilities = [...new Set(requestedCapabilities)];
+  const isVisualOnlyRequest =
+    uniqueRequestedCapabilities.length === 1 &&
+    uniqueRequestedCapabilities[0] === "visual-presentation-hints";
+
+  const userMessages = messages
+    .filter((message) => message.role === "user")
+    .map((message) => message.content);
+
+  const recentScopeDetectionText = userMessages.slice(-3).join("\n");
+
+  const normalizedRequestedCapabilities =
+    isVisualOnlyRequest && isReferentialVisualFollowUp(latestUserMessage)
+      ? ["report-period-overview", ...uniqueRequestedCapabilities]
+      : uniqueRequestedCapabilities;
+
+  // When no pattern matches, fall back to the broadest grounding capability so
+  // the LLM has at least the report-period overview to anchor an answer instead
+  // of free-styling. This keeps the unmatched-question path observable via
+  // the telemetry `fallbackUsed` flag.
+  const fallbackUsed = normalizedRequestedCapabilities.length === 0;
+  const effectiveCapabilities: ChatbotCapabilityName[] = fallbackUsed
+    ? ["report-period-overview"]
+    : (normalizedRequestedCapabilities as ChatbotCapabilityName[]);
 
   const maxCapabilities = Number(process.env.CHATBOT_MAX_CAPABILITIES ?? "2");
   const normalizedMaxCapabilities =
@@ -81,7 +147,7 @@ export const resolveChatbotCapabilities = async (
       : 2;
 
   // Preserve regex declaration order as capability priority and cap fan-out for latency.
-  const prioritizedCapabilities = [...new Set(requestedCapabilities)].slice(
+  const prioritizedCapabilities = [...new Set(effectiveCapabilities)].slice(
     0,
     normalizedMaxCapabilities,
   );
@@ -92,20 +158,41 @@ export const resolveChatbotCapabilities = async (
 
   // Only hydrate shared DB-backed context when at least one capability actually needs it.
   const ctx = needsDataContext
-    ? await createCapabilityContext(user, latestUserMessage)
+    ? await createCapabilityContext(
+        user,
+        latestUserMessage,
+        recentScopeDetectionText,
+      )
     : null;
 
+  const startedAt = Date.now();
+  const perCapabilityMs: Record<string, number> = {};
+
   const resolutionTasks = prioritizedCapabilities.map(async (capability) => {
-    if (capability === "visual-presentation-hints") {
-      return buildVisualPresentationHintsContext(latestUserMessage);
-    }
+    const builderStartedAt = Date.now();
+    try {
+      if (capability === "visual-presentation-hints") {
+        return await buildVisualPresentationHintsContext(latestUserMessage);
+      }
 
-    if (!ctx) {
-      throw new Error("VALIDATION:Missing capability context.");
-    }
+      if (!ctx) {
+        throw new Error("VALIDATION:Missing capability context.");
+      }
 
-    const builder = capabilityBuilders[capability];
-    return builder(ctx);
+      const builder = capabilityBuilders[capability];
+      return await builder(ctx);
+    } catch (error) {
+      // A single failing builder must not abort the whole chatbot response.
+      // Surface a degraded grounding block so the LLM still has scope context.
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`[chatbot] capability '${capability}' failed:`, message);
+      return {
+        capability,
+        contextBlock: `PRISM data grounding (${capability}): capability failed to resolve (${message}). Tell the user the requested data could not be retrieved and suggest rephrasing or trying a narrower scope.`,
+      } satisfies CapabilityResolution;
+    } finally {
+      perCapabilityMs[capability] = Date.now() - builderStartedAt;
+    }
   });
 
   const resolutions: CapabilityResolution[] =
@@ -126,9 +213,24 @@ export const resolveChatbotCapabilities = async (
     ...resolutions.map((resolution) => resolution.contextBlock),
   ].filter((value) => value.trim().length > 0);
 
+  const recommendedView = resolveRecommendedView(latestUserMessage);
+  const capabilitiesUsed = resolutions.map(
+    (resolution) => resolution.capability,
+  );
+
+  emitCapabilityTelemetry({
+    matched: uniqueRequestedCapabilities,
+    used: capabilitiesUsed,
+    fallbackUsed,
+    totalMs: Date.now() - startedAt,
+    perCapabilityMs,
+    recommendedView,
+    messageLength: latestUserMessage.length,
+  });
+
   return {
     additionalSystemContext: contextParts.join("\n\n"),
-    capabilitiesUsed: resolutions.map((resolution) => resolution.capability),
-    recommendedView: resolveRecommendedView(latestUserMessage),
+    capabilitiesUsed,
+    recommendedView,
   };
 };

@@ -46,6 +46,7 @@ const isServiceAreaScopedByDefinition = (
 const getRequestedCountForPeriod = async (
   user: CurrentUser,
   reportPeriodId: number,
+  scopeUtilityId: number | null = null,
 ): Promise<number> => {
   const definitionRows = await db
     .select({
@@ -92,8 +93,10 @@ const getRequestedCountForPeriod = async (
   );
 
   const serviceAreaConditions = [eq(serviceAreas.is_active, true)];
-  if (!isGlobalRole(user.role) && user.org_id != null) {
-    serviceAreaConditions.push(eq(serviceAreas.utility_id, user.org_id));
+  const effectiveUtilityId =
+    scopeUtilityId ?? (!isGlobalRole(user.role) ? user.org_id : null);
+  if (effectiveUtilityId != null) {
+    serviceAreaConditions.push(eq(serviceAreas.utility_id, effectiveUtilityId));
   }
 
   const serviceAreaRows = await db
@@ -132,8 +135,10 @@ const getRequestedCountForPeriod = async (
     eq(energyResources.is_virtual, false),
     hasActiveEnergyResourcePeriod(reportPeriodId),
   ];
-  if (!isGlobalRole(user.role) && user.org_id != null) {
-    generatorConditions.push(eq(energyResources.utility_id, user.org_id));
+  if (effectiveUtilityId != null) {
+    generatorConditions.push(
+      eq(energyResources.utility_id, effectiveUtilityId),
+    );
   }
 
   const generators = await db
@@ -196,9 +201,15 @@ export interface ReportPeriodDTO {
   Updated: string;
 }
 
+interface GetReportPeriodsOptions {
+  forceAllUtilities?: boolean;
+}
+
 export async function GetReportPeriods(
   user: CurrentUser,
+  options: GetReportPeriodsOptions = {},
 ): Promise<ReportPeriodDTO[]> {
+  const forceAllUtilities = options.forceAllUtilities === true;
   const ml = await db.select().from(managedListItems);
   const rolesList = await db.select().from(roles);
   const de = db.select().from(dataEntries);
@@ -207,7 +218,7 @@ export async function GetReportPeriods(
     .from(reportPeriods)
     .leftJoin(organisations, eq(reportPeriods.utility_id, organisations.id))
     .orderBy(desc(reportPeriods.report_date));
-  if (user.role !== "DEV" && user.role !== "BMO") {
+  if (!forceAllUtilities && user.role !== "DEV" && user.role !== "BMO") {
     rp.where(eq(reportPeriods.utility_id, user.org_id!));
   }
   const deList = await de;
@@ -216,9 +227,16 @@ export async function GetReportPeriods(
   const roleNameById = new Map(rolesList.map((role) => [role.id, role.name]));
   const requestedCountByPeriod = new Map<number, number>();
   for (const item of list) {
+    const scopeUtilityId = forceAllUtilities
+      ? item.report_periods.utility_id
+      : null;
     requestedCountByPeriod.set(
       item.report_periods.id,
-      await getRequestedCountForPeriod(user, item.report_periods.id),
+      await getRequestedCountForPeriod(
+        user,
+        item.report_periods.id,
+        scopeUtilityId,
+      ),
     );
   }
 

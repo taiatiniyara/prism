@@ -10,6 +10,18 @@ export type ChatbotCapabilityName =
   | "trend-snapshot"
   | "governance-audit-snapshot"
   | "configuration-setup-snapshot"
+  | "category-completeness-snapshot"
+  | "subcategory-completeness-snapshot"
+  | "service-area-completeness-snapshot"
+  | "energy-source-completeness-snapshot"
+  | "energy-provider-completeness-snapshot"
+  | "energy-type-completeness-snapshot"
+  | "energy-resource-completeness-snapshot"
+  | "aggregation-level-completeness-snapshot"
+  | "customer-type-completeness-snapshot"
+  | "payment-mode-completeness-snapshot"
+  | "custom-kpi-pipeline-snapshot"
+  | "input-value-lookup"
   | "visual-presentation-hints";
 
 export type ChatbotRecommendedView =

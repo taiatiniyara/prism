@@ -28,6 +28,10 @@ export default function TopNav(props: {
       href: "/dashboard",
     },
     {
+      label: "PRISM AI",
+      href: "/prism-ai",
+    },
+    {
       label: "Data Entry",
       href: "/data-entry",
     },
