@@ -357,15 +357,33 @@ export const listScorecardKpiOptions = async (
   context: ScorecardFilterContext,
 ): Promise<ScorecardKpiOption[]> => {
   const currentUser = await getCurrentUser();
+  const currentUserUtilityId = (
+    currentUser as {
+      utilityId?: number | null;
+      utility_id?: number | null;
+    }
+  ).utilityId ??
+    (
+      currentUser as {
+        utilityId?: number | null;
+        utility_id?: number | null;
+      }
+    ).utility_id ??
+    null;
   const predicates = [eq(kpiDefinitions.is_active, true)];
 
   if (!isGlobalKpiViewer(currentUser.role)) {
-    predicates.push(
-      or(
-        eq(kpiDefinitions.is_private, false),
-        eq(kpiDefinitions.owner_utility_id, reportPeriods.utility_id),
-      ),
-    );
+    const visibilityPredicate =
+      currentUserUtilityId == null
+        ? eq(kpiDefinitions.is_private, false)
+        : or(
+            eq(kpiDefinitions.is_private, false),
+            eq(kpiDefinitions.owner_utility_id, currentUserUtilityId),
+          );
+
+    if (visibilityPredicate) {
+      predicates.push(visibilityPredicate);
+    }
   }
 
   if (context.kpiCategoryId != null) {

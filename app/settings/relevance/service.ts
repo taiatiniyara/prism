@@ -125,8 +125,6 @@ export interface SetTransmissionDataLabelRelevancePayload {
 export interface UtilityGenerationRelevanceCell {
   energyProviderId: number;
   energyProvider: string;
-  energyResourceTypeId: number;
-  energyResourceType: string;
   isRelevant: boolean;
   relatedInputCount: number;
 }
@@ -158,7 +156,6 @@ export interface SetUtilityGenerationDataLabelRelevancePayload {
   serviceAreaId: number;
   energySourceId: number;
   energyProviderId: number;
-  energyResourceTypeId: number;
   isRelevant: boolean;
 }
 
@@ -910,7 +907,6 @@ export async function GetUtilityGenerationRelevance(
             reportPeriodId: generationRelevance.report_period_id,
             energySourceId: generationRelevance.energy_source_id,
             energyProviderId: generationRelevance.energy_provider_id,
-            energyResourceTypeId: generationRelevance.energy_resource_type_id,
             inputDefId: generationRelevance.input_def_id,
             isRelevant: generationRelevance.is_relevant,
             id: generationRelevance.id,
@@ -931,10 +927,6 @@ export async function GetUtilityGenerationRelevance(
                 generationRelevance.energy_source_id,
                 energySources.map((source) => source.id),
               ),
-              inArray(
-                generationRelevance.energy_resource_type_id,
-                energyResourceTypes.map((resourceType) => resourceType.id),
-              ),
             ),
           )
           .orderBy(desc(generationRelevance.updatedAt))
@@ -946,8 +938,7 @@ export async function GetUtilityGenerationRelevance(
     if (
       entry.reportPeriodId == null ||
       entry.energySourceId == null ||
-      entry.energyProviderId == null ||
-      entry.energyResourceTypeId == null
+      entry.energyProviderId == null
     ) {
       continue;
     }
@@ -956,7 +947,7 @@ export async function GetUtilityGenerationRelevance(
       continue;
     }
 
-    const key = `${entry.reportPeriodId}:${entry.energySourceId}:${entry.energyProviderId}:${entry.energyResourceTypeId}`;
+    const key = `${entry.reportPeriodId}:${entry.energySourceId}:${entry.energyProviderId}`;
     cellHasFalse.set(key, true);
   }
 
@@ -978,13 +969,11 @@ export async function GetUtilityGenerationRelevance(
         energyResourceTypeId: energyResourceType.id,
         energyResourceType: energyResourceType.name,
         cells: energyProviders.map((energyProvider) => {
-          const key = `${selectedReportPeriodId}:${energySource.id}:${energyProvider.id}:${energyResourceType.id}`;
+          const key = `${selectedReportPeriodId}:${energySource.id}:${energyProvider.id}`;
 
           return {
             energyProviderId: energyProvider.id,
             energyProvider: energyProvider.name,
-            energyResourceTypeId: energyResourceType.id,
-            energyResourceType: energyResourceType.name,
             isRelevant: !cellHasFalse.get(key),
             relatedInputCount: inputDefIds.length,
           };
@@ -1058,24 +1047,10 @@ export async function SetUtilityGenerationDataLabelRelevance(
     )
     .limit(1);
 
-  const [energyResourceType] = await db
-    .select({ id: managedListItems.id })
-    .from(managedListItems)
-    .innerJoin(managedLists, eq(managedListItems.list_id, managedLists.id))
-    .where(
-      and(
-        eq(managedLists.name, "Energy Resource Type"),
-        eq(managedLists.is_active, true),
-        eq(managedListItems.is_active, true),
-        eq(managedListItems.id, payload.energyResourceTypeId),
-      ),
-    )
-    .limit(1);
-
-  if (!energyProvider || !energySource || !energyResourceType) {
+  if (!energyProvider || !energySource) {
     return {
       success: false,
-      message: "Selected energy provider, source, or resource type is invalid.",
+      message: "Selected energy provider or source is invalid.",
     };
   }
 
@@ -1092,10 +1067,6 @@ export async function SetUtilityGenerationDataLabelRelevance(
         inArray(generationRelevance.input_def_id, inputDefIds),
         eq(generationRelevance.energy_provider_id, payload.energyProviderId),
         eq(generationRelevance.energy_source_id, payload.energySourceId),
-        eq(
-          generationRelevance.energy_resource_type_id,
-          payload.energyResourceTypeId,
-        ),
       ),
     )
     .orderBy(desc(generationRelevance.updatedAt));
@@ -1144,7 +1115,6 @@ export async function SetUtilityGenerationDataLabelRelevance(
           input_def_id: inputDefId,
           energy_provider_id: payload.energyProviderId,
           energy_source_id: payload.energySourceId,
-          energy_resource_type_id: payload.energyResourceTypeId,
           is_relevant: false,
           is_deleted: false,
           updatedAt: new Date(),

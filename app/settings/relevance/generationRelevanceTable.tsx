@@ -7,8 +7,6 @@ import { toast } from "sonner";
 type RelevanceCell = {
   energyProviderId: number;
   energyProvider: string;
-  energyResourceTypeId: number;
-  energyResourceType: string;
   isRelevant: boolean;
   relatedInputCount: number;
 };
@@ -26,7 +24,6 @@ type SetRelevancePayload = {
   serviceAreaId: number;
   energySourceId: number;
   energyProviderId: number;
-  energyResourceTypeId: number;
   isRelevant: boolean;
 };
 
@@ -90,17 +87,13 @@ export default function GenerationRelevanceTable(props: {
   const onCellToggle = (
     energySourceId: number,
     energyProviderId: number,
-    energyResourceTypeId: number,
     checked: boolean,
   ) => {
     const previousRows = rows;
 
     setRows((prev) =>
       prev.map((row) => {
-        if (
-          row.energySourceId !== energySourceId ||
-          row.energyResourceTypeId !== energyResourceTypeId
-        ) {
+        if (row.energySourceId !== energySourceId) {
           return row;
         }
 
@@ -124,7 +117,6 @@ export default function GenerationRelevanceTable(props: {
         serviceAreaId: props.serviceAreaId,
         energySourceId,
         energyProviderId,
-        energyResourceTypeId,
         isRelevant: checked,
       });
 
@@ -187,7 +179,6 @@ export default function GenerationRelevanceTable(props: {
                                   onCellToggle(
                                     row.energySourceId,
                                     provider.energyProviderId,
-                                    row.energyResourceTypeId,
                                     next === true,
                                   )
                                 }
