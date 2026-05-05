@@ -10,6 +10,7 @@ import {
   uploadDataEntryTemplateAction,
   type DataEntryTemplateUploadRowPayload,
 } from "@/app/data-entry/enter-data/service";
+import { DataEntryFilterContext } from "@/app/data-entry/constants";
 import { DataEntryPageViewModel } from "@/app/data-entry/types";
 import { Button } from "@/components/ui/button";
 
@@ -30,6 +31,8 @@ type TemplateRow = {
 
 interface EnterDataTemplatePanelProps {
   inputs: DataEntryPageViewModel["inputs"];
+  context: DataEntryFilterContext;
+  options: DataEntryPageViewModel["options"];
 }
 
 const SHEET_NAME = "Enter Data";
@@ -38,6 +41,109 @@ const normalizeHeader = (value: unknown) =>
   String(value ?? "")
     .trim()
     .toLowerCase();
+
+const toFilenameSegment = (
+  value: string | null | undefined,
+  fallback: string,
+) => {
+  const normalized = String(value ?? "")
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_+|_+$/g, "");
+
+  return normalized.length > 0 ? normalized : fallback;
+};
+
+const resolveOptionName = (
+  options: Array<{ id: number; name: string }>,
+  id: number | null,
+): string | null => {
+  if (id == null) {
+    return null;
+  }
+
+  return options.find((option) => option.id === id)?.name ?? null;
+};
+
+type WorksheetCellStyle = {
+  protection?: {
+    locked?: boolean;
+  };
+};
+
+type WorksheetCell = {
+  t?: string;
+  v?: unknown;
+  s?: WorksheetCellStyle;
+};
+
+type WorksheetLike = {
+  "!ref"?: string;
+  "!protect"?: Record<string, boolean>;
+  [address: string]: unknown;
+};
+
+const lockTemplateWorksheet = async (
+  worksheet: WorksheetLike,
+  editableHeaders: string[],
+) => {
+  const ref = worksheet["!ref"];
+  if (typeof ref !== "string" || ref.length === 0) {
+    return;
+  }
+
+  const XLSX = await import("xlsx");
+  const range = XLSX.utils.decode_range(ref);
+  const editableColumns = new Set<number>();
+
+  for (let col = range.s.c; col <= range.e.c; col += 1) {
+    const address = XLSX.utils.encode_cell({ r: range.s.r, c: col });
+    const headerCell = worksheet[address] as WorksheetCell | undefined;
+    if (editableHeaders.includes(normalizeHeader(headerCell?.v))) {
+      editableColumns.add(col);
+    }
+  }
+
+  for (let row = range.s.r + 1; row <= range.e.r; row += 1) {
+    for (const col of editableColumns) {
+      const address = XLSX.utils.encode_cell({ r: row, c: col });
+      const existingCell = worksheet[address];
+      const cell: WorksheetCell =
+        existingCell && typeof existingCell === "object"
+          ? (existingCell as WorksheetCell)
+          : { t: "s", v: "" };
+
+      cell.s = {
+        ...(cell.s ?? {}),
+        protection: {
+          ...(cell.s?.protection ?? {}),
+          locked: false,
+        },
+      };
+
+      worksheet[address] = cell;
+    }
+  }
+
+  worksheet["!protect"] = {
+    selectLockedCells: false,
+    selectUnlockedCells: true,
+    formatCells: false,
+    formatColumns: false,
+    formatRows: false,
+    insertColumns: false,
+    insertRows: false,
+    insertHyperlinks: false,
+    deleteColumns: false,
+    deleteRows: false,
+    sort: false,
+    autoFilter: false,
+    pivotTables: false,
+    objects: false,
+    scenarios: false,
+  };
+};
 
 const toNullableNumber = (value: unknown): number | null => {
   if (value == null) {
@@ -130,6 +236,8 @@ const flattenTemplateRows = (
 
 export default function EnterDataTemplatePanel({
   inputs,
+  context,
+  options,
 }: EnterDataTemplatePanelProps) {
   const router = useRouter();
   const [isUploading, startUploadTransition] = useTransition();
@@ -137,6 +245,29 @@ export default function EnterDataTemplatePanel({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const templateRows = useMemo(() => flattenTemplateRows(inputs), [inputs]);
+  const downloadFileName = useMemo(() => {
+    const inputCategoryName = resolveOptionName(
+      options.inputCategories,
+      context.inputCategoryId,
+    );
+    const inputSubcategoryName = resolveOptionName(
+      options.inputSubcategories,
+      context.inputSubcategoryId,
+    );
+    const reportPeriodName = resolveOptionName(
+      options.reportPeriods,
+      context.reportPeriodId,
+    );
+
+    return `prism_${toFilenameSegment(inputCategoryName, "all_inputcategory")}_${toFilenameSegment(inputSubcategoryName, "all_inputsubcategory")}_${toFilenameSegment(reportPeriodName, "all_reportperiod")}.xlsx`;
+  }, [
+    context.inputCategoryId,
+    context.inputSubcategoryId,
+    context.reportPeriodId,
+    options.inputCategories,
+    options.inputSubcategories,
+    options.reportPeriods,
+  ]);
 
   const handleDownload = async () => {
     if (templateRows.length === 0) {
@@ -147,7 +278,12 @@ export default function EnterDataTemplatePanel({
     try {
       const XLSX = await import("xlsx");
       const workbook = XLSX.utils.book_new();
-      const worksheet = XLSX.utils.json_to_sheet(templateRows);
+      const worksheet = XLSX.utils.json_to_sheet(templateRows) as WorksheetLike;
+
+      await lockTemplateWorksheet(worksheet, [
+        "value",
+        "is_data_not_available",
+      ]);
 
       XLSX.utils.book_append_sheet(workbook, worksheet, SHEET_NAME);
 
@@ -163,7 +299,7 @@ export default function EnterDataTemplatePanel({
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = "data-entry-template.xlsx";
+      link.download = downloadFileName;
       document.body.appendChild(link);
       link.click();
       link.remove();

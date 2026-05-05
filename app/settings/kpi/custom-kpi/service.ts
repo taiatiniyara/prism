@@ -29,6 +29,7 @@ const normalize = (value: string): string =>
 
 export const buildCustomKpiDefinitionFingerprint = (input: {
   title: string;
+  isPrivate?: boolean;
   formulaExpression: string;
   unitId: number;
   proposedUnits?: CustomKpiProposedUnit[];
@@ -37,6 +38,7 @@ export const buildCustomKpiDefinitionFingerprint = (input: {
 }): string =>
   [
     normalize(input.title),
+    input.isPrivate ? "1" : "0",
     normalize(input.formulaExpression),
     String(input.unitId),
     JSON.stringify(input.proposedUnits ?? []),
@@ -49,6 +51,7 @@ export const buildCustomKpiDefinitionFingerprint = (input: {
 export const isDuplicatePendingCustomKpiSubmission = async (input: {
   submitterUserId: string;
   title: string;
+  isPrivate?: boolean;
   formulaExpression: string;
   unitId: number;
   proposedUnits?: CustomKpiProposedUnit[];
@@ -117,6 +120,7 @@ export const recordCustomKpiLifecycleEvent = async (input: {
 export type CreateCustomKpiRequestInput = {
   title: string;
   description: string | null;
+  isPrivate: boolean;
   formulaExpression: string;
   unitId: number;
   proposedUnits: CustomKpiProposedUnit[];
@@ -148,6 +152,7 @@ export type CustomKpiRequestListItem = Pick<
   | "id"
   | "title"
   | "description"
+  | "is_private"
   | "formula_expression"
   | "unit_id"
   | "proposed_units"
@@ -411,6 +416,7 @@ export const createCustomKpiRequest = async (
   const isDuplicate = await isDuplicatePendingCustomKpiSubmission({
     submitterUserId,
     title: input.title,
+    isPrivate: input.isPrivate,
     formulaExpression: input.formulaExpression,
     unitId: input.unitId,
     proposedUnits: input.proposedUnits,
@@ -426,6 +432,7 @@ export const createCustomKpiRequest = async (
 
   const definitionFingerprint = buildCustomKpiDefinitionFingerprint({
     title: input.title,
+    isPrivate: input.isPrivate,
     formulaExpression: input.formulaExpression,
     unitId: input.unitId,
     proposedUnits: input.proposedUnits,
@@ -440,6 +447,7 @@ export const createCustomKpiRequest = async (
       title: input.title,
       description: input.description,
       formula_expression: input.formulaExpression,
+      is_private: input.isPrivate,
       unit_id: input.unitId,
       proposed_units: input.proposedUnits,
       proposed_inputs: input.proposedInputs,
@@ -452,6 +460,7 @@ export const createCustomKpiRequest = async (
       id: customKpiRequests.id,
       title: customKpiRequests.title,
       description: customKpiRequests.description,
+      is_private: customKpiRequests.is_private,
       formula_expression: customKpiRequests.formula_expression,
       unit_id: customKpiRequests.unit_id,
       proposed_units: customKpiRequests.proposed_units,
@@ -545,6 +554,7 @@ export const listMyCustomKpiRequests = async (
       id: customKpiRequests.id,
       title: customKpiRequests.title,
       description: customKpiRequests.description,
+      is_private: customKpiRequests.is_private,
       formula_expression: customKpiRequests.formula_expression,
       unit_id: customKpiRequests.unit_id,
       proposed_units: customKpiRequests.proposed_units,
@@ -642,6 +652,7 @@ export type CustomKpiReviewQueueItem = Pick<
   | "submitter_user_id"
   | "title"
   | "description"
+  | "is_private"
   | "formula_expression"
   | "unit_id"
   | "proposed_units"
@@ -674,6 +685,7 @@ export const listCustomKpiReviewQueue = async (): Promise<
       submitter_user_id: customKpiRequests.submitter_user_id,
       title: customKpiRequests.title,
       description: customKpiRequests.description,
+      is_private: customKpiRequests.is_private,
       formula_expression: customKpiRequests.formula_expression,
       unit_id: customKpiRequests.unit_id,
       proposed_units: customKpiRequests.proposed_units,

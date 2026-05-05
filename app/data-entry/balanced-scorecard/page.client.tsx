@@ -101,6 +101,90 @@ type TemplateRow = {
   target_value: string;
 };
 
+type WorksheetCellStyle = {
+  protection?: {
+    locked?: boolean;
+  };
+};
+
+type WorksheetCell = {
+  t?: string;
+  v?: unknown;
+  s?: WorksheetCellStyle;
+};
+
+type WorksheetLike = {
+  "!ref"?: string;
+  "!protect"?: Record<string, boolean>;
+  [address: string]: unknown;
+};
+
+const normalizeTemplateHeader = (value: unknown) =>
+  String(value ?? "")
+    .trim()
+    .toLowerCase();
+
+const lockTemplateWorksheet = async (
+  worksheet: WorksheetLike,
+  editableHeaders: string[],
+) => {
+  const ref = worksheet["!ref"];
+  if (typeof ref !== "string" || ref.length === 0) {
+    return;
+  }
+
+  const XLSX = await import("xlsx");
+  const range = XLSX.utils.decode_range(ref);
+  const editableColumns = new Set<number>();
+
+  for (let col = range.s.c; col <= range.e.c; col += 1) {
+    const address = XLSX.utils.encode_cell({ r: range.s.r, c: col });
+    const headerCell = worksheet[address] as WorksheetCell | undefined;
+    if (editableHeaders.includes(normalizeTemplateHeader(headerCell?.v))) {
+      editableColumns.add(col);
+    }
+  }
+
+  for (let row = range.s.r + 1; row <= range.e.r; row += 1) {
+    for (const col of editableColumns) {
+      const address = XLSX.utils.encode_cell({ r: row, c: col });
+      const existingCell = worksheet[address];
+      const cell: WorksheetCell =
+        existingCell && typeof existingCell === "object"
+          ? (existingCell as WorksheetCell)
+          : { t: "s", v: "" };
+
+      cell.s = {
+        ...(cell.s ?? {}),
+        protection: {
+          ...(cell.s?.protection ?? {}),
+          locked: false,
+        },
+      };
+
+      worksheet[address] = cell;
+    }
+  }
+
+  worksheet["!protect"] = {
+    selectLockedCells: false,
+    selectUnlockedCells: true,
+    formatCells: false,
+    formatColumns: false,
+    formatRows: false,
+    insertColumns: false,
+    insertRows: false,
+    insertHyperlinks: false,
+    deleteColumns: false,
+    deleteRows: false,
+    sort: false,
+    autoFilter: false,
+    pivotTables: false,
+    objects: false,
+    scenarios: false,
+  };
+};
+
 type PersistableObjective = ScorecardDraftObjectiveInput;
 
 type PersistableByLevel = {
@@ -239,7 +323,8 @@ export default function ScorecardPageClient({
                   trackingFrequency: kpi.trackingFrequency,
                   pendingCustomKpiRequestId: kpi.pendingCustomKpiRequestId,
                   pendingCustomKpiTitle: kpi.pendingCustomKpiTitle,
-                  pendingCustomKpiStatus: kpi.pendingCustomKpiStatus ?? undefined,
+                  pendingCustomKpiStatus:
+                    kpi.pendingCustomKpiStatus ?? undefined,
                   approvedKpiDefinitionId: kpi.approvedKpiDefinitionId,
                 })),
             }))
@@ -1066,7 +1151,10 @@ export default function ScorecardPageClient({
     try {
       const XLSX = await import("xlsx");
       const workbook = XLSX.utils.book_new();
-      const worksheet = XLSX.utils.json_to_sheet(templateRows);
+      const worksheet = XLSX.utils.json_to_sheet(templateRows) as WorksheetLike;
+
+      await lockTemplateWorksheet(worksheet, ["target_value"]);
+
       XLSX.utils.book_append_sheet(workbook, worksheet, "BSC_Template");
 
       const output = XLSX.write(workbook, {

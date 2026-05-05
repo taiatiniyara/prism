@@ -24,10 +24,16 @@ import {
 } from "@/db/schema/kpi";
 import { managedListItems } from "@/db/schema/managedLists";
 import { reportPeriods } from "@/db/schema/reportPeriods";
-import { and, desc, eq, inArray } from "drizzle-orm";
+import { and, desc, eq, inArray, or } from "drizzle-orm";
+import { getCurrentUser } from "@/lib/user.service";
 
 const MONTHLY_TYPE_PATTERN = /month/i;
 const FY_TYPE_PATTERN = /(financial|fiscal|fy|annual|year)/i;
+
+const isGlobalKpiViewer = (role: string | null): boolean => {
+  const normalizedRole = role?.trim().toUpperCase();
+  return normalizedRole === "DEV" || normalizedRole === "BMO";
+};
 
 type HierarchyAssignment = {
   perspectiveLevel: number;
@@ -200,7 +206,11 @@ const flattenHierarchy = (
     for (const initiative of objective.key_initiatives ?? []) {
       for (const linkedKpi of initiative.kpis ?? []) {
         const kpiId = linkedKpi.kpi_id;
-        if (typeof kpiId !== "number" || !Number.isInteger(kpiId) || kpiId <= 0) {
+        if (
+          typeof kpiId !== "number" ||
+          !Number.isInteger(kpiId) ||
+          kpiId <= 0
+        ) {
           continue;
         }
 
@@ -346,7 +356,17 @@ export const listScorecardInputRows = async (
 export const listScorecardKpiOptions = async (
   context: ScorecardFilterContext,
 ): Promise<ScorecardKpiOption[]> => {
+  const currentUser = await getCurrentUser();
   const predicates = [eq(kpiDefinitions.is_active, true)];
+
+  if (!isGlobalKpiViewer(currentUser.role)) {
+    predicates.push(
+      or(
+        eq(kpiDefinitions.is_private, false),
+        eq(kpiDefinitions.owner_utility_id, reportPeriods.utility_id),
+      ),
+    );
+  }
 
   if (context.kpiCategoryId != null) {
     predicates.push(eq(kpiDefinitions.category_id, context.kpiCategoryId));

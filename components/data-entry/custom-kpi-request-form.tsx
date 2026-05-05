@@ -337,6 +337,7 @@ export function CustomKpiRequestForm(props: {
       formData.get("formulaExpression") ?? "",
     ).trim();
     const description = String(formData.get("description") ?? "").trim();
+    const isPrivate = formData.get("isPrivate") != null;
     const unitIdRaw = String(formData.get("unitId") ?? "").trim();
     const parsedUnitId = Number(unitIdRaw);
 
@@ -392,6 +393,7 @@ export function CustomKpiRequestForm(props: {
           title,
           formulaExpression,
           description,
+          isPrivate,
           unitId: parsedUnitId,
           selectedInputDefinitionIds: form.selectedInputDefinitionIds,
           proposedUnits: form.proposedUnits
@@ -589,19 +591,40 @@ export function CustomKpiRequestForm(props: {
       </div>
 
       {/* Description is optional, so it comes before required fields for better UX. */}
-      <FieldGroup
-        label="Description of Use"
-        htmlFor="custom-kpi-description"
-        containerClassName="space-y-1"
-      >
-        <Textarea
-          placeholder="Enter description"
-          name="description"
-          required
-          id="custom-kpi-description"
-          className="w-full rounded-md border px-3 py-2 text-sm"
-        />
-      </FieldGroup>
+      <div className="grid gap-4 md:grid-cols-[2fr_1fr]">
+        <FieldGroup
+          label="Description of Use"
+          htmlFor="custom-kpi-description"
+          containerClassName="space-y-1"
+        >
+          <Textarea
+            placeholder="Enter description"
+            name="description"
+            required
+            id="custom-kpi-description"
+            className="w-full rounded-md border px-3 py-2 text-sm"
+          />
+        </FieldGroup>
+
+        <FieldGroup
+          label="Private KPI"
+          htmlFor="custom-kpi-is-private"
+          containerClassName="space-y-1"
+        >
+          <label
+            htmlFor="custom-kpi-is-private"
+            className="flex h-21 cursor-pointer items-start gap-2 rounded-md border px-3 py-2 text-sm"
+          >
+            <input
+              id="custom-kpi-is-private"
+              name="isPrivate"
+              type="checkbox"
+              className="mt-0.5 h-4 w-4"
+            />
+            <span>Keep this KPI private until explicitly shared.</span>
+          </label>
+        </FieldGroup>
+      </div>
 
       {/* Input selection and formula builder are the most complex parts of the form, so they come before business context to avoid overwhelming users right away. */}
       <div className="space-y-1">

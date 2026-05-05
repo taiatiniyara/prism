@@ -1,4 +1,5 @@
 import {
+  boolean,
   index,
   integer,
   json,
@@ -60,6 +61,7 @@ export const customKpiRequests = pgTable(
     title: text("title").notNull(),
     description: text("description"),
     formula_expression: text("formula_expression").notNull(),
+    is_private: boolean("is_private").notNull().default(false),
     unit_id: integer("unit_id").references(() => managedListItems.id),
     proposed_units: json("proposed_units")
       .$type<CustomKpiProposedUnit[]>()

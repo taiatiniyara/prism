@@ -224,9 +224,17 @@ const getKpiVisibilityFilter = (user: CurrentUser) => {
     return sql`1 = 0`;
   }
 
-  return or(
+  const sharedVisibility = or(
     eq(kpiDefinitions.owner_utility_id, user.org_id),
     sql`coalesce(${kpiDefinitions.utility_ids}::jsonb, '[]'::jsonb) @> ${JSON.stringify([user.org_id])}::jsonb`,
+  );
+
+  return or(
+    and(
+      eq(kpiDefinitions.is_private, true),
+      eq(kpiDefinitions.owner_utility_id, user.org_id),
+    ),
+    and(eq(kpiDefinitions.is_private, false), sharedVisibility),
   );
 };
 
@@ -687,11 +695,19 @@ export async function UpdateKpiDefinition(
 }
 
 export async function GetKpiFormulaBuilderData(): Promise<KpiFormulaBuilderData> {
+  const currentUser = await getCurrentUser();
+  const visibilityFilter = getKpiVisibilityFilter(currentUser);
   const managedListsItems = await db.select().from(managedListItems);
   const managedListNamesById = buildManagedListNameMap(managedListsItems);
-  const kpis = (
-    await db.select().from(kpiDefinitions).orderBy(asc(kpiDefinitions.name))
-  ).map((i) => {
+  const kpiRows = visibilityFilter
+    ? await db
+        .select()
+        .from(kpiDefinitions)
+        .where(visibilityFilter)
+        .orderBy(asc(kpiDefinitions.name))
+    : await db.select().from(kpiDefinitions).orderBy(asc(kpiDefinitions.name));
+
+  const kpis = kpiRows.map((i) => {
     const kpi: KpiDefinition = {
       ...i,
       agg_level: resolveManagedListName(

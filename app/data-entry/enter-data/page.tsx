@@ -29,7 +29,11 @@ export default async function EnterDataPage() {
             />
             <ProgressBreakdown progress={model.progress} />
 
-            <EnterDataTemplatePanel inputs={model.inputs} />
+            <EnterDataTemplatePanel
+              inputs={model.inputs}
+              context={model.context}
+              options={model.options}
+            />
           </div>
         </div>
         {model.inputs.mode === "grouped-by-generator" ? (

@@ -1,6 +1,7 @@
 export type CreateCustomKpiRequestInput = {
   title: string;
   description: string | null;
+  isPrivate: boolean;
   formulaExpression: string;
   unitId: number;
   proposedUnits: Array<{ name: string; description: string | null }>;
@@ -50,6 +51,28 @@ const optionalString = (value: unknown, max = 2000): string | null => {
   }
 
   return trimmed.slice(0, max);
+};
+
+const parseBoolean = (value: unknown): boolean => {
+  if (typeof value === "boolean") {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const normalized = value.trim().toLowerCase();
+    if (["true", "1", "yes", "on"].includes(normalized)) {
+      return true;
+    }
+    if (["false", "0", "no", "off", ""].includes(normalized)) {
+      return false;
+    }
+  }
+
+  if (typeof value === "number") {
+    return value !== 0;
+  }
+
+  return false;
 };
 
 const parseSelectedInputDefinitionIds = (value: unknown): number[] => {
@@ -174,6 +197,7 @@ export const parseCreateCustomKpiRequestPayload = (
   return {
     title: requireString(source.title, "title", 160),
     description,
+    isPrivate: parseBoolean(source.isPrivate),
     formulaExpression: requireString(
       source.formulaExpression,
       "formulaExpression",

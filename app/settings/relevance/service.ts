@@ -45,6 +45,11 @@ type UtilityScopedRelevanceFilter = {
   serviceAreaId?: number | null;
 };
 
+const isGlobalKpiViewer = (role: string | null): boolean => {
+  const normalizedRole = role?.trim().toUpperCase();
+  return normalizedRole === "DEV" || normalizedRole === "BMO";
+};
+
 export interface UtilityTariffRelevanceCell {
   customerTypeId: number;
   customerType: string;
@@ -1166,7 +1171,9 @@ export async function GetCustomKpiRelevance(): Promise<
     throw new Error("User not authenticated");
   }
 
-  if (user.org_id == null) {
+  const isGlobalViewer = isGlobalKpiViewer(user.role);
+
+  if (user.org_id == null && !isGlobalViewer) {
     return [];
   }
 
@@ -1186,6 +1193,14 @@ export async function GetCustomKpiRelevance(): Promise<
       and(
         eq(kpiDefinitions.type, "custom"),
         eq(kpiDefinitions.is_active, true),
+        ...(isGlobalViewer
+          ? []
+          : [
+              or(
+                eq(kpiDefinitions.is_private, false),
+                eq(kpiDefinitions.owner_utility_id, user.org_id!),
+              ),
+            ]),
       ),
     )
     .orderBy(kpiDefinitions.name);

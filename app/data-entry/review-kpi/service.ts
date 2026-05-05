@@ -26,7 +26,7 @@ import { triggerKpiWorkerAsync } from "@/app/data-entry/kpi-worker";
 import { publishSyncEvent } from "@/app/data-entry/review-kpi/sync-store";
 import { formatReportPeriodDisplay } from "@/lib/formatters";
 import { CurrentUser, getCurrentUser } from "@/lib/user.service";
-import { and, asc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
 import {
   CustomKpiDecisionType,
   CustomKpiRequestStatus,
@@ -47,6 +47,26 @@ const CUSTOM_KPI_REVIEWER_ROLES = new Set(["DEV"]);
 const hasRoleAccess = (allowedRoles: Set<string>, role: string | null) => {
   const normalizedRole = role?.trim().toUpperCase();
   return normalizedRole != null && allowedRoles.has(normalizedRole);
+};
+
+const isGlobalRole = (role: string | null): boolean => {
+  const normalizedRole = role?.trim().toUpperCase();
+  return normalizedRole === "DEV" || normalizedRole === "BMO";
+};
+
+const getKpiVisibilityFilterForUser = (user: CurrentUser) => {
+  if (isGlobalRole(user.role)) {
+    return null;
+  }
+
+  if (user.org_id == null) {
+    return sql`1 = 0`;
+  }
+
+  return or(
+    eq(kpiDefinitions.is_private, false),
+    eq(kpiDefinitions.owner_utility_id, user.org_id),
+  );
 };
 
 export const assertReviewKpiReadAccess = (user: CurrentUser): void => {
@@ -155,6 +175,7 @@ export const getReviewKpiFilterOptions = async (
   _context: ReviewKpiFilterContext,
 ): Promise<ReviewKpiFilterOptions> => {
   void _context;
+  const kpiVisibilityFilter = getKpiVisibilityFilterForUser(user);
   const reportPeriodWhere = [];
   const reportTypeWhere = [eq(managedListItems.is_active, true)];
   const serviceAreaWhere = [eq(serviceAreas.is_active, true)];
@@ -207,6 +228,7 @@ export const getReviewKpiFilterOptions = async (
           and(
             eq(kpiDefinitions.is_active, true),
             sql`${kpiDefinitions.category_id} is not null`,
+            ...(kpiVisibilityFilter ? [kpiVisibilityFilter] : []),
           ),
         )
         .groupBy(kpiDefinitions.category_id),
@@ -215,6 +237,7 @@ export const getReviewKpiFilterOptions = async (
   const kpiSubcategoryConditions = [
     eq(kpiDefinitions.is_active, true),
     sql`${kpiDefinitions.subcategory_id} is not null`,
+    ...(kpiVisibilityFilter ? [kpiVisibilityFilter] : []),
   ];
 
   const subcategoryRows = await db
@@ -234,6 +257,7 @@ export const getReviewKpiFilterOptions = async (
         eq(kpiDefinitions.is_active, true),
         sql`${kpiDefinitions.subcategory_id} is not null`,
         sql`${kpiDefinitions.category_id} is not null`,
+        ...(kpiVisibilityFilter ? [kpiVisibilityFilter] : []),
       ),
     )
     .groupBy(kpiDefinitions.subcategory_id, kpiDefinitions.category_id);
@@ -372,8 +396,15 @@ export const bootstrapReviewKpiContextAndOptions = async () => {
   return { context: sanitizedContext, options };
 };
 
-const buildKpiWhereConditions = (context: ReviewKpiFilterContext) => {
-  const conditions = [eq(kpiDefinitions.is_active, true)];
+const buildKpiWhereConditions = (
+  context: ReviewKpiFilterContext,
+  user: CurrentUser,
+) => {
+  const visibilityFilter = getKpiVisibilityFilterForUser(user);
+  const conditions = [
+    eq(kpiDefinitions.is_active, true),
+    ...(visibilityFilter ? [visibilityFilter] : []),
+  ];
 
   if (context.kpiCategoryId != null) {
     conditions.push(eq(kpiDefinitions.category_id, context.kpiCategoryId));
@@ -433,7 +464,10 @@ export const listReviewKpiRows = async (
     return [];
   }
 
-  const kpiWhereConditions = buildKpiWhereConditions(context);
+  const user = await getCurrentUser();
+  assertReviewKpiReadAccess(user);
+
+  const kpiWhereConditions = buildKpiWhereConditions(context, user);
 
   const kpiDefinitionRows = await db
     .select({
@@ -1321,6 +1355,7 @@ const getCustomKpiDecisionRequestOrThrow = async (requestId: string) => {
       submitterUserId: customKpiRequests.submitter_user_id,
       title: customKpiRequests.title,
       description: customKpiRequests.description,
+      isPrivate: customKpiRequests.is_private,
       formulaExpression: customKpiRequests.formula_expression,
       unitId: customKpiRequests.unit_id,
       proposedUnits: customKpiRequests.proposed_units,
@@ -1463,6 +1498,7 @@ export const applyCustomKpiReviewDecision = async (
         .set({
           formula: request.formulaExpression,
           formula_inputs: formulaInputs.length > 0 ? formulaInputs : null,
+          is_private: request.isPrivate,
           ...(request.unitId != null ? { unit_id: request.unitId } : {}),
           category_id: taxonomy.categoryId,
           subcategory_id: taxonomy.subcategoryId,
@@ -1493,6 +1529,7 @@ export const applyCustomKpiReviewDecision = async (
           ...(request.unitId != null ? { unit_id: request.unitId } : {}),
           category_id: taxonomy.categoryId,
           subcategory_id: taxonomy.subcategoryId,
+          is_private: request.isPrivate,
           type: "custom",
           owner_user_id: request.submitterUserId,
           owner_utility_id: submitter.organisationId,

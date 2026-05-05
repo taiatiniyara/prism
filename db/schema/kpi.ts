@@ -76,11 +76,11 @@ export const kpiDefinitions = pgTable("kpi_definitions", {
     .default("benchmarking")
     .notNull()
     .$type<"benchmarking" | "custom">(),
-
   limits: json("limits").$type<Limit[]>(),
   targets: json("targets").$type<KpiTarget[]>(),
   is_kpi_input: boolean("is_kpi_input").default(true).notNull(),
   owner_user_id: text("owner_user_id").references(() => user.id),
+  is_private: boolean("is_private").default(false).notNull(),
   updated_at: timestamp("updated_at")
     .defaultNow()
     .$onUpdate(() => /* @__PURE__ */ new Date())
