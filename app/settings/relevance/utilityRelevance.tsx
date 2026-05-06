@@ -122,6 +122,10 @@ export default async function UtilityRelevanceSection(props: {
                 filters.
               </p>
             )}
+
+            <span className="text-xs text-muted-foreground">
+              * Transmission refers to any lines with voltages 34kV and above.
+            </span>
           </div>
         </TabsContent>
         <TabsContent value="generation">

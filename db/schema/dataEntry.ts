@@ -272,6 +272,37 @@ export const generationRelevance = pgTable(
   ],
 );
 
+export const generationToggleRelevance = pgTable(
+  "generation_toggle_relevance",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    report_period_id: integer("report_period_id")
+      .notNull()
+      .references(() => reportPeriods.id),
+    service_area_id: integer("service_area_id")
+      .notNull()
+      .references(() => serviceAreas.id),
+    energy_provider_id: integer("energy_provider_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    energy_source_id: integer("energy_source_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    is_relevant: boolean("is_relevant").default(true).notNull(),
+    is_deleted: boolean("is_deleted").default(false).notNull(),
+    updatedAt: timestamp("updated_at").notNull().defaultNow(),
+    updatedById: text("updated_by_id").references(() => user.id),
+  },
+  (table) => [
+    index("uniq_generation_toggle_relevance").on(
+      table.report_period_id,
+      table.service_area_id,
+      table.energy_provider_id,
+      table.energy_source_id,
+    ),
+  ],
+);
+
 export type DataEntry = typeof dataEntries.$inferSelect & {
   report_period?: string | null;
   energy_resource?: string | null;
@@ -287,6 +318,10 @@ export type DataEntry = typeof dataEntries.$inferSelect & {
 export type NewDataEntry = typeof dataEntries.$inferInsert;
 export type GenerationRelevance = typeof generationRelevance.$inferSelect;
 export type NewGenerationRelevance = typeof generationRelevance.$inferInsert;
+export type GenerationToggleRelevance =
+  typeof generationToggleRelevance.$inferSelect;
+export type NewGenerationToggleRelevance =
+  typeof generationToggleRelevance.$inferInsert;
 
 export const inputDlDefMappings = pgTable(
   "input_dl_def_mappings",

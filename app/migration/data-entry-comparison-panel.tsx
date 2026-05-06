@@ -68,10 +68,10 @@ export default function DataEntryComparisonPanel({ options }: Props) {
 
       <CardContent className="space-y-4">
         <div className="grid gap-3 md:grid-cols-5">
-          <label className="space-y-1 text-sm">
-            <span className="font-medium">Utility</span>
+          <label className="space-y-1 text-xs">
+            <span className="text-[11px] font-medium">Utility</span>
             <select
-              className="w-full rounded-md border border-slate-300 bg-white px-2 py-2"
+              className="h-8 w-full rounded-md border border-slate-300 bg-white px-2 text-xs"
               value={utilityId}
               disabled={isPending}
               onChange={(event) => {
@@ -91,10 +91,10 @@ export default function DataEntryComparisonPanel({ options }: Props) {
             </select>
           </label>
 
-          <label className="space-y-1 text-sm">
-            <span className="font-medium">Report Period</span>
+          <label className="space-y-1 text-xs">
+            <span className="text-[11px] font-medium">Report Period</span>
             <select
-              className="w-full rounded-md border border-slate-300 bg-white px-2 py-2"
+              className="h-8 w-full rounded-md border border-slate-300 bg-white px-2 text-xs"
               value={reportPeriodId}
               disabled={isPending}
               onChange={(event) => setReportPeriodId(event.target.value)}
@@ -111,10 +111,10 @@ export default function DataEntryComparisonPanel({ options }: Props) {
             </select>
           </label>
 
-          <label className="space-y-1 text-sm">
-            <span className="font-medium">Input Category</span>
+          <label className="space-y-1 text-xs">
+            <span className="text-[11px] font-medium">Input Category</span>
             <select
-              className="w-full rounded-md border border-slate-300 bg-white px-2 py-2"
+              className="h-8 w-full rounded-md border border-slate-300 bg-white px-2 text-xs"
               value={categoryId}
               disabled={isPending}
               onChange={(event) => setCategoryId(event.target.value)}
@@ -131,10 +131,10 @@ export default function DataEntryComparisonPanel({ options }: Props) {
             </select>
           </label>
 
-          <label className="space-y-1 text-sm">
-            <span className="font-medium">Input Subcategory</span>
+          <label className="space-y-1 text-xs">
+            <span className="text-[11px] font-medium">Input Subcategory</span>
             <select
-              className="w-full rounded-md border border-slate-300 bg-white px-2 py-2"
+              className="h-8 w-full rounded-md border border-slate-300 bg-white px-2 text-xs"
               value={subcategoryId}
               disabled={isPending}
               onChange={(event) => setSubcategoryId(event.target.value)}

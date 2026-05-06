@@ -1,7 +1,7 @@
 "use client";
 
 import { Checkbox } from "@/components/ui/checkbox";
-import { useMemo, useState, useTransition } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 
 type RelevanceLabel = {
@@ -58,8 +58,13 @@ export default function TariffRelevanceTable(props: {
     payload: SetRelevancePayload,
   ) => Promise<{ success: boolean; message: string }>;
 }) {
-  const [isSaving, startTransition] = useTransition();
   const [rows, setRows] = useState<RelevanceRow[]>(props.rows);
+  const [pendingLabelKeys, setPendingLabelKeys] = useState<Set<string>>(
+    new Set(),
+  );
+  const [pendingBlockKeys, setPendingBlockKeys] = useState<Set<string>>(
+    new Set(),
+  );
 
   const customerTypes = useMemo(
     () => props.customerTypes,
@@ -106,13 +111,48 @@ export default function TariffRelevanceTable(props: {
     );
   };
 
+  const setBlockValue = (
+    target: {
+      paymentModeId: number;
+      customerTypeId: number;
+    },
+    nextValue: boolean,
+  ) => {
+    setRows((prev) =>
+      prev.map((row) => {
+        if (row.paymentModeId !== target.paymentModeId) {
+          return row;
+        }
+
+        return {
+          ...row,
+          cells: row.cells.map((cell) => {
+            if (cell.customerTypeId !== target.customerTypeId) {
+              return cell;
+            }
+
+            const nextCell = {
+              ...cell,
+              dataLabels: cell.dataLabels.map((label) => ({
+                ...label,
+                isRelevant: nextValue,
+              })),
+            };
+
+            return summarizeCell(nextCell);
+          }),
+        };
+      }),
+    );
+  };
+
   const onCheckedChange = (
     paymentModeId: number,
     customerTypeId: number,
     inputDefId: number,
     checked: boolean,
   ) => {
-    const previousRows = rows;
+    const labelKey = `${paymentModeId}:${customerTypeId}:${inputDefId}`;
 
     setLabelValue(
       {
@@ -123,21 +163,47 @@ export default function TariffRelevanceTable(props: {
       checked,
     );
 
-    startTransition(async () => {
-      const result = await props.onToggleRelevance({
+    setPendingLabelKeys((prev) => {
+      const next = new Set(prev);
+      next.add(labelKey);
+      return next;
+    });
+
+    const loadingToastId = toast.loading("Updating relevance...");
+
+    void props
+      .onToggleRelevance({
         reportPeriodId: props.reportPeriodId,
         serviceAreaId: props.serviceAreaId,
         paymentModeId,
         customerTypeId,
         inputDefId,
         isRelevant: checked,
-      });
+      })
+      .then((result) => {
+        if (!result.success) {
+          setLabelValue(
+            {
+              paymentModeId,
+              customerTypeId,
+              inputDefId,
+            },
+            !checked,
+          );
+          toast.error(result.message);
+          return;
+        }
 
-      if (!result.success) {
-        setRows(previousRows);
-        toast.error(result.message);
-      }
-    });
+        toast.success(result.message);
+      })
+      .finally(() => {
+        toast.dismiss(loadingToastId);
+        setPendingLabelKeys((prev) => {
+          const next = new Set(prev);
+          next.delete(labelKey);
+          return next;
+        });
+      });
   };
 
   const onBlockCheckedChange = (
@@ -146,56 +212,87 @@ export default function TariffRelevanceTable(props: {
     checked: boolean,
     labels: RelevanceLabel[],
   ) => {
-    const previousRows = rows;
-
-    setRows((prev) =>
-      prev.map((row) => {
-        if (row.paymentModeId !== paymentModeId) {
-          return row;
-        }
-
-        return {
-          ...row,
-          cells: row.cells.map((cell) => {
-            if (cell.customerTypeId !== customerTypeId) {
-              return cell;
-            }
-
-            const nextCell = {
-              ...cell,
-              dataLabels: cell.dataLabels.map((label) => ({
-                ...label,
-                isRelevant: checked,
-              })),
-            };
-
-            return summarizeCell(nextCell);
-          }),
-        };
-      }),
+    const blockKey = `${paymentModeId}:${customerTypeId}`;
+    const previousByInputDefId = new Map(
+      labels.map((label) => [label.inputDefId, label.isRelevant]),
     );
 
-    startTransition(async () => {
-      const results = await Promise.all(
-        labels.map((label) =>
-          props.onToggleRelevance({
-            reportPeriodId: props.reportPeriodId,
-            serviceAreaId: props.serviceAreaId,
-            paymentModeId,
-            customerTypeId,
-            inputDefId: label.inputDefId,
-            isRelevant: checked,
-          }),
-        ),
-      );
+    setBlockValue(
+      {
+        paymentModeId,
+        customerTypeId,
+      },
+      checked,
+    );
 
-      const failedResult = results.find((result) => !result.success);
-
-      if (failedResult) {
-        setRows(previousRows);
-        toast.error(failedResult.message);
-      }
+    setPendingBlockKeys((prev) => {
+      const next = new Set(prev);
+      next.add(blockKey);
+      return next;
     });
+
+    const loadingToastId = toast.loading("Updating relevance...");
+
+    void Promise.all(
+      labels.map((label) =>
+        props.onToggleRelevance({
+          reportPeriodId: props.reportPeriodId,
+          serviceAreaId: props.serviceAreaId,
+          paymentModeId,
+          customerTypeId,
+          inputDefId: label.inputDefId,
+          isRelevant: checked,
+        }),
+      ),
+    )
+      .then((results) => {
+        const failedResult = results.find((result) => !result.success);
+
+        if (failedResult) {
+          setRows((prev) =>
+            prev.map((row) => {
+              if (row.paymentModeId !== paymentModeId) {
+                return row;
+              }
+
+              return {
+                ...row,
+                cells: row.cells.map((cell) => {
+                  if (cell.customerTypeId !== customerTypeId) {
+                    return cell;
+                  }
+
+                  const revertedCell = {
+                    ...cell,
+                    dataLabels: cell.dataLabels.map((label) => ({
+                      ...label,
+                      isRelevant:
+                        previousByInputDefId.get(label.inputDefId) ??
+                        label.isRelevant,
+                    })),
+                  };
+
+                  return summarizeCell(revertedCell);
+                }),
+              };
+            }),
+          );
+          toast.error(failedResult.message);
+          return;
+        }
+
+        if (results.length > 0) {
+          toast.success("Tariff relevance updated.");
+        }
+      })
+      .finally(() => {
+        toast.dismiss(loadingToastId);
+        setPendingBlockKeys((prev) => {
+          const next = new Set(prev);
+          next.delete(blockKey);
+          return next;
+        });
+      });
   };
 
   return (
@@ -222,61 +319,68 @@ export default function TariffRelevanceTable(props: {
               <td className="sticky left-0 z-20 border bg-background px-5 py-4 text-sm font-semibold align-top">
                 {row.paymentMode}
               </td>
-              {row.cells.map((cell) => (
-                <td
-                  key={`${row.paymentModeId}-${cell.customerTypeId}`}
-                  className="border px-5 py-4 align-top"
-                >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between gap-4">
-                      <label className="flex items-center gap-2 text-sm font-medium">
-                        <Checkbox
-                          checked={cell.isRelevant}
-                          disabled={isSaving || cell.totalCount === 0}
-                          onCheckedChange={(next) =>
-                            onBlockCheckedChange(
-                              row.paymentModeId,
-                              cell.customerTypeId,
-                              next === true,
-                              cell.dataLabels,
-                            )
-                          }
-                        />
-                        <span>Entire block</span>
-                      </label>
-                      <span className="text-sm font-medium">
-                        {cell.relevantCount}/{cell.totalCount} relevant
-                      </span>
+              {row.cells.map((cell) => {
+                const blockKey = `${row.paymentModeId}:${cell.customerTypeId}`;
+                const isBlockPending = pendingBlockKeys.has(blockKey);
+
+                return (
+                  <td
+                    key={`${row.paymentModeId}-${cell.customerTypeId}`}
+                    className="border px-5 py-4 align-top"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between gap-4">
+                        <label className="flex items-center gap-2 text-sm font-medium">
+                          <Checkbox
+                            checked={cell.isRelevant}
+                            disabled={isBlockPending || cell.totalCount === 0}
+                            onCheckedChange={(next) =>
+                              onBlockCheckedChange(
+                                row.paymentModeId,
+                                cell.customerTypeId,
+                                next === true,
+                                cell.dataLabels,
+                              )
+                            }
+                          />
+                          <span>Entire block</span>
+                        </label>
+                        <span className="text-sm font-medium">
+                          {cell.relevantCount}/{cell.totalCount} relevant
+                        </span>
+                      </div>
+                      <ul className="space-y-2 text-sm">
+                        {cell.dataLabels.map((label) => (
+                          <li
+                            key={`${cell.customerTypeId}-${label.inputDefId}`}
+                            className="flex items-center justify-between gap-4 leading-6"
+                          >
+                            <label className="flex items-center gap-3 text-muted-foreground">
+                              <Checkbox
+                                checked={label.isRelevant}
+                                disabled={pendingLabelKeys.has(
+                                  `${row.paymentModeId}:${cell.customerTypeId}:${label.inputDefId}`,
+                                )}
+                                onCheckedChange={(next) =>
+                                  onCheckedChange(
+                                    row.paymentModeId,
+                                    cell.customerTypeId,
+                                    label.inputDefId,
+                                    next === true,
+                                  )
+                                }
+                              />
+                              <span className="whitespace-nowrap">
+                                {label.dataLabel}
+                              </span>
+                            </label>
+                          </li>
+                        ))}
+                      </ul>
                     </div>
-                    <ul className="space-y-2 text-sm">
-                      {cell.dataLabels.map((label) => (
-                        <li
-                          key={`${cell.customerTypeId}-${label.inputDefId}`}
-                          className="flex items-center justify-between gap-4 leading-6"
-                        >
-                          <label className="flex items-center gap-3 text-muted-foreground">
-                            <Checkbox
-                              checked={label.isRelevant}
-                              disabled={isSaving}
-                              onCheckedChange={(next) =>
-                                onCheckedChange(
-                                  row.paymentModeId,
-                                  cell.customerTypeId,
-                                  label.inputDefId,
-                                  next === true,
-                                )
-                              }
-                            />
-                            <span className="whitespace-nowrap">
-                              {label.dataLabel}
-                            </span>
-                          </label>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                </td>
-              ))}
+                  </td>
+                );
+              })}
             </tr>
           ))}
         </tbody>

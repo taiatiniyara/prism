@@ -1,7 +1,7 @@
 "use client";
 
 import { toast } from "sonner";
-import { Switch } from "../ui/switch";
+import { Checkbox } from "../ui/checkbox";
 import { DataTableFormResponse } from "./data-table-create-form";
 
 type BooleanToggleRecord = { id: string | number } & Record<string, unknown>;
@@ -12,14 +12,13 @@ export default function BooleanToggle<T extends BooleanToggleRecord>(props: {
   onCheckChange: (data: Partial<T>) => Promise<DataTableFormResponse<T>>;
 }) {
   return (
-    <Switch
+    <Checkbox
       className="cursor-pointer"
-      size="sm"
       defaultChecked={props.data[props.column] as boolean}
       onCheckedChange={async (checked) => {
         const data: Partial<T> = {
           id: props.data.id,
-          [props.column]: checked,
+          [props.column]: checked === true,
         } as Partial<T>;
         const res = await props.onCheckChange(data);
         if (res.success) {

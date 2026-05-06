@@ -1203,6 +1203,8 @@ export const getInputCategoryOptions = async (): Promise<
 };
 
 export const getInputSubcategoryOptions = async (
+  user: CurrentUser,
+  reportPeriodId: number | null,
   categoryId: number | null,
 ): Promise<DataEntryFilterOption[]> => {
   const subcategories = await getManagedListOptionsByNamePatterns(
@@ -1210,11 +1212,112 @@ export const getInputSubcategoryOptions = async (
     categoryId,
   );
 
-  return subcategories.filter(
+  const baseSubcategories = subcategories.filter(
     (subcategory) =>
       subcategory.name.trim().toLowerCase() !== "country context" &&
       !isAllLikeOption(subcategory.name),
   );
+
+  if (
+    isGlobalRole(user.role) ||
+    user.org_id == null ||
+    reportPeriodId == null ||
+    baseSubcategories.length === 0
+  ) {
+    return baseSubcategories;
+  }
+
+  const relevanceConditions = [
+    eq(dataEntries.report_period_id, reportPeriodId),
+    eq(dataEntries.is_deleted, false),
+    eq(reportPeriods.utility_id, user.org_id),
+    eq(inputDefinitions.is_active, true),
+    eq(inputDefinitions.is_aggregated, false),
+    eq(inputDefinitions.is_system_generated, false),
+  ];
+
+  if (categoryId != null) {
+    relevanceConditions.push(eq(inputDefinitions.category_id, categoryId));
+  }
+
+  const subcategoryDefinitionRows = await db
+    .select({
+      inputDefId: inputDefinitions.id,
+      subcategoryId: inputDefinitions.subcategory_id,
+    })
+    .from(inputDefinitions)
+    .where(
+      and(
+        eq(inputDefinitions.is_active, true),
+        eq(inputDefinitions.is_aggregated, false),
+        eq(inputDefinitions.is_system_generated, false),
+        inArray(
+          inputDefinitions.subcategory_id,
+          baseSubcategories.map((subcategory) => subcategory.id),
+        ),
+        ...(categoryId != null
+          ? [eq(inputDefinitions.category_id, categoryId)]
+          : []),
+      ),
+    );
+
+  if (subcategoryDefinitionRows.length === 0) {
+    return baseSubcategories;
+  }
+
+  const relevanceRows = await db
+    .select({
+      inputDefId: inputDefinitions.id,
+      subcategoryId: inputDefinitions.subcategory_id,
+      isRelevant: dataEntries.is_relevant,
+    })
+    .from(dataEntries)
+    .innerJoin(
+      inputDefinitions,
+      eq(dataEntries.input_def_id, inputDefinitions.id),
+    )
+    .innerJoin(
+      reportPeriods,
+      eq(dataEntries.report_period_id, reportPeriods.id),
+    )
+    .where(and(...relevanceConditions));
+
+  const definitionIdsBySubcategory = new Map<number, Set<number>>();
+  for (const row of subcategoryDefinitionRows) {
+    const set = definitionIdsBySubcategory.get(row.subcategoryId) ?? new Set();
+    set.add(row.inputDefId);
+    definitionIdsBySubcategory.set(row.subcategoryId, set);
+  }
+
+  const touchedDefinitionIdsBySubcategory = new Map<number, Set<number>>();
+  const hasRelevantRowBySubcategory = new Map<number, boolean>();
+
+  for (const row of relevanceRows) {
+    const touchedSet =
+      touchedDefinitionIdsBySubcategory.get(row.subcategoryId) ?? new Set();
+    touchedSet.add(row.inputDefId);
+    touchedDefinitionIdsBySubcategory.set(row.subcategoryId, touchedSet);
+
+    if (row.isRelevant) {
+      hasRelevantRowBySubcategory.set(row.subcategoryId, true);
+    }
+  }
+
+  return baseSubcategories.filter((subcategory) => {
+    const definitionIds = definitionIdsBySubcategory.get(subcategory.id);
+    if (!definitionIds || definitionIds.size === 0) {
+      return true;
+    }
+
+    if (hasRelevantRowBySubcategory.get(subcategory.id) === true) {
+      return true;
+    }
+
+    const touchedDefinitionCount =
+      touchedDefinitionIdsBySubcategory.get(subcategory.id)?.size ?? 0;
+
+    return touchedDefinitionCount < definitionIds.size;
+  });
 };
 
 export const getServiceAreaOptions = async (
@@ -1261,7 +1364,11 @@ export const getBaseFilterOptions = async (
 
   const [reportPeriods, inputSubcategories] = await Promise.all([
     getReportPeriodOptions(user, context.reportTypeId),
-    getInputSubcategoryOptions(context.inputCategoryId),
+    getInputSubcategoryOptions(
+      user,
+      context.reportPeriodId,
+      context.inputCategoryId,
+    ),
   ]);
 
   return {

@@ -112,6 +112,7 @@ export default function GenerationRelevanceTable(props: {
     );
 
     startTransition(async () => {
+      const loadingToastId = toast.loading("Updating relevance...");
       const result = await props.onToggleRelevance({
         reportPeriodId: props.reportPeriodId,
         serviceAreaId: props.serviceAreaId,
@@ -123,7 +124,12 @@ export default function GenerationRelevanceTable(props: {
       if (!result.success) {
         setRows(previousRows);
         toast.error(result.message);
+        toast.dismiss(loadingToastId);
+        return;
       }
+
+      toast.dismiss(loadingToastId);
+      toast.success(result.message);
     });
   };
 
@@ -171,10 +177,7 @@ export default function GenerationRelevanceTable(props: {
                             <label className="flex items-center gap-2">
                               <Checkbox
                                 checked={cell?.isRelevant ?? true}
-                                disabled={
-                                  isSaving ||
-                                  (cell?.relatedInputCount ?? 0) === 0
-                                }
+                                disabled={isSaving}
                                 onCheckedChange={(next) =>
                                   onCellToggle(
                                     row.energySourceId,

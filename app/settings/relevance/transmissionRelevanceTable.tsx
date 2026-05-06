@@ -49,6 +49,7 @@ export default function TransmissionRelevanceTable(props: {
     );
 
     startTransition(async () => {
+      const loadingToastId = toast.loading("Updating relevance...");
       const result = await props.onToggleRelevance({
         reportPeriodId: props.reportPeriodId,
         serviceAreaId: props.serviceAreaId,
@@ -59,7 +60,12 @@ export default function TransmissionRelevanceTable(props: {
       if (!result.success) {
         setItems(previousItems);
         toast.error(result.message);
+        toast.dismiss(loadingToastId);
+        return;
       }
+
+      toast.dismiss(loadingToastId);
+      toast.success(result.message);
     });
   };
 
@@ -74,6 +80,7 @@ export default function TransmissionRelevanceTable(props: {
     );
 
     startTransition(async () => {
+      const loadingToastId = toast.loading("Updating relevance...");
       const results = await Promise.all(
         items.map((item) =>
           props.onToggleRelevance({
@@ -90,6 +97,13 @@ export default function TransmissionRelevanceTable(props: {
       if (failedResult) {
         setItems(previousItems);
         toast.error(failedResult.message);
+        toast.dismiss(loadingToastId);
+        return;
+      }
+
+      toast.dismiss(loadingToastId);
+      if (results.length > 0) {
+        toast.success("Transmission relevance updated.");
       }
     });
   };

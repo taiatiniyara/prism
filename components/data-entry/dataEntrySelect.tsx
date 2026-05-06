@@ -18,7 +18,7 @@ export interface DataEntrySelectOption {
 }
 
 const triggerSizeClassName = {
-  compact: "h-7 px-1 text-[11px] shadow-none",
+  compact: "data-[size=sm]:h-7 px-1 text-[11px] shadow-none",
   default: "h-9 px-3 text-sm shadow-sm",
   input: "min-h-10 px-3 py-2.5 text-base md:text-sm shadow",
 } as const;
@@ -56,11 +56,14 @@ export function DataEntrySelect({
   contentClassName,
   ...props
 }: DataEntrySelectProps) {
+  const triggerSize = size === "compact" ? "sm" : "default";
+
   return (
     <Select {...props}>
       <SelectTrigger
         id={id}
         aria-label={ariaLabel}
+        size={triggerSize}
         className={getDataEntrySelectTriggerClassName(size, triggerClassName)}
       >
         <SelectValue placeholder={placeholder} />

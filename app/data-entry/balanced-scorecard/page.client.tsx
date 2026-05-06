@@ -1567,7 +1567,7 @@ export default function ScorecardPageClient({
               under each initiative.
             </p>
 
-            <div className="flex flex-wrap items-end justify-end gap-8 lg:ml-auto">
+            <div className="flex flex-wrap items-end justify-end gap-x-3 gap-y-2 lg:ml-auto">
               <div>
                 <h2 className="text-sm font-semibold">Targets Tracking</h2>
                 <div className="mt-2 flex gap-2">

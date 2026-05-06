@@ -41,7 +41,7 @@ export function FilterSelect({
   ];
 
   return (
-    <div className={compact ? "space-y-0.5 w-28" : "space-y-1 w-38"}>
+    <div className={compact ? "w-24 space-y-0.5" : "w-32 space-y-1"}>
       {showLabel ? (
         <Label
           className={compact ? "text-[11px] leading-none" : "text-xs"}
@@ -63,7 +63,9 @@ export function FilterSelect({
         placeholder={placeholder}
         options={selectOptions}
         size={compact ? "compact" : "default"}
-        triggerClassName={compact ? "h-7 px-0.5 text-[11px]" : undefined}
+        triggerClassName={
+          compact ? "data-[size=sm]:h-7 px-1 text-[10px]" : "h-8"
+        }
       />
     </div>
   );

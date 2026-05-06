@@ -21,7 +21,7 @@ export default async function EnterDataPage() {
         emptyMessage="No data-entry filter options are available for your account."
       >
         <div className="sticky top-0 z-40 bg-background border shadow-md rounded-lg p-3">
-          <div className="flex gap-20 flex-wrap items-end pt-2">
+          <div className="flex flex-wrap items-end gap-x-4 gap-y-2 pt-2">
             <DataEntryFiltersClient
               context={model.context}
               options={model.options}

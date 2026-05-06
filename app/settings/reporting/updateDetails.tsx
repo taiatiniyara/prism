@@ -2,13 +2,13 @@
 
 import { useState } from "react";
 
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { FaSave } from "react-icons/fa";
 import { UpdateOrganisation } from "../organisations/orgs.service";
 import { toast } from "sonner";
 import SubmitBtn from "@/components/submitBtn";
-import { Switch } from "@/components/ui/switch";
 import SettingsSection from "@/components/settings/settings-section";
 import {
   Select,
@@ -117,7 +117,7 @@ export default function UpdateReportingDetailsForm(props: {
     <div className="space-y-12">
       <SettingsSection
         title="Financial Year End"
-        description="Set the financial year end month for your organisation. This will be used to determine the financial year for reporting purposes."
+        description="Select the month and day that marks the end of your Utility's Financial Year."
       >
         <form
           action={async (formData) => {
@@ -235,7 +235,7 @@ export default function UpdateReportingDetailsForm(props: {
               placeholder="Day"
             />
             <p className="text-xs text-muted-foreground px-1">
-              Max day for selected month: {maxFinancialYearEndDay}
+              Maximum days is: {maxFinancialYearEndDay}
             </p>
           </div>
 
@@ -250,17 +250,17 @@ export default function UpdateReportingDetailsForm(props: {
       </SettingsSection>
       <SettingsSection
         title="Monthly Reporting"
-        description="Specify whether your organisation prepares monthly reports."
+        description="Select if your Utility would like to submit Monthly reports."
       >
-        <div className="flex items-center space-x-8 border w-fit p-4.5 rounded-lg shadow-md">
-          <Label htmlFor="monthly-reporting">Submit Monthly Reports</Label>
+        <div className="flex items-center gap-2 text-sm mt-2 py-4 border w-fit px-4 rounded-lg shadow hover:shadow-md">
+          <Label htmlFor="monthly-reporting">Will submit monthly reports</Label>
 
-          <Switch
+          <Checkbox
             id="monthly-reporting"
             defaultChecked={props.is_mth_report_relevant}
             onCheckedChange={async (checked) => {
               const res = await UpdateOrganisation({
-                is_mth_reports_relevant_month: Boolean(checked),
+                is_mth_reports_relevant_month: checked === true,
                 id: props.orgId,
               });
               if (res.success) {

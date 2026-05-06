@@ -3,7 +3,9 @@
 import { db } from "@/db/connection";
 import {
   dataEntries,
+  energyResources,
   generationRelevance,
+  generationToggleRelevance,
   inputRelevance,
   inputDefinitions,
   organisations,
@@ -15,7 +17,7 @@ import { managedListItems, managedLists } from "@/db/schema/managedLists";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { getCurrentUser } from "@/lib/user.service";
 import { formatReportPeriodDisplay } from "@/lib/formatters";
-import { and, asc, desc, eq, inArray, isNull, or } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { GetManagedListItemByName } from "../managed-lists/service";
 import { DataEntryStatusId } from "@/db/schema/dataEntry";
@@ -40,6 +42,12 @@ interface UtilityGenerationRelevanceFilter {
   serviceAreaId?: number | null;
 }
 
+interface InputDefinitionOption {
+  id: number;
+  name: string;
+  sortOrder: number | null;
+}
+
 type UtilityScopedRelevanceFilter = {
   reportPeriodId?: number | null;
   serviceAreaId?: number | null;
@@ -49,6 +57,14 @@ const isGlobalKpiViewer = (role: string | null): boolean => {
   const normalizedRole = role?.trim().toUpperCase();
   return normalizedRole === "DEV" || normalizedRole === "BMO";
 };
+
+const hasActiveEnergyResourcePeriod = (reportPeriodId: number) =>
+  sql<boolean>`exists (
+    select 1
+    from jsonb_array_elements(${energyResources.period_entries}) as period_entry
+    where (period_entry->>'report_period_id')::int = ${reportPeriodId}
+      and coalesce((period_entry->>'is_active')::boolean, false) = true
+  )`;
 
 export interface UtilityTariffRelevanceCell {
   customerTypeId: number;
@@ -315,12 +331,13 @@ const hasValidUtilityContext = async (
 
 const revalidateRelevanceAndDataEntry = () => {
   revalidatePath("/settings/relevance");
+  revalidatePath("/data-entry");
   revalidatePath("/data-entry/enter-data");
 };
 
 const getInputDefinitionsForStructure = async (
   structureName: string,
-): Promise<{ id: number; name: string }[]> => {
+): Promise<InputDefinitionOption[]> => {
   const structureManagedListItem =
     await GetManagedListItemByName(structureName);
 
@@ -332,6 +349,7 @@ const getInputDefinitionsForStructure = async (
     .select({
       id: inputDefinitions.id,
       name: inputDefinitions.name,
+      sortOrder: inputDefinitions.sort_order,
     })
     .from(inputDefinitions)
     .where(
@@ -344,7 +362,7 @@ const getInputDefinitionsForStructure = async (
         ),
       ),
     )
-    .orderBy(inputDefinitions.name);
+    .orderBy(asc(inputDefinitions.sort_order), asc(inputDefinitions.name));
 
   return rows;
 };
@@ -383,6 +401,70 @@ const getManagedDimensionItems = async (
   return rows;
 };
 
+const getInputDefinitionsForAnyStructure = async (
+  structureNames: string[],
+): Promise<InputDefinitionOption[]> => {
+  for (const structureName of structureNames) {
+    try {
+      const rows = await getInputDefinitionsForStructure(structureName);
+
+      if (rows.length > 0) {
+        return rows;
+      }
+    } catch {
+      // Continue trying aliases when a specific managed list item is unavailable.
+    }
+  }
+
+  return [];
+};
+
+const getGenerationInputDefinitions = async (): Promise<
+  InputDefinitionOption[]
+> => {
+  const structureScoped = await getInputDefinitionsForAnyStructure([
+    "Generation",
+    "Energy Resources",
+    "Energy Resource",
+    "Generation Structure",
+  ]);
+
+  if (structureScoped.length > 0) {
+    return structureScoped;
+  }
+
+  // Fallback for environments where generation structure labels were renamed.
+  const activeRows = await db
+    .select({
+      id: inputDefinitions.id,
+      name: inputDefinitions.name,
+      sortOrder: inputDefinitions.sort_order,
+    })
+    .from(inputDefinitions)
+    .where(
+      and(
+        eq(inputDefinitions.is_active, true),
+        eq(inputDefinitions.is_aggregated, false),
+      ),
+    )
+    .orderBy(asc(inputDefinitions.sort_order), asc(inputDefinitions.name));
+
+  if (activeRows.length > 0) {
+    return activeRows;
+  }
+
+  // Final fallback for partially migrated datasets where active flags were reset.
+  return db
+    .select({
+      id: inputDefinitions.id,
+      name: inputDefinitions.name,
+      sortOrder: inputDefinitions.sort_order,
+    })
+    .from(inputDefinitions)
+    .where(eq(inputDefinitions.is_aggregated, false))
+    .orderBy(asc(inputDefinitions.sort_order), asc(inputDefinitions.name));
+};
+
 const removeGenericDimensionOptions = (
   items: { id: number; name: string }[],
 ): { id: number; name: string }[] =>
@@ -390,6 +472,84 @@ const removeGenericDimensionOptions = (
     const normalized = item.name.trim().toLowerCase();
     return normalized !== "all" && normalized !== "both";
   });
+
+const getGenerationDimensionsFromResources = async (
+  utilityId: number,
+  serviceAreaId: number,
+  includeVirtual: boolean,
+): Promise<{
+  energyProviders: { id: number; name: string }[];
+  energySources: { id: number; name: string }[];
+  energyResourceTypes: { id: number; name: string }[];
+}> => {
+  const resourceConditions = [
+    eq(energyResources.utility_id, utilityId),
+    eq(energyResources.service_area_id, serviceAreaId),
+  ];
+
+  if (!includeVirtual) {
+    resourceConditions.push(eq(energyResources.is_virtual, false));
+  }
+
+  const resources = await db
+    .select({
+      energyProviderId: energyResources.energy_provider_id,
+      energySourceId: energyResources.energy_source_id,
+      energyResourceTypeId: energyResources.type_id,
+    })
+    .from(energyResources)
+    .where(and(...resourceConditions));
+
+  const providerIds = Array.from(
+    new Set(resources.map((row) => row.energyProviderId)),
+  );
+  const sourceIds = Array.from(
+    new Set(resources.map((row) => row.energySourceId)),
+  );
+  const typeIds = Array.from(
+    new Set(resources.map((row) => row.energyResourceTypeId)),
+  );
+
+  const allIds = Array.from(
+    new Set([...providerIds, ...sourceIds, ...typeIds]),
+  );
+
+  if (allIds.length === 0) {
+    return {
+      energyProviders: [],
+      energySources: [],
+      energyResourceTypes: [],
+    };
+  }
+
+  const managedItems = await db
+    .select({
+      id: managedListItems.id,
+      name: managedListItems.name,
+    })
+    .from(managedListItems)
+    .where(inArray(managedListItems.id, allIds));
+
+  const nameById = new Map(managedItems.map((item) => [item.id, item.name]));
+
+  const mapIdsToOptions = (ids: number[]) =>
+    ids
+      .map((id) => ({
+        id,
+        name: nameById.get(id),
+      }))
+      .filter(
+        (item): item is { id: number; name: string } =>
+          typeof item.name === "string",
+      )
+      .sort((a, b) => a.name.localeCompare(b.name));
+
+  return {
+    energyProviders: mapIdsToOptions(providerIds),
+    energySources: mapIdsToOptions(sourceIds),
+    energyResourceTypes: mapIdsToOptions(typeIds),
+  };
+};
 
 export async function GetUtilityTariffRelevance(
   filters: UtilityTariffRelevanceFilter = {},
@@ -409,11 +569,37 @@ export async function GetUtilityTariffRelevance(
 
   const inputList = await getInputDefinitionsForStructure("Tariff Structure");
 
-  const paymentModes = await getManagedDimensionItems("Payment Mode");
+  const paymentModes = (await getManagedDimensionItems("Payment Mode")).sort(
+    (a, b) => a.id - b.id,
+  );
 
-  const customerTypes = await getManagedDimensionItems("Customer Type");
+  const customerTypes = (await getManagedDimensionItems("Customer Type")).sort(
+    (a, b) => a.id - b.id,
+  );
 
-  const dataLabels = inputList.map((input) => ({
+  const tariffInputList = [...inputList].sort((a, b) => {
+    const aIsGst = a.name.trim().toLowerCase() === "gst";
+    const bIsGst = b.name.trim().toLowerCase() === "gst";
+
+    if (aIsGst && !bIsGst) {
+      return -1;
+    }
+
+    if (!aIsGst && bIsGst) {
+      return 1;
+    }
+
+    const aOrder = a.sortOrder ?? Number.MAX_SAFE_INTEGER;
+    const bOrder = b.sortOrder ?? Number.MAX_SAFE_INTEGER;
+
+    if (aOrder !== bOrder) {
+      return aOrder - bOrder;
+    }
+
+    return a.id - b.id;
+  });
+
+  const dataLabels = tariffInputList.map((input) => ({
     inputDefId: input.id,
     dataLabel: input.name,
   }));
@@ -855,12 +1041,44 @@ export async function GetUtilityGenerationRelevance(
     selectedServiceAreaId,
   } = await getUtilityRelevanceFilterContext(user.org_id!, user.role, filters);
 
-  const inputList = await getInputDefinitionsForStructure("Generation");
-  const energyProviders = await getManagedDimensionItems("Energy Provider");
-  const energySources = await getManagedDimensionItems("Energy Source");
-  const energyResourceTypes = removeGenericDimensionOptions(
-    await getManagedDimensionItems("Energy Resource Type"),
+  const inputList = await getGenerationInputDefinitions();
+  let energyProviders = await getManagedDimensionItems("Energy Provider");
+  let energySources = await getManagedDimensionItems("Energy Source");
+  const rawEnergyResourceTypes = await getManagedDimensionItems(
+    "Energy Resource Type",
   );
+  let energyResourceTypes = removeGenericDimensionOptions(
+    rawEnergyResourceTypes,
+  );
+
+  if (energyResourceTypes.length === 0) {
+    energyResourceTypes = rawEnergyResourceTypes;
+  }
+
+  if (
+    selectedServiceAreaId != null &&
+    (energyProviders.length === 0 ||
+      energySources.length === 0 ||
+      energyResourceTypes.length === 0)
+  ) {
+    const fromResources = await getGenerationDimensionsFromResources(
+      user.org_id!,
+      selectedServiceAreaId,
+      user.role === "DEV",
+    );
+
+    if (energyProviders.length === 0) {
+      energyProviders = fromResources.energyProviders;
+    }
+
+    if (energySources.length === 0) {
+      energySources = fromResources.energySources;
+    }
+
+    if (energyResourceTypes.length === 0) {
+      energyResourceTypes = fromResources.energyResourceTypes;
+    }
+  }
   const inputDefIds = inputList.map((input) => input.id);
 
   if (
@@ -898,10 +1116,123 @@ export async function GetUtilityGenerationRelevance(
     };
   }
 
+  const activeResources = await db
+    .select({
+      energyProviderId: energyResources.energy_provider_id,
+      energySourceId: energyResources.energy_source_id,
+      energyResourceTypeId: energyResources.type_id,
+    })
+    .from(energyResources)
+    .where(
+      and(
+        eq(energyResources.utility_id, user.org_id!),
+        eq(energyResources.service_area_id, selectedServiceAreaId),
+        eq(energyResources.is_virtual, false),
+        hasActiveEnergyResourcePeriod(selectedReportPeriodId),
+      ),
+    );
+
+  if (activeResources.length === 0) {
+    return {
+      filters: {
+        reportPeriodId: selectedReportPeriodId,
+        serviceAreaId: selectedServiceAreaId,
+      },
+      options: {
+        reportPeriods: reportPeriodOptions,
+        serviceAreas: serviceAreaOptions,
+      },
+      energyProviders: [],
+      energyResourceTypes: [],
+      rows: [],
+    };
+  }
+
+  const activeProviderIds = new Set(
+    activeResources.map((resource) => resource.energyProviderId),
+  );
+  const activeSourceIds = new Set(
+    activeResources.map((resource) => resource.energySourceId),
+  );
+  const activeTypeIds = new Set(
+    activeResources.map((resource) => resource.energyResourceTypeId),
+  );
+  const activeCombinationKeys = new Set(
+    activeResources.map(
+      (resource) =>
+        `${resource.energySourceId}:${resource.energyProviderId}:${resource.energyResourceTypeId}`,
+    ),
+  );
+
+  energyProviders = energyProviders.filter((provider) =>
+    activeProviderIds.has(provider.id),
+  );
+  energySources = energySources.filter((source) =>
+    activeSourceIds.has(source.id),
+  );
+  energyResourceTypes = energyResourceTypes.filter((type) =>
+    activeTypeIds.has(type.id),
+  );
+
+  if (
+    energyProviders.length === 0 ||
+    energySources.length === 0 ||
+    energyResourceTypes.length === 0
+  ) {
+    return {
+      filters: {
+        reportPeriodId: selectedReportPeriodId,
+        serviceAreaId: selectedServiceAreaId,
+      },
+      options: {
+        reportPeriods: reportPeriodOptions,
+        serviceAreas: serviceAreaOptions,
+      },
+      energyProviders: [],
+      energyResourceTypes: [],
+      rows: [],
+    };
+  }
+
+  const toggleEntries =
+    energyProviders.length > 0 && energySources.length > 0
+      ? await db
+          .select({
+            reportPeriodId: generationToggleRelevance.report_period_id,
+            energySourceId: generationToggleRelevance.energy_source_id,
+            energyProviderId: generationToggleRelevance.energy_provider_id,
+            isRelevant: generationToggleRelevance.is_relevant,
+          })
+          .from(generationToggleRelevance)
+          .where(
+            and(
+              eq(
+                generationToggleRelevance.report_period_id,
+                selectedReportPeriodId,
+              ),
+              eq(
+                generationToggleRelevance.service_area_id,
+                selectedServiceAreaId,
+              ),
+              eq(generationToggleRelevance.is_deleted, false),
+              inArray(
+                generationToggleRelevance.energy_provider_id,
+                energyProviders.map((provider) => provider.id),
+              ),
+              inArray(
+                generationToggleRelevance.energy_source_id,
+                energySources.map((source) => source.id),
+              ),
+            ),
+          )
+          .orderBy(desc(generationToggleRelevance.updatedAt))
+      : [];
+
   const entries =
     energyProviders.length > 0 &&
     energySources.length > 0 &&
-    energyResourceTypes.length > 0
+    energyResourceTypes.length > 0 &&
+    inputDefIds.length > 0
       ? await db
           .select({
             reportPeriodId: generationRelevance.report_period_id,
@@ -934,6 +1265,23 @@ export async function GetUtilityGenerationRelevance(
 
   const cellHasFalse = new Map<string, boolean>();
 
+  for (const entry of toggleEntries) {
+    if (
+      entry.reportPeriodId == null ||
+      entry.energySourceId == null ||
+      entry.energyProviderId == null
+    ) {
+      continue;
+    }
+
+    if (entry.isRelevant) {
+      continue;
+    }
+
+    const key = `${entry.reportPeriodId}:${entry.energySourceId}:${entry.energyProviderId}`;
+    cellHasFalse.set(key, true);
+  }
+
   for (const entry of entries) {
     if (
       entry.reportPeriodId == null ||
@@ -962,24 +1310,32 @@ export async function GetUtilityGenerationRelevance(
     },
     energyProviders: energyProviders.map((provider) => provider.name),
     energyResourceTypes: energyResourceTypes.map((type) => type.name),
-    rows: energySources.flatMap((energySource) =>
-      energyResourceTypes.map((energyResourceType) => ({
-        energySourceId: energySource.id,
-        energySource: energySource.name,
-        energyResourceTypeId: energyResourceType.id,
-        energyResourceType: energyResourceType.name,
-        cells: energyProviders.map((energyProvider) => {
-          const key = `${selectedReportPeriodId}:${energySource.id}:${energyProvider.id}`;
+    rows: energySources
+      .flatMap((energySource) =>
+        energyResourceTypes.map((energyResourceType) => ({
+          energySourceId: energySource.id,
+          energySource: energySource.name,
+          energyResourceTypeId: energyResourceType.id,
+          energyResourceType: energyResourceType.name,
+          cells: energyProviders
+            .filter((energyProvider) =>
+              activeCombinationKeys.has(
+                `${energySource.id}:${energyProvider.id}:${energyResourceType.id}`,
+              ),
+            )
+            .map((energyProvider) => {
+              const key = `${selectedReportPeriodId}:${energySource.id}:${energyProvider.id}`;
 
-          return {
-            energyProviderId: energyProvider.id,
-            energyProvider: energyProvider.name,
-            isRelevant: !cellHasFalse.get(key),
-            relatedInputCount: inputDefIds.length,
-          };
-        }),
-      })),
-    ),
+              return {
+                energyProviderId: energyProvider.id,
+                energyProvider: energyProvider.name,
+                isRelevant: !cellHasFalse.get(key),
+                relatedInputCount: inputDefIds.length,
+              };
+            }),
+        })),
+      )
+      .filter((row) => row.cells.length > 0),
   };
 }
 
@@ -1008,49 +1364,90 @@ export async function SetUtilityGenerationDataLabelRelevance(
     };
   }
 
-  const inputList = await getInputDefinitionsForStructure("Generation");
-
-  if (inputList.length === 0) {
-    return {
-      success: false,
-      message: "No Generation inputs were found.",
-    };
-  }
-
-  const inputDefIds = inputList.map((input) => input.id);
+  const inputList = await getGenerationInputDefinitions();
 
   const [energyProvider] = await db
     .select({ id: managedListItems.id })
     .from(managedListItems)
-    .innerJoin(managedLists, eq(managedListItems.list_id, managedLists.id))
-    .where(
-      and(
-        eq(managedLists.name, "Energy Provider"),
-        eq(managedLists.is_active, true),
-        eq(managedListItems.is_active, true),
-        eq(managedListItems.id, payload.energyProviderId),
-      ),
-    )
+    .where(eq(managedListItems.id, payload.energyProviderId))
     .limit(1);
 
   const [energySource] = await db
     .select({ id: managedListItems.id })
     .from(managedListItems)
-    .innerJoin(managedLists, eq(managedListItems.list_id, managedLists.id))
+    .where(eq(managedListItems.id, payload.energySourceId))
+    .limit(1);
+
+  const [resourceMatch] = await db
+    .select({ id: energyResources.id })
+    .from(energyResources)
     .where(
       and(
-        eq(managedLists.name, "Energy Source"),
-        eq(managedLists.is_active, true),
-        eq(managedListItems.is_active, true),
-        eq(managedListItems.id, payload.energySourceId),
+        eq(energyResources.utility_id, user.org_id!),
+        eq(energyResources.service_area_id, payload.serviceAreaId),
+        eq(energyResources.energy_provider_id, payload.energyProviderId),
+        eq(energyResources.energy_source_id, payload.energySourceId),
+        eq(energyResources.is_virtual, false),
+        hasActiveEnergyResourcePeriod(payload.reportPeriodId),
       ),
     )
     .limit(1);
 
-  if (!energyProvider || !energySource) {
+  if ((!energyProvider || !energySource) && !resourceMatch) {
     return {
       success: false,
       message: "Selected energy provider or source is invalid.",
+    };
+  }
+
+  const [existingToggle] = await db
+    .select({ id: generationToggleRelevance.id })
+    .from(generationToggleRelevance)
+    .where(
+      and(
+        eq(generationToggleRelevance.report_period_id, payload.reportPeriodId),
+        eq(generationToggleRelevance.service_area_id, payload.serviceAreaId),
+        eq(
+          generationToggleRelevance.energy_provider_id,
+          payload.energyProviderId,
+        ),
+        eq(generationToggleRelevance.energy_source_id, payload.energySourceId),
+      ),
+    )
+    .orderBy(desc(generationToggleRelevance.updatedAt))
+    .limit(1);
+
+  if (existingToggle) {
+    await db
+      .update(generationToggleRelevance)
+      .set({
+        is_relevant: payload.isRelevant,
+        is_deleted: false,
+        updatedAt: new Date(),
+        updatedById: user.id,
+      })
+      .where(eq(generationToggleRelevance.id, existingToggle.id));
+  } else if (!payload.isRelevant) {
+    await db.insert(generationToggleRelevance).values({
+      report_period_id: payload.reportPeriodId,
+      service_area_id: payload.serviceAreaId,
+      energy_provider_id: payload.energyProviderId,
+      energy_source_id: payload.energySourceId,
+      is_relevant: false,
+      is_deleted: false,
+      updatedAt: new Date(),
+      updatedById: user.id,
+    });
+  }
+
+  const inputDefIds = inputList.map((input) => input.id);
+
+  if (inputDefIds.length === 0) {
+    revalidateRelevanceAndDataEntry();
+
+    return {
+      success: true,
+      message: "Generation relevance updated.",
     };
   }
 
@@ -1383,7 +1780,7 @@ export async function SetCustomKpiRelevance(
     })
     .where(eq(kpiDefinitions.id, payload.kpiDefId));
 
-  revalidatePath("/settings/relevance");
+  revalidateRelevanceAndDataEntry();
   revalidatePath("/settings/kpi");
 
   return {
@@ -1590,7 +1987,7 @@ export async function AddDevInputRelevance(payload: {
     .where(eq(inputRelevance.id, created.id))
     .limit(1);
 
-  revalidatePath("/settings/relevance");
+  revalidateRelevanceAndDataEntry();
 
   return {
     success: true,
@@ -1722,7 +2119,7 @@ export async function UpdateDevInputRelevance(payload: {
     .where(eq(inputRelevance.id, payload.id))
     .limit(1);
 
-  revalidatePath("/settings/relevance");
+  revalidateRelevanceAndDataEntry();
 
   return {
     success: true,
@@ -1771,7 +2168,7 @@ export async function SetDevInputRelevance(payload: {
     })
     .where(eq(inputRelevance.id, payload.id));
 
-  revalidatePath("/settings/relevance");
+  revalidateRelevanceAndDataEntry();
 
   return {
     success: true,

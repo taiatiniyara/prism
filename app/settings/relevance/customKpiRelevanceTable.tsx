@@ -53,6 +53,7 @@ export default function CustomKpiRelevanceTable(props: {
     );
 
     startTransition(async () => {
+      const loadingToastId = toast.loading("Updating relevance...");
       const result = await props.onToggleRelevance({
         kpiDefId,
         isRelevant: checked,
@@ -61,7 +62,12 @@ export default function CustomKpiRelevanceTable(props: {
       if (!result.success) {
         setItems(previousItems);
         toast.error(result.message);
+        toast.dismiss(loadingToastId);
+        return;
       }
+
+      toast.dismiss(loadingToastId);
+      toast.success(result.message);
     });
   };
 

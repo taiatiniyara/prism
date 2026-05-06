@@ -60,6 +60,8 @@ export default function RootLayout({
               error: "bg-red-500",
               warning: "bg-amber-500",
               info: "bg-blue-500",
+              loading:
+                "bg-slate-700 border border-slate-500 text-white [&_svg]:text-white [&_svg]:stroke-white",
             },
             className:
               "rounded-md shadow-sm p-4 flex items-center gap-2 text-white font-medium font-sans",
