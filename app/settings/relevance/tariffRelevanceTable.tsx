@@ -26,6 +26,11 @@ type RelevanceRow = {
   cells: RelevanceCell[];
 };
 
+type CustomerTypeOption = {
+  id: number;
+  name: string;
+};
+
 type SetRelevancePayload = {
   reportPeriodId: number;
   serviceAreaId: number;
@@ -51,7 +56,8 @@ const summarizeCell = (cell: RelevanceCell): RelevanceCell => {
 
 export default function TariffRelevanceTable(props: {
   rows: RelevanceRow[];
-  customerTypes: string[];
+  customerTypes: CustomerTypeOption[];
+  selectedCustomerTypeIds: number[];
   reportPeriodId: number;
   serviceAreaId: number;
   onToggleRelevance: (
@@ -66,9 +72,30 @@ export default function TariffRelevanceTable(props: {
     new Set(),
   );
 
+  const selectedCustomerTypeIdSet = useMemo(
+    () => new Set(props.selectedCustomerTypeIds),
+    [props.selectedCustomerTypeIds],
+  );
+
   const customerTypes = useMemo(
-    () => props.customerTypes,
-    [props.customerTypes],
+    () =>
+      props.customerTypes.filter((customerType) =>
+        selectedCustomerTypeIdSet.has(customerType.id),
+      ),
+    [props.customerTypes, selectedCustomerTypeIdSet],
+  );
+
+  const visibleRows = useMemo(
+    () =>
+      rows
+        .map((row) => ({
+          ...row,
+          cells: row.cells.filter((cell) =>
+            selectedCustomerTypeIdSet.has(cell.customerTypeId),
+          ),
+        }))
+        .filter((row) => row.cells.length > 0),
+    [rows, selectedCustomerTypeIdSet],
   );
 
   const setLabelValue = (
@@ -305,16 +332,27 @@ export default function TariffRelevanceTable(props: {
             </th>
             {customerTypes.map((customerType) => (
               <th
-                key={customerType}
+                key={customerType.id}
                 className="sticky top-0 z-30 border bg-muted px-5 py-3 text-left text-sm font-semibold whitespace-nowrap min-w-72"
               >
-                {customerType}
+                {customerType.name}
               </th>
             ))}
           </tr>
         </thead>
         <tbody>
-          {rows.map((row) => (
+          {visibleRows.length === 0 ? (
+            <tr>
+              <td
+                colSpan={customerTypes.length + 1}
+                className="border px-5 py-6 text-center text-sm text-muted-foreground"
+              >
+                No customer types selected. Select at least one customer type to
+                view the matrix.
+              </td>
+            </tr>
+          ) : null}
+          {visibleRows.map((row) => (
             <tr key={row.paymentModeId}>
               <td className="sticky left-0 z-20 border bg-background px-5 py-4 text-sm font-semibold align-top">
                 {row.paymentMode}

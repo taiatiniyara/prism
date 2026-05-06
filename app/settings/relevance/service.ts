@@ -17,7 +17,7 @@ import { managedListItems, managedLists } from "@/db/schema/managedLists";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { getCurrentUser } from "@/lib/user.service";
 import { formatReportPeriodDisplay } from "@/lib/formatters";
-import { and, asc, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import { and, asc, desc, eq, ilike, inArray, isNull, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { GetManagedListItemByName } from "../managed-lists/service";
 import { DataEntryStatusId } from "@/db/schema/dataEntry";
@@ -57,14 +57,6 @@ const isGlobalKpiViewer = (role: string | null): boolean => {
   const normalizedRole = role?.trim().toUpperCase();
   return normalizedRole === "DEV" || normalizedRole === "BMO";
 };
-
-const hasActiveEnergyResourcePeriod = (reportPeriodId: number) =>
-  sql<boolean>`exists (
-    select 1
-    from jsonb_array_elements(${energyResources.period_entries}) as period_entry
-    where (period_entry->>'report_period_id')::int = ${reportPeriodId}
-      and coalesce((period_entry->>'is_active')::boolean, false) = true
-  )`;
 
 export interface UtilityTariffRelevanceCell {
   customerTypeId: number;
@@ -106,7 +98,7 @@ export interface UtilityTariffRelevanceResult {
     reportPeriods: RelevanceFilterOption[];
     serviceAreas: RelevanceFilterOption[];
   };
-  customerTypes: string[];
+  customerTypes: RelevanceFilterOption[];
   rows: UtilityTariffRelevanceRow[];
 }
 
@@ -370,7 +362,7 @@ const getInputDefinitionsForStructure = async (
 const getManagedDimensionItems = async (
   listName: string,
 ): Promise<{ id: number; name: string }[]> => {
-  const rows = await db
+  const exactRows = await db
     .select({
       id: managedListItems.id,
       name: managedListItems.name,
@@ -386,12 +378,38 @@ const getManagedDimensionItems = async (
     )
     .orderBy(managedListItems.name);
 
+  const rows =
+    exactRows.length > 0
+      ? exactRows
+      : await db
+          .select({
+            id: managedListItems.id,
+            name: managedListItems.name,
+          })
+          .from(managedListItems)
+          .innerJoin(
+            managedLists,
+            eq(managedListItems.list_id, managedLists.id),
+          )
+          .where(
+            and(
+              ilike(managedLists.name, `%${listName}%`),
+              eq(managedLists.is_active, true),
+              eq(managedListItems.is_active, true),
+            ),
+          )
+          .orderBy(managedListItems.name);
+
   const normalizedListName = listName.trim().toLowerCase();
   const filtered = rows.filter((row) => {
     const normalizedName = row.name.trim().toLowerCase();
-    return (
-      normalizedName !== normalizedListName && !normalizedName.includes("all")
-    );
+
+    const isAllLikeOption =
+      normalizedName === "all" ||
+      normalizedName === "all options" ||
+      normalizedName.startsWith("all ");
+
+    return normalizedName !== normalizedListName && !isAllLikeOption;
   });
 
   if (filtered.length > 0) {
@@ -399,6 +417,25 @@ const getManagedDimensionItems = async (
   }
 
   return rows;
+};
+
+const getManagedDimensionItemsByAliases = async (
+  listNames: string[],
+): Promise<{ id: number; name: string }[]> => {
+  for (const listName of listNames) {
+    const rows = await getManagedDimensionItems(listName);
+    if (rows.length > 0) {
+      return rows;
+    }
+  }
+
+  return [];
+};
+
+const filterGenerationResourceTypes = <T extends { name: string }>(
+  items: T[],
+): T[] => {
+  return items.filter((item) => item.name.trim().toLowerCase() !== "nill");
 };
 
 const getInputDefinitionsForAnyStructure = async (
@@ -464,14 +501,6 @@ const getGenerationInputDefinitions = async (): Promise<
     .where(eq(inputDefinitions.is_aggregated, false))
     .orderBy(asc(inputDefinitions.sort_order), asc(inputDefinitions.name));
 };
-
-const removeGenericDimensionOptions = (
-  items: { id: number; name: string }[],
-): { id: number; name: string }[] =>
-  items.filter((item) => {
-    const normalized = item.name.trim().toLowerCase();
-    return normalized !== "all" && normalized !== "both";
-  });
 
 const getGenerationDimensionsFromResources = async (
   utilityId: number,
@@ -618,7 +647,10 @@ export async function GetUtilityTariffRelevance(
         reportPeriods: reportPeriodOptions,
         serviceAreas: serviceAreaOptions,
       },
-      customerTypes: customerTypes.map((customerType) => customerType.name),
+      customerTypes: customerTypes.map((customerType) => ({
+        id: customerType.id,
+        name: customerType.name,
+      })),
       rows: paymentModes.map((paymentMode) => ({
         paymentModeId: paymentMode.id,
         paymentMode: paymentMode.name,
@@ -703,7 +735,10 @@ export async function GetUtilityTariffRelevance(
       reportPeriods: reportPeriodOptions,
       serviceAreas: serviceAreaOptions,
     },
-    customerTypes: customerTypes.map((customerType) => customerType.name),
+    customerTypes: customerTypes.map((customerType) => ({
+      id: customerType.id,
+      name: customerType.name,
+    })),
     rows: paymentModes.map((paymentMode) => ({
       paymentModeId: paymentMode.id,
       paymentMode: paymentMode.name,
@@ -1044,16 +1079,13 @@ export async function GetUtilityGenerationRelevance(
   const inputList = await getGenerationInputDefinitions();
   let energyProviders = await getManagedDimensionItems("Energy Provider");
   let energySources = await getManagedDimensionItems("Energy Source");
-  const rawEnergyResourceTypes = await getManagedDimensionItems(
-    "Energy Resource Type",
+  let energyResourceTypes = filterGenerationResourceTypes(
+    await getManagedDimensionItemsByAliases([
+      "Energy Resource Type",
+      "Energy Resouce Type",
+      "Energy Type",
+    ]),
   );
-  let energyResourceTypes = removeGenericDimensionOptions(
-    rawEnergyResourceTypes,
-  );
-
-  if (energyResourceTypes.length === 0) {
-    energyResourceTypes = rawEnergyResourceTypes;
-  }
 
   if (
     selectedServiceAreaId != null &&
@@ -1076,7 +1108,9 @@ export async function GetUtilityGenerationRelevance(
     }
 
     if (energyResourceTypes.length === 0) {
-      energyResourceTypes = fromResources.energyResourceTypes;
+      energyResourceTypes = filterGenerationResourceTypes(
+        fromResources.energyResourceTypes,
+      );
     }
   }
   const inputDefIds = inputList.map((input) => input.id);
@@ -1113,84 +1147,6 @@ export async function GetUtilityGenerationRelevance(
           })),
         })),
       ),
-    };
-  }
-
-  const activeResources = await db
-    .select({
-      energyProviderId: energyResources.energy_provider_id,
-      energySourceId: energyResources.energy_source_id,
-      energyResourceTypeId: energyResources.type_id,
-    })
-    .from(energyResources)
-    .where(
-      and(
-        eq(energyResources.utility_id, user.org_id!),
-        eq(energyResources.service_area_id, selectedServiceAreaId),
-        eq(energyResources.is_virtual, false),
-        hasActiveEnergyResourcePeriod(selectedReportPeriodId),
-      ),
-    );
-
-  if (activeResources.length === 0) {
-    return {
-      filters: {
-        reportPeriodId: selectedReportPeriodId,
-        serviceAreaId: selectedServiceAreaId,
-      },
-      options: {
-        reportPeriods: reportPeriodOptions,
-        serviceAreas: serviceAreaOptions,
-      },
-      energyProviders: [],
-      energyResourceTypes: [],
-      rows: [],
-    };
-  }
-
-  const activeProviderIds = new Set(
-    activeResources.map((resource) => resource.energyProviderId),
-  );
-  const activeSourceIds = new Set(
-    activeResources.map((resource) => resource.energySourceId),
-  );
-  const activeTypeIds = new Set(
-    activeResources.map((resource) => resource.energyResourceTypeId),
-  );
-  const activeCombinationKeys = new Set(
-    activeResources.map(
-      (resource) =>
-        `${resource.energySourceId}:${resource.energyProviderId}:${resource.energyResourceTypeId}`,
-    ),
-  );
-
-  energyProviders = energyProviders.filter((provider) =>
-    activeProviderIds.has(provider.id),
-  );
-  energySources = energySources.filter((source) =>
-    activeSourceIds.has(source.id),
-  );
-  energyResourceTypes = energyResourceTypes.filter((type) =>
-    activeTypeIds.has(type.id),
-  );
-
-  if (
-    energyProviders.length === 0 ||
-    energySources.length === 0 ||
-    energyResourceTypes.length === 0
-  ) {
-    return {
-      filters: {
-        reportPeriodId: selectedReportPeriodId,
-        serviceAreaId: selectedServiceAreaId,
-      },
-      options: {
-        reportPeriods: reportPeriodOptions,
-        serviceAreas: serviceAreaOptions,
-      },
-      energyProviders: [],
-      energyResourceTypes: [],
-      rows: [],
     };
   }
 
@@ -1310,32 +1266,24 @@ export async function GetUtilityGenerationRelevance(
     },
     energyProviders: energyProviders.map((provider) => provider.name),
     energyResourceTypes: energyResourceTypes.map((type) => type.name),
-    rows: energySources
-      .flatMap((energySource) =>
-        energyResourceTypes.map((energyResourceType) => ({
-          energySourceId: energySource.id,
-          energySource: energySource.name,
-          energyResourceTypeId: energyResourceType.id,
-          energyResourceType: energyResourceType.name,
-          cells: energyProviders
-            .filter((energyProvider) =>
-              activeCombinationKeys.has(
-                `${energySource.id}:${energyProvider.id}:${energyResourceType.id}`,
-              ),
-            )
-            .map((energyProvider) => {
-              const key = `${selectedReportPeriodId}:${energySource.id}:${energyProvider.id}`;
+    rows: energySources.flatMap((energySource) =>
+      energyResourceTypes.map((energyResourceType) => ({
+        energySourceId: energySource.id,
+        energySource: energySource.name,
+        energyResourceTypeId: energyResourceType.id,
+        energyResourceType: energyResourceType.name,
+        cells: energyProviders.map((energyProvider) => {
+          const key = `${selectedReportPeriodId}:${energySource.id}:${energyProvider.id}`;
 
-              return {
-                energyProviderId: energyProvider.id,
-                energyProvider: energyProvider.name,
-                isRelevant: !cellHasFalse.get(key),
-                relatedInputCount: inputDefIds.length,
-              };
-            }),
-        })),
-      )
-      .filter((row) => row.cells.length > 0),
+          return {
+            energyProviderId: energyProvider.id,
+            energyProvider: energyProvider.name,
+            isRelevant: !cellHasFalse.get(key),
+            relatedInputCount: inputDefIds.length,
+          };
+        }),
+      })),
+    ),
   };
 }
 
@@ -1387,8 +1335,6 @@ export async function SetUtilityGenerationDataLabelRelevance(
         eq(energyResources.service_area_id, payload.serviceAreaId),
         eq(energyResources.energy_provider_id, payload.energyProviderId),
         eq(energyResources.energy_source_id, payload.energySourceId),
-        eq(energyResources.is_virtual, false),
-        hasActiveEnergyResourcePeriod(payload.reportPeriodId),
       ),
     )
     .limit(1);

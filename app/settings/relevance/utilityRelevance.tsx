@@ -18,6 +18,7 @@ import GenerationRelevanceTable from "./generationRelevanceTable";
 type UtilityRelevanceSearchParams = {
   report_period_id?: string;
   service_area_id?: string;
+  tariff_customer_type_ids?: string;
 };
 
 const parseId = (value: string | undefined): number | null => {
@@ -56,6 +57,24 @@ export default async function UtilityRelevanceSection(props: {
     GetCustomKpiRelevance(),
   ]);
 
+  const requestedTariffCustomerTypeIds = (
+    props.searchParams?.tariff_customer_type_ids ?? ""
+  )
+    .split(",")
+    .map((value) => Number(value.trim()))
+    .filter((value) => Number.isInteger(value) && value > 0);
+
+  const availableTariffCustomerTypeIds = new Set(
+    tariffRelevance.customerTypes.map((customerType) => customerType.id),
+  );
+
+  const selectedTariffCustomerTypeIds =
+    requestedTariffCustomerTypeIds.length > 0
+      ? requestedTariffCustomerTypeIds.filter((id) =>
+          availableTariffCustomerTypeIds.has(id),
+        )
+      : tariffRelevance.customerTypes.map((customerType) => customerType.id);
+
   return (
     <div className="space-y-5">
       <Tabs defaultValue="generation">
@@ -63,7 +82,9 @@ export default async function UtilityRelevanceSection(props: {
           <TabsTrigger value="generation">Energy Resources</TabsTrigger>
           <TabsTrigger value="transmission">Transmission</TabsTrigger>
           <TabsTrigger value="tariff">Tariff</TabsTrigger>
-          <TabsTrigger value="custom-kpi-relevance">Custom KPIs</TabsTrigger>
+          <TabsTrigger value="custom-kpi-relevance">
+            Shared Custom KPIs
+          </TabsTrigger>
         </TabsList>
         <TabsContent value="tariff">
           <div className="space-y-5 rounded-lg border p-5 sm:p-6">
@@ -72,6 +93,10 @@ export default async function UtilityRelevanceSection(props: {
               serviceAreas={tariffRelevance.options.serviceAreas}
               selectedReportPeriodId={tariffRelevance.filters.reportPeriodId}
               selectedServiceAreaId={tariffRelevance.filters.serviceAreaId}
+              customerTypes={tariffRelevance.customerTypes}
+              selectedCustomerTypeIds={selectedTariffCustomerTypeIds}
+              tariffRows={tariffRelevance.rows}
+              onToggleTariffRelevance={SetUtilityTariffDataLabelRelevance}
             />
 
             {tariffRelevance.rows.length > 0 &&
@@ -82,6 +107,7 @@ export default async function UtilityRelevanceSection(props: {
                 key={`${tariffRelevance.filters.reportPeriodId}-${tariffRelevance.filters.serviceAreaId}`}
                 rows={tariffRelevance.rows}
                 customerTypes={tariffRelevance.customerTypes}
+                selectedCustomerTypeIds={selectedTariffCustomerTypeIds}
                 reportPeriodId={tariffRelevance.filters.reportPeriodId}
                 serviceAreaId={tariffRelevance.filters.serviceAreaId}
                 onToggleRelevance={SetUtilityTariffDataLabelRelevance}

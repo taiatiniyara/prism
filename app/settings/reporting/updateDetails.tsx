@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { FormEvent, useState } from "react";
 
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -32,6 +32,8 @@ const MONTH_OPTIONS = [
   "Nov",
   "Dec",
 ] as const;
+
+type MonthOption = (typeof MONTH_OPTIONS)[number];
 
 function getMaxDayForMonth(month: string | undefined) {
   switch (month) {
@@ -106,12 +108,51 @@ export default function UpdateReportingDetailsForm(props: {
     props.financial_year_end,
   );
   const [financialYearEndMonth, setFinancialYearEndMonth] = useState<
-    string | undefined
-  >(initialFinancialYearEnd.month);
+    MonthOption | undefined
+  >(initialFinancialYearEnd.month as MonthOption | undefined);
   const [financialYearEndDay, setFinancialYearEndDay] = useState<string>(
     initialFinancialYearEnd.day,
   );
   const maxFinancialYearEndDay = getMaxDayForMonth(financialYearEndMonth);
+
+  const handleFinancialYearEndSubmit = async (event: FormEvent) => {
+    event.preventDefault();
+
+    if (
+      !financialYearEndMonth ||
+      !MONTH_OPTIONS.includes(financialYearEndMonth)
+    ) {
+      toast.error("Financial year end month must be between Jan and Dec");
+      return;
+    }
+
+    const submittedFinancialYearEndDay = Number(financialYearEndDay);
+    const maxDayForMonth = getMaxDayForMonth(financialYearEndMonth);
+
+    if (
+      !Number.isInteger(submittedFinancialYearEndDay) ||
+      submittedFinancialYearEndDay < 1 ||
+      submittedFinancialYearEndDay > maxDayForMonth
+    ) {
+      toast.error(
+        `Financial year end day must be between 1 and ${maxDayForMonth} for ${financialYearEndMonth}`,
+      );
+      return;
+    }
+
+    const financial_year_end = `${submittedFinancialYearEndDay} ${financialYearEndMonth}`;
+
+    const res = await UpdateOrganisation({
+      financial_year_end,
+      id: props.orgId,
+    });
+
+    if (res.success) {
+      toast.success(res.message);
+    } else {
+      toast.error(res.message);
+    }
+  };
 
   return (
     <div className="space-y-12">
@@ -120,51 +161,8 @@ export default function UpdateReportingDetailsForm(props: {
         description="Select the month and day that marks the end of your Utility's Financial Year."
       >
         <form
-          action={async (formData) => {
-            const submittedFinancialYearEndDay = Number(
-              formData.get("financial_year_end_day") as string,
-            );
-            const submittedFinancialYearEndMonth = formData.get(
-              "financial_year_end_month",
-            ) as string;
-
-            if (
-              !MONTH_OPTIONS.includes(
-                submittedFinancialYearEndMonth as (typeof MONTH_OPTIONS)[number],
-              )
-            ) {
-              toast.error(
-                "Financial year end month must be between Jan and Dec",
-              );
-              return;
-            }
-
-            const maxDayForMonth = getMaxDayForMonth(
-              submittedFinancialYearEndMonth,
-            );
-
-            if (
-              !Number.isInteger(submittedFinancialYearEndDay) ||
-              submittedFinancialYearEndDay < 1 ||
-              submittedFinancialYearEndDay > maxDayForMonth
-            ) {
-              toast.error(
-                `Financial year end day must be between 1 and ${maxDayForMonth} for ${submittedFinancialYearEndMonth}`,
-              );
-              return;
-            }
-
-            const financial_year_end = `${submittedFinancialYearEndDay} ${submittedFinancialYearEndMonth}`;
-
-            const res = await UpdateOrganisation({
-              financial_year_end,
-              id: props.orgId,
-            });
-            if (res.success) {
-              toast.success(res.message);
-            } else {
-              toast.error(res.message);
-            }
+          onSubmit={(event) => {
+            void handleFinancialYearEndSubmit(event);
           }}
           className="flex items-start space-x-3 w-fit"
         >
@@ -173,7 +171,7 @@ export default function UpdateReportingDetailsForm(props: {
             required
             defaultValue={initialFinancialYearEnd.month}
             onValueChange={(value) => {
-              setFinancialYearEndMonth(value);
+              setFinancialYearEndMonth(value as MonthOption);
 
               const dayValue = Number(financialYearEndDay);
               const monthMaxDay = getMaxDayForMonth(value);
@@ -253,8 +251,6 @@ export default function UpdateReportingDetailsForm(props: {
         description="Select if your Utility would like to submit Monthly reports."
       >
         <div className="flex items-center gap-2 text-sm mt-2 py-4 border w-fit px-4 rounded-lg shadow hover:shadow-md">
-          <Label htmlFor="monthly-reporting">Will submit monthly reports</Label>
-
           <Checkbox
             id="monthly-reporting"
             defaultChecked={props.is_mth_report_relevant}
@@ -270,6 +266,7 @@ export default function UpdateReportingDetailsForm(props: {
               }
             }}
           />
+          <Label htmlFor="monthly-reporting">Will submit monthly reports</Label>
         </div>
       </SettingsSection>
     </div>
