@@ -35,8 +35,10 @@ import { revalidatePath } from "next/cache";
 
 const JSON_HEADERS = {
   "Content-Type": "application/json",
+  Accept: "application/json",
 } as const;
-const migrationApiKey = process.env.MIGRATION_API_KEY;
+const migrationApiKey =
+  process.env.PRISM_TRAINING_MIGRATION_KEY ?? process.env.MIGRATION_API_KEY;
 
 const normalizeMigrationBaseUrl = (value: string): string => {
   const trimmed = value.trim();
@@ -97,7 +99,20 @@ const fetchMigrationEndpoint = async (path: string) => {
       });
 
       if (response.ok) {
-        return response;
+        const contentType = response.headers.get("content-type") ?? "";
+        if (contentType.toLowerCase().includes("application/json")) {
+          return response;
+        }
+
+        const preview = (await response.text())
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 140);
+
+        failures.push(
+          `${requestUrl} -> expected JSON but got ${contentType || "unknown content-type"}${preview ? ` (body starts: ${preview})` : ""}`,
+        );
+        continue;
       }
 
       failures.push(`${requestUrl} -> HTTP ${response.status}`);
