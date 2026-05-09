@@ -12,7 +12,11 @@ import { organisations } from "@/db/schema/utility";
 import { managedListItems, managedLists } from "@/db/schema/managedLists";
 import { and, asc, eq, gt, ilike, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
-import { CurrentUser, getCurrentUser } from "@/lib/user.service";
+import {
+  CurrentUser,
+  getCurrentUser,
+  hasGlobalUtilityAccess,
+} from "@/lib/user.service";
 import {
   buildManagedListNameMap,
   resolveManagedListName,
@@ -110,12 +114,12 @@ const mapLegacyKpiTypeId = (
 
 const isDevRole = (role: string) => role === "DEV";
 
-const isGlobalRole = (role: string) => role === "DEV" || role === "BMO";
+const isGlobalRole = (user: CurrentUser) => hasGlobalUtilityAccess(user);
 
 const canSetKpiLimits = (role: string) => isDevRole(role);
 
 const canSetKpiTargets = (user: CurrentUser) => {
-  return !isGlobalRole(user.role) && user.org_id != null;
+  return !isGlobalRole(user) && user.org_id != null;
 };
 
 const hasLimitValuesInPayload = (data: KpiDefinitionWritePayload): boolean => {
@@ -208,7 +212,7 @@ const resolveCreateKpiType = (
   user: CurrentUser,
   value: unknown,
 ): "benchmarking" | "custom" => {
-  if (!isGlobalRole(user.role)) {
+  if (!isGlobalRole(user)) {
     return "custom";
   }
 
@@ -216,7 +220,7 @@ const resolveCreateKpiType = (
 };
 
 const getKpiVisibilityFilter = (user: CurrentUser) => {
-  if (isGlobalRole(user.role)) {
+  if (isGlobalRole(user)) {
     return null;
   }
 
@@ -362,14 +366,14 @@ export async function CreateKpiDefinition(
     };
   }
 
-  if (!isGlobalRole(currentUser.role) && currentUser.org_id == null) {
+  if (!isGlobalRole(currentUser) && currentUser.org_id == null) {
     return {
       success: false,
       message: "Your account is not scoped to a utility.",
     };
   }
 
-  if (!isGlobalRole(currentUser.role) && currentUser.org_id != null) {
+  if (!isGlobalRole(currentUser) && currentUser.org_id != null) {
     const [organisation] = await db
       .select({ id: organisations.id })
       .from(organisations)
@@ -415,7 +419,7 @@ export async function CreateKpiDefinition(
   }
 
   const utilityOwnershipFields =
-    !isGlobalRole(currentUser.role) && currentUser.org_id != null
+    !isGlobalRole(currentUser) && currentUser.org_id != null
       ? {
           owner_utility_id: currentUser.org_id,
         }
@@ -582,7 +586,7 @@ export async function UpdateKpiDefinition(
   const typePatch =
     typeof data.type === "undefined"
       ? undefined
-      : isGlobalRole(currentUser.role)
+      : isGlobalRole(currentUser)
         ? normalizeKpiType(data.type)
         : "custom";
 

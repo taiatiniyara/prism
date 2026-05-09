@@ -52,22 +52,24 @@ export default function CustomKpiRelevanceTable(props: {
       ),
     );
 
-    startTransition(async () => {
-      const loadingToastId = toast.loading("Updating relevance...");
-      const result = await props.onToggleRelevance({
-        kpiDefId,
-        isRelevant: checked,
-      });
+    startTransition(() => {
+      void (async () => {
+        const loadingToastId = toast.loading("Updating relevance...");
+        const result = await props.onToggleRelevance({
+          kpiDefId,
+          isRelevant: checked,
+        });
 
-      if (!result.success) {
-        setItems(previousItems);
-        toast.error(result.message);
+        if (!result.success) {
+          setItems(previousItems);
+          toast.error(result.message);
+          toast.dismiss(loadingToastId);
+          return;
+        }
+
         toast.dismiss(loadingToastId);
-        return;
-      }
-
-      toast.dismiss(loadingToastId);
-      toast.success(result.message);
+        toast.success(result.message);
+      })();
     });
   };
 

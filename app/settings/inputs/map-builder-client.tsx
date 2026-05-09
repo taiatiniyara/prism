@@ -183,23 +183,25 @@ export default function MapBuilderClient(props: MapBuilderClientProps) {
       };
     });
 
-    startTransition(async () => {
-      const result = await props.onSaveMappings({
-        items: [
-          {
-            inputId,
-            candidate,
-          },
-        ],
-      });
+    startTransition(() => {
+      void (async () => {
+        const result = await props.onSaveMappings({
+          items: [
+            {
+              inputId,
+              candidate,
+            },
+          ],
+        });
 
-      if (!result.success) {
-        toast.error(result.message);
-        return;
-      }
+        if (!result.success) {
+          toast.error(result.message);
+          return;
+        }
 
-      toast.success(result.message);
-      router.refresh();
+        toast.success(result.message);
+        router.refresh();
+      })();
     });
   };
 

@@ -92,13 +92,15 @@ export default function ReviewKpiFiltersClient({
     const next = applyLocalFilterCascade(localContext, key, value);
     setLocalContext(next);
 
-    startTransition(async () => {
-      try {
-        await updateReviewKpiFilterContextAction(key, value);
-        router.refresh();
-      } catch {
-        setError("Unable to apply filters. Please try again.");
-      }
+    startTransition(() => {
+      void (async () => {
+        try {
+          await updateReviewKpiFilterContextAction(key, value);
+          router.refresh();
+        } catch {
+          setError("Unable to apply filters. Please try again.");
+        }
+      })();
     });
   };
 

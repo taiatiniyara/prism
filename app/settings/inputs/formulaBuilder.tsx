@@ -732,37 +732,39 @@ export default function InputFormulaBuilder(props: {
   };
 
   const handleSave = () => {
-    startTransition(async () => {
-      if (!selectedInputId) {
-        toast.error("Choose an input definition first.");
-        return;
-      }
+    startTransition(() => {
+      void (async () => {
+        if (!selectedInputId) {
+          toast.error("Choose an input definition first.");
+          return;
+        }
 
-      if (parsedInlineFormula.errors.length > 0) {
-        toast.error(parsedInlineFormula.errors[0]);
-        return;
-      }
+        if (parsedInlineFormula.errors.length > 0) {
+          toast.error(parsedInlineFormula.errors[0]);
+          return;
+        }
 
-      const formulaInputs = getFormulaInputs(
-        parsedInlineFormula.cleanedFormula,
-        availableInputs,
-        selectedDependencyIds,
-        effectiveInputFilters,
-      );
+        const formulaInputs = getFormulaInputs(
+          parsedInlineFormula.cleanedFormula,
+          availableInputs,
+          selectedDependencyIds,
+          effectiveInputFilters,
+        );
 
-      const response = await SaveInputFormula({
-        inputId: Number(selectedInputId),
-        formula: parsedInlineFormula.cleanedFormula,
-        formulaInputs,
-      });
+        const response = await SaveInputFormula({
+          inputId: Number(selectedInputId),
+          formula: parsedInlineFormula.cleanedFormula,
+          formulaInputs,
+        });
 
-      if (!response.success) {
-        toast.error(response.message);
-        return;
-      }
+        if (!response.success) {
+          toast.error(response.message);
+          return;
+        }
 
-      toast.success(response.message);
-      resetFormulaBuilder();
+        toast.success(response.message);
+        resetFormulaBuilder();
+      })();
     });
   };
 

@@ -7,6 +7,7 @@ import NavList from "./navList";
 import { Session } from "better-auth";
 import UserDropdown from "./userDropdown";
 import { useState } from "react";
+import DevUtilityContextSwitcher from "./dev-utility-context-switcher";
 
 interface NavItem {
   label: string;
@@ -18,6 +19,15 @@ export default function TopNav(props: {
   role?: string;
   orgAcronym?: string;
   fullName?: string;
+  utilityContext?: {
+    selectedOrganisationId: number | null;
+    isScoped: boolean;
+    options: Array<{
+      id: number;
+      name: string;
+      acronym: string | null;
+    }>;
+  };
 }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -66,6 +76,18 @@ export default function TopNav(props: {
         </div>
 
         <div className="flex items-center gap-4">
+          {props.role === "DEV" && props.utilityContext ? (
+            <div className="hidden md:flex">
+              <DevUtilityContextSwitcher
+                options={props.utilityContext.options}
+                selectedOrganisationId={
+                  props.utilityContext.selectedOrganisationId
+                }
+                isScoped={props.utilityContext.isScoped}
+              />
+            </div>
+          ) : null}
+
           {/* Auth / Profile Area */}
           <div className="hidden md:flex">
             {props.session ? (
@@ -105,6 +127,18 @@ export default function TopNav(props: {
             />
 
             <div className="pt-4 border-t border-slate-600">
+              {props.role === "DEV" && props.utilityContext ? (
+                <div className="mb-3">
+                  <DevUtilityContextSwitcher
+                    options={props.utilityContext.options}
+                    selectedOrganisationId={
+                      props.utilityContext.selectedOrganisationId
+                    }
+                    isScoped={props.utilityContext.isScoped}
+                  />
+                </div>
+              ) : null}
+
               {props.session ? (
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">

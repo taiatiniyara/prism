@@ -43,16 +43,18 @@ export default function DataEntryComparisonPanel({ options }: Props) {
   }, [options.reportPeriods, utilityId]);
 
   const runComparison = () => {
-    startTransition(async () => {
-      const response = await compareDataEntries({
-        utilityId: utilityId ? Number(utilityId) : undefined,
-        reportPeriodId: reportPeriodId ? Number(reportPeriodId) : undefined,
-        categoryId: categoryId ? Number(categoryId) : undefined,
-        subcategoryId: subcategoryId ? Number(subcategoryId) : undefined,
-      });
+    startTransition(() => {
+      void (async () => {
+        const response = await compareDataEntries({
+          utilityId: utilityId ? Number(utilityId) : undefined,
+          reportPeriodId: reportPeriodId ? Number(reportPeriodId) : undefined,
+          categoryId: categoryId ? Number(categoryId) : undefined,
+          subcategoryId: subcategoryId ? Number(subcategoryId) : undefined,
+        });
 
-      setResult(response);
-      toast.success("Data entry comparison completed.");
+        setResult(response);
+        toast.success("Data entry comparison completed.");
+      })();
     });
   };
 

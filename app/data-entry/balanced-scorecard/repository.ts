@@ -25,15 +25,15 @@ import {
 import { managedListItems } from "@/db/schema/managedLists";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { and, desc, eq, inArray, or } from "drizzle-orm";
-import { getCurrentUser } from "@/lib/user.service";
+import { getCurrentUser, hasGlobalUtilityAccess } from "@/lib/user.service";
 
 const MONTHLY_TYPE_PATTERN = /month/i;
 const FY_TYPE_PATTERN = /(financial|fiscal|fy|annual|year)/i;
 
-const isGlobalKpiViewer = (role: string | null): boolean => {
-  const normalizedRole = role?.trim().toUpperCase();
-  return normalizedRole === "DEV" || normalizedRole === "BMO";
-};
+const isGlobalKpiViewer = (user: {
+  role: string | null;
+  is_utility_context_scoped?: boolean;
+}): boolean => hasGlobalUtilityAccess(user);
 
 type HierarchyAssignment = {
   perspectiveLevel: number;
@@ -357,12 +357,13 @@ export const listScorecardKpiOptions = async (
   context: ScorecardFilterContext,
 ): Promise<ScorecardKpiOption[]> => {
   const currentUser = await getCurrentUser();
-  const currentUserUtilityId = (
-    currentUser as {
-      utilityId?: number | null;
-      utility_id?: number | null;
-    }
-  ).utilityId ??
+  const currentUserUtilityId =
+    (
+      currentUser as {
+        utilityId?: number | null;
+        utility_id?: number | null;
+      }
+    ).utilityId ??
     (
       currentUser as {
         utilityId?: number | null;
@@ -372,7 +373,7 @@ export const listScorecardKpiOptions = async (
     null;
   const predicates = [eq(kpiDefinitions.is_active, true)];
 
-  if (!isGlobalKpiViewer(currentUser.role)) {
+  if (!isGlobalKpiViewer(currentUser)) {
     const visibilityPredicate =
       currentUserUtilityId == null
         ? eq(kpiDefinitions.is_private, false)

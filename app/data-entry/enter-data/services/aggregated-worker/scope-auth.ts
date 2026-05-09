@@ -3,15 +3,13 @@ import { eq } from "drizzle-orm";
 import type { AggregatedWorkerScope } from "@/app/data-entry/enter-data/services/aggregated-worker/source-reader";
 import { db } from "@/db/connection";
 import { reportPeriods } from "@/db/schema/reportPeriods";
-import type { CurrentUser } from "@/lib/user.service";
-
-const isGlobalRole = (role: string) => role === "DEV" || role === "BMO";
+import { hasGlobalUtilityAccess, type CurrentUser } from "@/lib/user.service";
 
 export const assertScopeAuthorization = async (
   user: CurrentUser,
   scope: AggregatedWorkerScope,
 ): Promise<void> => {
-  if (isGlobalRole(user.role)) {
+  if (hasGlobalUtilityAccess(user)) {
     return;
   }
 

@@ -88,29 +88,31 @@ export default function DevInputRelevanceTable(props: {
     const inputDefId = newItem.inputDefId;
     const dimensionId = newItem.dimensionId;
 
-    startTransition(async () => {
-      const result = await props.onAddItem({
-        inputDefId,
-        dimensionId,
-        isRelevant: newItem.isRelevant,
-      });
+    startTransition(() => {
+      void (async () => {
+        const result = await props.onAddItem({
+          inputDefId,
+          dimensionId,
+          isRelevant: newItem.isRelevant,
+        });
 
-      if (!result.success) {
-        toast.error(result.message);
-        return;
-      }
+        if (!result.success) {
+          toast.error(result.message);
+          return;
+        }
 
-      if (result.item) {
-        setItems((prev) => [result.item as DevInputRelevanceItem, ...prev]);
-      }
+        if (result.item) {
+          setItems((prev) => [result.item as DevInputRelevanceItem, ...prev]);
+        }
 
-      setNewItem({
-        inputDefId: null,
-        dimensionId: null,
-        isRelevant: true,
-      });
+        setNewItem({
+          inputDefId: null,
+          dimensionId: null,
+          isRelevant: true,
+        });
 
-      toast.success(result.message);
+        toast.success(result.message);
+      })();
     });
   };
 
@@ -135,29 +137,31 @@ export default function DevInputRelevanceTable(props: {
 
     const previousItems = items;
 
-    startTransition(async () => {
-      const result = await props.onUpdateItem({
-        id,
-        inputDefId: row.inputDefId,
-        dimensionId: row.dimensionId,
-        isRelevant: row.isRelevant,
-      });
+    startTransition(() => {
+      void (async () => {
+        const result = await props.onUpdateItem({
+          id,
+          inputDefId: row.inputDefId,
+          dimensionId: row.dimensionId,
+          isRelevant: row.isRelevant,
+        });
 
-      if (!result.success) {
-        setItems(previousItems);
-        toast.error(result.message);
-        return;
-      }
+        if (!result.success) {
+          setItems(previousItems);
+          toast.error(result.message);
+          return;
+        }
 
-      if (result.item) {
-        setItems((prev) =>
-          prev.map((item) =>
-            item.id === id ? (result.item as DevInputRelevanceItem) : item,
-          ),
-        );
-      }
+        if (result.item) {
+          setItems((prev) =>
+            prev.map((item) =>
+              item.id === id ? (result.item as DevInputRelevanceItem) : item,
+            ),
+          );
+        }
 
-      toast.success(result.message);
+        toast.success(result.message);
+      })();
     });
   };
 

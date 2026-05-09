@@ -15,7 +15,7 @@ import {
 import { kpiDefinitions } from "@/db/schema/kpi";
 import { managedListItems, managedLists } from "@/db/schema/managedLists";
 import { reportPeriods } from "@/db/schema/reportPeriods";
-import { getCurrentUser } from "@/lib/user.service";
+import { getCurrentUser, hasGlobalUtilityAccess } from "@/lib/user.service";
 import { formatReportPeriodDisplay } from "@/lib/formatters";
 import { and, asc, desc, eq, ilike, inArray, isNull, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -53,10 +53,10 @@ type UtilityScopedRelevanceFilter = {
   serviceAreaId?: number | null;
 };
 
-const isGlobalKpiViewer = (role: string | null): boolean => {
-  const normalizedRole = role?.trim().toUpperCase();
-  return normalizedRole === "DEV" || normalizedRole === "BMO";
-};
+const isGlobalKpiViewer = (user: {
+  role: string | null;
+  is_utility_context_scoped?: boolean;
+}): boolean => hasGlobalUtilityAccess(user);
 
 export interface UtilityTariffRelevanceCell {
   customerTypeId: number;
@@ -226,7 +226,10 @@ const resolveSelectedId = (
 
 const getUtilityRelevanceFilterContext = async (
   utilityId: number,
-  currentUserRole: string,
+  currentUser: {
+    role: string | null;
+    is_utility_context_scoped?: boolean;
+  },
   filters: UtilityScopedRelevanceFilter,
 ): Promise<{
   serviceAreaOptions: RelevanceFilterOption[];
@@ -236,7 +239,7 @@ const getUtilityRelevanceFilterContext = async (
 }> => {
   const serviceAreaConditions = [eq(serviceAreas.utility_id, utilityId)];
 
-  if (currentUserRole !== "DEV") {
+  if (!hasGlobalUtilityAccess(currentUser)) {
     serviceAreaConditions.push(eq(serviceAreas.is_virtual, false));
   }
 
@@ -594,7 +597,7 @@ export async function GetUtilityTariffRelevance(
     reportPeriodOptions,
     selectedReportPeriodId,
     selectedServiceAreaId,
-  } = await getUtilityRelevanceFilterContext(user.org_id!, user.role, filters);
+  } = await getUtilityRelevanceFilterContext(user.org_id!, user, filters);
 
   const inputList = await getInputDefinitionsForStructure("Tariff Structure");
 
@@ -873,7 +876,7 @@ export async function GetTransmissionRelevance(
     reportPeriodOptions,
     selectedReportPeriodId,
     selectedServiceAreaId,
-  } = await getUtilityRelevanceFilterContext(user.org_id!, user.role, filters);
+  } = await getUtilityRelevanceFilterContext(user.org_id!, user, filters);
 
   const inputList = await getInputDefinitionsForStructure("Transmission");
 
@@ -1074,7 +1077,7 @@ export async function GetUtilityGenerationRelevance(
     reportPeriodOptions,
     selectedReportPeriodId,
     selectedServiceAreaId,
-  } = await getUtilityRelevanceFilterContext(user.org_id!, user.role, filters);
+  } = await getUtilityRelevanceFilterContext(user.org_id!, user, filters);
 
   const inputList = await getGenerationInputDefinitions();
   let energyProviders = await getManagedDimensionItems("Energy Provider");
@@ -1484,7 +1487,7 @@ export async function GetCustomKpiRelevance(): Promise<
     throw new Error("User not authenticated");
   }
 
-  const isGlobalViewer = isGlobalKpiViewer(user.role);
+  const isGlobalViewer = isGlobalKpiViewer(user);
 
   if (user.org_id == null && !isGlobalViewer) {
     return [];

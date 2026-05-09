@@ -52,34 +52,36 @@ export function InputCommentThread({
 
     setError(null);
 
-    startTransition(async () => {
-      try {
-        const response = await fetch(
-          `/api/data-entry/review-kpi/inputs/${dataEntryId}/comments`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ comment: trimmed }),
-          },
-        );
+    startTransition(() => {
+      void (async () => {
+        try {
+          const response = await fetch(
+            `/api/data-entry/review-kpi/inputs/${dataEntryId}/comments`,
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ comment: trimmed }),
+            },
+          );
 
-        if (!response.ok) {
-          const body = (await response.json().catch(() => null)) as {
-            message?: string;
-          } | null;
-          throw new Error(body?.message ?? "Failed to add note.");
+          if (!response.ok) {
+            const body = (await response.json().catch(() => null)) as {
+              message?: string;
+            } | null;
+            throw new Error(body?.message ?? "Failed to add note.");
+          }
+
+          const body = (await response.json()) as { comments: InputComment[] };
+          onCommentsUpdated(body.comments);
+          event.currentTarget.reset();
+        } catch (submitError) {
+          setError(
+            submitError instanceof Error
+              ? submitError.message
+              : "Failed to add note.",
+          );
         }
-
-        const body = (await response.json()) as { comments: InputComment[] };
-        onCommentsUpdated(body.comments);
-        event.currentTarget.reset();
-      } catch (submitError) {
-        setError(
-          submitError instanceof Error
-            ? submitError.message
-            : "Failed to add note.",
-        );
-      }
+      })();
     });
   };
 

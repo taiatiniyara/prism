@@ -32,13 +32,15 @@ export default function ReportPeriodTable(props: {
     reportPeriodId: number,
     status: keyof typeof DataEntryStatus,
   ) => {
-    startTransition(async () => {
-      await updateFilterContextAction("reportPeriodId", reportPeriodId);
-      await updateFilterContextAction(
-        "dataEntryStatusId",
-        DataEntryStatus[status],
-      );
-      router.push("/data-entry/enter-data");
+    startTransition(() => {
+      void (async () => {
+        await updateFilterContextAction("reportPeriodId", reportPeriodId);
+        await updateFilterContextAction(
+          "dataEntryStatusId",
+          DataEntryStatus[status],
+        );
+        router.push("/data-entry/enter-data");
+      })();
     });
   };
 

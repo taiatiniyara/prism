@@ -2,17 +2,15 @@ import { eq } from "drizzle-orm";
 
 import { db } from "@/db/connection";
 import { reportPeriods } from "@/db/schema/reportPeriods";
-import type { CurrentUser } from "@/lib/user.service";
+import { hasGlobalUtilityAccess, type CurrentUser } from "@/lib/user.service";
 
 import type { KpiWorkerScope } from "./types";
-
-const isGlobalRole = (role: string) => role === "DEV" || role === "BMO";
 
 export const assertKpiWorkerScopeAuthorization = async (
   user: CurrentUser,
   scope: KpiWorkerScope,
 ): Promise<void> => {
-  if (isGlobalRole(user.role)) {
+  if (hasGlobalUtilityAccess(user)) {
     return;
   }
 

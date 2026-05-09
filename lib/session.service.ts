@@ -1,5 +1,5 @@
 import { unstable_noStore as noStore } from "next/cache";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/db/connection";
 import { roles, user } from "@/db/schema/auth-schema";
@@ -7,6 +7,10 @@ import { auth } from "./auth";
 import { organisations } from "@/db/schema/utility";
 import { sidebarAccess } from "@/db/schema/rls";
 import { getBlockedAccessState } from "@/lib/auth-status-guard";
+import {
+  DEV_UTILITY_CONTEXT_COOKIE,
+  parseOrganisationContextId,
+} from "@/lib/utility-context";
 
 export async function getSession() {
   // Opt-out of static caching so we always read fresh cookies per request
@@ -55,11 +59,38 @@ export async function getSession() {
     .from(sidebarAccess)
     .orderBy(asc(sidebarAccess.order));
 
-  const [org] = currentUser.organisation_id
+  let effectiveOrganisationId = currentUser.organisation_id;
+  let isUtilityContextScoped = false;
+
+  if (role?.name === "DEV") {
+    const cookieStore = await cookies();
+    const requestedContextId = parseOrganisationContextId(
+      cookieStore.get(DEV_UTILITY_CONTEXT_COOKIE)?.value,
+    );
+
+    if (requestedContextId != null) {
+      const [scopedOrganisation] = await db
+        .select({ id: organisations.id })
+        .from(organisations)
+        .where(eq(organisations.id, requestedContextId))
+        .limit(1);
+
+      if (scopedOrganisation) {
+        effectiveOrganisationId = scopedOrganisation.id;
+        isUtilityContextScoped = true;
+      } else {
+        effectiveOrganisationId = null;
+      }
+    } else {
+      effectiveOrganisationId = null;
+    }
+  }
+
+  const [org] = effectiveOrganisationId
     ? await db
         .select()
         .from(organisations)
-        .where(eq(organisations.id, currentUser.organisation_id))
+        .where(eq(organisations.id, effectiveOrganisationId))
         .limit(1)
     : [null];
 
@@ -72,6 +103,8 @@ export async function getSession() {
     session,
     user: currentUser,
     role: role ?? null,
+    effectiveOrgId: effectiveOrganisationId,
+    isUtilityContextScoped,
     orgAcronym: org?.acronym,
     sidebarList: sidebarList
       .filter((item) => item.roles.split(",").includes(role!.name))

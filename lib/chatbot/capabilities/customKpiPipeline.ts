@@ -7,11 +7,14 @@ import {
   customKpiLifecycleEvents,
   customKpiRequests,
 } from "@/db/schema/custom-kpi-requests";
+import { hasGlobalUtilityAccess } from "@/lib/user.service";
 
 import { type CapabilityContext, type CapabilityResolution } from "./common";
 
-const isUtilityScopedRole = (role: string): boolean =>
-  role !== "DEV" && role !== "BMO";
+const isUtilityScopedRole = (user: {
+  role: string;
+  is_utility_context_scoped?: boolean;
+}): boolean => !hasGlobalUtilityAccess(user);
 
 const STATUS_ORDER: ReadonlyArray<
   "PENDING_REVIEW" | "APPROVED" | "REJECTED" | "REPLACED"
@@ -27,7 +30,7 @@ export const buildCustomKpiPipelineContext = async (
   ctx: CapabilityContext,
 ): Promise<CapabilityResolution> => {
   const utilityScoped =
-    isUtilityScopedRole(ctx.user.role) &&
+    isUtilityScopedRole(ctx.user) &&
     ctx.user.org_id != null &&
     !ctx.allUtilitiesRequested;
 

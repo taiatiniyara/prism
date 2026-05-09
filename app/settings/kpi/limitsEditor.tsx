@@ -164,18 +164,20 @@ export default function KpiLimitsEditor(props: {
 
     const limits = [...keyed.values()];
 
-    startTransition(async () => {
-      const response = await SaveKpiLimits({
-        kpiId: Number(selectedKpiId),
-        limits,
-      });
+    startTransition(() => {
+      void (async () => {
+        const response = await SaveKpiLimits({
+          kpiId: Number(selectedKpiId),
+          limits,
+        });
 
-      if (!response.success) {
-        toast.error(response.message);
-        return;
-      }
+        if (!response.success) {
+          toast.error(response.message);
+          return;
+        }
 
-      toast.success(response.message);
+        toast.success(response.message);
+      })();
     });
   };
 

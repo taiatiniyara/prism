@@ -227,18 +227,20 @@ export default function KpiTargetsEditor(props: {
       });
     }
 
-    startTransition(async () => {
-      const response = await SaveKpiTargets({
-        kpiId: Number(selectedKpiId),
-        targets: [...keyed.values()],
-      });
+    startTransition(() => {
+      void (async () => {
+        const response = await SaveKpiTargets({
+          kpiId: Number(selectedKpiId),
+          targets: [...keyed.values()],
+        });
 
-      if (!response.success) {
-        toast.error(response.message);
-        return;
-      }
+        if (!response.success) {
+          toast.error(response.message);
+          return;
+        }
 
-      toast.success(response.message);
+        toast.success(response.message);
+      })();
     });
   };
 

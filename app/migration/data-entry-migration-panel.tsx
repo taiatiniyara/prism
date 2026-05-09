@@ -70,32 +70,34 @@ export default function DataEntryMigrationPanel() {
       return;
     }
 
-    startTransition(async () => {
-      const ok = await retrieveDataEntries({
-        reportPeriodId: parsedOptions.reportPeriodId,
-        batchSize: parsedOptions.batchSize,
-      });
+    startTransition(() => {
+      void (async () => {
+        const ok = await retrieveDataEntries({
+          reportPeriodId: parsedOptions.reportPeriodId,
+          batchSize: parsedOptions.batchSize,
+        });
 
-      if (ok) {
-        const scopeText =
-          parsedOptions.reportPeriodId != null
-            ? `report period ${parsedOptions.reportPeriodId}`
-            : "all report periods";
+        if (ok) {
+          const scopeText =
+            parsedOptions.reportPeriodId != null
+              ? `report period ${parsedOptions.reportPeriodId}`
+              : "all report periods";
 
-        const batchText =
-          parsedOptions.batchSize != null
-            ? `batch size ${parsedOptions.batchSize}`
-            : "default batch size";
+          const batchText =
+            parsedOptions.batchSize != null
+              ? `batch size ${parsedOptions.batchSize}`
+              : "default batch size";
 
-        const message = `Data entries migrated for ${scopeText} using ${batchText}.`;
-        setLastRunMessage(message);
-        toast.success(message);
-      } else {
-        const message =
-          "Data entry migration failed. Check prism server logs for details.";
-        setLastRunMessage(message);
-        toast.error(message);
-      }
+          const message = `Data entries migrated for ${scopeText} using ${batchText}.`;
+          setLastRunMessage(message);
+          toast.success(message);
+        } else {
+          const message =
+            "Data entry migration failed. Check prism server logs for details.";
+          setLastRunMessage(message);
+          toast.error(message);
+        }
+      })();
     });
   };
 

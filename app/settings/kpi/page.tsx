@@ -1,6 +1,6 @@
 import DataTable from "@/components/tables/data-table";
 import { KpiDefinition } from "@/db/schema/kpi";
-import { getCurrentUser } from "@/lib/user.service";
+import { getCurrentUser, hasGlobalUtilityAccess } from "@/lib/user.service";
 import {
   getCustomKpiPageViewModel,
   listCustomKpiProposalReferenceOptions,
@@ -40,8 +40,8 @@ export default async function KpiSettingsPage() {
   const currentUser = await getCurrentUser();
   const isDevRole = currentUser.role === "DEV";
   const isBloRole = currentUser.role === "BLO";
-  const isGlobalRole = currentUser.role === "DEV" || currentUser.role === "BMO";
-  const canEditTargets = !isGlobalRole && currentUser.org_id != null;
+  const canEditTargets =
+    !hasGlobalUtilityAccess(currentUser) && currentUser.org_id != null;
   const definitionsTitle = isDevRole ? "Definitions" : "Custom KPI Requests";
   const showCustomKpiReviewView = isDevRole;
   const showCustomKpiRequestsView = isBloRole;

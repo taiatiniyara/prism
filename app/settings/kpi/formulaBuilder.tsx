@@ -764,37 +764,39 @@ export default function KpiFormulaBuilder(props: {
   };
 
   const handleSave = () => {
-    startTransition(async () => {
-      if (!selectedKpiId) {
-        toast.error("Choose a KPI first.");
-        return;
-      }
+    startTransition(() => {
+      void (async () => {
+        if (!selectedKpiId) {
+          toast.error("Choose a KPI first.");
+          return;
+        }
 
-      const formulaInputs = getFormulaInputs(
-        parsedInlineFormula.cleanedFormula,
-        props.inputs,
-        selectedInputIds,
-        effectiveInputFilters,
-      );
+        const formulaInputs = getFormulaInputs(
+          parsedInlineFormula.cleanedFormula,
+          props.inputs,
+          selectedInputIds,
+          effectiveInputFilters,
+        );
 
-      if (parsedInlineFormula.errors.length > 0) {
-        toast.error(parsedInlineFormula.errors[0]);
-        return;
-      }
+        if (parsedInlineFormula.errors.length > 0) {
+          toast.error(parsedInlineFormula.errors[0]);
+          return;
+        }
 
-      const response = await SaveKpiFormula({
-        kpiId: Number(selectedKpiId),
-        formula: parsedInlineFormula.cleanedFormula,
-        formulaInputs,
-      });
+        const response = await SaveKpiFormula({
+          kpiId: Number(selectedKpiId),
+          formula: parsedInlineFormula.cleanedFormula,
+          formulaInputs,
+        });
 
-      if (!response.success) {
-        toast.error(response.message);
-        return;
-      }
+        if (!response.success) {
+          toast.error(response.message);
+          return;
+        }
 
-      toast.success(response.message);
-      resetFormulaBuilder();
+        toast.success(response.message);
+        resetFormulaBuilder();
+      })();
     });
   };
 

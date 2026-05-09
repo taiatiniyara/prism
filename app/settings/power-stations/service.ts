@@ -9,7 +9,7 @@ import {
   powerStations,
   serviceAreas,
 } from "@/db/schema/utility";
-import { getCurrentUser } from "@/lib/user.service";
+import { getCurrentUser, hasGlobalUtilityAccess } from "@/lib/user.service";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -22,7 +22,7 @@ export async function AllPowerStations(): Promise<PowerStation[]> {
     .leftJoin(serviceAreas, eq(powerStations.service_area_id, serviceAreas.id))
     .leftJoin(organisations, eq(powerStations.utility_id, organisations.id));
 
-  if (user.role !== "DEV") {
+  if (!hasGlobalUtilityAccess(user) && user.org_id != null) {
     query.where(eq(powerStations.utility_id, user.org_id!));
   }
 
@@ -61,19 +61,18 @@ export async function UpdatePowerStation(
   data: Partial<PowerStation>,
 ): Promise<DataTableFormResponse<PowerStation>> {
   const user = await getCurrentUser();
-  const condition =
-    user.role === "DEV"
-      ? eq(powerStations.id, data.id!)
-      : and(
-          eq(powerStations.id, data.id!),
-          eq(powerStations.utility_id, user.org_id!),
-        );
+  const condition = hasGlobalUtilityAccess(user)
+    ? eq(powerStations.id, data.id!)
+    : and(
+        eq(powerStations.id, data.id!),
+        eq(powerStations.utility_id, user.org_id!),
+      );
 
   const [powerStation] = await db
     .update(powerStations)
     .set({
       ...data,
-      utility_id: user.role === "DEV" ? data.utility_id : user.org_id!,
+      utility_id: hasGlobalUtilityAccess(user) ? data.utility_id : user.org_id!,
     })
     .where(condition)
     .returning();

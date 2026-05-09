@@ -25,7 +25,12 @@ import { user as authUsers } from "@/db/schema/auth-schema";
 import { triggerKpiWorkerAsync } from "@/app/data-entry/kpi-worker";
 import { publishSyncEvent } from "@/app/data-entry/review-kpi/sync-store";
 import { formatReportPeriodDisplay } from "@/lib/formatters";
-import { CurrentUser, getCurrentUser } from "@/lib/user.service";
+import {
+  CurrentUser,
+  getCurrentUser,
+  hasGlobalUtilityAccess,
+  resolveUtilityScopeId,
+} from "@/lib/user.service";
 import { and, asc, eq, inArray, or, sql } from "drizzle-orm";
 import {
   CustomKpiDecisionType,
@@ -49,13 +54,8 @@ const hasRoleAccess = (allowedRoles: Set<string>, role: string | null) => {
   return normalizedRole != null && allowedRoles.has(normalizedRole);
 };
 
-const isGlobalRole = (role: string | null): boolean => {
-  const normalizedRole = role?.trim().toUpperCase();
-  return normalizedRole === "DEV" || normalizedRole === "BMO";
-};
-
 const getKpiVisibilityFilterForUser = (user: CurrentUser) => {
-  if (isGlobalRole(user.role)) {
+  if (hasGlobalUtilityAccess(user)) {
     return null;
   }
 
@@ -179,15 +179,12 @@ export const getReviewKpiFilterOptions = async (
   const reportPeriodWhere = [];
   const reportTypeWhere = [eq(managedListItems.is_active, true)];
   const serviceAreaWhere = [eq(serviceAreas.is_active, true)];
+  const utilityScopeId = resolveUtilityScopeId(user);
 
-  if (user.org_id == null) {
-    reportPeriodWhere.push(sql`1 = 0`);
-    reportTypeWhere.push(sql`1 = 0`);
-    serviceAreaWhere.push(sql`1 = 0`);
-  } else {
-    reportPeriodWhere.push(eq(reportPeriods.utility_id, user.org_id));
-    reportTypeWhere.push(eq(reportPeriods.utility_id, user.org_id));
-    serviceAreaWhere.push(eq(serviceAreas.utility_id, user.org_id));
+  if (utilityScopeId != null) {
+    reportPeriodWhere.push(eq(reportPeriods.utility_id, utilityScopeId));
+    reportTypeWhere.push(eq(reportPeriods.utility_id, utilityScopeId));
+    serviceAreaWhere.push(eq(serviceAreas.utility_id, utilityScopeId));
   }
 
   const [reportTypeRows, reportPeriodRows, serviceAreaRows, kpiCategoryIdRows] =

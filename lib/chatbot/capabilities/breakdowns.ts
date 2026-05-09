@@ -5,6 +5,7 @@ import { dataEntries, inputDefinitions } from "@/db/schema/dataEntry";
 import { managedListItems } from "@/db/schema/managedLists";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { serviceAreas } from "@/db/schema/utility";
+import { hasGlobalUtilityAccess } from "@/lib/user.service";
 
 import {
   toPercent,
@@ -24,8 +25,10 @@ const STATUS_LABELS: Record<number, string> = {
 
 const COMPLETION_STATUS_IDS = [3, 4, 5, 6];
 
-const isUtilityScopedRole = (role: string): boolean =>
-  role !== "DEV" && role !== "BMO";
+const isUtilityScopedRole = (user: {
+  role: string;
+  is_utility_context_scoped?: boolean;
+}): boolean => !hasGlobalUtilityAccess(user);
 
 const resolveScopePeriodIds = (ctx: CapabilityContext): number[] => {
   const ids = new Set<number>();
@@ -201,7 +204,7 @@ export const buildServiceAreaCompletenessContext = async (
   const serviceAreaConditions = [eq(serviceAreas.is_active, true)];
   if (
     !ctx.allUtilitiesRequested &&
-    isUtilityScopedRole(ctx.user.role) &&
+    isUtilityScopedRole(ctx.user) &&
     ctx.user.org_id != null
   ) {
     serviceAreaConditions.push(eq(serviceAreas.utility_id, ctx.user.org_id));

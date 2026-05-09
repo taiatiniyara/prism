@@ -9,7 +9,11 @@ import {
   powerStations,
   serviceAreas,
 } from "@/db/schema/utility";
-import { getCurrentUser } from "@/lib/user.service";
+import {
+  getCurrentUser,
+  hasGlobalUtilityAccess,
+  resolveUtilityScopeId,
+} from "@/lib/user.service";
 import { and, eq } from "drizzle-orm";
 import { DataTableFormResponse } from "@/components/tables/data-table-create-form";
 import { managedListItems } from "@/db/schema/managedLists";
@@ -23,6 +27,7 @@ export async function GetAllEnergyResources(): Promise<EnergyResource[]> {
   const user = await getCurrentUser();
   const ml = await db.select().from(managedListItems);
   const managedListNamesById = buildManagedListNameMap(ml);
+  const utilityScopeId = resolveUtilityScopeId(user);
 
   const query = db
     .select()
@@ -36,13 +41,16 @@ export async function GetAllEnergyResources(): Promise<EnergyResource[]> {
       powerStations,
       eq(energyResources.power_station_id, powerStations.id),
     );
-  if (user?.role !== "DEV") {
+
+  if (utilityScopeId != null) {
     query.where(
       and(
-        eq(energyResources.utility_id, user.org_id!),
+        eq(energyResources.utility_id, utilityScopeId),
         eq(energyResources.is_virtual, false),
       ),
     );
+  } else if (!hasGlobalUtilityAccess(user)) {
+    query.where(eq(energyResources.is_virtual, false));
   }
 
   const list = await query.orderBy(energyResources.name);
@@ -81,9 +89,18 @@ export async function CreateEnergyResource(
   data: NewEnergyResource,
 ): Promise<DataTableFormResponse<EnergyResource>> {
   const user = await getCurrentUser();
+  const utilityScopeId = resolveUtilityScopeId(user);
+
+  if (utilityScopeId == null) {
+    return {
+      success: false,
+      message: "Select a utility context before creating an energy resource.",
+    };
+  }
+
   const query = db.insert(energyResources).values({
     ...data,
-    utility_id: user.org_id!,
+    utility_id: utilityScopeId,
     period_entries: data.period_entries ?? [],
     updated_by_id: user.id,
     is_virtual: false,
@@ -103,6 +120,8 @@ export async function UpdateEnergyResource(
   data: Partial<EnergyResource>,
 ): Promise<DataTableFormResponse<EnergyResource>> {
   const user = await getCurrentUser();
+  const utilityScopeId = resolveUtilityScopeId(user);
+
   const query = db
     .update(energyResources)
     .set({
@@ -110,8 +129,23 @@ export async function UpdateEnergyResource(
       updated_by_id: user.id,
       updated_at: new Date(),
     })
-    .where(eq(energyResources.id, data.id!));
+    .where(
+      utilityScopeId == null
+        ? eq(energyResources.id, data.id!)
+        : and(
+            eq(energyResources.id, data.id!),
+            eq(energyResources.utility_id, utilityScopeId),
+          ),
+    );
   const [result] = await query.returning();
+
+  if (!result) {
+    return {
+      success: false,
+      message: "Energy Resource not found in the active utility scope.",
+    };
+  }
+
   revalidatePath("/settings/energy-resources");
   return {
     success: true,

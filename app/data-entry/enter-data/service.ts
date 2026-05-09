@@ -30,7 +30,11 @@ import {
 import { managedListItems, managedLists } from "@/db/schema/managedLists";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { energyResources, serviceAreas } from "@/db/schema/utility";
-import { CurrentUser, getCurrentUser } from "@/lib/user.service";
+import {
+  CurrentUser,
+  getCurrentUser,
+  hasGlobalUtilityAccess,
+} from "@/lib/user.service";
 import {
   getOperationalCategoryId,
   sanitizeDependentFilterContext,
@@ -69,8 +73,6 @@ import {
   type KpiWorkerRunResult,
 } from "@/app/data-entry/kpi-worker";
 import { formatReportPeriodDisplay } from "@/lib/formatters";
-
-const isGlobalRole = (role: string) => role === "DEV" || role === "BMO";
 
 const hasActiveEnergyResourcePeriod = (reportPeriodId: number) =>
   sql<boolean>`exists (
@@ -572,7 +574,7 @@ const getGenerationGroupsForContext = async (
     hasActiveEnergyResourcePeriod(context.reportPeriodId),
   ];
 
-  if (!isGlobalRole(user.role) && user.org_id != null) {
+  if (!hasGlobalUtilityAccess(user) && user.org_id != null) {
     generatorConditions.push(eq(energyResources.utility_id, user.org_id));
   }
 
@@ -962,7 +964,7 @@ const getOverallProgressForContext = async (
   );
 
   const serviceAreaConditions = [eq(serviceAreas.is_active, true)];
-  if (!isGlobalRole(user.role) && user.org_id != null) {
+  if (!hasGlobalUtilityAccess(user) && user.org_id != null) {
     serviceAreaConditions.push(eq(serviceAreas.utility_id, user.org_id));
   }
 
@@ -1003,7 +1005,7 @@ const getOverallProgressForContext = async (
     hasActiveEnergyResourcePeriod(context.reportPeriodId),
   ];
 
-  if (!isGlobalRole(user.role) && user.org_id != null) {
+  if (!hasGlobalUtilityAccess(user) && user.org_id != null) {
     generatorConditions.push(eq(energyResources.utility_id, user.org_id));
   }
 
@@ -1165,7 +1167,7 @@ export const getReportPeriodOptions = async (
   }
 
   const conditions = [eq(reportPeriods.report_type_id, reportTypeId)];
-  if (!isGlobalRole(user.role) && user.org_id != null) {
+  if (!hasGlobalUtilityAccess(user) && user.org_id != null) {
     conditions.push(eq(reportPeriods.utility_id, user.org_id));
   }
 
@@ -1219,7 +1221,7 @@ export const getInputSubcategoryOptions = async (
   );
 
   if (
-    isGlobalRole(user.role) ||
+    hasGlobalUtilityAccess(user) ||
     user.org_id == null ||
     reportPeriodId == null ||
     baseSubcategories.length === 0
@@ -1328,7 +1330,7 @@ export const getServiceAreaOptions = async (
     sql`lower(${serviceAreas.name}) not like '%utility%'`,
   ];
 
-  if (!isGlobalRole(user.role) && user.org_id != null) {
+  if (!hasGlobalUtilityAccess(user) && user.org_id != null) {
     conditions.push(eq(serviceAreas.utility_id, user.org_id));
   }
 

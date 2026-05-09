@@ -48,24 +48,26 @@ export default function TransmissionRelevanceTable(props: {
       ),
     );
 
-    startTransition(async () => {
-      const loadingToastId = toast.loading("Updating relevance...");
-      const result = await props.onToggleRelevance({
-        reportPeriodId: props.reportPeriodId,
-        serviceAreaId: props.serviceAreaId,
-        inputDefId,
-        isRelevant: checked,
-      });
+    startTransition(() => {
+      void (async () => {
+        const loadingToastId = toast.loading("Updating relevance...");
+        const result = await props.onToggleRelevance({
+          reportPeriodId: props.reportPeriodId,
+          serviceAreaId: props.serviceAreaId,
+          inputDefId,
+          isRelevant: checked,
+        });
 
-      if (!result.success) {
-        setItems(previousItems);
-        toast.error(result.message);
+        if (!result.success) {
+          setItems(previousItems);
+          toast.error(result.message);
+          toast.dismiss(loadingToastId);
+          return;
+        }
+
         toast.dismiss(loadingToastId);
-        return;
-      }
-
-      toast.dismiss(loadingToastId);
-      toast.success(result.message);
+        toast.success(result.message);
+      })();
     });
   };
 
@@ -79,32 +81,34 @@ export default function TransmissionRelevanceTable(props: {
       })),
     );
 
-    startTransition(async () => {
-      const loadingToastId = toast.loading("Updating relevance...");
-      const results = await Promise.all(
-        items.map((item) =>
-          props.onToggleRelevance({
-            reportPeriodId: props.reportPeriodId,
-            serviceAreaId: props.serviceAreaId,
-            inputDefId: item.inputDefId,
-            isRelevant: checked,
-          }),
-        ),
-      );
+    startTransition(() => {
+      void (async () => {
+        const loadingToastId = toast.loading("Updating relevance...");
+        const results = await Promise.all(
+          items.map((item) =>
+            props.onToggleRelevance({
+              reportPeriodId: props.reportPeriodId,
+              serviceAreaId: props.serviceAreaId,
+              inputDefId: item.inputDefId,
+              isRelevant: checked,
+            }),
+          ),
+        );
 
-      const failedResult = results.find((result) => !result.success);
+        const failedResult = results.find((result) => !result.success);
 
-      if (failedResult) {
-        setItems(previousItems);
-        toast.error(failedResult.message);
+        if (failedResult) {
+          setItems(previousItems);
+          toast.error(failedResult.message);
+          toast.dismiss(loadingToastId);
+          return;
+        }
+
         toast.dismiss(loadingToastId);
-        return;
-      }
-
-      toast.dismiss(loadingToastId);
-      if (results.length > 0) {
-        toast.success("Transmission relevance updated.");
-      }
+        if (results.length > 0) {
+          toast.success("Transmission relevance updated.");
+        }
+      })();
     });
   };
 

@@ -9,6 +9,9 @@ import { Noto_Sans } from "next/font/google";
 import Footer from "@/components/layout/footer";
 import BlockedAccessOverlay from "@/components/auth/blocked-access-overlay";
 import { FloatingChatbot } from "@/components/chatbot/floating-chatbot";
+import { db } from "@/db/connection";
+import { organisations } from "@/db/schema/utility";
+import { and, asc, eq } from "drizzle-orm";
 
 const notoSans = Noto_Sans({
   subsets: ["latin"],
@@ -35,19 +38,10 @@ export default function RootLayout({
           <AppNavigation />
         </Suspense>
 
-        <div className="flex min-h-0 flex-1 overflow-hidden">
-          <Suspense fallback={null}>
-            <SidebarWrapper />
-          </Suspense>
-          <main className="flex-1 min-w-0 overflow-y-auto p-2">
-            <Suspense fallback={null}>
-              <AccessGate>{children}</AccessGate>
-            </Suspense>
-          </main>
-        </div>
-
-        <Suspense fallback={null}>
-          <FloatingChatbotWrapper />
+        <Suspense
+          fallback={<div className="flex min-h-0 flex-1 overflow-hidden" />}
+        >
+          <SessionShell>{children}</SessionShell>
         </Suspense>
 
         <Toaster
@@ -76,6 +70,23 @@ export default function RootLayout({
 
 async function AppNavigation() {
   const session = await getSession();
+  const utilityOptions =
+    session?.role?.name === "DEV"
+      ? await db
+          .select({
+            id: organisations.id,
+            name: organisations.name,
+            acronym: organisations.acronym,
+          })
+          .from(organisations)
+          .where(
+            and(
+              eq(organisations.is_active, true),
+              eq(organisations.is_utility, true),
+            ),
+          )
+          .orderBy(asc(organisations.name))
+      : [];
 
   return (
     <TopNav
@@ -83,43 +94,54 @@ async function AppNavigation() {
       role={session?.role?.name}
       orgAcronym={session?.orgAcronym || ""}
       fullName={session?.fullName}
+      utilityContext={
+        session?.role?.name === "DEV"
+          ? {
+              selectedOrganisationId: session.effectiveOrgId ?? null,
+              isScoped: session.isUtilityContextScoped === true,
+              options: utilityOptions.map((utility) => ({
+                id: utility.id,
+                name: utility.name,
+                acronym: utility.acronym ?? null,
+              })),
+            }
+          : undefined
+      }
     />
   );
 }
 
-async function SidebarWrapper() {
-  const session = await getSession();
-  if (!session?.user || !session?.role) return null;
-  if (session.blockedState?.blocked) return null;
-
-  return <Sidebar list={session.sidebarList} />;
-}
-
-async function AccessGate({ children }: { children: React.ReactNode }) {
+async function SessionShell({ children }: { children: React.ReactNode }) {
   const session = await getSession();
 
-  if (session?.blockedState?.blocked && session.blockedState.status) {
-    return (
-      <BlockedAccessOverlay
-        status={session.blockedState.status}
-        rejectionReason={session.blockedState.rejectionReason}
-      />
-    );
-  }
+  const showSidebar =
+    Boolean(session?.user && session?.role) && !session?.blockedState?.blocked;
 
-  return <>{children}</>;
-}
+  const showBlockedOverlay =
+    Boolean(session?.blockedState?.blocked) &&
+    Boolean(session?.blockedState?.status);
+  const blockedStatus = session?.blockedState?.status;
 
-async function FloatingChatbotWrapper() {
-  const session = await getSession();
+  const showFloatingChatbot =
+    Boolean(session?.user) && !session?.blockedState?.blocked;
 
-  if (!session?.user) {
-    return null;
-  }
+  return (
+    <>
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        {showSidebar ? <Sidebar list={session?.sidebarList ?? []} /> : null}
+        <main className="flex-1 min-w-0 overflow-y-auto p-2">
+          {showBlockedOverlay && blockedStatus ? (
+            <BlockedAccessOverlay
+              status={blockedStatus}
+              rejectionReason={session?.blockedState?.rejectionReason}
+            />
+          ) : (
+            children
+          )}
+        </main>
+      </div>
 
-  if (session.blockedState?.blocked) {
-    return null;
-  }
-
-  return <FloatingChatbot />;
+      {showFloatingChatbot ? <FloatingChatbot /> : null}
+    </>
+  );
 }

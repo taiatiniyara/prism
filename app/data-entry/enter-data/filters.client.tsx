@@ -54,9 +54,11 @@ export default function DataEntryFiltersClient({
     const contextKey = keyMap[key];
     setLocalContext((prev) => applyFilterCascade(prev, contextKey, value));
 
-    startTransition(async () => {
-      await updateFilterContextAction(contextKey, value);
-      router.refresh();
+    startTransition(() => {
+      void (async () => {
+        await updateFilterContextAction(contextKey, value);
+        router.refresh();
+      })();
     });
   };
 

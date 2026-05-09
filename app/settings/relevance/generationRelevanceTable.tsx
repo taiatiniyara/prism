@@ -111,25 +111,27 @@ export default function GenerationRelevanceTable(props: {
       }),
     );
 
-    startTransition(async () => {
-      const loadingToastId = toast.loading("Updating relevance...");
-      const result = await props.onToggleRelevance({
-        reportPeriodId: props.reportPeriodId,
-        serviceAreaId: props.serviceAreaId,
-        energySourceId,
-        energyProviderId,
-        isRelevant: checked,
-      });
+    startTransition(() => {
+      void (async () => {
+        const loadingToastId = toast.loading("Updating relevance...");
+        const result = await props.onToggleRelevance({
+          reportPeriodId: props.reportPeriodId,
+          serviceAreaId: props.serviceAreaId,
+          energySourceId,
+          energyProviderId,
+          isRelevant: checked,
+        });
 
-      if (!result.success) {
-        setRows(previousRows);
-        toast.error(result.message);
+        if (!result.success) {
+          setRows(previousRows);
+          toast.error(result.message);
+          toast.dismiss(loadingToastId);
+          return;
+        }
+
         toast.dismiss(loadingToastId);
-        return;
-      }
-
-      toast.dismiss(loadingToastId);
-      toast.success(result.message);
+        toast.success(result.message);
+      })();
     });
   };
 

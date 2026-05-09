@@ -1,5 +1,5 @@
 import DataTable from "@/components/tables/data-table";
-import { AllRoles, CreateRole } from "./roles.service";
+import { AllRoles, CreateRole, UpdateRole } from "./roles.service";
 import { Role } from "@/db/schema/auth-schema";
 
 export default async function RolesSettingsPage() {
@@ -11,6 +11,19 @@ export default async function RolesSettingsPage() {
       title="Roles"
       createFormProps={{
         formAction: CreateRole,
+        fields: [
+          {
+            key: "name",
+            type: "text",
+          },
+          {
+            key: "description",
+            type: "text",
+          },
+        ],
+      }}
+      updateFormProps={{
+        formAction: UpdateRole,
         fields: [
           {
             key: "name",

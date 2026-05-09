@@ -19,10 +19,8 @@ import {
 } from "@/db/schema/utility";
 import { formatReportPeriodDisplay } from "@/lib/formatters";
 import { buildManagedListNameMap } from "@/lib/managed-list-utils";
-import { CurrentUser } from "@/lib/user.service";
+import { CurrentUser, resolveUtilityScopeId } from "@/lib/user.service";
 import { and, desc, eq, ilike, inArray, isNull, sql } from "drizzle-orm";
-
-const isGlobalRole = (role: string) => role === "DEV" || role === "BMO";
 
 const isAllLikeOption = (name: string): boolean => {
   const normalized = name.trim().toLowerCase();
@@ -116,8 +114,7 @@ const getRequestedCountForPeriod = async (
     eq(serviceAreas.is_active, true),
     sql`lower(${serviceAreas.name}) not like '%utility%'`,
   ];
-  const effectiveUtilityId =
-    scopeUtilityId ?? (!isGlobalRole(user.role) ? user.org_id : null);
+  const effectiveUtilityId = scopeUtilityId ?? resolveUtilityScopeId(user);
   if (effectiveUtilityId != null) {
     serviceAreaConditions.push(eq(serviceAreas.utility_id, effectiveUtilityId));
   }
@@ -509,8 +506,11 @@ export async function GetReportPeriods(
     .from(reportPeriods)
     .leftJoin(organisations, eq(reportPeriods.utility_id, organisations.id))
     .orderBy(desc(reportPeriods.report_date));
-  if (!forceAllUtilities && user.role !== "DEV" && user.role !== "BMO") {
-    rp.where(eq(reportPeriods.utility_id, user.org_id!));
+  if (!forceAllUtilities) {
+    const scopedUtilityId = resolveUtilityScopeId(user);
+    if (scopedUtilityId != null) {
+      rp.where(eq(reportPeriods.utility_id, scopedUtilityId));
+    }
   }
   const deList = await de;
   const list = await rp;

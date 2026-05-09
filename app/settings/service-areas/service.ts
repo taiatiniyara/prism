@@ -9,7 +9,7 @@ import {
   serviceAreas,
 } from "@/db/schema/utility";
 import { generateRandomNumber } from "@/lib/utils";
-import { getCurrentUser } from "@/lib/user.service";
+import { getCurrentUser, resolveUtilityScopeId } from "@/lib/user.service";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -23,12 +23,13 @@ export async function AllServiceAreas(filters?: {
     .leftJoin(organisations, eq(serviceAreas.utility_id, organisations.id));
 
   const conditions = [];
+  const scopedUtilityId = resolveUtilityScopeId(user);
 
-  if (!filters?.all) {
-    conditions.push(eq(serviceAreas.utility_id, user.org_id!));
+  if (!filters?.all && scopedUtilityId != null) {
+    conditions.push(eq(serviceAreas.utility_id, scopedUtilityId));
   }
 
-  if (user.role !== "DEV") {
+  if (user.role !== "DEV" || user.is_utility_context_scoped) {
     conditions.push(eq(serviceAreas.is_virtual, false));
   }
 

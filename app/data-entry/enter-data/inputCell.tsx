@@ -63,30 +63,32 @@ export default function InputCell({ row }: InputCellProps) {
       return;
     }
 
-    startTransition(async () => {
-      const loadingToastId = toast.loading(
-        "Saving value and recalculating KPI...",
-      );
+    startTransition(() => {
+      void (async () => {
+        const loadingToastId = toast.loading(
+          "Saving value and recalculating KPI...",
+        );
 
-      try {
-        await updateDataEntryValueAction({
-          inputDefId: row.inputDefId,
-          energyResourceId: row.energyResourceId ?? null,
-          customerTypeId: row.customerTypeId ?? null,
-          paymentModeId: row.paymentModeId ?? null,
-          value: nextValue,
-        });
+        try {
+          await updateDataEntryValueAction({
+            inputDefId: row.inputDefId,
+            energyResourceId: row.energyResourceId ?? null,
+            customerTypeId: row.customerTypeId ?? null,
+            paymentModeId: row.paymentModeId ?? null,
+            value: nextValue,
+          });
 
-        router.refresh();
+          router.refresh();
 
-        toast.success("Data update was successful.", {
-          id: loadingToastId,
-        });
-      } catch {
-        toast.error("Failed to save value or recalculate KPI.", {
-          id: loadingToastId,
-        });
-      }
+          toast.success("Data update was successful.", {
+            id: loadingToastId,
+          });
+        } catch {
+          toast.error("Failed to save value or recalculate KPI.", {
+            id: loadingToastId,
+          });
+        }
+      })();
     });
   };
 
@@ -98,29 +100,31 @@ export default function InputCell({ row }: InputCellProps) {
     const previousValue = isDataNotAvailable;
     setIsDataNotAvailable(checked);
 
-    startTransition(async () => {
-      const loadingToastId = toast.loading("Updating availability status...");
+    startTransition(() => {
+      void (async () => {
+        const loadingToastId = toast.loading("Updating availability status...");
 
-      try {
-        await updateDataEntryAvailabilityAction({
-          inputDefId: row.inputDefId,
-          energyResourceId: row.energyResourceId ?? null,
-          customerTypeId: row.customerTypeId ?? null,
-          paymentModeId: row.paymentModeId ?? null,
-          isDataNotAvailable: checked,
-        });
+        try {
+          await updateDataEntryAvailabilityAction({
+            inputDefId: row.inputDefId,
+            energyResourceId: row.energyResourceId ?? null,
+            customerTypeId: row.customerTypeId ?? null,
+            paymentModeId: row.paymentModeId ?? null,
+            isDataNotAvailable: checked,
+          });
 
-        router.refresh();
+          router.refresh();
 
-        toast.success("Availability status updated.", {
-          id: loadingToastId,
-        });
-      } catch {
-        setIsDataNotAvailable(previousValue);
-        toast.error("Failed to update availability status.", {
-          id: loadingToastId,
-        });
-      }
+          toast.success("Availability status updated.", {
+            id: loadingToastId,
+          });
+        } catch {
+          setIsDataNotAvailable(previousValue);
+          toast.error("Failed to update availability status.", {
+            id: loadingToastId,
+          });
+        }
+      })();
     });
   };
 
@@ -141,29 +145,31 @@ export default function InputCell({ row }: InputCellProps) {
       return;
     }
 
-    startTransition(async () => {
-      const loadingToastId = toast.loading("Saving comment...");
+    startTransition(() => {
+      void (async () => {
+        const loadingToastId = toast.loading("Saving comment...");
 
-      try {
-        await updateDataEntryCommentAction({
-          inputDefId: row.inputDefId,
-          energyResourceId: row.energyResourceId ?? null,
-          customerTypeId: row.customerTypeId ?? null,
-          paymentModeId: row.paymentModeId ?? null,
-          comment: normalized,
-        });
+        try {
+          await updateDataEntryCommentAction({
+            inputDefId: row.inputDefId,
+            energyResourceId: row.energyResourceId ?? null,
+            customerTypeId: row.customerTypeId ?? null,
+            paymentModeId: row.paymentModeId ?? null,
+            comment: normalized,
+          });
 
-        setCommentDraft("");
-        router.refresh();
+          setCommentDraft("");
+          router.refresh();
 
-        toast.success("Comment saved.", {
-          id: loadingToastId,
-        });
-      } catch {
-        toast.error("Failed to save comment.", {
-          id: loadingToastId,
-        });
-      }
+          toast.success("Comment saved.", {
+            id: loadingToastId,
+          });
+        } catch {
+          toast.error("Failed to save comment.", {
+            id: loadingToastId,
+          });
+        }
+      })();
     });
   };
 
