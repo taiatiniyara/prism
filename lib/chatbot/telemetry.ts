@@ -21,7 +21,6 @@ export const emitCapabilityTelemetry = (
     return;
   }
 
-  // eslint-disable-next-line no-console -- structured log line for aggregation
   console.log(
     JSON.stringify({
       kind: "chatbot.capability",

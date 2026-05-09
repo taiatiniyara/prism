@@ -40,8 +40,8 @@ export default async function KpiSettingsPage() {
   const currentUser = await getCurrentUser();
   const isDevRole = currentUser.role === "DEV";
   const isBloRole = currentUser.role === "BLO";
-  const canEditTargets =
-    !hasGlobalUtilityAccess(currentUser) && currentUser.org_id != null;
+  const hasGlobalUtilityScope = hasGlobalUtilityAccess(currentUser);
+  const canEditTargets = !hasGlobalUtilityScope && currentUser.org_id != null;
   const definitionsTitle = isDevRole ? "Definitions" : "Custom KPI Requests";
   const showCustomKpiReviewView = isDevRole;
   const showCustomKpiRequestsView = isBloRole;
@@ -457,7 +457,7 @@ export default async function KpiSettingsPage() {
                     {
                       key: "type",
                       type: "select",
-                      disabled: !isGlobalRole,
+                      disabled: !hasGlobalUtilityScope,
                       selectList: kpiTypes,
                     },
                   ],

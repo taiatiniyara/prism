@@ -16,7 +16,6 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import * as XLSX from "xlsx";
 import type {
   ChatbotRecommendedView,
   ChatbotStreamEvent,
@@ -816,11 +815,28 @@ const downloadCsv = (data: VisualizationExportData) => {
   URL.revokeObjectURL(url);
 };
 
-const downloadExcel = (data: VisualizationExportData) => {
-  const workbook = XLSX.utils.book_new();
-  const worksheet = XLSX.utils.aoa_to_sheet([data.headers, ...data.rows]);
-  XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
-  XLSX.writeFile(workbook, `${data.fileBaseName}.xlsx`);
+const downloadExcel = async (data: VisualizationExportData) => {
+  const ExcelJS = await import("exceljs");
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet("Data");
+
+  worksheet.addRow(data.headers);
+  data.rows.forEach((row) => {
+    worksheet.addRow(row);
+  });
+
+  const output = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([output], {
+    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = `${data.fileBaseName}.xlsx`;
+  document.body.appendChild(anchor);
+  anchor.click();
+  document.body.removeChild(anchor);
+  URL.revokeObjectURL(url);
 };
 
 const VisualizationRenderer = ({

@@ -107,66 +107,36 @@ type WorksheetCellStyle = {
   };
 };
 
-type WorksheetCell = {
-  t?: string;
-  v?: unknown;
-  s?: WorksheetCellStyle;
-};
-
-type WorksheetLike = {
-  "!ref"?: string;
-  "!protect"?: Record<string, boolean>;
-  [address: string]: unknown;
-};
-
 const normalizeTemplateHeader = (value: unknown) =>
   String(value ?? "")
     .trim()
     .toLowerCase();
 
 const lockTemplateWorksheet = async (
-  worksheet: WorksheetLike,
+  worksheet: import("exceljs").Worksheet,
   editableHeaders: string[],
 ) => {
-  const ref = worksheet["!ref"];
-  if (typeof ref !== "string" || ref.length === 0) {
-    return;
-  }
-
-  const XLSX = await import("xlsx");
-  const range = XLSX.utils.decode_range(ref);
   const editableColumns = new Set<number>();
+  const headerRow = worksheet.getRow(1);
 
-  for (let col = range.s.c; col <= range.e.c; col += 1) {
-    const address = XLSX.utils.encode_cell({ r: range.s.r, c: col });
-    const headerCell = worksheet[address] as WorksheetCell | undefined;
-    if (editableHeaders.includes(normalizeTemplateHeader(headerCell?.v))) {
+  headerRow.eachCell({ includeEmpty: true }, (cell, col) => {
+    if (editableHeaders.includes(normalizeTemplateHeader(cell.value))) {
       editableColumns.add(col);
     }
-  }
+  });
 
-  for (let row = range.s.r + 1; row <= range.e.r; row += 1) {
+  for (let row = 2; row <= worksheet.rowCount; row += 1) {
     for (const col of editableColumns) {
-      const address = XLSX.utils.encode_cell({ r: row, c: col });
-      const existingCell = worksheet[address];
-      const cell: WorksheetCell =
-        existingCell && typeof existingCell === "object"
-          ? (existingCell as WorksheetCell)
-          : { t: "s", v: "" };
-
-      cell.s = {
-        ...(cell.s ?? {}),
-        protection: {
-          ...(cell.s?.protection ?? {}),
-          locked: false,
-        },
+      const cell = worksheet.getRow(row).getCell(col);
+      const existingProtection = (cell.style as WorksheetCellStyle).protection;
+      cell.protection = {
+        ...existingProtection,
+        locked: false,
       };
-
-      worksheet[address] = cell;
     }
   }
 
-  worksheet["!protect"] = {
+  await worksheet.protect("prism-template", {
     selectLockedCells: false,
     selectUnlockedCells: true,
     formatCells: false,
@@ -182,7 +152,7 @@ const lockTemplateWorksheet = async (
     pivotTables: false,
     objects: false,
     scenarios: false,
-  };
+  });
 };
 
 type PersistableObjective = ScorecardDraftObjectiveInput;
@@ -1149,18 +1119,21 @@ export default function ScorecardPageClient({
     }
 
     try {
-      const XLSX = await import("xlsx");
-      const workbook = XLSX.utils.book_new();
-      const worksheet = XLSX.utils.json_to_sheet(templateRows) as WorksheetLike;
+      const ExcelJS = await import("exceljs");
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet("BSC_Template");
+      const headers = Object.keys(templateRows[0] ?? {});
+
+      worksheet.addRow(headers);
+      templateRows.forEach((row) => {
+        worksheet.addRow(
+          headers.map((header) => row[header as keyof TemplateRow]),
+        );
+      });
 
       await lockTemplateWorksheet(worksheet, ["target_value"]);
 
-      XLSX.utils.book_append_sheet(workbook, worksheet, "BSC_Template");
-
-      const output = XLSX.write(workbook, {
-        bookType: "xlsx",
-        type: "array",
-      });
+      const output = await workbook.xlsx.writeBuffer();
 
       const blob = new Blob([output], {
         type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",

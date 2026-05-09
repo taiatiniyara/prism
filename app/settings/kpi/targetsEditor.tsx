@@ -2,7 +2,6 @@
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import readXlsxFile from "read-excel-file/browser";
-import * as XLSX from "xlsx";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -244,7 +243,7 @@ export default function KpiTargetsEditor(props: {
     });
   };
 
-  const downloadTemplate = () => {
+  const downloadTemplate = async () => {
     if (!selectedKpi) {
       toast.error("Please select a KPI first.");
       return;
@@ -271,18 +270,30 @@ export default function KpiTargetsEditor(props: {
       ]);
     }
 
-    const worksheet = XLSX.utils.aoa_to_sheet(templateRows);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "KPI Targets");
+    const ExcelJS = await import("exceljs");
+    const workbook = new ExcelJS.Workbook();
+    const worksheet = workbook.addWorksheet("KPI Targets");
+    templateRows.forEach((row) => {
+      worksheet.addRow(row);
+    });
+
+    const output = await workbook.xlsx.writeBuffer();
+    const blob = new Blob([output], {
+      type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
 
     const safeName = selectedKpi.name
       .replace(/[^A-Za-z0-9]+/g, "-")
       .replace(/^-+|-+$/g, "")
       .toLowerCase();
-    XLSX.writeFile(
-      workbook,
-      `kpi-target-template-${safeName || selectedKpi.id}.xlsx`,
-    );
+    link.download = `kpi-target-template-${safeName || selectedKpi.id}.xlsx`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    URL.revokeObjectURL(url);
   };
 
   const onUploadTargetsFile = async (

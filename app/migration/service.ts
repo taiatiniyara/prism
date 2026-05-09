@@ -613,8 +613,10 @@ export async function retrieveEnergyResources() {
 
     const existing = groupedEnergyResources.get(resource.id);
     if (!existing) {
-      const { report_period_id, capacity_mw, is_active, ...baseResource } =
-        resource;
+      const baseResource = { ...resource };
+      delete baseResource.report_period_id;
+      delete baseResource.capacity_mw;
+      delete baseResource.is_active;
 
       groupedEnergyResources.set(resource.id, {
         ...baseResource,

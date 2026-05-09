@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect } from "react";
+import { useState, useMemo, useEffect, useCallback } from "react";
 import { Heading } from "../heading";
 import { cn } from "@/lib/utils";
 import { Input } from "../ui/input";
@@ -133,12 +133,15 @@ export default function DataTable<T extends DataTableRecord>(
     }
   }
 
-  function inferColumnType(column: keyof T): "boolean" | "text" {
-    const firstValue = data.find(
-      (row) => row[column] !== null && row[column] !== undefined,
-    )?.[column];
-    return typeof firstValue === "boolean" ? "boolean" : "text";
-  }
+  const inferColumnType = useCallback(
+    (column: keyof T): "boolean" | "text" => {
+      const firstValue = data.find(
+        (row) => row[column] !== null && row[column] !== undefined,
+      )?.[column];
+      return typeof firstValue === "boolean" ? "boolean" : "text";
+    },
+    [data],
+  );
 
   function normalizeFilterValue(
     value: unknown,
@@ -174,7 +177,8 @@ export default function DataTable<T extends DataTableRecord>(
       const hasSelections = nextFilter.selectedValues.length > 0;
 
       if (!hasSearch && !hasSelections) {
-        const { [key]: _removed, ...rest } = prev;
+        const rest = { ...prev };
+        delete rest[key];
         return rest;
       }
 
@@ -210,7 +214,8 @@ export default function DataTable<T extends DataTableRecord>(
       const hasSelections = nextFilter.selectedValues.length > 0;
 
       if (!hasSearch && !hasSelections) {
-        const { [key]: _removed, ...rest } = prev;
+        const rest = { ...prev };
+        delete rest[key];
         return rest;
       }
 
@@ -224,7 +229,8 @@ export default function DataTable<T extends DataTableRecord>(
   function clearColumnFilter(column: keyof T) {
     const key = String(column);
     setColumnFilters((prev) => {
-      const { [key]: _removed, ...rest } = prev;
+      const rest = { ...prev };
+      delete rest[key];
       return rest;
     });
   }
@@ -262,7 +268,7 @@ export default function DataTable<T extends DataTableRecord>(
     }
 
     return valueCountsByColumn;
-  }, [normalizedColumns, rows]);
+  }, [inferColumnType, normalizedColumns, rows]);
 
   const canReorderRows =
     Boolean(reorderRowsProps) &&
@@ -349,6 +355,7 @@ export default function DataTable<T extends DataTableRecord>(
     search,
     sortColumn,
     sortDirection,
+    inferColumnType,
   ]);
 
   function reorderRowsById(fromId: T["id"], toId: T["id"]) {

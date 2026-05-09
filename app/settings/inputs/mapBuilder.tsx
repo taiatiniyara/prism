@@ -25,7 +25,7 @@ export default async function InputDlMapBuilder() {
     null;
   let errorMessage: string | null = null;
 
-  let localInputs = await getLocalInputs();
+  const localInputs = await getLocalInputs();
 
   try {
     result = await BuildInputDlMappingCandidates();
