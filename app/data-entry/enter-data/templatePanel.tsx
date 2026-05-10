@@ -29,6 +29,13 @@ type TemplateRow = {
   is_data_not_available: "TRUE" | "FALSE";
 };
 
+type TemplateRowLookupKey = {
+  context_mode: TemplateRow["context_mode"];
+  input_def_id: number;
+  input_name: string;
+  unit_name: string;
+};
+
 interface EnterDataTemplatePanelProps {
   inputs: DataEntryPageViewModel["inputs"];
   context: DataEntryFilterContext;
@@ -41,6 +48,28 @@ const normalizeHeader = (value: unknown) =>
   String(value ?? "")
     .trim()
     .toLowerCase();
+
+const normalizeKeyText = (value: unknown) =>
+  String(value ?? "")
+    .trim()
+    .toLowerCase();
+
+const createTemplateRowLookupKey = (value: TemplateRowLookupKey) =>
+  [
+    normalizeKeyText(value.context_mode),
+    value.input_def_id,
+    normalizeKeyText(value.input_name),
+    normalizeKeyText(value.unit_name),
+  ].join("|");
+
+const EXCLUDED_TEMPLATE_HEADERS = new Set<keyof TemplateRow>([
+  "energy_resource_id",
+  "generator_name",
+  "payment_mode_id",
+  "payment_mode_name",
+  "customer_type_id",
+  "customer_type_name",
+]);
 
 const toFilenameSegment = (
   value: string | null | undefined,
@@ -250,7 +279,10 @@ export default function EnterDataTemplatePanel({
       const ExcelJS = await import("exceljs");
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet(SHEET_NAME);
-      const headers = Object.keys(templateRows[0] ?? {});
+      const headers = Object.keys(templateRows[0] ?? {}).filter(
+        (header): header is keyof TemplateRow =>
+          !EXCLUDED_TEMPLATE_HEADERS.has(header as keyof TemplateRow),
+      );
 
       worksheet.addRow(headers);
       templateRows.forEach((row) => {
@@ -296,10 +328,10 @@ export default function EnterDataTemplatePanel({
 
     const headers = headerRow.map(normalizeHeader);
     const requiredHeaders = [
+      "context_mode",
       "input_def_id",
-      "energy_resource_id",
-      "payment_mode_id",
-      "customer_type_id",
+      "input_name",
+      "unit_name",
       "value",
       "is_data_not_available",
     ];
@@ -315,17 +347,55 @@ export default function EnterDataTemplatePanel({
     const getCell = (row: unknown[], name: string) =>
       row[headers.indexOf(name)];
 
+    const templateRowLookup = new Map<string, TemplateRow[]>();
+    templateRows.forEach((templateRow) => {
+      const key = createTemplateRowLookupKey({
+        context_mode: templateRow.context_mode,
+        input_def_id: templateRow.input_def_id,
+        input_name: templateRow.input_name,
+        unit_name: templateRow.unit_name,
+      });
+
+      const existing = templateRowLookup.get(key);
+      if (existing) {
+        existing.push(templateRow);
+      } else {
+        templateRowLookup.set(key, [templateRow]);
+      }
+    });
+
     return dataRows.map((row, index): DataEntryTemplateUploadRowPayload => {
       const inputDefId = toNullableNumber(getCell(row, "input_def_id"));
       if (inputDefId == null || inputDefId <= 0) {
         throw new Error(`Row ${index + 2} has an invalid input_def_id.`);
       }
 
+      const rowLookupKey = createTemplateRowLookupKey({
+        context_mode: String(getCell(row, "context_mode") ?? "")
+          .trim()
+          .toLowerCase() as
+          | "flat"
+          | "grouped-by-generator"
+          | "grouped-by-payment-mode",
+        input_def_id: inputDefId,
+        input_name: String(getCell(row, "input_name") ?? ""),
+        unit_name: String(getCell(row, "unit_name") ?? ""),
+      });
+
+      const matchedRows = templateRowLookup.get(rowLookupKey);
+      const matchedTemplateRow = matchedRows?.shift();
+
+      if (!matchedTemplateRow) {
+        throw new Error(
+          `Row ${index + 2} does not match the active template context. Please download a fresh template and try again.`,
+        );
+      }
+
       return {
         inputDefId,
-        energyResourceId: toNullableNumber(getCell(row, "energy_resource_id")),
-        paymentModeId: toNullableNumber(getCell(row, "payment_mode_id")),
-        customerTypeId: toNullableNumber(getCell(row, "customer_type_id")),
+        energyResourceId: matchedTemplateRow.energy_resource_id,
+        paymentModeId: matchedTemplateRow.payment_mode_id,
+        customerTypeId: matchedTemplateRow.customer_type_id,
         value: String(getCell(row, "value") ?? "").trim(),
         isDataNotAvailable: toBooleanFlag(
           getCell(row, "is_data_not_available"),

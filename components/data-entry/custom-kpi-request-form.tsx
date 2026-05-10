@@ -621,7 +621,7 @@ export function CustomKpiRequestForm(props: {
               type="checkbox"
               className="mt-0.5 h-4 w-4"
             />
-            <span>Keep this KPI private</span>
+            <span>Keep private for my utility only</span>
           </label>
         </FieldGroup>
       </div>

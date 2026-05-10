@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
@@ -48,7 +49,7 @@ export default function GenerationRelevanceTable(props: {
         energyProviderId: providerCell.energyProviderId,
         energyProvider: providerCell.energyProvider,
       }))
-      .sort((a, b) => a.energyProvider.localeCompare(b.energyProvider));
+      .sort((a, b) => b.energyProvider.localeCompare(a.energyProvider));
   }, [rows]);
 
   const rowsByEnergyResourceType = useMemo(() => {
@@ -135,6 +136,70 @@ export default function GenerationRelevanceTable(props: {
     });
   };
 
+  const onBlockToggle = (
+    energySourceIds: number[],
+    energyProviderId: number,
+    checked: boolean,
+  ) => {
+    if (energySourceIds.length === 0) {
+      return;
+    }
+
+    const previousRows = rows;
+    const energySourceIdsSet = new Set(energySourceIds);
+
+    setRows((prev) =>
+      prev.map((row) => {
+        if (!energySourceIdsSet.has(row.energySourceId)) {
+          return row;
+        }
+
+        return {
+          ...row,
+          cells: row.cells.map((cell) =>
+            cell.energyProviderId === energyProviderId
+              ? {
+                  ...cell,
+                  isRelevant: checked,
+                }
+              : cell,
+          ),
+        };
+      }),
+    );
+
+    startTransition(() => {
+      void (async () => {
+        const loadingToastId = toast.loading("Updating relevance...");
+        const results = await Promise.all(
+          energySourceIds.map((energySourceId) =>
+            props.onToggleRelevance({
+              reportPeriodId: props.reportPeriodId,
+              serviceAreaId: props.serviceAreaId,
+              energySourceId,
+              energyProviderId,
+              isRelevant: checked,
+            }),
+          ),
+        );
+
+        const failedResult = results.find((result) => !result.success);
+
+        if (failedResult) {
+          setRows(previousRows);
+          toast.error(failedResult.message);
+          toast.dismiss(loadingToastId);
+          return;
+        }
+
+        toast.dismiss(loadingToastId);
+        toast.success(
+          checked ? "Checked all in block." : "Unchecked all in block.",
+        );
+      })();
+    });
+  };
+
   return (
     <div className="max-h-[70vh] overflow-auto border">
       <table className="w-max min-w-full border-collapse text-sm">
@@ -160,11 +225,37 @@ export default function GenerationRelevanceTable(props: {
                 {group.energyResourceType}
               </td>
               {providers.map((provider) => {
+                const allChecked = group.rows.every((row) => {
+                  const cell = row.cells.find(
+                    (item) =>
+                      item.energyProviderId === provider.energyProviderId,
+                  );
+
+                  return cell?.isRelevant ?? true;
+                });
+
                 return (
                   <td
                     key={`${group.energyResourceTypeId}-${provider.energyProviderId}`}
                     className="border px-5 py-3 align-top"
                   >
+                    <div className="mb-2">
+                      <Button
+                        type="button"
+                        size="sm"
+                        variant="outline"
+                        disabled={isSaving}
+                        onClick={() =>
+                          onBlockToggle(
+                            group.rows.map((row) => row.energySourceId),
+                            provider.energyProviderId,
+                            !allChecked,
+                          )
+                        }
+                      >
+                        {allChecked ? "Uncheck all" : "Check all"}
+                      </Button>
+                    </div>
                     <ul className="space-y-2">
                       {group.rows.map((row) => {
                         const cell = row.cells.find(

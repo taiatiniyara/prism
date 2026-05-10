@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import BorderedPanel from "@/components/ui/bordered-panel";
 import { useState, useTransition } from "react";
@@ -115,6 +116,15 @@ export default function TransmissionRelevanceTable(props: {
   return (
     <BorderedPanel className="space-y-4">
       <div className="flex items-center justify-between gap-4">
+        <Button
+          type="button"
+          size="sm"
+          variant="outline"
+          disabled={isSaving || items.length === 0}
+          onClick={() => onBlockToggle(!isEntireBlockRelevant)}
+        >
+          {isEntireBlockRelevant ? "Uncheck All" : "Check All"}
+        </Button>
         <label className="flex items-center gap-2 text-sm font-medium">
           <Checkbox
             checked={isEntireBlockRelevant}
