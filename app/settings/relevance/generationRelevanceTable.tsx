@@ -38,6 +38,9 @@ export default function GenerationRelevanceTable(props: {
 }) {
   const [isSaving, startTransition] = useTransition();
   const [rows, setRows] = useState<RelevanceRow[]>(props.rows);
+  const isAllRelevant =
+    rows.length > 0 &&
+    rows.every((row) => row.cells.every((cell) => cell.isRelevant));
 
   const providers = useMemo(() => {
     if (rows.length === 0) {
@@ -200,100 +203,162 @@ export default function GenerationRelevanceTable(props: {
     });
   };
 
+  const onToggleAll = (checked: boolean) => {
+    if (rows.length === 0) {
+      return;
+    }
+
+    const previousRows = rows;
+
+    setRows((prev) =>
+      prev.map((row) => ({
+        ...row,
+        cells: row.cells.map((cell) => ({
+          ...cell,
+          isRelevant: checked,
+        })),
+      })),
+    );
+
+    startTransition(() => {
+      void (async () => {
+        const loadingToastId = toast.loading("Updating relevance...");
+        const results = await Promise.all(
+          rows.flatMap((row) =>
+            row.cells.map((cell) =>
+              props.onToggleRelevance({
+                reportPeriodId: props.reportPeriodId,
+                serviceAreaId: props.serviceAreaId,
+                energySourceId: row.energySourceId,
+                energyProviderId: cell.energyProviderId,
+                isRelevant: checked,
+              }),
+            ),
+          ),
+        );
+
+        const failedResult = results.find((result) => !result.success);
+
+        if (failedResult) {
+          setRows(previousRows);
+          toast.error(failedResult.message);
+          toast.dismiss(loadingToastId);
+          return;
+        }
+
+        toast.dismiss(loadingToastId);
+        toast.success(checked ? "Checked all." : "Unchecked all.");
+      })();
+    });
+  };
+
   return (
-    <div className="max-h-[70vh] overflow-auto border">
-      <table className="w-max min-w-full border-collapse text-sm">
-        <thead>
-          <tr className="bg-muted/30">
-            <th className="sticky top-0 left-0 z-40 border bg-muted px-5 py-3 text-left text-sm font-semibold whitespace-nowrap min-w-64">
-              Energy Resource Type
-            </th>
-            {providers.map((provider) => (
-              <th
-                key={provider.energyProviderId}
-                className="sticky top-0 z-30 border bg-muted px-5 py-3 text-left text-sm font-semibold whitespace-nowrap min-w-80"
-              >
-                {provider.energyProvider}
+    <div className="space-y-3">
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        disabled={isSaving || rows.length === 0}
+        onClick={() => onToggleAll(!isAllRelevant)}
+      >
+        {isAllRelevant ? "Uncheck All" : "Check All"}
+      </Button>
+
+      <div className="max-h-[70vh] overflow-auto border">
+        <table className="w-max min-w-full border-collapse text-sm">
+          <thead>
+            <tr className="bg-muted/30">
+              <th className="sticky top-0 left-0 z-40 border bg-muted px-5 py-3 text-left text-sm font-semibold whitespace-nowrap min-w-64">
+                Energy Resource Type
               </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {rowsByEnergyResourceType.map((group) => (
-            <tr key={group.energyResourceTypeId}>
-              <td className="sticky left-0 z-20 border bg-background px-5 py-3 font-medium whitespace-nowrap">
-                {group.energyResourceType}
-              </td>
-              {providers.map((provider) => {
-                const allChecked = group.rows.every((row) => {
-                  const cell = row.cells.find(
-                    (item) =>
-                      item.energyProviderId === provider.energyProviderId,
-                  );
-
-                  return cell?.isRelevant ?? true;
-                });
-
-                return (
-                  <td
-                    key={`${group.energyResourceTypeId}-${provider.energyProviderId}`}
-                    className="border px-5 py-3 align-top"
-                  >
-                    <div className="mb-2">
-                      <Button
-                        type="button"
-                        size="sm"
-                        variant="outline"
-                        disabled={isSaving}
-                        onClick={() =>
-                          onBlockToggle(
-                            group.rows.map((row) => row.energySourceId),
-                            provider.energyProviderId,
-                            !allChecked,
-                          )
-                        }
-                      >
-                        {allChecked ? "Uncheck all" : "Check all"}
-                      </Button>
-                    </div>
-                    <ul className="space-y-2">
-                      {group.rows.map((row) => {
-                        const cell = row.cells.find(
-                          (item) =>
-                            item.energyProviderId === provider.energyProviderId,
-                        );
-
-                        return (
-                          <li
-                            key={`${row.energySourceId}-${row.energyResourceTypeId}-${provider.energyProviderId}`}
-                          >
-                            <label className="flex items-center gap-2">
-                              <Checkbox
-                                checked={cell?.isRelevant ?? true}
-                                disabled={isSaving}
-                                onCheckedChange={(next) =>
-                                  onCellToggle(
-                                    row.energySourceId,
-                                    provider.energyProviderId,
-                                    next === true,
-                                  )
-                                }
-                              />
-                              <span className="text-sm">
-                                {row.energySource}
-                              </span>
-                            </label>
-                          </li>
-                        );
-                      })}
-                    </ul>
-                  </td>
-                );
-              })}
+              {providers.map((provider) => (
+                <th
+                  key={provider.energyProviderId}
+                  className="sticky top-0 z-30 border bg-muted px-5 py-3 text-left text-sm font-semibold whitespace-nowrap min-w-80"
+                >
+                  {provider.energyProvider}
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {rowsByEnergyResourceType.map((group) => (
+              <tr key={group.energyResourceTypeId}>
+                <td className="sticky left-0 z-20 border bg-background px-5 py-3 font-medium whitespace-nowrap">
+                  {group.energyResourceType}
+                </td>
+                {providers.map((provider) => {
+                  const allChecked = group.rows.every((row) => {
+                    const cell = row.cells.find(
+                      (item) =>
+                        item.energyProviderId === provider.energyProviderId,
+                    );
+
+                    return cell?.isRelevant ?? true;
+                  });
+
+                  return (
+                    <td
+                      key={`${group.energyResourceTypeId}-${provider.energyProviderId}`}
+                      className="border px-5 py-3 align-top"
+                    >
+                      <div className="mb-2">
+                        <Button
+                          type="button"
+                          size="sm"
+                          variant="outline"
+                          disabled={isSaving}
+                          onClick={() =>
+                            onBlockToggle(
+                              group.rows.map((row) => row.energySourceId),
+                              provider.energyProviderId,
+                              !allChecked,
+                            )
+                          }
+                        >
+                          {allChecked ? "Uncheck all" : "Check all"}
+                        </Button>
+                      </div>
+                      <ul className="space-y-2">
+                        {group.rows.map((row) => {
+                          const cell = row.cells.find(
+                            (item) =>
+                              item.energyProviderId ===
+                              provider.energyProviderId,
+                          );
+
+                          return (
+                            <li
+                              key={`${row.energySourceId}-${row.energyResourceTypeId}-${provider.energyProviderId}`}
+                            >
+                              <label className="flex items-center gap-2">
+                                <Checkbox
+                                  checked={cell?.isRelevant ?? true}
+                                  disabled={isSaving}
+                                  onCheckedChange={(next) =>
+                                    onCellToggle(
+                                      row.energySourceId,
+                                      provider.energyProviderId,
+                                      next === true,
+                                    )
+                                  }
+                                />
+                                <span className="text-sm">
+                                  {row.energySource}
+                                </span>
+                              </label>
+                            </li>
+                          );
+                        })}
+                      </ul>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }

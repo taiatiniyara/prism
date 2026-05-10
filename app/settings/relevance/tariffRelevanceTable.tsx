@@ -1,5 +1,6 @@
 "use client";
 
+import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useMemo, useState } from "react";
 import { toast } from "sonner";
@@ -71,6 +72,7 @@ export default function TariffRelevanceTable(props: {
   const [pendingBlockKeys, setPendingBlockKeys] = useState<Set<string>>(
     new Set(),
   );
+  const [isSavingAll, setIsSavingAll] = useState(false);
 
   const selectedCustomerTypeIdSet = useMemo(
     () => new Set(props.selectedCustomerTypeIds),
@@ -97,6 +99,15 @@ export default function TariffRelevanceTable(props: {
         .filter((row) => row.cells.length > 0),
     [rows, selectedCustomerTypeIdSet],
   );
+  const isAllRelevant =
+    visibleRows.length > 0 &&
+    visibleRows.every((row) =>
+      row.cells.every(
+        (cell) =>
+          cell.dataLabels.length > 0 &&
+          cell.dataLabels.every((label) => label.isRelevant),
+      ),
+    );
 
   const setLabelValue = (
     target: {
@@ -322,107 +333,195 @@ export default function TariffRelevanceTable(props: {
       });
   };
 
-  return (
-    <div className="max-h-[70vh] overflow-auto border">
-      <table className="w-max min-w-full border-collapse text-sm">
-        <thead>
-          <tr className="bg-muted/30">
-            <th className="sticky left-0 top-0 z-40 border bg-muted px-5 py-3 text-left text-sm font-semibold whitespace-nowrap min-w-52">
-              Payment Mode
-            </th>
-            {customerTypes.map((customerType) => (
-              <th
-                key={customerType.id}
-                className="sticky top-0 z-30 border bg-muted px-5 py-3 text-left text-sm font-semibold whitespace-nowrap min-w-72"
-              >
-                {customerType.name}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {visibleRows.length === 0 ? (
-            <tr>
-              <td
-                colSpan={customerTypes.length + 1}
-                className="border px-5 py-6 text-center text-sm text-muted-foreground"
-              >
-                No customer types selected. Select at least one customer type to
-                view the matrix.
-              </td>
-            </tr>
-          ) : null}
-          {visibleRows.map((row) => (
-            <tr key={row.paymentModeId}>
-              <td className="sticky left-0 z-20 border bg-background px-5 py-4 text-sm font-semibold align-top">
-                {row.paymentMode}
-              </td>
-              {row.cells.map((cell) => {
-                const blockKey = `${row.paymentModeId}:${cell.customerTypeId}`;
-                const isBlockPending = pendingBlockKeys.has(blockKey);
+  const onToggleAll = (checked: boolean) => {
+    const updates = visibleRows.flatMap((row) =>
+      row.cells.flatMap((cell) =>
+        cell.dataLabels.map((label) => ({
+          paymentModeId: row.paymentModeId,
+          customerTypeId: cell.customerTypeId,
+          inputDefId: label.inputDefId,
+          isRelevant: checked,
+        })),
+      ),
+    );
 
-                return (
-                  <td
-                    key={`${row.paymentModeId}-${cell.customerTypeId}`}
-                    className="border px-5 py-4 align-top"
-                  >
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between gap-4">
-                        <label className="flex items-center gap-2 text-sm font-medium">
-                          <Checkbox
-                            checked={cell.isRelevant}
-                            disabled={isBlockPending || cell.totalCount === 0}
-                            onCheckedChange={(next) =>
-                              onBlockCheckedChange(
-                                row.paymentModeId,
-                                cell.customerTypeId,
-                                next === true,
-                                cell.dataLabels,
-                              )
-                            }
-                          />
-                          <span>Entire block</span>
-                        </label>
-                        <span className="text-sm font-medium">
-                          {cell.relevantCount}/{cell.totalCount} relevant
-                        </span>
-                      </div>
-                      <ul className="space-y-2 text-sm">
-                        {cell.dataLabels.map((label) => (
-                          <li
-                            key={`${cell.customerTypeId}-${label.inputDefId}`}
-                            className="flex items-center justify-between gap-4 leading-6"
-                          >
-                            <label className="flex items-center gap-3 text-muted-foreground">
-                              <Checkbox
-                                checked={label.isRelevant}
-                                disabled={pendingLabelKeys.has(
-                                  `${row.paymentModeId}:${cell.customerTypeId}:${label.inputDefId}`,
-                                )}
-                                onCheckedChange={(next) =>
-                                  onCheckedChange(
-                                    row.paymentModeId,
-                                    cell.customerTypeId,
-                                    label.inputDefId,
-                                    next === true,
-                                  )
-                                }
-                              />
-                              <span className="whitespace-nowrap">
-                                {label.dataLabel}
-                              </span>
-                            </label>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  </td>
-                );
-              })}
+    if (updates.length === 0) {
+      return;
+    }
+
+    const previousRows = rows;
+
+    setRows((prev) =>
+      prev.map((row) => ({
+        ...row,
+        cells: row.cells.map((cell) => {
+          if (!selectedCustomerTypeIdSet.has(cell.customerTypeId)) {
+            return cell;
+          }
+
+          const nextCell = {
+            ...cell,
+            dataLabels: cell.dataLabels.map((label) => ({
+              ...label,
+              isRelevant: checked,
+            })),
+          };
+
+          return summarizeCell(nextCell);
+        }),
+      })),
+    );
+
+    setIsSavingAll(true);
+    const loadingToastId = toast.loading("Updating relevance...");
+
+    void Promise.all(
+      updates.map((update) =>
+        props.onToggleRelevance({
+          reportPeriodId: props.reportPeriodId,
+          serviceAreaId: props.serviceAreaId,
+          paymentModeId: update.paymentModeId,
+          customerTypeId: update.customerTypeId,
+          inputDefId: update.inputDefId,
+          isRelevant: update.isRelevant,
+        }),
+      ),
+    )
+      .then((results) => {
+        const failedResult = results.find((result) => !result.success);
+
+        if (failedResult) {
+          setRows(previousRows);
+          toast.error(failedResult.message);
+          return;
+        }
+
+        toast.success(checked ? "Checked all." : "Unchecked all.");
+      })
+      .finally(() => {
+        setIsSavingAll(false);
+        toast.dismiss(loadingToastId);
+      });
+  };
+
+  return (
+    <div className="space-y-3">
+      <Button
+        type="button"
+        size="sm"
+        variant="outline"
+        disabled={
+          isSavingAll ||
+          visibleRows.length === 0 ||
+          pendingLabelKeys.size > 0 ||
+          pendingBlockKeys.size > 0
+        }
+        onClick={() => onToggleAll(!isAllRelevant)}
+      >
+        {isAllRelevant ? "Uncheck All" : "Check All"}
+      </Button>
+
+      <div className="max-h-[70vh] overflow-auto border">
+        <table className="w-max min-w-full border-collapse text-sm">
+          <thead>
+            <tr className="bg-muted/30">
+              <th className="sticky left-0 top-0 z-40 border bg-muted px-5 py-3 text-left text-sm font-semibold whitespace-nowrap min-w-52">
+                Payment Mode
+              </th>
+              {customerTypes.map((customerType) => (
+                <th
+                  key={customerType.id}
+                  className="sticky top-0 z-30 border bg-muted px-5 py-3 text-left text-sm font-semibold whitespace-nowrap min-w-72"
+                >
+                  {customerType.name}
+                </th>
+              ))}
             </tr>
-          ))}
-        </tbody>
-      </table>
+          </thead>
+          <tbody>
+            {visibleRows.length === 0 ? (
+              <tr>
+                <td
+                  colSpan={customerTypes.length + 1}
+                  className="border px-5 py-6 text-center text-sm text-muted-foreground"
+                >
+                  No customer types selected. Select at least one customer type
+                  to view the matrix.
+                </td>
+              </tr>
+            ) : null}
+            {visibleRows.map((row) => (
+              <tr key={row.paymentModeId}>
+                <td className="sticky left-0 z-20 border bg-background px-5 py-4 text-sm font-semibold align-top">
+                  {row.paymentMode}
+                </td>
+                {row.cells.map((cell) => {
+                  const blockKey = `${row.paymentModeId}:${cell.customerTypeId}`;
+                  const isBlockPending = pendingBlockKeys.has(blockKey);
+
+                  return (
+                    <td
+                      key={`${row.paymentModeId}-${cell.customerTypeId}`}
+                      className="border px-5 py-4 align-top"
+                    >
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between gap-4">
+                          <label className="flex items-center gap-2 text-sm font-medium">
+                            <Checkbox
+                              checked={cell.isRelevant}
+                              disabled={isBlockPending || cell.totalCount === 0}
+                              onCheckedChange={(next) =>
+                                onBlockCheckedChange(
+                                  row.paymentModeId,
+                                  cell.customerTypeId,
+                                  next === true,
+                                  cell.dataLabels,
+                                )
+                              }
+                            />
+                            <span>Entire block</span>
+                          </label>
+                          <span className="text-sm font-medium">
+                            {cell.relevantCount}/{cell.totalCount} relevant
+                          </span>
+                        </div>
+                        <ul className="space-y-2 text-sm">
+                          {cell.dataLabels.map((label) => (
+                            <li
+                              key={`${cell.customerTypeId}-${label.inputDefId}`}
+                              className="flex items-center justify-between gap-4 leading-6"
+                            >
+                              <label className="flex items-center gap-3 text-muted-foreground">
+                                <Checkbox
+                                  checked={label.isRelevant}
+                                  disabled={pendingLabelKeys.has(
+                                    `${row.paymentModeId}:${cell.customerTypeId}:${label.inputDefId}`,
+                                  )}
+                                  onCheckedChange={(next) =>
+                                    onCheckedChange(
+                                      row.paymentModeId,
+                                      cell.customerTypeId,
+                                      label.inputDefId,
+                                      next === true,
+                                    )
+                                  }
+                                />
+                                <span className="whitespace-nowrap">
+                                  {label.dataLabel}
+                                </span>
+                              </label>
+                            </li>
+                          ))}
+                        </ul>
+                      </div>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   );
 }
