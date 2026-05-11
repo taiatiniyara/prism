@@ -606,14 +606,10 @@ export function CustomKpiRequestForm(props: {
           />
         </FieldGroup>
 
-        <FieldGroup
-          label="Private KPI"
-          htmlFor="custom-kpi-is-private"
-          containerClassName="space-y-1"
-        >
+        <div>
           <label
             htmlFor="custom-kpi-is-private"
-            className="flex h-21 cursor-pointer items-start gap-2 rounded-md border px-3 py-2 text-sm"
+            className="flex items-center gap-2 text-sm my-5"
           >
             <input
               id="custom-kpi-is-private"
@@ -623,7 +619,7 @@ export function CustomKpiRequestForm(props: {
             />
             <span>Keep private for my utility only</span>
           </label>
-        </FieldGroup>
+        </div>
       </div>
 
       {/* Input selection and formula builder are the most complex parts of the form, so they come before business context to avoid overwhelming users right away. */}

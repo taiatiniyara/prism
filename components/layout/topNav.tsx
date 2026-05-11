@@ -67,6 +67,7 @@ export default function TopNav(props: {
               alt="Logo"
               width={100}
               height={50}
+              style={{ width: "auto", height: "auto" }}
             />
           </Link>
           <NavList

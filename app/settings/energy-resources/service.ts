@@ -34,6 +34,7 @@ function toPeriodRows(
   resource: EnergyResource,
   periodEntries: EnergyResourcePeriodEntry[],
   periodLabelById: Map<number, string>,
+  periodTypeById: Map<number, string>,
 ): EnergyResourcePeriodTableRow[] {
   const sortedEntries = [...periodEntries].sort(
     (a, b) => a.report_period_id - b.report_period_id,
@@ -45,6 +46,7 @@ function toPeriodRows(
         ...resource,
         id: `${resource.id}-none`,
         report_period: "-",
+        report_period_type: "-",
         capacity: "-",
         is_active: null,
       },
@@ -57,6 +59,7 @@ function toPeriodRows(
     report_period:
       periodLabelById.get(entry.report_period_id) ??
       String(entry.report_period_id),
+    report_period_type: periodTypeById.get(entry.report_period_id) ?? "-",
     capacity: entry.capacity_mw == null ? "-" : String(entry.capacity_mw),
     is_active: entry.is_active,
   }));
@@ -131,6 +134,18 @@ export async function GetAllEnergyResources(): Promise<
     }),
   );
 
+  const periodTypeById = new Map(
+    periodRows.map((period) => {
+      const reportTypeName = resolveManagedListName(
+        managedListNamesById,
+        period.reportTypeId,
+        null,
+      );
+
+      return [period.id, reportTypeName ?? "-"] as const;
+    }),
+  );
+
   return list.flatMap((item) =>
     toPeriodRows(
       {
@@ -161,6 +176,7 @@ export async function GetAllEnergyResources(): Promise<
       },
       item.energy_resources.period_entries ?? [],
       periodLabelById,
+      periodTypeById,
     ),
   );
 }

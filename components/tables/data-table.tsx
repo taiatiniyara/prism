@@ -34,11 +34,23 @@ import {
   Loader2Icon,
 } from "lucide-react";
 import { toast } from "sonner";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../ui/select";
 
 interface DataTableProps<T extends DataTableRecord> {
   columns: DataTableColumn<T>[];
   title: string;
   data: T[];
+  quickFilters?: {
+    column: keyof T;
+    label: string;
+    allLabel?: string;
+  }[];
   createFormProps?: DataTableCreateFormProps<T>;
   updateFormProps?: {
     formAction: (body: Partial<T>) => Promise<DataTableFormResponse<T>>;
@@ -84,6 +96,7 @@ export default function DataTable<T extends DataTableRecord>(
     columns,
     data,
     title,
+    quickFilters,
     createFormProps,
     updateFormProps,
     reorderRowsProps,
@@ -96,6 +109,9 @@ export default function DataTable<T extends DataTableRecord>(
     Record<string, ColumnFilter>
   >({});
   const [rows, setRows] = useState<T[]>(data);
+  const [quickFilterValues, setQuickFilterValues] = useState<
+    Record<string, string>
+  >({});
   const [draggedRowId, setDraggedRowId] = useState<T["id"] | null>(null);
   const [dragOverRowId, setDragOverRowId] = useState<T["id"] | null>(null);
   const [savingOrder, setSavingOrder] = useState(false);
@@ -114,6 +130,36 @@ export default function DataTable<T extends DataTableRecord>(
       }),
     [columns],
   );
+
+  const quickFilterColumns = useMemo(
+    () => quickFilters?.map((filter) => filter.column) ?? [],
+    [quickFilters],
+  );
+
+  const filterableColumns = useMemo(() => {
+    const seen = new Set<string>();
+    const orderedColumns: (keyof T)[] = [];
+
+    for (const column of normalizedColumns.map((item) => item.name)) {
+      const key = String(column);
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      orderedColumns.push(column);
+    }
+
+    for (const column of quickFilterColumns) {
+      const key = String(column);
+      if (seen.has(key)) {
+        continue;
+      }
+      seen.add(key);
+      orderedColumns.push(column);
+    }
+
+    return orderedColumns;
+  }, [normalizedColumns, quickFilterColumns]);
 
   useEffect(() => {
     setRows(data);
@@ -245,17 +291,22 @@ export default function DataTable<T extends DataTableRecord>(
     [columnFilters],
   );
 
+  const activeQuickFilters = useMemo(
+    () =>
+      Object.entries(quickFilterValues).filter(
+        ([, value]) => value.trim().length > 0,
+      ),
+    [quickFilterValues],
+  );
+
   const aggregatedColumnValues = useMemo(() => {
     const valueCountsByColumn = new Map<string, Map<string, number>>();
 
     for (const row of rows) {
-      for (const column of normalizedColumns) {
-        const key = String(column.name);
-        const columnType = inferColumnType(column.name);
-        const normalizedValue = normalizeFilterValue(
-          row[column.name],
-          columnType,
-        );
+      for (const column of filterableColumns) {
+        const key = String(column);
+        const columnType = inferColumnType(column);
+        const normalizedValue = normalizeFilterValue(row[column], columnType);
         const columnValues =
           valueCountsByColumn.get(key) ?? new Map<string, number>();
 
@@ -268,14 +319,15 @@ export default function DataTable<T extends DataTableRecord>(
     }
 
     return valueCountsByColumn;
-  }, [inferColumnType, normalizedColumns, rows]);
+  }, [filterableColumns, inferColumnType, rows]);
 
   const canReorderRows =
     Boolean(reorderRowsProps) &&
     search.trim().length === 0 &&
     !sortColumn &&
     !sortDirection &&
-    activeFilters.length === 0;
+    activeFilters.length === 0 &&
+    activeQuickFilters.length === 0;
 
   const isOrderDirty = useMemo(() => {
     if (!reorderRowsProps || rows.length !== data.length) {
@@ -338,6 +390,27 @@ export default function DataTable<T extends DataTableRecord>(
       });
     }
 
+    if (activeQuickFilters.length > 0) {
+      result = result.filter((row) => {
+        return activeQuickFilters.every(([columnKey, filterValue]) => {
+          const column = filterableColumns.find(
+            (col) => String(col) === columnKey,
+          );
+          if (!column) {
+            return true;
+          }
+
+          const columnType = inferColumnType(column);
+          const normalizedRowValue = normalizeFilterValue(
+            row[column],
+            columnType,
+          );
+
+          return normalizedRowValue === filterValue;
+        });
+      });
+    }
+
     if (sortColumn && sortDirection) {
       result.sort((a, b) => {
         const aVal = String(a[sortColumn] ?? "");
@@ -350,6 +423,8 @@ export default function DataTable<T extends DataTableRecord>(
     return result;
   }, [
     activeFilters,
+    activeQuickFilters,
+    filterableColumns,
     normalizedColumns,
     rows,
     search,
@@ -357,6 +432,61 @@ export default function DataTable<T extends DataTableRecord>(
     sortDirection,
     inferColumnType,
   ]);
+
+  function quickFilterOptions(column: keyof T) {
+    const columnType = inferColumnType(column);
+    const columnKey = String(column);
+
+    // Filter data by other quick filters (but not this column)
+    let filteredData = rows;
+    if (activeQuickFilters.length > 0) {
+      filteredData = rows.filter((row) => {
+        return activeQuickFilters.every(([filterColumnKey, filterValue]) => {
+          // Skip filtering by this column; we want options for this column
+          if (filterColumnKey === columnKey) {
+            return true;
+          }
+
+          const filterColumn = filterableColumns.find(
+            (col) => String(col) === filterColumnKey,
+          );
+          if (!filterColumn) {
+            return true;
+          }
+
+          const filterColumnType = inferColumnType(filterColumn);
+          const normalizedRowValue = normalizeFilterValue(
+            row[filterColumn],
+            filterColumnType,
+          );
+
+          return normalizedRowValue === filterValue;
+        });
+      });
+    }
+
+    // Build value counts from cascaded filtered data
+    const valueCounts = new Map<string, number>();
+    for (const row of filteredData) {
+      const normalizedValue = normalizeFilterValue(row[column], columnType);
+      valueCounts.set(
+        normalizedValue,
+        (valueCounts.get(normalizedValue) ?? 0) + 1,
+      );
+    }
+
+    return Array.from(valueCounts.keys()).sort((a, b) => {
+      if (columnType === "boolean") {
+        if (a === b) return 0;
+        if (a === "true") return -1;
+        if (b === "true") return 1;
+      }
+
+      if (a === "__empty__") return 1;
+      if (b === "__empty__") return -1;
+      return a.localeCompare(b, undefined, { numeric: true });
+    });
+  }
 
   function reorderRowsById(fromId: T["id"], toId: T["id"]) {
     setRows((prev) => {
@@ -675,6 +805,67 @@ export default function DataTable<T extends DataTableRecord>(
         </div>
       </div>
 
+      <div className="p-2">
+        {quickFilters && quickFilters.length > 0 && (
+          <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
+            {quickFilters.map((filter) => {
+              const key = String(filter.column);
+              const selectedValue = quickFilterValues[key] ?? "";
+              const options = quickFilterOptions(filter.column);
+              const columnType = inferColumnType(filter.column);
+
+              return (
+                <div
+                  key={key}
+                  className="flex min-w-36 flex-col gap-1"
+                >
+                  <span className="px-1 text-[11px] font-medium leading-none text-muted-foreground">
+                    {filter.label}
+                  </span>
+                  <Select
+                    value={selectedValue || "__all__"}
+                    onValueChange={(nextValue) => {
+                      setQuickFilterValues((previous) => {
+                        if (nextValue === "__all__") {
+                          const rest = { ...previous };
+                          delete rest[key];
+                          return rest;
+                        }
+
+                        return {
+                          ...previous,
+                          [key]: nextValue,
+                        };
+                      });
+                    }}
+                  >
+                    <SelectTrigger
+                      size="sm"
+                      className="h-7 min-w-36 text-xs"
+                      aria-label={filter.label}
+                    >
+                      <SelectValue placeholder={`All ${filter.label}`} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="__all__">
+                        {filter.allLabel ?? `All ${filter.label}`}
+                      </SelectItem>
+                      {options.map((value) => (
+                        <SelectItem
+                          key={value}
+                          value={value}
+                        >
+                          {displayFilterValue(value, columnType)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
       {/* Table */}
       <div className="max-h-[calc(100vh-220px)] overflow-auto sm:max-h-[calc(100vh-200px)]">
         <table className="w-full min-w-max text-xs">

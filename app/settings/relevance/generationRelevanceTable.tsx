@@ -38,9 +38,6 @@ export default function GenerationRelevanceTable(props: {
 }) {
   const [isSaving, startTransition] = useTransition();
   const [rows, setRows] = useState<RelevanceRow[]>(props.rows);
-  const isAllRelevant =
-    rows.length > 0 &&
-    rows.every((row) => row.cells.every((cell) => cell.isRelevant));
 
   const providers = useMemo(() => {
     if (rows.length === 0) {
@@ -142,6 +139,7 @@ export default function GenerationRelevanceTable(props: {
   const onBlockToggle = (
     energySourceIds: number[],
     energyProviderId: number,
+    energyResourceTypeId: number,
     checked: boolean,
   ) => {
     if (energySourceIds.length === 0) {
@@ -153,7 +151,10 @@ export default function GenerationRelevanceTable(props: {
 
     setRows((prev) =>
       prev.map((row) => {
-        if (!energySourceIdsSet.has(row.energySourceId)) {
+        if (
+          !energySourceIdsSet.has(row.energySourceId) ||
+          row.energyResourceTypeId !== energyResourceTypeId
+        ) {
           return row;
         }
 
@@ -201,67 +202,8 @@ export default function GenerationRelevanceTable(props: {
     });
   };
 
-  const onToggleAll = (checked: boolean) => {
-    if (rows.length === 0) {
-      return;
-    }
-
-    const previousRows = rows;
-
-    setRows((prev) =>
-      prev.map((row) => ({
-        ...row,
-        cells: row.cells.map((cell) => ({
-          ...cell,
-          isRelevant: checked,
-        })),
-      })),
-    );
-
-    startTransition(() => {
-      void (async () => {
-        const loadingToastId = toast.loading("Updating relevance...");
-        const results = await Promise.all(
-          rows.flatMap((row) =>
-            row.cells.map((cell) =>
-              props.onToggleRelevance({
-                reportPeriodId: props.reportPeriodId,
-                serviceAreaId: props.serviceAreaId,
-                energySourceId: row.energySourceId,
-                energyProviderId: cell.energyProviderId,
-                isRelevant: checked,
-              }),
-            ),
-          ),
-        );
-
-        const failedResult = results.find((result) => !result.success);
-
-        if (failedResult) {
-          setRows(previousRows);
-          toast.error(failedResult.message);
-          toast.dismiss(loadingToastId);
-          return;
-        }
-
-        toast.dismiss(loadingToastId);
-        toast.success("Relevance updated.");
-      })();
-    });
-  };
-
   return (
     <div className="space-y-3">
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        disabled={isSaving || rows.length === 0}
-        onClick={() => onToggleAll(!isAllRelevant)}
-      >
-        {isAllRelevant ? "Uncheck All" : "Check All"}
-      </Button>
-
       <div className="max-h-[70vh] overflow-auto border">
         <table className="w-max min-w-full border-collapse text-sm">
           <thead>
@@ -310,6 +252,7 @@ export default function GenerationRelevanceTable(props: {
                             onBlockToggle(
                               group.rows.map((row) => row.energySourceId),
                               provider.energyProviderId,
+                              group.energyResourceTypeId,
                               !allChecked,
                             )
                           }

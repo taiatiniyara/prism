@@ -17,22 +17,38 @@ export default async function EnergyResourcesSettingsPage() {
 
   return (
     <DataTable<EnergyResourcePeriodTableRow>
-      columns={[
-        "service_area",
-        "power_station",
-        "name",
+      quickFilters={[
         {
-          name: "report_period",
-          display: "Report period",
+          column: "report_period_type",
+          label: "Report Period Type",
+          allLabel: "All Report Period Types",
         },
-        "capacity",
-        "is_active",
+        {
+          column: "report_period",
+          label: "Report Period",
+          allLabel: "All Report Periods",
+        },
+        {
+          column: "service_area",
+          label: "Service Area",
+          allLabel: "All Service Areas",
+        },
+        {
+          column: "power_station",
+          label: "Power Station",
+          allLabel: "All Power Stations",
+        },
+      ]}
+      columns={[
         {
           name: "type",
           display: "Resource Type",
         },
+        "name",
+        "capacity",
         "energy_provider",
         "energy_source",
+        "is_active",
       ]}
       title="Energy Resources"
       data={energyResources}
