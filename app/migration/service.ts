@@ -114,6 +114,37 @@ const logMigrationError = (error: unknown) => {
   console.error("[migration] operation failed", error);
 };
 
+const describeFetchError = (error: unknown): string => {
+  if (!(error instanceof Error)) {
+    return String(error);
+  }
+
+  const parts: string[] = [error.message];
+
+  const cause = (error as Error & { cause?: unknown }).cause;
+  if (cause && typeof cause === "object") {
+    const code = (cause as { code?: unknown }).code;
+    const errno = (cause as { errno?: unknown }).errno;
+    const syscall = (cause as { syscall?: unknown }).syscall;
+    const hostname = (cause as { hostname?: unknown }).hostname;
+    const address = (cause as { address?: unknown }).address;
+    const port = (cause as { port?: unknown }).port;
+    const causeMessage = (cause as { message?: unknown }).message;
+
+    if (code != null) parts.push(`code=${String(code)}`);
+    if (errno != null) parts.push(`errno=${String(errno)}`);
+    if (syscall != null) parts.push(`syscall=${String(syscall)}`);
+    if (hostname != null) parts.push(`host=${String(hostname)}`);
+    if (address != null) parts.push(`address=${String(address)}`);
+    if (port != null) parts.push(`port=${String(port)}`);
+    if (causeMessage && String(causeMessage) !== error.message) {
+      parts.push(`cause=${String(causeMessage)}`);
+    }
+  }
+
+  return parts.join("; ");
+};
+
 const toNumberOrNull = (value: unknown): number | null => {
   if (typeof value === "number") {
     return Number.isFinite(value) ? value : null;
@@ -168,7 +199,7 @@ const fetchMigrationEndpoint = async (path: string) => {
 
       failures.push(`${requestUrl} -> HTTP ${response.status}`);
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = describeFetchError(error);
       failures.push(`${requestUrl} -> ${message}`);
     }
   }
@@ -218,7 +249,7 @@ const fetchLegacyMigEndpoint = async (path: string) => {
 
       failures.push(`${requestUrl} -> HTTP ${response.status}`);
     } catch (error: unknown) {
-      const message = error instanceof Error ? error.message : String(error);
+      const message = describeFetchError(error);
       failures.push(`${requestUrl} -> ${message}`);
     }
   }
