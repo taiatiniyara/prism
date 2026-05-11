@@ -3,6 +3,7 @@
 import { Button } from "@/components/ui/button";
 import {
   backfillEnergyResourcePeriods,
+  retrieveCountryContextData,
   retrieveCountries,
   retrieveEnergyResources,
   retrieveInputDefinitions,
@@ -10,6 +11,7 @@ import {
   retrieveManagedLists,
   retrieveReportPeriods,
   retrieveRoles,
+  retrieveUtilityContextData,
   retrieveUsers,
   retrieveUtilityData,
 } from "./service";
@@ -58,6 +60,14 @@ const buttonList: {
   {
     label: "Migrate Input Definitions",
     fn: retrieveInputDefinitions,
+  },
+  {
+    label: "Migrate Country Context",
+    fn: retrieveCountryContextData,
+  },
+  {
+    label: "Migrate Utility Context",
+    fn: retrieveUtilityContextData,
   },
 ];
 

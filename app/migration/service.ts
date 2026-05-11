@@ -131,6 +131,454 @@ const fetchMigrationEndpoint = async (path: string) => {
   );
 };
 
+const fetchLegacyMigEndpoint = async (path: string) => {
+  const headers = {
+    ...JSON_HEADERS,
+    ...(migrationApiKey ? { "x-migration-key": migrationApiKey } : {}),
+  };
+
+  const failures: string[] = [];
+
+  const legacyBaseUrls = migrationBaseUrls.map((baseUrl) =>
+    baseUrl.replace(/\/api\/migration$/i, "/api/mig"),
+  );
+
+  for (const baseUrl of legacyBaseUrls) {
+    const requestUrl = `${baseUrl}${path}`;
+
+    try {
+      const response = await fetch(requestUrl, {
+        method: "GET",
+        headers,
+      });
+
+      if (response.ok) {
+        const contentType = response.headers.get("content-type") ?? "";
+        if (contentType.toLowerCase().includes("application/json")) {
+          return response;
+        }
+
+        const preview = (await response.text())
+          .replace(/\s+/g, " ")
+          .trim()
+          .slice(0, 140);
+
+        failures.push(
+          `${requestUrl} -> expected JSON but got ${contentType || "unknown content-type"}${preview ? ` (body starts: ${preview})` : ""}`,
+        );
+        continue;
+      }
+
+      failures.push(`${requestUrl} -> HTTP ${response.status}`);
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+      failures.push(`${requestUrl} -> ${message}`);
+    }
+  }
+
+  throw new Error(
+    [
+      `Unable to reach legacy migration endpoint for ${path}.`,
+      `Tried: ${failures.join(" | ")}`,
+      "Set PRISM_TRAINING_MIGRATION_URL in prism/.env to the prism-training migration API base URL.",
+    ].join(" "),
+  );
+};
+
+type SourceUtilityContextRow = {
+  utility_report_period_id?: number | null;
+  report_period_id?: number | null;
+  dl_def_id?: number | string | null;
+  value?: string | null;
+  dl_value?: string | null;
+  comments?: string | null;
+  updated_date?: string | Date | null;
+  updated_at?: string | Date | null;
+  data_not_available?: boolean;
+  is_deleted?: boolean;
+  energy_provider_id?: number | null;
+  energy_source_id?: number | null;
+  customer_type_id?: number | null;
+  payment_mode_id?: number | null;
+};
+
+type SourceCountryContextRow = {
+  utility_report_period_id?: number | null;
+  report_period_id?: number | null;
+  dl_def_id?: number | string | null;
+  value?: string | null;
+  dl_value?: string | null;
+  comments?: string | null;
+  updated_date?: string | Date | null;
+  updated_at?: string | Date | null;
+  data_not_available?: boolean;
+  is_deleted?: boolean;
+  country_id?: number | null;
+};
+
+export async function retrieveUtilityContextData(options?: {
+  reportPeriodId?: number;
+}) {
+  let res = false;
+  let inserted = 0;
+  let updated = 0;
+  let skipped = 0;
+
+  try {
+    const call = await fetchLegacyMigEndpoint("/utilityContext");
+    const list = (await call.json()) as SourceUtilityContextRow[];
+
+    const mappingRows = await db
+      .select({
+        trainingDlDefId: inputDlDefMappings.training_dl_def_id,
+        inputDefId: inputDlDefMappings.input_def_id,
+        updatedAt: inputDlDefMappings.updated_at,
+      })
+      .from(inputDlDefMappings);
+
+    const inputByTrainingDlDefId = new Map<
+      number,
+      { inputDefId: number; updatedAt: Date | null }
+    >();
+    for (const mapping of mappingRows) {
+      const existing = inputByTrainingDlDefId.get(mapping.trainingDlDefId);
+      if (!existing) {
+        inputByTrainingDlDefId.set(mapping.trainingDlDefId, {
+          inputDefId: mapping.inputDefId,
+          updatedAt: mapping.updatedAt,
+        });
+        continue;
+      }
+
+      const existingTime = existing.updatedAt?.getTime() ?? 0;
+      const currentTime = mapping.updatedAt?.getTime() ?? 0;
+      if (currentTime >= existingTime) {
+        inputByTrainingDlDefId.set(mapping.trainingDlDefId, {
+          inputDefId: mapping.inputDefId,
+          updatedAt: mapping.updatedAt,
+        });
+      }
+    }
+
+    const [targetInputDefs, targetReportPeriods, targetManagedItems] =
+      await Promise.all([
+        db.select({ id: inputDefinitions.id }).from(inputDefinitions),
+        db
+          .select({ id: reportPeriods.id })
+          .from(reportPeriods)
+          .where(
+            options?.reportPeriodId != null
+              ? eq(reportPeriods.id, options.reportPeriodId)
+              : undefined,
+          ),
+        db.select({ id: managedListItems.id }).from(managedListItems),
+      ]);
+
+    const targetInputDefIds = new Set(targetInputDefs.map((d) => d.id));
+    const targetReportPeriodIds = new Set(targetReportPeriods.map((r) => r.id));
+    const targetManagedListItemIds = new Set(
+      targetManagedItems.map((m) => m.id),
+    );
+
+    for (const row of list) {
+      const reportPeriodId = normalizeRequiredId(
+        toNumberOrNull(row.utility_report_period_id ?? row.report_period_id),
+      );
+
+      if (
+        reportPeriodId == null ||
+        (options?.reportPeriodId != null &&
+          reportPeriodId !== options.reportPeriodId)
+      ) {
+        skipped += 1;
+        continue;
+      }
+
+      if (!targetReportPeriodIds.has(reportPeriodId)) {
+        skipped += 1;
+        continue;
+      }
+
+      const sourceTrainingDlDefId = toNumberOrNull(row.dl_def_id);
+      if (sourceTrainingDlDefId == null) {
+        skipped += 1;
+        continue;
+      }
+
+      const mapped = inputByTrainingDlDefId.get(sourceTrainingDlDefId);
+      const inputDefId = mapped?.inputDefId ?? null;
+      if (inputDefId == null || !targetInputDefIds.has(inputDefId)) {
+        skipped += 1;
+        continue;
+      }
+
+      const energyProviderId = normalizeOptionalFkId(
+        normalizeOptionalId(row.energy_provider_id),
+        targetManagedListItemIds,
+      );
+      const energySourceId = normalizeOptionalFkId(
+        normalizeOptionalId(row.energy_source_id),
+        targetManagedListItemIds,
+      );
+      const customerTypeId = normalizeOptionalFkId(
+        normalizeOptionalId(row.customer_type_id),
+        targetManagedListItemIds,
+      );
+      const paymentModeId = normalizeOptionalFkId(
+        normalizeOptionalId(row.payment_mode_id),
+        targetManagedListItemIds,
+      );
+
+      const updatedAt =
+        row.updated_at || row.updated_date
+          ? new Date((row.updated_at ?? row.updated_date) as string | Date)
+          : new Date();
+
+      const payload = {
+        report_period_id: reportPeriodId,
+        input_def_id: inputDefId,
+        service_area_id: null,
+        energy_resource_id: null,
+        energy_provider_id: energyProviderId,
+        energy_source_id: energySourceId,
+        customer_type_id: customerTypeId,
+        payment_mode_id: paymentModeId,
+        value: row.dl_value ?? row.value ?? null,
+        comments: toStructuredComments(row.comments ?? null, updatedAt),
+        update_medium_id: null,
+        status_id:
+          row.data_not_available === true
+            ? DataEntryStatusId.Not_Available
+            : DataEntryStatusId.Entered,
+        is_relevant: true,
+        is_deleted: row.is_deleted ?? false,
+        updatedAt,
+        updatedById: null,
+      };
+
+      const [existing] = await db
+        .select({ id: dataEntries.id })
+        .from(dataEntries)
+        .where(
+          and(
+            eq(dataEntries.report_period_id, reportPeriodId),
+            eq(dataEntries.input_def_id, inputDefId),
+            isNull(dataEntries.service_area_id),
+            isNull(dataEntries.energy_resource_id),
+            energyProviderId == null
+              ? isNull(dataEntries.energy_provider_id)
+              : eq(dataEntries.energy_provider_id, energyProviderId),
+            energySourceId == null
+              ? isNull(dataEntries.energy_source_id)
+              : eq(dataEntries.energy_source_id, energySourceId),
+            customerTypeId == null
+              ? isNull(dataEntries.customer_type_id)
+              : eq(dataEntries.customer_type_id, customerTypeId),
+            paymentModeId == null
+              ? isNull(dataEntries.payment_mode_id)
+              : eq(dataEntries.payment_mode_id, paymentModeId),
+          ),
+        )
+        .limit(1);
+
+      if (existing) {
+        await db
+          .update(dataEntries)
+          .set(payload)
+          .where(eq(dataEntries.id, existing.id));
+        updated += 1;
+      } else {
+        await db.insert(dataEntries).values(payload);
+        inserted += 1;
+      }
+    }
+
+    const backfill = await backfillUtilityContextDataEntriesFromPreviousPeriods(
+      {
+        reportPeriodId: options?.reportPeriodId,
+      },
+    );
+
+    console.info(
+      `[migration] utility context done: inserted=${inserted}, updated=${updated}, skipped=${skipped}, backfilled=${backfill.inserted}, backfillPeriods=${backfill.targetPeriodsConsidered}, backfillSkipped=${backfill.skippedNoPreviousPeriodData}`,
+    );
+    res = true;
+  } catch (error: unknown) {
+    logMigrationError(error);
+  }
+
+  revalidatePath("/migration");
+
+  return res;
+}
+
+export async function retrieveCountryContextData(options?: {
+  reportPeriodId?: number;
+}) {
+  let res = false;
+  let inserted = 0;
+  let updated = 0;
+  let skipped = 0;
+
+  try {
+    const call = await fetchLegacyMigEndpoint("/countryContext");
+    const list = (await call.json()) as SourceCountryContextRow[];
+
+    const mappingRows = await db
+      .select({
+        trainingDlDefId: inputDlDefMappings.training_dl_def_id,
+        inputDefId: inputDlDefMappings.input_def_id,
+        updatedAt: inputDlDefMappings.updated_at,
+      })
+      .from(inputDlDefMappings);
+
+    const inputByTrainingDlDefId = new Map<
+      number,
+      { inputDefId: number; updatedAt: Date | null }
+    >();
+    for (const mapping of mappingRows) {
+      const existing = inputByTrainingDlDefId.get(mapping.trainingDlDefId);
+      if (!existing) {
+        inputByTrainingDlDefId.set(mapping.trainingDlDefId, {
+          inputDefId: mapping.inputDefId,
+          updatedAt: mapping.updatedAt,
+        });
+        continue;
+      }
+
+      const existingTime = existing.updatedAt?.getTime() ?? 0;
+      const currentTime = mapping.updatedAt?.getTime() ?? 0;
+      if (currentTime >= existingTime) {
+        inputByTrainingDlDefId.set(mapping.trainingDlDefId, {
+          inputDefId: mapping.inputDefId,
+          updatedAt: mapping.updatedAt,
+        });
+      }
+    }
+
+    const [targetInputDefs, targetReportPeriods] = await Promise.all([
+      db.select({ id: inputDefinitions.id }).from(inputDefinitions),
+      db
+        .select({ id: reportPeriods.id })
+        .from(reportPeriods)
+        .where(
+          options?.reportPeriodId != null
+            ? eq(reportPeriods.id, options.reportPeriodId)
+            : undefined,
+        ),
+    ]);
+
+    const targetInputDefIds = new Set(targetInputDefs.map((d) => d.id));
+    const targetReportPeriodIds = new Set(targetReportPeriods.map((r) => r.id));
+
+    for (const row of list) {
+      const reportPeriodId = normalizeRequiredId(
+        toNumberOrNull(row.utility_report_period_id ?? row.report_period_id),
+      );
+
+      if (
+        reportPeriodId == null ||
+        (options?.reportPeriodId != null &&
+          reportPeriodId !== options.reportPeriodId)
+      ) {
+        skipped += 1;
+        continue;
+      }
+
+      if (!targetReportPeriodIds.has(reportPeriodId)) {
+        skipped += 1;
+        continue;
+      }
+
+      const sourceTrainingDlDefId = toNumberOrNull(row.dl_def_id);
+      if (sourceTrainingDlDefId == null) {
+        skipped += 1;
+        continue;
+      }
+
+      const mapped = inputByTrainingDlDefId.get(sourceTrainingDlDefId);
+      const inputDefId = mapped?.inputDefId ?? null;
+      if (inputDefId == null || !targetInputDefIds.has(inputDefId)) {
+        skipped += 1;
+        continue;
+      }
+
+      const updatedAt =
+        row.updated_at || row.updated_date
+          ? new Date((row.updated_at ?? row.updated_date) as string | Date)
+          : new Date();
+
+      const payload = {
+        report_period_id: reportPeriodId,
+        input_def_id: inputDefId,
+        service_area_id: null,
+        energy_resource_id: null,
+        energy_provider_id: null,
+        energy_source_id: null,
+        customer_type_id: null,
+        payment_mode_id: null,
+        value: row.dl_value ?? row.value ?? null,
+        comments: toStructuredComments(row.comments ?? null, updatedAt),
+        update_medium_id: null,
+        status_id:
+          row.data_not_available === true
+            ? DataEntryStatusId.Not_Available
+            : DataEntryStatusId.Entered,
+        is_relevant: true,
+        is_deleted: row.is_deleted ?? false,
+        updatedAt,
+        updatedById: null,
+      };
+
+      const [existing] = await db
+        .select({ id: dataEntries.id })
+        .from(dataEntries)
+        .where(
+          and(
+            eq(dataEntries.report_period_id, reportPeriodId),
+            eq(dataEntries.input_def_id, inputDefId),
+            isNull(dataEntries.service_area_id),
+            isNull(dataEntries.energy_resource_id),
+            isNull(dataEntries.energy_provider_id),
+            isNull(dataEntries.energy_source_id),
+            isNull(dataEntries.customer_type_id),
+            isNull(dataEntries.payment_mode_id),
+          ),
+        )
+        .limit(1);
+
+      if (existing) {
+        await db
+          .update(dataEntries)
+          .set(payload)
+          .where(eq(dataEntries.id, existing.id));
+        updated += 1;
+      } else {
+        await db.insert(dataEntries).values(payload);
+        inserted += 1;
+      }
+    }
+
+    const backfill = await backfillCountryContextDataEntriesFromPreviousPeriods(
+      {
+        reportPeriodId: options?.reportPeriodId,
+      },
+    );
+
+    console.info(
+      `[migration] country context done: inserted=${inserted}, updated=${updated}, skipped=${skipped}, backfilled=${backfill.inserted}, backfillPeriods=${backfill.targetPeriodsConsidered}, backfillSkipped=${backfill.skippedNoPreviousPeriodData}`,
+    );
+
+    res = true;
+  } catch (error: unknown) {
+    logMigrationError(error);
+  }
+
+  revalidatePath("/migration");
+
+  return res;
+}
+
 export async function retrieveRoles() {
   let res = false;
   await db.delete(roles).where(gt(roles.id, 0));
@@ -1090,6 +1538,414 @@ const toStructuredComments = (
   ];
 };
 
+type UtilityContextBackfillResult = {
+  inserted: number;
+  skippedNoPreviousPeriodData: number;
+  targetPeriodsConsidered: number;
+};
+
+const isUtilityContextInput = (
+  input: { categoryId: number | null; subcategoryId: number | null },
+  managedListNameById: Map<number, string>,
+): boolean => {
+  const categoryName = normalizeKey(
+    input.categoryId != null ? managedListNameById.get(input.categoryId) : null,
+  );
+  const subcategoryName = normalizeKey(
+    input.subcategoryId != null
+      ? managedListNameById.get(input.subcategoryId)
+      : null,
+  );
+
+  return (
+    (categoryName != null && categoryName.includes("utility context")) ||
+    (subcategoryName != null && subcategoryName.includes("utility context"))
+  );
+};
+
+const isCountryContextInput = (
+  input: { categoryId: number | null; subcategoryId: number | null },
+  managedListNameById: Map<number, string>,
+): boolean => {
+  const categoryName = normalizeKey(
+    input.categoryId != null ? managedListNameById.get(input.categoryId) : null,
+  );
+  const subcategoryName = normalizeKey(
+    input.subcategoryId != null
+      ? managedListNameById.get(input.subcategoryId)
+      : null,
+  );
+
+  return (
+    (categoryName != null && categoryName.includes("country context")) ||
+    (subcategoryName != null && subcategoryName.includes("country context"))
+  );
+};
+
+const buildDataEntryKeyForTargetPeriod = (
+  reportPeriodId: number,
+  entry: {
+    input_def_id: number;
+    service_area_id: number | null;
+    energy_resource_id: number | null;
+    energy_provider_id: number | null;
+    energy_source_id: number | null;
+    customer_type_id: number | null;
+    payment_mode_id: number | null;
+  },
+): string => {
+  return [
+    reportPeriodId,
+    entry.input_def_id,
+    nullableKeyPart(entry.service_area_id),
+    nullableKeyPart(entry.energy_resource_id),
+    nullableKeyPart(entry.energy_provider_id),
+    nullableKeyPart(entry.energy_source_id),
+    nullableKeyPart(entry.customer_type_id),
+    nullableKeyPart(entry.payment_mode_id),
+  ].join("|");
+};
+
+async function backfillUtilityContextDataEntriesFromPreviousPeriods(options?: {
+  reportPeriodId?: number;
+}): Promise<UtilityContextBackfillResult> {
+  const managedItems = await db
+    .select({ id: managedListItems.id, name: managedListItems.name })
+    .from(managedListItems);
+  const managedListNameById = new Map(managedItems.map((m) => [m.id, m.name]));
+
+  const inputRows = await db
+    .select({
+      id: inputDefinitions.id,
+      categoryId: inputDefinitions.category_id,
+      subcategoryId: inputDefinitions.subcategory_id,
+    })
+    .from(inputDefinitions);
+
+  const utilityContextInputIds = inputRows
+    .filter((input) => isUtilityContextInput(input, managedListNameById))
+    .map((input) => input.id);
+
+  if (utilityContextInputIds.length === 0) {
+    return {
+      inserted: 0,
+      skippedNoPreviousPeriodData: 0,
+      targetPeriodsConsidered: 0,
+    };
+  }
+
+  const periodRows = await db
+    .select({
+      id: reportPeriods.id,
+      utilityId: reportPeriods.utility_id,
+      reportDate: reportPeriods.report_date,
+    })
+    .from(reportPeriods);
+
+  const periodById = new Map(periodRows.map((p) => [p.id, p]));
+  const targetPeriods =
+    options?.reportPeriodId != null
+      ? periodById.has(options.reportPeriodId)
+        ? [periodById.get(options.reportPeriodId)!]
+        : []
+      : periodRows;
+
+  if (targetPeriods.length === 0) {
+    return {
+      inserted: 0,
+      skippedNoPreviousPeriodData: 0,
+      targetPeriodsConsidered: 0,
+    };
+  }
+
+  const entries = await db
+    .select({
+      report_period_id: dataEntries.report_period_id,
+      input_def_id: dataEntries.input_def_id,
+      service_area_id: dataEntries.service_area_id,
+      energy_resource_id: dataEntries.energy_resource_id,
+      energy_provider_id: dataEntries.energy_provider_id,
+      energy_source_id: dataEntries.energy_source_id,
+      customer_type_id: dataEntries.customer_type_id,
+      payment_mode_id: dataEntries.payment_mode_id,
+      value: dataEntries.value,
+      comments: dataEntries.comments,
+      update_medium_id: dataEntries.update_medium_id,
+      status_id: dataEntries.status_id,
+      is_relevant: dataEntries.is_relevant,
+      is_deleted: dataEntries.is_deleted,
+    })
+    .from(dataEntries)
+    .where(inArray(dataEntries.input_def_id, utilityContextInputIds));
+
+  const entriesByPeriodId = new Map<number, typeof entries>();
+  for (const entry of entries) {
+    const existing = entriesByPeriodId.get(entry.report_period_id) ?? [];
+    existing.push(entry);
+    entriesByPeriodId.set(entry.report_period_id, existing);
+  }
+
+  const periodsByUtility = new Map<number, typeof periodRows>();
+  for (const period of periodRows) {
+    const existing = periodsByUtility.get(period.utilityId) ?? [];
+    existing.push(period);
+    periodsByUtility.set(period.utilityId, existing);
+  }
+  for (const periods of periodsByUtility.values()) {
+    periods.sort((a, b) => {
+      const dateDiff = a.reportDate.getTime() - b.reportDate.getTime();
+      if (dateDiff !== 0) return dateDiff;
+      return a.id - b.id;
+    });
+  }
+
+  const rowsToInsert: Array<typeof dataEntries.$inferInsert> = [];
+  const pendingInsertKeySet = new Set<string>();
+  let skippedNoPreviousPeriodData = 0;
+
+  for (const targetPeriod of targetPeriods) {
+    const targetEntries = entriesByPeriodId.get(targetPeriod.id) ?? [];
+    const existingTargetKeySet = new Set(
+      targetEntries.map((entry) =>
+        buildDataEntryKeyForTargetPeriod(targetPeriod.id, entry),
+      ),
+    );
+
+    const utilityPeriods = periodsByUtility.get(targetPeriod.utilityId) ?? [];
+    const previousPeriods = utilityPeriods.filter(
+      (period) =>
+        period.reportDate.getTime() < targetPeriod.reportDate.getTime() ||
+        (period.reportDate.getTime() === targetPeriod.reportDate.getTime() &&
+          period.id < targetPeriod.id),
+    );
+
+    let sourceEntriesForCopy: typeof entries = [];
+    for (let i = previousPeriods.length - 1; i >= 0; i -= 1) {
+      const source = entriesByPeriodId.get(previousPeriods[i].id) ?? [];
+      const activeSource = source.filter((entry) => entry.is_deleted === false);
+      if (activeSource.length > 0) {
+        sourceEntriesForCopy = activeSource;
+        break;
+      }
+    }
+
+    if (sourceEntriesForCopy.length === 0) {
+      skippedNoPreviousPeriodData += 1;
+      continue;
+    }
+
+    for (const sourceEntry of sourceEntriesForCopy) {
+      const key = buildDataEntryKeyForTargetPeriod(
+        targetPeriod.id,
+        sourceEntry,
+      );
+      if (existingTargetKeySet.has(key) || pendingInsertKeySet.has(key)) {
+        continue;
+      }
+
+      pendingInsertKeySet.add(key);
+      rowsToInsert.push({
+        report_period_id: targetPeriod.id,
+        input_def_id: sourceEntry.input_def_id,
+        service_area_id: sourceEntry.service_area_id,
+        energy_resource_id: sourceEntry.energy_resource_id,
+        energy_provider_id: sourceEntry.energy_provider_id,
+        energy_source_id: sourceEntry.energy_source_id,
+        customer_type_id: sourceEntry.customer_type_id,
+        payment_mode_id: sourceEntry.payment_mode_id,
+        value: sourceEntry.value,
+        comments: sourceEntry.comments,
+        update_medium_id: sourceEntry.update_medium_id,
+        status_id: sourceEntry.status_id,
+        is_relevant: sourceEntry.is_relevant,
+        is_deleted: false,
+        updatedAt: new Date(),
+        updatedById: null,
+      });
+    }
+  }
+
+  if (rowsToInsert.length > 0) {
+    await db.insert(dataEntries).values(rowsToInsert);
+  }
+
+  return {
+    inserted: rowsToInsert.length,
+    skippedNoPreviousPeriodData,
+    targetPeriodsConsidered: targetPeriods.length,
+  };
+}
+
+async function backfillCountryContextDataEntriesFromPreviousPeriods(options?: {
+  reportPeriodId?: number;
+}): Promise<UtilityContextBackfillResult> {
+  const managedItems = await db
+    .select({ id: managedListItems.id, name: managedListItems.name })
+    .from(managedListItems);
+  const managedListNameById = new Map(managedItems.map((m) => [m.id, m.name]));
+
+  const inputRows = await db
+    .select({
+      id: inputDefinitions.id,
+      categoryId: inputDefinitions.category_id,
+      subcategoryId: inputDefinitions.subcategory_id,
+    })
+    .from(inputDefinitions);
+
+  const countryContextInputIds = inputRows
+    .filter((input) => isCountryContextInput(input, managedListNameById))
+    .map((input) => input.id);
+
+  if (countryContextInputIds.length === 0) {
+    return {
+      inserted: 0,
+      skippedNoPreviousPeriodData: 0,
+      targetPeriodsConsidered: 0,
+    };
+  }
+
+  const periodRows = await db
+    .select({
+      id: reportPeriods.id,
+      utilityId: reportPeriods.utility_id,
+      reportDate: reportPeriods.report_date,
+    })
+    .from(reportPeriods);
+
+  const periodById = new Map(periodRows.map((p) => [p.id, p]));
+  const targetPeriods =
+    options?.reportPeriodId != null
+      ? periodById.has(options.reportPeriodId)
+        ? [periodById.get(options.reportPeriodId)!]
+        : []
+      : periodRows;
+
+  if (targetPeriods.length === 0) {
+    return {
+      inserted: 0,
+      skippedNoPreviousPeriodData: 0,
+      targetPeriodsConsidered: 0,
+    };
+  }
+
+  const entries = await db
+    .select({
+      report_period_id: dataEntries.report_period_id,
+      input_def_id: dataEntries.input_def_id,
+      service_area_id: dataEntries.service_area_id,
+      energy_resource_id: dataEntries.energy_resource_id,
+      energy_provider_id: dataEntries.energy_provider_id,
+      energy_source_id: dataEntries.energy_source_id,
+      customer_type_id: dataEntries.customer_type_id,
+      payment_mode_id: dataEntries.payment_mode_id,
+      value: dataEntries.value,
+      comments: dataEntries.comments,
+      update_medium_id: dataEntries.update_medium_id,
+      status_id: dataEntries.status_id,
+      is_relevant: dataEntries.is_relevant,
+      is_deleted: dataEntries.is_deleted,
+    })
+    .from(dataEntries)
+    .where(inArray(dataEntries.input_def_id, countryContextInputIds));
+
+  const entriesByPeriodId = new Map<number, typeof entries>();
+  for (const entry of entries) {
+    const existing = entriesByPeriodId.get(entry.report_period_id) ?? [];
+    existing.push(entry);
+    entriesByPeriodId.set(entry.report_period_id, existing);
+  }
+
+  const periodsByUtility = new Map<number, typeof periodRows>();
+  for (const period of periodRows) {
+    const existing = periodsByUtility.get(period.utilityId) ?? [];
+    existing.push(period);
+    periodsByUtility.set(period.utilityId, existing);
+  }
+  for (const periods of periodsByUtility.values()) {
+    periods.sort((a, b) => {
+      const dateDiff = a.reportDate.getTime() - b.reportDate.getTime();
+      if (dateDiff !== 0) return dateDiff;
+      return a.id - b.id;
+    });
+  }
+
+  const rowsToInsert: Array<typeof dataEntries.$inferInsert> = [];
+  const pendingInsertKeySet = new Set<string>();
+  let skippedNoPreviousPeriodData = 0;
+
+  for (const targetPeriod of targetPeriods) {
+    const targetEntries = entriesByPeriodId.get(targetPeriod.id) ?? [];
+    const existingTargetKeySet = new Set(
+      targetEntries.map((entry) =>
+        buildDataEntryKeyForTargetPeriod(targetPeriod.id, entry),
+      ),
+    );
+
+    const utilityPeriods = periodsByUtility.get(targetPeriod.utilityId) ?? [];
+    const previousPeriods = utilityPeriods.filter(
+      (period) =>
+        period.reportDate.getTime() < targetPeriod.reportDate.getTime() ||
+        (period.reportDate.getTime() === targetPeriod.reportDate.getTime() &&
+          period.id < targetPeriod.id),
+    );
+
+    let sourceEntriesForCopy: typeof entries = [];
+    for (let i = previousPeriods.length - 1; i >= 0; i -= 1) {
+      const source = entriesByPeriodId.get(previousPeriods[i].id) ?? [];
+      const activeSource = source.filter((entry) => entry.is_deleted === false);
+      if (activeSource.length > 0) {
+        sourceEntriesForCopy = activeSource;
+        break;
+      }
+    }
+
+    if (sourceEntriesForCopy.length === 0) {
+      skippedNoPreviousPeriodData += 1;
+      continue;
+    }
+
+    for (const sourceEntry of sourceEntriesForCopy) {
+      const key = buildDataEntryKeyForTargetPeriod(
+        targetPeriod.id,
+        sourceEntry,
+      );
+      if (existingTargetKeySet.has(key) || pendingInsertKeySet.has(key)) {
+        continue;
+      }
+
+      pendingInsertKeySet.add(key);
+      rowsToInsert.push({
+        report_period_id: targetPeriod.id,
+        input_def_id: sourceEntry.input_def_id,
+        service_area_id: sourceEntry.service_area_id,
+        energy_resource_id: sourceEntry.energy_resource_id,
+        energy_provider_id: sourceEntry.energy_provider_id,
+        energy_source_id: sourceEntry.energy_source_id,
+        customer_type_id: sourceEntry.customer_type_id,
+        payment_mode_id: sourceEntry.payment_mode_id,
+        value: sourceEntry.value,
+        comments: sourceEntry.comments,
+        update_medium_id: sourceEntry.update_medium_id,
+        status_id: sourceEntry.status_id,
+        is_relevant: sourceEntry.is_relevant,
+        is_deleted: false,
+        updatedAt: new Date(),
+        updatedById: null,
+      });
+    }
+  }
+
+  if (rowsToInsert.length > 0) {
+    await db.insert(dataEntries).values(rowsToInsert);
+  }
+
+  return {
+    inserted: rowsToInsert.length,
+    skippedNoPreviousPeriodData,
+    targetPeriodsConsidered: targetPeriods.length,
+  };
+}
+
 export async function retrieveDataEntries(options?: {
   reportPeriodId?: number;
   batchSize?: number;
@@ -1108,6 +1964,9 @@ export async function retrieveDataEntries(options?: {
   let mappedByMetadata = 0;
   let skippedMissingRequiredFk = 0;
   let nulledInvalidOptionalFk = 0;
+  let utilityContextBackfilled = 0;
+  let utilityContextBackfillSkipped = 0;
+  let utilityContextBackfillPeriods = 0;
 
   const mappingRows = await db
     .select({
@@ -1418,8 +2277,18 @@ export async function retrieveDataEntries(options?: {
       hasMore = page.pagination.hasMore === true && cursor != null;
     }
 
+    const utilityContextBackfill =
+      await backfillUtilityContextDataEntriesFromPreviousPeriods({
+        reportPeriodId: options?.reportPeriodId,
+      });
+    utilityContextBackfilled = utilityContextBackfill.inserted;
+    utilityContextBackfillSkipped =
+      utilityContextBackfill.skippedNoPreviousPeriodData;
+    utilityContextBackfillPeriods =
+      utilityContextBackfill.targetPeriodsConsidered;
+
     console.info(
-      `[migration] data entries done: inserted=${inserted}, updated=${updated}, skipped=${skipped}, skippedOutOfRange=${skippedOutOfRange}, skippedMissingRequiredFk=${skippedMissingRequiredFk}, mappedByDlDefMapping=${mappedByDlDefMapping}, mappedByMetadata=${mappedByMetadata}, nulledInvalidOptionalFk=${nulledInvalidOptionalFk}`,
+      `[migration] data entries done: inserted=${inserted}, updated=${updated}, skipped=${skipped}, skippedOutOfRange=${skippedOutOfRange}, skippedMissingRequiredFk=${skippedMissingRequiredFk}, mappedByDlDefMapping=${mappedByDlDefMapping}, mappedByMetadata=${mappedByMetadata}, nulledInvalidOptionalFk=${nulledInvalidOptionalFk}, utilityContextBackfilled=${utilityContextBackfilled}, utilityContextBackfillPeriods=${utilityContextBackfillPeriods}, utilityContextBackfillSkipped=${utilityContextBackfillSkipped}`,
     );
     res = true;
   } catch (error: unknown) {
