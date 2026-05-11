@@ -73,6 +73,18 @@ import {
   type KpiWorkerRunResult,
 } from "@/app/data-entry/kpi-worker";
 import { formatReportPeriodDisplay } from "@/lib/formatters";
+import {
+  DataEntryValidationMetadata,
+  getDataTypeValidationMessage,
+  getRangeOrPolarityValidationMessage,
+  isValueValidForDataType,
+} from "@/app/data-entry/enter-data/services/dataEntryValidation.service";
+import { getDevValidationBuilderConfigFromDb } from "@/app/data-entry/enter-data/services/validation-builder/store";
+import {
+  DevValidationBuilderConfig,
+  ValidationCode,
+  ValidationRuleName,
+} from "@/app/data-entry/enter-data/services/validation-builder/types";
 
 const hasActiveEnergyResourcePeriod = (reportPeriodId: number) =>
   sql<boolean>`exists (
@@ -1639,6 +1651,80 @@ const normalizeDataEntryValue = (value: string | null): string | null => {
   return trimmed.length > 0 ? trimmed : null;
 };
 
+const getDataEntryValidationMetadata = async (
+  inputDefId: number,
+): Promise<DataEntryValidationMetadata | null> => {
+  const [definition] = await db
+    .select({
+      inputName: inputDefinitions.name,
+      isMandatory: inputDefinitions.is_mandatory,
+      dataTypeName: sql<string | null>`(
+        select mli.name
+        from managed_list_items mli
+        where mli.id = ${inputDefinitions.data_type_id}
+        limit 1
+      )`,
+      validRangeMin: inputDefinitions.valid_range_min,
+      validRangeMax: inputDefinitions.valid_range_max,
+      validPolarityId: inputDefinitions.valid_polarity_id,
+      validPolarityName: sql<string | null>`(
+        select mli.name
+        from managed_list_items mli
+        where mli.id = ${inputDefinitions.valid_polarity_id}
+        limit 1
+      )`,
+    })
+    .from(inputDefinitions)
+    .where(eq(inputDefinitions.id, inputDefId))
+    .limit(1);
+
+  return definition ?? null;
+};
+
+const getDevValidationBuilderConfig = async (
+  user: CurrentUser,
+): Promise<DevValidationBuilderConfig | null> => {
+  if (user.role !== "DEV") {
+    return null;
+  }
+
+  return getDevValidationBuilderConfigFromDb();
+};
+
+const resolveBuilderValidationMessage = (params: {
+  config: DevValidationBuilderConfig | null;
+  code: ValidationCode;
+  fallbackMessage: string;
+}) => params.config?.customMessages[params.code] ?? params.fallbackMessage;
+
+const shouldRunBuilderRule = (params: {
+  config: DevValidationBuilderConfig | null;
+  ruleName: ValidationRuleName;
+  code: ValidationCode;
+  inputDefId: number;
+}) => {
+  if (!params.config) {
+    return true;
+  }
+
+  if (!params.config.enabled) {
+    return false;
+  }
+
+  if (!params.config.ruleToggles[params.ruleName]) {
+    return false;
+  }
+
+  const exclusion = params.config.dlDefExclusions.find(
+    (item) => item.inputDefId === params.inputDefId,
+  );
+  if (!exclusion) {
+    return true;
+  }
+
+  return !exclusion.codes.includes(params.code);
+};
+
 type DataEntryScopedPayload = {
   inputDefId: number;
   energyResourceId?: number | null;
@@ -1806,6 +1892,102 @@ export const updateDataEntryValueAction = async (
     throw new Error("A report period is required before saving data entries.");
   }
 
+  const builderConfig = await getDevValidationBuilderConfig(user);
+  const normalizedValue = normalizeDataEntryValue(payload.value);
+  const validationMetadata = await getDataEntryValidationMetadata(
+    payload.inputDefId,
+  );
+  if (!validationMetadata) {
+    throw new Error("Unable to validate the selected input definition.");
+  }
+
+  if (
+    shouldRunBuilderRule({
+      config: builderConfig,
+      ruleName: "required-value",
+      code: "REQUIRED",
+      inputDefId: payload.inputDefId,
+    }) &&
+    validationMetadata.isMandatory &&
+    normalizedValue == null
+  ) {
+    throw new Error(
+      resolveBuilderValidationMessage({
+        config: builderConfig,
+        code: "REQUIRED",
+        fallbackMessage: `${validationMetadata.inputName} is required.`,
+      }),
+    );
+  }
+
+  if (
+    shouldRunBuilderRule({
+      config: builderConfig,
+      ruleName: "data-type",
+      code: "INVALID_TYPE",
+      inputDefId: payload.inputDefId,
+    }) &&
+    !isValueValidForDataType(validationMetadata.dataTypeName, normalizedValue)
+  ) {
+    throw new Error(
+      resolveBuilderValidationMessage({
+        config: builderConfig,
+        code: "INVALID_TYPE",
+        fallbackMessage: getDataTypeValidationMessage(validationMetadata),
+      }),
+    );
+  }
+
+  if (
+    shouldRunBuilderRule({
+      config: builderConfig,
+      ruleName: "relevance",
+      code: "NOT_RELEVANT",
+      inputDefId: payload.inputDefId,
+    })
+  ) {
+    const serviceAreaScopedInputDefinitionIds =
+      await getServiceAreaScopedInputDefinitionIds([payload.inputDefId]);
+    const irrelevantInputDefinitionIds =
+      await getIrrelevantInputDefinitionIdsForContext(
+        context,
+        [payload.inputDefId],
+        serviceAreaScopedInputDefinitionIds,
+      );
+    if (irrelevantInputDefinitionIds.has(payload.inputDefId)) {
+      throw new Error(
+        resolveBuilderValidationMessage({
+          config: builderConfig,
+          code: "NOT_RELEVANT",
+          fallbackMessage:
+            "This field is not relevant for the selected report context.",
+        }),
+      );
+    }
+  }
+
+  const rangeOrPolarityError = getRangeOrPolarityValidationMessage(
+    validationMetadata,
+    normalizedValue,
+  );
+  if (
+    shouldRunBuilderRule({
+      config: builderConfig,
+      ruleName: "range-polarity",
+      code: "RANGE_OR_POLARITY",
+      inputDefId: payload.inputDefId,
+    }) &&
+    rangeOrPolarityError
+  ) {
+    throw new Error(
+      resolveBuilderValidationMessage({
+        config: builderConfig,
+        code: "RANGE_OR_POLARITY",
+        fallbackMessage: rangeOrPolarityError,
+      }),
+    );
+  }
+
   const existingConditions = buildExistingDataEntryConditions({
     reportPeriodId,
     inputDefId: payload.inputDefId,
@@ -1826,7 +2008,7 @@ export const updateDataEntryValueAction = async (
     input_def_id: payload.inputDefId,
     service_area_id: scopedServiceAreaId,
     energy_resource_id: energyResourceId,
-    value: normalizeDataEntryValue(payload.value),
+    value: normalizedValue,
     status_id: DataEntryStatusId.Entered,
     energy_source_id: energyMetadata?.energySourceId,
     energy_type_id: energyMetadata?.energyTypeId,

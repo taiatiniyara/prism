@@ -3,6 +3,7 @@ export * from "./chat-history";
 export * from "./country";
 export * from "./custom-kpi-requests";
 export * from "./dataEntry";
+export * from "./devValidationBuilder";
 export * from "./kpi";
 export * from "./managedLists";
 export * from "./reportPeriods";
