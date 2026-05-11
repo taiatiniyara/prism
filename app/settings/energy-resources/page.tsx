@@ -8,6 +8,13 @@ import {
 import { AllPowerStations } from "../power-stations/service";
 import { AllServiceAreas } from "../service-areas/service";
 
+const ENERGY_SOURCE_MANAGED_LIST_ALIASES = [
+  "Energy Source",
+  "Storage Energy Source",
+  "Energy Storage Source",
+  "Generator Energy Source",
+].join("|");
+
 export default async function EnergyResourcesSettingsPage() {
   const [energyResources, powerStations, serviceAreas] = await Promise.all([
     GetAllEnergyResources(),
@@ -56,6 +63,11 @@ export default async function EnergyResourcesSettingsPage() {
         formAction: CreateEnergyResourceFromPeriodRow,
         fields: [
           {
+            key: "type_id",
+            type: "managed-list",
+            managedListName: "Energy Resource Type",
+          },
+          {
             key: "name",
             type: "text",
           },
@@ -88,12 +100,7 @@ export default async function EnergyResourcesSettingsPage() {
           {
             key: "energy_source_id",
             type: "managed-list",
-            managedListName: "Energy Source",
-          },
-          {
-            key: "type_id",
-            type: "managed-list",
-            managedListName: "Energy Resource Type",
+            managedListName: ENERGY_SOURCE_MANAGED_LIST_ALIASES,
           },
         ],
       }}
@@ -133,7 +140,7 @@ export default async function EnergyResourcesSettingsPage() {
           {
             key: "energy_source_id",
             type: "managed-list",
-            managedListName: "Energy Source",
+            managedListName: ENERGY_SOURCE_MANAGED_LIST_ALIASES,
           },
           {
             key: "type_id",

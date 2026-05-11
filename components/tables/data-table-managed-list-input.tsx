@@ -1,6 +1,6 @@
 "use client";
 
-import { GetAllManagedLists } from "@/app/settings/managed-lists/service";
+import { GetAllManagedListItems } from "@/app/settings/managed-lists/service";
 import {
   DataEntrySelect,
   type DataEntrySelectOption,
@@ -21,17 +21,63 @@ export default function DataTableManagedListInput(props: {
   useEffect(() => {
     let isCancelled = false;
 
-    GetAllManagedLists({
-      name: props.managedListName,
-    })
-      .then((res) => {
+    const aliases = Array.from(
+      new Set(
+        props.managedListName
+          .split("|")
+          .map((name) => name.trim())
+          .filter((name) => name.length > 0),
+      ),
+    );
+
+    if (aliases.length === 0) {
+      Promise.resolve().then(() => {
+        if (!isCancelled) {
+          setList([]);
+          setIsLoading(false);
+        }
+      });
+      return;
+    }
+
+    Promise.all(
+      aliases.map((listName) =>
+        GetAllManagedListItems({
+          listName,
+          excludeAll: true,
+        }),
+      ),
+    )
+      .then((resultSets) => {
         if (isCancelled) {
           return;
         }
 
-        const items = res?.[0]?.items ?? [];
+        const merged = new Map<number, ManagedListItem>();
+        for (const set of resultSets) {
+          for (const item of set) {
+            if (!item.is_active) {
+              continue;
+            }
+
+            const normalizedName = item.name.trim().toLowerCase();
+            const isAllLikeOption =
+              normalizedName === "all" ||
+              normalizedName === "all options" ||
+              normalizedName.startsWith("all ");
+
+            if (isAllLikeOption) {
+              continue;
+            }
+
+            merged.set(item.id, item);
+          }
+        }
+
         setList(
-          items.filter((item) => !item.name.includes("All") && item.is_active),
+          Array.from(merged.values()).sort((a, b) =>
+            a.name.localeCompare(b.name),
+          ),
         );
       })
       .catch(() => {

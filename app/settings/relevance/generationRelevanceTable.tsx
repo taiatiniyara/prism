@@ -88,13 +88,17 @@ export default function GenerationRelevanceTable(props: {
   const onCellToggle = (
     energySourceId: number,
     energyProviderId: number,
+    energyResourceTypeId: number,
     checked: boolean,
   ) => {
     const previousRows = rows;
 
     setRows((prev) =>
       prev.map((row) => {
-        if (row.energySourceId !== energySourceId) {
+        if (
+          row.energySourceId !== energySourceId ||
+          row.energyResourceTypeId !== energyResourceTypeId
+        ) {
           return row;
         }
 
@@ -280,6 +284,7 @@ export default function GenerationRelevanceTable(props: {
                                     onCellToggle(
                                       row.energySourceId,
                                       provider.energyProviderId,
+                                      row.energyResourceTypeId,
                                       next === true,
                                     )
                                   }

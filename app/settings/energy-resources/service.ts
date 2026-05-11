@@ -18,7 +18,7 @@ import {
 } from "@/lib/user.service";
 import { and, eq, inArray } from "drizzle-orm";
 import { DataTableFormResponse } from "@/components/tables/data-table-create-form";
-import { managedListItems } from "@/db/schema/managedLists";
+import { managedListItems, managedLists } from "@/db/schema/managedLists";
 import { revalidatePath } from "next/cache";
 import {
   buildManagedListNameMap,
@@ -28,6 +28,116 @@ import { formatReportPeriodDisplay } from "@/lib/formatters";
 
 export type EnergyResourcePeriodTableRow = Omit<EnergyResource, "id"> & {
   id: string;
+};
+
+const GENERATOR_ENERGY_SOURCE_LIST_ALIASES = [
+  "Energy Source",
+  "Generator Energy Source",
+];
+
+const STORAGE_ENERGY_SOURCE_LIST_ALIASES = [
+  "Storage Energy Source",
+  "Energy Storage Source",
+];
+
+const ENERGY_RESOURCE_TYPE_LIST_ALIASES = [
+  "Energy Resource Type",
+  "Energy Resouce Type",
+  "Energy Type",
+];
+
+const normalizeListName = (name: string): string => name.trim().toLowerCase();
+
+const isStorageEnergyResourceType = (typeName: string): boolean => {
+  const normalized = typeName.trim().toLowerCase();
+  return (
+    normalized.includes("storage") ||
+    normalized.includes("battery") ||
+    normalized.includes("bess")
+  );
+};
+
+const resolveNumber = (value: unknown): number | null => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  return null;
+};
+
+const validateEnergySourceForResourceType = async (params: {
+  typeId: number;
+  energySourceId: number;
+}): Promise<{ valid: true } | { valid: false; message: string }> => {
+  const [typeItem] = await db
+    .select({
+      id: managedListItems.id,
+      name: managedListItems.name,
+      listName: managedLists.name,
+    })
+    .from(managedListItems)
+    .innerJoin(managedLists, eq(managedListItems.list_id, managedLists.id))
+    .where(eq(managedListItems.id, params.typeId))
+    .limit(1);
+
+  const [sourceItem] = await db
+    .select({
+      id: managedListItems.id,
+      name: managedListItems.name,
+      listName: managedLists.name,
+    })
+    .from(managedListItems)
+    .innerJoin(managedLists, eq(managedListItems.list_id, managedLists.id))
+    .where(eq(managedListItems.id, params.energySourceId))
+    .limit(1);
+
+  if (!typeItem || !sourceItem) {
+    return {
+      valid: false,
+      message: "Selected energy resource type or energy source is invalid.",
+    };
+  }
+
+  const typeListName = normalizeListName(typeItem.listName);
+  const isEnergyResourceType = ENERGY_RESOURCE_TYPE_LIST_ALIASES.some(
+    (name) => normalizeListName(name) === typeListName,
+  );
+
+  if (!isEnergyResourceType) {
+    return {
+      valid: false,
+      message: "Selected type is not a valid energy resource type.",
+    };
+  }
+
+  const sourceListName = normalizeListName(sourceItem.listName);
+  const storageLists = new Set(
+    STORAGE_ENERGY_SOURCE_LIST_ALIASES.map(normalizeListName),
+  );
+  const generatorLists = new Set(
+    GENERATOR_ENERGY_SOURCE_LIST_ALIASES.map(normalizeListName),
+  );
+  const allowedSourceLists = isStorageEnergyResourceType(typeItem.name)
+    ? storageLists
+    : generatorLists;
+
+  if (!allowedSourceLists.has(sourceListName)) {
+    return {
+      valid: false,
+      message: isStorageEnergyResourceType(typeItem.name)
+        ? "Storage resource types must use a storage energy source."
+        : "Generator resource types must use a generator energy source.",
+    };
+  }
+
+  return { valid: true };
 };
 
 function toPeriodRows(
@@ -194,6 +304,28 @@ export async function CreateEnergyResource(
     };
   }
 
+  const typeId = resolveNumber(data.type_id);
+  const energySourceId = resolveNumber(data.energy_source_id);
+
+  if (typeId == null || energySourceId == null) {
+    return {
+      success: false,
+      message: "Energy resource type and energy source are required.",
+    };
+  }
+
+  const validation = await validateEnergySourceForResourceType({
+    typeId,
+    energySourceId,
+  });
+
+  if (!validation.valid) {
+    return {
+      success: false,
+      message: validation.message,
+    };
+  }
+
   const query = db.insert(energyResources).values({
     ...data,
     utility_id: utilityScopeId,
@@ -252,6 +384,52 @@ export async function UpdateEnergyResource(
   const user = await getCurrentUser();
   const utilityScopeId = resolveUtilityScopeId(user);
 
+  const existingQuery = db
+    .select()
+    .from(energyResources)
+    .where(
+      utilityScopeId == null
+        ? eq(energyResources.id, data.id!)
+        : and(
+            eq(energyResources.id, data.id!),
+            eq(energyResources.utility_id, utilityScopeId),
+          ),
+    )
+    .limit(1);
+
+  const [existing] = await existingQuery;
+
+  if (!existing) {
+    return {
+      success: false,
+      message: "Energy Resource not found in the active utility scope.",
+    };
+  }
+
+  const typeId = resolveNumber(data.type_id ?? existing.type_id);
+  const energySourceId = resolveNumber(
+    data.energy_source_id ?? existing.energy_source_id,
+  );
+
+  if (typeId == null || energySourceId == null) {
+    return {
+      success: false,
+      message: "Energy resource type and energy source are required.",
+    };
+  }
+
+  const validation = await validateEnergySourceForResourceType({
+    typeId,
+    energySourceId,
+  });
+
+  if (!validation.valid) {
+    return {
+      success: false,
+      message: validation.message,
+    };
+  }
+
   const query = db
     .update(energyResources)
     .set({
@@ -268,13 +446,6 @@ export async function UpdateEnergyResource(
           ),
     );
   const [result] = await query.returning();
-
-  if (!result) {
-    return {
-      success: false,
-      message: "Energy Resource not found in the active utility scope.",
-    };
-  }
 
   revalidatePath("/settings/energy-resources");
   return {

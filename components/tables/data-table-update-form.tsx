@@ -32,6 +32,7 @@ import InputAlternativeNamesEditor from "./input-alternative-names-editor";
 
 export interface DataTableUpdateFormField<T> {
   key: keyof T;
+  label?: string;
   type: FieldType;
   required?: boolean;
   disabled?: boolean;
@@ -61,7 +62,10 @@ const stringifyFieldValue = (value: unknown): string => {
   return String(value);
 };
 
-function updateField<T>(field: DataTableUpdateFormField<T>) {
+function updateField<T>(
+  field: DataTableUpdateFormField<T>,
+  fieldLabel: string,
+) {
   if (field.type === "boolean") {
     return (
       <BooleanFormInput
@@ -80,7 +84,9 @@ function updateField<T>(field: DataTableUpdateFormField<T>) {
       >
         <SelectTrigger className="w-full shadow">
           <SelectValue
-            placeholder={field.value ? String(field.value) : undefined}
+            placeholder={
+              field.value ? String(field.value) : `Select ${fieldLabel}`
+            }
           />
         </SelectTrigger>
         <SelectContent>
@@ -189,14 +195,17 @@ export default function DataTableUpdateForm<T>(
               key={`${String(field.key)}-${index}`}
             >
               <Label htmlFor={field.key as string}>
-                {formatLabel(field.key as string)}
+                {field.label ?? formatLabel(field.key as string)}
               </Label>
-              {updateField({
-                ...field,
-                value: (props.record as Record<string, unknown>)[
-                  String(field.key)
-                ] as T[keyof T],
-              })}
+              {updateField(
+                {
+                  ...field,
+                  value: (props.record as Record<string, unknown>)[
+                    String(field.key)
+                  ] as T[keyof T],
+                },
+                field.label ?? formatLabel(field.key as string),
+              )}
             </div>
           ))}
           <SubmitBtn

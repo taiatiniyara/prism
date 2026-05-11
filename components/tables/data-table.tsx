@@ -56,6 +56,7 @@ interface DataTableProps<T extends DataTableRecord> {
     formAction: (body: Partial<T>) => Promise<DataTableFormResponse<T>>;
     fields: {
       key: keyof T;
+      label?: string;
       type: FieldType;
       required?: boolean;
       disabled?: boolean;

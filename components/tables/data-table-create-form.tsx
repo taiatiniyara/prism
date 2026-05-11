@@ -50,6 +50,7 @@ export interface DataTableFormResponse<T> {
 
 interface DataTableCreateFormField<T> {
   key: keyof T;
+  label?: string;
   type: FieldType;
   required?: boolean;
   disabled?: boolean;
@@ -96,7 +97,7 @@ export function formDataToObject<T>(
   return obj;
 }
 
-function field<T>(field: DataTableCreateFormField<T>) {
+function field<T>(field: DataTableCreateFormField<T>, fieldLabel: string) {
   if (field.type === "select") {
     return (
       <Select
@@ -104,9 +105,7 @@ function field<T>(field: DataTableCreateFormField<T>) {
         disabled={field.disabled}
       >
         <SelectTrigger className="w-full shadow">
-          <SelectValue
-            placeholder={`Select ${formatLabel(field.key.toString())}`}
-          />
+          <SelectValue placeholder={`Select ${fieldLabel}`} />
         </SelectTrigger>
         <SelectContent>
           {field.selectList?.map((option) => (
@@ -233,8 +232,8 @@ export function DataTableCreateForm<T>(props: DataTableCreateFormProps<T>) {
                 className="space-y-1"
                 key={f.key as string}
               >
-                <Label>{formatLabel(f.key.toString())}</Label>
-                {field(f)}
+                <Label>{f.label ?? formatLabel(f.key.toString())}</Label>
+                {field(f, f.label ?? formatLabel(f.key.toString()))}
               </div>
             ))}
             <SubmitBtn

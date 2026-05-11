@@ -461,6 +461,24 @@ const getManagedDimensionItemsByAliases = async (
   return [];
 };
 
+const getManagedDimensionItemsMergedByAliases = async (
+  listNames: string[],
+): Promise<{ id: number; name: string }[]> => {
+  const merged = new Map<number, { id: number; name: string }>();
+
+  for (const listName of listNames) {
+    const rows = await getManagedDimensionItems(listName);
+
+    for (const row of rows) {
+      merged.set(row.id, row);
+    }
+  }
+
+  return Array.from(merged.values()).sort((a, b) =>
+    a.name.localeCompare(b.name),
+  );
+};
+
 const filterGenerationResourceTypes = <T extends { name: string }>(
   items: T[],
 ): T[] => {
@@ -1107,7 +1125,12 @@ export async function GetUtilityGenerationRelevance(
 
   const inputList = await getGenerationInputDefinitions();
   let energyProviders = await getManagedDimensionItems("Energy Provider");
-  let energySources = await getManagedDimensionItems("Energy Source");
+  let energySources = await getManagedDimensionItemsMergedByAliases([
+    "Energy Source",
+    "Storage Energy Source",
+    "Energy Storage Source",
+    "Generator Energy Source",
+  ]);
   let energyResourceTypes = filterGenerationResourceTypes(
     await getManagedDimensionItemsByAliases([
       "Energy Resource Type",
