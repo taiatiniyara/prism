@@ -147,8 +147,8 @@ const lockTemplateWorksheet = async (
     insertHyperlinks: false,
     deleteColumns: false,
     deleteRows: false,
-    sort: false,
-    autoFilter: false,
+    sort: true,
+    autoFilter: true,
     pivotTables: false,
     objects: false,
     scenarios: false,
@@ -161,8 +161,49 @@ const applyBoldHeaderRow = (worksheet: import("exceljs").Worksheet) => {
     cell.font = {
       ...(cell.font ?? {}),
       bold: true,
+      color: { argb: "FF1F2937" },
+    };
+    cell.fill = {
+      type: "pattern",
+      pattern: "solid",
+      fgColor: { argb: "FFE5E7EB" },
+    };
+    cell.border = {
+      top: { style: "thin", color: { argb: "FFCBD5E1" } },
+      bottom: { style: "thin", color: { argb: "FFCBD5E1" } },
+      left: { style: "thin", color: { argb: "FFCBD5E1" } },
+      right: { style: "thin", color: { argb: "FFCBD5E1" } },
     };
   });
+};
+
+const applyLeftAlignment = (worksheet: import("exceljs").Worksheet) => {
+  worksheet.eachRow({ includeEmpty: true }, (row) => {
+    row.eachCell({ includeEmpty: true }, (cell) => {
+      cell.alignment = {
+        ...(cell.alignment ?? {}),
+        horizontal: "left",
+      };
+    });
+  });
+};
+
+const freezeTopRow = (worksheet: import("exceljs").Worksheet) => {
+  worksheet.views = [{ state: "frozen", ySplit: 1 }];
+};
+
+const applyHeaderFilter = (
+  worksheet: import("exceljs").Worksheet,
+  headerCount: number,
+) => {
+  if (headerCount <= 0) {
+    return;
+  }
+
+  worksheet.autoFilter = {
+    from: { row: 1, column: 1 },
+    to: { row: 1, column: headerCount },
+  };
 };
 
 type PersistableObjective = ScorecardDraftObjectiveInput;
@@ -1141,6 +1182,9 @@ export default function ScorecardPageClient({
           headers.map((header) => row[header as keyof TemplateRow]),
         );
       });
+      applyLeftAlignment(worksheet);
+      freezeTopRow(worksheet);
+      applyHeaderFilter(worksheet, headers.length);
 
       await lockTemplateWorksheet(worksheet, ["target_value"]);
 
