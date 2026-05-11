@@ -16,7 +16,7 @@ import {
   hasGlobalUtilityAccess,
   resolveUtilityScopeId,
 } from "@/lib/user.service";
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, desc } from "drizzle-orm";
 import { DataTableFormResponse } from "@/components/tables/data-table-create-form";
 import { managedListItems, managedLists } from "@/db/schema/managedLists";
 import { revalidatePath } from "next/cache";
@@ -28,6 +28,7 @@ import { formatReportPeriodDisplay } from "@/lib/formatters";
 
 export type EnergyResourcePeriodTableRow = Omit<EnergyResource, "id"> & {
   id: string;
+  report_period_id?: number | null;
 };
 
 const GENERATOR_ENERGY_SOURCE_LIST_ALIASES = [
@@ -71,6 +72,38 @@ const resolveNumber = (value: unknown): number | null => {
 
   return null;
 };
+
+export async function GetAllReportPeriods(): Promise<
+  { id: number; label: string }[]
+> {
+  const user = await getCurrentUser();
+  const ml = await db.select().from(managedListItems);
+  const managedListNamesById = buildManagedListNameMap(ml);
+  const utilityScopeId = resolveUtilityScopeId(user);
+
+  const query = db
+    .select({
+      id: reportPeriods.id,
+      reportDate: reportPeriods.report_date,
+      reportTypeId: reportPeriods.report_type_id,
+    })
+    .from(reportPeriods)
+    .orderBy(desc(reportPeriods.report_date));
+
+  if (utilityScopeId != null) {
+    query.where(eq(reportPeriods.utility_id, utilityScopeId));
+  }
+
+  const periods = await query;
+
+  return periods.map((period) => ({
+    id: period.id,
+    label: formatReportPeriodDisplay(
+      period.reportDate,
+      resolveManagedListName(managedListNamesById, period.reportTypeId, null),
+    ),
+  }));
+}
 
 const validateEnergySourceForResourceType = async (params: {
   typeId: number;
@@ -155,6 +188,7 @@ function toPeriodRows(
       {
         ...resource,
         id: `${resource.id}-none`,
+        report_period_id: null,
         report_period: "-",
         report_period_type: "-",
         capacity: "-",
@@ -166,6 +200,7 @@ function toPeriodRows(
   return sortedEntries.map((entry) => ({
     ...resource,
     id: `${resource.id}-${entry.report_period_id}`,
+    report_period_id: entry.report_period_id,
     report_period:
       periodLabelById.get(entry.report_period_id) ??
       String(entry.report_period_id),
@@ -348,11 +383,12 @@ export async function CreateEnergyResourceFromPeriodRow(
   data: EnergyResourcePeriodTableRow,
 ): Promise<DataTableFormResponse<EnergyResourcePeriodTableRow>> {
   const {
-    id: _rowId,
+    id: _id,
+    report_period_id,
     report_period: _reportPeriod,
     report_period_type: _reportPeriodType,
-    capacity: _capacity,
-    is_active: _isActive,
+    capacity,
+    is_active,
     power_station: _powerStation,
     service_area: _serviceArea,
     utility: _utility,
@@ -364,7 +400,29 @@ export async function CreateEnergyResourceFromPeriodRow(
     ...createData
   } = data;
 
-  const result = await CreateEnergyResource(createData);
+  const reportPeriodId = resolveNumber(report_period_id);
+  if (reportPeriodId == null) {
+    return {
+      success: false,
+      message: "Report period is required.",
+    };
+  }
+
+  const capacityMw =
+    typeof capacity === "string" && capacity.trim() === ""
+      ? null
+      : resolveNumber(capacity);
+
+  const result = await CreateEnergyResource({
+    ...(createData as NewEnergyResource),
+    period_entries: [
+      {
+        report_period_id: reportPeriodId,
+        capacity_mw: capacityMw,
+        is_active: typeof is_active === "boolean" ? is_active : true,
+      },
+    ],
+  });
 
   return {
     success: result.success,
@@ -469,90 +527,110 @@ export async function UpdateEnergyResourceFromPeriodRow(
     };
   }
 
-  if (typeof data.is_active === "boolean") {
-    const reportPeriodId = Number(reportPeriodIdPart);
+  const user = await getCurrentUser();
+  const utilityScopeId = resolveUtilityScopeId(user);
 
-    if (!Number.isFinite(reportPeriodId)) {
-      return {
-        success: false,
-        message: "Cannot update is_active for this row.",
-      };
-    }
+  const existingQuery = db
+    .select()
+    .from(energyResources)
+    .where(
+      utilityScopeId == null
+        ? eq(energyResources.id, resourceId)
+        : and(
+            eq(energyResources.id, resourceId),
+            eq(energyResources.utility_id, utilityScopeId),
+          ),
+    )
+    .limit(1);
 
-    const user = await getCurrentUser();
-    const utilityScopeId = resolveUtilityScopeId(user);
+  const [existing] = await existingQuery;
 
-    const existingQuery = db
-      .select()
-      .from(energyResources)
-      .where(
-        utilityScopeId == null
-          ? eq(energyResources.id, resourceId)
-          : and(
-              eq(energyResources.id, resourceId),
-              eq(energyResources.utility_id, utilityScopeId),
-            ),
-      )
-      .limit(1);
-
-    const [existing] = await existingQuery;
-
-    if (!existing) {
-      return {
-        success: false,
-        message: "Energy Resource not found in the active utility scope.",
-      };
-    }
-
-    const updatedPeriodEntries = (existing.period_entries ?? []).map((entry) =>
-      entry.report_period_id === reportPeriodId
-        ? {
-            ...entry,
-            is_active: data.is_active as boolean,
-          }
-        : entry,
-    );
-
-    const hasMatchingEntry = updatedPeriodEntries.some(
-      (entry) => entry.report_period_id === reportPeriodId,
-    );
-
-    if (!hasMatchingEntry) {
-      return {
-        success: false,
-        message: "Report period entry not found for this row.",
-      };
-    }
-
-    const query = db
-      .update(energyResources)
-      .set({
-        period_entries: updatedPeriodEntries,
-        updated_by_id: user.id,
-        updated_at: new Date(),
-      })
-      .where(
-        utilityScopeId == null
-          ? eq(energyResources.id, resourceId)
-          : and(
-              eq(energyResources.id, resourceId),
-              eq(energyResources.utility_id, utilityScopeId),
-            ),
-      );
-
-    const [result] = await query.returning();
-
-    if (!result) {
-      return {
-        success: false,
-        message: "Energy Resource not found in the active utility scope.",
-      };
-    }
-
-    revalidatePath("/settings/energy-resources");
+  if (!existing) {
     return {
-      success: true,
-      message: "Period entry status updated successfully",
+      success: false,
+      message: "Energy Resource not found in the active utility scope.",
+    };
+  }
+
+  const resolvedReportPeriodId =
+    resolveNumber(data.report_period_id) ?? resolveNumber(reportPeriodIdPart);
+
+  if (
+    data.report_period_id !== undefined ||
+    data.capacity !== undefined ||
+    data.is_active !== undefined
+  ) {
+    if (resolvedReportPeriodId == null) {
+      return {
+        success: false,
+        message: "Report period is required.",
+      };
+    }
+
+    const capacityMw =
+      typeof data.capacity === "string" && data.capacity.trim() === ""
+        ? null
+        : data.capacity === undefined
+          ? undefined
+          : resolveNumber(data.capacity);
+
+    let hasMatchingEntry = false;
+    const updatedPeriodEntries = (existing.period_entries ?? []).map(
+      (entry) => {
+        if (entry.report_period_id !== resolvedReportPeriodId) {
+          return entry;
+        }
+
+        hasMatchingEntry = true;
+        return {
+          ...entry,
+          capacity_mw:
+            capacityMw === undefined ? entry.capacity_mw : capacityMw,
+          is_active:
+            typeof data.is_active === "boolean"
+              ? data.is_active
+              : entry.is_active,
+        };
+      },
+    );
+
+    const nextPeriodEntries = hasMatchingEntry
+      ? updatedPeriodEntries
+      : [
+          ...updatedPeriodEntries,
+          {
+            report_period_id: resolvedReportPeriodId,
+            capacity_mw: capacityMw ?? null,
+            is_active:
+              typeof data.is_active === "boolean" ? data.is_active : true,
+          },
+        ];
+
+    const baseData = { ...data };
+    delete baseData.id;
+    delete baseData.report_period_id;
+    delete baseData.report_period;
+    delete baseData.report_period_type;
+    delete baseData.capacity;
+    delete baseData.is_active;
+    delete baseData.utility;
+    delete baseData.service_area;
+    delete baseData.power_station;
+    delete baseData.energy_provider;
+    delete baseData.energy_type;
+    delete baseData.energy_source;
+    delete baseData.agg_level;
+    delete baseData.type;
+
+    const result = await UpdateEnergyResource({
+      ...(baseData as Partial<EnergyResource>),
+      id: resourceId,
+      period_entries: nextPeriodEntries,
+    });
+
+    return {
+      success: result.success,
+      message: result.message,
     };
   }
 

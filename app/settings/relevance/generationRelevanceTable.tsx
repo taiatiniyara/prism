@@ -77,12 +77,14 @@ export default function GenerationRelevanceTable(props: {
       });
     }
 
-    return Array.from(grouped.values()).map((group) => ({
-      ...group,
-      rows: [...group.rows].sort((a, b) =>
-        a.energySource.localeCompare(b.energySource),
-      ),
-    }));
+    return Array.from(grouped.values())
+      .sort((a, b) => b.energyResourceType.localeCompare(a.energyResourceType))
+      .map((group) => ({
+        ...group,
+        rows: [...group.rows].sort((a, b) =>
+          a.energySource.localeCompare(b.energySource),
+        ),
+      }));
   }, [rows]);
 
   const onCellToggle = (

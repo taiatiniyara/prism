@@ -17,7 +17,7 @@
     "db-push": "drizzle-kit push --config ./db/config.ts",
     "db-push-safe": "npm run db-fix-uuid-timestamps && npm run db-push",
     "deploy-dev": "bash ./scripts/deploy-dev.sh",
-    "git-push": "tsx ./scripts/generate-chatbot-prompt.ts && next build &&  git add . && git commit && git push"
+    "git-push": "tsx ./scripts/generate-chatbot-prompt.ts && next build && git add . && (git diff --cached --quiet || git commit -m \"Update generated chatbot prompt\") && git push"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.53",

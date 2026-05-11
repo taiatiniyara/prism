@@ -4,6 +4,7 @@ import {
   GetAllEnergyResources,
   EnergyResourcePeriodTableRow,
   UpdateEnergyResourceFromPeriodRow,
+  GetAllReportPeriods,
 } from "./service";
 import { AllPowerStations } from "../power-stations/service";
 import { AllServiceAreas } from "../service-areas/service";
@@ -16,11 +17,13 @@ const ENERGY_SOURCE_MANAGED_LIST_ALIASES = [
 ].join("|");
 
 export default async function EnergyResourcesSettingsPage() {
-  const [energyResources, powerStations, serviceAreas] = await Promise.all([
-    GetAllEnergyResources(),
-    AllPowerStations(),
-    AllServiceAreas(),
-  ]);
+  const [energyResources, powerStations, serviceAreas, reportPeriods] =
+    await Promise.all([
+      GetAllEnergyResources(),
+      AllPowerStations(),
+      AllServiceAreas(),
+      GetAllReportPeriods(),
+    ]);
 
   return (
     <DataTable<EnergyResourcePeriodTableRow>
@@ -52,7 +55,10 @@ export default async function EnergyResourcesSettingsPage() {
           display: "Resource Type",
         },
         "name",
-        "capacity",
+        {
+          name: "capacity",
+          display: "Capacity (MW)",
+        },
         "energy_provider",
         "energy_source",
         "is_active",
@@ -66,14 +72,17 @@ export default async function EnergyResourcesSettingsPage() {
             key: "type_id",
             type: "managed-list",
             managedListName: "Energy Resource Type",
+            label: "Energy Resource Type",
           },
           {
             key: "name",
             type: "text",
+            label: "Resource Name",
           },
           {
             key: "power_station_id",
             type: "select",
+            label: "Power Station",
             selectList: powerStations.map((powerStation) => ({
               value: powerStation.id,
               label: powerStation.name,
@@ -82,6 +91,7 @@ export default async function EnergyResourcesSettingsPage() {
           {
             key: "service_area_id",
             type: "select",
+            label: "Service Area",
             selectList: serviceAreas.map((serviceArea) => ({
               value: serviceArea.id,
               label: serviceArea.name,
@@ -101,6 +111,21 @@ export default async function EnergyResourcesSettingsPage() {
             key: "energy_source_id",
             type: "managed-list",
             managedListName: ENERGY_SOURCE_MANAGED_LIST_ALIASES,
+            label: "Energy Source",
+          },
+          {
+            key: "report_period_id",
+            type: "select",
+            label: "Report Period",
+            selectList: reportPeriods.map((period) => ({
+              value: period.id,
+              label: period.label,
+            })),
+          },
+          {
+            key: "capacity",
+            type: "number",
+            label: "Capacity (MW)",
           },
         ],
       }}
@@ -110,10 +135,12 @@ export default async function EnergyResourcesSettingsPage() {
           {
             key: "name",
             type: "text",
+            label: "Resource Name",
           },
           {
             key: "power_station_id",
             type: "select",
+            label: "Power Station",
             selectList: powerStations.map((powerStation) => ({
               value: powerStation.id,
               label: powerStation.name,
@@ -122,6 +149,7 @@ export default async function EnergyResourcesSettingsPage() {
           {
             key: "service_area_id",
             type: "select",
+            label: "Service Area",
             selectList: serviceAreas.map((serviceArea) => ({
               value: serviceArea.id,
               label: serviceArea.name,
@@ -141,11 +169,27 @@ export default async function EnergyResourcesSettingsPage() {
             key: "energy_source_id",
             type: "managed-list",
             managedListName: ENERGY_SOURCE_MANAGED_LIST_ALIASES,
+            label: "Energy Source",
           },
           {
             key: "type_id",
             type: "managed-list",
             managedListName: "Energy Resource Type",
+            label: "Resource Type",
+          },
+          {
+            key: "report_period_id",
+            type: "select",
+            label: "Report Period",
+            selectList: reportPeriods.map((period) => ({
+              value: period.id,
+              label: period.label,
+            })),
+          },
+          {
+            key: "capacity",
+            type: "number",
+            label: "Capacity (MW)",
           },
         ],
       }}

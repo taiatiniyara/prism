@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import type { ReviewKpiFilterOptions } from "@/app/data-entry/review-kpi/types";
 import type {
@@ -228,6 +228,103 @@ export default function ScorecardBuilderTree({
     3: false,
     4: false,
   });
+  const [justAddedObjectiveKey, setJustAddedObjectiveKey] = useState<
+    string | null
+  >(null);
+  const [justAddedInitiativeKey, setJustAddedInitiativeKey] = useState<
+    string | null
+  >(null);
+  const prevObjectiveCountsRef = useRef<Record<PerspectiveLevel, number>>({
+    1: 0,
+    2: 0,
+    3: 0,
+    4: 0,
+  });
+  const prevInitiativeCountsRef = useRef<Record<string, number>>({});
+  const objectiveInputRefs = useRef<Record<string, HTMLInputElement | null>>(
+    {},
+  );
+  const initiativeInputRefs = useRef<Record<string, HTMLInputElement | null>>(
+    {},
+  );
+
+  useEffect(() => {
+    if (justAddedObjectiveKey) {
+      const ref = objectiveInputRefs.current[justAddedObjectiveKey];
+      if (ref) {
+        ref.focus();
+        ref.select();
+        setJustAddedObjectiveKey(null);
+      }
+    }
+  }, [justAddedObjectiveKey, expandedObjectives]);
+
+  useEffect(() => {
+    if (justAddedInitiativeKey) {
+      const ref = initiativeInputRefs.current[justAddedInitiativeKey];
+      if (ref) {
+        ref.focus();
+        ref.select();
+        setJustAddedInitiativeKey(null);
+      }
+    }
+  }, [justAddedInitiativeKey, expandedInitiatives]);
+
+  // Watch for new objectives and auto-expand them
+  useEffect(() => {
+    const perspectiveLevels: PerspectiveLevel[] = [1, 2, 3, 4];
+
+    perspectiveLevels.forEach((level) => {
+      const objectives = draftObjectivesByPerspective[level];
+      const currentCount = Array.isArray(objectives) ? objectives.length : 0;
+      const prevCount = prevObjectiveCountsRef.current[level];
+
+      if (currentCount > prevCount) {
+        const newObjective = objectives?.[currentCount - 1];
+        if (newObjective) {
+          const key = `${level}-${newObjective.id}`;
+          setExpandedObjectives((prev) => ({
+            ...prev,
+            [key]: true,
+          }));
+          setJustAddedObjectiveKey(key);
+        }
+      }
+      prevObjectiveCountsRef.current[level] = currentCount;
+    });
+  }, [draftObjectivesByPerspective]);
+
+  // Watch for new initiatives and auto-expand them
+  useEffect(() => {
+    const perspectiveLevels: PerspectiveLevel[] = [1, 2, 3, 4];
+
+    perspectiveLevels.forEach((level) => {
+      const objectives = draftObjectivesByPerspective[level];
+      if (!Array.isArray(objectives)) return;
+
+      objectives.forEach((objective) => {
+        const objectiveKey = `${level}-${objective.id}`;
+        const initiatives = objective.keyInitiatives;
+        const currentCount = Array.isArray(initiatives)
+          ? initiatives.length
+          : 0;
+        const prevCount = prevInitiativeCountsRef.current[objectiveKey] || 0;
+
+        if (currentCount > prevCount) {
+          const newInitiative = initiatives?.[currentCount - 1];
+          if (newInitiative) {
+            const key = `${level}-${objective.id}-${newInitiative.id}`;
+            setExpandedInitiatives((prev) => ({
+              ...prev,
+              [key]: true,
+            }));
+            setJustAddedInitiativeKey(key);
+          }
+        }
+        prevInitiativeCountsRef.current[objectiveKey] = currentCount;
+      });
+    });
+  }, [draftObjectivesByPerspective]);
 
   const perspectiveLevels: PerspectiveLevel[] = [1, 2, 3, 4];
   const approvedCustomKpiDefinitionIdSet = useMemo(
@@ -331,6 +428,10 @@ export default function ScorecardBuilderTree({
                             event.preventDefault();
                             event.stopPropagation();
                             onAddObjective(level);
+                            setExpandedPerspectives((prev) => ({
+                              ...prev,
+                              [level]: true,
+                            }));
                           }}
                           disabled={isProcessingTemplate}
                         />
@@ -409,6 +510,12 @@ export default function ScorecardBuilderTree({
                                   <div className="min-w-0 flex-1">
                                     {objectiveExpanded ? (
                                       <Input
+                                        ref={(el) => {
+                                          if (el)
+                                            objectiveInputRefs.current[
+                                              objectiveKey
+                                            ] = el;
+                                        }}
                                         value={objective.description}
                                         maxLength={50}
                                         onChange={(event) =>
@@ -444,9 +551,13 @@ export default function ScorecardBuilderTree({
                                     <SaveStateChip saved={objective.isSaved} />
                                     <AddIconButton
                                       tooltip="Add initiative"
-                                      onClick={() =>
-                                        onAddInitiative(level, objective.id)
-                                      }
+                                      onClick={() => {
+                                        onAddInitiative(level, objective.id);
+                                        setExpandedObjectives((prev) => ({
+                                          ...prev,
+                                          [objectiveKey]: true,
+                                        }));
+                                      }}
                                       disabled={isProcessingTemplate}
                                     />
                                     <RemoveIconButton
@@ -527,6 +638,12 @@ export default function ScorecardBuilderTree({
                                                 <div className="min-w-0 flex-1">
                                                   {initiativeExpanded ? (
                                                     <Input
+                                                      ref={(el) => {
+                                                        if (el)
+                                                          initiativeInputRefs.current[
+                                                            initiativeKey
+                                                          ] = el;
+                                                      }}
                                                       value={
                                                         initiative.description
                                                       }
@@ -570,13 +687,19 @@ export default function ScorecardBuilderTree({
                                                   />
                                                   <AddIconButton
                                                     tooltip="Add KPI"
-                                                    onClick={() =>
+                                                    onClick={() => {
                                                       onAddKpi(
                                                         level,
                                                         objective.id,
                                                         initiative.id,
-                                                      )
-                                                    }
+                                                      );
+                                                      setExpandedInitiatives(
+                                                        (prev) => ({
+                                                          ...prev,
+                                                          [initiativeKey]: true,
+                                                        }),
+                                                      );
+                                                    }}
                                                     disabled={
                                                       isProcessingTemplate
                                                     }

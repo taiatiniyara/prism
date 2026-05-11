@@ -45,7 +45,7 @@ export default async function Page() {
             src="/ppaLogo.png"
             alt="Pacific Power Association Logo"
             width={160}
-            height={160}
+            height={114}
             className="mb-8 drop-shadow-md"
             priority
           />
