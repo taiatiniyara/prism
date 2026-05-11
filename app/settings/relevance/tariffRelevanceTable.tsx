@@ -72,7 +72,6 @@ export default function TariffRelevanceTable(props: {
   const [pendingBlockKeys, setPendingBlockKeys] = useState<Set<string>>(
     new Set(),
   );
-  const [isSavingAll, setIsSavingAll] = useState(false);
 
   const selectedCustomerTypeIdSet = useMemo(
     () => new Set(props.selectedCustomerTypeIds),
@@ -99,15 +98,6 @@ export default function TariffRelevanceTable(props: {
         .filter((row) => row.cells.length > 0),
     [rows, selectedCustomerTypeIdSet],
   );
-  const isAllRelevant =
-    visibleRows.length > 0 &&
-    visibleRows.every((row) =>
-      row.cells.every(
-        (cell) =>
-          cell.dataLabels.length > 0 &&
-          cell.dataLabels.every((label) => label.isRelevant),
-      ),
-    );
 
   const setLabelValue = (
     target: {
@@ -320,7 +310,7 @@ export default function TariffRelevanceTable(props: {
         }
 
         if (results.length > 0) {
-          toast.success("Tariff relevance updated.");
+          toast.success("Relevance updated.");
         }
       })
       .finally(() => {
@@ -333,94 +323,8 @@ export default function TariffRelevanceTable(props: {
       });
   };
 
-  const onToggleAll = (checked: boolean) => {
-    const updates = visibleRows.flatMap((row) =>
-      row.cells.flatMap((cell) =>
-        cell.dataLabels.map((label) => ({
-          paymentModeId: row.paymentModeId,
-          customerTypeId: cell.customerTypeId,
-          inputDefId: label.inputDefId,
-          isRelevant: checked,
-        })),
-      ),
-    );
-
-    if (updates.length === 0) {
-      return;
-    }
-
-    const previousRows = rows;
-
-    setRows((prev) =>
-      prev.map((row) => ({
-        ...row,
-        cells: row.cells.map((cell) => {
-          if (!selectedCustomerTypeIdSet.has(cell.customerTypeId)) {
-            return cell;
-          }
-
-          const nextCell = {
-            ...cell,
-            dataLabels: cell.dataLabels.map((label) => ({
-              ...label,
-              isRelevant: checked,
-            })),
-          };
-
-          return summarizeCell(nextCell);
-        }),
-      })),
-    );
-
-    setIsSavingAll(true);
-    const loadingToastId = toast.loading("Updating relevance...");
-
-    void Promise.all(
-      updates.map((update) =>
-        props.onToggleRelevance({
-          reportPeriodId: props.reportPeriodId,
-          serviceAreaId: props.serviceAreaId,
-          paymentModeId: update.paymentModeId,
-          customerTypeId: update.customerTypeId,
-          inputDefId: update.inputDefId,
-          isRelevant: update.isRelevant,
-        }),
-      ),
-    )
-      .then((results) => {
-        const failedResult = results.find((result) => !result.success);
-
-        if (failedResult) {
-          setRows(previousRows);
-          toast.error(failedResult.message);
-          return;
-        }
-
-        toast.success(checked ? "Checked all." : "Unchecked all.");
-      })
-      .finally(() => {
-        setIsSavingAll(false);
-        toast.dismiss(loadingToastId);
-      });
-  };
-
   return (
     <div className="space-y-3">
-      <Button
-        type="button"
-        size="sm"
-        variant="outline"
-        disabled={
-          isSavingAll ||
-          visibleRows.length === 0 ||
-          pendingLabelKeys.size > 0 ||
-          pendingBlockKeys.size > 0
-        }
-        onClick={() => onToggleAll(!isAllRelevant)}
-      >
-        {isAllRelevant ? "Uncheck All" : "Check All"}
-      </Button>
-
       <div className="max-h-[70vh] overflow-auto border">
         <table className="w-max min-w-full border-collapse text-sm">
           <thead>
@@ -466,21 +370,22 @@ export default function TariffRelevanceTable(props: {
                     >
                       <div className="space-y-3">
                         <div className="flex items-center justify-between gap-4">
-                          <label className="flex items-center gap-2 text-sm font-medium">
-                            <Checkbox
-                              checked={cell.isRelevant}
-                              disabled={isBlockPending || cell.totalCount === 0}
-                              onCheckedChange={(next) =>
-                                onBlockCheckedChange(
-                                  row.paymentModeId,
-                                  cell.customerTypeId,
-                                  next === true,
-                                  cell.dataLabels,
-                                )
-                              }
-                            />
-                            <span>Entire block</span>
-                          </label>
+                          <Button
+                            type="button"
+                            size="sm"
+                            variant="outline"
+                            disabled={isBlockPending || cell.totalCount === 0}
+                            onClick={() =>
+                              onBlockCheckedChange(
+                                row.paymentModeId,
+                                cell.customerTypeId,
+                                !cell.isRelevant,
+                                cell.dataLabels,
+                              )
+                            }
+                          >
+                            {cell.isRelevant ? "Uncheck All" : "Check All"}
+                          </Button>
                           <span className="text-sm font-medium">
                             {cell.relevantCount}/{cell.totalCount} relevant
                           </span>

@@ -107,7 +107,7 @@ export default function TransmissionRelevanceTable(props: {
 
         toast.dismiss(loadingToastId);
         if (results.length > 0) {
-          toast.success("Transmission relevance updated.");
+          toast.success("Relevance updated.");
         }
       })();
     });
@@ -125,14 +125,6 @@ export default function TransmissionRelevanceTable(props: {
         >
           {isEntireBlockRelevant ? "Uncheck All" : "Check All"}
         </Button>
-        <label className="flex items-center gap-2 text-sm font-medium">
-          <Checkbox
-            checked={isEntireBlockRelevant}
-            disabled={isSaving || items.length === 0}
-            onCheckedChange={(next) => onBlockToggle(next === true)}
-          />
-          <span>Entire transmission block</span>
-        </label>
         <span className="text-sm font-medium">
           {relevantCount}/{items.length} relevant
         </span>

@@ -196,9 +196,7 @@ export default function GenerationRelevanceTable(props: {
         }
 
         toast.dismiss(loadingToastId);
-        toast.success(
-          checked ? "Checked all in block." : "Unchecked all in block.",
-        );
+        toast.success("Relevance updated.");
       })();
     });
   };
@@ -247,7 +245,7 @@ export default function GenerationRelevanceTable(props: {
         }
 
         toast.dismiss(loadingToastId);
-        toast.success(checked ? "Checked all." : "Unchecked all.");
+        toast.success("Relevance updated.");
       })();
     });
   };

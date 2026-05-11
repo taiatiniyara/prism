@@ -1,5 +1,6 @@
 import { applyPendingUserDecision } from "@/app/settings/users/service";
 import { parseStatusDecisionRequest } from "@/app/api/settings/users/_lib/validators";
+import { revalidatePath } from "next/cache";
 
 type RouteParams = {
   params: Promise<{
@@ -19,6 +20,8 @@ export async function POST(request: Request, { params }: RouteParams) {
       decision: payload.decision,
       rejectionReason: payload.rejectionReason,
     });
+
+    revalidatePath("/settings/users");
 
     return Response.json(result);
   } catch (error) {

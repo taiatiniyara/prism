@@ -214,7 +214,7 @@ export default function DevInputRelevanceTable(props: {
         }
 
         toast.dismiss(loadingToastId);
-        toast.success(checked ? "Checked all." : "Unchecked all.");
+        toast.success("Relevance updated.");
       })();
     });
   };

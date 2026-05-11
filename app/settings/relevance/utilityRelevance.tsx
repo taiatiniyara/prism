@@ -1,5 +1,7 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { getCurrentUser } from "@/lib/user.service";
 import {
+  GetDevOrganisationRelevancePivot,
   GetCustomKpiRelevance,
   GetTransmissionRelevance,
   GetUtilityGenerationRelevance,
@@ -14,6 +16,7 @@ import RelevanceFilters from "./relevanceFilters";
 import TransmissionRelevanceTable from "./transmissionRelevanceTable";
 import CustomKpiRelevanceTable from "./customKpiRelevanceTable";
 import GenerationRelevanceTable from "./generationRelevanceTable";
+import DevOrganisationRelevancePivotTable from "./devOrganisationRelevancePivotTable";
 
 type UtilityRelevanceSearchParams = {
   report_period_id?: string;
@@ -33,6 +36,9 @@ const parseId = (value: string | undefined): number | null => {
 export default async function UtilityRelevanceSection(props: {
   searchParams?: UtilityRelevanceSearchParams;
 }) {
+  const user = await getCurrentUser();
+  const isDevUser = user?.role === "DEV";
+
   const reportPeriodId = parseId(props.searchParams?.report_period_id);
   const serviceAreaId = parseId(props.searchParams?.service_area_id);
 
@@ -75,6 +81,10 @@ export default async function UtilityRelevanceSection(props: {
         )
       : tariffRelevance.customerTypes.map((customerType) => customerType.id);
 
+  const organisationRelevancePivot = isDevUser
+    ? await GetDevOrganisationRelevancePivot()
+    : null;
+
   return (
     <div className="space-y-5">
       <Tabs defaultValue="generation">
@@ -85,6 +95,11 @@ export default async function UtilityRelevanceSection(props: {
           <TabsTrigger value="custom-kpi-relevance">
             Shared Custom KPIs
           </TabsTrigger>
+          {isDevUser ? (
+            <TabsTrigger value="organisation-relevance-pivot">
+              Organisation Relevance Pivot
+            </TabsTrigger>
+          ) : null}
         </TabsList>
         <TabsContent value="tariff">
           <div className="space-y-5 rounded-lg border p-5 sm:p-6">
@@ -150,7 +165,7 @@ export default async function UtilityRelevanceSection(props: {
             )}
 
             <span className="text-xs text-muted-foreground">
-              * Transmission refers to any lines with voltages 34kV and above.
+              * Transmission refers to any lines with voltages greater than 34kV
             </span>
           </div>
         </TabsContent>
@@ -198,6 +213,16 @@ export default async function UtilityRelevanceSection(props: {
             )}
           </div>
         </TabsContent>
+        {isDevUser ? (
+          <TabsContent value="organisation-relevance-pivot">
+            <div className="space-y-5 rounded-lg border p-5 sm:p-6">
+              <DevOrganisationRelevancePivotTable
+                organisations={organisationRelevancePivot?.organisations ?? []}
+                rows={organisationRelevancePivot?.rows ?? []}
+              />
+            </div>
+          </TabsContent>
+        ) : null}
       </Tabs>
     </div>
   );

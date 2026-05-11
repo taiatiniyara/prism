@@ -112,7 +112,7 @@ export default function CustomKpiRelevanceTable(props: {
         }
 
         toast.dismiss(loadingToastId);
-        toast.success(checked ? "Checked all." : "Unchecked all.");
+        toast.success("Relevance updated.");
       })();
     });
   };

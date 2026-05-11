@@ -169,6 +169,8 @@ export const energyResources = pgTable(
 export type EnergyResource = typeof energyResources.$inferSelect & {
   report_period?: string | null;
   report_period_type?: string | null;
+  capacity?: string | null;
+  is_active?: boolean | null;
   power_station?: string | null;
   service_area?: string | null;
   utility?: string | null;

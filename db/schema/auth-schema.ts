@@ -20,6 +20,7 @@ export type Role = typeof roles.$inferSelect;
 export type NewRole = typeof roles.$inferInsert;
 
 export type UserStatus = "active" | "pending" | "deactivated";
+export type RegistrationClarificationDirection = "outbound" | "inbound";
 
 export const user = pgTable("user", {
   id: text("id").primaryKey(),
@@ -69,6 +70,30 @@ export const userStatusEvent = pgTable(
   (table) => [
     index("user_status_event_target_user_idx").on(table.target_user_id),
     index("user_status_event_actor_user_idx").on(table.actor_user_id),
+  ],
+);
+
+export const userRegistrationClarificationMessage = pgTable(
+  "user_registration_clarification_message",
+  {
+    id: serial("id").primaryKey(),
+    target_user_id: text("target_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    actor_user_id: text("actor_user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    direction: text("direction")
+      .notNull()
+      .$type<RegistrationClarificationDirection>(),
+    subject: text("subject"),
+    message: text("message").notNull(),
+    received_from_email: text("received_from_email"),
+    created_at: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => [
+    index("user_reg_clarification_target_user_idx").on(table.target_user_id),
+    index("user_reg_clarification_actor_user_idx").on(table.actor_user_id),
   ],
 );
 

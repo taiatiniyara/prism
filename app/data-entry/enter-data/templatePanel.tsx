@@ -26,11 +26,10 @@ type TemplateRow = {
   customer_type_id: number | null;
   customer_type_name: string;
   value: string;
-  is_data_not_available: "TRUE" | "FALSE";
+  is_data_not_available: boolean;
 };
 
 type TemplateRowLookupKey = {
-  context_mode: TemplateRow["context_mode"];
   input_def_id: number;
   input_name: string;
   unit_name: string;
@@ -56,13 +55,13 @@ const normalizeKeyText = (value: unknown) =>
 
 const createTemplateRowLookupKey = (value: TemplateRowLookupKey) =>
   [
-    normalizeKeyText(value.context_mode),
     value.input_def_id,
     normalizeKeyText(value.input_name),
     normalizeKeyText(value.unit_name),
   ].join("|");
 
 const EXCLUDED_TEMPLATE_HEADERS = new Set<keyof TemplateRow>([
+  "context_mode",
   "energy_resource_id",
   "generator_name",
   "payment_mode_id",
@@ -188,7 +187,7 @@ const flattenTemplateRows = (
       customer_type_id: row.customerTypeId ?? null,
       customer_type_name: row.customerTypeName ?? "",
       value: row.value ?? "",
-      is_data_not_available: row.isDataNotAvailable ? "TRUE" : "FALSE",
+      is_data_not_available: row.isDataNotAvailable ?? false,
     }));
   }
 
@@ -206,7 +205,7 @@ const flattenTemplateRows = (
         customer_type_id: row.customerTypeId ?? null,
         customer_type_name: row.customerTypeName ?? "",
         value: row.value ?? "",
-        is_data_not_available: row.isDataNotAvailable ? "TRUE" : "FALSE",
+        is_data_not_available: row.isDataNotAvailable ?? false,
       })),
     );
   }
@@ -228,7 +227,7 @@ const flattenTemplateRows = (
         customer_type_name:
           row.customerTypeName ?? customerTypeGroup.customerTypeName,
         value: row.value ?? "",
-        is_data_not_available: row.isDataNotAvailable ? "TRUE" : "FALSE",
+        is_data_not_available: row.isDataNotAvailable ?? false,
       })),
     ),
   );
@@ -291,6 +290,35 @@ export default function EnterDataTemplatePanel({
         );
       });
 
+      // Add TRUE/FALSE data validation dropdown to the is_data_not_available column.
+      const dnaColIndex = headers.indexOf("is_data_not_available");
+      if (dnaColIndex >= 0) {
+        const dnaCol = dnaColIndex + 1; // ExcelJS columns are 1-based
+        for (
+          let rowIndex = 2;
+          rowIndex <= templateRows.length + 1;
+          rowIndex += 1
+        ) {
+          worksheet.getCell(rowIndex, dnaCol).dataValidation = {
+            type: "list",
+            allowBlank: false,
+            formulae: ['"TRUE,FALSE"'],
+          };
+        }
+      }
+
+      // Auto-size each column to fit the widest cell content.
+      worksheet.columns.forEach((column) => {
+        let maxLength = 10;
+        column.eachCell?.({ includeEmpty: true }, (cell) => {
+          const cellLength = String(cell.value ?? "").length;
+          if (cellLength > maxLength) {
+            maxLength = cellLength;
+          }
+        });
+        column.width = maxLength + 4;
+      });
+
       await lockTemplateWorksheet(worksheet, [
         "value",
         "is_data_not_available",
@@ -328,7 +356,6 @@ export default function EnterDataTemplatePanel({
 
     const headers = headerRow.map(normalizeHeader);
     const requiredHeaders = [
-      "context_mode",
       "input_def_id",
       "input_name",
       "unit_name",
@@ -350,7 +377,6 @@ export default function EnterDataTemplatePanel({
     const templateRowLookup = new Map<string, TemplateRow[]>();
     templateRows.forEach((templateRow) => {
       const key = createTemplateRowLookupKey({
-        context_mode: templateRow.context_mode,
         input_def_id: templateRow.input_def_id,
         input_name: templateRow.input_name,
         unit_name: templateRow.unit_name,
@@ -371,12 +397,6 @@ export default function EnterDataTemplatePanel({
       }
 
       const rowLookupKey = createTemplateRowLookupKey({
-        context_mode: String(getCell(row, "context_mode") ?? "")
-          .trim()
-          .toLowerCase() as
-          | "flat"
-          | "grouped-by-generator"
-          | "grouped-by-payment-mode",
         input_def_id: inputDefId,
         input_name: String(getCell(row, "input_name") ?? ""),
         unit_name: String(getCell(row, "unit_name") ?? ""),

@@ -1,12 +1,12 @@
 import DataTable from "@/components/tables/data-table";
 import {
-  CreateEnergyResource,
+  CreateEnergyResourceFromPeriodRow,
   GetAllEnergyResources,
-  UpdateEnergyResource,
+  EnergyResourcePeriodTableRow,
+  UpdateEnergyResourceFromPeriodRow,
 } from "./service";
 import { AllPowerStations } from "../power-stations/service";
 import { AllServiceAreas } from "../service-areas/service";
-import { EnergyResource } from "@/db/schema/utility";
 
 export default async function EnergyResourcesSettingsPage() {
   const [energyResources, powerStations, serviceAreas] = await Promise.all([
@@ -16,11 +16,17 @@ export default async function EnergyResourcesSettingsPage() {
   ]);
 
   return (
-    <DataTable<EnergyResource>
+    <DataTable<EnergyResourcePeriodTableRow>
       columns={[
         "service_area",
         "power_station",
         "name",
+        {
+          name: "report_period",
+          display: "Report period",
+        },
+        "capacity",
+        "is_active",
         {
           name: "type",
           display: "Resource Type",
@@ -31,7 +37,7 @@ export default async function EnergyResourcesSettingsPage() {
       title="Energy Resources"
       data={energyResources}
       createFormProps={{
-        formAction: CreateEnergyResource,
+        formAction: CreateEnergyResourceFromPeriodRow,
         fields: [
           {
             key: "name",
@@ -76,7 +82,7 @@ export default async function EnergyResourcesSettingsPage() {
         ],
       }}
       updateFormProps={{
-        formAction: UpdateEnergyResource,
+        formAction: UpdateEnergyResourceFromPeriodRow,
         fields: [
           {
             key: "name",

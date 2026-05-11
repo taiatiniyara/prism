@@ -498,7 +498,11 @@ export default function DataTable<T extends DataTableRecord>(
         />
       );
     }
-    return String(row[col] ?? "");
+    const value = String(row[col] ?? "");
+    if (value.includes("\n")) {
+      return <span className="whitespace-pre-line leading-5">{value}</span>;
+    }
+    return value;
   }
 
   function columnFilterMenu(column: keyof T, display: string) {

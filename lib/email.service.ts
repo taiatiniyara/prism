@@ -201,3 +201,80 @@ export const buildCustomKpiSubmissionReviewEmail = (input: {
     }),
   };
 };
+
+export const buildRegistrationClarificationEmail = (input: {
+  requesterName: string;
+  subject: string;
+  clarificationMessage: string;
+  referenceTag?: string;
+}): { subject: string; html: string } => {
+  const safeRequesterName = input.requesterName.trim() || "Requester";
+  const safeSubject = input.subject.trim() || "Clarification Required";
+  const safeMessage = input.clarificationMessage.trim();
+  const safeReferenceTag = input.referenceTag?.trim() || "";
+
+  return {
+    subject: `PRISM Registration Clarification: ${safeSubject}${safeReferenceTag ? ` ${safeReferenceTag}` : ""}`,
+    html: `
+      <div style="margin: 0; padding: 24px 12px; background: #f3f6fb; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #17213a;">
+        <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width: 640px; margin: 0 auto; border-collapse: separate; border-spacing: 0; background: #ffffff; border: 1px solid #dce3ef; border-radius: 14px; overflow: hidden;">
+          <tr>
+            <td style="padding: 16px 24px; background: #0f172a; text-align: center;">
+              <img src="https://dev.prismdashboard.org/logo.png" alt="PRISM logo" width="140" style="display: block; height: auto; margin: 0 auto;" />
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 0; background: linear-gradient(120deg, #1f2a44 0%, #304e7a 100%);">
+              <div style="padding: 18px 24px 10px 24px; color: #eaf1ff; font-size: 12px; letter-spacing: 0.08em; text-transform: uppercase; font-weight: 700;">
+                PRISM Registration
+              </div>
+              <div style="padding: 0 24px 20px 24px; color: #ffffff; font-size: 24px; line-height: 1.25; font-weight: 700;">
+                Clarification Required
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 20px 24px 8px 24px; color: #26334d; font-size: 14px; line-height: 1.6;">
+              Dear ${escapeHtml(safeRequesterName)},
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 0 24px 12px 24px; color: #26334d; font-size: 14px; line-height: 1.6;">
+              Your PRISM registration request is currently under review. Please provide clarification on the following:
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 0 24px 14px 24px;">
+              <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="border: 1px solid #e3e8f2; border-radius: 10px; border-collapse: separate; border-spacing: 0; overflow: hidden;">
+                <tr>
+                  <td style="padding: 8px 12px; border-bottom: 1px solid #e3e8f2; width: 180px; color: #4f5d75; font-size: 13px; font-weight: 600; vertical-align: top;">
+                    Subject
+                  </td>
+                  <td style="padding: 8px 12px; border-bottom: 1px solid #e3e8f2; color: #17213a; font-size: 13px; line-height: 1.5; vertical-align: top;">
+                    ${escapeHtml(safeSubject)}
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 12px; width: 180px; color: #4f5d75; font-size: 13px; font-weight: 600; vertical-align: top;">
+                    Clarification
+                  </td>
+                  <td style="padding: 8px 12px; color: #17213a; font-size: 13px; line-height: 1.5; vertical-align: top;">
+                    ${toHtmlMultiline(safeMessage)}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 4px 24px 22px 24px;">
+              <div style="padding: 12px 14px; border-radius: 10px; background: #f7f9fd; border: 1px solid #e3e8f2; color: #3a4a67; font-size: 12px; line-height: 1.6;">
+                You can reply directly to this email, and the PRISM team will log your response as part of your registration review record.
+                ${safeReferenceTag ? `<br /><br /><strong>Reference:</strong> ${escapeHtml(safeReferenceTag)}` : ""}
+              </div>
+            </td>
+          </tr>
+        </table>
+      </div>
+    `,
+  };
+};

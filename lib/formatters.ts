@@ -27,11 +27,19 @@ export function formatReportPeriodDisplay(
   reportDate: Date,
   reportPeriodTypeName?: string | null,
 ): string {
-  const monthLabel = reportDate.toISOString().slice(0, 7);
+  const monthLabel = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(reportDate);
+  const yearLabel = new Intl.DateTimeFormat("en-US", {
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(reportDate);
   const normalizedType = (reportPeriodTypeName ?? "").trim().toLowerCase();
 
   if (normalizedType.includes("financial year")) {
-    return monthLabel.slice(0, 4);
+    return yearLabel;
   }
 
   if (normalizedType.includes("month")) {

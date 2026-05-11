@@ -17,7 +17,18 @@ import { managedListItems, managedLists } from "@/db/schema/managedLists";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { getCurrentUser, hasGlobalUtilityAccess } from "@/lib/user.service";
 import { formatReportPeriodDisplay } from "@/lib/formatters";
-import { and, asc, desc, eq, ilike, inArray, isNull, or } from "drizzle-orm";
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  ilike,
+  inArray,
+  isNull,
+  isNotNull,
+  or,
+  sql,
+} from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { GetManagedListItemByName } from "../managed-lists/service";
 import { DataEntryStatusId } from "@/db/schema/dataEntry";
@@ -204,6 +215,21 @@ export interface DevInputRelevanceItem {
 export interface DevInputRelevanceOption {
   id: number;
   name: string;
+}
+
+export interface DevOrganisationRelevanceOption {
+  id: number;
+  name: string;
+  acronym: string | null;
+}
+
+export interface DevOrganisationRelevancePivotRow {
+  id: string;
+  label: string;
+  values: Array<{
+    organisationId: number;
+    count: number;
+  }>;
 }
 
 const resolveSelectedId = (
@@ -1735,6 +1761,830 @@ export async function SetCustomKpiRelevance(
   return {
     success: true,
     message: "Custom KPI relevance updated.",
+  };
+}
+
+export async function GetDevOrganisationRelevancePivot(): Promise<{
+  organisations: DevOrganisationRelevanceOption[];
+  rows: DevOrganisationRelevancePivotRow[];
+}> {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    throw new Error("User not authenticated");
+  }
+
+  if (user.role !== "DEV") {
+    throw new Error("Only DEV users can access organisation relevance.");
+  }
+
+  const utilityRows = await db
+    .select({
+      id: organisations.id,
+      name: organisations.name,
+      acronym: organisations.acronym,
+    })
+    .from(organisations)
+    .where(
+      and(
+        eq(organisations.is_active, true),
+        eq(organisations.is_utility, true),
+      ),
+    )
+    .orderBy(asc(organisations.acronym), asc(organisations.name));
+
+  const utilityIdSet = new Set(utilityRows.map((utility) => utility.id));
+
+  const toValues = (countsByOrganisationId: Map<number, number>) =>
+    utilityRows.map((utility) => ({
+      organisationId: utility.id,
+      count: countsByOrganisationId.get(utility.id) ?? 0,
+    }));
+
+  const tariffInputDefIds = (
+    await getInputDefinitionsForAnyStructure(["Tariff Structure"])
+  ).map((input) => input.id);
+
+  const transmissionInputDefIds = (
+    await getInputDefinitionsForAnyStructure(["Transmission"])
+  ).map((input) => input.id);
+
+  const dataEntryTotalByOrganisationId = new Map<number, number>();
+  const dataEntryRelevantByOrganisationId = new Map<number, number>();
+  const dataEntryNotRelevantByOrganisationId = new Map<number, number>();
+  {
+    const totalRows = await db
+      .select({
+        organisationId: serviceAreas.utility_id,
+        count: sql<number>`cast(count(*) as int)`,
+      })
+      .from(dataEntries)
+      .innerJoin(serviceAreas, eq(dataEntries.service_area_id, serviceAreas.id))
+      .where(eq(dataEntries.is_deleted, false))
+      .groupBy(serviceAreas.utility_id);
+
+    for (const row of totalRows) {
+      if (utilityIdSet.has(row.organisationId)) {
+        dataEntryTotalByOrganisationId.set(
+          row.organisationId,
+          Number(row.count),
+        );
+      }
+    }
+
+    const relevantRows = await db
+      .select({
+        organisationId: serviceAreas.utility_id,
+        count: sql<number>`cast(count(*) as int)`,
+      })
+      .from(dataEntries)
+      .innerJoin(serviceAreas, eq(dataEntries.service_area_id, serviceAreas.id))
+      .where(
+        and(
+          eq(dataEntries.is_deleted, false),
+          eq(dataEntries.is_relevant, true),
+        ),
+      )
+      .groupBy(serviceAreas.utility_id);
+
+    for (const row of relevantRows) {
+      if (utilityIdSet.has(row.organisationId)) {
+        dataEntryRelevantByOrganisationId.set(
+          row.organisationId,
+          Number(row.count),
+        );
+      }
+    }
+
+    const notRelevantRows = await db
+      .select({
+        organisationId: serviceAreas.utility_id,
+        count: sql<number>`cast(count(*) as int)`,
+      })
+      .from(dataEntries)
+      .innerJoin(serviceAreas, eq(dataEntries.service_area_id, serviceAreas.id))
+      .where(
+        and(
+          eq(dataEntries.is_deleted, false),
+          eq(dataEntries.is_relevant, false),
+        ),
+      )
+      .groupBy(serviceAreas.utility_id);
+
+    for (const row of notRelevantRows) {
+      if (utilityIdSet.has(row.organisationId)) {
+        dataEntryNotRelevantByOrganisationId.set(
+          row.organisationId,
+          Number(row.count),
+        );
+      }
+    }
+  }
+
+  const dataEntryTariffTotalByOrganisationId = new Map<number, number>();
+  const dataEntryTariffRelevantByOrganisationId = new Map<number, number>();
+  const dataEntryTariffNotRelevantByOrganisationId = new Map<number, number>();
+  if (tariffInputDefIds.length > 0) {
+    const totalRows = await db
+      .select({
+        organisationId: serviceAreas.utility_id,
+        count: sql<number>`cast(count(*) as int)`,
+      })
+      .from(dataEntries)
+      .innerJoin(serviceAreas, eq(dataEntries.service_area_id, serviceAreas.id))
+      .where(
+        and(
+          eq(dataEntries.is_deleted, false),
+          inArray(dataEntries.input_def_id, tariffInputDefIds),
+          isNotNull(dataEntries.payment_mode_id),
+          isNotNull(dataEntries.customer_type_id),
+          isNull(dataEntries.energy_resource_id),
+        ),
+      )
+      .groupBy(serviceAreas.utility_id);
+
+    for (const row of totalRows) {
+      if (utilityIdSet.has(row.organisationId)) {
+        dataEntryTariffTotalByOrganisationId.set(
+          row.organisationId,
+          Number(row.count),
+        );
+      }
+    }
+
+    const relevantRows = await db
+      .select({
+        organisationId: serviceAreas.utility_id,
+        count: sql<number>`cast(count(*) as int)`,
+      })
+      .from(dataEntries)
+      .innerJoin(serviceAreas, eq(dataEntries.service_area_id, serviceAreas.id))
+      .where(
+        and(
+          eq(dataEntries.is_deleted, false),
+          eq(dataEntries.is_relevant, true),
+          inArray(dataEntries.input_def_id, tariffInputDefIds),
+          isNotNull(dataEntries.payment_mode_id),
+          isNotNull(dataEntries.customer_type_id),
+          isNull(dataEntries.energy_resource_id),
+        ),
+      )
+      .groupBy(serviceAreas.utility_id);
+
+    for (const row of relevantRows) {
+      if (utilityIdSet.has(row.organisationId)) {
+        dataEntryTariffRelevantByOrganisationId.set(
+          row.organisationId,
+          Number(row.count),
+        );
+      }
+    }
+
+    const notRelevantRows = await db
+      .select({
+        organisationId: serviceAreas.utility_id,
+        count: sql<number>`cast(count(*) as int)`,
+      })
+      .from(dataEntries)
+      .innerJoin(serviceAreas, eq(dataEntries.service_area_id, serviceAreas.id))
+      .where(
+        and(
+          eq(dataEntries.is_deleted, false),
+          eq(dataEntries.is_relevant, false),
+          inArray(dataEntries.input_def_id, tariffInputDefIds),
+          isNotNull(dataEntries.payment_mode_id),
+          isNotNull(dataEntries.customer_type_id),
+          isNull(dataEntries.energy_resource_id),
+        ),
+      )
+      .groupBy(serviceAreas.utility_id);
+
+    for (const row of notRelevantRows) {
+      if (utilityIdSet.has(row.organisationId)) {
+        dataEntryTariffNotRelevantByOrganisationId.set(
+          row.organisationId,
+          Number(row.count),
+        );
+      }
+    }
+  }
+
+  const dataEntryTransmissionTotalByOrganisationId = new Map<number, number>();
+  const dataEntryTransmissionRelevantByOrganisationId = new Map<
+    number,
+    number
+  >();
+  const dataEntryTransmissionNotRelevantByOrganisationId = new Map<
+    number,
+    number
+  >();
+  if (transmissionInputDefIds.length > 0) {
+    const totalRows = await db
+      .select({
+        organisationId: serviceAreas.utility_id,
+        count: sql<number>`cast(count(*) as int)`,
+      })
+      .from(dataEntries)
+      .innerJoin(serviceAreas, eq(dataEntries.service_area_id, serviceAreas.id))
+      .where(
+        and(
+          eq(dataEntries.is_deleted, false),
+          inArray(dataEntries.input_def_id, transmissionInputDefIds),
+          isNull(dataEntries.payment_mode_id),
+          isNull(dataEntries.customer_type_id),
+          isNull(dataEntries.energy_resource_id),
+        ),
+      )
+      .groupBy(serviceAreas.utility_id);
+
+    for (const row of totalRows) {
+      if (utilityIdSet.has(row.organisationId)) {
+        dataEntryTransmissionTotalByOrganisationId.set(
+          row.organisationId,
+          Number(row.count),
+        );
+      }
+    }
+
+    const relevantRows = await db
+      .select({
+        organisationId: serviceAreas.utility_id,
+        count: sql<number>`cast(count(*) as int)`,
+      })
+      .from(dataEntries)
+      .innerJoin(serviceAreas, eq(dataEntries.service_area_id, serviceAreas.id))
+      .where(
+        and(
+          eq(dataEntries.is_deleted, false),
+          eq(dataEntries.is_relevant, true),
+          inArray(dataEntries.input_def_id, transmissionInputDefIds),
+          isNull(dataEntries.payment_mode_id),
+          isNull(dataEntries.customer_type_id),
+          isNull(dataEntries.energy_resource_id),
+        ),
+      )
+      .groupBy(serviceAreas.utility_id);
+
+    for (const row of relevantRows) {
+      if (utilityIdSet.has(row.organisationId)) {
+        dataEntryTransmissionRelevantByOrganisationId.set(
+          row.organisationId,
+          Number(row.count),
+        );
+      }
+    }
+
+    const notRelevantRows = await db
+      .select({
+        organisationId: serviceAreas.utility_id,
+        count: sql<number>`cast(count(*) as int)`,
+      })
+      .from(dataEntries)
+      .innerJoin(serviceAreas, eq(dataEntries.service_area_id, serviceAreas.id))
+      .where(
+        and(
+          eq(dataEntries.is_deleted, false),
+          eq(dataEntries.is_relevant, false),
+          inArray(dataEntries.input_def_id, transmissionInputDefIds),
+          isNull(dataEntries.payment_mode_id),
+          isNull(dataEntries.customer_type_id),
+          isNull(dataEntries.energy_resource_id),
+        ),
+      )
+      .groupBy(serviceAreas.utility_id);
+
+    for (const row of notRelevantRows) {
+      if (utilityIdSet.has(row.organisationId)) {
+        dataEntryTransmissionNotRelevantByOrganisationId.set(
+          row.organisationId,
+          Number(row.count),
+        );
+      }
+    }
+  }
+
+  const dataEntryGenerationTotalByOrganisationId = new Map<number, number>();
+  const dataEntryGenerationRelevantByOrganisationId = new Map<number, number>();
+  const dataEntryGenerationNotRelevantByOrganisationId = new Map<
+    number,
+    number
+  >();
+  {
+    const totalRows = await db
+      .select({
+        organisationId: serviceAreas.utility_id,
+        count: sql<number>`cast(count(*) as int)`,
+      })
+      .from(dataEntries)
+      .innerJoin(serviceAreas, eq(dataEntries.service_area_id, serviceAreas.id))
+      .where(
+        and(
+          eq(dataEntries.is_deleted, false),
+          isNotNull(dataEntries.energy_resource_id),
+        ),
+      )
+      .groupBy(serviceAreas.utility_id);
+
+    for (const row of totalRows) {
+      if (utilityIdSet.has(row.organisationId)) {
+        dataEntryGenerationTotalByOrganisationId.set(
+          row.organisationId,
+          Number(row.count),
+        );
+      }
+    }
+
+    const relevantRows = await db
+      .select({
+        organisationId: serviceAreas.utility_id,
+        count: sql<number>`cast(count(*) as int)`,
+      })
+      .from(dataEntries)
+      .innerJoin(serviceAreas, eq(dataEntries.service_area_id, serviceAreas.id))
+      .where(
+        and(
+          eq(dataEntries.is_deleted, false),
+          eq(dataEntries.is_relevant, true),
+          isNotNull(dataEntries.energy_resource_id),
+        ),
+      )
+      .groupBy(serviceAreas.utility_id);
+
+    for (const row of relevantRows) {
+      if (utilityIdSet.has(row.organisationId)) {
+        dataEntryGenerationRelevantByOrganisationId.set(
+          row.organisationId,
+          Number(row.count),
+        );
+      }
+    }
+
+    const notRelevantRows = await db
+      .select({
+        organisationId: serviceAreas.utility_id,
+        count: sql<number>`cast(count(*) as int)`,
+      })
+      .from(dataEntries)
+      .innerJoin(serviceAreas, eq(dataEntries.service_area_id, serviceAreas.id))
+      .where(
+        and(
+          eq(dataEntries.is_deleted, false),
+          eq(dataEntries.is_relevant, false),
+          isNotNull(dataEntries.energy_resource_id),
+        ),
+      )
+      .groupBy(serviceAreas.utility_id);
+
+    for (const row of notRelevantRows) {
+      if (utilityIdSet.has(row.organisationId)) {
+        dataEntryGenerationNotRelevantByOrganisationId.set(
+          row.organisationId,
+          Number(row.count),
+        );
+      }
+    }
+  }
+
+  const subtractMaps = (
+    minuend: Map<number, number>,
+    subtrahend: Map<number, number>,
+  ): Map<number, number> => {
+    const next = new Map<number, number>();
+
+    for (const utility of utilityRows) {
+      next.set(
+        utility.id,
+        Math.max(
+          0,
+          (minuend.get(utility.id) ?? 0) - (subtrahend.get(utility.id) ?? 0),
+        ),
+      );
+    }
+
+    return next;
+  };
+
+  const tariffTotalByOrganisationId = new Map<number, number>();
+  const tariffNotRelevantByOrganisationId = new Map<number, number>();
+  if (tariffInputDefIds.length > 0) {
+    const totalRows = await db
+      .select({
+        organisationId: serviceAreas.utility_id,
+        count: sql<number>`cast(count(*) as int)`,
+      })
+      .from(dataEntries)
+      .innerJoin(serviceAreas, eq(dataEntries.service_area_id, serviceAreas.id))
+      .where(
+        and(
+          eq(dataEntries.is_deleted, false),
+          inArray(dataEntries.input_def_id, tariffInputDefIds),
+          isNotNull(dataEntries.payment_mode_id),
+          isNotNull(dataEntries.customer_type_id),
+          isNull(dataEntries.energy_resource_id),
+        ),
+      )
+      .groupBy(serviceAreas.utility_id);
+
+    for (const row of totalRows) {
+      if (utilityIdSet.has(row.organisationId)) {
+        tariffTotalByOrganisationId.set(row.organisationId, Number(row.count));
+      }
+    }
+
+    const notRelevantRows = await db
+      .select({
+        organisationId: serviceAreas.utility_id,
+        count: sql<number>`cast(count(*) as int)`,
+      })
+      .from(dataEntries)
+      .innerJoin(serviceAreas, eq(dataEntries.service_area_id, serviceAreas.id))
+      .where(
+        and(
+          eq(dataEntries.is_deleted, false),
+          eq(dataEntries.is_relevant, false),
+          inArray(dataEntries.input_def_id, tariffInputDefIds),
+          isNotNull(dataEntries.payment_mode_id),
+          isNotNull(dataEntries.customer_type_id),
+          isNull(dataEntries.energy_resource_id),
+        ),
+      )
+      .groupBy(serviceAreas.utility_id);
+
+    for (const row of notRelevantRows) {
+      if (utilityIdSet.has(row.organisationId)) {
+        tariffNotRelevantByOrganisationId.set(
+          row.organisationId,
+          Number(row.count),
+        );
+      }
+    }
+  }
+
+  const tariffRelevantByOrganisationId = subtractMaps(
+    tariffTotalByOrganisationId,
+    tariffNotRelevantByOrganisationId,
+  );
+
+  const transmissionTotalByOrganisationId = new Map<number, number>();
+  const transmissionNotRelevantByOrganisationId = new Map<number, number>();
+  if (transmissionInputDefIds.length > 0) {
+    const totalRows = await db
+      .select({
+        organisationId: serviceAreas.utility_id,
+        count: sql<number>`cast(count(*) as int)`,
+      })
+      .from(dataEntries)
+      .innerJoin(serviceAreas, eq(dataEntries.service_area_id, serviceAreas.id))
+      .where(
+        and(
+          eq(dataEntries.is_deleted, false),
+          inArray(dataEntries.input_def_id, transmissionInputDefIds),
+          isNull(dataEntries.payment_mode_id),
+          isNull(dataEntries.customer_type_id),
+          isNull(dataEntries.energy_resource_id),
+        ),
+      )
+      .groupBy(serviceAreas.utility_id);
+
+    for (const row of totalRows) {
+      if (utilityIdSet.has(row.organisationId)) {
+        transmissionTotalByOrganisationId.set(
+          row.organisationId,
+          Number(row.count),
+        );
+      }
+    }
+
+    const notRelevantRows = await db
+      .select({
+        organisationId: serviceAreas.utility_id,
+        count: sql<number>`cast(count(*) as int)`,
+      })
+      .from(dataEntries)
+      .innerJoin(serviceAreas, eq(dataEntries.service_area_id, serviceAreas.id))
+      .where(
+        and(
+          eq(dataEntries.is_deleted, false),
+          eq(dataEntries.is_relevant, false),
+          inArray(dataEntries.input_def_id, transmissionInputDefIds),
+          isNull(dataEntries.payment_mode_id),
+          isNull(dataEntries.customer_type_id),
+          isNull(dataEntries.energy_resource_id),
+        ),
+      )
+      .groupBy(serviceAreas.utility_id);
+
+    for (const row of notRelevantRows) {
+      if (utilityIdSet.has(row.organisationId)) {
+        transmissionNotRelevantByOrganisationId.set(
+          row.organisationId,
+          Number(row.count),
+        );
+      }
+    }
+  }
+
+  const transmissionRelevantByOrganisationId = subtractMaps(
+    transmissionTotalByOrganisationId,
+    transmissionNotRelevantByOrganisationId,
+  );
+
+  const generationTotalByOrganisationId = new Map<number, number>();
+  const generationNotRelevantByOrganisationId = new Map<number, number>();
+  {
+    const totalRows = await db
+      .select({
+        organisationId: serviceAreas.utility_id,
+        count: sql<number>`cast(count(*) as int)`,
+      })
+      .from(generationRelevance)
+      .innerJoin(
+        serviceAreas,
+        eq(generationRelevance.service_area_id, serviceAreas.id),
+      )
+      .where(eq(generationRelevance.is_deleted, false))
+      .groupBy(serviceAreas.utility_id);
+
+    for (const row of totalRows) {
+      if (utilityIdSet.has(row.organisationId)) {
+        generationTotalByOrganisationId.set(
+          row.organisationId,
+          Number(row.count),
+        );
+      }
+    }
+
+    const notRelevantRows = await db
+      .select({
+        organisationId: serviceAreas.utility_id,
+        count: sql<number>`cast(count(*) as int)`,
+      })
+      .from(generationRelevance)
+      .innerJoin(
+        serviceAreas,
+        eq(generationRelevance.service_area_id, serviceAreas.id),
+      )
+      .where(
+        and(
+          eq(generationRelevance.is_deleted, false),
+          eq(generationRelevance.is_relevant, false),
+        ),
+      )
+      .groupBy(serviceAreas.utility_id);
+
+    for (const row of notRelevantRows) {
+      if (utilityIdSet.has(row.organisationId)) {
+        generationNotRelevantByOrganisationId.set(
+          row.organisationId,
+          Number(row.count),
+        );
+      }
+    }
+  }
+
+  const generationRelevantByOrganisationId = subtractMaps(
+    generationTotalByOrganisationId,
+    generationNotRelevantByOrganisationId,
+  );
+
+  const generationToggleTotalByOrganisationId = new Map<number, number>();
+  const generationToggleNotRelevantByOrganisationId = new Map<number, number>();
+  {
+    const totalRows = await db
+      .select({
+        organisationId: serviceAreas.utility_id,
+        count: sql<number>`cast(count(*) as int)`,
+      })
+      .from(generationToggleRelevance)
+      .innerJoin(
+        serviceAreas,
+        eq(generationToggleRelevance.service_area_id, serviceAreas.id),
+      )
+      .where(eq(generationToggleRelevance.is_deleted, false))
+      .groupBy(serviceAreas.utility_id);
+
+    for (const row of totalRows) {
+      if (utilityIdSet.has(row.organisationId)) {
+        generationToggleTotalByOrganisationId.set(
+          row.organisationId,
+          Number(row.count),
+        );
+      }
+    }
+
+    const notRelevantRows = await db
+      .select({
+        organisationId: serviceAreas.utility_id,
+        count: sql<number>`cast(count(*) as int)`,
+      })
+      .from(generationToggleRelevance)
+      .innerJoin(
+        serviceAreas,
+        eq(generationToggleRelevance.service_area_id, serviceAreas.id),
+      )
+      .where(
+        and(
+          eq(generationToggleRelevance.is_deleted, false),
+          eq(generationToggleRelevance.is_relevant, false),
+        ),
+      )
+      .groupBy(serviceAreas.utility_id);
+
+    for (const row of notRelevantRows) {
+      if (utilityIdSet.has(row.organisationId)) {
+        generationToggleNotRelevantByOrganisationId.set(
+          row.organisationId,
+          Number(row.count),
+        );
+      }
+    }
+  }
+
+  const generationToggleRelevantByOrganisationId = subtractMaps(
+    generationToggleTotalByOrganisationId,
+    generationToggleNotRelevantByOrganisationId,
+  );
+
+  const customKpiAssignedByOrganisationId = new Map<number, number>();
+  const customKpiOwnedByOrganisationId = new Map<number, number>();
+  {
+    const kpis = await db
+      .select({
+        ownerUtilityId: kpiDefinitions.owner_utility_id,
+        utilityIds: kpiDefinitions.utility_ids,
+      })
+      .from(kpiDefinitions)
+      .where(
+        and(
+          eq(kpiDefinitions.type, "custom"),
+          eq(kpiDefinitions.is_active, true),
+        ),
+      );
+
+    for (const kpi of kpis) {
+      if (
+        typeof kpi.ownerUtilityId === "number" &&
+        utilityIdSet.has(kpi.ownerUtilityId)
+      ) {
+        customKpiOwnedByOrganisationId.set(
+          kpi.ownerUtilityId,
+          (customKpiOwnedByOrganisationId.get(kpi.ownerUtilityId) ?? 0) + 1,
+        );
+      }
+
+      const utilityIds = Array.isArray(kpi.utilityIds)
+        ? kpi.utilityIds.filter((value): value is number =>
+            Number.isInteger(value),
+          )
+        : [];
+
+      for (const utilityId of utilityIds) {
+        if (!utilityIdSet.has(utilityId)) {
+          continue;
+        }
+
+        customKpiAssignedByOrganisationId.set(
+          utilityId,
+          (customKpiAssignedByOrganisationId.get(utilityId) ?? 0) + 1,
+        );
+      }
+    }
+  }
+
+  return {
+    organisations: utilityRows,
+    rows: [
+      {
+        id: "data-entry-total",
+        label: "Data entry rows (all, total)",
+        values: toValues(dataEntryTotalByOrganisationId),
+      },
+      {
+        id: "data-entry-relevant",
+        label: "Data entry rows (all, relevant)",
+        values: toValues(dataEntryRelevantByOrganisationId),
+      },
+      {
+        id: "data-entry-not-relevant",
+        label: "Data entry rows (all, not-relevant)",
+        values: toValues(dataEntryNotRelevantByOrganisationId),
+      },
+      {
+        id: "data-entry-tariff-total",
+        label: "Data entry rows (tariff, total)",
+        values: toValues(dataEntryTariffTotalByOrganisationId),
+      },
+      {
+        id: "data-entry-tariff-relevant",
+        label: "Data entry rows (tariff, relevant)",
+        values: toValues(dataEntryTariffRelevantByOrganisationId),
+      },
+      {
+        id: "data-entry-tariff-not-relevant",
+        label: "Data entry rows (tariff, not-relevant)",
+        values: toValues(dataEntryTariffNotRelevantByOrganisationId),
+      },
+      {
+        id: "data-entry-transmission-total",
+        label: "Data entry rows (transmission, total)",
+        values: toValues(dataEntryTransmissionTotalByOrganisationId),
+      },
+      {
+        id: "data-entry-transmission-relevant",
+        label: "Data entry rows (transmission, relevant)",
+        values: toValues(dataEntryTransmissionRelevantByOrganisationId),
+      },
+      {
+        id: "data-entry-transmission-not-relevant",
+        label: "Data entry rows (transmission, not-relevant)",
+        values: toValues(dataEntryTransmissionNotRelevantByOrganisationId),
+      },
+      {
+        id: "data-entry-generation-total",
+        label: "Data entry rows (generation, total)",
+        values: toValues(dataEntryGenerationTotalByOrganisationId),
+      },
+      {
+        id: "data-entry-generation-relevant",
+        label: "Data entry rows (generation, relevant)",
+        values: toValues(dataEntryGenerationRelevantByOrganisationId),
+      },
+      {
+        id: "data-entry-generation-not-relevant",
+        label: "Data entry rows (generation, not-relevant)",
+        values: toValues(dataEntryGenerationNotRelevantByOrganisationId),
+      },
+      {
+        id: "custom-kpi-assigned",
+        label: "Custom KPI assigned relevance (count)",
+        values: toValues(customKpiAssignedByOrganisationId),
+      },
+      {
+        id: "custom-kpi-owned",
+        label: "Custom KPI owned by organisation (count)",
+        values: toValues(customKpiOwnedByOrganisationId),
+      },
+      {
+        id: "tariff-total",
+        label: "Tariff explicit relevance rows (total)",
+        values: toValues(tariffTotalByOrganisationId),
+      },
+      {
+        id: "tariff-relevant",
+        label: "Tariff explicit relevant rows (count)",
+        values: toValues(tariffRelevantByOrganisationId),
+      },
+      {
+        id: "tariff-not-relevant",
+        label: "Tariff explicit not-relevant rows (count)",
+        values: toValues(tariffNotRelevantByOrganisationId),
+      },
+      {
+        id: "transmission-total",
+        label: "Transmission explicit relevance rows (total)",
+        values: toValues(transmissionTotalByOrganisationId),
+      },
+      {
+        id: "transmission-relevant",
+        label: "Transmission explicit relevant rows (count)",
+        values: toValues(transmissionRelevantByOrganisationId),
+      },
+      {
+        id: "transmission-not-relevant",
+        label: "Transmission explicit not-relevant rows (count)",
+        values: toValues(transmissionNotRelevantByOrganisationId),
+      },
+      {
+        id: "generation-total",
+        label: "Generation explicit relevance rows (total)",
+        values: toValues(generationTotalByOrganisationId),
+      },
+      {
+        id: "generation-relevant",
+        label: "Generation explicit relevant rows (count)",
+        values: toValues(generationRelevantByOrganisationId),
+      },
+      {
+        id: "generation-not-relevant",
+        label: "Generation explicit not-relevant rows (count)",
+        values: toValues(generationNotRelevantByOrganisationId),
+      },
+      {
+        id: "generation-toggle-total",
+        label: "Generation toggle rows (total)",
+        values: toValues(generationToggleTotalByOrganisationId),
+      },
+      {
+        id: "generation-toggle-relevant",
+        label: "Generation toggle relevant rows (count)",
+        values: toValues(generationToggleRelevantByOrganisationId),
+      },
+      {
+        id: "generation-toggle-not-relevant",
+        label: "Generation toggle not-relevant rows (count)",
+        values: toValues(generationToggleNotRelevantByOrganisationId),
+      },
+    ],
   };
 }
 

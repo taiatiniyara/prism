@@ -63,6 +63,9 @@ export default async function UsersSettingsPage() {
 
   return (
     <>
+      {(currentUser.role === "DEV" || currentUser.role === "BMO") && (
+        <PendingUserDecisionPanel />
+      )}
       <DataTable<User>
         data={users}
         columns={columns}
@@ -72,10 +75,6 @@ export default async function UsersSettingsPage() {
           fields: createFields,
         }}
       />
-
-      {(currentUser.role === "DEV" || currentUser.role === "BMO") && (
-        <PendingUserDecisionPanel />
-      )}
     </>
   );
 }

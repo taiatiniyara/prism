@@ -29,7 +29,7 @@ export async function AllServiceAreas(filters?: {
     conditions.push(eq(serviceAreas.utility_id, scopedUtilityId));
   }
 
-  if (user.role !== "DEV" || user.is_utility_context_scoped) {
+  if (user.role !== "DEV") {
     conditions.push(eq(serviceAreas.is_virtual, false));
   }
 
