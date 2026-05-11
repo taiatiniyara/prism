@@ -232,26 +232,26 @@ export default function DevInputRelevanceTable(props: {
       </Button>
 
       <div className="max-h-[70vh] overflow-auto border">
-        <table className="w-max min-w-full border-collapse text-sm">
+        <table className="w-max min-w-full border-collapse text-xs">
           <thead>
             <tr className="bg-muted/30">
-              <th className="sticky left-0 top-0 z-40 min-w-72 border bg-muted px-5 py-3 text-left text-sm font-semibold whitespace-nowrap">
+              <th className="sticky left-0 top-0 z-40 min-w-56 border bg-muted px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">
                 Input
               </th>
-              <th className="sticky top-0 z-30 min-w-72 border bg-muted px-5 py-3 text-left text-sm font-semibold whitespace-nowrap">
+              <th className="sticky top-0 z-30 min-w-56 border bg-muted px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">
                 Dimension
               </th>
-              <th className="sticky top-0 z-30 min-w-40 border bg-muted px-5 py-3 text-left text-sm font-semibold whitespace-nowrap">
+              <th className="sticky top-0 z-30 min-w-32 border bg-muted px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">
                 Relevant
               </th>
-              <th className="sticky top-0 z-30 min-w-40 border bg-muted px-5 py-3 text-left text-sm font-semibold whitespace-nowrap">
+              <th className="sticky top-0 z-30 min-w-32 border bg-muted px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">
                 Actions
               </th>
             </tr>
           </thead>
           <tbody>
             <tr className="bg-muted/10">
-              <td className="sticky left-0 z-20 border bg-background px-5 py-4 align-top">
+              <td className="sticky left-0 z-20 border bg-background px-3 py-2 align-top">
                 <SearchableSelect
                   disabled={isSaving}
                   options={inputSelectOptions}
@@ -259,8 +259,8 @@ export default function DevInputRelevanceTable(props: {
                   placeholder="Select input"
                   searchPlaceholder="Search inputs"
                   emptyLabel="No inputs found."
-                  triggerClassName="w-full min-w-72"
-                  contentClassName="min-w-72"
+                  triggerClassName="w-full min-w-56 text-xs"
+                  contentClassName="min-w-56"
                   onValueChange={(value) =>
                     setNewItem((prev) => ({
                       ...prev,
@@ -269,7 +269,7 @@ export default function DevInputRelevanceTable(props: {
                   }
                 />
               </td>
-              <td className="border px-5 py-4 align-top">
+              <td className="border px-3 py-2 align-top">
                 <SearchableSelect
                   disabled={isSaving}
                   options={dimensionSelectOptions}
@@ -277,8 +277,8 @@ export default function DevInputRelevanceTable(props: {
                   placeholder="Select dimension"
                   searchPlaceholder="Search dimensions"
                   emptyLabel="No dimensions found."
-                  triggerClassName="w-full min-w-72"
-                  contentClassName="min-w-72"
+                  triggerClassName="w-full min-w-56 text-xs"
+                  contentClassName="min-w-56"
                   onValueChange={(value) =>
                     setNewItem((prev) => ({
                       ...prev,
@@ -287,7 +287,7 @@ export default function DevInputRelevanceTable(props: {
                   }
                 />
               </td>
-              <td className="border px-5 py-4 align-top">
+              <td className="border px-3 py-2 align-top">
                 <Checkbox
                   checked={newItem.isRelevant}
                   disabled={isSaving}
@@ -299,9 +299,10 @@ export default function DevInputRelevanceTable(props: {
                   }
                 />
               </td>
-              <td className="border px-5 py-4 align-top">
+              <td className="border px-3 py-2 align-top">
                 <Button
                   size="sm"
+                  className="h-7 px-2 text-xs"
                   disabled={isSaving}
                   onClick={onAddRow}
                 >
@@ -311,7 +312,7 @@ export default function DevInputRelevanceTable(props: {
             </tr>
             {items.map((item) => (
               <tr key={item.id}>
-                <td className="sticky left-0 z-20 border bg-background px-5 py-4 align-top">
+                <td className="sticky left-0 z-20 border bg-background px-3 py-2 align-top">
                   <SearchableSelect
                     disabled={isSaving}
                     options={inputSelectOptions}
@@ -321,14 +322,14 @@ export default function DevInputRelevanceTable(props: {
                     }
                     searchPlaceholder="Search inputs"
                     emptyLabel="No inputs found."
-                    triggerClassName="w-full min-w-72"
-                    contentClassName="min-w-72"
+                    triggerClassName="w-full min-w-56 text-xs"
+                    contentClassName="min-w-56"
                     onValueChange={(value) =>
                       updateDraft(item.id, { inputDefId: Number(value) })
                     }
                   />
                 </td>
-                <td className="border px-5 py-4 align-top">
+                <td className="border px-3 py-2 align-top">
                   <SearchableSelect
                     disabled={isSaving}
                     options={dimensionSelectOptions}
@@ -339,14 +340,14 @@ export default function DevInputRelevanceTable(props: {
                     }
                     searchPlaceholder="Search dimensions"
                     emptyLabel="No dimensions found."
-                    triggerClassName="w-full min-w-72"
-                    contentClassName="min-w-72"
+                    triggerClassName="w-full min-w-56 text-xs"
+                    contentClassName="min-w-56"
                     onValueChange={(value) =>
                       updateDraft(item.id, { dimensionId: Number(value) })
                     }
                   />
                 </td>
-                <td className="border px-5 py-4 align-top">
+                <td className="border px-3 py-2 align-top">
                   <Checkbox
                     checked={item.isRelevant}
                     disabled={isSaving}
@@ -355,9 +356,10 @@ export default function DevInputRelevanceTable(props: {
                     }
                   />
                 </td>
-                <td className="border px-5 py-4 align-top">
+                <td className="border px-3 py-2 align-top">
                   <Button
                     size="sm"
+                    className="h-7 px-2 text-xs"
                     disabled={isSaving}
                     onClick={() => onUpdateRow(item.id)}
                   >

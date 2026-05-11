@@ -211,16 +211,16 @@ export default function GenerationRelevanceTable(props: {
   return (
     <div className="space-y-3">
       <div className="max-h-[70vh] overflow-auto border">
-        <table className="w-max min-w-full border-collapse text-sm">
+        <table className="w-max min-w-full border-collapse text-xs">
           <thead>
             <tr className="bg-muted/30">
-              <th className="sticky top-0 left-0 z-40 border bg-muted px-5 py-3 text-left text-sm font-semibold whitespace-nowrap min-w-64">
+              <th className="sticky top-0 left-0 z-40 border bg-muted px-3 py-2 text-left text-xs font-semibold whitespace-nowrap min-w-48">
                 Energy Resource Type
               </th>
               {providers.map((provider) => (
                 <th
                   key={provider.energyProviderId}
-                  className="sticky top-0 z-30 border bg-muted px-5 py-3 text-left text-sm font-semibold whitespace-nowrap min-w-80"
+                  className="sticky top-0 z-30 border bg-muted px-3 py-2 text-left text-xs font-semibold whitespace-nowrap min-w-56"
                 >
                   {provider.energyProvider}
                 </th>
@@ -230,7 +230,7 @@ export default function GenerationRelevanceTable(props: {
           <tbody>
             {rowsByEnergyResourceType.map((group) => (
               <tr key={group.energyResourceTypeId}>
-                <td className="sticky left-0 z-20 border bg-background px-5 py-3 font-medium whitespace-nowrap">
+                <td className="sticky left-0 z-20 border bg-background px-3 py-2 font-medium whitespace-nowrap">
                   {group.energyResourceType}
                 </td>
                 {providers.map((provider) => {
@@ -246,12 +246,13 @@ export default function GenerationRelevanceTable(props: {
                   return (
                     <td
                       key={`${group.energyResourceTypeId}-${provider.energyProviderId}`}
-                      className="border px-5 py-3 align-top"
+                      className="border px-3 py-2 align-top"
                     >
-                      <div className="mb-2">
+                      <div className="mb-1.5">
                         <Button
                           type="button"
                           size="sm"
+                          className="h-7 px-2 text-xs"
                           variant="outline"
                           disabled={isSaving}
                           onClick={() =>
@@ -266,7 +267,7 @@ export default function GenerationRelevanceTable(props: {
                           {allChecked ? "Uncheck all" : "Check all"}
                         </Button>
                       </div>
-                      <ul className="space-y-2">
+                      <ul className="space-y-1.5">
                         {group.rows.map((row) => {
                           const cell = row.cells.find(
                             (item) =>
@@ -278,7 +279,7 @@ export default function GenerationRelevanceTable(props: {
                             <li
                               key={`${row.energySourceId}-${row.energyResourceTypeId}-${provider.energyProviderId}`}
                             >
-                              <label className="flex items-center gap-2">
+                              <label className="flex items-center gap-1.5">
                                 <Checkbox
                                   checked={cell?.isRelevant ?? true}
                                   disabled={isSaving}
@@ -291,7 +292,7 @@ export default function GenerationRelevanceTable(props: {
                                     )
                                   }
                                 />
-                                <span className="text-sm">
+                                <span className="text-xs">
                                   {row.energySource}
                                 </span>
                               </label>

@@ -45,16 +45,16 @@ export default function DevOrganisationRelevancePivotTable(props: {
 
   return (
     <div className="max-h-[70vh] overflow-auto border">
-      <table className="w-max min-w-full border-collapse text-sm">
+      <table className="w-max min-w-full border-collapse text-xs">
         <thead>
           <tr className="bg-muted/30">
-            <th className="sticky left-0 top-0 z-40 min-w-96 border bg-muted px-5 py-3 text-left text-sm font-semibold whitespace-nowrap">
+            <th className="sticky left-0 top-0 z-40 min-w-72 border bg-muted px-3 py-2 text-left text-xs font-semibold whitespace-nowrap">
               Relevance Area
             </th>
             {props.organisations.map((organisation) => (
               <th
                 key={organisation.id}
-                className="sticky top-0 z-30 min-w-40 border bg-muted px-5 py-3 text-left text-sm font-semibold whitespace-nowrap"
+                className="sticky top-0 z-30 min-w-28 border bg-muted px-3 py-2 text-left text-xs font-semibold whitespace-nowrap"
                 title={organisation.name}
               >
                 {organisation.acronym || organisation.name}
@@ -70,7 +70,7 @@ export default function DevOrganisationRelevancePivotTable(props: {
 
             return (
               <tr key={row.id}>
-                <td className="sticky left-0 z-20 border bg-background px-5 py-4 text-sm font-medium align-top">
+                <td className="sticky left-0 z-20 border bg-background px-3 py-2 text-xs font-medium align-top">
                   {row.label}
                 </td>
                 {props.organisations.map((organisation) => {
@@ -82,8 +82,8 @@ export default function DevOrganisationRelevancePivotTable(props: {
                       key={`${row.id}-${organisation.id}`}
                       className={
                         isNonZero
-                          ? "border bg-emerald-50 px-5 py-4 text-center text-sm"
-                          : "border px-5 py-4 text-center text-sm"
+                          ? "border bg-emerald-50 px-3 py-2 text-center text-xs"
+                          : "border px-3 py-2 text-center text-xs"
                       }
                     >
                       <span
@@ -102,7 +102,7 @@ export default function DevOrganisationRelevancePivotTable(props: {
             );
           })}
           <tr className="bg-muted/20">
-            <td className="sticky left-0 z-20 border bg-background px-5 py-4 text-sm font-semibold align-top">
+            <td className="sticky left-0 z-20 border bg-background px-3 py-2 text-xs font-semibold align-top">
               Total (all relevance areas)
             </td>
             {props.organisations.map((organisation) => {
@@ -114,8 +114,8 @@ export default function DevOrganisationRelevancePivotTable(props: {
                   key={`total-${organisation.id}`}
                   className={
                     isNonZero
-                      ? "border bg-emerald-100 px-5 py-4 text-center text-sm"
-                      : "border px-5 py-4 text-center text-sm"
+                      ? "border bg-emerald-100 px-3 py-2 text-center text-xs"
+                      : "border px-3 py-2 text-center text-xs"
                   }
                 >
                   <span

@@ -326,16 +326,16 @@ export default function TariffRelevanceTable(props: {
   return (
     <div className="space-y-3">
       <div className="max-h-[70vh] overflow-auto border">
-        <table className="w-max min-w-full border-collapse text-sm">
+        <table className="w-max min-w-full border-collapse text-xs">
           <thead>
             <tr className="bg-muted/30">
-              <th className="sticky left-0 top-0 z-40 border bg-muted px-5 py-3 text-left text-sm font-semibold whitespace-nowrap min-w-52">
+              <th className="sticky left-0 top-0 z-40 border bg-muted px-3 py-2 text-left text-xs font-semibold whitespace-nowrap min-w-44">
                 Payment Mode
               </th>
               {customerTypes.map((customerType) => (
                 <th
                   key={customerType.id}
-                  className="sticky top-0 z-30 border bg-muted px-5 py-3 text-left text-sm font-semibold whitespace-nowrap min-w-72"
+                  className="sticky top-0 z-30 border bg-muted px-3 py-2 text-left text-xs font-semibold whitespace-nowrap min-w-56"
                 >
                   {customerType.name}
                 </th>
@@ -347,7 +347,7 @@ export default function TariffRelevanceTable(props: {
               <tr>
                 <td
                   colSpan={customerTypes.length + 1}
-                  className="border px-5 py-6 text-center text-sm text-muted-foreground"
+                  className="border px-3 py-4 text-center text-xs text-muted-foreground"
                 >
                   No customer types selected. Select at least one customer type
                   to view the matrix.
@@ -356,7 +356,7 @@ export default function TariffRelevanceTable(props: {
             ) : null}
             {visibleRows.map((row) => (
               <tr key={row.paymentModeId}>
-                <td className="sticky left-0 z-20 border bg-background px-5 py-4 text-sm font-semibold align-top">
+                <td className="sticky left-0 z-20 border bg-background px-3 py-2 text-xs font-semibold align-top">
                   {row.paymentMode}
                 </td>
                 {row.cells.map((cell) => {
@@ -366,13 +366,14 @@ export default function TariffRelevanceTable(props: {
                   return (
                     <td
                       key={`${row.paymentModeId}-${cell.customerTypeId}`}
-                      className="border px-5 py-4 align-top"
+                      className="border px-3 py-2 align-top"
                     >
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between gap-4">
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between gap-2">
                           <Button
                             type="button"
                             size="sm"
+                            className="h-7 px-2 text-xs"
                             variant="outline"
                             disabled={isBlockPending || cell.totalCount === 0}
                             onClick={() =>
@@ -386,17 +387,17 @@ export default function TariffRelevanceTable(props: {
                           >
                             {cell.isRelevant ? "Uncheck All" : "Check All"}
                           </Button>
-                          <span className="text-sm font-medium">
+                          <span className="text-xs font-medium">
                             {cell.relevantCount}/{cell.totalCount} relevant
                           </span>
                         </div>
-                        <ul className="space-y-2 text-sm">
+                        <ul className="space-y-1.5 text-xs">
                           {cell.dataLabels.map((label) => (
                             <li
                               key={`${cell.customerTypeId}-${label.inputDefId}`}
-                              className="flex items-center justify-between gap-4 leading-6"
+                              className="flex items-center justify-between gap-2 leading-5"
                             >
-                              <label className="flex items-center gap-3 text-muted-foreground">
+                              <label className="flex items-center gap-2 text-muted-foreground">
                                 <Checkbox
                                   checked={label.isRelevant}
                                   disabled={pendingLabelKeys.has(

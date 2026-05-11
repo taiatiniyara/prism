@@ -114,27 +114,28 @@ export default function TransmissionRelevanceTable(props: {
   };
 
   return (
-    <BorderedPanel className="space-y-4">
-      <div className="flex items-center justify-between gap-4">
+    <BorderedPanel className="space-y-3">
+      <div className="flex items-center justify-between gap-2">
         <Button
           type="button"
           size="sm"
+          className="h-7 px-2 text-xs"
           variant="outline"
           disabled={isSaving || items.length === 0}
           onClick={() => onBlockToggle(!isEntireBlockRelevant)}
         >
           {isEntireBlockRelevant ? "Uncheck All" : "Check All"}
         </Button>
-        <span className="text-sm font-medium">
+        <span className="text-xs font-medium">
           {relevantCount}/{items.length} relevant
         </span>
       </div>
 
-      <ul className="space-y-2 text-sm">
+      <ul className="space-y-1.5 text-xs">
         {items.map((item) => (
           <li
             key={item.inputDefId}
-            className="flex items-center gap-3 leading-6"
+            className="flex items-center gap-2 leading-5"
           >
             <Checkbox
               checked={item.isRelevant}

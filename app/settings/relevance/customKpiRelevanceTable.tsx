@@ -129,17 +129,17 @@ export default function CustomKpiRelevanceTable(props: {
         {isAllRelevant ? "Uncheck All" : "Check All"}
       </Button>
 
-      <div className="grid gap-3 xl:grid-cols-2">
+      <div className="grid gap-2 xl:grid-cols-2">
         {items.map((item) => (
           <section
             key={item.kpiDefId}
-            className={`rounded-lg border bg-card p-4 shadow-sm ${
+            className={`rounded-lg border bg-card p-3 shadow-sm ${
               item.isRelevant ? "border-lime-300" : "border-border"
             }`}
             aria-label={`Custom KPI relevance for ${item.kpiName}`}
           >
             <div className="space-y-1">
-              <label className="inline-flex items-center gap-2 text-sm font-semibold">
+              <label className="inline-flex items-center gap-2 text-xs font-semibold">
                 <Checkbox
                   checked={item.isRelevant}
                   disabled={isSaving}
@@ -163,13 +163,13 @@ export default function CustomKpiRelevanceTable(props: {
               ) : null}
             </div>
 
-            <div className="mt-4 grid gap-3 lg:grid-cols-2">
-              <div className="space-y-1 rounded-md border bg-background p-3">
+            <div className="mt-3 grid gap-2 lg:grid-cols-2">
+              <div className="space-y-1 rounded-md border bg-background p-2">
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Formula
                 </p>
                 {item.formula ? (
-                  <code className="whitespace-pre-wrap wrap-break-word text-xs leading-6 text-muted-foreground">
+                  <code className="whitespace-pre-wrap wrap-break-word text-xs leading-5 text-muted-foreground">
                     {item.formula}
                   </code>
                 ) : (
@@ -179,16 +179,16 @@ export default function CustomKpiRelevanceTable(props: {
                 )}
               </div>
 
-              <div className="space-y-1 rounded-md border bg-background p-3">
+              <div className="space-y-1 rounded-md border bg-background p-2">
                 <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
                   Inputs
                 </p>
                 {item.inputs.length > 0 ? (
-                  <ul className="space-y-1">
+                  <ul className="space-y-0.5">
                     {item.inputs.map((input) => (
                       <li
                         key={`${item.kpiDefId}-${input.inputDefId}`}
-                        className="rounded border border-muted bg-muted/20 px-2 py-1 text-xs text-foreground"
+                        className="rounded border border-muted bg-muted/20 px-1.5 py-0.5 text-xs text-foreground"
                       >
                         {input.dataLabel}
                       </li>
