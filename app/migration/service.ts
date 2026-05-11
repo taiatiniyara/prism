@@ -45,17 +45,68 @@ const normalizeMigrationBaseUrl = (value: string): string => {
   return trimmed.endsWith("/") ? trimmed.slice(0, -1) : trimmed;
 };
 
+const toMigrationBaseUrl = (value: string): string => {
+  const normalized = normalizeMigrationBaseUrl(value);
+
+  if (normalized.toLowerCase().endsWith("/api/migration")) {
+    return normalized;
+  }
+  if (normalized.toLowerCase().endsWith("/api/mig")) {
+    return `${normalized.slice(0, -4)}/migration`;
+  }
+  if (normalized.toLowerCase().endsWith("/api")) {
+    return `${normalized}/migration`;
+  }
+  return `${normalized}/api/migration`;
+};
+
+const toLegacyMigBaseUrl = (value: string): string => {
+  const normalized = normalizeMigrationBaseUrl(value);
+
+  if (normalized.toLowerCase().endsWith("/api/mig")) {
+    return normalized;
+  }
+  if (normalized.toLowerCase().endsWith("/api/migration")) {
+    return `${normalized.slice(0, -10)}/mig`;
+  }
+  if (normalized.toLowerCase().endsWith("/api")) {
+    return `${normalized}/mig`;
+  }
+  return `${normalized}/api/mig`;
+};
+
+const configuredTrainingBaseUrls = [
+  process.env.PRISM_TRAINING_MIGRATION_URL,
+  process.env.PRISM_TRAINING_API_BASE_URL,
+  process.env.NEXT_PUBLIC_PRISM_TRAINING_API_BASE_URL,
+].filter((url): url is string => Boolean(url && url.trim().length > 0));
+
 const migrationBaseUrls = Array.from(
   new Set(
     [
-      process.env.PRISM_TRAINING_MIGRATION_URL,
+      ...configuredTrainingBaseUrls,
       "http://localhost:36197/api/migration",
       "http://localhost:3001/api/migration",
       "http://localhost:3000/api/migration",
       "https://prismdashboard.org/api/migration",
     ]
       .filter((url): url is string => Boolean(url && url.trim().length > 0))
-      .map(normalizeMigrationBaseUrl),
+      .map(toMigrationBaseUrl),
+  ),
+);
+
+const legacyMigBaseUrls = Array.from(
+  new Set(
+    [
+      ...configuredTrainingBaseUrls,
+      ...migrationBaseUrls,
+      "http://localhost:36197/api/mig",
+      "http://localhost:3001/api/mig",
+      "http://localhost:3000/api/mig",
+      "https://prismdashboard.org/api/mig",
+    ]
+      .filter((url): url is string => Boolean(url && url.trim().length > 0))
+      .map(toLegacyMigBaseUrl),
   ),
 );
 
@@ -126,7 +177,7 @@ const fetchMigrationEndpoint = async (path: string) => {
     [
       `Unable to reach migration endpoint for ${path}.`,
       `Tried: ${failures.join(" | ")}`,
-      "Set PRISM_TRAINING_MIGRATION_URL in prism/.env to the prism-training migration API base URL.",
+      "Set PRISM_TRAINING_MIGRATION_URL or PRISM_TRAINING_API_BASE_URL in prism/.env to the prism-training API host.",
     ].join(" "),
   );
 };
@@ -139,11 +190,7 @@ const fetchLegacyMigEndpoint = async (path: string) => {
 
   const failures: string[] = [];
 
-  const legacyBaseUrls = migrationBaseUrls.map((baseUrl) =>
-    baseUrl.replace(/\/api\/migration$/i, "/api/mig"),
-  );
-
-  for (const baseUrl of legacyBaseUrls) {
+  for (const baseUrl of legacyMigBaseUrls) {
     const requestUrl = `${baseUrl}${path}`;
 
     try {
@@ -180,7 +227,7 @@ const fetchLegacyMigEndpoint = async (path: string) => {
     [
       `Unable to reach legacy migration endpoint for ${path}.`,
       `Tried: ${failures.join(" | ")}`,
-      "Set PRISM_TRAINING_MIGRATION_URL in prism/.env to the prism-training migration API base URL.",
+      "Set PRISM_TRAINING_MIGRATION_URL or PRISM_TRAINING_API_BASE_URL in prism/.env to the prism-training API host.",
     ].join(" "),
   );
 };
