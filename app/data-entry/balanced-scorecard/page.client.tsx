@@ -155,6 +155,16 @@ const lockTemplateWorksheet = async (
   });
 };
 
+const applyBoldHeaderRow = (worksheet: import("exceljs").Worksheet) => {
+  const headerRow = worksheet.getRow(1);
+  headerRow.eachCell({ includeEmpty: true }, (cell) => {
+    cell.font = {
+      ...(cell.font ?? {}),
+      bold: true,
+    };
+  });
+};
+
 type PersistableObjective = ScorecardDraftObjectiveInput;
 
 type PersistableByLevel = {
@@ -1125,6 +1135,7 @@ export default function ScorecardPageClient({
       const headers = Object.keys(templateRows[0] ?? {});
 
       worksheet.addRow(headers);
+      applyBoldHeaderRow(worksheet);
       templateRows.forEach((row) => {
         worksheet.addRow(
           headers.map((header) => row[header as keyof TemplateRow]),

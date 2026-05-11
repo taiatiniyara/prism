@@ -57,6 +57,10 @@ export default async function ManagedListSettingsPage() {
           "description",
           "list",
           "parent",
+          {
+            name: "energy_resource_type",
+            display: "Energy Resource Type",
+          },
           "color",
           "is_active",
         ]}
@@ -89,6 +93,13 @@ export default async function ManagedListSettingsPage() {
               })),
             },
             {
+              key: "energy_resource_type_id",
+              type: "managed-list",
+              managedListName: "Energy Resource Type",
+              label: "Energy Resource Type",
+              required: false,
+            },
+            {
               key: "color",
               type: "color",
             },
@@ -112,6 +123,13 @@ export default async function ManagedListSettingsPage() {
                 label: m.name,
                 value: m.id,
               })),
+            },
+            {
+              key: "energy_resource_type_id",
+              type: "managed-list",
+              managedListName: "Energy Resource Type",
+              label: "Energy Resource Type",
+              required: false,
             },
             {
               key: "color",

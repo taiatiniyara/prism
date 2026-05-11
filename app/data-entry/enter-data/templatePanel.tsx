@@ -144,6 +144,16 @@ const lockTemplateWorksheet = async (
   });
 };
 
+const applyBoldHeaderRow = (worksheet: import("exceljs").Worksheet) => {
+  const headerRow = worksheet.getRow(1);
+  headerRow.eachCell({ includeEmpty: true }, (cell) => {
+    cell.font = {
+      ...(cell.font ?? {}),
+      bold: true,
+    };
+  });
+};
+
 const toNullableNumber = (value: unknown): number | null => {
   if (value == null) {
     return null;
@@ -284,6 +294,7 @@ export default function EnterDataTemplatePanel({
       );
 
       worksheet.addRow(headers);
+      applyBoldHeaderRow(worksheet);
       templateRows.forEach((row) => {
         worksheet.addRow(
           headers.map((header) => row[header as keyof TemplateRow]),

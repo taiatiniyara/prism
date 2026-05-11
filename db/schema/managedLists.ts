@@ -23,6 +23,7 @@ export const managedListItems = pgTable("managed_list_items", {
     .notNull()
     .references(() => managedLists.id),
   parent_id: integer("parent_id"),
+  energy_resource_type_id: integer("energy_resource_type_id"),
   name: varchar("name", { length: 255 }).notNull(),
   description: varchar("description", { length: 255 }),
   is_active: boolean("is_active").default(true).notNull(),
@@ -31,5 +32,6 @@ export const managedListItems = pgTable("managed_list_items", {
 export type ManagedListItem = typeof managedListItems.$inferSelect & {
   list?: string;
   parent?: string | null;
+  energy_resource_type?: string | null;
 };
 export type NewManagedListItem = typeof managedListItems.$inferInsert;

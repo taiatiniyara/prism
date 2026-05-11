@@ -12,6 +12,26 @@ import { generateRandomNumber } from "@/lib/utils";
 import { eq, like } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
+const toOptionalNumber = (value: unknown): number | null => {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string") {
+    const trimmed = value.trim();
+    if (trimmed.length === 0) {
+      return null;
+    }
+
+    const parsed = Number(trimmed);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  return null;
+};
+
 export async function GetAllManagedLists(filter?: {
   name?: string;
   excludeAll?: boolean;
@@ -43,7 +63,8 @@ export async function CreateManagedListItem(
 ): Promise<DataTableFormResponse<ManagedListItem>> {
   const query = db.insert(managedListItems).values({
     ...data,
-    parent_id: data.parent_id || null,
+    parent_id: toOptionalNumber(data.parent_id),
+    energy_resource_type_id: toOptionalNumber(data.energy_resource_type_id),
     is_active: true,
     id: generateRandomNumber(5),
   });
@@ -89,10 +110,16 @@ export async function GetAllManagedListItems(options?: {
       const parent = list.find(
         (l) => l.managed_list_items.id === item.managed_list_items.parent_id,
       )?.managed_list_items;
+      const energyResourceType = list.find(
+        (l) =>
+          l.managed_list_items.id ===
+          item.managed_list_items.energy_resource_type_id,
+      )?.managed_list_items;
       return {
         ...item.managed_list_items,
         list: item.managed_lists?.name,
         parent: parent?.name ?? null,
+        energy_resource_type: energyResourceType?.name ?? null,
       };
     });
 }
@@ -135,9 +162,21 @@ export async function UpdateManagedList(
 export async function UpdateManagedListItem(
   data: Partial<ManagedListItem>,
 ): Promise<DataTableFormResponse<ManagedListItem>> {
+  const updateData: Partial<ManagedListItem> = { ...data };
+
+  if ("parent_id" in data) {
+    updateData.parent_id = toOptionalNumber(data.parent_id);
+  }
+
+  if ("energy_resource_type_id" in data) {
+    updateData.energy_resource_type_id = toOptionalNumber(
+      data.energy_resource_type_id,
+    );
+  }
+
   const query = db
     .update(managedListItems)
-    .set(data)
+    .set(updateData)
     .where(eq(managedListItems.id, data.id!));
 
   const [result] = await query.returning();
