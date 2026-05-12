@@ -1,6 +1,8 @@
 "use server";
 
 import crypto from "node:crypto";
+import http from "node:http";
+import https from "node:https";
 import { db } from "@/db/connection";
 import { Role, roles, type UserStatus, user } from "@/db/schema/auth-schema";
 import { countries, Country, SubRegion, subRegions } from "@/db/schema/country";
@@ -130,11 +132,99 @@ const logMigrationError = (error: unknown) => {
   console.error("[migration] operation failed", error);
 };
 
-const fetchJsonEndpoint = async (requestUrl: string, headers: HeadersInit) => {
-  const response = await fetch(requestUrl, {
-    method: "GET",
-    headers,
+const isProtocolHeaderError = (error: unknown): boolean => {
+  if (!(error instanceof Error)) return false;
+  const message = error.message.toLowerCase();
+  return (
+    message.includes("response does not match the http/1.1 protocol") ||
+    message.includes("invalid header value char")
+  );
+};
+
+const toNodeHeaders = (headers: HeadersInit): Record<string, string> => {
+  if (headers instanceof Headers) {
+    const out: Record<string, string> = {};
+    headers.forEach((value, key) => {
+      out[key] = value;
+    });
+    return out;
+  }
+
+  if (Array.isArray(headers)) {
+    return Object.fromEntries(headers.map(([key, value]) => [key, value]));
+  }
+
+  return Object.fromEntries(
+    Object.entries(headers).map(([key, value]) => [key, String(value)]),
+  );
+};
+
+const requestWithInsecureHttpParser = async (
+  requestUrl: string,
+  headers: HeadersInit,
+): Promise<Response> => {
+  const url = new URL(requestUrl);
+  const transport = url.protocol === "https:" ? https : http;
+
+  return await new Promise<Response>((resolve, reject) => {
+    const req = transport.request(
+      requestUrl,
+      {
+        method: "GET",
+        headers: toNodeHeaders(headers),
+        // Upstream occasionally emits invalid header chars; this keeps migration
+        // pulls alive until edge/header config is corrected.
+        insecureHTTPParser: true,
+      },
+      (res) => {
+        const chunks: Buffer[] = [];
+
+        res.on("data", (chunk: Buffer | string) => {
+          chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+        });
+
+        res.on("end", () => {
+          const body = Buffer.concat(chunks);
+          const responseHeaders = new Headers();
+
+          for (const [key, value] of Object.entries(res.headers)) {
+            if (value == null) continue;
+            responseHeaders.set(
+              key,
+              Array.isArray(value) ? value.join(", ") : value,
+            );
+          }
+
+          resolve(
+            new Response(body, {
+              status: res.statusCode ?? 502,
+              headers: responseHeaders,
+            }),
+          );
+        });
+      },
+    );
+
+    req.on("error", reject);
+    req.end();
   });
+};
+
+const fetchJsonEndpoint = async (requestUrl: string, headers: HeadersInit) => {
+  let response: Response;
+
+  try {
+    response = await fetch(requestUrl, {
+      method: "GET",
+      headers,
+    });
+  } catch (error: unknown) {
+    if (!isProtocolHeaderError(error)) {
+      throw error;
+    }
+
+    response = await requestWithInsecureHttpParser(requestUrl, headers);
+  }
 
   if (!response.ok) {
     return {
