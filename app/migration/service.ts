@@ -89,8 +89,6 @@ const configuredTrainingBaseUrls = [
   process.env.PRISM_TRAINING_API_BASE_URL,
 ].filter((url): url is string => Boolean(url && url.trim().length > 0));
 
-const isProduction = process.env.NODE_ENV === "production";
-
 const defaultLocalMigrationBaseUrls = [
   "http://localhost:36197/api/migration",
   "http://localhost:3001/api/migration",
@@ -107,7 +105,9 @@ const migrationBaseUrls = Array.from(
   new Set(
     [
       ...configuredTrainingBaseUrls,
-      ...(isProduction ? [] : defaultLocalMigrationBaseUrls),
+      // Keep localhost fallbacks even in production. If public edge headers are
+      // malformed, direct local calls can still succeed on co-hosted deploys.
+      ...defaultLocalMigrationBaseUrls,
     ]
       .filter((url): url is string => Boolean(url && url.trim().length > 0))
       .map(toMigrationBaseUrl),
@@ -119,7 +119,7 @@ const legacyMigBaseUrls = Array.from(
     [
       ...configuredTrainingBaseUrls,
       ...migrationBaseUrls,
-      ...(isProduction ? [] : defaultLocalLegacyMigBaseUrls),
+      ...defaultLocalLegacyMigBaseUrls,
     ]
       .filter((url): url is string => Boolean(url && url.trim().length > 0))
       .map(toLegacyMigBaseUrl),
@@ -128,6 +128,39 @@ const legacyMigBaseUrls = Array.from(
 
 const logMigrationError = (error: unknown) => {
   console.error("[migration] operation failed", error);
+};
+
+const fetchJsonEndpoint = async (requestUrl: string, headers: HeadersInit) => {
+  const response = await fetch(requestUrl, {
+    method: "GET",
+    headers,
+  });
+
+  if (!response.ok) {
+    return {
+      ok: false as const,
+      message: `${requestUrl} -> HTTP ${response.status}`,
+      response,
+    };
+  }
+
+  const contentType = response.headers.get("content-type") ?? "";
+  if (contentType.toLowerCase().includes("application/json")) {
+    return {
+      ok: true as const,
+      response,
+    };
+  }
+
+  const preview = (await response.text())
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 140);
+  return {
+    ok: false as const,
+    message: `${requestUrl} -> expected JSON but got ${contentType || "unknown content-type"}${preview ? ` (body starts: ${preview})` : ""}`,
+    response,
+  };
 };
 
 const describeFetchError = (error: unknown): string => {
@@ -202,45 +235,50 @@ const fetchMigrationEndpoint = async (path: string) => {
     ...(migrationApiKey ? { "x-migration-key": migrationApiKey } : {}),
   };
 
-  const failures: string[] = [];
+  const migrationFailures: string[] = [];
 
   for (const baseUrl of migrationBaseUrls) {
     const requestUrl = `${baseUrl}${path}`;
 
     try {
-      const response = await fetch(requestUrl, {
-        method: "GET",
-        headers,
-      });
-
-      if (response.ok) {
-        const contentType = response.headers.get("content-type") ?? "";
-        if (contentType.toLowerCase().includes("application/json")) {
-          return response;
-        }
-
-        const preview = (await response.text())
-          .replace(/\s+/g, " ")
-          .trim()
-          .slice(0, 140);
-
-        const failMsg = `${requestUrl} -> expected JSON but got ${contentType || "unknown content-type"}${preview ? ` (body starts: ${preview})` : ""}`;
-        failures.push(failMsg);
-        continue;
+      const result = await fetchJsonEndpoint(requestUrl, headers);
+      if (result.ok) {
+        return result.response;
       }
-
-      const failMsg = `${requestUrl} -> HTTP ${response.status}`;
-      failures.push(failMsg);
+      migrationFailures.push(result.message);
     } catch (error: unknown) {
       const message = describeFetchError(error);
-      const failMsg = `${requestUrl} -> ${message}`;
-      failures.push(failMsg);
+      migrationFailures.push(`${requestUrl} -> ${message}`);
     }
   }
 
+  const legacyFallbackFailures: string[] = [];
+
+  for (const baseUrl of legacyMigBaseUrls) {
+    const requestUrl = `${baseUrl}${path}`;
+
+    try {
+      const result = await fetchJsonEndpoint(requestUrl, headers);
+      if (result.ok) {
+        return result.response;
+      }
+      legacyFallbackFailures.push(result.message);
+    } catch (error: unknown) {
+      const message = describeFetchError(error);
+      legacyFallbackFailures.push(`${requestUrl} -> ${message}`);
+    }
+  }
+
+  const allFailures = [
+    ...migrationFailures,
+    ...legacyFallbackFailures.map(
+      (message) => `${message} [legacy /api/mig fallback]`,
+    ),
+  ];
+
   const errorMsg = [
     `Unable to reach migration endpoint for ${path}.`,
-    `Tried: ${failures.join(" | ")}`,
+    `Tried: ${allFailures.join(" | ")}`,
     "Set PRISM_TRAINING_MIGRATION_URL or PRISM_TRAINING_API_BASE_URL in prism/.env to the prism-training API host.",
   ].join(" ");
   throw new Error(errorMsg);
@@ -258,29 +296,11 @@ const fetchLegacyMigEndpoint = async (path: string) => {
     const requestUrl = `${baseUrl}${path}`;
 
     try {
-      const response = await fetch(requestUrl, {
-        method: "GET",
-        headers,
-      });
-
-      if (response.ok) {
-        const contentType = response.headers.get("content-type") ?? "";
-        if (contentType.toLowerCase().includes("application/json")) {
-          return response;
-        }
-
-        const preview = (await response.text())
-          .replace(/\s+/g, " ")
-          .trim()
-          .slice(0, 140);
-
-        failures.push(
-          `${requestUrl} -> expected JSON but got ${contentType || "unknown content-type"}${preview ? ` (body starts: ${preview})` : ""}`,
-        );
-        continue;
+      const result = await fetchJsonEndpoint(requestUrl, headers);
+      if (result.ok) {
+        return result.response;
       }
-
-      failures.push(`${requestUrl} -> HTTP ${response.status}`);
+      failures.push(result.message);
     } catch (error: unknown) {
       const message = describeFetchError(error);
       failures.push(`${requestUrl} -> ${message}`);
