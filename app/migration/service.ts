@@ -41,69 +41,7 @@ const JSON_HEADERS = {
 } as const;
 const migrationApiKey = (
   process.env.PRISM_TRAINING_MIGRATION_KEY ?? process.env.MIGRATION_API_KEY
-)?.trim(); // Trim whitespace that might cause HTTP header issues
-
-// Detailed API key inspection
-if (migrationApiKey) {
-  const charCodes = Array.from(migrationApiKey).map((c, i) => ({
-    index: i,
-    char: c === "\n" ? "\\n" : c === "\r" ? "\\r" : c === "\t" ? "\\t" : c,
-    code: c.charCodeAt(0),
-    hex: `0x${c.charCodeAt(0).toString(16).padStart(2, "0")}`,
-    isControl: c.charCodeAt(0) < 32,
-    isExtended: c.charCodeAt(0) > 126,
-  }));
-  const hasInvalidHttpChars = /[\x00-\x1F\x7F-\xFF]|[\n\r\t\v]/.test(
-    migrationApiKey,
-  );
-  const invalidChars = charCodes.filter(
-    (c) => c.code < 32 || c.code > 126 || c.code === 127,
-  );
-
-  // Check for common HTTP-invalid characters
-  const httpInvalidChars = charCodes.filter((c) => {
-    // HTTP headers cannot contain certain characters
-    const invalidForHttp =
-      c.code < 32 ||
-      c.code === 127 ||
-      c.char === " " ||
-      c.char === ":" ||
-      c.char === "," ||
-      c.char === ";";
-    return invalidForHttp;
-  });
-
-  console.log("[migration:init] API Key Full Analysis:", {
-    length: migrationApiKey.length,
-    hasInvalidHttpChars,
-    invalidCharCount: invalidChars.length,
-    httpInvalidCount: httpInvalidChars.length,
-    allChars: charCodes,
-    httpInvalidChars: httpInvalidChars.length > 0 ? httpInvalidChars : "NONE",
-    preview: migrationApiKey.slice(0, 30),
-    trimmedLength: migrationApiKey.trim().length,
-    isTrimmed: migrationApiKey !== migrationApiKey.trim(),
-    source: process.env.PRISM_TRAINING_MIGRATION_KEY
-      ? "PRISM_TRAINING_MIGRATION_KEY"
-      : "MIGRATION_API_KEY",
-  });
-
-  // Also log the raw key for debugging
-  console.log(
-    "[migration:init] API Key (raw):",
-    JSON.stringify(migrationApiKey),
-  );
-}
-
-console.log("[migration:init] Environment variables:", {
-  PRISM_TRAINING_MIGRATION_URL: process.env.PRISM_TRAINING_MIGRATION_URL,
-  PRISM_TRAINING_API_BASE_URL: process.env.PRISM_TRAINING_API_BASE_URL,
-  PRISM_TRAINING_MIGRATION_KEY_SET: Boolean(
-    process.env.PRISM_TRAINING_MIGRATION_KEY,
-  ),
-  MIGRATION_API_KEY_SET: Boolean(process.env.MIGRATION_API_KEY),
-  NODE_ENV: process.env.NODE_ENV,
-});
+)?.trim();
 
 const normalizeMigrationBaseUrl = (value: string): string => {
   const trimmed = value.trim();
@@ -112,53 +50,37 @@ const normalizeMigrationBaseUrl = (value: string): string => {
 
 const toMigrationBaseUrl = (value: string): string => {
   const normalized = normalizeMigrationBaseUrl(value);
-  console.log("[migration:url] toMigrationBaseUrl input:", value);
 
   if (normalized.toLowerCase().endsWith("/api/migration")) {
-    console.log("[migration:url] -> Already has /api/migration", normalized);
     return normalized;
   }
   if (normalized.toLowerCase().endsWith("/api/mig")) {
     const result = `${normalized.slice(0, -4)}/migration`;
-    console.log(
-      "[migration:url] -> Replaced /api/mig with /api/migration",
-      result,
-    );
     return result;
   }
   if (normalized.toLowerCase().endsWith("/api")) {
     const result = `${normalized}/migration`;
-    console.log("[migration:url] -> Added /migration to /api", result);
     return result;
   }
   const result = `${normalized}/api/migration`;
-  console.log("[migration:url] -> Added /api/migration", result);
   return result;
 };
 
 const toLegacyMigBaseUrl = (value: string): string => {
   const normalized = normalizeMigrationBaseUrl(value);
-  console.log("[migration:url] toLegacyMigBaseUrl input:", value);
 
   if (normalized.toLowerCase().endsWith("/api/mig")) {
-    console.log("[migration:url] -> Already has /api/mig", normalized);
     return normalized;
   }
   if (normalized.toLowerCase().endsWith("/api/migration")) {
     const result = `${normalized.slice(0, -10)}/mig`;
-    console.log(
-      "[migration:url] -> Replaced /api/migration with /api/mig",
-      result,
-    );
     return result;
   }
   if (normalized.toLowerCase().endsWith("/api")) {
     const result = `${normalized}/mig`;
-    console.log("[migration:url] -> Added /mig to /api", result);
     return result;
   }
   const result = `${normalized}/api/mig`;
-  console.log("[migration:url] -> Added /api/mig", result);
   return result;
 };
 
@@ -203,13 +125,6 @@ const legacyMigBaseUrls = Array.from(
       .map(toLegacyMigBaseUrl),
   ),
 );
-
-console.log("[migration:urls] Configured URLs:", {
-  configuredTrainingBaseUrls,
-  isProduction,
-  migrationBaseUrls,
-  legacyMigBaseUrls,
-});
 
 const logMigrationError = (error: unknown) => {
   console.error("[migration] operation failed", error);
@@ -282,80 +197,25 @@ const toUserStatus = (value: unknown): UserStatus => {
 };
 
 const fetchMigrationEndpoint = async (path: string) => {
-  console.log(
-    "[migration:fetch] Starting fetchMigrationEndpoint for path:",
-    path,
-  );
-  console.log("[migration:fetch] Attempting URLs:", migrationBaseUrls);
-
   const headers = {
     ...JSON_HEADERS,
     ...(migrationApiKey ? { "x-migration-key": migrationApiKey } : {}),
   };
-  console.log("[migration:fetch] Headers:", {
-    "Content-Type": headers["Content-Type"],
-    Accept: headers["Accept"],
-    "x-migration-key": migrationApiKey
-      ? `SET (length: ${migrationApiKey.length})`
-      : "NOT SET",
-  });
 
-  // Validate headers for invalid characters
-  for (const [key, value] of Object.entries(headers)) {
-    if (typeof value === "string") {
-      // Check for control characters and non-printable ASCII
-      const chars = Array.from(value).map((c, i) => ({
-        index: i,
-        char: c === "\n" ? "\\n" : c === "\r" ? "\\r" : c === "\t" ? "\\t" : c,
-        code: c.charCodeAt(0),
-        hex: `0x${c.charCodeAt(0).toString(16).padStart(2, "0")}`,
-        isValid: c.charCodeAt(0) >= 32 && c.charCodeAt(0) <= 126,
-        isControl: c.charCodeAt(0) < 32,
-        isExtended: c.charCodeAt(0) > 126,
-      }));
-      const invalidChars = chars.filter((c) => !c.isValid);
-      if (invalidChars.length > 0) {
-        console.warn(
-          `[migration:fetch] ⚠️ Header "${key}" contains ${invalidChars.length} invalid character(s):`,
-          {
-            totalLength: value.length,
-            invalidChars,
-            fullChars: chars,
-          },
-        );
-      } else {
-        console.log(
-          `[migration:fetch] ✓ Header "${key}" is valid (${value.length} chars). First 5:`,
-          chars.slice(0, 5),
-        );
-      }
-    }
-  }
   const failures: string[] = [];
 
   for (const baseUrl of migrationBaseUrls) {
     const requestUrl = `${baseUrl}${path}`;
-    console.log("[migration:fetch] Trying URL:", requestUrl);
 
     try {
-      console.log("[migration:fetch] Making fetch request...");
       const response = await fetch(requestUrl, {
         method: "GET",
         headers,
       });
 
-      console.log("[migration:fetch] Response received:", {
-        status: response.status,
-        ok: response.ok,
-        statusText: response.statusText,
-        contentType: response.headers.get("content-type"),
-        url: response.url,
-      });
-
       if (response.ok) {
         const contentType = response.headers.get("content-type") ?? "";
         if (contentType.toLowerCase().includes("application/json")) {
-          console.log("[migration:fetch] ✓ Success! Got JSON response");
           return response;
         }
 
@@ -365,21 +225,15 @@ const fetchMigrationEndpoint = async (path: string) => {
           .slice(0, 140);
 
         const failMsg = `${requestUrl} -> expected JSON but got ${contentType || "unknown content-type"}${preview ? ` (body starts: ${preview})` : ""}`;
-        console.log(
-          "[migration:fetch] ✗ Got response but wrong content-type:",
-          failMsg,
-        );
         failures.push(failMsg);
         continue;
       }
 
       const failMsg = `${requestUrl} -> HTTP ${response.status}`;
-      console.log("[migration:fetch] ✗ Got HTTP error:", failMsg);
       failures.push(failMsg);
     } catch (error: unknown) {
       const message = describeFetchError(error);
       const failMsg = `${requestUrl} -> ${message}`;
-      console.log("[migration:fetch] ✗ Fetch error:", failMsg);
       failures.push(failMsg);
     }
   }
@@ -389,17 +243,10 @@ const fetchMigrationEndpoint = async (path: string) => {
     `Tried: ${failures.join(" | ")}`,
     "Set PRISM_TRAINING_MIGRATION_URL or PRISM_TRAINING_API_BASE_URL in prism/.env to the prism-training API host.",
   ].join(" ");
-  console.log("[migration:fetch] ✗ All attempts failed:", errorMsg);
   throw new Error(errorMsg);
 };
 
 const fetchLegacyMigEndpoint = async (path: string) => {
-  console.log(
-    "[migration:legacy-fetch] Starting fetchLegacyMigEndpoint for path:",
-    path,
-  );
-  console.log("[migration:legacy-fetch] Attempting URLs:", legacyMigBaseUrls);
-
   const headers = {
     ...JSON_HEADERS,
     ...(migrationApiKey ? { "x-migration-key": migrationApiKey } : {}),
@@ -409,19 +256,11 @@ const fetchLegacyMigEndpoint = async (path: string) => {
 
   for (const baseUrl of legacyMigBaseUrls) {
     const requestUrl = `${baseUrl}${path}`;
-    console.log("[migration:legacy-fetch] Trying URL:", requestUrl);
 
     try {
-      console.log("[migration:legacy-fetch] Making fetch request...");
       const response = await fetch(requestUrl, {
         method: "GET",
         headers,
-      });
-      console.log("[migration:legacy-fetch] Response received:", {
-        status: response.status,
-        ok: response.ok,
-        statusText: response.statusText,
-        contentType: response.headers.get("content-type"),
       });
 
       if (response.ok) {
@@ -666,15 +505,10 @@ export async function retrieveUtilityContextData(options?: {
       }
     }
 
-    const backfill = await backfillUtilityContextDataEntriesFromPreviousPeriods(
-      {
-        reportPeriodId: options?.reportPeriodId,
-      },
-    );
+    await backfillUtilityContextDataEntriesFromPreviousPeriods({
+      reportPeriodId: options?.reportPeriodId,
+    });
 
-    console.info(
-      `[migration] utility context done: inserted=${inserted}, updated=${updated}, skipped=${skipped}, backfilled=${backfill.inserted}, backfillPeriods=${backfill.targetPeriodsConsidered}, backfillSkipped=${backfill.skippedNoPreviousPeriodData}`,
-    );
     res = true;
   } catch (error: unknown) {
     logMigrationError(error);
@@ -833,15 +667,9 @@ export async function retrieveCountryContextData(options?: {
       }
     }
 
-    const backfill = await backfillCountryContextDataEntriesFromPreviousPeriods(
-      {
-        reportPeriodId: options?.reportPeriodId,
-      },
-    );
-
-    console.info(
-      `[migration] country context done: inserted=${inserted}, updated=${updated}, skipped=${skipped}, backfilled=${backfill.inserted}, backfillPeriods=${backfill.targetPeriodsConsidered}, backfillSkipped=${backfill.skippedNoPreviousPeriodData}`,
-    );
+    await backfillCountryContextDataEntriesFromPreviousPeriods({
+      reportPeriodId: options?.reportPeriodId,
+    });
 
     res = true;
   } catch (error: unknown) {
@@ -890,9 +718,6 @@ export async function retrieveRoles() {
       }
     }
 
-    console.info(
-      `[migration] roles done: inserted=${inserted}, updated=${updated}, source=${list.length}`,
-    );
     res = true;
   } catch (error: unknown) {
     logMigrationError(error);
@@ -999,9 +824,6 @@ export async function retrieveUsers() {
       inserted += 1;
     }
 
-    console.log(
-      `[migration] users done: inserted=${inserted}, updated=${updated}`,
-    );
     res = true;
   } catch (error: unknown) {
     logMigrationError(error);
@@ -1141,9 +963,6 @@ export async function retrieveUtilityData() {
       await db.insert(reportPeriods).values(normalizedReportPeriods);
     }
 
-    console.info(
-      `[migration] utility data done: orgs=${normalizedOrgs.length}/${nonExistingOrgs.length}, serviceAreas=${normalizedServiceAreas.length}/${nonExistingSAs.length}, reportPeriods=${normalizedReportPeriods.length}/${nonExistingRPs.length}`,
-    );
     res = true;
   } catch (error: unknown) {
     logMigrationError(error);
@@ -1451,9 +1270,6 @@ export async function retrieveEnergyResources() {
       );
     }
 
-    console.info(
-      `[migration] energy resources done: inserted=${nonExistingEnergyResources.length}, autoFilledPeriodEntries=${autoFilledPeriodEntries}`,
-    );
     res = true;
   } catch (error: unknown) {
     logMigrationError(error);
@@ -1583,9 +1399,6 @@ export async function backfillEnergyResourcePeriods() {
       }
     }
 
-    console.info(
-      `[migration] energy resource period backfill done: resourcesUpdated=${resourcesUpdated}, periodEntriesAdded=${periodEntriesAdded}, periodEntriesActivated=${periodEntriesActivated}, periodEntriesCapacityFilled=${periodEntriesCapacityFilled}`,
-    );
     res = true;
   } catch (error: unknown) {
     logMigrationError(error);
@@ -2266,9 +2079,6 @@ export async function retrieveDataEntries(options?: {
   let skippedMissingRequiredFk = 0;
   let nulledInvalidOptionalFk = 0;
   let mergedByUniqueKeyCollision = 0;
-  let utilityContextBackfilled = 0;
-  let utilityContextBackfillSkipped = 0;
-  let utilityContextBackfillPeriods = 0;
   const skippedSamples: Array<{
     sourceId: number | null;
     reason: string;
@@ -2406,9 +2216,6 @@ export async function retrieveDataEntries(options?: {
       }
 
       const page: SourceDataEntryPage = await call.json();
-      console.info(
-        `[migration:dataEntry] fetched page: returned=${page.pagination.returned}, hasMore=${page.pagination.hasMore}, nextCursor=${page.pagination.nextCursor}`,
-      );
 
       for (const row of page.dataEntry) {
         const reportPeriodId = normalizeRequiredId(row.report_period_id);
@@ -2673,24 +2480,11 @@ export async function retrieveDataEntries(options?: {
       hasMore = page.pagination.hasMore === true && cursor != null;
     }
 
-    const utilityContextBackfill =
-      await backfillUtilityContextDataEntriesFromPreviousPeriods({
-        reportPeriodId: options?.reportPeriodId,
-      });
-    utilityContextBackfilled = utilityContextBackfill.inserted;
-    utilityContextBackfillSkipped =
-      utilityContextBackfill.skippedNoPreviousPeriodData;
-    utilityContextBackfillPeriods =
-      utilityContextBackfill.targetPeriodsConsidered;
+    await backfillUtilityContextDataEntriesFromPreviousPeriods({
+      reportPeriodId: options?.reportPeriodId,
+    });
 
-    console.info(
-      `[migration] data entries done: inserted=${inserted}, updated=${updated}, skipped=${skipped}, skippedOutOfRange=${skippedOutOfRange}, skippedMissingInputDefMapping=${skippedMissingInputDefMapping}, skippedMissingReportPeriod=${skippedMissingReportPeriod}, skippedMissingRequiredFk=${skippedMissingRequiredFk}, mappedByDlDefMapping=${mappedByDlDefMapping}, mappedByMetadata=${mappedByMetadata}, nulledInvalidOptionalFk=${nulledInvalidOptionalFk}, mergedByUniqueKeyCollision=${mergedByUniqueKeyCollision}, utilityContextBackfilled=${utilityContextBackfilled}, utilityContextBackfillPeriods=${utilityContextBackfillPeriods}, utilityContextBackfillSkipped=${utilityContextBackfillSkipped}`,
-    );
     if (skippedSamples.length > 0) {
-      console.warn(
-        `[migration] data entries skipped sample (${skippedSamples.length} captured, max=100):`,
-        skippedSamples,
-      );
     }
     res = true;
   } catch (error: unknown) {
@@ -2936,9 +2730,6 @@ export async function retrieveGenerationRelevance(options?: {
       hasMore = page.pagination.hasMore === true && cursor != null;
     }
 
-    console.info(
-      `[migration] generation relevance done: inserted=${inserted}, updated=${updated}, skipped=${skipped}, skippedMissingRequiredFk=${skippedMissingRequiredFk}`,
-    );
     res = true;
   } catch (error: unknown) {
     logMigrationError(error);
@@ -3124,9 +2915,6 @@ export async function retrieveTransmissionRelevance(options?: {
       hasMore = page.pagination.hasMore === true && cursor != null;
     }
 
-    console.info(
-      `[migration] transmission relevance done: inserted=${inserted}, updated=${updated}, skipped=${skipped}, skippedMissingRequiredFk=${skippedMissingRequiredFk}`,
-    );
     res = true;
   } catch (error: unknown) {
     logMigrationError(error);
@@ -3144,16 +2932,12 @@ export async function retrieveTariffRelevance(options?: {
   batchSize?: number;
 }) {
   await assertDevMigrationAccess();
-  console.log("[migration:tariffRelevance] Starting retrieveTariffRelevance", {
-    options,
-  });
 
   let res = false;
   let cursor: number | null = null;
   let hasMore = true;
 
   const batchSize = Math.max(1, Math.min(2000, options?.batchSize ?? 500));
-  console.log("[migration:tariffRelevance] Batch size:", batchSize);
 
   let inserted = 0;
   let updated = 0;
@@ -3218,18 +3002,8 @@ export async function retrieveTariffRelevance(options?: {
         params.set("reportPeriodId", String(options.reportPeriodId));
       }
 
-      console.log("[migration:tariffRelevance] Fetching batch:", {
-        cursor,
-        limit: batchSize,
-        queryString: params.toString(),
-      });
-
       const call = await fetchMigrationEndpoint(
         `/tariffRelevance?${params.toString()}`,
-      );
-
-      console.log(
-        "[migration:tariffRelevance] Batch fetch successful, parsing JSON...",
       );
 
       if (!call.ok) {
@@ -3239,12 +3013,6 @@ export async function retrieveTariffRelevance(options?: {
       }
 
       const page: SourceTariffRelevancePage = await call.json();
-      console.log(
-        "[migration:tariffRelevance] Batch parsed. Items count:",
-        page.tariffRelevance?.length ?? 0,
-        "hasMore:",
-        page.pagination.hasMore,
-      );
 
       for (const row of page.tariffRelevance) {
         const reportPeriodId = toNumberOrNull(row.report_period_id);
@@ -3342,18 +3110,8 @@ export async function retrieveTariffRelevance(options?: {
 
       cursor = page.pagination.nextCursor;
       hasMore = page.pagination.hasMore === true && cursor != null;
-      console.log("[migration:tariffRelevance] Batch processed:", {
-        inserted,
-        updated,
-        skipped,
-        cursor,
-        hasMore,
-      });
     }
 
-    console.info(
-      `[migration:tariffRelevance] SUCCESS: inserted=${inserted}, updated=${updated}, skipped=${skipped}, skippedMissingRequiredFk=${skippedMissingRequiredFk}`,
-    );
     res = true;
   } catch (error: unknown) {
     console.error(
