@@ -8,6 +8,7 @@ import {
   DataEntryComment,
   dataEntries,
   DataEntryStatusId,
+  generationRelevance,
   InputDefinition,
   inputDlDefMappings,
   inputDefinitions,
@@ -30,7 +31,7 @@ import {
   serviceAreas,
 } from "@/db/schema/utility";
 import { generateRandomNumber } from "@/lib/utils";
-import { and, eq, gt, inArray, isNull } from "drizzle-orm";
+import { and, desc, eq, gt, inArray, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 const JSON_HEADERS = {
@@ -2374,6 +2375,640 @@ export async function retrieveDataEntries(options?: {
   }
 
   revalidatePath("/migration");
+  return res;
+}
+
+type SourceGenerationRelevanceRow = {
+  source_id?: number;
+  utility_id?: number | null;
+  report_period_id?: number | null;
+  service_area_id?: number | null;
+  training_dl_def_id?: number | string | null;
+  energy_provider_id?: number | null;
+  energy_source_id?: number | null;
+  is_relevant?: boolean | null;
+  is_deleted?: boolean | null;
+  updated_at?: string | Date | null;
+};
+
+type SourceGenerationRelevancePage = {
+  generationRelevance: SourceGenerationRelevanceRow[];
+  pagination: {
+    nextCursor: number | null;
+    hasMore: boolean;
+    returned: number;
+  };
+};
+
+type SourceTransmissionRelevanceRow = {
+  source_id?: number;
+  utility_id?: number | null;
+  report_period_id?: number | null;
+  service_area_id?: number | null;
+  training_dl_def_id?: number | string | null;
+  is_relevant?: boolean | null;
+  is_deleted?: boolean | null;
+  updated_at?: string | Date | null;
+};
+
+type SourceTransmissionRelevancePage = {
+  transmissionRelevance: SourceTransmissionRelevanceRow[];
+  pagination: {
+    nextCursor: number | null;
+    hasMore: boolean;
+    returned: number;
+  };
+};
+
+type SourceTariffRelevanceRow = {
+  source_id?: number;
+  utility_id?: number | null;
+  report_period_id?: number | null;
+  service_area_id?: number | null;
+  training_dl_def_id?: number | string | null;
+  payment_mode_id?: number | null;
+  customer_type_id?: number | null;
+  is_relevant?: boolean | null;
+  is_deleted?: boolean | null;
+  updated_at?: string | Date | null;
+};
+
+type SourceTariffRelevancePage = {
+  tariffRelevance: SourceTariffRelevanceRow[];
+  pagination: {
+    nextCursor: number | null;
+    hasMore: boolean;
+    returned: number;
+  };
+};
+
+export async function retrieveGenerationRelevance(options?: {
+  reportPeriodId?: number;
+  batchSize?: number;
+}) {
+  let res = false;
+  let cursor: number | null = null;
+  let hasMore = true;
+
+  const batchSize = Math.max(1, Math.min(2000, options?.batchSize ?? 500));
+
+  let inserted = 0;
+  let updated = 0;
+  let skipped = 0;
+  let skippedMissingRequiredFk = 0;
+
+  const mappingRows = await db
+    .select({
+      trainingDlDefId: inputDlDefMappings.training_dl_def_id,
+      inputDefId: inputDlDefMappings.input_def_id,
+      updatedAt: inputDlDefMappings.updated_at,
+    })
+    .from(inputDlDefMappings);
+
+  const inputByTrainingDlDefId = new Map<
+    number,
+    { inputDefId: number; updatedAt: Date | null }
+  >();
+
+  for (const mapping of mappingRows) {
+    const existing = inputByTrainingDlDefId.get(mapping.trainingDlDefId);
+    if (!existing) {
+      inputByTrainingDlDefId.set(mapping.trainingDlDefId, {
+        inputDefId: mapping.inputDefId,
+        updatedAt: mapping.updatedAt,
+      });
+      continue;
+    }
+
+    const existingTime = existing.updatedAt?.getTime() ?? 0;
+    const currentTime = mapping.updatedAt?.getTime() ?? 0;
+    if (currentTime >= existingTime) {
+      inputByTrainingDlDefId.set(mapping.trainingDlDefId, {
+        inputDefId: mapping.inputDefId,
+        updatedAt: mapping.updatedAt,
+      });
+    }
+  }
+
+  const [targetReportPeriods, targetServiceAreas, targetManagedListItems] =
+    await Promise.all([
+      db.select({ id: reportPeriods.id }).from(reportPeriods),
+      db.select({ id: serviceAreas.id }).from(serviceAreas),
+      db.select({ id: managedListItems.id }).from(managedListItems),
+    ]);
+
+  const targetReportPeriodIds = new Set(targetReportPeriods.map((r) => r.id));
+  const targetServiceAreaIds = new Set(targetServiceAreas.map((r) => r.id));
+  const targetManagedListItemIds = new Set(
+    targetManagedListItems.map((r) => r.id),
+  );
+
+  try {
+    while (hasMore) {
+      const params = new URLSearchParams();
+      params.set("limit", String(batchSize));
+
+      if (cursor != null) {
+        params.set("cursor", String(cursor));
+      }
+      if (options?.reportPeriodId != null) {
+        params.set("reportPeriodId", String(options.reportPeriodId));
+      }
+
+      const call = await fetchMigrationEndpoint(
+        `/generationRelevance?${params.toString()}`,
+      );
+      if (!call.ok) {
+        throw new Error(
+          `Generation relevance migration API failed: ${call.status}`,
+        );
+      }
+
+      const page: SourceGenerationRelevancePage = await call.json();
+
+      for (const row of page.generationRelevance) {
+        const reportPeriodId = toNumberOrNull(row.report_period_id);
+        const serviceAreaId = toNumberOrNull(row.service_area_id);
+        const sourceTrainingDlDefId = toNumberOrNull(row.training_dl_def_id);
+        const energyProviderId = toNumberOrNull(row.energy_provider_id);
+        const energySourceId = toNumberOrNull(row.energy_source_id);
+
+        if (
+          reportPeriodId == null ||
+          serviceAreaId == null ||
+          sourceTrainingDlDefId == null ||
+          energyProviderId == null ||
+          energySourceId == null
+        ) {
+          skippedMissingRequiredFk += 1;
+          skipped += 1;
+          continue;
+        }
+
+        if (
+          !targetReportPeriodIds.has(reportPeriodId) ||
+          !targetServiceAreaIds.has(serviceAreaId) ||
+          !targetManagedListItemIds.has(energyProviderId) ||
+          !targetManagedListItemIds.has(energySourceId)
+        ) {
+          skippedMissingRequiredFk += 1;
+          skipped += 1;
+          continue;
+        }
+
+        const mappedInput = inputByTrainingDlDefId.get(sourceTrainingDlDefId);
+        const inputDefId = mappedInput?.inputDefId ?? null;
+
+        if (inputDefId == null) {
+          skipped += 1;
+          continue;
+        }
+
+        const updatedAt = row.updated_at
+          ? new Date(row.updated_at)
+          : new Date();
+
+        const [existing] = await db
+          .select({ id: generationRelevance.id })
+          .from(generationRelevance)
+          .where(
+            and(
+              eq(generationRelevance.report_period_id, reportPeriodId),
+              eq(generationRelevance.service_area_id, serviceAreaId),
+              eq(generationRelevance.input_def_id, inputDefId),
+              eq(generationRelevance.energy_provider_id, energyProviderId),
+              eq(generationRelevance.energy_source_id, energySourceId),
+              isNull(generationRelevance.energy_resource_type_id),
+            ),
+          )
+          .limit(1);
+
+        const payload = {
+          report_period_id: reportPeriodId,
+          service_area_id: serviceAreaId,
+          input_def_id: inputDefId,
+          energy_provider_id: energyProviderId,
+          energy_source_id: energySourceId,
+          energy_resource_type_id: null,
+          is_relevant: row.is_relevant ?? true,
+          is_deleted: row.is_deleted ?? false,
+          updatedAt,
+          updatedById: null,
+        };
+
+        if (existing) {
+          await db
+            .update(generationRelevance)
+            .set(payload)
+            .where(eq(generationRelevance.id, existing.id));
+          updated += 1;
+        } else {
+          await db.insert(generationRelevance).values(payload);
+          inserted += 1;
+        }
+      }
+
+      cursor = page.pagination.nextCursor;
+      hasMore = page.pagination.hasMore === true && cursor != null;
+    }
+
+    console.info(
+      `[migration] generation relevance done: inserted=${inserted}, updated=${updated}, skipped=${skipped}, skippedMissingRequiredFk=${skippedMissingRequiredFk}`,
+    );
+    res = true;
+  } catch (error: unknown) {
+    logMigrationError(error);
+  }
+
+  revalidatePath("/migration");
+  revalidatePath("/settings/relevance");
+  revalidatePath("/data-entry");
+
+  return res;
+}
+
+export async function retrieveTransmissionRelevance(options?: {
+  reportPeriodId?: number;
+  batchSize?: number;
+}) {
+  let res = false;
+  let cursor: number | null = null;
+  let hasMore = true;
+
+  const batchSize = Math.max(1, Math.min(2000, options?.batchSize ?? 500));
+
+  let inserted = 0;
+  let updated = 0;
+  let skipped = 0;
+  let skippedMissingRequiredFk = 0;
+
+  const mappingRows = await db
+    .select({
+      trainingDlDefId: inputDlDefMappings.training_dl_def_id,
+      inputDefId: inputDlDefMappings.input_def_id,
+      updatedAt: inputDlDefMappings.updated_at,
+    })
+    .from(inputDlDefMappings);
+
+  const inputByTrainingDlDefId = new Map<
+    number,
+    { inputDefId: number; updatedAt: Date | null }
+  >();
+
+  for (const mapping of mappingRows) {
+    const existing = inputByTrainingDlDefId.get(mapping.trainingDlDefId);
+    if (!existing) {
+      inputByTrainingDlDefId.set(mapping.trainingDlDefId, {
+        inputDefId: mapping.inputDefId,
+        updatedAt: mapping.updatedAt,
+      });
+      continue;
+    }
+
+    const existingTime = existing.updatedAt?.getTime() ?? 0;
+    const currentTime = mapping.updatedAt?.getTime() ?? 0;
+    if (currentTime >= existingTime) {
+      inputByTrainingDlDefId.set(mapping.trainingDlDefId, {
+        inputDefId: mapping.inputDefId,
+        updatedAt: mapping.updatedAt,
+      });
+    }
+  }
+
+  const [targetReportPeriods, targetServiceAreas] = await Promise.all([
+    db.select({ id: reportPeriods.id }).from(reportPeriods),
+    db.select({ id: serviceAreas.id }).from(serviceAreas),
+  ]);
+
+  const targetReportPeriodIds = new Set(targetReportPeriods.map((r) => r.id));
+  const targetServiceAreaIds = new Set(targetServiceAreas.map((r) => r.id));
+
+  try {
+    while (hasMore) {
+      const params = new URLSearchParams();
+      params.set("limit", String(batchSize));
+
+      if (cursor != null) {
+        params.set("cursor", String(cursor));
+      }
+      if (options?.reportPeriodId != null) {
+        params.set("reportPeriodId", String(options.reportPeriodId));
+      }
+
+      const call = await fetchMigrationEndpoint(
+        `/transmissionRelevance?${params.toString()}`,
+      );
+
+      if (!call.ok) {
+        throw new Error(
+          `Transmission relevance migration API failed: ${call.status}`,
+        );
+      }
+
+      const page: SourceTransmissionRelevancePage = await call.json();
+
+      for (const row of page.transmissionRelevance) {
+        const reportPeriodId = toNumberOrNull(row.report_period_id);
+        const serviceAreaId = toNumberOrNull(row.service_area_id);
+        const sourceTrainingDlDefId = toNumberOrNull(row.training_dl_def_id);
+
+        if (
+          reportPeriodId == null ||
+          serviceAreaId == null ||
+          sourceTrainingDlDefId == null
+        ) {
+          skippedMissingRequiredFk += 1;
+          skipped += 1;
+          continue;
+        }
+
+        if (
+          !targetReportPeriodIds.has(reportPeriodId) ||
+          !targetServiceAreaIds.has(serviceAreaId)
+        ) {
+          skippedMissingRequiredFk += 1;
+          skipped += 1;
+          continue;
+        }
+
+        const mappedInput = inputByTrainingDlDefId.get(sourceTrainingDlDefId);
+        const inputDefId = mappedInput?.inputDefId ?? null;
+
+        if (inputDefId == null) {
+          skipped += 1;
+          continue;
+        }
+
+        const [existing] = await db
+          .select({ id: dataEntries.id })
+          .from(dataEntries)
+          .where(
+            and(
+              eq(dataEntries.report_period_id, reportPeriodId),
+              eq(dataEntries.service_area_id, serviceAreaId),
+              eq(dataEntries.input_def_id, inputDefId),
+              isNull(dataEntries.energy_resource_id),
+              isNull(dataEntries.energy_provider_id),
+              isNull(dataEntries.energy_source_id),
+              isNull(dataEntries.payment_mode_id),
+              isNull(dataEntries.customer_type_id),
+            ),
+          )
+          .orderBy(desc(dataEntries.updatedAt))
+          .limit(1);
+
+        const updatedAt = row.updated_at
+          ? new Date(row.updated_at)
+          : new Date();
+
+        if (existing) {
+          await db
+            .update(dataEntries)
+            .set({
+              is_relevant: row.is_relevant ?? true,
+              is_deleted: row.is_deleted ?? false,
+              updatedAt,
+              updatedById: null,
+            })
+            .where(eq(dataEntries.id, existing.id));
+          updated += 1;
+          continue;
+        }
+
+        await db.insert(dataEntries).values({
+          report_period_id: reportPeriodId,
+          service_area_id: serviceAreaId,
+          input_def_id: inputDefId,
+          energy_resource_id: null,
+          energy_provider_id: null,
+          energy_source_id: null,
+          payment_mode_id: null,
+          customer_type_id: null,
+          value: null,
+          comments: null,
+          status_id: DataEntryStatusId.Entered,
+          is_relevant: row.is_relevant ?? true,
+          is_deleted: row.is_deleted ?? false,
+          updatedAt,
+          updatedById: null,
+        });
+        inserted += 1;
+      }
+
+      cursor = page.pagination.nextCursor;
+      hasMore = page.pagination.hasMore === true && cursor != null;
+    }
+
+    console.info(
+      `[migration] transmission relevance done: inserted=${inserted}, updated=${updated}, skipped=${skipped}, skippedMissingRequiredFk=${skippedMissingRequiredFk}`,
+    );
+    res = true;
+  } catch (error: unknown) {
+    logMigrationError(error);
+  }
+
+  revalidatePath("/migration");
+  revalidatePath("/settings/relevance");
+  revalidatePath("/data-entry");
+
+  return res;
+}
+
+export async function retrieveTariffRelevance(options?: {
+  reportPeriodId?: number;
+  batchSize?: number;
+}) {
+  let res = false;
+  let cursor: number | null = null;
+  let hasMore = true;
+
+  const batchSize = Math.max(1, Math.min(2000, options?.batchSize ?? 500));
+
+  let inserted = 0;
+  let updated = 0;
+  let skipped = 0;
+  let skippedMissingRequiredFk = 0;
+
+  const mappingRows = await db
+    .select({
+      trainingDlDefId: inputDlDefMappings.training_dl_def_id,
+      inputDefId: inputDlDefMappings.input_def_id,
+      updatedAt: inputDlDefMappings.updated_at,
+    })
+    .from(inputDlDefMappings);
+
+  const inputByTrainingDlDefId = new Map<
+    number,
+    { inputDefId: number; updatedAt: Date | null }
+  >();
+
+  for (const mapping of mappingRows) {
+    const existing = inputByTrainingDlDefId.get(mapping.trainingDlDefId);
+    if (!existing) {
+      inputByTrainingDlDefId.set(mapping.trainingDlDefId, {
+        inputDefId: mapping.inputDefId,
+        updatedAt: mapping.updatedAt,
+      });
+      continue;
+    }
+
+    const existingTime = existing.updatedAt?.getTime() ?? 0;
+    const currentTime = mapping.updatedAt?.getTime() ?? 0;
+    if (currentTime >= existingTime) {
+      inputByTrainingDlDefId.set(mapping.trainingDlDefId, {
+        inputDefId: mapping.inputDefId,
+        updatedAt: mapping.updatedAt,
+      });
+    }
+  }
+
+  const [targetReportPeriods, targetServiceAreas, targetManagedListItems] =
+    await Promise.all([
+      db.select({ id: reportPeriods.id }).from(reportPeriods),
+      db.select({ id: serviceAreas.id }).from(serviceAreas),
+      db.select({ id: managedListItems.id }).from(managedListItems),
+    ]);
+
+  const targetReportPeriodIds = new Set(targetReportPeriods.map((r) => r.id));
+  const targetServiceAreaIds = new Set(targetServiceAreas.map((r) => r.id));
+  const targetManagedListItemIds = new Set(
+    targetManagedListItems.map((r) => r.id),
+  );
+
+  try {
+    while (hasMore) {
+      const params = new URLSearchParams();
+      params.set("limit", String(batchSize));
+
+      if (cursor != null) {
+        params.set("cursor", String(cursor));
+      }
+      if (options?.reportPeriodId != null) {
+        params.set("reportPeriodId", String(options.reportPeriodId));
+      }
+
+      const call = await fetchMigrationEndpoint(
+        `/tariffRelevance?${params.toString()}`,
+      );
+
+      if (!call.ok) {
+        throw new Error(
+          `Tariff relevance migration API failed: ${call.status}`,
+        );
+      }
+
+      const page: SourceTariffRelevancePage = await call.json();
+
+      for (const row of page.tariffRelevance) {
+        const reportPeriodId = toNumberOrNull(row.report_period_id);
+        const serviceAreaId = toNumberOrNull(row.service_area_id);
+        const sourceTrainingDlDefId = toNumberOrNull(row.training_dl_def_id);
+        const paymentModeId = toNumberOrNull(row.payment_mode_id);
+        const customerTypeId = toNumberOrNull(row.customer_type_id);
+
+        if (
+          reportPeriodId == null ||
+          serviceAreaId == null ||
+          sourceTrainingDlDefId == null ||
+          paymentModeId == null ||
+          customerTypeId == null
+        ) {
+          skippedMissingRequiredFk += 1;
+          skipped += 1;
+          continue;
+        }
+
+        if (
+          !targetReportPeriodIds.has(reportPeriodId) ||
+          !targetServiceAreaIds.has(serviceAreaId) ||
+          !targetManagedListItemIds.has(paymentModeId) ||
+          !targetManagedListItemIds.has(customerTypeId)
+        ) {
+          skippedMissingRequiredFk += 1;
+          skipped += 1;
+          continue;
+        }
+
+        const mappedInput = inputByTrainingDlDefId.get(sourceTrainingDlDefId);
+        const inputDefId = mappedInput?.inputDefId ?? null;
+
+        if (inputDefId == null) {
+          skipped += 1;
+          continue;
+        }
+
+        const [existing] = await db
+          .select({ id: dataEntries.id })
+          .from(dataEntries)
+          .where(
+            and(
+              eq(dataEntries.report_period_id, reportPeriodId),
+              eq(dataEntries.service_area_id, serviceAreaId),
+              eq(dataEntries.input_def_id, inputDefId),
+              eq(dataEntries.payment_mode_id, paymentModeId),
+              eq(dataEntries.customer_type_id, customerTypeId),
+              isNull(dataEntries.energy_resource_id),
+              isNull(dataEntries.energy_provider_id),
+              isNull(dataEntries.energy_source_id),
+            ),
+          )
+          .orderBy(desc(dataEntries.updatedAt))
+          .limit(1);
+
+        const updatedAt = row.updated_at
+          ? new Date(row.updated_at)
+          : new Date();
+
+        if (existing) {
+          await db
+            .update(dataEntries)
+            .set({
+              is_relevant: row.is_relevant ?? true,
+              is_deleted: row.is_deleted ?? false,
+              updatedAt,
+              updatedById: null,
+            })
+            .where(eq(dataEntries.id, existing.id));
+          updated += 1;
+          continue;
+        }
+
+        await db.insert(dataEntries).values({
+          report_period_id: reportPeriodId,
+          service_area_id: serviceAreaId,
+          input_def_id: inputDefId,
+          energy_resource_id: null,
+          energy_provider_id: null,
+          energy_source_id: null,
+          payment_mode_id: paymentModeId,
+          customer_type_id: customerTypeId,
+          value: null,
+          comments: null,
+          status_id: DataEntryStatusId.Entered,
+          is_relevant: row.is_relevant ?? true,
+          is_deleted: row.is_deleted ?? false,
+          updatedAt,
+          updatedById: null,
+        });
+        inserted += 1;
+      }
+
+      cursor = page.pagination.nextCursor;
+      hasMore = page.pagination.hasMore === true && cursor != null;
+    }
+
+    console.info(
+      `[migration] tariff relevance done: inserted=${inserted}, updated=${updated}, skipped=${skipped}, skippedMissingRequiredFk=${skippedMissingRequiredFk}`,
+    );
+    res = true;
+  } catch (error: unknown) {
+    logMigrationError(error);
+  }
+
+  revalidatePath("/migration");
+  revalidatePath("/settings/relevance");
+  revalidatePath("/data-entry");
+
   return res;
 }
 

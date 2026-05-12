@@ -16,6 +16,11 @@ export interface InputDefinitionCandidate {
   subcategoryId: number;
   dataTypeId: number;
   dataTypeName: string | null;
+  isMandatory?: boolean;
+  validRangeMin?: number | null;
+  validRangeMax?: number | null;
+  validPolarityId?: number | null;
+  validPolarityName?: string | null;
   unitName: string | null;
 }
 
@@ -154,6 +159,12 @@ export const buildInputRowsFromDefinitions = (
       inputName: definition.name,
       unitName: definition.unitName,
       dataTypeId: 0,
+      dataTypeName: definition.dataTypeName,
+      isMandatory: definition.isMandatory,
+      validRangeMin: definition.validRangeMin,
+      validRangeMax: definition.validRangeMax,
+      validPolarityId: definition.validPolarityId,
+      validPolarityName: definition.validPolarityName,
       controlType: mapDataTypeToControlType(definition.dataTypeName),
       isDataNotAvailable: entry?.statusId === DataEntryStatusId.Not_Available,
       updatedByName: entry?.updatedByName ?? null,

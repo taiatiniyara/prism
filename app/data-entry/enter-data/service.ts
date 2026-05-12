@@ -80,10 +80,10 @@ import {
   isValueValidForDataType,
 } from "@/app/data-entry/enter-data/services/dataEntryValidation.service";
 import { getDevValidationBuilderConfigFromDb } from "@/app/data-entry/enter-data/services/validation-builder/store";
+import { shouldRunValidationBuilderRule } from "@/app/data-entry/enter-data/services/validation-builder/shared";
 import {
   DevValidationBuilderConfig,
   ValidationCode,
-  ValidationRuleName,
 } from "@/app/data-entry/enter-data/services/validation-builder/types";
 
 const hasActiveEnergyResourcePeriod = (reportPeriodId: number) =>
@@ -324,6 +324,7 @@ const getInputDefinitionsForContext = async (
       alternativeNames: inputDefinitions.alternative_names,
       categoryId: inputDefinitions.category_id,
       subcategoryId: inputDefinitions.subcategory_id,
+      isMandatory: inputDefinitions.is_mandatory,
       subcategoryName: sql<string | null>`(
         select mli.name
         from managed_list_items mli
@@ -332,6 +333,15 @@ const getInputDefinitionsForContext = async (
       )`,
       dataTypeId: inputDefinitions.data_type_id,
       dataTypeName: managedListItems.name,
+      validRangeMin: inputDefinitions.valid_range_min,
+      validRangeMax: inputDefinitions.valid_range_max,
+      validPolarityId: inputDefinitions.valid_polarity_id,
+      validPolarityName: sql<string | null>`(
+        select mli.name
+        from managed_list_items mli
+        where mli.id = ${inputDefinitions.valid_polarity_id}
+        limit 1
+      )`,
       unitName: sql<string | null>`(
         select mli.name
         from managed_list_items mli
@@ -359,6 +369,11 @@ const getInputDefinitionsForContext = async (
       subcategoryId: row.subcategoryId,
       dataTypeName: row.dataTypeName,
       dataTypeId: row.dataTypeId,
+      isMandatory: row.isMandatory,
+      validRangeMin: row.validRangeMin,
+      validRangeMax: row.validRangeMax,
+      validPolarityId: row.validPolarityId,
+      validPolarityName: row.validPolarityName,
       unitName: row.unitName,
     }));
 };
@@ -533,6 +548,12 @@ const getInputRowsForContext = async (
       ...row,
       unitName: definition?.unitName ?? null,
       dataTypeId: definition?.dataTypeId ?? 0,
+      dataTypeName: definition?.dataTypeName ?? null,
+      isMandatory: definition?.isMandatory ?? false,
+      validRangeMin: definition?.validRangeMin ?? null,
+      validRangeMax: definition?.validRangeMax ?? null,
+      validPolarityId: definition?.validPolarityId ?? null,
+      validPolarityName: definition?.validPolarityName ?? null,
       controlType: mapDataTypeToControlType(definition?.dataTypeName),
     };
   });
@@ -566,6 +587,12 @@ const getInputDefinitionRowsForContext = async (
     inputName: definition.name,
     unitName: definition.unitName,
     dataTypeId: definition.dataTypeId,
+    dataTypeName: definition.dataTypeName,
+    isMandatory: definition.isMandatory,
+    validRangeMin: definition.validRangeMin,
+    validRangeMax: definition.validRangeMax,
+    validPolarityId: definition.validPolarityId,
+    validPolarityName: definition.validPolarityName,
     controlType: mapDataTypeToControlType(definition.dataTypeName),
     value: null,
     comments: null,
@@ -909,6 +936,12 @@ const getTariffGroupsForContext = async (
             inputName: definition.name,
             unitName: definition.unitName,
             dataTypeId: definition.dataTypeId,
+            dataTypeName: definition.dataTypeName,
+            isMandatory: definition.isMandatory,
+            validRangeMin: definition.validRangeMin,
+            validRangeMax: definition.validRangeMax,
+            validPolarityId: definition.validPolarityId,
+            validPolarityName: definition.validPolarityName,
             controlType: mapDataTypeToControlType(definition.dataTypeName),
             isDataNotAvailable:
               entry?.statusId === DataEntryStatusId.Not_Available,
@@ -1697,34 +1730,6 @@ const resolveBuilderValidationMessage = (params: {
   fallbackMessage: string;
 }) => params.config?.customMessages[params.code] ?? params.fallbackMessage;
 
-const shouldRunBuilderRule = (params: {
-  config: DevValidationBuilderConfig | null;
-  ruleName: ValidationRuleName;
-  code: ValidationCode;
-  inputDefId: number;
-}) => {
-  if (!params.config) {
-    return true;
-  }
-
-  if (!params.config.enabled) {
-    return false;
-  }
-
-  if (!params.config.ruleToggles[params.ruleName]) {
-    return false;
-  }
-
-  const exclusion = params.config.dlDefExclusions.find(
-    (item) => item.inputDefId === params.inputDefId,
-  );
-  if (!exclusion) {
-    return true;
-  }
-
-  return !exclusion.codes.includes(params.code);
-};
-
 type DataEntryScopedPayload = {
   inputDefId: number;
   energyResourceId?: number | null;
@@ -1902,7 +1907,7 @@ export const updateDataEntryValueAction = async (
   }
 
   if (
-    shouldRunBuilderRule({
+    shouldRunValidationBuilderRule({
       config: builderConfig,
       ruleName: "required-value",
       code: "REQUIRED",
@@ -1921,7 +1926,7 @@ export const updateDataEntryValueAction = async (
   }
 
   if (
-    shouldRunBuilderRule({
+    shouldRunValidationBuilderRule({
       config: builderConfig,
       ruleName: "data-type",
       code: "INVALID_TYPE",
@@ -1939,7 +1944,7 @@ export const updateDataEntryValueAction = async (
   }
 
   if (
-    shouldRunBuilderRule({
+    shouldRunValidationBuilderRule({
       config: builderConfig,
       ruleName: "relevance",
       code: "NOT_RELEVANT",
@@ -1971,7 +1976,7 @@ export const updateDataEntryValueAction = async (
     normalizedValue,
   );
   if (
-    shouldRunBuilderRule({
+    shouldRunValidationBuilderRule({
       config: builderConfig,
       ruleName: "range-polarity",
       code: "RANGE_OR_POLARITY",

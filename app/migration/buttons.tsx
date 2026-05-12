@@ -6,11 +6,14 @@ import {
   retrieveCountryContextData,
   retrieveCountries,
   retrieveEnergyResources,
+  retrieveGenerationRelevance,
   retrieveInputDefinitions,
   retrieveKpiDefinitions,
   retrieveManagedLists,
   retrieveReportPeriods,
   retrieveRoles,
+  retrieveTariffRelevance,
+  retrieveTransmissionRelevance,
   retrieveUtilityContextData,
   retrieveUsers,
   retrieveUtilityData,
@@ -68,6 +71,18 @@ const buttonList: {
   {
     label: "Migrate Utility Context",
     fn: retrieveUtilityContextData,
+  },
+  {
+    label: "Migrate Generation Relevance",
+    fn: retrieveGenerationRelevance,
+  },
+  {
+    label: "Migrate Transmission Relevance",
+    fn: retrieveTransmissionRelevance,
+  },
+  {
+    label: "Migrate Tariff Relevance",
+    fn: retrieveTariffRelevance,
   },
 ];
 

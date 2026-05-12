@@ -6,10 +6,17 @@ import InputRows from "@/app/data-entry/enter-data/inputRows";
 import ProgressBreakdown from "@/app/data-entry/enter-data/progressBreakdown";
 import TariffGroups from "@/app/data-entry/enter-data/tariffGroups";
 import { getDataEntryFilterViewModel } from "@/app/data-entry/enter-data/service";
+import { getCurrentUser } from "@/lib/user.service";
+import { getDevValidationBuilderConfigFromDb } from "@/app/data-entry/enter-data/services/validation-builder/store";
 import EnterDataTemplatePanel from "./templatePanel";
 
 export default async function EnterDataPage() {
-  const model = await getDataEntryFilterViewModel();
+  const [model, user] = await Promise.all([
+    getDataEntryFilterViewModel(),
+    getCurrentUser(),
+  ]);
+  const builderConfig =
+    user.role === "DEV" ? await getDevValidationBuilderConfigFromDb() : null;
   const noFilterOptions =
     model.options.reportTypes.length === 0 ||
     model.options.inputCategories.length === 0;
@@ -33,6 +40,7 @@ export default async function EnterDataPage() {
               inputs={model.inputs}
               context={model.context}
               options={model.options}
+              builderConfig={builderConfig}
             />
           </div>
         </div>

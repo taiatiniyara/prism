@@ -85,3 +85,31 @@ export function sanitizeDevValidationBuilderConfig(
     dlDefExclusions,
   };
 }
+
+export const shouldRunValidationBuilderRule = (params: {
+  config: DevValidationBuilderConfig | null;
+  ruleName: ValidationRuleName;
+  code: ValidationCode;
+  inputDefId: number;
+}) => {
+  if (!params.config) {
+    return true;
+  }
+
+  if (!params.config.enabled) {
+    return false;
+  }
+
+  if (!params.config.ruleToggles[params.ruleName]) {
+    return false;
+  }
+
+  const exclusion = params.config.dlDefExclusions.find(
+    (item) => item.inputDefId === params.inputDefId,
+  );
+  if (!exclusion) {
+    return true;
+  }
+
+  return !exclusion.codes.includes(params.code);
+};

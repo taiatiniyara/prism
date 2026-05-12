@@ -35,6 +35,12 @@ export interface DataEntryInputRowView {
   inputName: string;
   unitName: string | null;
   dataTypeId: number;
+  dataTypeName?: string | null;
+  isMandatory?: boolean;
+  validRangeMin?: number | null;
+  validRangeMax?: number | null;
+  validPolarityId?: number | null;
+  validPolarityName?: string | null;
   controlType: DataEntryControlType;
   isDataNotAvailable?: boolean;
   updatedByName?: string | null;

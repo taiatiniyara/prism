@@ -12,6 +12,8 @@ import {
 } from "@/app/data-entry/enter-data/service";
 import { DataEntryFilterContext } from "@/app/data-entry/constants";
 import { DataEntryPageViewModel } from "@/app/data-entry/types";
+import { shouldRunValidationBuilderRule } from "@/app/data-entry/enter-data/services/validation-builder/shared";
+import { DevValidationBuilderConfig } from "@/app/data-entry/enter-data/services/validation-builder/types";
 import { Button } from "@/components/ui/button";
 
 type TemplateRow = {
@@ -25,6 +27,12 @@ type TemplateRow = {
   payment_mode_name: string;
   customer_type_id: number | null;
   customer_type_name: string;
+  data_type_name: string | null;
+  is_mandatory: boolean;
+  valid_range_min: number | null;
+  valid_range_max: number | null;
+  valid_polarity_id: number | null;
+  valid_polarity_name: string | null;
   value: string;
   is_data_not_available: boolean;
 };
@@ -39,6 +47,7 @@ interface EnterDataTemplatePanelProps {
   inputs: DataEntryPageViewModel["inputs"];
   context: DataEntryFilterContext;
   options: DataEntryPageViewModel["options"];
+  builderConfig: DevValidationBuilderConfig | null;
 }
 
 const SHEET_NAME = "Enter Data";
@@ -68,7 +77,168 @@ const EXCLUDED_TEMPLATE_HEADERS = new Set<keyof TemplateRow>([
   "payment_mode_name",
   "customer_type_id",
   "customer_type_name",
+  "data_type_name",
+  "is_mandatory",
+  "valid_range_min",
+  "valid_range_max",
+  "valid_polarity_id",
+  "valid_polarity_name",
 ]);
+
+const normalizeTypeName = (typeName: string | null | undefined) =>
+  (typeName ?? "").trim().toLowerCase();
+
+const resolvePolarityRule = (
+  validPolarityId: number | null,
+  validPolarityName: string | null,
+): "positive" | "negative" | "non-zero" | null => {
+  if (validPolarityId === 130) {
+    return "positive";
+  }
+  if (validPolarityId === 131) {
+    return "negative";
+  }
+  if (validPolarityId === 132) {
+    return "non-zero";
+  }
+
+  const normalized = normalizeTypeName(validPolarityName);
+  if (normalized.includes("non-zero") || normalized.includes("non zero")) {
+    return "non-zero";
+  }
+  if (normalized.includes("non-positive")) {
+    return "negative";
+  }
+  if (normalized.includes("non-negative")) {
+    return "positive";
+  }
+  if (normalized.includes("cannot be zero")) {
+    return "non-zero";
+  }
+  if (normalized.includes("positive")) {
+    return "positive";
+  }
+  if (normalized.includes("negative")) {
+    return "negative";
+  }
+
+  return null;
+};
+
+const excelColumnLetter = (columnIndex: number): string => {
+  let index = columnIndex;
+  let letters = "";
+
+  while (index > 0) {
+    const remainder = (index - 1) % 26;
+    letters = String.fromCharCode(65 + remainder) + letters;
+    index = Math.floor((index - 1) / 26);
+  }
+
+  return letters;
+};
+
+const buildValueValidationFormula = (params: {
+  valueRef: string;
+  dnaRef: string;
+  row: TemplateRow;
+  builderConfig: DevValidationBuilderConfig | null;
+}): string => {
+  const conditions: string[] = [];
+  const numericExpr = `VALUE(SUBSTITUTE(SUBSTITUTE(${params.valueRef}&"","$",""),",",""))`;
+
+  // Keep parity with template upload handling: value and DNA cannot both be set.
+  conditions.push(
+    `OR(UPPER(TRIM(${params.dnaRef}&""))<>"TRUE",LEN(TRIM(${params.valueRef}&""))=0)`,
+  );
+
+  if (
+    shouldRunValidationBuilderRule({
+      config: params.builderConfig,
+      ruleName: "required-value",
+      code: "REQUIRED",
+      inputDefId: params.row.input_def_id,
+    }) &&
+    params.row.is_mandatory
+  ) {
+    conditions.push(
+      `OR(UPPER(TRIM(${params.dnaRef}&""))="TRUE",LEN(TRIM(${params.valueRef}&""))>0)`,
+    );
+  }
+
+  if (
+    shouldRunValidationBuilderRule({
+      config: params.builderConfig,
+      ruleName: "data-type",
+      code: "INVALID_TYPE",
+      inputDefId: params.row.input_def_id,
+    })
+  ) {
+    const normalizedType = normalizeTypeName(params.row.data_type_name);
+
+    if (
+      normalizedType.includes("number") ||
+      normalizedType.includes("decimal") ||
+      normalizedType.includes("int")
+    ) {
+      conditions.push(
+        `OR(LEN(TRIM(${params.valueRef}&""))=0,NOT(ISERROR(${numericExpr})))`,
+      );
+    } else if (normalizedType.includes("bool")) {
+      conditions.push(
+        `OR(LEN(TRIM(${params.valueRef}&""))=0,ISNUMBER(MATCH(LOWER(TRIM(${params.valueRef}&"")),{"true","false","yes","no","1","0"},0)))`,
+      );
+    } else if (normalizedType.includes("date")) {
+      conditions.push(
+        `OR(LEN(TRIM(${params.valueRef}&""))=0,ISNUMBER(${params.valueRef}),NOT(ISERROR(DATEVALUE(${params.valueRef}&""))))`,
+      );
+    }
+  }
+
+  if (
+    shouldRunValidationBuilderRule({
+      config: params.builderConfig,
+      ruleName: "range-polarity",
+      code: "RANGE_OR_POLARITY",
+      inputDefId: params.row.input_def_id,
+    })
+  ) {
+    if (params.row.valid_range_min != null) {
+      conditions.push(
+        `OR(LEN(TRIM(${params.valueRef}&""))=0,ISERROR(${numericExpr}),${numericExpr}>=${Number(params.row.valid_range_min)})`,
+      );
+    }
+
+    if (params.row.valid_range_max != null) {
+      conditions.push(
+        `OR(LEN(TRIM(${params.valueRef}&""))=0,ISERROR(${numericExpr}),${numericExpr}<=${Number(params.row.valid_range_max)})`,
+      );
+    }
+
+    const polarityRule = resolvePolarityRule(
+      params.row.valid_polarity_id,
+      params.row.valid_polarity_name,
+    );
+
+    if (polarityRule === "positive") {
+      conditions.push(
+        `OR(LEN(TRIM(${params.valueRef}&""))=0,ISERROR(${numericExpr}),${numericExpr}>=0)`,
+      );
+    }
+    if (polarityRule === "negative") {
+      conditions.push(
+        `OR(LEN(TRIM(${params.valueRef}&""))=0,ISERROR(${numericExpr}),${numericExpr}<=0)`,
+      );
+    }
+    if (polarityRule === "non-zero") {
+      conditions.push(
+        `OR(LEN(TRIM(${params.valueRef}&""))=0,ISERROR(${numericExpr}),${numericExpr}<>0)`,
+      );
+    }
+  }
+
+  return `AND(${conditions.join(",")})`;
+};
 
 const toFilenameSegment = (
   value: string | null | undefined,
@@ -237,6 +407,12 @@ const flattenTemplateRows = (
       payment_mode_name: row.paymentModeName ?? "",
       customer_type_id: row.customerTypeId ?? null,
       customer_type_name: row.customerTypeName ?? "",
+      data_type_name: row.dataTypeName ?? null,
+      is_mandatory: row.isMandatory ?? false,
+      valid_range_min: row.validRangeMin ?? null,
+      valid_range_max: row.validRangeMax ?? null,
+      valid_polarity_id: row.validPolarityId ?? null,
+      valid_polarity_name: row.validPolarityName ?? null,
       value: row.value ?? "",
       is_data_not_available: row.isDataNotAvailable ?? false,
     }));
@@ -255,6 +431,12 @@ const flattenTemplateRows = (
         payment_mode_name: row.paymentModeName ?? "",
         customer_type_id: row.customerTypeId ?? null,
         customer_type_name: row.customerTypeName ?? "",
+        data_type_name: row.dataTypeName ?? null,
+        is_mandatory: row.isMandatory ?? false,
+        valid_range_min: row.validRangeMin ?? null,
+        valid_range_max: row.validRangeMax ?? null,
+        valid_polarity_id: row.validPolarityId ?? null,
+        valid_polarity_name: row.validPolarityName ?? null,
         value: row.value ?? "",
         is_data_not_available: row.isDataNotAvailable ?? false,
       })),
@@ -277,6 +459,12 @@ const flattenTemplateRows = (
           row.customerTypeId ?? customerTypeGroup.customerTypeId,
         customer_type_name:
           row.customerTypeName ?? customerTypeGroup.customerTypeName,
+        data_type_name: row.dataTypeName ?? null,
+        is_mandatory: row.isMandatory ?? false,
+        valid_range_min: row.validRangeMin ?? null,
+        valid_range_max: row.validRangeMax ?? null,
+        valid_polarity_id: row.validPolarityId ?? null,
+        valid_polarity_name: row.validPolarityName ?? null,
         value: row.value ?? "",
         is_data_not_available: row.isDataNotAvailable ?? false,
       })),
@@ -288,6 +476,7 @@ export default function EnterDataTemplatePanel({
   inputs,
   context,
   options,
+  builderConfig,
 }: EnterDataTemplatePanelProps) {
   const router = useRouter();
   const [isUploading, startUploadTransition] = useTransition();
@@ -346,6 +535,7 @@ export default function EnterDataTemplatePanel({
       applyHeaderFilter(worksheet, headers.length);
 
       // Add TRUE/FALSE data validation dropdown to the is_data_not_available column.
+      const valueColIndex = headers.indexOf("value");
       const dnaColIndex = headers.indexOf("is_data_not_available");
       if (dnaColIndex >= 0) {
         const dnaCol = dnaColIndex + 1; // ExcelJS columns are 1-based
@@ -358,6 +548,39 @@ export default function EnterDataTemplatePanel({
             type: "list",
             allowBlank: false,
             formulae: ['"TRUE,FALSE"'],
+          };
+        }
+      }
+
+      if (valueColIndex >= 0 && dnaColIndex >= 0) {
+        const valueCol = valueColIndex + 1;
+        const dnaCol = dnaColIndex + 1;
+
+        for (
+          let rowIndex = 2;
+          rowIndex <= templateRows.length + 1;
+          rowIndex += 1
+        ) {
+          const row = templateRows[rowIndex - 2];
+          const valueRef = `${excelColumnLetter(valueCol)}${rowIndex}`;
+          const dnaRef = `${excelColumnLetter(dnaCol)}${rowIndex}`;
+
+          worksheet.getCell(rowIndex, valueCol).dataValidation = {
+            type: "custom",
+            allowBlank: true,
+            showErrorMessage: true,
+            errorStyle: "error",
+            errorTitle: "Invalid data-entry value",
+            error:
+              "Value does not satisfy template validation rules for this input.",
+            formulae: [
+              buildValueValidationFormula({
+                valueRef,
+                dnaRef,
+                row,
+                builderConfig,
+              }),
+            ],
           };
         }
       }

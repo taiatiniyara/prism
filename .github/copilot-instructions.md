@@ -27,12 +27,6 @@ results for any failures or errors. If you are using a build tool, make sure to
 check the build output for any errors or warnings. Always make sure to fix any
 errors before proceeding with further development or testing.
 
-## testing
-
-Always write tests for new code and run all tests after making changes. If any
-tests fail, fix the code and then run the tests again. Repeat until all tests
-pass.
-
 ## documentation
 
 Always update or add documentation for new code. This includes comments in the
