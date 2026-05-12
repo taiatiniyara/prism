@@ -27,11 +27,10 @@ export function formatReportPeriodDisplay(
   reportDate: Date,
   reportPeriodTypeName?: string | null,
 ): string {
-  const monthLabel = new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(reportDate);
+  const monthLabel = [
+    reportDate.getUTCFullYear(),
+    String(reportDate.getUTCMonth() + 1).padStart(2, "0"),
+  ].join("-");
   const yearLabel = new Intl.DateTimeFormat("en-US", {
     year: "numeric",
     timeZone: "UTC",
