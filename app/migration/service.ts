@@ -154,6 +154,24 @@ const isProtocolHeaderError = (error: unknown): boolean => {
   );
 };
 
+const shouldTryInsecureParser = (
+  requestUrl: string,
+  error: unknown,
+): boolean => {
+  if (isProtocolHeaderError(error)) return true;
+
+  try {
+    const url = new URL(requestUrl);
+    const path = url.pathname.toLowerCase();
+    return (
+      url.protocol === "https:" &&
+      (path.startsWith("/api/migration/") || path.startsWith("/api/mig/"))
+    );
+  } catch {
+    return false;
+  }
+};
+
 const toNodeHeaders = (headers: HeadersInit): Record<string, string> => {
   if (headers instanceof Headers) {
     const out: Record<string, string> = {};
@@ -232,7 +250,7 @@ const fetchJsonEndpoint = async (requestUrl: string, headers: HeadersInit) => {
       headers,
     });
   } catch (error: unknown) {
-    if (!isProtocolHeaderError(error)) {
+    if (!shouldTryInsecureParser(requestUrl, error)) {
       throw error;
     }
 
