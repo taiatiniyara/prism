@@ -13,10 +13,17 @@ import {
   user as authUsers,
 } from "@/db/schema";
 import { kpiDefinitions } from "@/db/schema/kpi";
-import { managedListItems, managedLists } from "@/db/schema/managedLists";
+import {
+  energyResourceTypeRelevance,
+  managedListItems,
+  managedLists,
+} from "@/db/schema/managedLists";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { getCurrentUser, hasGlobalUtilityAccess } from "@/lib/user.service";
 import { formatReportPeriodDisplay } from "@/lib/formatters";
+import { DataTableFormResponse } from "@/components/tables/data-table-create-form";
+import { toPositiveInteger } from "./energyResourceTypeRelevanceBuilder.shared";
+import { buildGenerationTypeSourcePairs } from "./generationRelevance.shared";
 import {
   and,
   asc,
@@ -231,6 +238,30 @@ export interface DevOrganisationRelevancePivotRow {
     count: number;
   }>;
 }
+
+export interface DevEnergyResourceTypeRelevanceItem {
+  id: number;
+  energyResourceTypeId: number;
+  energyResourceType: string;
+  energyTypeId: number;
+  energyType: string;
+  energySourceId: number;
+  energySource: string;
+}
+
+const ENERGY_RESOURCE_TYPE_LIST_ALIASES = [
+  "Energy Resource Type",
+  "Energy Resouce Type",
+];
+
+const ENERGY_TYPE_LIST_ALIASES = ["Energy Type", "Energy Types"];
+
+const ENERGY_SOURCE_LIST_ALIASES = [
+  "Energy Source",
+  "Storage Energy Source",
+  "Energy Storage Source",
+  "Generator Energy Source",
+];
 
 const resolveSelectedId = (
   requestedId: number | null | undefined,
@@ -1165,6 +1196,28 @@ export async function GetUtilityGenerationRelevance(
       );
     }
   }
+
+  const configuredTypeSourceMappings = await db
+    .select({
+      energyResourceTypeId: energyResourceTypeRelevance.energy_resource_type_id,
+      energySourceId: energyResourceTypeRelevance.energy_source_id,
+    })
+    .from(energyResourceTypeRelevance);
+
+  const generationTypeSourcePairs = buildGenerationTypeSourcePairs({
+    energyResourceTypes,
+    energySources,
+    mappings: configuredTypeSourceMappings,
+  });
+
+  const visibleEnergySourceIds = Array.from(
+    new Set(generationTypeSourcePairs.map((pair) => pair.energySourceId)),
+  );
+
+  const visibleEnergyResourceTypes = Array.from(
+    new Set(generationTypeSourcePairs.map((pair) => pair.energyResourceType)),
+  ).sort((a, b) => a.localeCompare(b));
+
   const inputDefIds = inputList.map((input) => input.id);
 
   if (
@@ -1182,28 +1235,26 @@ export async function GetUtilityGenerationRelevance(
         serviceAreas: serviceAreaOptions,
       },
       energyProviders: energyProviders.map((provider) => provider.name),
-      energyResourceTypes: energyResourceTypes.map((type) => type.name),
-      rows: energySources.flatMap((energySource) =>
-        energyResourceTypes.map((energyResourceType) => ({
-          energySourceId: energySource.id,
-          energySource: energySource.name,
-          energyResourceTypeId: energyResourceType.id,
-          energyResourceType: energyResourceType.name,
-          cells: energyProviders.map((energyProvider) => ({
-            energyProviderId: energyProvider.id,
-            energyProvider: energyProvider.name,
-            energyResourceTypeId: energyResourceType.id,
-            energyResourceType: energyResourceType.name,
-            isRelevant: true,
-            relatedInputCount: inputDefIds.length,
-          })),
+      energyResourceTypes: visibleEnergyResourceTypes,
+      rows: generationTypeSourcePairs.map((pair) => ({
+        energySourceId: pair.energySourceId,
+        energySource: pair.energySource,
+        energyResourceTypeId: pair.energyResourceTypeId,
+        energyResourceType: pair.energyResourceType,
+        cells: energyProviders.map((energyProvider) => ({
+          energyProviderId: energyProvider.id,
+          energyProvider: energyProvider.name,
+          energyResourceTypeId: pair.energyResourceTypeId,
+          energyResourceType: pair.energyResourceType,
+          isRelevant: true,
+          relatedInputCount: inputDefIds.length,
         })),
-      ),
+      })),
     };
   }
 
   const toggleEntries =
-    energyProviders.length > 0 && energySources.length > 0
+    energyProviders.length > 0 && visibleEnergySourceIds.length > 0
       ? await db
           .select({
             reportPeriodId: generationToggleRelevance.report_period_id,
@@ -1229,7 +1280,7 @@ export async function GetUtilityGenerationRelevance(
               ),
               inArray(
                 generationToggleRelevance.energy_source_id,
-                energySources.map((source) => source.id),
+                visibleEnergySourceIds,
               ),
             ),
           )
@@ -1238,8 +1289,7 @@ export async function GetUtilityGenerationRelevance(
 
   const entries =
     energyProviders.length > 0 &&
-    energySources.length > 0 &&
-    energyResourceTypes.length > 0 &&
+    generationTypeSourcePairs.length > 0 &&
     inputDefIds.length > 0
       ? await db
           .select({
@@ -1264,7 +1314,7 @@ export async function GetUtilityGenerationRelevance(
               ),
               inArray(
                 generationRelevance.energy_source_id,
-                energySources.map((source) => source.id),
+                visibleEnergySourceIds,
               ),
             ),
           )
@@ -1317,25 +1367,23 @@ export async function GetUtilityGenerationRelevance(
       serviceAreas: serviceAreaOptions,
     },
     energyProviders: energyProviders.map((provider) => provider.name),
-    energyResourceTypes: energyResourceTypes.map((type) => type.name),
-    rows: energySources.flatMap((energySource) =>
-      energyResourceTypes.map((energyResourceType) => ({
-        energySourceId: energySource.id,
-        energySource: energySource.name,
-        energyResourceTypeId: energyResourceType.id,
-        energyResourceType: energyResourceType.name,
-        cells: energyProviders.map((energyProvider) => {
-          const key = `${selectedReportPeriodId}:${energySource.id}:${energyProvider.id}`;
+    energyResourceTypes: visibleEnergyResourceTypes,
+    rows: generationTypeSourcePairs.map((pair) => ({
+      energySourceId: pair.energySourceId,
+      energySource: pair.energySource,
+      energyResourceTypeId: pair.energyResourceTypeId,
+      energyResourceType: pair.energyResourceType,
+      cells: energyProviders.map((energyProvider) => {
+        const key = `${selectedReportPeriodId}:${pair.energySourceId}:${energyProvider.id}`;
 
-          return {
-            energyProviderId: energyProvider.id,
-            energyProvider: energyProvider.name,
-            isRelevant: !cellHasFalse.get(key),
-            relatedInputCount: inputDefIds.length,
-          };
-        }),
-      })),
-    ),
+        return {
+          energyProviderId: energyProvider.id,
+          energyProvider: energyProvider.name,
+          isRelevant: !cellHasFalse.get(key),
+          relatedInputCount: inputDefIds.length,
+        };
+      }),
+    })),
   };
 }
 
@@ -2608,6 +2656,390 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
         values: toValues(generationToggleNotRelevantByOrganisationId),
       },
     ],
+  };
+}
+
+const getEnergyResourceTypeRelevanceBuilderOptions = async (): Promise<{
+  energyResourceTypeOptions: Array<{ id: number; name: string }>;
+  energyTypeOptions: Array<{ id: number; name: string }>;
+  energySourceOptions: Array<{ id: number; name: string }>;
+}> => {
+  const [energyResourceTypeOptions, energyTypeOptions, energySourceOptions] =
+    await Promise.all([
+      getManagedDimensionItemsMergedByAliases(
+        ENERGY_RESOURCE_TYPE_LIST_ALIASES,
+      ),
+      getManagedDimensionItemsMergedByAliases(ENERGY_TYPE_LIST_ALIASES),
+      getManagedDimensionItemsMergedByAliases(ENERGY_SOURCE_LIST_ALIASES),
+    ]);
+
+  return {
+    energyResourceTypeOptions,
+    energyTypeOptions,
+    energySourceOptions,
+  };
+};
+
+const mapEnergyResourceTypeRelevanceRows = async (
+  rows: Array<{
+    id: number;
+    energy_resource_type_id: number;
+    energy_type_id: number;
+    energy_source_id: number;
+  }>,
+): Promise<DevEnergyResourceTypeRelevanceItem[]> => {
+  if (rows.length === 0) {
+    return [];
+  }
+
+  const managedItemIds = Array.from(
+    new Set(
+      rows.flatMap((row) => [
+        row.energy_resource_type_id,
+        row.energy_type_id,
+        row.energy_source_id,
+      ]),
+    ),
+  );
+
+  const managedItemRows =
+    managedItemIds.length > 0
+      ? await db
+          .select({
+            id: managedListItems.id,
+            name: managedListItems.name,
+          })
+          .from(managedListItems)
+          .where(inArray(managedListItems.id, managedItemIds))
+      : [];
+
+  const managedItemNameById = new Map(
+    managedItemRows.map((row) => [row.id, row.name]),
+  );
+
+  return rows
+    .map((row) => ({
+      id: row.id,
+      energyResourceTypeId: row.energy_resource_type_id,
+      energyResourceType:
+        managedItemNameById.get(row.energy_resource_type_id) ??
+        `Unknown (${row.energy_resource_type_id})`,
+      energyTypeId: row.energy_type_id,
+      energyType:
+        managedItemNameById.get(row.energy_type_id) ??
+        `Unknown (${row.energy_type_id})`,
+      energySourceId: row.energy_source_id,
+      energySource:
+        managedItemNameById.get(row.energy_source_id) ??
+        `Unknown (${row.energy_source_id})`,
+    }))
+    .sort((a, b) => {
+      const byResourceType = a.energyResourceType.localeCompare(
+        b.energyResourceType,
+      );
+
+      if (byResourceType !== 0) {
+        return byResourceType;
+      }
+
+      const byType = a.energyType.localeCompare(b.energyType);
+      if (byType !== 0) {
+        return byType;
+      }
+
+      return a.energySource.localeCompare(b.energySource);
+    });
+};
+
+const resolveEnergyResourceTypeRelevancePayload = (
+  payload: Partial<DevEnergyResourceTypeRelevanceItem>,
+): {
+  energyResourceTypeId: number | null;
+  energyTypeId: number | null;
+  energySourceId: number | null;
+} => {
+  return {
+    energyResourceTypeId: toPositiveInteger(payload.energyResourceTypeId),
+    energyTypeId: toPositiveInteger(payload.energyTypeId),
+    energySourceId: toPositiveInteger(payload.energySourceId),
+  };
+};
+
+const validateEnergyResourceTypeRelevancePayload = async (payload: {
+  energyResourceTypeId: number;
+  energyTypeId: number;
+  energySourceId: number;
+}): Promise<{ success: true } | { success: false; message: string }> => {
+  const { energyResourceTypeOptions, energyTypeOptions, energySourceOptions } =
+    await getEnergyResourceTypeRelevanceBuilderOptions();
+
+  const energyResourceTypeOptionIds = new Set(
+    energyResourceTypeOptions.map((item) => item.id),
+  );
+  if (!energyResourceTypeOptionIds.has(payload.energyResourceTypeId)) {
+    return {
+      success: false,
+      message: "Selected Energy Resource Type is invalid.",
+    };
+  }
+
+  const energyTypeOptionIds = new Set(energyTypeOptions.map((item) => item.id));
+  if (!energyTypeOptionIds.has(payload.energyTypeId)) {
+    return {
+      success: false,
+      message: "Selected Energy Type is invalid.",
+    };
+  }
+
+  const energySourceOptionIds = new Set(
+    energySourceOptions.map((item) => item.id),
+  );
+  if (!energySourceOptionIds.has(payload.energySourceId)) {
+    return {
+      success: false,
+      message: "Selected Energy Source is invalid.",
+    };
+  }
+
+  return { success: true };
+};
+
+export async function GetDevEnergyResourceTypeRelevance(): Promise<
+  DevEnergyResourceTypeRelevanceItem[]
+> {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    throw new Error("User not authenticated");
+  }
+
+  if (user.role !== "DEV") {
+    throw new Error(
+      "Only DEV users can access energy resource type relevance rows.",
+    );
+  }
+
+  const rows = await db
+    .select()
+    .from(energyResourceTypeRelevance)
+    .orderBy(energyResourceTypeRelevance.id);
+
+  return mapEnergyResourceTypeRelevanceRows(rows);
+}
+
+export async function CreateDevEnergyResourceTypeRelevance(
+  payload: DevEnergyResourceTypeRelevanceItem,
+): Promise<DataTableFormResponse<DevEnergyResourceTypeRelevanceItem>> {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return {
+      success: false,
+      message: "User not authenticated",
+    };
+  }
+
+  if (user.role !== "DEV") {
+    return {
+      success: false,
+      message: "Only DEV users can add energy resource type relevance rows.",
+    };
+  }
+
+  const { energyResourceTypeId, energyTypeId, energySourceId } =
+    resolveEnergyResourceTypeRelevancePayload(payload);
+
+  if (
+    energyResourceTypeId == null ||
+    energyTypeId == null ||
+    energySourceId == null
+  ) {
+    return {
+      success: false,
+      message:
+        "Energy Resource Type, Energy Type, and Energy Source are required.",
+    };
+  }
+
+  const validation = await validateEnergyResourceTypeRelevancePayload({
+    energyResourceTypeId,
+    energyTypeId,
+    energySourceId,
+  });
+
+  if (!validation.success) {
+    return validation;
+  }
+
+  const [duplicate] = await db
+    .select({ id: energyResourceTypeRelevance.id })
+    .from(energyResourceTypeRelevance)
+    .where(
+      and(
+        eq(
+          energyResourceTypeRelevance.energy_resource_type_id,
+          energyResourceTypeId,
+        ),
+        eq(energyResourceTypeRelevance.energy_type_id, energyTypeId),
+        eq(energyResourceTypeRelevance.energy_source_id, energySourceId),
+      ),
+    )
+    .limit(1);
+
+  if (duplicate) {
+    return {
+      success: false,
+      message: "This relevance combination already exists.",
+    };
+  }
+
+  const [created] = await db
+    .insert(energyResourceTypeRelevance)
+    .values({
+      energy_resource_type_id: energyResourceTypeId,
+      energy_type_id: energyTypeId,
+      energy_source_id: energySourceId,
+    })
+    .returning({ id: energyResourceTypeRelevance.id });
+
+  if (!created) {
+    return {
+      success: false,
+      message: "Failed to create relevance row.",
+    };
+  }
+
+  const [createdRow] = await db
+    .select()
+    .from(energyResourceTypeRelevance)
+    .where(eq(energyResourceTypeRelevance.id, created.id))
+    .limit(1);
+
+  const [item] = createdRow
+    ? await mapEnergyResourceTypeRelevanceRows([createdRow])
+    : [];
+
+  revalidateRelevanceAndDataEntry();
+
+  return {
+    success: true,
+    message: "Relevance row added.",
+    data: item,
+  };
+}
+
+export async function UpdateDevEnergyResourceTypeRelevance(
+  payload: Partial<DevEnergyResourceTypeRelevanceItem>,
+): Promise<DataTableFormResponse<DevEnergyResourceTypeRelevanceItem>> {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    return {
+      success: false,
+      message: "User not authenticated",
+    };
+  }
+
+  if (user.role !== "DEV") {
+    return {
+      success: false,
+      message: "Only DEV users can update energy resource type relevance rows.",
+    };
+  }
+
+  const rowId = toPositiveInteger(payload.id);
+  const { energyResourceTypeId, energyTypeId, energySourceId } =
+    resolveEnergyResourceTypeRelevancePayload(payload);
+
+  if (rowId == null) {
+    return {
+      success: false,
+      message: "Relevance row id is required.",
+    };
+  }
+
+  if (
+    energyResourceTypeId == null ||
+    energyTypeId == null ||
+    energySourceId == null
+  ) {
+    return {
+      success: false,
+      message:
+        "Energy Resource Type, Energy Type, and Energy Source are required.",
+    };
+  }
+
+  const [existing] = await db
+    .select({ id: energyResourceTypeRelevance.id })
+    .from(energyResourceTypeRelevance)
+    .where(eq(energyResourceTypeRelevance.id, rowId))
+    .limit(1);
+
+  if (!existing) {
+    return {
+      success: false,
+      message: "Relevance row not found.",
+    };
+  }
+
+  const validation = await validateEnergyResourceTypeRelevancePayload({
+    energyResourceTypeId,
+    energyTypeId,
+    energySourceId,
+  });
+
+  if (!validation.success) {
+    return validation;
+  }
+
+  const duplicateRows = await db
+    .select({ id: energyResourceTypeRelevance.id })
+    .from(energyResourceTypeRelevance)
+    .where(
+      and(
+        eq(
+          energyResourceTypeRelevance.energy_resource_type_id,
+          energyResourceTypeId,
+        ),
+        eq(energyResourceTypeRelevance.energy_type_id, energyTypeId),
+        eq(energyResourceTypeRelevance.energy_source_id, energySourceId),
+      ),
+    )
+    .limit(2);
+
+  if (duplicateRows.some((row) => row.id !== rowId)) {
+    return {
+      success: false,
+      message: "This relevance combination already exists.",
+    };
+  }
+
+  await db
+    .update(energyResourceTypeRelevance)
+    .set({
+      energy_resource_type_id: energyResourceTypeId,
+      energy_type_id: energyTypeId,
+      energy_source_id: energySourceId,
+    })
+    .where(eq(energyResourceTypeRelevance.id, rowId));
+
+  const [updatedRow] = await db
+    .select()
+    .from(energyResourceTypeRelevance)
+    .where(eq(energyResourceTypeRelevance.id, rowId))
+    .limit(1);
+
+  const [item] = updatedRow
+    ? await mapEnergyResourceTypeRelevanceRows([updatedRow])
+    : [];
+
+  revalidateRelevanceAndDataEntry();
+
+  return {
+    success: true,
+    message: "Relevance row updated.",
+    data: item,
   };
 }
 

@@ -81,7 +81,7 @@ interface DataTableProps<T extends DataTableRecord> {
 type SortDirection = "asc" | "desc" | null;
 type ColumnFilter = { search: string; selectedValues: string[] };
 
-type DataTableRecord = { id: string | number } & Record<string, unknown>;
+type DataTableRecord = { id: string | number };
 
 type DataTableColumn<T> =
   | keyof T

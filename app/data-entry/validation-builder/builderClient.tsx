@@ -19,7 +19,7 @@ import {
   clearDevValidationBuilderConfig,
   resetDevValidationBuilderConfig,
   saveDevValidationBuilderConfig,
-} from "@/app/dev/data-entry/validation-builder/service";
+} from "./service";
 
 type InputDefinitionOption = {
   id: number;
@@ -221,7 +221,10 @@ export default function ValidationBuilderClient(props: {
         <h2 className="text-base font-semibold">Custom messages</h2>
         <div className="grid gap-3">
           {CODE_LABELS.map((code) => (
-            <div key={code.key} className="space-y-1">
+            <div
+              key={code.key}
+              className="space-y-1"
+            >
               <Label>{code.label}</Label>
               <Input
                 value={config.customMessages[code.key] ?? ""}
@@ -260,10 +263,15 @@ export default function ValidationBuilderClient(props: {
             <select
               className="h-9 w-full rounded-md border bg-transparent px-2 text-sm"
               value={selectedInputDefId}
-              onChange={(event) => setSelectedInputDefId(Number(event.target.value))}
+              onChange={(event) =>
+                setSelectedInputDefId(Number(event.target.value))
+              }
             >
               {filteredInputDefinitions.map((item) => (
-                <option key={item.id} value={item.id}>
+                <option
+                  key={item.id}
+                  value={item.id}
+                >
                   {item.name} ({item.dataType}
                   {item.isMandatory ? ", required" : ""})
                 </option>
@@ -310,7 +318,9 @@ export default function ValidationBuilderClient(props: {
                 className="flex items-center justify-between gap-3 rounded border p-3"
               >
                 <div className="text-sm">
-                  <div className="font-medium">{getInputLabel(item.inputDefId)}</div>
+                  <div className="font-medium">
+                    {getInputLabel(item.inputDefId)}
+                  </div>
                   <div className="text-muted-foreground">
                     {item.codes.join(", ")}
                   </div>
@@ -330,7 +340,11 @@ export default function ValidationBuilderClient(props: {
       </section>
 
       <div className="flex flex-wrap gap-2">
-        <Button type="button" onClick={saveConfig} disabled={isPending}>
+        <Button
+          type="button"
+          onClick={saveConfig}
+          disabled={isPending}
+        >
           Save
         </Button>
         <Button

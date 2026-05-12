@@ -35,3 +35,17 @@ export type ManagedListItem = typeof managedListItems.$inferSelect & {
   energy_resource_type?: string | null;
 };
 export type NewManagedListItem = typeof managedListItems.$inferInsert;
+
+export const energyResourceTypeRelevance = pgTable(
+  "energy_resource_type_relevance",
+  {
+    id: serial("id").primaryKey().notNull(),
+    energy_resource_type_id: integer("energy_resource_type_id").notNull(),
+    energy_type_id: integer("energy_type_id").notNull(),
+    energy_source_id: integer("energy_source_id").notNull(),
+  },
+);
+export type EnergyResourceTypeRelevance =
+  typeof energyResourceTypeRelevance.$inferSelect;
+export type NewEnergyResourceTypeRelevance =
+  typeof energyResourceTypeRelevance.$inferInsert;

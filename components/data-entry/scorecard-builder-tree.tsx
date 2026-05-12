@@ -234,6 +234,8 @@ export default function ScorecardBuilderTree({
   const [justAddedInitiativeKey, setJustAddedInitiativeKey] = useState<
     string | null
   >(null);
+  const focusedObjectiveKeyRef = useRef<string | null>(null);
+  const focusedInitiativeKeyRef = useRef<string | null>(null);
   const prevObjectiveCountsRef = useRef<Record<PerspectiveLevel, number>>({
     1: 0,
     2: 0,
@@ -249,24 +251,34 @@ export default function ScorecardBuilderTree({
   );
 
   useEffect(() => {
-    if (justAddedObjectiveKey) {
-      const ref = objectiveInputRefs.current[justAddedObjectiveKey];
-      if (ref) {
-        ref.focus();
-        ref.select();
-        setJustAddedObjectiveKey(null);
-      }
+    if (
+      !justAddedObjectiveKey ||
+      focusedObjectiveKeyRef.current === justAddedObjectiveKey
+    ) {
+      return;
+    }
+
+    const ref = objectiveInputRefs.current[justAddedObjectiveKey];
+    if (ref) {
+      ref.focus();
+      ref.select();
+      focusedObjectiveKeyRef.current = justAddedObjectiveKey;
     }
   }, [justAddedObjectiveKey, expandedObjectives]);
 
   useEffect(() => {
-    if (justAddedInitiativeKey) {
-      const ref = initiativeInputRefs.current[justAddedInitiativeKey];
-      if (ref) {
-        ref.focus();
-        ref.select();
-        setJustAddedInitiativeKey(null);
-      }
+    if (
+      !justAddedInitiativeKey ||
+      focusedInitiativeKeyRef.current === justAddedInitiativeKey
+    ) {
+      return;
+    }
+
+    const ref = initiativeInputRefs.current[justAddedInitiativeKey];
+    if (ref) {
+      ref.focus();
+      ref.select();
+      focusedInitiativeKeyRef.current = justAddedInitiativeKey;
     }
   }, [justAddedInitiativeKey, expandedInitiatives]);
 
@@ -287,6 +299,7 @@ export default function ScorecardBuilderTree({
             ...prev,
             [key]: true,
           }));
+          focusedObjectiveKeyRef.current = null;
           setJustAddedObjectiveKey(key);
         }
       }
@@ -318,6 +331,7 @@ export default function ScorecardBuilderTree({
               ...prev,
               [key]: true,
             }));
+            focusedInitiativeKeyRef.current = null;
             setJustAddedInitiativeKey(key);
           }
         }

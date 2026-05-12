@@ -16,5 +16,5 @@ export default async function RelevanceSettingsPage(props: {
   if (user && !hasGlobalUtilityAccess(user)) {
     return <UtilityRelevanceSection searchParams={searchParams} />;
   }
-  return <DevRelevanceSection />;
+  return <DevRelevanceSection isDevUser={user?.role === "DEV"} />;
 }

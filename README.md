@@ -12,7 +12,7 @@ scorecard analysis, and settings-driven administration.
 - Balanced scorecard views and drilldown support
 - Embedded Power BI dashboard integration
 - Settings management modules (roles, users, service areas, reporting, inputs,
-  managed lists, organisations, countries, energy resources)
+  managed lists, organisations, countries, energy resources, relevance)
 
 ## Tech Stack
 
@@ -71,6 +71,8 @@ Set these values in `.env` before running the app.
 - `BETTER_AUTH_SECRET`
 - `BETTER_AUTH_URL` or `NEXT_PUBLIC_APP_URL`
 - `NEXT_PUBLIC_BETTER_AUTH_URL` (used by the auth client)
+- `PRISM_TRAINING_API_BASE_URL` (required for legacy `/api/fact*` and `/api/dim*` endpoint parity proxy)
+- `PRISM_TRAINING_API_KEY` (optional fallback for legacy prism-training `Authorization` header)
 
 ### SMTP (magic-link email delivery)
 
@@ -147,6 +149,9 @@ options, and visual presentation hints.
 - Auth API route is exposed through `app/api/auth/[...all]/route.ts`.
 - Additional route handlers are grouped under `app/api/data-entry`,
   `app/api/settings`, and related feature folders.
+- Legacy prism-training parity routes are available through
+  `app/api/[legacy]/route.ts` for supported `/api/fact*` and `/api/dim*`
+  endpoint names.
 
 ## Testing
 

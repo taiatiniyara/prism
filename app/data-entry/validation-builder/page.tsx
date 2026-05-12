@@ -2,8 +2,8 @@ import { db } from "@/db/connection";
 import { inputDefinitions, managedListItems } from "@/db/schema";
 import { getCurrentUser } from "@/lib/user.service";
 import { asc, eq } from "drizzle-orm";
-import ValidationBuilderClient from "@/app/dev/data-entry/validation-builder/builderClient";
-import { getDevValidationBuilderConfig } from "@/app/dev/data-entry/validation-builder/service";
+import { getDevValidationBuilderConfig } from "./service";
+import ValidationBuilderClient from "./builderClient";
 
 type InputDefinitionOption = {
   id: number;

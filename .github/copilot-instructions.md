@@ -18,7 +18,14 @@ Type `/graphify` in Copilot Chat to build or update the graph.
 ## error checks
 
 Always check for errors in the code after generating it. If you see an error,
-fix it and then check again. Repeat until there are no errors.
+fix it and then check again. Repeat until there are no errors. Run npx tsc
+--noEmit to check for TypeScript errors, or the equivalent for your language. If
+you are using an IDE, make sure to check for any error highlights or warnings in
+the code editor. If you are using a linter, run it to check for any linting
+errors or warnings. If you are running tests, make sure to check the test
+results for any failures or errors. If you are using a build tool, make sure to
+check the build output for any errors or warnings. Always make sure to fix any
+errors before proceeding with further development or testing.
 
 ## testing
 
