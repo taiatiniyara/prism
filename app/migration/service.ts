@@ -79,17 +79,27 @@ const toLegacyMigBaseUrl = (value: string): string => {
 const configuredTrainingBaseUrls = [
   process.env.PRISM_TRAINING_MIGRATION_URL,
   process.env.PRISM_TRAINING_API_BASE_URL,
-  process.env.NEXT_PUBLIC_PRISM_TRAINING_API_BASE_URL,
 ].filter((url): url is string => Boolean(url && url.trim().length > 0));
+
+const isProduction = process.env.NODE_ENV === "production";
+
+const defaultLocalMigrationBaseUrls = [
+  "http://localhost:36197/api/migration",
+  "http://localhost:3001/api/migration",
+  "http://localhost:3000/api/migration",
+];
+
+const defaultLocalLegacyMigBaseUrls = [
+  "http://localhost:36197/api/mig",
+  "http://localhost:3001/api/mig",
+  "http://localhost:3000/api/mig",
+];
 
 const migrationBaseUrls = Array.from(
   new Set(
     [
       ...configuredTrainingBaseUrls,
-      "http://localhost:36197/api/migration",
-      "http://localhost:3001/api/migration",
-      "http://localhost:3000/api/migration",
-      "https://prismdashboard.org/api/migration",
+      ...(isProduction ? [] : defaultLocalMigrationBaseUrls),
     ]
       .filter((url): url is string => Boolean(url && url.trim().length > 0))
       .map(toMigrationBaseUrl),
@@ -101,10 +111,7 @@ const legacyMigBaseUrls = Array.from(
     [
       ...configuredTrainingBaseUrls,
       ...migrationBaseUrls,
-      "http://localhost:36197/api/mig",
-      "http://localhost:3001/api/mig",
-      "http://localhost:3000/api/mig",
-      "https://prismdashboard.org/api/mig",
+      ...(isProduction ? [] : defaultLocalLegacyMigBaseUrls),
     ]
       .filter((url): url is string => Boolean(url && url.trim().length > 0))
       .map(toLegacyMigBaseUrl),

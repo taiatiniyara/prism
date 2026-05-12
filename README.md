@@ -72,7 +72,9 @@ Set these values in `.env` before running the app.
 - `BETTER_AUTH_URL` or `NEXT_PUBLIC_APP_URL`
 - `NEXT_PUBLIC_BETTER_AUTH_URL` (used by the auth client)
 - `PRISM_TRAINING_API_BASE_URL` (required for legacy `/api/fact*` and `/api/dim*` endpoint parity proxy)
+- `PRISM_TRAINING_MIGRATION_URL` (required in production for migration sync endpoints like `/api/migration/*` and `/api/mig/*`)
 - `PRISM_TRAINING_API_KEY` (optional fallback for legacy prism-training `Authorization` header)
+- `PRISM_TRAINING_MIGRATION_KEY` (optional API key sent as `x-migration-key` for migration sync calls)
 
 ### SMTP (magic-link email delivery)
 
