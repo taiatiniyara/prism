@@ -135,9 +135,22 @@ const logMigrationError = (error: unknown) => {
 const isProtocolHeaderError = (error: unknown): boolean => {
   if (!(error instanceof Error)) return false;
   const message = error.message.toLowerCase();
+  const cause = (error as Error & { cause?: unknown }).cause;
+  const causeMessage =
+    cause && typeof cause === "object" && "message" in cause
+      ? String((cause as { message?: unknown }).message ?? "").toLowerCase()
+      : "";
+  const code =
+    cause && typeof cause === "object" && "code" in cause
+      ? String((cause as { code?: unknown }).code ?? "").toUpperCase()
+      : "";
+
   return (
     message.includes("response does not match the http/1.1 protocol") ||
-    message.includes("invalid header value char")
+    message.includes("invalid header value char") ||
+    causeMessage.includes("response does not match the http/1.1 protocol") ||
+    causeMessage.includes("invalid header value char") ||
+    code === "HPE_INVALID_HEADER_TOKEN"
   );
 };
 

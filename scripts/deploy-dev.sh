@@ -25,7 +25,13 @@ ssh root@156.67.221.57 << 'EOF'
     echo "Build failed. Aborting deployment."
     exit 1
   fi
-  pm2 restart prism-dev --update-env
+  if pm2 describe prism-v2 >/dev/null 2>&1; then
+    pm2 restart prism-v2 --update-env
+  elif pm2 describe prism-dev >/dev/null 2>&1; then
+    pm2 restart prism-dev --update-env
+  else
+    pm2 start npm --name prism-v2 -- start
+  fi
   git stash
   echo "Deployment complete!"
 EOF
