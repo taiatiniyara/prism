@@ -41,6 +41,15 @@ const JSON_HEADERS = {
   "Content-Type": "application/json",
   Accept: "application/json",
 } as const;
+const DATA_ENTRY_PAGE_LIMIT = Number(
+  process.env.MIGRATION_DATA_ENTRY_PAGE_LIMIT ?? "500",
+);
+const MIGRATION_FETCH_TIMEOUT_MS = Number(
+  process.env.MIGRATION_FETCH_TIMEOUT_MS ?? "12000",
+);
+const MIGRATION_HEAVY_FETCH_TIMEOUT_MS = Number(
+  process.env.MIGRATION_HEAVY_FETCH_TIMEOUT_MS ?? "120000",
+);
 const migrationApiKey = (
   process.env.PRISM_TRAINING_MIGRATION_KEY ?? process.env.MIGRATION_API_KEY
 )?.trim();
@@ -190,9 +199,42 @@ const toNodeHeaders = (headers: HeadersInit): Record<string, string> => {
   );
 };
 
+const resolveTimeoutMs = (requestUrl: string): number => {
+  const defaultTimeoutMs =
+    Number.isFinite(MIGRATION_FETCH_TIMEOUT_MS) &&
+    MIGRATION_FETCH_TIMEOUT_MS > 0
+      ? MIGRATION_FETCH_TIMEOUT_MS
+      : 12000;
+  const heavyTimeoutMs =
+    Number.isFinite(MIGRATION_HEAVY_FETCH_TIMEOUT_MS) &&
+    MIGRATION_HEAVY_FETCH_TIMEOUT_MS > 0
+      ? MIGRATION_HEAVY_FETCH_TIMEOUT_MS
+      : 120000;
+
+  const lowerUrl = requestUrl.toLowerCase();
+  if (
+    lowerUrl.includes("/dataentry") ||
+    lowerUrl.includes("/generationrelevance") ||
+    lowerUrl.includes("/tariffrelevance")
+  ) {
+    return heavyTimeoutMs;
+  }
+
+  return defaultTimeoutMs;
+};
+
+const resolveDataEntryPageLimit = (): number => {
+  if (!Number.isFinite(DATA_ENTRY_PAGE_LIMIT) || DATA_ENTRY_PAGE_LIMIT <= 0) {
+    return 500;
+  }
+
+  return Math.max(1, Math.min(2000, Math.trunc(DATA_ENTRY_PAGE_LIMIT)));
+};
+
 const requestWithInsecureHttpParser = async (
   requestUrl: string,
   headers: HeadersInit,
+  timeoutMs: number,
 ): Promise<Response> => {
   const url = new URL(requestUrl);
   const transport = url.protocol === "https:" ? https : http;
@@ -236,6 +278,10 @@ const requestWithInsecureHttpParser = async (
       },
     );
 
+    req.setTimeout(timeoutMs, () => {
+      req.destroy(new Error(`Migration request timeout after ${timeoutMs}ms`));
+    });
+
     req.on("error", reject);
     req.end();
   });
@@ -243,18 +289,32 @@ const requestWithInsecureHttpParser = async (
 
 const fetchJsonEndpoint = async (requestUrl: string, headers: HeadersInit) => {
   let response: Response;
+  const timeoutMs = resolveTimeoutMs(requestUrl);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => {
+    controller.abort(
+      new Error(`Migration request timeout after ${timeoutMs}ms`),
+    );
+  }, timeoutMs);
 
   try {
     response = await fetch(requestUrl, {
       method: "GET",
       headers,
+      signal: controller.signal,
     });
   } catch (error: unknown) {
     if (!shouldTryInsecureParser(requestUrl, error)) {
       throw error;
     }
 
-    response = await requestWithInsecureHttpParser(requestUrl, headers);
+    response = await requestWithInsecureHttpParser(
+      requestUrl,
+      headers,
+      timeoutMs,
+    );
+  } finally {
+    clearTimeout(timeout);
   }
 
   if (!response.ok) {
@@ -2342,7 +2402,7 @@ export async function retrieveDataEntries(options?: {
     while (hasMore) {
       const params = new URLSearchParams();
       params.set("includeDeleted", "1");
-      params.set("unlimited", "1");
+      params.set("limit", String(resolveDataEntryPageLimit()));
 
       if (cursor != null) params.set("cursor", String(cursor));
       if (options?.reportPeriodId != null) {
