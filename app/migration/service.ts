@@ -30,16 +30,80 @@ import {
   ServiceArea,
   serviceAreas,
 } from "@/db/schema/utility";
+import { getCurrentUser } from "@/lib/user.service";
 import { generateRandomNumber } from "@/lib/utils";
-import { and, desc, eq, gt, inArray, isNull } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 const JSON_HEADERS = {
   "Content-Type": "application/json",
   Accept: "application/json",
 } as const;
-const migrationApiKey =
-  process.env.PRISM_TRAINING_MIGRATION_KEY ?? process.env.MIGRATION_API_KEY;
+const migrationApiKey = (
+  process.env.PRISM_TRAINING_MIGRATION_KEY ?? process.env.MIGRATION_API_KEY
+)?.trim(); // Trim whitespace that might cause HTTP header issues
+
+// Detailed API key inspection
+if (migrationApiKey) {
+  const charCodes = Array.from(migrationApiKey).map((c, i) => ({
+    index: i,
+    char: c === "\n" ? "\\n" : c === "\r" ? "\\r" : c === "\t" ? "\\t" : c,
+    code: c.charCodeAt(0),
+    hex: `0x${c.charCodeAt(0).toString(16).padStart(2, "0")}`,
+    isControl: c.charCodeAt(0) < 32,
+    isExtended: c.charCodeAt(0) > 126,
+  }));
+  const hasInvalidHttpChars = /[\x00-\x1F\x7F-\xFF]|[\n\r\t\v]/.test(
+    migrationApiKey,
+  );
+  const invalidChars = charCodes.filter(
+    (c) => c.code < 32 || c.code > 126 || c.code === 127,
+  );
+
+  // Check for common HTTP-invalid characters
+  const httpInvalidChars = charCodes.filter((c) => {
+    // HTTP headers cannot contain certain characters
+    const invalidForHttp =
+      c.code < 32 ||
+      c.code === 127 ||
+      c.char === " " ||
+      c.char === ":" ||
+      c.char === "," ||
+      c.char === ";";
+    return invalidForHttp;
+  });
+
+  console.log("[migration:init] API Key Full Analysis:", {
+    length: migrationApiKey.length,
+    hasInvalidHttpChars,
+    invalidCharCount: invalidChars.length,
+    httpInvalidCount: httpInvalidChars.length,
+    allChars: charCodes,
+    httpInvalidChars: httpInvalidChars.length > 0 ? httpInvalidChars : "NONE",
+    preview: migrationApiKey.slice(0, 30),
+    trimmedLength: migrationApiKey.trim().length,
+    isTrimmed: migrationApiKey !== migrationApiKey.trim(),
+    source: process.env.PRISM_TRAINING_MIGRATION_KEY
+      ? "PRISM_TRAINING_MIGRATION_KEY"
+      : "MIGRATION_API_KEY",
+  });
+
+  // Also log the raw key for debugging
+  console.log(
+    "[migration:init] API Key (raw):",
+    JSON.stringify(migrationApiKey),
+  );
+}
+
+console.log("[migration:init] Environment variables:", {
+  PRISM_TRAINING_MIGRATION_URL: process.env.PRISM_TRAINING_MIGRATION_URL,
+  PRISM_TRAINING_API_BASE_URL: process.env.PRISM_TRAINING_API_BASE_URL,
+  PRISM_TRAINING_MIGRATION_KEY_SET: Boolean(
+    process.env.PRISM_TRAINING_MIGRATION_KEY,
+  ),
+  MIGRATION_API_KEY_SET: Boolean(process.env.MIGRATION_API_KEY),
+  NODE_ENV: process.env.NODE_ENV,
+});
 
 const normalizeMigrationBaseUrl = (value: string): string => {
   const trimmed = value.trim();
@@ -48,32 +112,54 @@ const normalizeMigrationBaseUrl = (value: string): string => {
 
 const toMigrationBaseUrl = (value: string): string => {
   const normalized = normalizeMigrationBaseUrl(value);
+  console.log("[migration:url] toMigrationBaseUrl input:", value);
 
   if (normalized.toLowerCase().endsWith("/api/migration")) {
+    console.log("[migration:url] -> Already has /api/migration", normalized);
     return normalized;
   }
   if (normalized.toLowerCase().endsWith("/api/mig")) {
-    return `${normalized.slice(0, -4)}/migration`;
+    const result = `${normalized.slice(0, -4)}/migration`;
+    console.log(
+      "[migration:url] -> Replaced /api/mig with /api/migration",
+      result,
+    );
+    return result;
   }
   if (normalized.toLowerCase().endsWith("/api")) {
-    return `${normalized}/migration`;
+    const result = `${normalized}/migration`;
+    console.log("[migration:url] -> Added /migration to /api", result);
+    return result;
   }
-  return `${normalized}/api/migration`;
+  const result = `${normalized}/api/migration`;
+  console.log("[migration:url] -> Added /api/migration", result);
+  return result;
 };
 
 const toLegacyMigBaseUrl = (value: string): string => {
   const normalized = normalizeMigrationBaseUrl(value);
+  console.log("[migration:url] toLegacyMigBaseUrl input:", value);
 
   if (normalized.toLowerCase().endsWith("/api/mig")) {
+    console.log("[migration:url] -> Already has /api/mig", normalized);
     return normalized;
   }
   if (normalized.toLowerCase().endsWith("/api/migration")) {
-    return `${normalized.slice(0, -10)}/mig`;
+    const result = `${normalized.slice(0, -10)}/mig`;
+    console.log(
+      "[migration:url] -> Replaced /api/migration with /api/mig",
+      result,
+    );
+    return result;
   }
   if (normalized.toLowerCase().endsWith("/api")) {
-    return `${normalized}/mig`;
+    const result = `${normalized}/mig`;
+    console.log("[migration:url] -> Added /mig to /api", result);
+    return result;
   }
-  return `${normalized}/api/mig`;
+  const result = `${normalized}/api/mig`;
+  console.log("[migration:url] -> Added /api/mig", result);
+  return result;
 };
 
 const configuredTrainingBaseUrls = [
@@ -118,6 +204,13 @@ const legacyMigBaseUrls = Array.from(
   ),
 );
 
+console.log("[migration:urls] Configured URLs:", {
+  configuredTrainingBaseUrls,
+  isProduction,
+  migrationBaseUrls,
+  legacyMigBaseUrls,
+});
+
 const logMigrationError = (error: unknown) => {
   console.error("[migration] operation failed", error);
 };
@@ -153,6 +246,23 @@ const describeFetchError = (error: unknown): string => {
   return parts.join("; ");
 };
 
+const assertDevMigrationAccess = async () => {
+  const user = await getCurrentUser();
+  if (user.role !== "DEV") {
+    throw new Error("Unauthorized: DEV role required.");
+  }
+};
+
+const isUniqueViolationError = (error: unknown): boolean => {
+  if (!(error instanceof Error)) return false;
+
+  const code = (error as Error & { code?: unknown }).code;
+  if (code === "23505") return true;
+
+  const message = error.message.toLowerCase();
+  return message.includes("duplicate key") || message.includes("uniq_entry");
+};
+
 const toNumberOrNull = (value: unknown): number | null => {
   if (typeof value === "number") {
     return Number.isFinite(value) ? value : null;
@@ -172,25 +282,80 @@ const toUserStatus = (value: unknown): UserStatus => {
 };
 
 const fetchMigrationEndpoint = async (path: string) => {
+  console.log(
+    "[migration:fetch] Starting fetchMigrationEndpoint for path:",
+    path,
+  );
+  console.log("[migration:fetch] Attempting URLs:", migrationBaseUrls);
+
   const headers = {
     ...JSON_HEADERS,
     ...(migrationApiKey ? { "x-migration-key": migrationApiKey } : {}),
   };
+  console.log("[migration:fetch] Headers:", {
+    "Content-Type": headers["Content-Type"],
+    Accept: headers["Accept"],
+    "x-migration-key": migrationApiKey
+      ? `SET (length: ${migrationApiKey.length})`
+      : "NOT SET",
+  });
 
+  // Validate headers for invalid characters
+  for (const [key, value] of Object.entries(headers)) {
+    if (typeof value === "string") {
+      // Check for control characters and non-printable ASCII
+      const chars = Array.from(value).map((c, i) => ({
+        index: i,
+        char: c === "\n" ? "\\n" : c === "\r" ? "\\r" : c === "\t" ? "\\t" : c,
+        code: c.charCodeAt(0),
+        hex: `0x${c.charCodeAt(0).toString(16).padStart(2, "0")}`,
+        isValid: c.charCodeAt(0) >= 32 && c.charCodeAt(0) <= 126,
+        isControl: c.charCodeAt(0) < 32,
+        isExtended: c.charCodeAt(0) > 126,
+      }));
+      const invalidChars = chars.filter((c) => !c.isValid);
+      if (invalidChars.length > 0) {
+        console.warn(
+          `[migration:fetch] ⚠️ Header "${key}" contains ${invalidChars.length} invalid character(s):`,
+          {
+            totalLength: value.length,
+            invalidChars,
+            fullChars: chars,
+          },
+        );
+      } else {
+        console.log(
+          `[migration:fetch] ✓ Header "${key}" is valid (${value.length} chars). First 5:`,
+          chars.slice(0, 5),
+        );
+      }
+    }
+  }
   const failures: string[] = [];
 
   for (const baseUrl of migrationBaseUrls) {
     const requestUrl = `${baseUrl}${path}`;
+    console.log("[migration:fetch] Trying URL:", requestUrl);
 
     try {
+      console.log("[migration:fetch] Making fetch request...");
       const response = await fetch(requestUrl, {
         method: "GET",
         headers,
       });
 
+      console.log("[migration:fetch] Response received:", {
+        status: response.status,
+        ok: response.ok,
+        statusText: response.statusText,
+        contentType: response.headers.get("content-type"),
+        url: response.url,
+      });
+
       if (response.ok) {
         const contentType = response.headers.get("content-type") ?? "";
         if (contentType.toLowerCase().includes("application/json")) {
+          console.log("[migration:fetch] ✓ Success! Got JSON response");
           return response;
         }
 
@@ -199,29 +364,42 @@ const fetchMigrationEndpoint = async (path: string) => {
           .trim()
           .slice(0, 140);
 
-        failures.push(
-          `${requestUrl} -> expected JSON but got ${contentType || "unknown content-type"}${preview ? ` (body starts: ${preview})` : ""}`,
+        const failMsg = `${requestUrl} -> expected JSON but got ${contentType || "unknown content-type"}${preview ? ` (body starts: ${preview})` : ""}`;
+        console.log(
+          "[migration:fetch] ✗ Got response but wrong content-type:",
+          failMsg,
         );
+        failures.push(failMsg);
         continue;
       }
 
-      failures.push(`${requestUrl} -> HTTP ${response.status}`);
+      const failMsg = `${requestUrl} -> HTTP ${response.status}`;
+      console.log("[migration:fetch] ✗ Got HTTP error:", failMsg);
+      failures.push(failMsg);
     } catch (error: unknown) {
       const message = describeFetchError(error);
-      failures.push(`${requestUrl} -> ${message}`);
+      const failMsg = `${requestUrl} -> ${message}`;
+      console.log("[migration:fetch] ✗ Fetch error:", failMsg);
+      failures.push(failMsg);
     }
   }
 
-  throw new Error(
-    [
-      `Unable to reach migration endpoint for ${path}.`,
-      `Tried: ${failures.join(" | ")}`,
-      "Set PRISM_TRAINING_MIGRATION_URL or PRISM_TRAINING_API_BASE_URL in prism/.env to the prism-training API host.",
-    ].join(" "),
-  );
+  const errorMsg = [
+    `Unable to reach migration endpoint for ${path}.`,
+    `Tried: ${failures.join(" | ")}`,
+    "Set PRISM_TRAINING_MIGRATION_URL or PRISM_TRAINING_API_BASE_URL in prism/.env to the prism-training API host.",
+  ].join(" ");
+  console.log("[migration:fetch] ✗ All attempts failed:", errorMsg);
+  throw new Error(errorMsg);
 };
 
 const fetchLegacyMigEndpoint = async (path: string) => {
+  console.log(
+    "[migration:legacy-fetch] Starting fetchLegacyMigEndpoint for path:",
+    path,
+  );
+  console.log("[migration:legacy-fetch] Attempting URLs:", legacyMigBaseUrls);
+
   const headers = {
     ...JSON_HEADERS,
     ...(migrationApiKey ? { "x-migration-key": migrationApiKey } : {}),
@@ -231,11 +409,19 @@ const fetchLegacyMigEndpoint = async (path: string) => {
 
   for (const baseUrl of legacyMigBaseUrls) {
     const requestUrl = `${baseUrl}${path}`;
+    console.log("[migration:legacy-fetch] Trying URL:", requestUrl);
 
     try {
+      console.log("[migration:legacy-fetch] Making fetch request...");
       const response = await fetch(requestUrl, {
         method: "GET",
         headers,
+      });
+      console.log("[migration:legacy-fetch] Response received:", {
+        status: response.status,
+        ok: response.ok,
+        statusText: response.statusText,
+        contentType: response.headers.get("content-type"),
       });
 
       if (response.ok) {
@@ -305,6 +491,7 @@ type SourceCountryContextRow = {
 export async function retrieveUtilityContextData(options?: {
   reportPeriodId?: number;
 }) {
+  await assertDevMigrationAccess();
   let res = false;
   let inserted = 0;
   let updated = 0;
@@ -501,6 +688,7 @@ export async function retrieveUtilityContextData(options?: {
 export async function retrieveCountryContextData(options?: {
   reportPeriodId?: number;
 }) {
+  await assertDevMigrationAccess();
   let res = false;
   let inserted = 0;
   let updated = 0;
@@ -666,18 +854,45 @@ export async function retrieveCountryContextData(options?: {
 }
 
 export async function retrieveRoles() {
+  await assertDevMigrationAccess();
   let res = false;
-  await db.delete(roles).where(gt(roles.id, 0));
-  const call = await fetchMigrationEndpoint("/roles");
-  const list: Role[] = await call.json();
-
-  const existingRoles = await db.select().from(roles);
-  const existingIds = new Set(existingRoles.map((r) => r.id));
-  const nonExistingRoles = list.filter((role) => !existingIds.has(role.id));
   try {
-    if (nonExistingRoles.length > 0) {
-      await db.insert(roles).values(nonExistingRoles);
+    const call = await fetchMigrationEndpoint("/roles");
+    const list: Role[] = await call.json();
+
+    const existingRoles = await db.select().from(roles);
+    const existingById = new Map(existingRoles.map((r) => [r.id, r]));
+
+    let inserted = 0;
+    let updated = 0;
+
+    for (const sourceRole of list) {
+      const existing = existingById.get(sourceRole.id);
+
+      if (!existing) {
+        await db.insert(roles).values(sourceRole);
+        inserted += 1;
+        continue;
+      }
+
+      if (
+        existing.name !== sourceRole.name ||
+        existing.description !== sourceRole.description
+      ) {
+        await db
+          .update(roles)
+          .set({
+            name: sourceRole.name,
+            description: sourceRole.description,
+          })
+          .where(eq(roles.id, sourceRole.id));
+        updated += 1;
+      }
     }
+
+    console.info(
+      `[migration] roles done: inserted=${inserted}, updated=${updated}, source=${list.length}`,
+    );
     res = true;
   } catch (error: unknown) {
     logMigrationError(error);
@@ -702,6 +917,7 @@ type MigrationUserDto = {
 };
 
 export async function retrieveUsers() {
+  await assertDevMigrationAccess();
   let res = false;
 
   try {
@@ -797,10 +1013,8 @@ export async function retrieveUsers() {
 }
 
 export async function retrieveUtilityData() {
+  await assertDevMigrationAccess();
   let res = false;
-  await db.delete(serviceAreas).where(gt(serviceAreas.id, 0));
-  await db.delete(reportPeriods).where(gt(reportPeriods.id, 0));
-  await db.delete(organisations).where(gt(organisations.id, 0));
   const call = await fetchMigrationEndpoint("/organisation");
   const list = await call.json();
   const serviceAreaList: ServiceArea[] = list.serviceAreas;
@@ -941,9 +1155,8 @@ export async function retrieveUtilityData() {
 }
 
 export async function retrieveCountries() {
+  await assertDevMigrationAccess();
   let res = false;
-  await db.delete(subRegions).where(gt(subRegions.id, 0));
-  await db.delete(countries).where(gt(countries.id, 0));
   const call = await fetchMigrationEndpoint("/country");
   const list = await call.json();
   const subRegionList: SubRegion[] = list.subregions;
@@ -985,9 +1198,8 @@ export async function retrieveCountries() {
 }
 
 export async function retrieveManagedLists() {
+  await assertDevMigrationAccess();
   let res = false;
-  await db.delete(managedLists).where(gt(managedLists.id, 0));
-  await db.delete(managedListItems).where(gt(managedListItems.id, 0));
   const call = await fetchMigrationEndpoint("/managedList");
   const list = await call.json();
   const managedListItemsList: ManagedListItem[] = list.managedListItems;
@@ -1025,8 +1237,8 @@ export async function retrieveManagedLists() {
 }
 
 export async function retrieveInputDefinitions() {
+  await assertDevMigrationAccess();
   let res = false;
-  await db.delete(inputDefinitions).where(gt(inputDefinitions.id, 0));
   const call = await fetchMigrationEndpoint("/inputDefinitions");
   const list = await call.json();
   const inputDefinitionsList: InputDefinition[] = list.inputDefinitions;
@@ -1059,8 +1271,8 @@ export async function retrieveInputDefinitions() {
 }
 
 export async function retrieveReportPeriods() {
+  await assertDevMigrationAccess();
   let res = false;
-  await db.delete(reportPeriods).where(gt(reportPeriods.id, 0));
   const call = await fetchMigrationEndpoint("/reportPeriods");
   const list = await call.json();
   const reportPeriodsList: ReportPeriod[] = list;
@@ -1095,9 +1307,9 @@ export async function retrieveReportPeriods() {
 }
 
 export async function retrieveEnergyResources() {
+  await assertDevMigrationAccess();
   let res = false;
   let autoFilledPeriodEntries = 0;
-  await db.delete(energyResources).where(gt(energyResources.id, 0));
   const call = await fetchMigrationEndpoint("/generators");
   const list = await call.json();
   type SourceEnergyResource = Omit<EnergyResource, "period_entries"> & {
@@ -1253,6 +1465,7 @@ export async function retrieveEnergyResources() {
 }
 
 export async function backfillEnergyResourcePeriods() {
+  await assertDevMigrationAccess();
   let res = false;
   let resourcesUpdated = 0;
   let periodEntriesAdded = 0;
@@ -1384,6 +1597,7 @@ export async function backfillEnergyResourcePeriods() {
 }
 
 export async function retrieveKpiDefinitions() {
+  await assertDevMigrationAccess();
   let res = false;
   const call = await fetchMigrationEndpoint("/kpi");
   const list = await call.json();
@@ -2036,23 +2250,49 @@ export async function retrieveDataEntries(options?: {
   reportPeriodId?: number;
   batchSize?: number;
 }) {
+  await assertDevMigrationAccess();
   let res = false;
   let cursor: number | null = null;
   let hasMore = true;
-
-  const batchSize = Math.max(1, Math.min(2000, options?.batchSize ?? 500));
 
   let inserted = 0;
   let updated = 0;
   let skipped = 0;
   let skippedOutOfRange = 0;
+  let skippedMissingInputDefMapping = 0;
+  let skippedMissingReportPeriod = 0;
   let mappedByDlDefMapping = 0;
   let mappedByMetadata = 0;
   let skippedMissingRequiredFk = 0;
   let nulledInvalidOptionalFk = 0;
+  let mergedByUniqueKeyCollision = 0;
   let utilityContextBackfilled = 0;
   let utilityContextBackfillSkipped = 0;
   let utilityContextBackfillPeriods = 0;
+  const skippedSamples: Array<{
+    sourceId: number | null;
+    reason: string;
+    reportPeriodId: number | null;
+    inputDefId: number | null;
+    sourceInputDefId: number | null;
+  }> = [];
+
+  const recordSkippedSample = (
+    row: SourceDataEntryRow,
+    reason: string,
+    reportPeriodId: number | null,
+    inputDefId: number | null,
+    sourceInputDefId: number | null,
+  ) => {
+    if (skippedSamples.length >= 100) return;
+    skippedSamples.push({
+      sourceId: row.source_id ?? null,
+      reason,
+      reportPeriodId,
+      inputDefId,
+      sourceInputDefId,
+    });
+  };
 
   const mappingRows = await db
     .select({
@@ -2150,8 +2390,8 @@ export async function retrieveDataEntries(options?: {
   try {
     while (hasMore) {
       const params = new URLSearchParams();
-      params.set("limit", String(batchSize));
       params.set("includeDeleted", "1");
+      params.set("unlimited", "1");
 
       if (cursor != null) params.set("cursor", String(cursor));
       if (options?.reportPeriodId != null) {
@@ -2166,6 +2406,9 @@ export async function retrieveDataEntries(options?: {
       }
 
       const page: SourceDataEntryPage = await call.json();
+      console.info(
+        `[migration:dataEntry] fetched page: returned=${page.pagination.returned}, hasMore=${page.pagination.hasMore}, nextCursor=${page.pagination.nextCursor}`,
+      );
 
       for (const row of page.dataEntry) {
         const reportPeriodId = normalizeRequiredId(row.report_period_id);
@@ -2210,12 +2453,38 @@ export async function retrieveDataEntries(options?: {
         }
 
         if (reportPeriodId == null || inputDefId == null) {
+          if (inputDefId == null) {
+            skippedMissingInputDefMapping += 1;
+            recordSkippedSample(
+              row,
+              "missing-input-definition-mapping",
+              reportPeriodId,
+              inputDefId,
+              sourceTrainingDlDefId,
+            );
+          } else {
+            recordSkippedSample(
+              row,
+              "invalid-or-missing-report-period-id",
+              reportPeriodId,
+              inputDefId,
+              sourceTrainingDlDefId,
+            );
+          }
           skippedOutOfRange += 1;
           skipped += 1;
           continue;
         }
 
         if (!targetReportPeriodIds.has(reportPeriodId)) {
+          skippedMissingReportPeriod += 1;
+          recordSkippedSample(
+            row,
+            "report-period-not-found-in-target",
+            reportPeriodId,
+            inputDefId,
+            sourceTrainingDlDefId,
+          );
           skippedMissingRequiredFk += 1;
           skipped += 1;
           continue;
@@ -2354,8 +2623,49 @@ export async function retrieveDataEntries(options?: {
             .where(eq(dataEntries.id, existing.id));
           updated += 1;
         } else {
-          await db.insert(dataEntries).values(payload);
-          inserted += 1;
+          try {
+            await db.insert(dataEntries).values(payload);
+            inserted += 1;
+          } catch (error: unknown) {
+            if (!isUniqueViolationError(error)) {
+              throw error;
+            }
+
+            const uniqueKeyConditions = [
+              eq(dataEntries.report_period_id, reportPeriodId),
+              eq(dataEntries.input_def_id, inputDefId),
+              serviceAreaId == null
+                ? isNull(dataEntries.service_area_id)
+                : eq(dataEntries.service_area_id, serviceAreaId),
+              scopedEnergyResourceId == null
+                ? isNull(dataEntries.energy_resource_id)
+                : eq(dataEntries.energy_resource_id, scopedEnergyResourceId),
+              energyProviderId == null
+                ? isNull(dataEntries.energy_provider_id)
+                : eq(dataEntries.energy_provider_id, energyProviderId),
+              energySourceId == null
+                ? isNull(dataEntries.energy_source_id)
+                : eq(dataEntries.energy_source_id, energySourceId),
+            ];
+
+            const [existingByUniqueIndex] = await db
+              .select({ id: dataEntries.id })
+              .from(dataEntries)
+              .where(and(...uniqueKeyConditions))
+              .limit(1);
+
+            if (!existingByUniqueIndex) {
+              throw error;
+            }
+
+            await db
+              .update(dataEntries)
+              .set(payload)
+              .where(eq(dataEntries.id, existingByUniqueIndex.id));
+
+            mergedByUniqueKeyCollision += 1;
+            updated += 1;
+          }
         }
       }
 
@@ -2374,8 +2684,14 @@ export async function retrieveDataEntries(options?: {
       utilityContextBackfill.targetPeriodsConsidered;
 
     console.info(
-      `[migration] data entries done: inserted=${inserted}, updated=${updated}, skipped=${skipped}, skippedOutOfRange=${skippedOutOfRange}, skippedMissingRequiredFk=${skippedMissingRequiredFk}, mappedByDlDefMapping=${mappedByDlDefMapping}, mappedByMetadata=${mappedByMetadata}, nulledInvalidOptionalFk=${nulledInvalidOptionalFk}, utilityContextBackfilled=${utilityContextBackfilled}, utilityContextBackfillPeriods=${utilityContextBackfillPeriods}, utilityContextBackfillSkipped=${utilityContextBackfillSkipped}`,
+      `[migration] data entries done: inserted=${inserted}, updated=${updated}, skipped=${skipped}, skippedOutOfRange=${skippedOutOfRange}, skippedMissingInputDefMapping=${skippedMissingInputDefMapping}, skippedMissingReportPeriod=${skippedMissingReportPeriod}, skippedMissingRequiredFk=${skippedMissingRequiredFk}, mappedByDlDefMapping=${mappedByDlDefMapping}, mappedByMetadata=${mappedByMetadata}, nulledInvalidOptionalFk=${nulledInvalidOptionalFk}, mergedByUniqueKeyCollision=${mergedByUniqueKeyCollision}, utilityContextBackfilled=${utilityContextBackfilled}, utilityContextBackfillPeriods=${utilityContextBackfillPeriods}, utilityContextBackfillSkipped=${utilityContextBackfillSkipped}`,
     );
+    if (skippedSamples.length > 0) {
+      console.warn(
+        `[migration] data entries skipped sample (${skippedSamples.length} captured, max=100):`,
+        skippedSamples,
+      );
+    }
     res = true;
   } catch (error: unknown) {
     logMigrationError(error);
@@ -2453,6 +2769,7 @@ export async function retrieveGenerationRelevance(options?: {
   reportPeriodId?: number;
   batchSize?: number;
 }) {
+  await assertDevMigrationAccess();
   let res = false;
   let cursor: number | null = null;
   let hasMore = true;
@@ -2638,6 +2955,7 @@ export async function retrieveTransmissionRelevance(options?: {
   reportPeriodId?: number;
   batchSize?: number;
 }) {
+  await assertDevMigrationAccess();
   let res = false;
   let cursor: number | null = null;
   let hasMore = true;
@@ -2825,11 +3143,17 @@ export async function retrieveTariffRelevance(options?: {
   reportPeriodId?: number;
   batchSize?: number;
 }) {
+  await assertDevMigrationAccess();
+  console.log("[migration:tariffRelevance] Starting retrieveTariffRelevance", {
+    options,
+  });
+
   let res = false;
   let cursor: number | null = null;
   let hasMore = true;
 
   const batchSize = Math.max(1, Math.min(2000, options?.batchSize ?? 500));
+  console.log("[migration:tariffRelevance] Batch size:", batchSize);
 
   let inserted = 0;
   let updated = 0;
@@ -2894,8 +3218,18 @@ export async function retrieveTariffRelevance(options?: {
         params.set("reportPeriodId", String(options.reportPeriodId));
       }
 
+      console.log("[migration:tariffRelevance] Fetching batch:", {
+        cursor,
+        limit: batchSize,
+        queryString: params.toString(),
+      });
+
       const call = await fetchMigrationEndpoint(
         `/tariffRelevance?${params.toString()}`,
+      );
+
+      console.log(
+        "[migration:tariffRelevance] Batch fetch successful, parsing JSON...",
       );
 
       if (!call.ok) {
@@ -2905,6 +3239,12 @@ export async function retrieveTariffRelevance(options?: {
       }
 
       const page: SourceTariffRelevancePage = await call.json();
+      console.log(
+        "[migration:tariffRelevance] Batch parsed. Items count:",
+        page.tariffRelevance?.length ?? 0,
+        "hasMore:",
+        page.pagination.hasMore,
+      );
 
       for (const row of page.tariffRelevance) {
         const reportPeriodId = toNumberOrNull(row.report_period_id);
@@ -3002,13 +3342,29 @@ export async function retrieveTariffRelevance(options?: {
 
       cursor = page.pagination.nextCursor;
       hasMore = page.pagination.hasMore === true && cursor != null;
+      console.log("[migration:tariffRelevance] Batch processed:", {
+        inserted,
+        updated,
+        skipped,
+        cursor,
+        hasMore,
+      });
     }
 
     console.info(
-      `[migration] tariff relevance done: inserted=${inserted}, updated=${updated}, skipped=${skipped}, skippedMissingRequiredFk=${skippedMissingRequiredFk}`,
+      `[migration:tariffRelevance] SUCCESS: inserted=${inserted}, updated=${updated}, skipped=${skipped}, skippedMissingRequiredFk=${skippedMissingRequiredFk}`,
     );
     res = true;
   } catch (error: unknown) {
+    console.error(
+      "[migration:tariffRelevance] ERROR:",
+      error instanceof Error
+        ? {
+            message: error.message,
+            stack: error.stack,
+          }
+        : error,
+    );
     logMigrationError(error);
   }
 
@@ -3090,6 +3446,7 @@ const buildReportPeriodLabel = (reportDate: Date): string => {
 };
 
 export async function getDataEntryComparisonFilterOptions(): Promise<DataEntryComparisonFilterOptions> {
+  await assertDevMigrationAccess();
   const utilityList = await db
     .select({ id: organisations.id, name: organisations.name })
     .from(organisations);
@@ -3163,6 +3520,7 @@ export async function getDataEntryComparisonFilterOptions(): Promise<DataEntryCo
 export async function compareDataEntries(
   filters?: DataEntryComparisonFilters,
 ): Promise<DataEntryComparisonResult> {
+  await assertDevMigrationAccess();
   const utilityId = toOptionalNumber(filters?.utilityId);
   const reportPeriodId = toOptionalNumber(filters?.reportPeriodId);
   const categoryId = toOptionalNumber(filters?.categoryId);
