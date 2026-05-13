@@ -7,6 +7,7 @@ import { Download, Upload } from "lucide-react";
 import { toast } from "sonner";
 
 import {
+  getTemplateInputsForDownloadAction,
   uploadDataEntryTemplateAction,
   type DataEntryTemplateUploadRowPayload,
 } from "@/app/data-entry/enter-data/service";
@@ -15,6 +16,13 @@ import { DataEntryPageViewModel } from "@/app/data-entry/types";
 import { shouldRunValidationBuilderRule } from "@/app/data-entry/enter-data/services/validation-builder/shared";
 import { DevValidationBuilderConfig } from "@/app/data-entry/enter-data/services/validation-builder/types";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 
 type TemplateRow = {
   context_mode: "flat" | "grouped-by-generator" | "grouped-by-payment-mode";
@@ -42,6 +50,8 @@ type TemplateRowLookupKey = {
   input_name: string;
   unit_name: string;
 };
+
+type DownloadTemplateScope = "subcategory" | "category";
 
 interface EnterDataTemplatePanelProps {
   inputs: DataEntryPageViewModel["inputs"];
@@ -481,17 +491,19 @@ export default function EnterDataTemplatePanel({
   const router = useRouter();
   const [isUploading, startUploadTransition] = useTransition();
   const [selectedFileName, setSelectedFileName] = useState<string | null>(null);
+  const [isDownloadScopeDialogOpen, setIsDownloadScopeDialogOpen] =
+    useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const templateRows = useMemo(() => flattenTemplateRows(inputs), [inputs]);
-  const downloadFileName = useMemo(() => {
+  const buildDownloadFileName = (scope: DownloadTemplateScope) => {
     const inputCategoryName = resolveOptionName(
       options.inputCategories,
       context.inputCategoryId,
     );
     const inputSubcategoryName = resolveOptionName(
       options.inputSubcategories,
-      context.inputSubcategoryId,
+      scope === "category" ? null : context.inputSubcategoryId,
     );
     const reportPeriodName = resolveOptionName(
       options.reportPeriods,
@@ -499,17 +511,15 @@ export default function EnterDataTemplatePanel({
     );
 
     return `prism_${toFilenameSegment(inputCategoryName, "all_inputcategory")}_${toFilenameSegment(inputSubcategoryName, "all_inputsubcategory")}_${toFilenameSegment(reportPeriodName, "all_reportperiod")}.xlsx`;
-  }, [
-    context.inputCategoryId,
-    context.inputSubcategoryId,
-    context.reportPeriodId,
-    options.inputCategories,
-    options.inputSubcategories,
-    options.reportPeriods,
-  ]);
+  };
 
-  const handleDownload = async () => {
-    if (templateRows.length === 0) {
+  const handleDownload = async (scope: DownloadTemplateScope) => {
+    const rowsForDownload =
+      scope === "subcategory"
+        ? templateRows
+        : flattenTemplateRows(await getTemplateInputsForDownloadAction(scope));
+
+    if (rowsForDownload.length === 0) {
       toast.error("No visible rows are available to build a template.");
       return;
     }
@@ -518,14 +528,14 @@ export default function EnterDataTemplatePanel({
       const ExcelJS = await import("exceljs");
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet(SHEET_NAME);
-      const headers = Object.keys(templateRows[0] ?? {}).filter(
+      const headers = Object.keys(rowsForDownload[0] ?? {}).filter(
         (header): header is keyof TemplateRow =>
           !EXCLUDED_TEMPLATE_HEADERS.has(header as keyof TemplateRow),
       );
 
       worksheet.addRow(headers);
       applyBoldHeaderRow(worksheet);
-      templateRows.forEach((row) => {
+      rowsForDownload.forEach((row) => {
         worksheet.addRow(
           headers.map((header) => row[header as keyof TemplateRow]),
         );
@@ -541,7 +551,7 @@ export default function EnterDataTemplatePanel({
         const dnaCol = dnaColIndex + 1; // ExcelJS columns are 1-based
         for (
           let rowIndex = 2;
-          rowIndex <= templateRows.length + 1;
+          rowIndex <= rowsForDownload.length + 1;
           rowIndex += 1
         ) {
           worksheet.getCell(rowIndex, dnaCol).dataValidation = {
@@ -558,10 +568,10 @@ export default function EnterDataTemplatePanel({
 
         for (
           let rowIndex = 2;
-          rowIndex <= templateRows.length + 1;
+          rowIndex <= rowsForDownload.length + 1;
           rowIndex += 1
         ) {
-          const row = templateRows[rowIndex - 2];
+          const row = rowsForDownload[rowIndex - 2];
           const valueRef = `${excelColumnLetter(valueCol)}${rowIndex}`;
           const dnaRef = `${excelColumnLetter(dnaCol)}${rowIndex}`;
 
@@ -611,13 +621,15 @@ export default function EnterDataTemplatePanel({
       const url = URL.createObjectURL(blob);
       const link = document.createElement("a");
       link.href = url;
-      link.download = downloadFileName;
+      link.download = buildDownloadFileName(scope);
       document.body.appendChild(link);
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
 
-      toast.success(`Downloaded template with ${templateRows.length} row(s).`);
+      toast.success(
+        `Downloaded template with ${rowsForDownload.length} row(s).`,
+      );
     } catch {
       toast.error("Unable to download the template.");
     }
@@ -746,7 +758,7 @@ export default function EnterDataTemplatePanel({
         type="button"
         size="sm"
         variant="outline"
-        onClick={handleDownload}
+        onClick={() => setIsDownloadScopeDialogOpen(true)}
         className="text-xs"
         disabled={templateRows.length === 0 || isUploading}
       >
@@ -768,6 +780,42 @@ export default function EnterDataTemplatePanel({
         {templateRows.length} row{templateRows.length === 1 ? "" : "s"}
         {selectedFileName ? ` · ${selectedFileName}` : ""}
       </span>
+
+      <Dialog
+        open={isDownloadScopeDialogOpen}
+        onOpenChange={setIsDownloadScopeDialogOpen}
+      >
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Download template scope</DialogTitle>
+            <DialogDescription>
+              Choose whether to download rows for the selected subcategory only
+              or for the whole category.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-wrap justify-end gap-2 pt-2">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsDownloadScopeDialogOpen(false);
+                void handleDownload("subcategory");
+              }}
+            >
+              Subcategory only
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                setIsDownloadScopeDialogOpen(false);
+                void handleDownload("category");
+              }}
+            >
+              Whole category
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

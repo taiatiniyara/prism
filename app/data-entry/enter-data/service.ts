@@ -1607,6 +1607,32 @@ export const getDataEntryFilterViewModel =
     );
   };
 
+export const getTemplateInputsForDownloadAction = async (
+  scope: "subcategory" | "category",
+): Promise<DataEntryPageViewModel["inputs"]> => {
+  if (scope === "subcategory") {
+    const viewModel = await getDataEntryFilterViewModel();
+    return viewModel.inputs;
+  }
+
+  const user = await getCurrentUser();
+  const { context } = await bootstrapDataEntryFilterContext(user);
+  const categoryContext = {
+    ...context,
+    inputSubcategoryId: null,
+  };
+
+  const rows = filterRowsByDataEntryStatus(
+    await getInputRowsForContext(categoryContext),
+    categoryContext.dataEntryStatusId,
+  );
+
+  return {
+    mode: "flat",
+    rows,
+  };
+};
+
 export const updateFilterContextAction = async (
   key: keyof DataEntryFilterContext,
   value: number | null,

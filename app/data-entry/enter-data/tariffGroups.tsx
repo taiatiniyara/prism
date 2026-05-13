@@ -59,6 +59,10 @@ export default function TariffGroups({ groups }: TariffGroupsProps) {
 
   return (
     <div className="space-y-4">
+      <div className="rounded-md border border-amber-300 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+        <strong>Note:</strong> Tariff values entered below must{" "}
+        <strong>EXCLUDE</strong> tax (VAT/GST).
+      </div>
       <div className="sticky top-0 z-20 rounded-md border bg-white p-3 shadow-sm">
         <div className="grid gap-3 md:grid-cols-3">
           <div className="space-y-1">

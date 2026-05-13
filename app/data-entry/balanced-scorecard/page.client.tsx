@@ -23,6 +23,13 @@ import type {
 } from "@/app/data-entry/balanced-scorecard/types";
 import type { ReviewKpiFilterOptions } from "@/app/data-entry/review-kpi/types";
 import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -40,6 +47,7 @@ import { Download, Save, Upload } from "lucide-react";
 
 type TrackingFrequency = "monthly" | "annually";
 type TemplateTrackingMode = "monthly" | "financial_year";
+type DownloadTemplateScope = "subcategory" | "category";
 
 type DraftObjectiveKpi = {
   kpiId: string | null;
@@ -86,6 +94,8 @@ type TemplateSeed = {
   trackingFrequency: TrackingFrequency;
   kpiDefinitionId: number;
   kpiName: string;
+  kpiCategoryId: number | null;
+  kpiSubcategoryId: number | null;
 };
 
 type TemplateRow = {
@@ -312,6 +322,10 @@ export default function ScorecardPageClient({
   const [templateUploadFile, setTemplateUploadFile] = useState<File | null>(
     null,
   );
+  const [
+    isTemplateDownloadScopeDialogOpen,
+    setIsTemplateDownloadScopeDialogOpen,
+  ] = useState(false);
   const [isProcessingTemplate, setIsProcessingTemplate] = useState(false);
   const [activeMainTab, setActiveMainTab] = useState<
     "strategic-map" | "builder" | "strategy-tracker" | "tree-view"
@@ -1088,6 +1102,8 @@ export default function ScorecardPageClient({
                 kpi.kpiName.trim() ||
                 kpiNameByDefinitionId.get(kpiDefinitionId) ||
                 `KPI ${kpiDefinitionId}`,
+              kpiCategoryId: kpi.kpiCategoryId,
+              kpiSubcategoryId: kpi.kpiSubcategoryId,
             });
           }
         }
@@ -1097,56 +1113,72 @@ export default function ScorecardPageClient({
     return [...seeds.values()];
   }, [draftObjectivesByPerspective, kpiNameByDefinitionId]);
 
-  const templateRows = useMemo(() => {
-    const rows: TemplateRow[] = [];
+  const buildTemplateRowsForSeeds = useCallback(
+    (seeds: TemplateSeed[]): TemplateRow[] => {
+      const rows: TemplateRow[] = [];
 
-    if (
-      !Number.isInteger(templateStartYear) ||
-      !Number.isInteger(templateEndYear) ||
-      templateStartYear <= 0 ||
-      templateEndYear < templateStartYear
-    ) {
-      return rows;
-    }
+      if (
+        !Number.isInteger(templateStartYear) ||
+        !Number.isInteger(templateEndYear) ||
+        templateStartYear <= 0 ||
+        templateEndYear < templateStartYear
+      ) {
+        return rows;
+      }
 
-    for (const seed of templateSeeds) {
-      if (templateTrackingMode === "monthly") {
-        for (let year = templateStartYear; year <= templateEndYear; year += 1) {
-          for (let month = 1; month <= 12; month += 1) {
+      for (const seed of seeds) {
+        if (templateTrackingMode === "monthly") {
+          for (
+            let year = templateStartYear;
+            year <= templateEndYear;
+            year += 1
+          ) {
+            for (let month = 1; month <= 12; month += 1) {
+              rows.push({
+                perspective_level: seed.perspectiveLevel,
+                perspective: PERSPECTIVE_LABELS[seed.perspectiveLevel],
+                strategic_objective: seed.strategicObjective,
+                key_initiative: seed.keyInitiative,
+                tracking_frequency: "monthly",
+                kpi_definition_id: seed.kpiDefinitionId,
+                kpi_name: seed.kpiName,
+                year,
+                month,
+                target_value: "",
+              });
+            }
+          }
+        } else {
+          for (
+            let year = templateStartYear;
+            year <= templateEndYear;
+            year += 1
+          ) {
             rows.push({
               perspective_level: seed.perspectiveLevel,
               perspective: PERSPECTIVE_LABELS[seed.perspectiveLevel],
               strategic_objective: seed.strategicObjective,
               key_initiative: seed.keyInitiative,
-              tracking_frequency: "monthly",
+              tracking_frequency: "annually",
               kpi_definition_id: seed.kpiDefinitionId,
               kpi_name: seed.kpiName,
               year,
-              month,
+              month: null,
               target_value: "",
             });
           }
         }
-      } else {
-        for (let year = templateStartYear; year <= templateEndYear; year += 1) {
-          rows.push({
-            perspective_level: seed.perspectiveLevel,
-            perspective: PERSPECTIVE_LABELS[seed.perspectiveLevel],
-            strategic_objective: seed.strategicObjective,
-            key_initiative: seed.keyInitiative,
-            tracking_frequency: "annually",
-            kpi_definition_id: seed.kpiDefinitionId,
-            kpi_name: seed.kpiName,
-            year,
-            month: null,
-            target_value: "",
-          });
-        }
       }
-    }
 
-    return rows;
-  }, [templateEndYear, templateSeeds, templateStartYear, templateTrackingMode]);
+      return rows;
+    },
+    [templateEndYear, templateStartYear, templateTrackingMode],
+  );
+
+  const templateRows = useMemo(
+    () => buildTemplateRowsForSeeds(templateSeeds),
+    [buildTemplateRowsForSeeds, templateSeeds],
+  );
 
   const templateYearRangeIsValid =
     Number.isInteger(templateStartYear) &&
@@ -1154,7 +1186,7 @@ export default function ScorecardPageClient({
     templateStartYear > 0 &&
     templateEndYear >= templateStartYear;
 
-  const handleTemplateDownload = async () => {
+  const handleTemplateDownload = async (scope: DownloadTemplateScope) => {
     if (!templateYearRangeIsValid) {
       setSaveMessage(
         "Provide a valid period range where End Year is not before Start Year.",
@@ -1162,7 +1194,29 @@ export default function ScorecardPageClient({
       return;
     }
 
-    if (templateRows.length === 0) {
+    let scopedSeeds = templateSeeds;
+    if (context.kpiCategoryId != null) {
+      scopedSeeds = scopedSeeds.filter(
+        (seed) => seed.kpiCategoryId === context.kpiCategoryId,
+      );
+    }
+
+    if (scope === "subcategory") {
+      if (context.kpiSubcategoryId == null) {
+        setSaveMessage(
+          "Select a KPI subcategory first to download a subcategory-only template.",
+        );
+        return;
+      }
+
+      scopedSeeds = scopedSeeds.filter(
+        (seed) => seed.kpiSubcategoryId === context.kpiSubcategoryId,
+      );
+    }
+
+    const rowsForDownload = buildTemplateRowsForSeeds(scopedSeeds);
+
+    if (rowsForDownload.length === 0) {
       setSaveMessage(
         "No hierarchy rows available to generate a template. Define BSC hierarchy first.",
       );
@@ -1173,11 +1227,11 @@ export default function ScorecardPageClient({
       const ExcelJS = await import("exceljs");
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet("BSC_Template");
-      const headers = Object.keys(templateRows[0] ?? {});
+      const headers = Object.keys(rowsForDownload[0] ?? {});
 
       worksheet.addRow(headers);
       applyBoldHeaderRow(worksheet);
-      templateRows.forEach((row) => {
+      rowsForDownload.forEach((row) => {
         worksheet.addRow(
           headers.map((header) => row[header as keyof TemplateRow]),
         );
@@ -1202,7 +1256,9 @@ export default function ScorecardPageClient({
       link.click();
       link.remove();
       URL.revokeObjectURL(url);
-      setSaveMessage(`Template downloaded with ${templateRows.length} rows.`);
+      setSaveMessage(
+        `Template downloaded with ${rowsForDownload.length} rows.`,
+      );
     } catch (err) {
       setSaveMessage(
         err instanceof Error ? err.message : "Unable to download template.",
@@ -1658,7 +1714,7 @@ export default function ScorecardPageClient({
                   size="sm"
                   className="text-xs"
                   variant={"outline"}
-                  onClick={() => void handleTemplateDownload()}
+                  onClick={() => setIsTemplateDownloadScopeDialogOpen(true)}
                   disabled={!canDownloadTemplate}
                 >
                   <Download /> Download Excel Template
@@ -1694,6 +1750,42 @@ export default function ScorecardPageClient({
                 >
                   <Save /> {isSaving ? "Saving..." : "Save"}
                 </Button>
+
+                <Dialog
+                  open={isTemplateDownloadScopeDialogOpen}
+                  onOpenChange={setIsTemplateDownloadScopeDialogOpen}
+                >
+                  <DialogContent className="sm:max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Download template scope</DialogTitle>
+                      <DialogDescription>
+                        Choose whether to download rows for the selected
+                        subcategory only or for the whole category.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="flex flex-wrap justify-end gap-2 pt-2">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => {
+                          setIsTemplateDownloadScopeDialogOpen(false);
+                          void handleTemplateDownload("subcategory");
+                        }}
+                      >
+                        Subcategory only
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          setIsTemplateDownloadScopeDialogOpen(false);
+                          void handleTemplateDownload("category");
+                        }}
+                      >
+                        Whole category
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
               </div>
             </div>
           </div>
