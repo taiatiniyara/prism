@@ -1,12 +1,20 @@
 import { getCurrentUser } from "./user.service";
 
-export const powerBiCLientID = process.env.POWERBI_CLIENT_ID as string;
-export const powerBiClientSecret = process.env.POWERBI_CLIENT_SECRET as string;
-export const powerBiTenantID = process.env.POWERBI_TENANT_ID as string;
-export const powerBiWorkspaceID = process.env.POWERBI_WORKSPACE_ID as string;
-export const powerBiReportID = process.env.POWERBI_REPORT_ID as string;
-export const powerBiEmbedURL = process.env.POWERBI_EMBED_URL as string;
-export const datasetID = process.env.POWERBI_DATASET_ID as string;
+const getRequiredEnv = (key: string): string => {
+  const value = process.env[key]?.trim();
+  if (!value) {
+    throw new Error(`Missing Power BI environment variable: ${key}`);
+  }
+  return value;
+};
+
+export const powerBiCLientID = getRequiredEnv("POWERBI_CLIENT_ID");
+export const powerBiClientSecret = getRequiredEnv("POWERBI_CLIENT_SECRET");
+export const powerBiTenantID = getRequiredEnv("POWERBI_TENANT_ID");
+export const powerBiWorkspaceID = getRequiredEnv("POWERBI_WORKSPACE_ID");
+export const powerBiReportID = getRequiredEnv("POWERBI_REPORT_ID");
+export const powerBiEmbedURL = getRequiredEnv("POWERBI_EMBED_URL");
+export const datasetID = getRequiredEnv("POWERBI_DATASET_ID");
 
 if (
   !powerBiCLientID ||

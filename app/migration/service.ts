@@ -1330,6 +1330,7 @@ export async function retrieveEnergyResources() {
   await assertDevMigrationAccess();
   let res = false;
   let autoFilledPeriodEntries = 0;
+  let skippedInvalidForeignKeys = 0;
   const call = await fetchMigrationEndpoint("/generators");
   const list = await call.json();
   type SourceEnergyResource = Omit<EnergyResource, "period_entries"> & {
@@ -1458,16 +1459,67 @@ export async function retrieveEnergyResources() {
     (er) => !existingIds.has(er.id),
   );
 
+  const [serviceAreaRows, utilityRows, managedItemRows] = await Promise.all([
+    db.select({ id: serviceAreas.id }).from(serviceAreas),
+    db.select({ id: organisations.id }).from(organisations),
+    db.select({ id: managedListItems.id }).from(managedListItems),
+  ]);
+
+  const validServiceAreaIds = new Set(serviceAreaRows.map((row) => row.id));
+  const validUtilityIds = new Set(utilityRows.map((row) => row.id));
+  const validManagedItemIds = new Set(managedItemRows.map((row) => row.id));
+
+  const validatedEnergyResources: Array<typeof energyResources.$inferInsert> =
+    [];
+
+  for (const er of nonExistingEnergyResources) {
+    const serviceAreaId = normalizeRequiredId(er.service_area_id);
+    const utilityId = normalizeRequiredId(er.utility_id);
+    const energyProviderId = normalizeRequiredId(er.energy_provider_id);
+    const energyTypeId = normalizeRequiredId(er.energy_type_id);
+    const energySourceId = normalizeRequiredId(er.energy_source_id);
+    const aggLevelId = normalizeRequiredId(er.agg_level_id);
+
+    const hasInvalidForeignKey =
+      serviceAreaId == null ||
+      !validServiceAreaIds.has(serviceAreaId) ||
+      utilityId == null ||
+      !validUtilityIds.has(utilityId) ||
+      energyProviderId == null ||
+      !validManagedItemIds.has(energyProviderId) ||
+      energyTypeId == null ||
+      !validManagedItemIds.has(energyTypeId) ||
+      energySourceId == null ||
+      !validManagedItemIds.has(energySourceId) ||
+      aggLevelId == null ||
+      !validManagedItemIds.has(aggLevelId);
+
+    if (hasInvalidForeignKey) {
+      skippedInvalidForeignKeys += 1;
+      continue;
+    }
+
+    validatedEnergyResources.push({
+      ...er,
+      service_area_id: serviceAreaId,
+      utility_id: utilityId,
+      energy_provider_id: energyProviderId,
+      energy_type_id: energyTypeId,
+      energy_source_id: energySourceId,
+      agg_level_id: aggLevelId,
+      updated_at: er.updated_at ? new Date(er.updated_at) : new Date(),
+      updated_by_id: null,
+    });
+  }
+
   try {
-    if (nonExistingEnergyResources.length > 0) {
-      await db.insert(energyResources).values(
-        nonExistingEnergyResources.map((er) => {
-          return {
-            ...er,
-            updated_at: er.updated_at ? new Date(er.updated_at) : new Date(),
-            updated_by_id: null,
-          };
-        }),
+    if (validatedEnergyResources.length > 0) {
+      await db.insert(energyResources).values(validatedEnergyResources);
+    }
+
+    if (skippedInvalidForeignKeys > 0) {
+      console.warn(
+        `[migration] retrieveEnergyResources skipped ${skippedInvalidForeignKeys} rows with invalid foreign keys`,
       );
     }
 
