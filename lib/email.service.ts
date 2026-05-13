@@ -5,10 +5,10 @@ export type CustomKpiDecisionType = "APPROVE" | "REJECT" | "REPLACE";
 let transporter: nodemailer.Transporter | null = null;
 
 function getTransporter() {
-  const host = process.env.SMTP_HOST;
+  const host = process.env.SMTP_HOST?.trim();
   const port = Number(process.env.SMTP_PORT);
-  const user = process.env.SMTP_USER;
-  const pass = process.env.SMTP_PASS;
+  const user = process.env.SMTP_USER?.trim();
+  const pass = process.env.SMTP_PASS?.trim();
 
   if (!host || !port || !user || !pass) {
     throw new Error("SMTP configuration is incomplete.");
