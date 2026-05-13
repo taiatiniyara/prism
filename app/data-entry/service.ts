@@ -536,9 +536,9 @@ export async function GetReportPeriods(
       (x) => x.report_period_id === item.report_periods.id,
     );
     let enteredOnly = 0;
-    let reviewed = 0;
-    let approved = 0;
-    let endorsed = 0;
+    let reviewedOnly = 0;
+    let approvedOnly = 0;
+    let endorsedOnly = 0;
     let dataNotAvailable = 0;
 
     for (const entry of entriesForPeriod) {
@@ -546,13 +546,13 @@ export async function GetReportPeriods(
         enteredOnly += 1;
       }
       if (entry.status_id === DataEntryStatusId.Reviewed) {
-        reviewed += 1;
+        reviewedOnly += 1;
       }
       if (entry.status_id === DataEntryStatusId.Approved) {
-        approved += 1;
+        approvedOnly += 1;
       }
       if (entry.status_id === DataEntryStatusId.Endorsed) {
-        endorsed += 1;
+        endorsedOnly += 1;
       }
       if (entry.status_id === DataEntryStatusId.Not_Available) {
         dataNotAvailable += 1;
@@ -560,8 +560,19 @@ export async function GetReportPeriods(
     }
 
     const requested = requestedCountByPeriod.get(item.report_periods.id) ?? 0;
-    const entered = enteredOnly + reviewed + approved + endorsed;
-    const pending = Math.max(requested - (entered + dataNotAvailable), 0);
+    const completed =
+      enteredOnly +
+      reviewedOnly +
+      approvedOnly +
+      endorsedOnly +
+      dataNotAvailable;
+    const pending = Math.max(requested - completed, 0);
+
+    // Summary statuses are intentionally cumulative from Entered -> Endorsed.
+    const entered = enteredOnly;
+    const reviewed = entered + dataNotAvailable;
+    const approved = reviewed + reviewedOnly;
+    const endorsed = approved + approvedOnly + endorsedOnly;
 
     return {
       Id: item.report_periods.id,

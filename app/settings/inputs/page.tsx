@@ -99,7 +99,7 @@ export default async function InputsSettingsPage(props: {
                   {
                     key: "unit_id",
                     type: "managed-list",
-                    managedListName: "Unit",
+                    managedListName: "Units",
                   },
                 ],
               }}
@@ -143,7 +143,7 @@ export default async function InputsSettingsPage(props: {
                   {
                     key: "unit_id",
                     type: "managed-list",
-                    managedListName: "Unit",
+                    managedListName: "Units",
                   },
                 ],
               }}
