@@ -568,11 +568,10 @@ export async function GetReportPeriods(
       dataNotAvailable;
     const pending = Math.max(requested - completed, 0);
 
-    // Summary statuses are intentionally cumulative from Entered -> Endorsed.
     const entered = enteredOnly;
     const reviewed = entered + dataNotAvailable;
-    const approved = reviewed + reviewedOnly;
-    const endorsed = approved + approvedOnly + endorsedOnly;
+    const approved = entered + dataNotAvailable - reviewed;
+    const endorsed = entered + dataNotAvailable - reviewed - approved;
 
     return {
       Id: item.report_periods.id,
