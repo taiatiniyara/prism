@@ -156,6 +156,21 @@ export const verification = pgTable(
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
 
+export const externalRegistrations = pgTable("external_registrations", {
+  id: serial("id").primaryKey().notNull(),
+  name: text("name").notNull(),
+  email: text("email").notNull(),
+  organisation: text("organisation").notNull(),
+  dataset_required: text("dataset_required"),
+  data_access_reason: text("data_access_reason"),
+  date_created: timestamp("date_created").defaultNow().notNull(),
+  status_id: integer("status_id").default(1).notNull(),
+});
+
+export type ExternalRegistration = typeof externalRegistrations.$inferSelect;
+export type NewExternalRegistration =
+  typeof externalRegistrations.$inferInsert;
+
 export const rateLimit = pgTable("rate_limit", {
   id: text("id").primaryKey(),
   key: text("key"),

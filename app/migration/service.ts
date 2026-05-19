@@ -11,6 +11,7 @@ import {
   dataEntries,
   DataEntryStatusId,
   generationRelevance,
+  generationToggleRelevance,
   InputDefinition,
   inputDlDefMappings,
   inputDefinitions,
@@ -1164,6 +1165,108 @@ export async function retrieveUtilityData() {
       await db.insert(reportPeriods).values(normalizedReportPeriods);
     }
 
+    const allReportPeriods = await db.select().from(reportPeriods);
+    const reportPeriodsByUtility = new Map<number, typeof allReportPeriods>();
+    allReportPeriods.forEach((rp) => {
+      const list = reportPeriodsByUtility.get(rp.utility_id) || [];
+      list.push(rp);
+      reportPeriodsByUtility.set(rp.utility_id, list);
+    });
+
+    for (const newRp of normalizedReportPeriods) {
+      const utilityPeriods = reportPeriodsByUtility.get(newRp.utility_id) || [];
+      utilityPeriods.sort((a, b) => a.report_date.getTime() - b.report_date.getTime());
+
+      const newRpInList = utilityPeriods.find(
+        (rp) => rp.report_date.getTime() === newRp.report_date.getTime() && rp.utility_id === newRp.utility_id,
+      );
+      if (!newRpInList) continue;
+
+      const prevRp = utilityPeriods.find(
+        (rp) => rp.report_date.getTime() < newRpInList.report_date.getTime() && rp.id !== newRpInList.id,
+      );
+      if (!prevRp) continue;
+
+      const energyResourcesList = await db
+        .select()
+        .from(energyResources)
+        .where(eq(energyResources.utility_id, newRp.utility_id));
+
+      const resourcesToUpdate = energyResourcesList.filter((er) =>
+        er.period_entries.some((pe) => pe.report_period_id === prevRp.id),
+      );
+
+      for (const resource of resourcesToUpdate) {
+        const prevEntry = resource.period_entries.find(
+          (pe) => pe.report_period_id === prevRp.id,
+        );
+        if (!prevEntry) continue;
+
+        const hasNewEntry = resource.period_entries.some(
+          (pe) => pe.report_period_id === newRpInList.id,
+        );
+        if (hasNewEntry) continue;
+
+        const newPeriodEntries = [
+          ...resource.period_entries,
+          {
+            report_period_id: newRpInList.id,
+            capacity_mw: prevEntry.capacity_mw,
+            is_active: prevEntry.is_active,
+          },
+        ];
+
+        await db
+          .update(energyResources)
+          .set({ period_entries: newPeriodEntries })
+          .where(eq(energyResources.id, resource.id));
+      }
+
+      const prevGenRelevance = await db
+        .select()
+        .from(generationRelevance)
+        .where(eq(generationRelevance.report_period_id, prevRp.id));
+
+      if (prevGenRelevance.length > 0) {
+        const newGenRelevance = prevGenRelevance.map((gr) => ({
+          id: crypto.randomUUID(),
+          report_period_id: newRpInList.id,
+          service_area_id: gr.service_area_id,
+          input_def_id: gr.input_def_id,
+          energy_provider_id: gr.energy_provider_id,
+          energy_source_id: gr.energy_source_id,
+          energy_resource_type_id: gr.energy_resource_type_id,
+          is_relevant: gr.is_relevant,
+          is_deleted: gr.is_deleted,
+          updatedAt: new Date(),
+          updatedById: gr.updatedById,
+        }));
+
+        await db.insert(generationRelevance).values(newGenRelevance);
+      }
+
+      const prevGenToggleRelevance = await db
+        .select()
+        .from(generationToggleRelevance)
+        .where(eq(generationToggleRelevance.report_period_id, prevRp.id));
+
+      if (prevGenToggleRelevance.length > 0) {
+        const newGenToggleRelevance = prevGenToggleRelevance.map((gtr) => ({
+          id: crypto.randomUUID(),
+          report_period_id: newRpInList.id,
+          service_area_id: gtr.service_area_id,
+          energy_provider_id: gtr.energy_provider_id,
+          energy_source_id: gtr.energy_source_id,
+          is_relevant: gtr.is_relevant,
+          is_deleted: gtr.is_deleted,
+          updatedAt: new Date(),
+          updatedById: gtr.updatedById,
+        }));
+
+        await db.insert(generationToggleRelevance).values(newGenToggleRelevance);
+      }
+    }
+
     res = true;
   } catch (error: unknown) {
     logMigrationError(error);
@@ -1316,6 +1419,107 @@ export async function retrieveReportPeriods() {
         }),
       );
     }
+
+    const allReportPeriods = await db.select().from(reportPeriods);
+    const reportPeriodsByUtility = new Map<number, typeof allReportPeriods>();
+    allReportPeriods.forEach((rp) => {
+      const list = reportPeriodsByUtility.get(rp.utility_id) || [];
+      list.push(rp);
+      reportPeriodsByUtility.set(rp.utility_id, list);
+    });
+
+    for (const newRp of nonExistingReportPeriods) {
+      const utilityPeriods = reportPeriodsByUtility.get(newRp.utility_id) || [];
+      utilityPeriods.sort((a, b) => a.report_date.getTime() - b.report_date.getTime());
+
+      const newRpInList = utilityPeriods.find((rp) => rp.id === newRp.id);
+      if (!newRpInList) continue;
+
+      const prevRp = utilityPeriods.find(
+        (rp) => rp.report_date.getTime() < newRpInList.report_date.getTime() && rp.id !== newRp.id,
+      );
+      if (!prevRp) continue;
+
+      const energyResourcesList = await db
+        .select()
+        .from(energyResources)
+        .where(eq(energyResources.utility_id, newRp.utility_id));
+
+      const resourcesToUpdate = energyResourcesList.filter((er) =>
+        er.period_entries.some((pe) => pe.report_period_id === prevRp.id),
+      );
+
+      for (const resource of resourcesToUpdate) {
+        const prevEntry = resource.period_entries.find(
+          (pe) => pe.report_period_id === prevRp.id,
+        );
+        if (!prevEntry) continue;
+
+        const hasNewEntry = resource.period_entries.some(
+          (pe) => pe.report_period_id === newRp.id,
+        );
+        if (hasNewEntry) continue;
+
+        const newPeriodEntries = [
+          ...resource.period_entries,
+          {
+            report_period_id: newRp.id,
+            capacity_mw: prevEntry.capacity_mw,
+            is_active: prevEntry.is_active,
+          },
+        ];
+
+        await db
+          .update(energyResources)
+          .set({ period_entries: newPeriodEntries })
+          .where(eq(energyResources.id, resource.id));
+      }
+
+      const prevGenRelevance = await db
+        .select()
+        .from(generationRelevance)
+        .where(eq(generationRelevance.report_period_id, prevRp.id));
+
+      if (prevGenRelevance.length > 0) {
+        const newGenRelevance = prevGenRelevance.map((gr) => ({
+          id: crypto.randomUUID(),
+          report_period_id: newRp.id,
+          service_area_id: gr.service_area_id,
+          input_def_id: gr.input_def_id,
+          energy_provider_id: gr.energy_provider_id,
+          energy_source_id: gr.energy_source_id,
+          energy_resource_type_id: gr.energy_resource_type_id,
+          is_relevant: gr.is_relevant,
+          is_deleted: gr.is_deleted,
+          updatedAt: new Date(),
+          updatedById: gr.updatedById,
+        }));
+
+        await db.insert(generationRelevance).values(newGenRelevance);
+      }
+
+      const prevGenToggleRelevance = await db
+        .select()
+        .from(generationToggleRelevance)
+        .where(eq(generationToggleRelevance.report_period_id, prevRp.id));
+
+      if (prevGenToggleRelevance.length > 0) {
+        const newGenToggleRelevance = prevGenToggleRelevance.map((gtr) => ({
+          id: crypto.randomUUID(),
+          report_period_id: newRp.id,
+          service_area_id: gtr.service_area_id,
+          energy_provider_id: gtr.energy_provider_id,
+          energy_source_id: gtr.energy_source_id,
+          is_relevant: gtr.is_relevant,
+          is_deleted: gtr.is_deleted,
+          updatedAt: new Date(),
+          updatedById: gtr.updatedById,
+        }));
+
+        await db.insert(generationToggleRelevance).values(newGenToggleRelevance);
+      }
+    }
+
     res = true;
   } catch (error: unknown) {
     logMigrationError(error);

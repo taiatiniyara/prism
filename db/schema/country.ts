@@ -39,3 +39,22 @@ export type Country = typeof countries.$inferSelect & {
   currency?: string | null;
 };
 export type NewCountry = typeof countries.$inferInsert;
+
+export const countryContext = pgTable("country_context", {
+  id: serial("id").primaryKey().notNull(),
+  country_id: integer("country_id")
+    .notNull()
+    .references(() => countries.id),
+  dl_def_id: integer("dl_def_id")
+    .notNull()
+    .references(() => managedListItems.id),
+  source_date: timestamp("source_date"),
+  source_doc: varchar("source_doc", { length: 500 }),
+  source_url: varchar("source_url", { length: 500 }),
+  value: varchar("value", { length: 1000 }),
+  updated_by: varchar("updated_by", { length: 255 }),
+  updated_date: timestamp("updated_date").defaultNow().notNull(),
+});
+
+export type CountryContextRow = typeof countryContext.$inferSelect;
+export type NewCountryContextRow = typeof countryContext.$inferInsert;
