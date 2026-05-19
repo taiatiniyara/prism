@@ -516,20 +516,6 @@ export async function GetReportPeriods(
   const list = await rp;
   const reportTypeNameById = buildManagedListNameMap(ml);
   const roleNameById = new Map(rolesList.map((role) => [role.id, role.name]));
-  const requestedCountByPeriod = new Map<number, number>();
-  for (const item of list) {
-    const scopeUtilityId = forceAllUtilities
-      ? item.report_periods.utility_id
-      : null;
-    requestedCountByPeriod.set(
-      item.report_periods.id,
-      await getRequestedCountForPeriod(
-        user,
-        item.report_periods.id,
-        scopeUtilityId,
-      ),
-    );
-  }
 
   return list.map((item) => {
     const entriesForPeriod = deList.filter(
@@ -559,7 +545,7 @@ export async function GetReportPeriods(
       }
     }
 
-    const requested = requestedCountByPeriod.get(item.report_periods.id) ?? 0;
+    const requested = entriesForPeriod.length;
     const completed =
       enteredOnly +
       reviewedOnly +

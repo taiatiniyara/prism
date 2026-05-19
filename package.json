@@ -8,17 +8,14 @@
     "build": "next build",
     "start": "next start -p 3555",
     "lint": "eslint",
-    "generate-chatbot-prompt": "tsx ./scripts/generate-chatbot-prompt.ts",
     "test": "vitest run",
     "test:unit": "vitest run test/unit",
     "test:integration": "vitest run test/integration",
     "test:watch": "vitest",
-    "db-fix-uuid-timestamps": "tsx ./db/scripts/fix-uuid-to-timestamp.ts",
-    "db-sync-relevance": "tsx ./db/scripts/sync-relevance-to-data-entries.ts",
     "db-push": "drizzle-kit push --config ./db/config.ts",
-    "db-push-safe": "npm run db-fix-uuid-timestamps && npm run db-push",
+    "db-push-safe": "npm run db-push",
     "deploy-dev": "bash ./scripts/deploy-dev.sh",
-    "git-push": "tsx ./scripts/generate-chatbot-prompt.ts && next build && git add . && (git diff --cached --quiet || git commit -m \"Update generated chatbot prompt\") && git push"
+    "vps-deploy": "bash ./scripts/vps-deploy.sh"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.53",
