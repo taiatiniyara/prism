@@ -13,6 +13,7 @@ import {
   getCurrentUser,
   resolveUtilityScopeId,
 } from "@/lib/user.service";
+import { formatReportPeriodDisplay } from "@/lib/formatters";
 import { and, eq } from "drizzle-orm";
 
 export interface IncompleteKpiRow {
@@ -134,7 +135,7 @@ export async function GetIncompleteKpis(): Promise<IncompleteKpiRow[]> {
         subcategoryName: (kpiDef.subcategory_id != null ? mlById.get(kpiDef.subcategory_id)?.name : null) ?? null,
         formulaText: kpiDef.formula,
         reportPeriodId: period.id,
-        reportPeriodLabel: period.report_date.toISOString().split("T")[0],
+        reportPeriodLabel: formatReportPeriodDisplay(period.report_date, period.report_type_name),
         utilityName: period.utility_acronym ?? period.utility_name ?? "",
         inputs: relevantEntries.map((e) => {
           const def = inputDefById.get(e.input_def_id);

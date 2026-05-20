@@ -9,6 +9,7 @@ import { reportPeriods } from "@/db/schema/reportPeriods";
 import { organisations } from "@/db/schema/utility";
 import { managedListItems } from "@/db/schema/managedLists";
 import { getCurrentUser, resolveUtilityScopeId } from "@/lib/user.service";
+import { formatReportPeriodDisplay } from "@/lib/formatters";
 import { and, eq } from "drizzle-orm";
 
 export interface DownloadRow {
@@ -110,7 +111,7 @@ export async function GetDownloadData(): Promise<DownloadRow[]> {
       rows.push({
         utility: period.utility_acronym ?? period.utility_name ?? "",
         report_type: period.report_type_name ?? "",
-        report_period: period.report_date.toISOString().split("T")[0],
+        report_period: formatReportPeriodDisplay(period.report_date, period.report_type_name),
         category,
         subcategory,
         input_def_name: inputDef.name,

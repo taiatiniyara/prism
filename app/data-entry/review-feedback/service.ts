@@ -12,6 +12,7 @@ import {
   getCurrentUser,
   hasGlobalUtilityAccess,
 } from "@/lib/user.service";
+import { formatReportPeriodDisplay } from "@/lib/formatters";
 import { and, eq } from "drizzle-orm";
 
 export interface ReviewFeedbackRow {
@@ -39,11 +40,13 @@ export async function GetReviewFeedback(): Promise<ReviewFeedbackRow[]> {
     .select({
       id: reportPeriods.id,
       report_date: reportPeriods.report_date,
+      report_type_name: managedListItems.name,
       utility_name: organisations.name,
       utility_acronym: organisations.acronym,
     })
     .from(reportPeriods)
     .leftJoin(organisations, eq(reportPeriods.utility_id, organisations.id))
+    .leftJoin(managedListItems, eq(reportPeriods.report_type_id, managedListItems.id))
     .orderBy(reportPeriods.report_date);
 
   const results: ReviewFeedbackRow[] = [];
@@ -91,7 +94,7 @@ export async function GetReviewFeedback(): Promise<ReviewFeedbackRow[]> {
         inputName: inputDef?.name ?? `ID ${entry.input_def_id}`,
         unitName,
         value: entry.value,
-        reportPeriodLabel: period.report_date.toISOString().split("T")[0],
+        reportPeriodLabel: formatReportPeriodDisplay(period.report_date, period.report_type_name),
         utilityName: period.utility_acronym ?? period.utility_name ?? "",
         comments: entry.comments.map((c) => ({
           comment: c.comment,

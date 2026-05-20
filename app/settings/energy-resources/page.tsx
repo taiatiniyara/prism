@@ -80,6 +80,16 @@ export default async function EnergyResourcesSettingsPage() {
             label: "Resource Name",
           },
           {
+            key: "is_aggregated",
+            type: "boolean",
+            label: "Is Aggregated Resource",
+          },
+          {
+            key: "resource_qty",
+            type: "number",
+            label: "Resource Quantity",
+          },
+          {
             key: "power_station_id",
             type: "select",
             label: "Power Station",
@@ -136,6 +146,16 @@ export default async function EnergyResourcesSettingsPage() {
             key: "name",
             type: "text",
             label: "Resource Name",
+          },
+          {
+            key: "is_aggregated",
+            type: "boolean",
+            label: "Is Aggregated Resource",
+          },
+          {
+            key: "resource_qty",
+            type: "number",
+            label: "Resource Quantity",
           },
           {
             key: "power_station_id",
