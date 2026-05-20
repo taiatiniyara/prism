@@ -135,6 +135,8 @@ export const energyResources = pgTable(
       .notNull()
       .default(sql`'[]'::jsonb`),
     name: varchar("name", { length: 255 }).notNull(),
+    is_aggregated: boolean("is_aggregated").notNull().default(false),
+    resource_qty: integer("resource_qty"),
     power_station_id: integer("power_station_id").references(
       () => powerStations.id,
     ),

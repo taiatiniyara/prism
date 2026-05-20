@@ -43,6 +43,7 @@ type TemplateRow = {
   valid_polarity_name: string | null;
   value: string;
   is_data_not_available: boolean;
+  comments: string;
 };
 
 type TemplateRowLookupKey = {
@@ -79,21 +80,28 @@ const createTemplateRowLookupKey = (value: TemplateRowLookupKey) =>
     normalizeKeyText(value.unit_name),
   ].join("|");
 
-const EXCLUDED_TEMPLATE_HEADERS = new Set<keyof TemplateRow>([
-  "context_mode",
-  "energy_resource_id",
-  "generator_name",
-  "payment_mode_id",
-  "payment_mode_name",
-  "customer_type_id",
-  "customer_type_name",
-  "data_type_name",
-  "is_mandatory",
-  "valid_range_min",
-  "valid_range_max",
-  "valid_polarity_id",
-  "valid_polarity_name",
-]);
+const getExcludedTemplateHeaders = (
+  isGeneration: boolean,
+): Set<keyof TemplateRow> => {
+  const excluded = new Set<keyof TemplateRow>([
+    "context_mode",
+    "energy_resource_id",
+    "payment_mode_id",
+    "payment_mode_name",
+    "customer_type_id",
+    "customer_type_name",
+    "data_type_name",
+    "is_mandatory",
+    "valid_range_min",
+    "valid_range_max",
+    "valid_polarity_id",
+    "valid_polarity_name",
+  ]);
+  if (!isGeneration) {
+    excluded.add("generator_name");
+  }
+  return excluded;
+};
 
 const normalizeTypeName = (typeName: string | null | undefined) =>
   (typeName ?? "").trim().toLowerCase();
@@ -425,6 +433,7 @@ const flattenTemplateRows = (
       valid_polarity_name: row.validPolarityName ?? null,
       value: row.value ?? "",
       is_data_not_available: row.isDataNotAvailable ?? false,
+      comments: row.comments ?? "",
     }));
   }
 
@@ -449,6 +458,7 @@ const flattenTemplateRows = (
         valid_polarity_name: row.validPolarityName ?? null,
         value: row.value ?? "",
         is_data_not_available: row.isDataNotAvailable ?? false,
+        comments: row.comments ?? "",
       })),
     );
   }
@@ -477,6 +487,7 @@ const flattenTemplateRows = (
         valid_polarity_name: row.validPolarityName ?? null,
         value: row.value ?? "",
         is_data_not_available: row.isDataNotAvailable ?? false,
+        comments: row.comments ?? "",
       })),
     ),
   );
@@ -524,13 +535,26 @@ export default function EnterDataTemplatePanel({
       return;
     }
 
+    const isGeneration =
+      scope === "subcategory"
+        ? context.inputSubcategoryId != null &&
+          options.inputSubcategories.some(
+            (sc) =>
+              sc.id === context.inputSubcategoryId &&
+              sc.name.trim().toLowerCase() === "generation",
+          )
+        : rowsForDownload.some(
+            (row) => row.generator_name.trim().length > 0,
+          );
+    const excludedHeaders = getExcludedTemplateHeaders(isGeneration);
+
     try {
       const ExcelJS = await import("exceljs");
       const workbook = new ExcelJS.Workbook();
       const worksheet = workbook.addWorksheet(SHEET_NAME);
       const headers = Object.keys(rowsForDownload[0] ?? {}).filter(
         (header): header is keyof TemplateRow =>
-          !EXCLUDED_TEMPLATE_HEADERS.has(header as keyof TemplateRow),
+          !excludedHeaders.has(header as keyof TemplateRow),
       );
 
       worksheet.addRow(headers);
@@ -610,6 +634,7 @@ export default function EnterDataTemplatePanel({
       await lockTemplateWorksheet(worksheet, [
         "value",
         "is_data_not_available",
+        "comments",
       ]);
 
       const output = await workbook.xlsx.writeBuffer();
@@ -701,6 +726,8 @@ export default function EnterDataTemplatePanel({
         );
       }
 
+      const commentsIndex = headers.indexOf("comments");
+
       return {
         inputDefId,
         energyResourceId: matchedTemplateRow.energy_resource_id,
@@ -710,6 +737,10 @@ export default function EnterDataTemplatePanel({
         isDataNotAvailable: toBooleanFlag(
           getCell(row, "is_data_not_available"),
         ),
+        comments:
+          commentsIndex >= 0
+            ? String(getCell(row, "comments") ?? "").trim()
+            : "",
       };
     });
   };

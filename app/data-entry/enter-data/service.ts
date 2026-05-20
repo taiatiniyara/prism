@@ -1693,6 +1693,7 @@ export interface DataEntryTemplateUploadRowPayload {
   inputDefId: number;
   value: string | null;
   isDataNotAvailable: boolean;
+  comments: string;
   energyResourceId?: number | null;
   customerTypeId?: number | null;
   paymentModeId?: number | null;
@@ -2341,17 +2342,26 @@ export const uploadDataEntryTemplateAction = async (
         isDataNotAvailable: true,
       });
       processed += 1;
-      continue;
+    } else {
+      await updateDataEntryValueAction({
+        inputDefId: row.inputDefId,
+        energyResourceId: row.energyResourceId ?? null,
+        customerTypeId: row.customerTypeId ?? null,
+        paymentModeId: row.paymentModeId ?? null,
+        value: row.value,
+      });
+      processed += 1;
     }
 
-    await updateDataEntryValueAction({
-      inputDefId: row.inputDefId,
-      energyResourceId: row.energyResourceId ?? null,
-      customerTypeId: row.customerTypeId ?? null,
-      paymentModeId: row.paymentModeId ?? null,
-      value: row.value,
-    });
-    processed += 1;
+    if (row.comments.trim().length > 0) {
+      await updateDataEntryCommentAction({
+        inputDefId: row.inputDefId,
+        comment: row.comments.trim(),
+        energyResourceId: row.energyResourceId ?? null,
+        customerTypeId: row.customerTypeId ?? null,
+        paymentModeId: row.paymentModeId ?? null,
+      });
+    }
   }
 
   return {

@@ -33,6 +33,7 @@ import {
   ServiceArea,
   serviceAreas,
 } from "@/db/schema/utility";
+import { formatReportPeriodDisplay } from "@/lib/formatters";
 import { getCurrentUser } from "@/lib/user.service";
 import { generateRandomNumber } from "@/lib/utils";
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
@@ -3656,8 +3657,8 @@ const parseDataEntryComparisonKey = (key: string) => {
   };
 };
 
-const buildReportPeriodLabel = (reportDate: Date): string => {
-  return reportDate.toISOString().slice(0, 10);
+const buildReportPeriodLabel = (reportDate: Date, reportTypeName?: string | null): string => {
+  return formatReportPeriodDisplay(reportDate, reportTypeName);
 };
 
 export async function getDataEntryComparisonFilterOptions(): Promise<DataEntryComparisonFilterOptions> {
@@ -3671,8 +3672,10 @@ export async function getDataEntryComparisonFilterOptions(): Promise<DataEntryCo
       id: reportPeriods.id,
       utilityId: reportPeriods.utility_id,
       reportDate: reportPeriods.report_date,
+      reportTypeName: managedListItems.name,
     })
-    .from(reportPeriods);
+    .from(reportPeriods)
+    .leftJoin(managedListItems, eq(reportPeriods.report_type_id, managedListItems.id));
 
   const inputDefList = await db
     .select({
@@ -3720,7 +3723,7 @@ export async function getDataEntryComparisonFilterOptions(): Promise<DataEntryCo
       .map((rp) => ({
         id: rp.id,
         utilityId: rp.utilityId,
-        label: buildReportPeriodLabel(rp.reportDate),
+        label: buildReportPeriodLabel(rp.reportDate, rp.reportTypeName),
       }))
       .sort((a, b) => b.id - a.id),
     categories: categoryItems
@@ -4045,8 +4048,10 @@ export async function compareDataEntries(
           .select({
             id: reportPeriods.id,
             reportDate: reportPeriods.report_date,
+            reportTypeName: managedListItems.name,
           })
           .from(reportPeriods)
+          .leftJoin(managedListItems, eq(reportPeriods.report_type_id, managedListItems.id))
           .where(inArray(reportPeriods.id, reportPeriodIds));
 
   const inputDefList =
@@ -4116,7 +4121,7 @@ export async function compareDataEntries(
   const reportPeriodLabelById = new Map(
     reportPeriodList.map((rp) => [
       rp.id,
-      buildReportPeriodLabel(rp.reportDate),
+      buildReportPeriodLabel(rp.reportDate, rp.reportTypeName),
     ]),
   );
   const inputDefById = new Map(inputDefList.map((d) => [d.id, d]));
