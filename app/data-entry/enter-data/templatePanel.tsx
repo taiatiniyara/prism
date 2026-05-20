@@ -63,6 +63,13 @@ interface EnterDataTemplatePanelProps {
 
 const SHEET_NAME = "Enter Data";
 
+const HEADER_DISPLAY_NAMES: Record<string, string> = {
+  is_data_not_available:
+    "Data Not Available (Select true if data is not available)",
+};
+const getDisplayHeader = (key: string): string =>
+  HEADER_DISPLAY_NAMES[key] ?? key;
+
 const normalizeHeader = (value: unknown) =>
   String(value ?? "")
     .trim()
@@ -557,7 +564,7 @@ export default function EnterDataTemplatePanel({
           !excludedHeaders.has(header as keyof TemplateRow),
       );
 
-      worksheet.addRow(headers);
+      worksheet.addRow(headers.map(getDisplayHeader));
       applyBoldHeaderRow(worksheet);
       rowsForDownload.forEach((row) => {
         worksheet.addRow(
@@ -633,7 +640,7 @@ export default function EnterDataTemplatePanel({
 
       await lockTemplateWorksheet(worksheet, [
         "value",
-        "is_data_not_available",
+        normalizeHeader(getDisplayHeader("is_data_not_available")),
         "comments",
       ]);
 
@@ -669,7 +676,14 @@ export default function EnterDataTemplatePanel({
       throw new Error("The selected worksheet is empty.");
     }
 
-    const headers = headerRow.map(normalizeHeader);
+    const headers = headerRow.map(normalizeHeader).map((raw) => {
+      for (const [internal, display] of Object.entries(
+        HEADER_DISPLAY_NAMES,
+      )) {
+        if (normalizeHeader(display) === raw) return internal;
+      }
+      return raw;
+    });
     const requiredHeaders = [
       "input_def_id",
       "input_name",
