@@ -183,6 +183,8 @@ async function sendGlobalSummary(
     grandReviewed += p.Reviewed;
     grandApproved += p.Approved;
 
+    const pct = p.Requested > 0 ? Math.round((p.Entered / p.Requested) * 100) : 0;
+
     tableRows += `<tr>
       <td style="padding:4px 8px;border-bottom:1px solid #e2e8f0;">${p.Utility}</td>
       <td style="padding:4px 8px;border-bottom:1px solid #e2e8f0;">${p.Period}</td>
@@ -193,8 +195,11 @@ async function sendGlobalSummary(
       <td style="padding:4px 8px;border-bottom:1px solid #e2e8f0;text-align:right;">${p.Approved}</td>
       <td style="padding:4px 8px;border-bottom:1px solid #e2e8f0;text-align:right;">${p.Endorsed}</td>
       <td style="padding:4px 8px;border-bottom:1px solid #e2e8f0;text-align:right;">${p.Pending}</td>
+      <td style="padding:4px 8px;border-bottom:1px solid #e2e8f0;text-align:right;">${pct}%</td>
     </tr>`;
   }
+
+  const grandPct = grandRequested > 0 ? Math.round((grandEntered / grandRequested) * 100) : 0;
 
   const highlightBlock = isBLO
     ? `<div style="background:#fef3c7;border:1px solid #f59e0b;border-radius:8px;padding:10px 14px;margin-bottom:14px;">
@@ -211,10 +216,10 @@ async function sendGlobalSummary(
     <p>Here is the ${schedule.frequency} data entry progress report across all utilities:</p>
     ${highlightBlock}
     <p style="margin:4px 0;color:#64748b;font-size:13px;">
-      Totals — Requested: ${grandRequested} | Entered: ${grandEntered} | Reviewed: ${grandReviewed} | Approved: ${grandApproved} | Pending: ${grandPending}
+      Totals — Requested: ${grandRequested} | Entered: ${grandEntered} | Reviewed: ${grandReviewed} | Approved: ${grandApproved} | Pending: ${grandPending} | % Entered: ${grandPct}%
     </p>
-    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;">
-      <thead><tr style="background:#f1f5f9;">
+    <div style="max-height:600px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:4px;"><table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead><tr style="background:#f1f5f9;position:sticky;top:0;">
         <th style="padding:4px 8px;text-align:left;">Utility</th>
         <th style="padding:4px 8px;text-align:left;">Period</th>
         <th style="padding:4px 8px;text-align:left;">Type</th>
@@ -224,9 +229,10 @@ async function sendGlobalSummary(
         <th style="padding:4px 8px;">Approved</th>
         <th style="padding:4px 8px;">Endorsed</th>
         <th style="padding:4px 8px;">Pending</th>
+        <th style="padding:4px 8px;">% Entered</th>
       </tr></thead>
       <tbody>${tableRows}</tbody>
-    </table>
+    </table></div>
     <p style="margin-top:16px;color:#64748b;font-size:12px;">
       This is an automated ${schedule.frequency} summary from the PRISM benchmarking platform.
     </p>
