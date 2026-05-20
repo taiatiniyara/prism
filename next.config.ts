@@ -7,9 +7,6 @@ const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 const nextConfig: NextConfig = {
   cacheComponents: true,
   outputFileTracingRoot: projectRoot,
-  experimental: {
-    instrumentationHook: true,
-  },
 };
 
 export default nextConfig;

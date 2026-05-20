@@ -514,6 +514,15 @@ export default function EnterDataTemplatePanel({
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const templateRows = useMemo(() => flattenTemplateRows(inputs), [inputs]);
+  const inputCategoryName = useMemo(
+    () => resolveOptionName(options.inputCategories, context.inputCategoryId),
+    [options.inputCategories, context.inputCategoryId],
+  );
+  const inputSubcategoryName = useMemo(
+    () =>
+      resolveOptionName(options.inputSubcategories, context.inputSubcategoryId),
+    [options.inputSubcategories, context.inputSubcategoryId],
+  );
   const buildDownloadFileName = (scope: DownloadTemplateScope) => {
     const inputCategoryName = resolveOptionName(
       options.inputCategories,
@@ -550,9 +559,7 @@ export default function EnterDataTemplatePanel({
               sc.id === context.inputSubcategoryId &&
               sc.name.trim().toLowerCase() === "generation",
           )
-        : rowsForDownload.some(
-            (row) => row.generator_name.trim().length > 0,
-          );
+        : rowsForDownload.some((row) => row.generator_name.trim().length > 0);
     const excludedHeaders = getExcludedTemplateHeaders(isGeneration);
 
     try {
@@ -677,9 +684,7 @@ export default function EnterDataTemplatePanel({
     }
 
     const headers = headerRow.map(normalizeHeader).map((raw) => {
-      for (const [internal, display] of Object.entries(
-        HEADER_DISPLAY_NAMES,
-      )) {
+      for (const [internal, display] of Object.entries(HEADER_DISPLAY_NAMES)) {
         if (normalizeHeader(display) === raw) return internal;
       }
       return raw;
@@ -834,8 +839,9 @@ export default function EnterDataTemplatePanel({
           <DialogHeader>
             <DialogTitle>Download template scope</DialogTitle>
             <DialogDescription>
-              Choose whether to download rows for the selected subcategory only
-              or for the whole category.
+              {`Download rows for
+              ${inputSubcategoryName || "subcategory"}
+              only or the whole of ${inputCategoryName || "category"}.`}
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-wrap justify-end gap-2 pt-2">
@@ -847,7 +853,8 @@ export default function EnterDataTemplatePanel({
                 void handleDownload("subcategory");
               }}
             >
-              Subcategory only
+              <Download />{" "}
+              {inputSubcategoryName ? `: ${inputSubcategoryName}` : " only"}
             </Button>
             <Button
               type="button"
@@ -856,7 +863,7 @@ export default function EnterDataTemplatePanel({
                 void handleDownload("category");
               }}
             >
-              Whole category
+              <Download /> {inputCategoryName ? `: ${inputCategoryName}` : ""}
             </Button>
           </div>
         </DialogContent>
