@@ -218,8 +218,8 @@ async function sendGlobalSummary(
     <p style="margin:4px 0;color:#64748b;font-size:13px;">
       Totals — Requested: ${grandRequested} | Entered: ${grandEntered} | Reviewed: ${grandReviewed} | Approved: ${grandApproved} | Pending: ${grandPending} | % Entered: ${grandPct}%
     </p>
-    <table style="width:100%;border-collapse:collapse;font-size:12px;margin-top:8px;">
-      <thead><tr style="background:#f1f5f9;">
+    <div style="max-height:600px;overflow-y:auto;border:1px solid #e2e8f0;border-radius:4px;"><table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead><tr style="background:#f1f5f9;position:sticky;top:0;">
         <th style="padding:4px 8px;text-align:left;">Utility</th>
         <th style="padding:4px 8px;text-align:left;">Period</th>
         <th style="padding:4px 8px;text-align:left;">Type</th>
@@ -232,7 +232,7 @@ async function sendGlobalSummary(
         <th style="padding:4px 8px;">% Entered</th>
       </tr></thead>
       <tbody>${tableRows}</tbody>
-    </table>
+    </table></div>
     <p style="margin-top:16px;color:#64748b;font-size:12px;">
       This is an automated ${schedule.frequency} summary from the PRISM benchmarking platform.
     </p>
