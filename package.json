@@ -14,8 +14,7 @@
     "test:watch": "vitest",
     "db-push": "drizzle-kit push --config ./db/config.ts",
     "db-push-safe": "npm run db-push",
-    "deploy-dev": "bash ./scripts/deploy-dev.sh",
-    "vps-deploy": "bash ./scripts/vps-deploy.sh"
+    "deploy": "bash ./scripts/deploy.sh"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.53",
