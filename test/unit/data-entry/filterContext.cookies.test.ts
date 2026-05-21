@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { sanitizeFilterContext } from "@/app/data-entry/filterContext.cookies";
+import { sanitizeFilterContext } from "@/app/data-entry/filterContext.utils";
 
 describe("sanitizeFilterContext", () => {
   it("converts positive integer-like values to numbers", () => {

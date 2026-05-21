@@ -1,9 +1,12 @@
+"use server";
+
 import {
   DATA_ENTRY_FILTER_COOKIE_KEYS,
   DEFAULT_DATA_ENTRY_FILTER_CONTEXT,
   DataEntryFilterContext,
   DataEntryFilterCookieKey,
 } from "@/app/data-entry/constants";
+import { sanitizeFilterContext } from "@/app/data-entry/filterContext.utils";
 import { cookies } from "next/headers";
 
 const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
@@ -11,44 +14,6 @@ const ONE_YEAR_SECONDS = 60 * 60 * 24 * 365;
 type DataEntryFilterContextInput = {
   [K in keyof DataEntryFilterContext]?: number | string | null;
 };
-
-const parseNullableInt = (value: string | undefined): number | null => {
-  if (!value) {
-    return null;
-  }
-
-  const parsed = Number(value);
-  return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
-};
-
-export const sanitizeFilterContext = (
-  context: DataEntryFilterContextInput,
-): DataEntryFilterContext => ({
-  reportTypeId: parseNullableInt(
-    context.reportTypeId == null ? undefined : String(context.reportTypeId),
-  ),
-  reportPeriodId: parseNullableInt(
-    context.reportPeriodId == null ? undefined : String(context.reportPeriodId),
-  ),
-  inputCategoryId: parseNullableInt(
-    context.inputCategoryId == null
-      ? undefined
-      : String(context.inputCategoryId),
-  ),
-  inputSubcategoryId: parseNullableInt(
-    context.inputSubcategoryId == null
-      ? undefined
-      : String(context.inputSubcategoryId),
-  ),
-  serviceAreaId: parseNullableInt(
-    context.serviceAreaId == null ? undefined : String(context.serviceAreaId),
-  ),
-  dataEntryStatusId: parseNullableInt(
-    context.dataEntryStatusId == null
-      ? undefined
-      : String(context.dataEntryStatusId),
-  ),
-});
 
 export const getFilterContextFromCookies =
   async (): Promise<DataEntryFilterContext> => {

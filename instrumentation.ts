@@ -1,11 +1,12 @@
 export const runtime = "nodejs";
 
 export async function register() {
+  if (process.env.NODE_ENV === "development") return;
   if (process.env.NEXT_RUNTIME !== "nodejs") return;
 
   const [{ default: cron }, { checkAndSendDueSchedules }] = await Promise.all([
     import(/* webpackIgnore: true */ "node-cron"),
-    import("@/app/settings/email-schedules/service"),
+    import(/* webpackIgnore: true */ "@/app/settings/email-schedules/service"),
   ]);
 
   cron.schedule("*/5 * * * *", async () => {

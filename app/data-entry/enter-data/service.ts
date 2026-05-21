@@ -1471,8 +1471,6 @@ export const bootstrapDataEntryFilterContext = async (
       : null,
   };
 
-  await saveFilterContextToCookies(statusAwareContext);
-
   return {
     context: statusAwareContext,
     options,
