@@ -8,7 +8,7 @@ type RelevanceSearchParams = {
 };
 
 export default async function RelevanceSettingsPage(props: {
-  searchParams?: Promise<RelevanceSearchParams> | RelevanceSearchParams;
+  searchParams?: Promise<RelevanceSearchParams>;
 }) {
   const searchParams = await Promise.resolve(props.searchParams);
   const user = await getCurrentUser();

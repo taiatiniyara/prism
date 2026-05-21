@@ -27,7 +27,7 @@ function resolveDefaultTab(tab: string | undefined): InputsTab {
 }
 
 export default async function InputsSettingsPage(props: {
-  searchParams?: Promise<{ tab?: string }> | { tab?: string };
+  searchParams?: Promise<{ tab?: string }>;
 }) {
   const searchParams = await Promise.resolve(props.searchParams);
   const defaultTab = resolveDefaultTab(searchParams?.tab);
