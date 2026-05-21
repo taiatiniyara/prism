@@ -14,6 +14,7 @@ import {
   CreateKpiDefinition,
   GetAllKpiDefinitions,
   GetKpiFormulaBuilderData,
+  GetKpiTargetsFilterOptions,
   GetKpiTypeOptions,
   UpdateKpiDefinition,
 } from "./service";
@@ -47,6 +48,7 @@ export default async function KpiSettingsPage() {
   const showCustomKpiRequestsView = isBloRole;
   const kpiDefinitions = await GetAllKpiDefinitions();
   const data = await GetKpiFormulaBuilderData();
+  const kpiTargetsFilterOptions = await GetKpiTargetsFilterOptions();
   const kpiTypes = await GetKpiTypeOptions();
   const customKpiViewModel = showCustomKpiRequestsView
     ? await getCustomKpiPageViewModel(currentUser.id)
@@ -501,6 +503,8 @@ export default async function KpiSettingsPage() {
             kpis={data.kpis}
             utilityId={currentUser.org_id}
             canEditTargets={canEditTargets}
+            categories={kpiTargetsFilterOptions.categories}
+            subcategories={kpiTargetsFilterOptions.subcategories}
           />
         </TabsContent>
 

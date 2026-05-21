@@ -10,7 +10,7 @@ import {
 } from "@/db/schema/kpi";
 import { organisations } from "@/db/schema/utility";
 import { managedListItems, managedLists } from "@/db/schema/managedLists";
-import { and, asc, eq, gt, ilike, or, sql } from "drizzle-orm";
+import { and, asc, eq, gt, ilike, inArray, or, sql } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import {
   CurrentUser,
@@ -901,6 +901,183 @@ export async function SaveKpiLimits(
     success: true,
     message: "KPI limits saved successfully.",
     data: updated,
+  };
+}
+
+export interface KpiTargetsFilterOption {
+  id: number;
+  name: string;
+  parent_id: number | null;
+}
+
+export interface KpiTargetsFilterOptions {
+  categories: KpiTargetsFilterOption[];
+  subcategories: KpiTargetsFilterOption[];
+}
+
+export async function GetKpiTargetsFilterOptions(): Promise<KpiTargetsFilterOptions> {
+  const [listIdByName, kpiCategoryIdRows, kpiSubcategoryIdRows] =
+    await Promise.all([
+      (async () => {
+        const listRows = await db
+          .select({ id: managedLists.id, name: managedLists.name })
+          .from(managedLists)
+          .where(
+            and(
+              eq(managedLists.is_active, true),
+              sql`${managedLists.name} in ('KPI Category', 'KPI Sub-Category')`,
+            ),
+          );
+        const map = new Map<string, number>();
+        for (const row of listRows) {
+          map.set(row.name, row.id);
+        }
+        return map;
+      })(),
+      db
+        .select({ id: kpiDefinitions.category_id })
+        .from(kpiDefinitions)
+        .where(
+          and(
+            eq(kpiDefinitions.is_active, true),
+            sql`${kpiDefinitions.category_id} is not null`,
+          ),
+        )
+        .groupBy(kpiDefinitions.category_id),
+      db
+        .select({ id: kpiDefinitions.subcategory_id })
+        .from(kpiDefinitions)
+        .where(
+          and(
+            eq(kpiDefinitions.is_active, true),
+            sql`${kpiDefinitions.subcategory_id} is not null`,
+          ),
+        )
+        .groupBy(kpiDefinitions.subcategory_id),
+    ]);
+
+  const categoryListId = listIdByName.get("KPI Category") ?? null;
+  const subcategoryListId = listIdByName.get("KPI Sub-Category") ?? null;
+
+  const [categoryRows, subcategoryRows] = await Promise.all([
+    categoryListId != null
+      ? db
+          .select({ id: managedListItems.id, name: managedListItems.name })
+          .from(managedListItems)
+          .where(
+            and(
+              eq(managedListItems.list_id, categoryListId),
+              eq(managedListItems.is_active, true),
+            ),
+          )
+          .orderBy(asc(managedListItems.name))
+      : Promise.resolve([]),
+    subcategoryListId != null
+      ? db
+          .select({
+            id: managedListItems.id,
+            name: managedListItems.name,
+            parentId: managedListItems.parent_id,
+          })
+          .from(managedListItems)
+          .where(
+            and(
+              eq(managedListItems.list_id, subcategoryListId),
+              eq(managedListItems.is_active, true),
+            ),
+          )
+          .orderBy(asc(managedListItems.name))
+      : Promise.resolve([]),
+  ]);
+
+  const distinctKpiCategoryIds = [
+    ...new Set(
+      kpiCategoryIdRows
+        .map((row) => row.id)
+        .filter((id): id is number => id != null),
+    ),
+  ];
+  const distinctKpiSubcategoryIds = [
+    ...new Set(
+      kpiSubcategoryIdRows
+        .map((row) => row.id)
+        .filter((id): id is number => id != null),
+    ),
+  ];
+
+  const missingCategoryIds = distinctKpiCategoryIds.filter(
+    (id) => !categoryRows.some((row) => row.id === id),
+  );
+  const missingSubcategoryIds = distinctKpiSubcategoryIds.filter(
+    (id) => !subcategoryRows.some((row) => row.id === id),
+  );
+
+  const [missingCategoryRows, missingSubcategoryRows] = await Promise.all([
+    missingCategoryIds.length > 0
+      ? db
+          .select({ id: managedListItems.id, name: managedListItems.name })
+          .from(managedListItems)
+          .where(inArray(managedListItems.id, missingCategoryIds))
+      : Promise.resolve([]),
+    missingSubcategoryIds.length > 0
+      ? db
+          .select({
+            id: managedListItems.id,
+            name: managedListItems.name,
+            parentId: managedListItems.parent_id,
+          })
+          .from(managedListItems)
+          .where(inArray(managedListItems.id, missingSubcategoryIds))
+      : Promise.resolve([]),
+  ]);
+
+  const allCategories: KpiTargetsFilterOption[] = [
+    ...categoryRows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      parent_id: null as number | null,
+    })),
+    ...missingCategoryRows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      parent_id: null as number | null,
+    })),
+    ...missingCategoryIds
+      .filter((id) => !missingCategoryRows.some((row) => row.id === id))
+      .map((id) => ({
+        id,
+        name: `Category #${id}`,
+        parent_id: null as number | null,
+      })),
+  ];
+
+  const existingSubcategoryIds = new Set(subcategoryRows.map((row) => row.id));
+
+  const allSubcategories: KpiTargetsFilterOption[] = [
+    ...subcategoryRows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      parent_id: row.parentId,
+    })),
+    ...missingSubcategoryRows.map((row) => ({
+      id: row.id,
+      name: row.name,
+      parent_id: row.parentId,
+    })),
+    ...missingSubcategoryIds
+      .filter((id) => !existingSubcategoryIds.has(id) && !missingSubcategoryRows.some((row) => row.id === id))
+      .map((id) => ({
+        id,
+        name: `Subcategory #${id}`,
+        parent_id: null as number | null,
+      })),
+  ];
+
+  return {
+    categories: allCategories.sort((a, b) => a.name.localeCompare(b.name)),
+    subcategories: allSubcategories.sort((a, b) =>
+      a.name.localeCompare(b.name),
+    ),
   };
 }
 

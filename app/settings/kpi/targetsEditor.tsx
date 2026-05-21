@@ -16,7 +16,10 @@ import {
 import { KpiDefinition } from "@/db/schema/kpi";
 import { toast } from "sonner";
 
-import { SaveKpiTargets } from "./service";
+import {
+  KpiTargetsFilterOption,
+  SaveKpiTargets,
+} from "./service";
 
 type TargetRow = {
   id: string;
@@ -72,70 +75,53 @@ export default function KpiTargetsEditor(props: {
   kpis: KpiDefinition[];
   utilityId: number | null;
   canEditTargets: boolean;
+  categories: KpiTargetsFilterOption[];
+  subcategories: KpiTargetsFilterOption[];
 }) {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
   const [isSaving, startTransition] = useTransition();
   const [selectedKpiId, setSelectedKpiId] = useState<string>(
     props.kpis[0]?.id ? String(props.kpis[0].id) : "",
   );
-  const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [selectedSubcategory, setSelectedSubcategory] = useState<string>("all");
+  const [selectedCategoryId, setSelectedCategoryId] = useState<number | null>(
+    null,
+  );
+  const [selectedSubcategoryId, setSelectedSubcategoryId] = useState<
+    number | null
+  >(null);
 
-  const categoryOptions = useMemo(() => {
-    const options = new Set<string>();
-    for (const kpi of props.kpis) {
-      const category = (kpi.category ?? "").trim();
-      if (category) {
-        options.add(category);
-      }
+  const filteredSubcategories = useMemo(() => {
+    if (selectedCategoryId == null) {
+      return [];
     }
-
-    return [...options].sort((a, b) => a.localeCompare(b));
-  }, [props.kpis]);
-
-  const subcategoryOptions = useMemo(() => {
-    const options = new Set<string>();
-    for (const kpi of props.kpis) {
-      const matchesCategory =
-        selectedCategory === "all" ||
-        (kpi.category ?? "").trim() === selectedCategory;
-      if (!matchesCategory) {
-        continue;
-      }
-
-      const subcategory = (kpi.subcategory ?? "").trim();
-      if (subcategory) {
-        options.add(subcategory);
-      }
-    }
-
-    return [...options].sort((a, b) => a.localeCompare(b));
-  }, [props.kpis, selectedCategory]);
+    return props.subcategories.filter(
+      (subcategory) => subcategory.parent_id === selectedCategoryId,
+    );
+  }, [selectedCategoryId, props.subcategories]);
 
   const filteredKpis = useMemo(
     () =>
       props.kpis.filter((kpi) => {
-        const category = (kpi.category ?? "").trim();
-        const subcategory = (kpi.subcategory ?? "").trim();
-
         const matchesCategory =
-          selectedCategory === "all" || category === selectedCategory;
+          selectedCategoryId == null ||
+          kpi.category_id === selectedCategoryId;
         const matchesSubcategory =
-          selectedSubcategory === "all" || subcategory === selectedSubcategory;
+          selectedSubcategoryId == null ||
+          kpi.subcategory_id === selectedSubcategoryId;
 
         return matchesCategory && matchesSubcategory;
       }),
-    [props.kpis, selectedCategory, selectedSubcategory],
+    [props.kpis, selectedCategoryId, selectedSubcategoryId],
   );
 
   useEffect(() => {
     if (
-      selectedSubcategory !== "all" &&
-      !subcategoryOptions.includes(selectedSubcategory)
+      selectedSubcategoryId != null &&
+      !filteredSubcategories.some((sub) => sub.id === selectedSubcategoryId)
     ) {
-      setSelectedSubcategory("all");
+      setSelectedSubcategoryId(null);
     }
-  }, [selectedSubcategory, subcategoryOptions]);
+  }, [selectedSubcategoryId, filteredSubcategories]);
 
   useEffect(() => {
     const selectedStillVisible = filteredKpis.some(
@@ -159,6 +145,16 @@ export default function KpiTargetsEditor(props: {
   const [rows, setRows] = useState<TargetRow[]>(
     parseTargetRows(selectedKpi, props.utilityId),
   );
+
+  const onCategoryChange = (value: string) => {
+    const nextCategoryId = value === "all" ? null : Number(value);
+    setSelectedCategoryId(nextCategoryId);
+    setSelectedSubcategoryId(null);
+  };
+
+  const onSubcategoryChange = (value: string) => {
+    setSelectedSubcategoryId(value === "all" ? null : Number(value));
+  };
 
   const onKpiChange = (nextKpiId: string) => {
     setSelectedKpiId(nextKpiId);
@@ -454,8 +450,12 @@ export default function KpiTargetsEditor(props: {
               KPI Category
             </label>
             <Select
-              value={selectedCategory}
-              onValueChange={setSelectedCategory}
+              value={
+                selectedCategoryId == null
+                  ? "all"
+                  : String(selectedCategoryId)
+              }
+              onValueChange={onCategoryChange}
             >
               <SelectTrigger
                 id="kpi-target-category-filter"
@@ -465,12 +465,12 @@ export default function KpiTargetsEditor(props: {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All categories</SelectItem>
-                {categoryOptions.map((category) => (
+                {props.categories.map((category) => (
                   <SelectItem
-                    key={category}
-                    value={category}
+                    key={category.id}
+                    value={String(category.id)}
                   >
-                    {category}
+                    {category.name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -485,8 +485,13 @@ export default function KpiTargetsEditor(props: {
               KPI Subcategory
             </label>
             <Select
-              value={selectedSubcategory}
-              onValueChange={setSelectedSubcategory}
+              value={
+                selectedSubcategoryId == null
+                  ? "all"
+                  : String(selectedSubcategoryId)
+              }
+              onValueChange={onSubcategoryChange}
+              disabled={selectedCategoryId == null}
             >
               <SelectTrigger
                 id="kpi-target-subcategory-filter"
@@ -496,12 +501,15 @@ export default function KpiTargetsEditor(props: {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">All subcategories</SelectItem>
-                {subcategoryOptions.map((subcategory) => (
+                {(selectedCategoryId == null
+                  ? []
+                  : filteredSubcategories
+                ).map((subcategory) => (
                   <SelectItem
-                    key={subcategory}
-                    value={subcategory}
+                    key={subcategory.id}
+                    value={String(subcategory.id)}
                   >
-                    {subcategory}
+                    {subcategory.name}
                   </SelectItem>
                 ))}
               </SelectContent>
