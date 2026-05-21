@@ -6,7 +6,7 @@ export async function register() {
 
   const [{ default: cron }, { checkAndSendDueSchedules }] = await Promise.all([
     import(/* webpackIgnore: true */ "node-cron"),
-    import(/* webpackIgnore: true */ "@/app/settings/email-schedules/service"),
+    import("@/app/settings/email-schedules/service"),
   ]);
 
   cron.schedule("*/5 * * * *", async () => {
