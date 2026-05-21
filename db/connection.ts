@@ -1,9 +1,7 @@
-import "dotenv/config";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 
 declare global {
-  // Reuse the same pg pool across hot-reloads in development.
   var __prismPool: Pool | undefined;
 }
 
