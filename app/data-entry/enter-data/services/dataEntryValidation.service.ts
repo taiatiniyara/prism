@@ -2,6 +2,7 @@ export type DataEntryValidationMetadata = {
   inputName: string;
   isMandatory: boolean;
   dataTypeName: string | null;
+  isCurrency: boolean;
   validRangeMin: number | null;
   validRangeMax: number | null;
   validPolarityId: number | null;
@@ -95,6 +96,8 @@ const resolvePolarityRule = (
   return null;
 };
 
+const CURRENCY_MAX_RANGE = 999999999999;
+
 export const getRangeOrPolarityValidationMessage = (
   metadata: DataEntryValidationMetadata,
   value: string | null,
@@ -108,6 +111,10 @@ export const getRangeOrPolarityValidationMessage = (
     return null;
   }
 
+  const effectiveRangeMax = metadata.isCurrency
+    ? Math.max(metadata.validRangeMax ?? 0, CURRENCY_MAX_RANGE)
+    : metadata.validRangeMax;
+
   if (
     metadata.validRangeMin != null &&
     numericValue < Number(metadata.validRangeMin)
@@ -116,10 +123,10 @@ export const getRangeOrPolarityValidationMessage = (
   }
 
   if (
-    metadata.validRangeMax != null &&
-    numericValue > Number(metadata.validRangeMax)
+    effectiveRangeMax != null &&
+    numericValue > Number(effectiveRangeMax)
   ) {
-    return `${metadata.inputName} must be less than or equal to ${metadata.validRangeMax}.`;
+    return `${metadata.inputName} must be less than or equal to ${effectiveRangeMax}.`;
   }
 
   const polarityRule = resolvePolarityRule(

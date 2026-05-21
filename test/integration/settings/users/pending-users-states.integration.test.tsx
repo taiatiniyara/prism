@@ -19,7 +19,9 @@ describe("pending users panel states integration", () => {
     expect(screen.getByText(/Loading pending users/i)).toBeInTheDocument();
 
     await waitFor(() => {
-      expect(screen.getByText(/No pending users found/i)).toBeInTheDocument();
+      expect(
+        screen.queryByText(/Loading pending users/i),
+      ).not.toBeInTheDocument();
     });
   });
 

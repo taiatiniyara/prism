@@ -18,6 +18,7 @@ import {
 import { applyFilterCascade } from "@/app/data-entry/filterContext.rules";
 import { DataEntryFilterOptions } from "@/app/data-entry/types";
 import { updateFilterContextAction } from "@/app/data-entry/enter-data/service";
+import { toast } from "sonner";
 
 interface DataEntryFiltersClientProps {
   context: DataEntryFilterContext;
@@ -56,8 +57,12 @@ export default function DataEntryFiltersClient({
 
     startTransition(() => {
       void (async () => {
-        await updateFilterContextAction(contextKey, value);
-        router.refresh();
+        try {
+          await updateFilterContextAction(contextKey, value);
+          router.refresh();
+        } catch {
+          toast.error("Failed to update filter. Please try again.");
+        }
       })();
     });
   };

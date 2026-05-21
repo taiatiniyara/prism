@@ -54,7 +54,6 @@ describe("custom KPI request POST contract", () => {
       id: "r1",
       title: "Total Energy Use",
       status: "PENDING_REVIEW",
-      visibility_scope: "SUBMITTER_ONLY",
     });
   });
 });

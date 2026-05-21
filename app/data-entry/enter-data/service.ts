@@ -725,6 +725,20 @@ const getGenerationGroupsForContext = async (
     sourceRelevanceByDimension.set(key, row.isRelevant);
   }
 
+  const configuredGeneratorKeys = new Set<string>();
+  for (const key of relevanceByDimension.keys()) {
+    const parts = key.split(":");
+    const providerId = parts[parts.length - 2];
+    const sourceId = parts[parts.length - 1];
+    configuredGeneratorKeys.add(`${providerId}:${sourceId}`);
+  }
+
+  const configuredSourceKeys = new Set<string>();
+  for (const key of sourceRelevanceByDimension.keys()) {
+    const parts = key.split(":");
+    configuredSourceKeys.add(parts[parts.length - 1]);
+  }
+
   const entries = await db
     .select({
       id: dataEntries.id,
@@ -764,10 +778,19 @@ const getGenerationGroupsForContext = async (
       const generationKey = `${definition.inputDefId}:${generator.energyProviderId}:${generator.energySourceId}`;
       const sourceKey = `${definition.inputDefId}:${generator.energySourceId}`;
 
+      const hasGeneratorRelevance = configuredGeneratorKeys.has(
+        `${generator.energyProviderId}:${generator.energySourceId}`,
+      );
+      const hasSourceRelevanceForGen = configuredSourceKeys.has(
+        String(generator.energySourceId),
+      );
+
       const isGenerationRelevant =
-        relevanceByDimension.get(generationKey) ?? true;
+        relevanceByDimension.get(generationKey) ??
+        (hasGeneratorRelevance ? false : true);
       const isSourceRelevant =
-        sourceRelevanceByDimension.get(sourceKey) ?? true;
+        sourceRelevanceByDimension.get(sourceKey) ??
+        (hasSourceRelevanceForGen ? false : true);
 
       return isGenerationRelevant && isSourceRelevant;
     },
@@ -1718,6 +1741,7 @@ const getDataEntryValidationMetadata = async (
     .select({
       inputName: inputDefinitions.name,
       isMandatory: inputDefinitions.is_mandatory,
+      isCurrency: inputDefinitions.is_currency,
       dataTypeName: sql<string | null>`(
         select mli.name
         from managed_list_items mli

@@ -5,17 +5,35 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface InputRowsProps {
   rows: DataEntryInputRowView[];
+  hasFilterSelection?: boolean;
+  hasDefinitions?: boolean;
 }
 
-export default function InputRows({ rows }: InputRowsProps) {
+export default function InputRows({
+  rows,
+  hasFilterSelection = true,
+  hasDefinitions = true,
+}: InputRowsProps) {
   if (rows.length === 0) {
+    let emptyReason: string;
+    if (!hasFilterSelection) {
+      emptyReason =
+        "Please select a report period and subcategory above to view input rows.";
+    } else if (!hasDefinitions) {
+      emptyReason =
+        "No input definitions have been configured for this subcategory. Run the migration from Settings > Migration, or create input definitions under Settings > Inputs.";
+    } else {
+      emptyReason =
+        "All input definitions for this subcategory have been marked as not relevant. Check your relevance settings under Settings > Relevance.";
+    }
+
     return (
       <Card>
         <CardHeader>
           <CardTitle>Input Rows</CardTitle>
         </CardHeader>
         <CardContent className="text-muted-foreground text-sm">
-          No input rows are available for the selected filter combination.
+          {emptyReason}
         </CardContent>
       </Card>
     );

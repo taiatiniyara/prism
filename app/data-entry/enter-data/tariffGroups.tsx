@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 import { DataEntryTariffPaymentModeGroupView } from "@/app/data-entry/types";
 
@@ -8,17 +8,84 @@ import InputCell from "@/app/data-entry/enter-data/inputCell";
 import { DataEntrySelect } from "@/components/data-entry/dataEntrySelect";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
+const STORAGE_KEY_PAYMENT_MODE = "prism:tariff:paymentModeId";
+const STORAGE_KEY_CUSTOMER_TYPE_PREFIX = "prism:tariff:customerType:";
+
+const readSessionNumber = (key: string): number | null => {
+  if (typeof window === "undefined") return null;
+  try {
+    const raw = sessionStorage.getItem(key);
+    if (raw == null) return null;
+    const n = Number(raw);
+    return Number.isInteger(n) && n > 0 ? n : null;
+  } catch {
+    return null;
+  }
+};
+
+const writeSessionNumber = (key: string, value: number): void => {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.setItem(key, String(value));
+  } catch {
+    // sessionStorage may be unavailable
+  }
+};
+
+const readSessionCustomerType = (
+  paymentModeId: number,
+): number | null => {
+  return readSessionNumber(`${STORAGE_KEY_CUSTOMER_TYPE_PREFIX}${paymentModeId}`);
+};
+
+const writeSessionCustomerType = (
+  paymentModeId: number,
+  customerTypeId: number,
+): void => {
+  writeSessionNumber(`${STORAGE_KEY_CUSTOMER_TYPE_PREFIX}${paymentModeId}`, customerTypeId);
+};
+
 interface TariffGroupsProps {
   groups: DataEntryTariffPaymentModeGroupView[];
 }
 
 export default function TariffGroups({ groups }: TariffGroupsProps) {
+  const hasHydratedRef = useRef(false);
+
+  const resolveInitialPaymentModeId = useCallback(() => {
+    const stored = readSessionNumber(STORAGE_KEY_PAYMENT_MODE);
+    if (stored != null && groups.some((g) => g.paymentModeId === stored)) {
+      return stored;
+    }
+    return groups[0]?.paymentModeId ?? 0;
+  }, [groups]);
+
+  const resolveInitialCustomerTypes = useCallback(() => {
+    const result: Record<number, number> = {};
+    for (const group of groups) {
+      const stored = readSessionCustomerType(group.paymentModeId);
+      if (
+        stored != null &&
+        group.customerTypeGroups.some(
+          (ct) => ct.customerTypeId === stored,
+        )
+      ) {
+        result[group.paymentModeId] = stored;
+      }
+    }
+    return result;
+  }, [groups]);
+
   const [openPaymentModeId, setOpenPaymentModeId] = useState<number>(
-    groups[0]?.paymentModeId ?? 0,
+    resolveInitialPaymentModeId,
   );
   const [activeCustomerTypeByPaymentMode, setActiveCustomerTypeByPaymentMode] =
-    useState<Record<number, number>>({});
+    useState<Record<number, number>>(resolveInitialCustomerTypes);
   const [searchQuery, setSearchQuery] = useState("");
+
+  useEffect(() => {
+    hasHydratedRef.current = true;
+  }, []);
 
   if (groups.length === 0) {
     return (
@@ -27,7 +94,10 @@ export default function TariffGroups({ groups }: TariffGroupsProps) {
           <CardTitle>Tariff Inputs</CardTitle>
         </CardHeader>
         <CardContent className="text-muted-foreground text-sm">
-          No tariff inputs are available for the selected filter combination.
+          No tariff inputs are available. Check that a service area is selected,
+          input definitions exist for Tariff Structure under Settings &gt;
+          Inputs, and the tariff relevance has been configured under Settings
+          &gt; Relevance.
         </CardContent>
       </Card>
     );
@@ -75,6 +145,7 @@ export default function TariffGroups({ groups }: TariffGroupsProps) {
               onValueChange={(nextValue) => {
                 const nextPaymentModeId = Number(nextValue);
                 setOpenPaymentModeId(nextPaymentModeId);
+                writeSessionNumber(STORAGE_KEY_PAYMENT_MODE, nextPaymentModeId);
                 setSearchQuery("");
               }}
               placeholder="Select payment mode"
@@ -110,13 +181,17 @@ export default function TariffGroups({ groups }: TariffGroupsProps) {
                 <button
                   key={customerTypeGroup.customerTypeId}
                   type="button"
-                  onClick={() =>
+                  onClick={() => {
+                    const nextId = customerTypeGroup.customerTypeId;
                     setActiveCustomerTypeByPaymentMode((prev) => ({
                       ...prev,
-                      [activePaymentMode.paymentModeId]:
-                        customerTypeGroup.customerTypeId,
-                    }))
-                  }
+                      [activePaymentMode.paymentModeId]: nextId,
+                    }));
+                    writeSessionCustomerType(
+                      activePaymentMode.paymentModeId,
+                      nextId,
+                    );
+                  }}
                   className={`rounded-md border px-3 py-1.5 text-sm transition-colors ${
                     isActive
                       ? "bg-slate-700 text-white border-slate-700"

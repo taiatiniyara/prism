@@ -31,7 +31,9 @@ export default function GeneratorGroups({ groups }: GeneratorGroupsProps) {
           <CardTitle>Generator Groups</CardTitle>
         </CardHeader>
         <CardContent className="text-muted-foreground text-sm">
-          No non-virtual generators are available for the selected service area.
+          No non-virtual generators are available. Ensure generators have been
+          configured under Settings &gt; Energy Resources and that generation
+          relevance has been set under Settings &gt; Relevance.
         </CardContent>
       </Card>
     );

@@ -45,11 +45,20 @@ export default async function EnterDataPage() {
           </div>
         </div>
         {model.inputs.mode === "grouped-by-generator" ? (
-          <GeneratorGroups groups={model.inputs.groups} />
+          <GeneratorGroups
+            key="generator-groups"
+            groups={model.inputs.groups}
+          />
         ) : model.inputs.mode === "grouped-by-payment-mode" ? (
-          <TariffGroups groups={model.inputs.groups} />
+          <TariffGroups
+            key="tariff-groups"
+            groups={model.inputs.groups}
+          />
         ) : (
-          <InputRows rows={model.inputs.rows} />
+          <InputRows
+            key="flat-rows"
+            rows={model.inputs.rows}
+          />
         )}
       </FilterStatePanel>
     </div>

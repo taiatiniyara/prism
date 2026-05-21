@@ -11,6 +11,7 @@ const baseMetadata: DataEntryValidationMetadata = {
   inputName: "Test Input",
   isMandatory: false,
   dataTypeName: "Number",
+  isCurrency: false,
   validRangeMin: null,
   validRangeMax: null,
   validPolarityId: null,

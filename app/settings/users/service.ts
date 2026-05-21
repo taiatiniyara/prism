@@ -580,6 +580,21 @@ export async function applyPendingUserDecision(input: {
     reason: updated.reject_reason,
   });
 
+  const { writeAuditLog } = await import("@/lib/audit.service");
+  await writeAuditLog({
+    action: `user.${input.decision}` as const,
+    actorUserId: currentUser.id,
+    actorEmail: currentUser.email,
+    actorRole: currentUser.role,
+    targetType: "user",
+    targetId: updated.id,
+    details: {
+      fromStatus: currentRecord.status,
+      toStatus: updated.status,
+      reason: updated.reject_reason,
+    },
+  });
+
   revalidatePath("/settings/users");
   revalidatePath("/dashboard");
 
