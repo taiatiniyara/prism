@@ -1580,6 +1580,13 @@ export const getDataEntryFilterViewModel =
         context.dataEntryStatusId,
       );
 
+      console.log("[getDataEntryFilterViewModel] generation mode: %d groups, serviceAreaId=%d",
+        groups.length, context.serviceAreaId);
+      groups.forEach((g, i) => {
+        console.log("[getDataEntryFilterViewModel]   group[%d]: generatorId=%d, generatorName=%s, rows=%d",
+          i, g.generatorId, g.generatorName, g.rows.length);
+      });
+
       return toPageModel(
         context,
         options,
@@ -1635,6 +1642,7 @@ export const getTemplateInputsForDownloadAction = async (
 ): Promise<DataEntryPageViewModel["inputs"]> => {
   if (scope === "subcategory") {
     const viewModel = await getDataEntryFilterViewModel();
+    console.log("[getTemplateInputsForDownloadAction] subcategory scope → inputs.mode=%s", viewModel.inputs.mode);
     return viewModel.inputs;
   }
 
@@ -1650,6 +1658,7 @@ export const getTemplateInputsForDownloadAction = async (
     categoryContext.dataEntryStatusId,
   );
 
+  console.log("[getTemplateInputsForDownloadAction] category scope → flat mode, %d rows", rows.length);
   return {
     mode: "flat",
     rows,
