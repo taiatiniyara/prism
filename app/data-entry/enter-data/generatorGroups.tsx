@@ -3,6 +3,7 @@
 import { useState } from "react";
 
 import { DataEntryGeneratorGroupView } from "@/app/data-entry/types";
+import { DataEntryStatusId } from "@/db/schema/dataEntry";
 
 import InputCell from "@/app/data-entry/enter-data/inputCell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,11 +15,21 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+const STATUS_ID_TO_LABEL: Record<number, string> = {
+  [DataEntryStatusId.Pending]: "pending",
+  [DataEntryStatusId.Entered]: "entered",
+  [DataEntryStatusId.Not_Available]: "N/A",
+};
+
 interface GeneratorGroupsProps {
   groups: DataEntryGeneratorGroupView[];
+  dataEntryStatusId: number | null;
 }
 
-export default function GeneratorGroups({ groups }: GeneratorGroupsProps) {
+export default function GeneratorGroups({
+  groups,
+  dataEntryStatusId,
+}: GeneratorGroupsProps) {
   const [openGeneratorId, setOpenGeneratorId] = useState<number | null>(null);
   const selectedGroup = groups.find(
     (group) => group.generatorId === openGeneratorId,
@@ -43,10 +54,31 @@ export default function GeneratorGroups({ groups }: GeneratorGroupsProps) {
     <>
       <div className="grid grid-cols-2 gap-4 xl:grid-cols-4">
         {groups.map((group) => {
+          const rowCount = group.rows.length;
           const pendingCount = group.rows.filter((row) => {
             const hasValue = String(row.value ?? "").trim().length > 0;
             return !hasValue && !row.isDataNotAvailable;
           }).length;
+
+          const statusLabel =
+            dataEntryStatusId != null
+              ? STATUS_ID_TO_LABEL[dataEntryStatusId]
+              : null;
+
+          const badgeLabel =
+            statusLabel != null
+              ? `${rowCount} ${statusLabel}`
+              : pendingCount > 0
+                ? `${pendingCount} pending`
+                : "Complete";
+
+          const isPendingBadge =
+            dataEntryStatusId != null
+              ? dataEntryStatusId === DataEntryStatusId.Pending
+              : pendingCount > 0;
+
+          const isNaBadge =
+            dataEntryStatusId === DataEntryStatusId.Not_Available;
 
           return (
             <button
@@ -61,17 +93,18 @@ export default function GeneratorGroups({ groups }: GeneratorGroupsProps) {
                 </div>
                 <span
                   className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                    pendingCount > 0
-                      ? "bg-amber-100 text-amber-800"
-                      : "bg-lime-100 text-lime-700"
+                    isNaBadge
+                      ? "bg-slate-100 text-slate-600"
+                      : isPendingBadge
+                        ? "bg-amber-100 text-amber-800"
+                        : "bg-lime-100 text-lime-700"
                   }`}
                 >
-                  {pendingCount > 0 ? `${pendingCount} pending` : "Complete"}
+                  {badgeLabel}
                 </span>
               </div>
               <div className="mt-1 text-xs text-slate-500">
-                {group.rows.length} input{group.rows.length === 1 ? "" : "s"}{" "}
-                total
+                {rowCount} input{rowCount === 1 ? "" : "s"} total
               </div>
             </button>
           );

@@ -5,7 +5,7 @@
   "scripts": {
     "dev": "next dev -p 3554",
     "dev:turbo": "next dev -p 3554",
-    "build": "next build",
+    "build": "next build --webpack",
     "start": "next start -p 3555",
     "lint": "eslint",
     "test": "vitest run",

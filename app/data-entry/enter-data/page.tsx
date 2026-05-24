@@ -48,6 +48,7 @@ export default async function EnterDataPage() {
           <GeneratorGroups
             key="generator-groups"
             groups={model.inputs.groups}
+            dataEntryStatusId={model.context.dataEntryStatusId}
           />
         ) : model.inputs.mode === "grouped-by-payment-mode" ? (
           <TariffGroups
