@@ -725,20 +725,6 @@ const getGenerationGroupsForContext = async (
     sourceRelevanceByDimension.set(key, row.isRelevant);
   }
 
-  const configuredGeneratorKeys = new Set<string>();
-  for (const key of relevanceByDimension.keys()) {
-    const parts = key.split(":");
-    const providerId = parts[parts.length - 2];
-    const sourceId = parts[parts.length - 1];
-    configuredGeneratorKeys.add(`${providerId}:${sourceId}`);
-  }
-
-  const configuredSourceKeys = new Set<string>();
-  for (const key of sourceRelevanceByDimension.keys()) {
-    const parts = key.split(":");
-    configuredSourceKeys.add(parts[parts.length - 1]);
-  }
-
   const entries = await db
     .select({
       id: dataEntries.id,
@@ -778,19 +764,10 @@ const getGenerationGroupsForContext = async (
       const generationKey = `${definition.inputDefId}:${generator.energyProviderId}:${generator.energySourceId}`;
       const sourceKey = `${definition.inputDefId}:${generator.energySourceId}`;
 
-      const hasGeneratorRelevance = configuredGeneratorKeys.has(
-        `${generator.energyProviderId}:${generator.energySourceId}`,
-      );
-      const hasSourceRelevanceForGen = configuredSourceKeys.has(
-        String(generator.energySourceId),
-      );
-
       const isGenerationRelevant =
-        relevanceByDimension.get(generationKey) ??
-        (hasGeneratorRelevance ? false : true);
+        relevanceByDimension.get(generationKey) ?? false;
       const isSourceRelevant =
-        sourceRelevanceByDimension.get(sourceKey) ??
-        (hasSourceRelevanceForGen ? false : true);
+        sourceRelevanceByDimension.get(sourceKey) ?? false;
 
       return isGenerationRelevant && isSourceRelevant;
     },
