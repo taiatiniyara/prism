@@ -2,7 +2,6 @@ import { connection } from "next/server";
 import { getCurrentUser } from "@/lib/user.service";
 
 import MigrationButtons from "./buttons";
-import DataEntryMigrationPanel from "./data-entry-migration-panel";
 import DataEntryComparisonPanel from "./data-entry-comparison-panel";
 import { getDataEntryComparisonFilterOptions } from "./service";
 
@@ -23,7 +22,6 @@ export default async function MigrationPage() {
   return (
     <div>
       <MigrationButtons />
-      <DataEntryMigrationPanel />
       <DataEntryComparisonPanel options={comparisonOptions} />
     </div>
   );

@@ -424,7 +424,7 @@ const flattenTemplateRows = (
 
   if (inputs.mode === "flat") {
     const result = inputs.rows.map((row) => ({
-      context_mode: "flat",
+      context_mode: "flat" as const,
       input_def_id: row.inputDefId,
       input_name: row.inputName,
       unit_name: row.unitName ?? "",
@@ -458,7 +458,7 @@ const flattenTemplateRows = (
 
     const result = inputs.groups.flatMap((group) =>
       group.rows.map((row) => ({
-        context_mode: "grouped-by-generator",
+        context_mode: "grouped-by-generator" as const,
         input_def_id: row.inputDefId,
         input_name: row.inputName,
         unit_name: row.unitName ?? "",
@@ -487,7 +487,7 @@ const flattenTemplateRows = (
   return inputs.groups.flatMap((paymentModeGroup) =>
     paymentModeGroup.customerTypeGroups.flatMap((customerTypeGroup) =>
       customerTypeGroup.rows.map((row) => ({
-        context_mode: "grouped-by-payment-mode",
+        context_mode: "grouped-by-payment-mode" as const,
         input_def_id: row.inputDefId,
         input_name: row.inputName,
         unit_name: row.unitName ?? "",

@@ -38,6 +38,14 @@ import { getCurrentUser } from "@/lib/user.service";
 import { generateRandomNumber } from "@/lib/utils";
 import { and, desc, eq, inArray, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { migrationLogs } from "@/db/schema/migration-log";
+
+export type MigrationStepResult = {
+  ok: boolean;
+  inserted: number;
+  updated: number;
+  total: number;
+};
 
 const JSON_HEADERS = {
   "Content-Type": "application/json",
@@ -4232,4 +4240,34 @@ export async function compareDataEntries(
     },
     rows,
   };
+}
+
+export async function logMigrationStep(
+  label: string,
+  success: boolean,
+  durationMs: number,
+  errorMessage: string | null,
+): Promise<void> {
+  await db.insert(migrationLogs).values({
+    step_label: label,
+    success,
+    duration_ms: durationMs,
+    error_message: errorMessage,
+  });
+}
+
+export async function getMigrationHistory() {
+  const rows = await db
+    .select()
+    .from(migrationLogs)
+    .orderBy(desc(migrationLogs.id))
+    .limit(200);
+  return rows.map((r) => ({
+    id: r.id,
+    run_at: r.run_at?.toISOString() ?? "",
+    step_label: r.step_label,
+    success: r.success,
+    duration_ms: r.duration_ms,
+    error_message: r.error_message,
+  }));
 }

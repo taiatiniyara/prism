@@ -1,15 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   backfillEnergyResourcePeriods,
   retrieveCountryContextData,
   retrieveCountries,
+  retrieveDataEntries,
   retrieveEnergyResources,
   retrieveGenerationRelevance,
-  retrieveInputDefinitions,
-  retrieveKpiDefinitions,
   retrieveManagedLists,
   retrieveReportPeriods,
   retrieveRoles,
@@ -18,171 +17,153 @@ import {
   retrieveUtilityContextData,
   retrieveUsers,
   retrieveUtilityData,
+  logMigrationStep,
+  getMigrationHistory,
 } from "./service";
-import { toast } from "sonner";
 
-const buttonList: {
+interface HistoryEntry {
+  id: number;
+  run_at: string;
+  step_label: string;
+  success: boolean;
+  duration_ms: number;
+  error_message: string | null;
+}
+
+interface Step {
   label: string;
   fn: () => Promise<boolean>;
-}[] = [
-  {
-    label: "Migrate Managed Lists",
-    fn: retrieveManagedLists,
-  },
-  {
-    label: "Migrate Countries",
-    fn: retrieveCountries,
-  },
-  {
-    label: "Migrate Roles",
-    fn: retrieveRoles,
-  },
-  {
-    label: "Migrate Users",
-    fn: retrieveUsers,
-  },
-  {
-    label: "Migrate Utility Data",
-    fn: retrieveUtilityData,
-  },
-  {
-    label: "Migrate Report Periods",
-    fn: retrieveReportPeriods,
-  },
-  {
-    label: "Migrate Energy Resources",
-    fn: retrieveEnergyResources,
-  },
-  {
-    label: "Backfill Energy Resource Periods",
-    fn: backfillEnergyResourcePeriods,
-  },
-  {
-    label: "Migrate KPI Definitions",
-    fn: retrieveKpiDefinitions,
-  },
-  {
-    label: "Migrate Input Definitions",
-    fn: retrieveInputDefinitions,
-  },
-  {
-    label: "Migrate Country Context",
-    fn: retrieveCountryContextData,
-  },
-  {
-    label: "Migrate Utility Context",
-    fn: retrieveUtilityContextData,
-  },
-  {
-    label: "Migrate Generation Relevance",
-    fn: retrieveGenerationRelevance,
-  },
-  {
-    label: "Migrate Transmission Relevance",
-    fn: retrieveTransmissionRelevance,
-  },
-  {
-    label: "Migrate Tariff Relevance",
-    fn: retrieveTariffRelevance,
-  },
+  heavy?: boolean;
+}
+
+const steps: Step[] = [
+  { label: "Managed Lists", fn: retrieveManagedLists },
+  { label: "Countries", fn: retrieveCountries },
+  { label: "Roles", fn: retrieveRoles },
+  { label: "Users", fn: retrieveUsers },
+  { label: "Utility Data", fn: retrieveUtilityData },
+  { label: "Report Periods", fn: retrieveReportPeriods },
+  { label: "Energy Resources", fn: retrieveEnergyResources },
+  { label: "Energy Resource Periods", fn: backfillEnergyResourcePeriods },
+  { label: "Country Context", fn: retrieveCountryContextData },
+  { label: "Utility Context", fn: retrieveUtilityContextData },
+  { label: "Generation Relevance", fn: retrieveGenerationRelevance, heavy: true },
+  { label: "Transmission Relevance", fn: retrieveTransmissionRelevance, heavy: true },
+  { label: "Tariff Relevance", fn: retrieveTariffRelevance, heavy: true },
+  { label: "Data Entries", fn: () => retrieveDataEntries(), heavy: true },
 ];
 
-const DEFAULT_TIMEOUT_MS = 30_000;
-const HEAVY_MIGRATION_TIMEOUT_MS = 180_000;
+const HEAVY_TIMEOUT_MS = 180_000;
 
-const getTimeoutMsForLabel = (label: string): number => {
-  if (
-    label === "Migrate Generation Relevance" ||
-    label === "Migrate Tariff Relevance"
-  ) {
-    return HEAVY_MIGRATION_TIMEOUT_MS;
-  }
-
-  return DEFAULT_TIMEOUT_MS;
-};
+interface StepResult {
+  label: string;
+  ok: boolean;
+  ms: number;
+  details: string;
+  error?: string;
+}
 
 export default function MigrationButtons() {
-  const [runningLabel, setRunningLabel] = useState<string | null>(null);
-  const [lastRunMessage, setLastRunMessage] = useState<string | null>(null);
+  const [running, setRunning] = useState(false);
+  const [currentStep, setCurrentStep] = useState(-1);
+  const [results, setResults] = useState<StepResult[]>([]);
+  const [history, setHistory] = useState<HistoryEntry[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
 
-  const isRunning = runningLabel !== null;
+  useEffect(() => {
+    getMigrationHistory().then(setHistory).catch(() => {});
+  }, [running]);
 
-  const runMigration = async (label: string, fn: () => Promise<boolean>) => {
-    if (isRunning) return;
+  async function syncAll() {
+    if (running) return;
+    setRunning(true);
+    setResults([]);
 
-    setRunningLabel(label);
-    setLastRunMessage(`Starting ${label}...`);
-    const startedAt = Date.now();
-    const timeoutMs = getTimeoutMsForLabel(label);
+    const log: StepResult[] = [];
 
-    const withTimeout = <T,>(promise: Promise<T>, ms: number): Promise<T> =>
-      new Promise<T>((resolve, reject) => {
-        const timer = setTimeout(() => {
-          reject(
-            new Error(`Migration timed out after ${Math.round(ms / 1000)}s`),
-          );
-        }, ms);
+    for (let i = 0; i < steps.length; i++) {
+      setCurrentStep(i);
+      const step = steps[i];
+      const timeoutMs = step.heavy ? HEAVY_TIMEOUT_MS : 30_000;
+      const started = Date.now();
 
-        promise.then(
-          (value) => {
-            clearTimeout(timer);
-            resolve(value);
-          },
-          (error) => {
-            clearTimeout(timer);
-            reject(error);
-          },
-        );
-      });
+      let ok = false;
+      let error: string | undefined;
 
-    try {
-      const result = await withTimeout(fn(), timeoutMs);
-      const elapsedMs = Date.now() - startedAt;
-
-      if (result === true) {
-        const message = `${label} migrated successfully (${elapsedMs}ms)`;
-        setLastRunMessage(message);
-        toast.success(message);
-        return;
+      try {
+        ok = await withTimeout(step.fn(), timeoutMs);
+      } catch (err) {
+        error = err instanceof Error ? err.message : "Unknown error";
       }
 
-      const message = `Failed to migrate ${label} (${elapsedMs}ms)`;
-      setLastRunMessage(message);
-      toast.error(message);
-    } catch (error) {
-      const elapsedMs = Date.now() - startedAt;
-      const errorMessage =
-        error instanceof Error && error.message.trim().length > 0
-          ? error.message
-          : `Failed to migrate ${label}`;
-      const message = `${errorMessage} (${elapsedMs}ms)`;
+      const ms = Date.now() - started;
+      const details = error ? `Error: ${error}` : (ok ? "OK" : "Failed");
+      log.push({ label: step.label, ok, ms, details, error });
+      setResults([...log]);
 
-      setLastRunMessage(message);
-      toast.error(message);
-    } finally {
-      setRunningLabel(null);
+      await logMigrationStep(step.label, ok, ms, error ?? null);
     }
-  };
+
+    setCurrentStep(-1);
+    setRunning(false);
+    getMigrationHistory().then(setHistory).catch(() => {});
+  }
+
+  const passed = results.filter((r) => r.ok).length;
+  const failed = results.filter((r) => !r.ok).length;
+  const lastRun = history.length > 0 ? history.filter((h) => h.run_at === history[0].run_at) : [];
+  const lastPassed = lastRun.filter((h) => h.success).length;
+  const lastFailed = lastRun.filter((h) => !h.success).length;
 
   return (
-    <div className="space-y-3">
-      <div className="grid grid-cols-4 gap-4">
-        {buttonList.map((btn) => (
-          <Button
-            key={btn.label}
-            disabled={isRunning}
-            onClick={() => {
-              void runMigration(btn.label, btn.fn);
-            }}
-          >
-            {isRunning && runningLabel === btn.label ? "Running..." : btn.label}
-          </Button>
-        ))}
+    <div className="space-y-4">
+      <div className="flex items-center gap-4">
+        <Button disabled={running} onClick={syncAll} className="text-base px-6">
+          {running ? `Syncing: ${steps[currentStep]?.label}...` : "Sync All from prism-training"}
+        </Button>
+        {running && <span className="text-sm text-slate-500">Step {currentStep + 1} of {steps.length}</span>}
+        {history.length > 0 && !running && (
+          <span className="text-xs text-slate-400">Last run: {lastPassed} passed{lastFailed > 0 ? `, ${lastFailed} failed` : ""}</span>
+        )}
       </div>
 
-      {lastRunMessage ? (
-        <p className="text-muted-foreground text-sm">{lastRunMessage}</p>
-      ) : null}
+      {results.length > 0 && (
+        <div className="space-y-1">
+          <div className="text-sm font-medium mb-2">{passed} passed{failed > 0 ? `, ${failed} failed` : ""}</div>
+          {results.map((r, i) => (
+            <div key={i} className={`text-xs px-2 py-1 rounded ${r.ok ? "bg-lime-100 text-lime-800" : "bg-red-100 text-red-800"}`}>
+        {r.ok ? "\u2713" : "\u2717"} {r.label} ({r.ms}ms)
+        {r.details && <span className="ml-1 opacity-75"> {"—"} {r.details}</span>}
+        {r.error && <span className="ml-2 opacity-75">{r.error}</span>}
+            </div>
+          ))}
+        </div>
+      )}
+
+      {history.length > 0 && (
+        <div>
+          <button onClick={() => setShowHistory(!showHistory)} className="text-xs text-slate-500 hover:text-slate-700 underline">
+            {showHistory ? "Hide history" : `Show history (${history.length} entries)`}
+          </button>
+          {showHistory && (
+            <div className="mt-2 space-y-0.5 max-h-64 overflow-y-auto">
+              {history.map((h) => (
+                <div key={h.id} className={`text-xs px-2 py-0.5 rounded flex justify-between ${h.success ? "text-slate-600" : "text-red-600 bg-red-50"}`}>
+                  <span>{h.success ? "\u2713" : "\u2717"} {h.step_label}{h.error_message && <span className="ml-2 opacity-75">- {h.error_message}</span>}</span>
+                  <span className="text-slate-400">{new Date(h.run_at).toLocaleString()} ({h.duration_ms}ms)</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
+}
+
+function withTimeout<T>(promise: Promise<T>, ms: number): Promise<T> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(() => reject(new Error(`Timed out after ${Math.round(ms / 1000)}s`)), ms);
+    promise.then((v) => { clearTimeout(timer); resolve(v); }, (e) => { clearTimeout(timer); reject(e); });
+  });
 }

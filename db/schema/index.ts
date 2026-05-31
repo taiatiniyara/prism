@@ -8,6 +8,7 @@ export * from "./error-log";
 export * from "./governance";
 export * from "./kpi";
 export * from "./managedLists";
+export * from "./migration-log";
 export * from "./reportPeriods";
 export * from "./rls";
 export * from "./utility";
