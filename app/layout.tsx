@@ -94,6 +94,7 @@ async function AppNavigation() {
       role={session?.role?.name}
       orgAcronym={session?.orgAcronym || ""}
       fullName={session?.fullName}
+      sidebarList={session?.sidebarList}
       utilityContext={
         session?.role?.name === "DEV"
           ? {

@@ -1,6 +1,9 @@
 import { Heading } from "@/components/heading";
 import Image from "next/image";
 import { FaChartLine, FaCheckCircle, FaFile, FaLock } from "react-icons/fa";
+import { getSession } from "@/lib/session.service";
+import { getDefaultPageForRole } from "@/lib/role-guard";
+import { redirect } from "next/navigation";
 
 const features: {
   title: string;
@@ -34,6 +37,11 @@ const features: {
 ];
 
 export default async function Page() {
+  const session = await getSession();
+
+  if (session?.role?.name && !session.blockedState?.blocked) {
+    redirect(getDefaultPageForRole(session.role.name));
+  }
   return (
     <main className="min-h-screen bg-slate-50 selection:bg-slate-200">
       {/* Hero Section */}
