@@ -5,6 +5,7 @@ import { user } from "@/db/schema/auth-schema";
 import { authClient } from "@/lib/auth-client";
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
+import crypto from "node:crypto";
 
 const getForwardedAuthHeaders = async () => {
   const headersList = await headers();
@@ -19,28 +20,24 @@ const getForwardedAuthHeaders = async () => {
 
 export async function sendMagicLink(email: string) {
   const checkUser = await db.select().from(user).where(eq(user.email, email));
-  if (checkUser.length === 0) {
-    return {
-      success: false,
-      message: "You don't have an account yet. Please register first.",
-    };
-  }
 
   const forwardedHeaders = await getForwardedAuthHeaders();
 
-  await authClient.signIn.magicLink(
-    {
-      email,
-      callbackURL: "/dashboard",
-    },
-    {
-      headers: forwardedHeaders,
-    },
-  );
+  if (checkUser.length > 0) {
+    await authClient.signIn.magicLink(
+      {
+        email,
+        callbackURL: "/dashboard",
+      },
+      {
+        headers: forwardedHeaders,
+      },
+    );
+  }
 
   return {
     success: true,
-    message: "Magic link sent successfully",
+    message: "If an account exists for this email, a magic link has been sent.",
   };
 }
 
@@ -61,7 +58,7 @@ export async function registerUser(data: {
       {
         email: data.email,
         name: `${data.firstName} ${data.lastName}`,
-        password: "Password#123",
+        password: crypto.randomUUID() + crypto.randomBytes(16).toString("hex"),
         callbackURL: "/",
       },
       {

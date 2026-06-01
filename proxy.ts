@@ -6,6 +6,9 @@ import { roles, user } from "@/db/schema/auth-schema";
 import { eq } from "drizzle-orm";
 import { canAccessRoute, getDefaultPageForRole } from "@/lib/role-guard";
 
+const PRIVILEGED_ROLES = new Set(["DEV", "BMO"]);
+const MFA_REQUIRED_PREFIXES = ["/settings/users", "/settings/kpi", "/migration"];
+
 export async function proxy(request: NextRequest) {
   const session = await auth.api.getSession({
     headers: await headers(),
@@ -27,6 +30,12 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/auth", request.url));
   }
 
+  if (!currentUser.emailVerified) {
+    if (!pathname.startsWith("/profile") && !pathname.startsWith("/api")) {
+      return NextResponse.redirect(new URL("/profile?verify=required", request.url));
+    }
+  }
+
   const [role] = currentUser.role_id
     ? await db
         .select()
@@ -40,6 +49,15 @@ export async function proxy(request: NextRequest) {
   if (!canAccessRoute(roleName, pathname)) {
     const defaultPage = getDefaultPageForRole(roleName);
     return NextResponse.redirect(new URL(defaultPage, request.url));
+  }
+
+  if (
+    roleName != null &&
+    PRIVILEGED_ROLES.has(roleName) &&
+    MFA_REQUIRED_PREFIXES.some((prefix) => pathname.startsWith(prefix)) &&
+    !session.user.twoFactorEnabled
+  ) {
+    return NextResponse.redirect(new URL("/profile?mfa=required", request.url));
   }
 
   return NextResponse.next();

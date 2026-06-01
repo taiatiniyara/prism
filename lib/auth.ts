@@ -36,16 +36,35 @@ const appUrl = (() => {
   }
 })();
 
-export const auth = betterAuth({
-  emailAndPassword: {
-    enabled: true,
-  },
-  trustedOrigins: [
-    appUrl,
+const isProduction =
+  process.env.NODE_ENV === "production" ||
+  !rawAppUrl.includes("localhost");
+
+const trustedOrigins = [appUrl];
+if (!isProduction) {
+  trustedOrigins.push(
     "http://localhost:3554",
     "http://localhost:3000",
     "http://localhost:3001",
-  ],
+  );
+}
+
+export const auth = betterAuth({
+  emailAndPassword: {
+    enabled: true,
+    requireEmailVerification: true,
+  },
+  emailVerification: {
+    sendVerificationEmail: async ({ user: u, url }) => {
+      const payload = buildMagicLinkEmail({ url });
+      await sendEmail({
+        to: u.email,
+        subject: "Verify your PRISM account",
+        html: payload.html,
+      });
+    },
+  },
+  trustedOrigins,
   secret: authSecret,
   url: appUrl,
   database: drizzleAdapter(db, {
@@ -59,10 +78,20 @@ export const auth = betterAuth({
       twoFactor,
     },
   }),
+  session: {
+    expiresIn: 60 * 60 * 24, // 24 hours
+    updateAge: 60 * 60, // Refresh session every hour of activity
+  },
   rateLimit: {
     window: 15 * 60 * 1000, // 15 minutes
     max: 100, // limit each IP to 100 requests per windowMs
     storage: "database",
+  },
+  accountLocking: {
+    enabled: true,
+    maxAttempts: 5,
+    lockDuration: 15 * 60, // 15 minutes in seconds
+    prefix: "account_lock",
   },
   plugins: [
     nextCookies(),

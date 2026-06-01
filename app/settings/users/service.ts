@@ -20,6 +20,7 @@ import {
 } from "@/lib/email.service";
 import { assertValidTransition, type StatusDecision } from "@/lib/user-status";
 import { getCurrentUser } from "@/lib/user.service";
+import { writeAuditLog } from "@/lib/audit.service";
 import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { createHmac, timingSafeEqual } from "node:crypto";
@@ -58,15 +59,29 @@ export async function CreateUser(
     dataAccessReason: data.data_access_reason || "",
     organisationId: data.organisation_id || 1,
     roleId: Number(data.role_id) || 1,
-  }).then(async () => {
-    await db
-      .update(user)
-      .set({
-        status: "active",
-      })
-      .where(eq(user.email, data.email))
-      .returning();
-  });
+    }).then(async () => {
+      await db
+        .update(user)
+        .set({
+          status: "active",
+        })
+        .where(eq(user.email, data.email))
+        .returning();
+
+      writeAuditLog({
+        action: "user.activate",
+        actorUserId: currentUser.id,
+        actorEmail: currentUser.email,
+        actorRole: currentUser.role,
+        targetType: "user",
+        targetId: data.email,
+        details: {
+          name: data.name,
+          roleId: data.role_id,
+          organisationId: data.organisation_id,
+        },
+      }).catch((err) => console.error("[audit] user.create failed", err));
+    });
   revalidatePath("/settings/users");
   return {
     success: true,

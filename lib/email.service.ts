@@ -99,8 +99,8 @@ const buildPrismEmailLayout = (input: {
   eyebrow: string;
   accentColor: string;
   sectionLabel?: string;
-  introHtml: string;
-  bodyHtml: string;
+  introText: string;
+  bodyText: string;
   note: string;
 }) => {
   return `
@@ -127,13 +127,13 @@ const buildPrismEmailLayout = (input: {
               ${escapeHtml(input.sectionLabel || "PRISM Notification")}
             </div>
             <p style="margin: 14px 0 0 0; color: #26334d; font-size: 14px; line-height: 1.6;">
-              ${input.introHtml}
+              ${input.introText}
             </p>
           </td>
         </tr>
         <tr>
           <td style="padding: 8px 24px 12px 24px;">
-            ${input.bodyHtml}
+            ${input.bodyText}
           </td>
         </tr>
         <tr>
@@ -164,9 +164,9 @@ export const buildCustomKpiReviewOutcomeEmail = (input: {
       eyebrow: "PRISM Notification",
       accentColor: decisionAccentByType[input.decisionType],
       sectionLabel: "Custom KPI Workflow",
-      introHtml:
+      introText:
         "Your custom KPI request has been reviewed by the PRISM team. See the decision details below.",
-      bodyHtml: buildSummaryRowsTable([
+      bodyText: buildSummaryRowsTable([
         { label: "KPI Title", value: safeTitle },
         { label: "Decision", value: decisionLabel },
         { label: "Reviewer Rationale", value: safeRationale },
@@ -195,9 +195,9 @@ export const buildCustomKpiSubmissionReviewEmail = (input: {
       eyebrow: "PRISM Notification",
       accentColor: "#2563eb",
       sectionLabel: "Custom KPI Workflow",
-      introHtml:
+      introText:
         "A new custom KPI request has been submitted and is ready for DEV review.",
-      bodyHtml: buildSummaryRowsTable([
+      bodyText: buildSummaryRowsTable([
         { label: "KPI Title", value: safeTitle },
         {
           label: "Submitted By",
@@ -231,8 +231,8 @@ export const buildRegistrationClarificationEmail = (input: {
       eyebrow: "PRISM Registration",
       accentColor: "#0f766e",
       sectionLabel: "Registration Review",
-      introHtml: `Dear ${escapeHtml(safeRequesterName)},<br /><br />Your PRISM registration request is currently under review. Please provide clarification on the following:`,
-      bodyHtml: buildSummaryRowsTable([
+      introText: `Dear ${escapeHtml(safeRequesterName)},<br /><br />Your PRISM registration request is currently under review. Please provide clarification on the following:`,
+      bodyText: buildSummaryRowsTable([
         { label: "Subject", value: safeSubject },
         { label: "Clarification", value: safeMessage },
       ]),
@@ -253,9 +253,9 @@ export const buildMagicLinkEmail = (input: {
       eyebrow: "Secure Sign In",
       accentColor: "#1e293b",
       sectionLabel: "Authentication",
-      introHtml:
+      introText:
         "Hello,<br /><br />To complete your login and gain access to the platform, please use the secure link below.",
-      bodyHtml: `
+      bodyText: `
         <div style="padding: 24px; border: 1px solid #e3e8f2; border-radius: 10px; text-align: center; background: #ffffff;">
           <a href="${safeUrl}" style="display: inline-block; background: #1e293b; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">Verify My Email</a>
           <p style="margin: 16px 0 0 0; color: #4b5563; font-size: 13px; line-height: 1.6;">This link expires in <strong>15 minutes</strong> for security reasons.</p>

@@ -45,6 +45,7 @@ import {
   processPendingCustomKpiOutcomeEmailsForDecision,
   recordCustomKpiLifecycleEvent,
 } from "@/app/settings/kpi/custom-kpi/service";
+import { writeAuditLog } from "@/lib/audit.service";
 
 const EDIT_ROLES = new Set(["DEV", "BMO", "BLO", "DAOO", "DAOF"]);
 const CUSTOM_KPI_REVIEWER_ROLES = new Set(["DEV"]);
@@ -851,6 +852,19 @@ export const updateReviewKpiInputValue = async (
     })
     .where(eq(dataEntries.id, dataEntryId));
 
+  writeAuditLog({
+    action: "data_entry.update",
+    actorUserId: user.id,
+    actorEmail: user.email,
+    actorRole: user.role,
+    targetType: "data_entry",
+    targetId: dataEntryId,
+    details: {
+      fromValue: existing.value,
+      toValue: payload.value?.trim() ? payload.value.trim() : null,
+    },
+  }).catch((err) => console.error("[audit] data_entry.update failed", err));
+
   const updated = await getReviewKpiDataEntryById(dataEntryId);
 
   if (!updated) {
@@ -936,6 +950,18 @@ export const addReviewKpiInputComment = async (
       updatedById: user.id,
     })
     .where(eq(dataEntries.id, dataEntryId));
+
+  writeAuditLog({
+    action: "data_entry.update",
+    actorUserId: user.id,
+    actorEmail: user.email,
+    actorRole: user.role,
+    targetType: "data_entry_comment",
+    targetId: dataEntryId,
+    details: { comment },
+  }).catch((err) =>
+    console.error("[audit] data_entry_comment.update failed", err),
+  );
 
   const serializedComments = nextComments.map((entry) =>
     serializeComment(entry),
@@ -1415,6 +1441,12 @@ export const applyCustomKpiReviewDecision = async (
 
   const request = await getCustomKpiDecisionRequestOrThrow(requestId);
 
+  if (request.submitterUserId === user.id) {
+    throw new Error(
+      "FORBIDDEN:You cannot review your own custom KPI request. Separation of duties requires a different reviewer.",
+    );
+  }
+
   const nextStatus = mapDecisionTypeToStatus(input.decisionType);
   const lineage = resolveOverrideDecisionLineage({
     currentStatus: request.status,
@@ -1578,6 +1610,23 @@ export const applyCustomKpiReviewDecision = async (
     },
   });
 
+  writeAuditLog({
+    action: "settings.kpi.update",
+    actorUserId: user.id,
+    actorEmail: user.email,
+    actorRole: user.role,
+    targetType: "custom_kpi_request",
+    targetId: requestId,
+    details: {
+      decisionType: input.decisionType,
+      fromStatus: request.status,
+      toStatus: nextStatus,
+      rationale: input.rationale,
+    },
+  }).catch((err) =>
+    console.error("[audit] settings.kpi.update failed", err),
+  );
+
   if (lineage.requiresOverride) {
     await recordCustomKpiLifecycleEvent({
       requestId,
@@ -1654,6 +1703,22 @@ export const promoteCustomKpiRequestVisibility = async (
       to: "GLOBAL",
     },
   });
+
+  writeAuditLog({
+    action: "settings.kpi.update",
+    actorUserId: user.id,
+    actorEmail: user.email,
+    actorRole: user.role,
+    targetType: "custom_kpi_request",
+    targetId: requestId,
+    details: {
+      event: "VISIBILITY_PROMOTED",
+      fromScope: "SUBMITTER_ONLY",
+      toScope: "GLOBAL",
+    },
+  }).catch((err) =>
+    console.error("[audit] settings.kpi.update failed", err),
+  );
 
   return {
     requestId,

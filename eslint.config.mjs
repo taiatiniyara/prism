@@ -1,10 +1,24 @@
 import { defineConfig, globalIgnores } from "eslint/config";
 import nextVitals from "eslint-config-next/core-web-vitals";
 import nextTs from "eslint-config-next/typescript";
+import securityPlugin from "eslint-plugin-security";
 
 const eslintConfig = defineConfig([
   ...nextVitals,
   ...nextTs,
+  {
+    plugins: { security: securityPlugin },
+    rules: {
+      "security/detect-eval-with-expression": "error",
+      "security/detect-no-csrf-before-method-override": "error",
+      "security/detect-non-literal-fs-filename": "warn",
+      "security/detect-non-literal-regexp": "warn",
+      "security/detect-non-literal-require": "warn",
+      "security/detect-possible-timing-attacks": "warn",
+      "security/detect-pseudoRandomBytes": "warn",
+      "security/detect-object-injection": "off",
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

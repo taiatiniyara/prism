@@ -5,6 +5,7 @@ import { fileURLToPath } from "node:url";
 const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
+  poweredByHeader: false,
   cacheComponents: true,
   serverExternalPackages: [
     "pg",
@@ -17,6 +18,44 @@ const nextConfig: NextConfig = {
     "fstream",
   ],
   outputFileTracingRoot: projectRoot,
+  async headers() {
+    return [
+      {
+        source: "/((?!_next/static|_next/image|favicon.ico).*)",
+        headers: [
+          {
+            key: "Content-Security-Policy",
+            value: [
+              "default-src 'self'",
+              "script-src 'self' https://app.powerbi.com",
+              "style-src 'self' 'unsafe-inline'",
+              "img-src 'self' data: blob: https:",
+              "font-src 'self'",
+              "connect-src 'self' https://prismdashboard.org https://api.powerbi.com https://login.microsoftonline.com",
+              "frame-src https://app.powerbi.com",
+              "frame-ancestors 'self'",
+              "object-src 'none'",
+              "base-uri 'self'",
+              "form-action 'self'",
+              "upgrade-insecure-requests",
+            ].join("; "),
+          },
+          {
+            key: "X-Content-Type-Options",
+            value: "nosniff",
+          },
+          {
+            key: "X-Frame-Options",
+            value: "DENY",
+          },
+          {
+            key: "Referrer-Policy",
+            value: "strict-origin-when-cross-origin",
+          },
+        ],
+      },
+    ];
+  },
   webpack: (config, { isServer }) => {
     if (!isServer) {
       config.resolve.fallback = {
