@@ -3034,12 +3034,15 @@ export async function retrieveGenerationRelevance(options?: {
   let cursor: number | null = null;
   let hasMore = true;
 
-  const batchSize = Math.max(1, Math.min(2000, options?.batchSize ?? 500));
+  const batchSize = Math.max(1, Math.min(2000, options?.batchSize ?? 2000));
 
   let inserted = 0;
   let updated = 0;
   let skipped = 0;
   let skippedMissingRequiredFk = 0;
+
+  const loopStartedAt = Date.now();
+  const LOOP_MAX_MS = 50_000;
 
   const mappingRows = await db
     .select({
@@ -3194,6 +3197,15 @@ export async function retrieveGenerationRelevance(options?: {
 
       cursor = page.pagination.nextCursor;
       hasMore = page.pagination.hasMore === true && cursor != null;
+
+      if (hasMore && Date.now() - loopStartedAt > LOOP_MAX_MS) {
+        console.warn(
+          `[migration] retrieveGenerationRelevance time budget exhausted after ${inserted + updated} ops ` +
+          `(inserted=${inserted}, updated=${updated}, skipped=${skipped}), ` +
+          `deferring remaining pages (next cursor: ${cursor}). Re-run to continue.`,
+        );
+        break;
+      }
     }
 
     res = true;
