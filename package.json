@@ -15,7 +15,8 @@
     "db-push": "drizzle-kit push --config ./db/config.ts",
     "db-push-safe": "npm run db-push",
     "db-seed": "npx tsx scripts/seed.ts",
-    "deploy": "bash ./scripts/deploy.sh"
+    "deploy": "bash ./scripts/deploy.sh",
+    "git-push": "git add . && git commit -m 'Update' && git push"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.53",

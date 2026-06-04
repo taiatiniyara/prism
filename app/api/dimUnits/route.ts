@@ -1,14 +1,5 @@
-import { authorizeApiKey } from "../service";
-import { getManagedListByName } from "@/lib/legacy-dl-resolver";
+import { dimManagedListRoute } from "@/lib/dim-route-helper";
 
 export async function GET(req: Request) {
-  const authorize = await authorizeApiKey(req);
-  if (authorize.success === false) {
-    return Response.json(authorize.message);
-  }
-
-  const list = await getManagedListByName("Units");
-  return Response.json(
-    list.map((item) => ({ Unit: item.name })),
-  );
+  return dimManagedListRoute(req, "Units", "Unit");
 }

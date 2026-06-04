@@ -543,9 +543,6 @@ export async function retrieveUtilityContextData(options?: {
 }) {
   await assertDevMigrationAccess();
   let res = false;
-  let inserted = 0;
-  let updated = 0;
-  let skipped = 0;
 
   try {
     const call = await fetchLegacyMigEndpoint("/utilityContext");
@@ -613,25 +610,21 @@ export async function retrieveUtilityContextData(options?: {
         (options?.reportPeriodId != null &&
           reportPeriodId !== options.reportPeriodId)
       ) {
-        skipped += 1;
         continue;
       }
 
       if (!targetReportPeriodIds.has(reportPeriodId)) {
-        skipped += 1;
         continue;
       }
 
       const sourceTrainingDlDefId = toNumberOrNull(row.dl_def_id);
       if (sourceTrainingDlDefId == null) {
-        skipped += 1;
         continue;
       }
 
       const mapped = inputByTrainingDlDefId.get(sourceTrainingDlDefId);
       const inputDefId = mapped?.inputDefId ?? null;
       if (inputDefId == null || !targetInputDefIds.has(inputDefId)) {
-        skipped += 1;
         continue;
       }
 
@@ -709,10 +702,8 @@ export async function retrieveUtilityContextData(options?: {
           .update(dataEntries)
           .set(payload)
           .where(eq(dataEntries.id, existing.id));
-        updated += 1;
       } else {
         await db.insert(dataEntries).values(payload);
-        inserted += 1;
       }
     }
 
@@ -735,9 +726,6 @@ export async function retrieveCountryContextData(options?: {
 }) {
   await assertDevMigrationAccess();
   let res = false;
-  let inserted = 0;
-  let updated = 0;
-  let skipped = 0;
 
   try {
     const call = await fetchLegacyMigEndpoint("/countryContext");
@@ -800,25 +788,21 @@ export async function retrieveCountryContextData(options?: {
         (options?.reportPeriodId != null &&
           reportPeriodId !== options.reportPeriodId)
       ) {
-        skipped += 1;
         continue;
       }
 
       if (!targetReportPeriodIds.has(reportPeriodId)) {
-        skipped += 1;
         continue;
       }
 
       const sourceTrainingDlDefId = toNumberOrNull(row.dl_def_id);
       if (sourceTrainingDlDefId == null) {
-        skipped += 1;
         continue;
       }
 
       const mapped = inputByTrainingDlDefId.get(sourceTrainingDlDefId);
       const inputDefId = mapped?.inputDefId ?? null;
       if (inputDefId == null || !targetInputDefIds.has(inputDefId)) {
-        skipped += 1;
         continue;
       }
 
@@ -847,7 +831,7 @@ export async function retrieveCountryContextData(options?: {
         is_deleted: row.is_deleted ?? false,
         updatedAt,
         updatedById: null,
-      };
+      }; 
 
       const [existing] = await db
         .select({ id: dataEntries.id })
@@ -871,10 +855,8 @@ export async function retrieveCountryContextData(options?: {
           .update(dataEntries)
           .set(payload)
           .where(eq(dataEntries.id, existing.id));
-        updated += 1;
       } else {
         await db.insert(dataEntries).values(payload);
-        inserted += 1;
       }
     }
 
@@ -902,15 +884,11 @@ export async function retrieveRoles() {
     const existingRoles = await db.select().from(roles);
     const existingById = new Map(existingRoles.map((r) => [r.id, r]));
 
-    let inserted = 0;
-    let updated = 0;
-
     for (const sourceRole of list) {
       const existing = existingById.get(sourceRole.id);
 
       if (!existing) {
         await db.insert(roles).values(sourceRole);
-        inserted += 1;
         continue;
       }
 
@@ -925,7 +903,6 @@ export async function retrieveRoles() {
             description: sourceRole.description,
           })
           .where(eq(roles.id, sourceRole.id));
-        updated += 1;
       }
     }
 
@@ -976,9 +953,6 @@ export async function retrieveUsers() {
       existingOrganisations.map((o) => o.id),
     );
 
-    let inserted = 0;
-    let updated = 0;
-
     for (const sourceUser of list) {
       const normalizedEmail = (sourceUser.email || "").trim().toLowerCase();
       if (!normalizedEmail) {
@@ -1014,7 +988,6 @@ export async function retrieveUsers() {
           .update(user)
           .set(updatePayload)
           .where(eq(user.id, existingIdForEmail));
-        updated += 1;
         continue;
       }
 
@@ -1032,7 +1005,6 @@ export async function retrieveUsers() {
 
       existingUserIdSet.add(insertId);
       existingUserIdByEmail.set(normalizedEmail, insertId);
-      inserted += 1;
     }
 
     res = true;
@@ -1542,7 +1514,6 @@ export async function retrieveReportPeriods() {
 export async function retrieveEnergyResources() {
   await assertDevMigrationAccess();
   let res = false;
-  let autoFilledPeriodEntries = 0;
   let skippedInvalidForeignKeys = 0;
   const call = await fetchMigrationEndpoint("/generators");
   const list = await call.json();
@@ -1658,8 +1629,7 @@ export async function retrieveEnergyResources() {
         capacity_mw: null,
         is_active: false,
       });
-      autoFilledPeriodEntries += 1;
-    }
+      }
 
     resource.period_entries.sort(
       (a, b) => a.report_period_id - b.report_period_id,
@@ -1749,10 +1719,6 @@ export async function retrieveEnergyResources() {
 export async function backfillEnergyResourcePeriods() {
   await assertDevMigrationAccess();
   let res = false;
-  let resourcesUpdated = 0;
-  let periodEntriesAdded = 0;
-  let periodEntriesActivated = 0;
-  let periodEntriesCapacityFilled = 0;
 
   try {
     const reportPeriodRows = await db
@@ -1820,22 +1786,12 @@ export async function backfillEnergyResourcePeriods() {
           capacity_mw: fallbackCapacity,
           is_active: true,
         });
-        periodEntriesAdded += 1;
       }
 
       const nextEntries = Array.from(entriesByReportPeriod.values())
         .map((entry) => {
-          const wasActive = entry.is_active;
-          const hadCapacity = entry.capacity_mw != null;
           const nextCapacity =
             entry.capacity_mw != null ? entry.capacity_mw : fallbackCapacity;
-
-          if (!wasActive) {
-            periodEntriesActivated += 1;
-          }
-          if (!hadCapacity && nextCapacity != null) {
-            periodEntriesCapacityFilled += 1;
-          }
 
           return {
             report_period_id: entry.report_period_id,
@@ -1860,8 +1816,6 @@ export async function backfillEnergyResourcePeriods() {
           .update(energyResources)
           .set({ period_entries: nextEntries })
           .where(eq(energyResources.id, resource.id));
-
-        resourcesUpdated += 1;
       }
     }
 
@@ -2534,17 +2488,6 @@ export async function retrieveDataEntries(options?: {
   let cursor: number | null = null;
   let hasMore = true;
 
-  let inserted = 0;
-  let updated = 0;
-  let skipped = 0;
-  let skippedOutOfRange = 0;
-  let skippedMissingInputDefMapping = 0;
-  let skippedMissingReportPeriod = 0;
-  let mappedByDlDefMapping = 0;
-  let mappedByMetadata = 0;
-  let skippedMissingRequiredFk = 0;
-  let nulledInvalidOptionalFk = 0;
-  let mergedByUniqueKeyCollision = 0;
   const skippedSamples: Array<{
     sourceId: number | null;
     reason: string;
@@ -2692,7 +2635,6 @@ export async function retrieveDataEntries(options?: {
           const mapped = inputByTrainingDlDefId.get(sourceTrainingDlDefId);
           if (mapped) {
             inputDefId = mapped.inputDefId;
-            mappedByDlDefMapping += 1;
           }
         }
 
@@ -2712,7 +2654,6 @@ export async function retrieveDataEntries(options?: {
             const resolved = targetInputDefByVariableName.get(byVariableName);
             if (resolved != null) {
               inputDefId = resolved;
-              mappedByMetadata += 1;
             }
           }
 
@@ -2720,14 +2661,12 @@ export async function retrieveDataEntries(options?: {
             const resolved = targetInputDefByName.get(byName);
             if (resolved != null) {
               inputDefId = resolved;
-              mappedByMetadata += 1;
             }
           }
         }
 
         if (reportPeriodId == null || inputDefId == null) {
           if (inputDefId == null) {
-            skippedMissingInputDefMapping += 1;
             recordSkippedSample(
               row,
               "missing-input-definition-mapping",
@@ -2744,13 +2683,10 @@ export async function retrieveDataEntries(options?: {
               sourceTrainingDlDefId,
             );
           }
-          skippedOutOfRange += 1;
-          skipped += 1;
           continue;
         }
 
         if (!targetReportPeriodIds.has(reportPeriodId)) {
-          skippedMissingReportPeriod += 1;
           recordSkippedSample(
             row,
             "report-period-not-found-in-target",
@@ -2758,8 +2694,6 @@ export async function retrieveDataEntries(options?: {
             inputDefId,
             sourceTrainingDlDefId,
           );
-          skippedMissingRequiredFk += 1;
-          skipped += 1;
           continue;
         }
 
@@ -2807,34 +2741,6 @@ export async function retrieveDataEntries(options?: {
           rawUpdateMediumId,
           targetManagedListItemIds,
         );
-
-        if (rawServiceAreaId != null && serviceAreaId == null) {
-          nulledInvalidOptionalFk += 1;
-        }
-        if (rawEnergyResourceId != null && energyResourceId == null) {
-          nulledInvalidOptionalFk += 1;
-        }
-        if (
-          energyResourceId != null &&
-          !isEnergyResourceActiveForReportPeriod
-        ) {
-          nulledInvalidOptionalFk += 1;
-        }
-        if (rawEnergyProviderId != null && energyProviderId == null) {
-          nulledInvalidOptionalFk += 1;
-        }
-        if (rawEnergySourceId != null && energySourceId == null) {
-          nulledInvalidOptionalFk += 1;
-        }
-        if (rawCustomerTypeId != null && customerTypeId == null) {
-          nulledInvalidOptionalFk += 1;
-        }
-        if (rawPaymentModeId != null && paymentModeId == null) {
-          nulledInvalidOptionalFk += 1;
-        }
-        if (rawUpdateMediumId != null && updateMediumId == null) {
-          nulledInvalidOptionalFk += 1;
-        }
 
         const updatedAt = row.updated_at
           ? new Date(row.updated_at)
@@ -2894,11 +2800,9 @@ export async function retrieveDataEntries(options?: {
             .update(dataEntries)
             .set(payload)
             .where(eq(dataEntries.id, existing.id));
-          updated += 1;
         } else {
           try {
             await db.insert(dataEntries).values(payload);
-            inserted += 1;
           } catch (error: unknown) {
             if (!isUniqueViolationError(error)) {
               throw error;
@@ -2936,8 +2840,6 @@ export async function retrieveDataEntries(options?: {
               .set(payload)
               .where(eq(dataEntries.id, existingByUniqueIndex.id));
 
-            mergedByUniqueKeyCollision += 1;
-            updated += 1;
           }
         }
       }
@@ -2950,8 +2852,6 @@ export async function retrieveDataEntries(options?: {
       reportPeriodId: options?.reportPeriodId,
     });
 
-    if (skippedSamples.length > 0) {
-    }
     res = true;
   } catch (error: unknown) {
     logMigrationError(error);
@@ -3039,7 +2939,6 @@ export async function retrieveGenerationRelevance(options?: {
   let inserted = 0;
   let updated = 0;
   let skipped = 0;
-  let skippedMissingRequiredFk = 0;
 
   const loopStartedAt = Date.now();
   const LOOP_MAX_MS = 50_000;
@@ -3127,7 +3026,6 @@ export async function retrieveGenerationRelevance(options?: {
           energyProviderId == null ||
           energySourceId == null
         ) {
-          skippedMissingRequiredFk += 1;
           skipped += 1;
           continue;
         }
@@ -3138,7 +3036,6 @@ export async function retrieveGenerationRelevance(options?: {
           !targetManagedListItemIds.has(energyProviderId) ||
           !targetManagedListItemIds.has(energySourceId)
         ) {
-          skippedMissingRequiredFk += 1;
           skipped += 1;
           continue;
         }
@@ -3231,11 +3128,6 @@ export async function retrieveTransmissionRelevance(options?: {
 
   const batchSize = Math.max(1, Math.min(2000, options?.batchSize ?? 500));
 
-  let inserted = 0;
-  let updated = 0;
-  let skipped = 0;
-  let skippedMissingRequiredFk = 0;
-
   const mappingRows = await db
     .select({
       trainingDlDefId: inputDlDefMappings.training_dl_def_id,
@@ -3311,8 +3203,6 @@ export async function retrieveTransmissionRelevance(options?: {
           serviceAreaId == null ||
           sourceTrainingDlDefId == null
         ) {
-          skippedMissingRequiredFk += 1;
-          skipped += 1;
           continue;
         }
 
@@ -3320,8 +3210,6 @@ export async function retrieveTransmissionRelevance(options?: {
           !targetReportPeriodIds.has(reportPeriodId) ||
           !targetServiceAreaIds.has(serviceAreaId)
         ) {
-          skippedMissingRequiredFk += 1;
-          skipped += 1;
           continue;
         }
 
@@ -3329,7 +3217,6 @@ export async function retrieveTransmissionRelevance(options?: {
         const inputDefId = mappedInput?.inputDefId ?? null;
 
         if (inputDefId == null) {
-          skipped += 1;
           continue;
         }
 
@@ -3365,7 +3252,6 @@ export async function retrieveTransmissionRelevance(options?: {
               updatedById: null,
             })
             .where(eq(dataEntries.id, existing.id));
-          updated += 1;
           continue;
         }
 
@@ -3386,7 +3272,6 @@ export async function retrieveTransmissionRelevance(options?: {
           updatedAt,
           updatedById: null,
         });
-        inserted += 1;
       }
 
       cursor = page.pagination.nextCursor;
@@ -3416,11 +3301,6 @@ export async function retrieveTariffRelevance(options?: {
   let hasMore = true;
 
   const batchSize = Math.max(1, Math.min(2000, options?.batchSize ?? 500));
-
-  let inserted = 0;
-  let updated = 0;
-  let skipped = 0;
-  let skippedMissingRequiredFk = 0;
 
   const mappingRows = await db
     .select({
@@ -3506,8 +3386,6 @@ export async function retrieveTariffRelevance(options?: {
           paymentModeId == null ||
           customerTypeId == null
         ) {
-          skippedMissingRequiredFk += 1;
-          skipped += 1;
           continue;
         }
 
@@ -3517,8 +3395,6 @@ export async function retrieveTariffRelevance(options?: {
           !targetManagedListItemIds.has(paymentModeId) ||
           !targetManagedListItemIds.has(customerTypeId)
         ) {
-          skippedMissingRequiredFk += 1;
-          skipped += 1;
           continue;
         }
 
@@ -3526,7 +3402,6 @@ export async function retrieveTariffRelevance(options?: {
         const inputDefId = mappedInput?.inputDefId ?? null;
 
         if (inputDefId == null) {
-          skipped += 1;
           continue;
         }
 
@@ -3562,7 +3437,6 @@ export async function retrieveTariffRelevance(options?: {
               updatedById: null,
             })
             .where(eq(dataEntries.id, existing.id));
-          updated += 1;
           continue;
         }
 
@@ -3583,7 +3457,6 @@ export async function retrieveTariffRelevance(options?: {
           updatedAt,
           updatedById: null,
         });
-        inserted += 1;
       }
 
       cursor = page.pagination.nextCursor;

@@ -19,6 +19,11 @@ const nextConfig: NextConfig = {
   ],
   outputFileTracingRoot: projectRoot,
   async headers() {
+    const isDev = process.env.NODE_ENV === "development";
+    const scriptSrc = isDev
+      ? "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://app.powerbi.com"
+      : "script-src 'self' 'unsafe-inline' https://app.powerbi.com";
+
     return [
       {
         source: "/((?!_next/static|_next/image|favicon.ico).*)",
@@ -27,7 +32,7 @@ const nextConfig: NextConfig = {
             key: "Content-Security-Policy",
             value: [
               "default-src 'self'",
-              "script-src 'self' https://app.powerbi.com",
+              scriptSrc,
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https:",
               "font-src 'self'",

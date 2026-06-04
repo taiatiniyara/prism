@@ -10,17 +10,16 @@ interface SyncStore {
 }
 
 const getStore = (): SyncStore => {
-  const globalKey = "__reviewKpiSyncStore";
-  const globalState = globalThis as unknown as Record<string, SyncStore | undefined>;
+  const g = globalThis as { __reviewKpiSyncStore?: SyncStore };
 
-  if (!globalState[globalKey]) {
-    globalState[globalKey] = {
+  if (!g.__reviewKpiSyncStore) {
+    g.__reviewKpiSyncStore = {
       events: [],
       listeners: new Set<SyncListener>(),
     };
   }
 
-  return globalState[globalKey]!;
+  return g.__reviewKpiSyncStore;
 };
 
 export const publishSyncEvent = (event: SyncEventEnvelope) => {

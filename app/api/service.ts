@@ -1,3 +1,12 @@
+import { timingSafeEqual } from "crypto";
+
+function safeCompare(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  const bufA = Buffer.from(a);
+  const bufB = Buffer.from(b);
+  return timingSafeEqual(bufA, bufB);
+}
+
 export const authorizeApiKey = async (req: Request) => {
   let result = {
     success: false,
@@ -8,7 +17,7 @@ export const authorizeApiKey = async (req: Request) => {
   const requestApiKey = req.headers.get("Authorization");
   const apiKey = process.env.API_KEY;
 
-  if (apiKey === requestApiKey) {
+  if (apiKey && requestApiKey && safeCompare(apiKey, requestApiKey)) {
     result = {
       success: true,
       message: "Authorized",

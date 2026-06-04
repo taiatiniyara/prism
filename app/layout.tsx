@@ -8,7 +8,7 @@ import { Suspense } from "react";
 import { Noto_Sans } from "next/font/google";
 import Footer from "@/components/layout/footer";
 import BlockedAccessOverlay from "@/components/auth/blocked-access-overlay";
-import { FloatingChatbot } from "@/components/chatbot/floating-chatbot";
+import { FloatingChatbot } from "@/components/ai/floating-chatbot";
 import { db } from "@/db/connection";
 import { organisations } from "@/db/schema/utility";
 import { and, asc, eq } from "drizzle-orm";

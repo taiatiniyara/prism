@@ -30,17 +30,13 @@ interface SyncChannel {
 }
 
 const getChannels = (): Map<string, SyncChannel> => {
-  const globalKey = "__reviewKpiSyncChannels";
-  const globalState = globalThis as unknown as Record<
-    string,
-    Map<string, SyncChannel> | undefined
-  >;
+  const g = globalThis as { __reviewKpiSyncChannels?: Map<string, SyncChannel> };
 
-  if (!globalState[globalKey]) {
-    globalState[globalKey] = new Map<string, SyncChannel>();
+  if (!g.__reviewKpiSyncChannels) {
+    g.__reviewKpiSyncChannels = new Map<string, SyncChannel>();
   }
 
-  return globalState[globalKey]!;
+  return g.__reviewKpiSyncChannels;
 };
 
 const toUrl = (

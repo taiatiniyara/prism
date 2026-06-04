@@ -1,3 +1,3 @@
 export default function SettingsHomePage() {
-  return <div>SettingsHomePage</div>;
+  return null;
 }

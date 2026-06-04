@@ -1,9 +1,9 @@
-import { ChatPanel } from "@/components/chatbot/chat-panel";
+import { ChatPanel } from "@/components/ai/chat-panel";
 
 export default function PrismAiPage() {
   return (
-    <main className="mx-auto h-[calc(100vh-7rem)] w-full max-w-5xl p-4 sm:p-6">
-      <ChatPanel />
+    <main className="h-[calc(100vh-4rem)] w-full">
+      <ChatPanel showSidebar={true} />
     </main>
   );
 }
