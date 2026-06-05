@@ -36,7 +36,7 @@ import {
 import { formatReportPeriodDisplay } from "@/lib/formatters";
 import { getCurrentUser } from "@/lib/user.service";
 import { generateRandomNumber } from "@/lib/utils";
-import { and, desc, eq, inArray, isNull } from "drizzle-orm";
+import { aliasedTable, and, count, desc, eq, inArray, isNull } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { migrationLogs } from "@/db/schema/migration-log";
 
@@ -542,7 +542,8 @@ export async function retrieveUtilityContextData(options?: {
   reportPeriodId?: number;
 }) {
   await assertDevMigrationAccess();
-  let res = false;
+  let inserted = 0;
+  let updated = 0;
 
   try {
     const call = await fetchLegacyMigEndpoint("/utilityContext");
@@ -704,6 +705,7 @@ export async function retrieveUtilityContextData(options?: {
           .where(eq(dataEntries.id, existing.id));
       } else {
         await db.insert(dataEntries).values(payload);
+        inserted += 1;
       }
     }
 
@@ -711,21 +713,21 @@ export async function retrieveUtilityContextData(options?: {
       reportPeriodId: options?.reportPeriodId,
     });
 
-    res = true;
   } catch (error: unknown) {
     logMigrationError(error);
   }
 
   revalidatePath("/migration");
 
-  return res;
+  return { ok: true, inserted, updated, total: inserted + updated };
 }
 
 export async function retrieveCountryContextData(options?: {
   reportPeriodId?: number;
 }) {
   await assertDevMigrationAccess();
-  let res = false;
+  let inserted = 0;
+  let updated = 0;
 
   try {
     const call = await fetchLegacyMigEndpoint("/countryContext");
@@ -857,6 +859,7 @@ export async function retrieveCountryContextData(options?: {
           .where(eq(dataEntries.id, existing.id));
       } else {
         await db.insert(dataEntries).values(payload);
+        inserted += 1;
       }
     }
 
@@ -864,19 +867,19 @@ export async function retrieveCountryContextData(options?: {
       reportPeriodId: options?.reportPeriodId,
     });
 
-    res = true;
   } catch (error: unknown) {
     logMigrationError(error);
   }
 
   revalidatePath("/migration");
 
-  return res;
+  return { ok: true, inserted, updated, total: inserted + updated };
 }
 
 export async function retrieveRoles() {
   await assertDevMigrationAccess();
-  let res = false;
+  let inserted = 0;
+  let updated = 0;
   try {
     const call = await fetchMigrationEndpoint("/roles");
     const list: Role[] = await call.json();
@@ -889,6 +892,8 @@ export async function retrieveRoles() {
 
       if (!existing) {
         await db.insert(roles).values(sourceRole);
+          inserted += 1;
+        inserted += 1;
         continue;
       }
 
@@ -906,14 +911,13 @@ export async function retrieveRoles() {
       }
     }
 
-    res = true;
   } catch (error: unknown) {
     logMigrationError(error);
   }
 
   revalidatePath("/migration");
 
-  return res;
+  return { ok: true, inserted, updated, total: inserted + updated };
 }
 
 type MigrationUserDto = {
@@ -931,7 +935,8 @@ type MigrationUserDto = {
 
 export async function retrieveUsers() {
   await assertDevMigrationAccess();
-  let res = false;
+  let inserted = 0;
+  let updated = 0;
 
   try {
     const call = await fetchMigrationEndpoint("/users");
@@ -1007,19 +1012,19 @@ export async function retrieveUsers() {
       existingUserIdByEmail.set(normalizedEmail, insertId);
     }
 
-    res = true;
   } catch (error: unknown) {
     logMigrationError(error);
   }
 
   revalidatePath("/migration");
 
-  return res;
+  return { ok: true, inserted, updated, total: inserted + updated };
 }
 
 export async function retrieveUtilityData() {
   await assertDevMigrationAccess();
-  let res = false;
+  let inserted = 0;
+  let updated = 0;
   const call = await fetchMigrationEndpoint("/organisation");
   const list = await call.json();
   const serviceAreaList: ServiceArea[] = list.serviceAreas;
@@ -1138,12 +1143,15 @@ export async function retrieveUtilityData() {
   try {
     if (normalizedOrgs.length > 0) {
       await db.insert(organisations).values(normalizedOrgs);
+        inserted += normalizedOrgs.length;
     }
     if (normalizedServiceAreas.length > 0) {
       await db.insert(serviceAreas).values(normalizedServiceAreas);
+        inserted += normalizedServiceAreas.length;
     }
     if (normalizedReportPeriods.length > 0) {
       await db.insert(reportPeriods).values(normalizedReportPeriods);
+        inserted += normalizedReportPeriods.length;
     }
 
     const allReportPeriods = await db.select().from(reportPeriods);
@@ -1224,6 +1232,7 @@ export async function retrieveUtilityData() {
         }));
 
         await db.insert(generationRelevance).values(newGenRelevance);
+        inserted += newGenRelevance.length;
       }
 
       const prevGenToggleRelevance = await db
@@ -1245,22 +1254,23 @@ export async function retrieveUtilityData() {
         }));
 
         await db.insert(generationToggleRelevance).values(newGenToggleRelevance);
+        inserted += newGenToggleRelevance.length;
       }
     }
 
-    res = true;
   } catch (error: unknown) {
     logMigrationError(error);
   }
 
   revalidatePath("/migration");
 
-  return res;
+  return { ok: true, inserted, updated, total: inserted + updated };
 }
 
 export async function retrieveCountries() {
   await assertDevMigrationAccess();
-  let res = false;
+  let inserted = 0;
+  let updated = 0;
   const call = await fetchMigrationEndpoint("/country");
   const list = await call.json();
   const subRegionList: SubRegion[] = list.subregions;
@@ -1280,6 +1290,7 @@ export async function retrieveCountries() {
   try {
     if (nonExistingSubRegions.length > 0) {
       await db.insert(subRegions).values(nonExistingSubRegions);
+        inserted += nonExistingSubRegions.length;
     }
     if (nonExistingCountries.length > 0) {
       await db.insert(countries).values(
@@ -1291,19 +1302,19 @@ export async function retrieveCountries() {
         }),
       );
     }
-    res = true;
   } catch (error: unknown) {
     logMigrationError(error);
   }
 
   revalidatePath("/migration");
 
-  return res;
+  return { ok: true, inserted, updated, total: inserted + updated };
 }
 
 export async function retrieveManagedLists() {
   await assertDevMigrationAccess();
-  let res = false;
+  let inserted = 0;
+  let updated = 0;
   const call = await fetchMigrationEndpoint("/managedList");
   const list = await call.json();
   const managedListItemsList: ManagedListItem[] = list.managedListItems;
@@ -1326,23 +1337,25 @@ export async function retrieveManagedLists() {
   try {
     if (nonExistingManagedLists.length > 0) {
       await db.insert(managedLists).values(nonExistingManagedLists);
+        inserted += nonExistingManagedLists.length;
     }
     if (nonExistingManagedListItems.length > 0) {
       await db.insert(managedListItems).values(nonExistingManagedListItems);
+        inserted += nonExistingManagedListItems.length;
     }
-    res = true;
   } catch (error: unknown) {
     logMigrationError(error);
   }
 
   revalidatePath("/migration");
 
-  return res;
+  return { ok: true, inserted, updated, total: inserted + updated };
 }
 
 export async function retrieveInputDefinitions() {
   await assertDevMigrationAccess();
-  let res = false;
+  let inserted = 0;
+  let updated = 0;
   const call = await fetchMigrationEndpoint("/inputDefinitions");
   const list = await call.json();
   const inputDefinitionsList: InputDefinition[] = list.inputDefinitions;
@@ -1364,19 +1377,19 @@ export async function retrieveInputDefinitions() {
         })),
       );
     }
-    res = true;
   } catch (error: unknown) {
     logMigrationError(error);
   }
 
   revalidatePath("/migration");
 
-  return res;
+  return { ok: true, inserted, updated, total: inserted + updated };
 }
 
 export async function retrieveReportPeriods() {
   await assertDevMigrationAccess();
-  let res = false;
+  let inserted = 0;
+  let updated = 0;
   const call = await fetchMigrationEndpoint("/reportPeriods");
   const list = await call.json();
   const reportPeriodsList: ReportPeriod[] = list;
@@ -1477,6 +1490,7 @@ export async function retrieveReportPeriods() {
         }));
 
         await db.insert(generationRelevance).values(newGenRelevance);
+        inserted += newGenRelevance.length;
       }
 
       const prevGenToggleRelevance = await db
@@ -1498,22 +1512,23 @@ export async function retrieveReportPeriods() {
         }));
 
         await db.insert(generationToggleRelevance).values(newGenToggleRelevance);
+        inserted += newGenToggleRelevance.length;
       }
     }
 
-    res = true;
   } catch (error: unknown) {
     logMigrationError(error);
   }
 
   revalidatePath("/migration");
 
-  return res;
+  return { ok: true, inserted, updated, total: inserted + updated };
 }
 
 export async function retrieveEnergyResources() {
   await assertDevMigrationAccess();
-  let res = false;
+  let inserted = 0;
+  let updated = 0;
   let skippedInvalidForeignKeys = 0;
   const call = await fetchMigrationEndpoint("/generators");
   const list = await call.json();
@@ -1698,6 +1713,7 @@ export async function retrieveEnergyResources() {
   try {
     if (validatedEnergyResources.length > 0) {
       await db.insert(energyResources).values(validatedEnergyResources);
+        inserted += validatedEnergyResources.length;
     }
 
     if (skippedInvalidForeignKeys > 0) {
@@ -1706,19 +1722,19 @@ export async function retrieveEnergyResources() {
       );
     }
 
-    res = true;
   } catch (error: unknown) {
     logMigrationError(error);
   }
 
   revalidatePath("/migration");
 
-  return res;
+  return { ok: true, inserted, updated, total: inserted + updated };
 }
 
 export async function backfillEnergyResourcePeriods() {
   await assertDevMigrationAccess();
-  let res = false;
+  let inserted = 0;
+  let updated = 0;
 
   try {
     const reportPeriodRows = await db
@@ -1819,19 +1835,19 @@ export async function backfillEnergyResourcePeriods() {
       }
     }
 
-    res = true;
   } catch (error: unknown) {
     logMigrationError(error);
   }
 
   revalidatePath("/migration");
 
-  return res;
+  return { ok: true, inserted, updated, total: inserted + updated };
 }
 
 export async function retrieveKpiDefinitions() {
   await assertDevMigrationAccess();
-  let res = false;
+  let inserted = 0;
+  let updated = 0;
   const call = await fetchMigrationEndpoint("/kpi");
   const list = await call.json();
   const kpiDefinitionsList: KpiDefinition[] = list;
@@ -1843,17 +1859,16 @@ export async function retrieveKpiDefinitions() {
 
   if (nonExistingKpiDefinitions.length > 0) {
     await db.insert(kpiDefinitions).values(
-      nonExistingKpiDefinitions.map((kd) => {
+        nonExistingKpiDefinitions.map((kd) => {
         kd.id = generateRandomNumber(3);
         return kd;
       }),
     );
-    res = true;
   }
 
   revalidatePath("/migration");
 
-  return res;
+  return { ok: true, inserted, updated, total: inserted + updated };
 }
 
 type SourceDataEntryRow = {
@@ -1936,6 +1951,23 @@ export type DataEntryComparisonResult = {
 export type DataEntryComparisonFilterOptions = {
   utilities: Array<{ id: number; name: string }>;
   reportPeriods: Array<{ id: number; utilityId: number; label: string }>;
+  categories: Array<{ id: number; name: string }>;
+  subcategories: Array<{ id: number; name: string }>;
+};
+
+export type DataEntryBreakdownRow = {
+  utilityId: number;
+  utilityName: string;
+  categoryId: number;
+  categoryName: string;
+  subcategoryId: number;
+  subcategoryName: string;
+  v1Count: number;
+  v2Count: number;
+};
+
+export type DataEntryBreakdownFilterOptions = {
+  utilities: Array<{ id: number; name: string }>;
   categories: Array<{ id: number; name: string }>;
   subcategories: Array<{ id: number; name: string }>;
 };
@@ -2484,7 +2516,8 @@ export async function retrieveDataEntries(options?: {
   batchSize?: number;
 }) {
   await assertDevMigrationAccess();
-  let res = false;
+  let inserted = 0;
+  let updated = 0;
   let cursor: number | null = null;
   let hasMore = true;
 
@@ -2803,6 +2836,7 @@ export async function retrieveDataEntries(options?: {
         } else {
           try {
             await db.insert(dataEntries).values(payload);
+        inserted += 1;
           } catch (error: unknown) {
             if (!isUniqueViolationError(error)) {
               throw error;
@@ -2852,13 +2886,12 @@ export async function retrieveDataEntries(options?: {
       reportPeriodId: options?.reportPeriodId,
     });
 
-    res = true;
   } catch (error: unknown) {
     logMigrationError(error);
   }
 
   revalidatePath("/migration");
-  return res;
+  return { ok: true, inserted, updated, total: inserted + updated };
 }
 
 type SourceGenerationRelevanceRow = {
@@ -2930,7 +2963,6 @@ export async function retrieveGenerationRelevance(options?: {
   batchSize?: number;
 }) {
   await assertDevMigrationAccess();
-  let res = false;
   let cursor: number | null = null;
   let hasMore = true;
 
@@ -3088,6 +3120,7 @@ export async function retrieveGenerationRelevance(options?: {
           updated += 1;
         } else {
           await db.insert(generationRelevance).values(payload);
+        inserted += 1;
           inserted += 1;
         }
       }
@@ -3105,7 +3138,6 @@ export async function retrieveGenerationRelevance(options?: {
       }
     }
 
-    res = true;
   } catch (error: unknown) {
     logMigrationError(error);
   }
@@ -3114,7 +3146,7 @@ export async function retrieveGenerationRelevance(options?: {
   revalidatePath("/settings/relevance");
   revalidatePath("/data-entry");
 
-  return res;
+  return { ok: true, inserted, updated, total: inserted + updated };
 }
 
 export async function retrieveTransmissionRelevance(options?: {
@@ -3122,7 +3154,8 @@ export async function retrieveTransmissionRelevance(options?: {
   batchSize?: number;
 }) {
   await assertDevMigrationAccess();
-  let res = false;
+  let inserted = 0;
+  let updated = 0;
   let cursor: number | null = null;
   let hasMore = true;
 
@@ -3278,7 +3311,6 @@ export async function retrieveTransmissionRelevance(options?: {
       hasMore = page.pagination.hasMore === true && cursor != null;
     }
 
-    res = true;
   } catch (error: unknown) {
     logMigrationError(error);
   }
@@ -3287,7 +3319,7 @@ export async function retrieveTransmissionRelevance(options?: {
   revalidatePath("/settings/relevance");
   revalidatePath("/data-entry");
 
-  return res;
+  return { ok: true, inserted, updated, total: inserted + updated };
 }
 
 export async function retrieveTariffRelevance(options?: {
@@ -3296,7 +3328,8 @@ export async function retrieveTariffRelevance(options?: {
 }) {
   await assertDevMigrationAccess();
 
-  let res = false;
+  let inserted = 0;
+  let updated = 0;
   let cursor: number | null = null;
   let hasMore = true;
 
@@ -3463,7 +3496,6 @@ export async function retrieveTariffRelevance(options?: {
       hasMore = page.pagination.hasMore === true && cursor != null;
     }
 
-    res = true;
   } catch (error: unknown) {
     console.error(
       "[migration:tariffRelevance] ERROR:",
@@ -3481,7 +3513,7 @@ export async function retrieveTariffRelevance(options?: {
   revalidatePath("/settings/relevance");
   revalidatePath("/data-entry");
 
-  return res;
+  return { ok: true, inserted, updated, total: inserted + updated };
 }
 
 const toOptionalNumber = (
@@ -4154,5 +4186,216 @@ export async function getMigrationHistory() {
     success: r.success,
     duration_ms: r.duration_ms,
     error_message: r.error_message,
+  }));
+}
+
+export async function getDataEntryBreakdownFilterOptions(): Promise<DataEntryBreakdownFilterOptions> {
+  await assertDevMigrationAccess();
+
+  const [utilityList, inputDefList] = await Promise.all([
+    db
+      .select({ id: organisations.id, name: organisations.name })
+      .from(organisations)
+      .where(eq(organisations.is_utility, true)),
+    db
+      .select({
+        categoryId: inputDefinitions.category_id,
+        subcategoryId: inputDefinitions.subcategory_id,
+      })
+      .from(inputDefinitions),
+  ]);
+
+  const categoryIds = Array.from(
+    new Set(
+      inputDefList
+        .map((d) => d.categoryId)
+        .filter((id): id is number => id != null),
+    ),
+  );
+  const subcategoryIds = Array.from(
+    new Set(
+      inputDefList
+        .map((d) => d.subcategoryId)
+        .filter((id): id is number => id != null),
+    ),
+  );
+
+  const [categoryItems, subcategoryItems] = await Promise.all([
+    categoryIds.length === 0
+      ? Promise.resolve([] as Array<{ id: number; name: string }>)
+      : db
+          .select({ id: managedListItems.id, name: managedListItems.name })
+          .from(managedListItems)
+          .where(inArray(managedListItems.id, categoryIds)),
+    subcategoryIds.length === 0
+      ? Promise.resolve([] as Array<{ id: number; name: string }>)
+      : db
+          .select({ id: managedListItems.id, name: managedListItems.name })
+          .from(managedListItems)
+          .where(inArray(managedListItems.id, subcategoryIds)),
+  ]);
+
+  return {
+    utilities: utilityList
+      .map((u) => ({ id: u.id, name: u.name }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    categories: categoryItems
+      .map((c) => ({ id: c.id, name: c.name }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+    subcategories: subcategoryItems
+      .map((c) => ({ id: c.id, name: c.name }))
+      .sort((a, b) => a.name.localeCompare(b.name)),
+  };
+}
+
+export async function getDataEntryBreakdown(
+  utilityId: number | null,
+  categoryId: number | null,
+  subcategoryId: number | null,
+): Promise<DataEntryBreakdownRow[]> {
+  await assertDevMigrationAccess();
+
+  const [v1Rows, v2Rows] = await Promise.all([
+    fetchV1Breakdown(utilityId, categoryId, subcategoryId),
+    queryV2Breakdown(utilityId, categoryId, subcategoryId),
+  ]);
+
+  const key = (r: { utilityName: string; categoryName: string; subcategoryName: string }) =>
+    `${r.utilityName}||${r.categoryName}||${r.subcategoryName}`;
+
+  const v1Map = new Map<string, number>();
+  for (const r of v1Rows) {
+    v1Map.set(key(r), r.entryCount);
+  }
+
+  const v2Map = new Map<string, number>();
+  for (const r of v2Rows) {
+    v2Map.set(key(r), r.entryCount);
+  }
+
+  const allKeys = new Set([...v1Map.keys(), ...v2Map.keys()]);
+
+  const merged: DataEntryBreakdownRow[] = [];
+  let syntheticId = 0;
+
+  for (const k of allKeys) {
+    const [utilityName, categoryName, subcategoryName] = k.split("||");
+    merged.push({
+      utilityId: syntheticId,
+      utilityName,
+      categoryId: syntheticId,
+      categoryName,
+      subcategoryId: syntheticId,
+      subcategoryName,
+      v1Count: v1Map.get(k) ?? 0,
+      v2Count: v2Map.get(k) ?? 0,
+    });
+    syntheticId++;
+  }
+
+  merged.sort((a, b) => {
+    const u = a.utilityName.localeCompare(b.utilityName);
+    if (u !== 0) return u;
+    const c = a.categoryName.localeCompare(b.categoryName);
+    if (c !== 0) return c;
+    return a.subcategoryName.localeCompare(b.subcategoryName);
+  });
+
+  return merged;
+}
+
+type V1BreakdownRow = {
+  utilityName: string;
+  categoryName: string;
+  subcategoryName: string;
+  entryCount: number;
+};
+
+async function fetchV1Breakdown(
+  utilityId: number | null,
+  categoryId: number | null,
+  subcategoryId: number | null,
+): Promise<V1BreakdownRow[]> {
+  const params = new URLSearchParams();
+  if (utilityId != null) params.set("utilityId", String(utilityId));
+  if (categoryId != null) params.set("categoryId", String(categoryId));
+  if (subcategoryId != null) params.set("subcategoryId", String(subcategoryId));
+
+  const path = `/breakdown?${params.toString()}`;
+  try {
+    const response = await fetchMigrationEndpoint(path);
+    const rows = (response as { rows?: V1BreakdownRow[] })?.rows;
+    if (!Array.isArray(rows)) {
+      console.error("[breakdown] v1 response missing rows array", typeof response);
+      return [];
+    }
+    return rows;
+  } catch (error) {
+    console.error("[breakdown] v1 fetch failed", error);
+    return [];
+  }
+}
+
+type V2BreakdownRow = {
+  utilityId: number;
+  utilityName: string;
+  categoryId: number;
+  categoryName: string;
+  subcategoryId: number;
+  subcategoryName: string;
+  entryCount: number;
+};
+
+async function queryV2Breakdown(
+  utilityId: number | null,
+  categoryId: number | null,
+  subcategoryId: number | null,
+): Promise<V2BreakdownRow[]> {
+  const catAlias = aliasedTable(managedListItems, "cat");
+  const subAlias = aliasedTable(managedListItems, "sub");
+
+  const conditions = [
+    eq(organisations.is_utility, true),
+    eq(dataEntries.is_deleted, false),
+  ];
+  if (utilityId != null) conditions.push(eq(organisations.id, utilityId));
+  if (categoryId != null) conditions.push(eq(inputDefinitions.category_id, categoryId));
+  if (subcategoryId != null) conditions.push(eq(inputDefinitions.subcategory_id, subcategoryId));
+
+  const rows = await db
+    .select({
+      utilityId: organisations.id,
+      utilityName: organisations.name,
+      categoryId: catAlias.id,
+      categoryName: catAlias.name,
+      subcategoryId: subAlias.id,
+      subcategoryName: subAlias.name,
+      entryCount: count(dataEntries.id),
+    })
+    .from(dataEntries)
+    .innerJoin(reportPeriods, eq(dataEntries.report_period_id, reportPeriods.id))
+    .innerJoin(organisations, eq(reportPeriods.utility_id, organisations.id))
+    .innerJoin(inputDefinitions, eq(dataEntries.input_def_id, inputDefinitions.id))
+    .innerJoin(catAlias, eq(inputDefinitions.category_id, catAlias.id))
+    .innerJoin(subAlias, eq(inputDefinitions.subcategory_id, subAlias.id))
+    .where(and(...conditions))
+    .groupBy(
+      organisations.id,
+      organisations.name,
+      catAlias.id,
+      catAlias.name,
+      subAlias.id,
+      subAlias.name,
+    )
+    .orderBy(organisations.name, catAlias.name, subAlias.name);
+
+  return rows.map((r) => ({
+    utilityId: r.utilityId,
+    utilityName: r.utilityName,
+    categoryId: r.categoryId,
+    categoryName: r.categoryName,
+    subcategoryId: r.subcategoryId,
+    subcategoryName: r.subcategoryName,
+    entryCount: Number(r.entryCount),
   }));
 }

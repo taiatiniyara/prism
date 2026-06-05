@@ -14,40 +14,20 @@ interface NavItem {
   href: string;
 }
 
-const NAV_SECTION_LABELS: Record<string, string> = {
-  dashboard: "Dashboard",
-  "data-entry": "Data Entry",
-  settings: "Settings",
-  docs: "Docs",
-  "prism-ai": "PRISM AI",
-  migration: "Migration",
-  profile: "Profile",
-};
-
-function buildNavFromSidebar(
-  sidebarList: { name: string; page: string }[],
-): NavItem[] {
-  const seen = new Set<string>();
-  const items: NavItem[] = [];
-
-  for (const item of sidebarList) {
-    const segment = item.page.split("/")[1];
-    if (!segment || seen.has(segment)) continue;
-    seen.add(segment);
-
-    const label = NAV_SECTION_LABELS[segment] ?? segment;
-    items.push({ label, href: `/${segment}` });
-  }
-
-  return items;
-}
+const navList: NavItem[] = [
+  { label: "Home", href: "/" },
+  { label: "Dashboard", href: "/dashboard" },
+  { label: "Data Entry", href: "/data-entry" },
+  { label: "Settings", href: "/settings" },
+  { label: "Docs", href: "/docs" },
+  { label: "PRISM AI", href: "/prism-ai" },
+];
 
 export default function TopNav(props: {
   session?: Session;
   role?: string;
   orgAcronym?: string;
   fullName?: string;
-  sidebarList?: { name: string; page: string }[];
   utilityContext?: {
     selectedOrganisationId: number | null;
     isScoped: boolean;
@@ -59,15 +39,6 @@ export default function TopNav(props: {
   };
 }) {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-  const sidebarBasedNav = props.sidebarList
-    ? buildNavFromSidebar(props.sidebarList)
-    : [];
-
-  const navList: NavItem[] = [
-    { label: "Home", href: "/" },
-    ...sidebarBasedNav,
-  ];
 
   const handleToggleMenu = () => {
     setIsMobileMenuOpen(!isMobileMenuOpen);

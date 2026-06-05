@@ -7,7 +7,7 @@ import { eq } from "drizzle-orm";
 import { canAccessRoute, getDefaultPageForRole } from "@/lib/role-guard";
 
 const PRIVILEGED_ROLES = new Set(["DEV", "BMO"]);
-const MFA_REQUIRED_PREFIXES = ["/settings/users", "/settings/kpi", "/migration"];
+const MFA_REQUIRED_PREFIXES = ["/settings/users", "/settings/kpi"];
 
 export async function proxy(request: NextRequest) {
   const session = await auth.api.getSession({

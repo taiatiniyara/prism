@@ -2,8 +2,9 @@ import { connection } from "next/server";
 import { getCurrentUser } from "@/lib/user.service";
 
 import MigrationButtons from "./buttons";
+import DataEntryBreakdownPanel from "./data-entry-breakdown-panel";
 import DataEntryComparisonPanel from "./data-entry-comparison-panel";
-import { getDataEntryComparisonFilterOptions } from "./service";
+import { getDataEntryBreakdownFilterOptions, getDataEntryComparisonFilterOptions } from "./service";
 
 export default async function MigrationPage() {
   await connection();
@@ -17,11 +18,15 @@ export default async function MigrationPage() {
     );
   }
 
-  const comparisonOptions = await getDataEntryComparisonFilterOptions();
+  const [comparisonOptions, breakdownOptions] = await Promise.all([
+    getDataEntryComparisonFilterOptions(),
+    getDataEntryBreakdownFilterOptions(),
+  ]);
 
   return (
     <div>
       <MigrationButtons />
+      <DataEntryBreakdownPanel options={breakdownOptions} />
       <DataEntryComparisonPanel options={comparisonOptions} />
     </div>
   );

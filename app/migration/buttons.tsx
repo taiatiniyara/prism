@@ -19,6 +19,7 @@ import {
   retrieveUtilityData,
   logMigrationStep,
   getMigrationHistory,
+  type MigrationStepResult,
 } from "./service";
 
 interface HistoryEntry {
@@ -32,25 +33,25 @@ interface HistoryEntry {
 
 interface Step {
   label: string;
-  fn: () => Promise<boolean>;
+  fn: () => Promise<MigrationStepResult>;
   heavy?: boolean;
 }
 
 const steps: Step[] = [
-  { label: "Managed Lists", fn: retrieveManagedLists },
-  { label: "Countries", fn: retrieveCountries },
-  { label: "Roles", fn: retrieveRoles },
-  { label: "Users", fn: retrieveUsers },
-  { label: "Utility Data", fn: retrieveUtilityData },
-  { label: "Report Periods", fn: retrieveReportPeriods },
-  { label: "Energy Resources", fn: retrieveEnergyResources },
-  { label: "Energy Resource Periods", fn: backfillEnergyResourcePeriods },
-  { label: "Country Context", fn: retrieveCountryContextData },
-  { label: "Utility Context", fn: retrieveUtilityContextData },
-  { label: "Generation Relevance", fn: retrieveGenerationRelevance, heavy: true },
-  { label: "Transmission Relevance", fn: retrieveTransmissionRelevance, heavy: true },
-  { label: "Tariff Relevance", fn: retrieveTariffRelevance, heavy: true },
-  { label: "Data Entries", fn: () => retrieveDataEntries(), heavy: true },
+  { label: "Managed Lists", fn: retrieveManagedLists as () => Promise<MigrationStepResult> },
+  { label: "Countries", fn: retrieveCountries as () => Promise<MigrationStepResult> },
+  { label: "Roles", fn: retrieveRoles as () => Promise<MigrationStepResult> },
+  { label: "Users", fn: retrieveUsers as () => Promise<MigrationStepResult> },
+  { label: "Utility Data", fn: retrieveUtilityData as () => Promise<MigrationStepResult> },
+  { label: "Report Periods", fn: retrieveReportPeriods as () => Promise<MigrationStepResult> },
+  { label: "Energy Resources", fn: retrieveEnergyResources as () => Promise<MigrationStepResult> },
+  { label: "Energy Resource Periods", fn: backfillEnergyResourcePeriods as () => Promise<MigrationStepResult> },
+  { label: "Country Context", fn: retrieveCountryContextData as () => Promise<MigrationStepResult> },
+  { label: "Utility Context", fn: retrieveUtilityContextData as () => Promise<MigrationStepResult> },
+  { label: "Generation Relevance", fn: retrieveGenerationRelevance as () => Promise<MigrationStepResult>, heavy: true },
+  { label: "Transmission Relevance", fn: retrieveTransmissionRelevance as () => Promise<MigrationStepResult>, heavy: true },
+  { label: "Tariff Relevance", fn: retrieveTariffRelevance as () => Promise<MigrationStepResult>, heavy: true },
+  { label: "Data Entries", fn: (() => retrieveDataEntries()) as () => Promise<MigrationStepResult>, heavy: true },
 ];
 
 const HEAVY_TIMEOUT_MS = 180_000;
@@ -89,15 +90,20 @@ export default function MigrationButtons() {
 
       let ok = false;
       let error: string | undefined;
+      let inserted = 0;
+      let updated = 0;
 
       try {
-        ok = await withTimeout(step.fn(), timeoutMs);
+        const result = await withTimeout(step.fn(), timeoutMs);
+        ok = result.ok;
+        inserted = result.inserted;
+        updated = result.updated;
       } catch (err) {
         error = err instanceof Error ? err.message : "Unknown error";
       }
 
       const ms = Date.now() - started;
-      const details = error ? `Error: ${error}` : (ok ? "OK" : "Failed");
+      const details = error ? `Error: ${error}` : (ok ? `${inserted} inserted, ${updated} updated` : "Failed");
       log.push({ label: step.label, ok, ms, details, error });
       setResults([...log]);
 
