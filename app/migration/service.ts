@@ -4312,21 +4312,16 @@ type V1BreakdownRow = {
 };
 
 async function fetchV1Breakdown(
-  utilityId: number | null,
-  categoryId: number | null,
-  subcategoryId: number | null,
+  _utilityId: number | null,
+  _categoryId: number | null,
+  _subcategoryId: number | null,
 ): Promise<V1BreakdownRow[]> {
-  const params = new URLSearchParams();
-  if (utilityId != null) params.set("utilityId", String(utilityId));
-  if (categoryId != null) params.set("categoryId", String(categoryId));
-  if (subcategoryId != null) params.set("subcategoryId", String(subcategoryId));
-
-  const path = `/breakdown?${params.toString()}`;
   try {
-    const response = await fetchMigrationEndpoint(path);
-    const rows = (response as { rows?: V1BreakdownRow[] })?.rows;
+    const response = await fetchMigrationEndpoint("/breakdown");
+    const data = await response.json();
+    const rows = (data as { rows?: V1BreakdownRow[] })?.rows;
     if (!Array.isArray(rows)) {
-      console.error("[breakdown] v1 response missing rows array", typeof response);
+      console.error("[breakdown] v1 response missing rows array", typeof data);
       return [];
     }
     return rows;
