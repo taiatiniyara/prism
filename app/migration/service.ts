@@ -1968,6 +1968,7 @@ export type DataEntryBreakdownRow = {
 
 export type DataEntryBreakdownFilterOptions = {
   utilities: Array<{ id: number; name: string }>;
+  reportPeriods: Array<{ id: number; label: string }>;
   categories: Array<{ id: number; name: string }>;
   subcategories: Array<{ id: number; name: string }>;
 };
@@ -4239,6 +4240,7 @@ export async function getDataEntryBreakdownFilterOptions(): Promise<DataEntryBre
     utilities: utilityList
       .map((u) => ({ id: u.id, name: u.name }))
       .sort((a, b) => a.name.localeCompare(b.name)),
+    reportPeriods: await fetchReportPeriodOptions(),
     categories: categoryItems
       .map((c) => ({ id: c.id, name: c.name }))
       .sort((a, b) => a.name.localeCompare(b.name)),
@@ -4248,16 +4250,35 @@ export async function getDataEntryBreakdownFilterOptions(): Promise<DataEntryBre
   };
 }
 
+async function fetchReportPeriodOptions(): Promise<Array<{ id: number; label: string }>> {
+  const rows = await db
+    .select({
+      id: reportPeriods.id,
+      reportDate: reportPeriods.report_date,
+      typeName: managedListItems.name,
+    })
+    .from(reportPeriods)
+    .leftJoin(managedListItems, eq(reportPeriods.report_type_id, managedListItems.id))
+    .orderBy(desc(reportPeriods.report_date));
+
+  return rows.map((r) => ({
+    id: r.id,
+    label: formatReportPeriodDisplay(r.reportDate, r.typeName),
+  }));
+}
+
 export async function getDataEntryBreakdown(
   utilityId: number | null,
+  reportPeriodId: number | null,
   categoryId: number | null,
   subcategoryId: number | null,
 ): Promise<DataEntryBreakdownRow[]> {
   await assertDevMigrationAccess();
 
-  const [v1Rows, v2Rows] = await Promise.all([
-    fetchV1Breakdown(utilityId, categoryId, subcategoryId),
-    queryV2Breakdown(utilityId, categoryId, subcategoryId),
+  const [v1Rows, v2Rows, v1FilterNames] = await Promise.all([
+    fetchV1Breakdown(),
+    queryV2Breakdown(utilityId, reportPeriodId, categoryId, subcategoryId),
+    resolveBreakdownFilterNames(utilityId, categoryId, subcategoryId),
   ]);
 
   const key = (r: { utilityName: string; categoryName: string; subcategoryName: string }) =>
@@ -4265,7 +4286,13 @@ export async function getDataEntryBreakdown(
 
   const v1Map = new Map<string, number>();
   for (const r of v1Rows) {
-    v1Map.set(key(r), r.entryCount);
+    if (v1FilterNames) {
+      if (v1FilterNames.utilityName && r.utilityName !== v1FilterNames.utilityName) continue;
+      if (v1FilterNames.categoryName && r.categoryName !== v1FilterNames.categoryName) continue;
+      if (v1FilterNames.subcategoryName && r.subcategoryName !== v1FilterNames.subcategoryName) continue;
+    }
+    const k = key(r);
+    v1Map.set(k, (v1Map.get(k) ?? 0) + r.entryCount);
   }
 
   const v2Map = new Map<string, number>();
@@ -4304,6 +4331,49 @@ export async function getDataEntryBreakdown(
   return merged;
 }
 
+type BreakdownFilterNames = {
+  utilityName: string | null;
+  categoryName: string | null;
+  subcategoryName: string | null;
+};
+
+async function resolveBreakdownFilterNames(
+  utilityId: number | null,
+  categoryId: number | null,
+  subcategoryId: number | null,
+): Promise<BreakdownFilterNames | null> {
+  if (utilityId == null && categoryId == null && subcategoryId == null) return null;
+
+  const [utilityName, categoryName, subcategoryName] = await Promise.all([
+    utilityId != null
+      ? db
+          .select({ name: organisations.name })
+          .from(organisations)
+          .where(eq(organisations.id, utilityId))
+          .limit(1)
+          .then((r) => r[0]?.name ?? null)
+      : null,
+    categoryId != null
+      ? db
+          .select({ name: managedListItems.name })
+          .from(managedListItems)
+          .where(eq(managedListItems.id, categoryId))
+          .limit(1)
+          .then((r) => r[0]?.name ?? null)
+      : null,
+    subcategoryId != null
+      ? db
+          .select({ name: managedListItems.name })
+          .from(managedListItems)
+          .where(eq(managedListItems.id, subcategoryId))
+          .limit(1)
+          .then((r) => r[0]?.name ?? null)
+      : null,
+  ]);
+
+  return { utilityName, categoryName, subcategoryName };
+}
+
 type V1BreakdownRow = {
   utilityName: string;
   categoryName: string;
@@ -4311,11 +4381,7 @@ type V1BreakdownRow = {
   entryCount: number;
 };
 
-async function fetchV1Breakdown(
-  _utilityId: number | null,
-  _categoryId: number | null,
-  _subcategoryId: number | null,
-): Promise<V1BreakdownRow[]> {
+async function fetchV1Breakdown(): Promise<V1BreakdownRow[]> {
   try {
     const response = await fetchMigrationEndpoint("/breakdown");
     const data = await response.json();
@@ -4343,6 +4409,7 @@ type V2BreakdownRow = {
 
 async function queryV2Breakdown(
   utilityId: number | null,
+  reportPeriodId: number | null,
   categoryId: number | null,
   subcategoryId: number | null,
 ): Promise<V2BreakdownRow[]> {
@@ -4354,6 +4421,7 @@ async function queryV2Breakdown(
     eq(dataEntries.is_deleted, false),
   ];
   if (utilityId != null) conditions.push(eq(organisations.id, utilityId));
+  if (reportPeriodId != null) conditions.push(eq(reportPeriods.id, reportPeriodId));
   if (categoryId != null) conditions.push(eq(inputDefinitions.category_id, categoryId));
   if (subcategoryId != null) conditions.push(eq(inputDefinitions.subcategory_id, subcategoryId));
 

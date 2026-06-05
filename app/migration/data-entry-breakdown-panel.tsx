@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import {
   Card,
@@ -17,28 +18,54 @@ import {
 
 type Props = {
   options: DataEntryBreakdownFilterOptions;
+  initialUtility?: string;
+  initialReportPeriod?: string;
+  initialCategory?: string;
+  initialSubcategory?: string;
 };
 
-export default function DataEntryBreakdownPanel({ options }: Props) {
-  const [utilityId, setUtilityId] = useState<string>("");
-  const [categoryId, setCategoryId] = useState<string>("");
-  const [subcategoryId, setSubcategoryId] = useState<string>("");
+export default function DataEntryBreakdownPanel({
+  options,
+  initialUtility,
+  initialReportPeriod,
+  initialCategory,
+  initialSubcategory,
+}: Props) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+
+  const utility = searchParams.get("utility") ?? initialUtility ?? "";
+  const reportPeriod = searchParams.get("reportPeriod") ?? initialReportPeriod ?? "";
+  const category = searchParams.get("category") ?? initialCategory ?? "";
+  const subcategory = searchParams.get("subcategory") ?? initialSubcategory ?? "";
+
   const [rows, setRows] = useState<DataEntryBreakdownRow[] | null>(null);
   const [loading, setLoading] = useState(false);
+
+  const updateParam = (key: string, value: string) => {
+    const next = new URLSearchParams(searchParams.toString());
+    if (value) {
+      next.set(key, value);
+    } else {
+      next.delete(key);
+    }
+    router.replace(`?${next.toString()}`, { scroll: false });
+  };
 
   const fetchBreakdown = useCallback(async () => {
     setLoading(true);
     try {
       const result = await getDataEntryBreakdown(
-        utilityId ? Number(utilityId) : null,
-        categoryId ? Number(categoryId) : null,
-        subcategoryId ? Number(subcategoryId) : null,
+        utility ? Number(utility) : null,
+        reportPeriod ? Number(reportPeriod) : null,
+        category ? Number(category) : null,
+        subcategory ? Number(subcategory) : null,
       );
       setRows(result);
     } finally {
       setLoading(false);
     }
-  }, [utilityId, categoryId, subcategoryId]);
+  }, [utility, reportPeriod, category, subcategory]);
 
   useEffect(() => {
     setRows(null);
@@ -59,23 +86,40 @@ export default function DataEntryBreakdownPanel({ options }: Props) {
       </CardHeader>
 
       <CardContent className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-3">
+        <div className="grid gap-3 sm:grid-cols-4">
           <label className="space-y-1 text-sm">
             <span className="font-medium">Utility</span>
             <select
               className="w-full rounded-md border border-slate-300 bg-white px-2 py-2"
-              value={utilityId}
+              value={utility}
               disabled={loading}
-              onChange={(event) => {
-                setUtilityId(event.target.value);
-                setCategoryId("");
-                setSubcategoryId("");
+              onChange={(e) => {
+                updateParam("utility", e.target.value);
+                updateParam("category", "");
+                updateParam("subcategory", "");
               }}
             >
               <option value="">All</option>
-              {options.utilities.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.name}
+              {options.utilities.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label className="space-y-1 text-sm">
+            <span className="font-medium">Report Period</span>
+            <select
+              className="w-full rounded-md border border-slate-300 bg-white px-2 py-2"
+              value={reportPeriod}
+              disabled={loading}
+              onChange={(e) => updateParam("reportPeriod", e.target.value)}
+            >
+              <option value="">All</option>
+              {options.reportPeriods.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.label}
                 </option>
               ))}
             </select>
@@ -85,17 +129,17 @@ export default function DataEntryBreakdownPanel({ options }: Props) {
             <span className="font-medium">Input Category</span>
             <select
               className="w-full rounded-md border border-slate-300 bg-white px-2 py-2"
-              value={categoryId}
+              value={category}
               disabled={loading}
-              onChange={(event) => {
-                setCategoryId(event.target.value);
-                setSubcategoryId("");
+              onChange={(e) => {
+                updateParam("category", e.target.value);
+                updateParam("subcategory", "");
               }}
             >
               <option value="">All</option>
-              {options.categories.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.name}
+              {options.categories.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
                 </option>
               ))}
             </select>
@@ -105,14 +149,14 @@ export default function DataEntryBreakdownPanel({ options }: Props) {
             <span className="font-medium">Input Subcategory</span>
             <select
               className="w-full rounded-md border border-slate-300 bg-white px-2 py-2"
-              value={subcategoryId}
+              value={subcategory}
               disabled={loading}
-              onChange={(event) => setSubcategoryId(event.target.value)}
+              onChange={(e) => updateParam("subcategory", e.target.value)}
             >
               <option value="">All</option>
-              {options.subcategories.map((option) => (
-                <option key={option.id} value={option.id}>
-                  {option.name}
+              {options.subcategories.map((o) => (
+                <option key={o.id} value={o.id}>
+                  {o.name}
                 </option>
               ))}
             </select>

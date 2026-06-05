@@ -6,7 +6,11 @@ import DataEntryBreakdownPanel from "./data-entry-breakdown-panel";
 import DataEntryComparisonPanel from "./data-entry-comparison-panel";
 import { getDataEntryBreakdownFilterOptions, getDataEntryComparisonFilterOptions } from "./service";
 
-export default async function MigrationPage() {
+export default async function MigrationPage({
+  searchParams,
+}: {
+  searchParams: Promise<Record<string, string | string[] | undefined>>;
+}) {
   await connection();
   const user = await getCurrentUser();
 
@@ -23,10 +27,18 @@ export default async function MigrationPage() {
     getDataEntryBreakdownFilterOptions(),
   ]);
 
+  const params = await searchParams;
+
   return (
     <div>
       <MigrationButtons />
-      <DataEntryBreakdownPanel options={breakdownOptions} />
+      <DataEntryBreakdownPanel
+        options={breakdownOptions}
+        initialUtility={params.utility as string | undefined}
+        initialReportPeriod={params.reportPeriod as string | undefined}
+        initialCategory={params.category as string | undefined}
+        initialSubcategory={params.subcategory as string | undefined}
+      />
       <DataEntryComparisonPanel options={comparisonOptions} />
     </div>
   );
