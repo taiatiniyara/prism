@@ -56,7 +56,9 @@ export const parseOffset = (raw: string | null) => {
 
 export const assertMigrationKey = (request: Request) => {
   const required = process.env.MIGRATION_API_KEY;
-  if (!required) return;
+  if (!required) {
+    throw new Error("MIGRATION_API_KEY is not configured on this server.");
+  }
   const provided = request.headers.get("x-migration-key") ?? "";
   if (provided !== required) {
     throw new Error("Unauthorized");
