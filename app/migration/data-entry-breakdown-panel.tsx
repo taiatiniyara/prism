@@ -1,7 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import {
+  Bar,
+  BarChart,
+  CartesianGrid,
+  Legend,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+} from "recharts";
 
 import {
   Card,
@@ -74,6 +84,43 @@ export default function DataEntryBreakdownPanel({
 
   const totalV1 = rows?.reduce((sum, r) => sum + r.v1Count, 0) ?? 0;
   const totalV2 = rows?.reduce((sum, r) => sum + r.v2Count, 0) ?? 0;
+
+  const categoryBreakdown = useMemo(() => {
+    if (!rows) return [];
+    const map = new Map<string, { v1: number; v2: number }>();
+    for (const r of rows) {
+      const key = r.categoryName;
+      const prev = map.get(key) ?? { v1: 0, v2: 0 };
+      map.set(key, { v1: prev.v1 + r.v1Count, v2: prev.v2 + r.v2Count });
+    }
+    return Array.from(map.entries())
+      .map(([name, counts]) => ({
+        name,
+        v1Count: counts.v1,
+        v2Count: counts.v2,
+        gap: counts.v1 - counts.v2,
+      }))
+      .sort((a, b) => b.gap - a.gap);
+  }, [rows]);
+
+  const subcategoryBreakdown = useMemo(() => {
+    if (!rows) return [];
+    const map = new Map<string, { category: string; subcategory: string; v1: number; v2: number }>();
+    for (const r of rows) {
+      const key = `${r.categoryName}||${r.subcategoryName}`;
+      const prev = map.get(key) ?? { category: r.categoryName, subcategory: r.subcategoryName, v1: 0, v2: 0 };
+      map.set(key, { category: r.categoryName, subcategory: r.subcategoryName, v1: prev.v1 + r.v1Count, v2: prev.v2 + r.v2Count });
+    }
+    return Array.from(map.entries())
+      .map(([, data]) => ({
+        categoryName: data.category,
+        subcategoryName: data.subcategory,
+        v1Count: data.v1,
+        v2Count: data.v2,
+        gap: data.v1 - data.v2,
+      }))
+      .sort((a, b) => b.gap - a.gap);
+  }, [rows]);
 
   return (
     <Card className="mt-6">
@@ -184,6 +231,57 @@ export default function DataEntryBreakdownPanel({
                 across {rows.length} row{rows.length !== 1 ? "s" : ""}
               </span>
             </div>
+
+            <div className="space-y-1">
+              <h3 className="text-sm font-medium">By Category</h3>
+              {categoryBreakdown.length === 0 ? (
+                <p className="text-sm text-slate-500">No category data.</p>
+              ) : (
+                <div className="rounded border bg-white" style={{ height: Math.max(200, categoryBreakdown.length * 32) }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={categoryBreakdown.map((c) => ({ name: c.name, Expected: c.v1Count, Actual: c.v2Count }))}
+                      layout="vertical"
+                      margin={{ top: 8, right: 20, left: 10, bottom: 8 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                      <XAxis type="number" tick={{ fontSize: 11 }} />
+                      <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={140} />
+                      <Tooltip formatter={(value) => (value != null ? Number(value).toLocaleString() : "0")} />
+                      <Legend />
+                      <Bar dataKey="Expected" fill="#94a3b8" radius={[0, 2, 2, 0]} />
+                      <Bar dataKey="Actual" fill="#3b82f6" radius={[0, 2, 2, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+
+            <div className="space-y-1">
+              <h3 className="text-sm font-medium">By Subcategory</h3>
+              {subcategoryBreakdown.length === 0 ? (
+                <p className="text-sm text-slate-500">No subcategory data.</p>
+              ) : (
+                <div className="rounded border bg-white" style={{ height: Math.max(200, subcategoryBreakdown.length * 32) }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart
+                      data={subcategoryBreakdown.map((s) => ({ name: `${s.categoryName} / ${s.subcategoryName}`, Expected: s.v1Count, Actual: s.v2Count }))}
+                      layout="vertical"
+                      margin={{ top: 8, right: 20, left: 10, bottom: 8 }}
+                    >
+                      <CartesianGrid strokeDasharray="3 3" horizontal={false} />
+                      <XAxis type="number" tick={{ fontSize: 11 }} />
+                      <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={200} />
+                      <Tooltip formatter={(value) => (value != null ? Number(value).toLocaleString() : "0")} />
+                      <Legend />
+                      <Bar dataKey="Expected" fill="#94a3b8" radius={[0, 2, 2, 0]} />
+                      <Bar dataKey="Actual" fill="#3b82f6" radius={[0, 2, 2, 0]} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+              )}
+            </div>
+
             <div className="max-h-105 overflow-auto rounded border">
               <table className="min-w-full text-left text-sm">
                 <thead className="sticky top-0 bg-slate-100">

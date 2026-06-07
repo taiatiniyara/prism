@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { useRouter } from "next/navigation";
+import { Button } from "@/components/ui/button";
 import type {
   InputDlMapBuilderResult,
   SaveInputDlMappingItem,
@@ -213,8 +214,39 @@ export default function MapBuilderClient(props: MapBuilderClientProps) {
     setDraggingTrainingDlDefId(null);
   };
 
+  const [isAutoAccepting, startAutoAccept] = useTransition();
+
+  const handleAutoAccept = () => {
+    startAutoAccept(() => {
+      void (async () => {
+        const result = await props.onAutoAcceptHigh();
+        if (result.success) {
+          toast.success(result.message);
+          router.refresh();
+        } else {
+          toast.error(result.message);
+        }
+      })();
+    });
+  };
+
   return (
-    <div className="grid gap-3 lg:grid-cols-2">
+    <div>
+      <div className="flex items-center justify-between border-b px-3 py-2">
+        <div className="text-xs text-muted-foreground">
+          {props.result.stats.unmapped} unmapped / {props.result.stats.mappedHigh} high /{" "}
+          {props.result.stats.mappedMedium} medium / {props.result.stats.mappedLow} low
+        </div>
+        <Button
+          variant="outline"
+          size="sm"
+          disabled={isAutoAccepting}
+          onClick={handleAutoAccept}
+        >
+          {isAutoAccepting ? "Accepting..." : "Auto Accept High Confidence"}
+        </Button>
+      </div>
+      <div className="grid gap-3 lg:grid-cols-2 p-3">
       <div className="rounded border p-3">
         <div className="mb-2 flex items-center justify-between">
           <h4 className="text-sm font-semibold">Prism-Training Data Labels</h4>
@@ -251,6 +283,20 @@ export default function MapBuilderClient(props: MapBuilderClientProps) {
                 </div>
                 <div className="text-muted-foreground">
                   {dl.variable_name ?? ""}
+                </div>
+                <div className="mt-0.5 flex flex-wrap gap-x-2 text-[10px] text-muted-foreground">
+                  {dl.category_name ? (
+                    <span>{dl.category_name}</span>
+                  ) : null}
+                  {dl.subcategory_name ? (
+                    <span>/ {dl.subcategory_name}</span>
+                  ) : null}
+                  {dl.unit_name ? (
+                    <span>· {dl.unit_name}</span>
+                  ) : null}
+                  {dl.data_type_name ? (
+                    <span>· {dl.data_type_name}</span>
+                  ) : null}
                 </div>
                 {isMapped ? (
                   <div className="mt-1 text-[11px] text-emerald-700">
@@ -323,6 +369,7 @@ export default function MapBuilderClient(props: MapBuilderClientProps) {
           Saving mapping...
         </p>
       ) : null}
+    </div>
     </div>
   );
 }

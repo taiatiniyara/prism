@@ -602,9 +602,13 @@ export interface TrainingDataLabelDefinition {
   name: string;
   variable_name: string | null;
   category_id: number;
+  category_name: string | null;
   subcategory_id: number;
+  subcategory_name: string | null;
   unit_id: number;
+  unit_name: string | null;
   data_type_id: number;
+  data_type_name: string | null;
   agg_level_id: number;
   is_active: boolean;
   is_aggregated: boolean;
@@ -650,6 +654,7 @@ export interface InputDlMapBuilderResult {
   source: {
     baseUrl: string;
     endpoint: string;
+    error?: string;
   };
 }
 
@@ -689,8 +694,8 @@ const normalize = (value: string | null | undefined) =>
 const confidenceFromScore = (
   score: number,
 ): InputDlMapCandidate["confidence"] => {
-  if (score >= 80) return "high";
-  if (score >= 50) return "medium";
+  if (score >= 70) return "high";
+  if (score >= 40) return "medium";
   return "low";
 };
 
@@ -701,18 +706,64 @@ function scoreMapping(
   const reasons: string[] = [];
   let score = 0;
 
+  const inputVarNorm = normalize(input.variable_name).replace(/[_\s-]+/g, "");
+  const trainingVarNorm = normalize(training.variable_name).replace(
+    /[_\s-]+/g,
+    "",
+  );
+
   if (
     input.variable_name &&
     training.variable_name &&
-    normalize(input.variable_name) === normalize(training.variable_name)
+    inputVarNorm === trainingVarNorm
   ) {
     score += 60;
     reasons.push("variable_name match");
+  } else if (
+    inputVarNorm &&
+    trainingVarNorm &&
+    (inputVarNorm.includes(trainingVarNorm) ||
+      trainingVarNorm.includes(inputVarNorm))
+  ) {
+    score += 35;
+    reasons.push("partial variable_name match");
   }
 
-  if (normalize(input.name) === normalize(training.name)) {
+  const inputNameNorm = normalize(input.name);
+  const trainingNameNorm = normalize(training.name);
+
+  if (inputNameNorm === trainingNameNorm) {
     score += 30;
     reasons.push("name match");
+  } else {
+    const inputWords = new Set(
+      inputNameNorm.split(/\s+/).filter((w) => w.length > 1),
+    );
+    const trainingWords = new Set(
+      trainingNameNorm.split(/\s+/).filter((w) => w.length > 1),
+    );
+
+    if (inputWords.size > 0 && trainingWords.size > 0) {
+      const intersection = [...inputWords].filter((w) =>
+        trainingWords.has(w),
+      );
+      const union = new Set([...inputWords, ...trainingWords]);
+      const jaccard = intersection.length / union.size;
+
+      if (jaccard >= 0.8) {
+        score += 20;
+        reasons.push("strong word overlap");
+      } else if (jaccard >= 0.5) {
+        score += 12;
+        reasons.push("moderate word overlap");
+      } else if (
+        inputNameNorm.includes(trainingNameNorm) ||
+        trainingNameNorm.includes(inputNameNorm)
+      ) {
+        score += 8;
+        reasons.push("substring match");
+      }
+    }
   }
 
   if (input.category_id === training.category_id) {
@@ -754,14 +805,16 @@ function scoreMapping(
 }
 
 async function fetchTrainingDataLabelDefinitions() {
-  const baseUrl = process.env.PRISM_TRAINING_API_BASE_URL;
+  const baseUrl = process.env.PRISM_TRAINING_API_BASE_URL?.replace(/\/$/, "");
   if (!baseUrl) {
     throw new Error(
       "PRISM_TRAINING_API_BASE_URL is not configured in prism environment.",
     );
   }
 
-  const endpoint = `${baseUrl.replace(/\/$/, "")}/api/migration/dlDef`;
+  const endpoint = baseUrl.endsWith("/api")
+    ? `${baseUrl}/migration/dlDef`
+    : `${baseUrl}/api/migration/dlDef`;
   const migrationKey = process.env.PRISM_TRAINING_MIGRATION_KEY;
 
   let cursor: number | null = null;
@@ -848,11 +901,13 @@ export async function BuildInputDlMappingCandidates(): Promise<InputDlMapBuilder
     baseUrl: string;
     endpoint: string;
     data: TrainingDataLabelDefinition[];
+    error?: string;
   };
 
   try {
     training = await fetchTrainingDataLabelDefinitions();
-  } catch {
+  } catch (error) {
+    console.error("[map-builder] failed to fetch training data labels:", error);
     const baseUrl = process.env.PRISM_TRAINING_API_BASE_URL ?? "";
     const endpoint = baseUrl
       ? `${baseUrl.replace(/\/$/, "")}/api/migration/dlDef`
@@ -862,6 +917,7 @@ export async function BuildInputDlMappingCandidates(): Promise<InputDlMapBuilder
       baseUrl,
       endpoint,
       data: [],
+      error: error instanceof Error ? error.message : "Unknown error fetching training labels",
     };
   }
 
@@ -970,6 +1026,7 @@ export async function BuildInputDlMappingCandidates(): Promise<InputDlMapBuilder
     source: {
       baseUrl: training.baseUrl,
       endpoint: training.endpoint,
+      error: training.error,
     },
   };
 }

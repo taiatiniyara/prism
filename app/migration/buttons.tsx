@@ -54,7 +54,9 @@ const steps: Step[] = [
   { label: "Data Entries", fn: (() => retrieveDataEntries()) as () => Promise<MigrationStepResult>, heavy: true },
 ];
 
-const HEAVY_TIMEOUT_MS = 180_000;
+const HEAVY_TIMEOUT_MS = Number(
+  process.env.MIGRATION_HEAVY_STEP_TIMEOUT_MS ?? "600000",
+);
 
 interface StepResult {
   label: string;

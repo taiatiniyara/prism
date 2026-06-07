@@ -45,17 +45,36 @@ export default function DataEntryMigrationPanel() {
 
     startTransition(() => {
       void (async () => {
-        const ok = await retrieveDataEntries({
+        const result = await retrieveDataEntries({
           reportPeriodId: parsedOptions.reportPeriodId,
         });
 
-        if (ok) {
+        if (result.ok) {
           const scopeText =
             parsedOptions.reportPeriodId != null
               ? `report period ${parsedOptions.reportPeriodId}`
               : "all report periods";
 
-          const message = `Data entries migrated for ${scopeText}.`;
+          const parts = [
+            `Data entries migrated for ${scopeText}: ${result.inserted} inserted, ${result.updated} updated.`,
+          ];
+          const utilityBackfillInserted =
+            result.utilityContextBackfill?.inserted ?? 0;
+          const countryBackfillInserted =
+            result.countryContextBackfill?.inserted ?? 0;
+
+          if (utilityBackfillInserted > 0) {
+            parts.push(
+              `Utility context backfill: ${utilityBackfillInserted} copied from previous periods.`,
+            );
+          }
+          if (countryBackfillInserted > 0) {
+            parts.push(
+              `Country context backfill: ${countryBackfillInserted} copied from previous periods.`,
+            );
+          }
+
+          const message = parts.join(" ");
           setLastRunMessage(message);
           toast.success(message);
         } else {

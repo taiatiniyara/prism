@@ -98,6 +98,14 @@ export default async function InputDlMapBuilder() {
         <p className="mt-1 text-xs text-muted-foreground">
           Source endpoint: {result.source.endpoint}
         </p>
+        {resolvedResult.source.error ? (
+          <p className="mt-1 text-xs text-red-600">
+            Error fetching training labels: {resolvedResult.source.error}
+          </p>
+        ) : null}
+        <p className="mt-1 text-xs text-muted-foreground">
+          Training labels fetched: {resolvedResult.trainingDataLabels.length}
+        </p>
       </div>
 
       <div className="overflow-auto rounded border">

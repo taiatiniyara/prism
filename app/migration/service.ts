@@ -52,7 +52,7 @@ const JSON_HEADERS = {
   Accept: "application/json",
 } as const;
 const DATA_ENTRY_PAGE_LIMIT = Number(
-  process.env.MIGRATION_DATA_ENTRY_PAGE_LIMIT ?? "500",
+  process.env.MIGRATION_DATA_ENTRY_PAGE_LIMIT ?? "2000",
 );
 const MIGRATION_FETCH_TIMEOUT_MS = Number(
   process.env.MIGRATION_FETCH_TIMEOUT_MS ?? "12000",
@@ -543,7 +543,7 @@ export async function retrieveUtilityContextData(options?: {
 }) {
   await assertDevMigrationAccess();
   let inserted = 0;
-  let updated = 0;
+  const updated = 0;
 
   try {
     const call = await fetchLegacyMigEndpoint("/utilityContext");
@@ -713,8 +713,14 @@ export async function retrieveUtilityContextData(options?: {
       reportPeriodId: options?.reportPeriodId,
     });
 
+    await backfillCountryContextDataEntriesFromPreviousPeriods({
+      reportPeriodId: options?.reportPeriodId,
+    });
+
   } catch (error: unknown) {
     logMigrationError(error);
+    revalidatePath("/migration");
+    return { ok: false, inserted, updated, total: inserted + updated };
   }
 
   revalidatePath("/migration");
@@ -727,7 +733,7 @@ export async function retrieveCountryContextData(options?: {
 }) {
   await assertDevMigrationAccess();
   let inserted = 0;
-  let updated = 0;
+  const updated = 0;
 
   try {
     const call = await fetchLegacyMigEndpoint("/countryContext");
@@ -869,6 +875,8 @@ export async function retrieveCountryContextData(options?: {
 
   } catch (error: unknown) {
     logMigrationError(error);
+    revalidatePath("/migration");
+    return { ok: false, inserted, updated, total: inserted + updated };
   }
 
   revalidatePath("/migration");
@@ -879,7 +887,7 @@ export async function retrieveCountryContextData(options?: {
 export async function retrieveRoles() {
   await assertDevMigrationAccess();
   let inserted = 0;
-  let updated = 0;
+  const updated = 0;
   try {
     const call = await fetchMigrationEndpoint("/roles");
     const list: Role[] = await call.json();
@@ -935,8 +943,8 @@ type MigrationUserDto = {
 
 export async function retrieveUsers() {
   await assertDevMigrationAccess();
-  let inserted = 0;
-  let updated = 0;
+  const inserted = 0;
+  const updated = 0;
 
   try {
     const call = await fetchMigrationEndpoint("/users");
@@ -1024,7 +1032,7 @@ export async function retrieveUsers() {
 export async function retrieveUtilityData() {
   await assertDevMigrationAccess();
   let inserted = 0;
-  let updated = 0;
+  const updated = 0;
   const call = await fetchMigrationEndpoint("/organisation");
   const list = await call.json();
   const serviceAreaList: ServiceArea[] = list.serviceAreas;
@@ -1270,7 +1278,7 @@ export async function retrieveUtilityData() {
 export async function retrieveCountries() {
   await assertDevMigrationAccess();
   let inserted = 0;
-  let updated = 0;
+  const updated = 0;
   const call = await fetchMigrationEndpoint("/country");
   const list = await call.json();
   const subRegionList: SubRegion[] = list.subregions;
@@ -1314,7 +1322,7 @@ export async function retrieveCountries() {
 export async function retrieveManagedLists() {
   await assertDevMigrationAccess();
   let inserted = 0;
-  let updated = 0;
+  const updated = 0;
   const call = await fetchMigrationEndpoint("/managedList");
   const list = await call.json();
   const managedListItemsList: ManagedListItem[] = list.managedListItems;
@@ -1354,8 +1362,8 @@ export async function retrieveManagedLists() {
 
 export async function retrieveInputDefinitions() {
   await assertDevMigrationAccess();
-  let inserted = 0;
-  let updated = 0;
+  const inserted = 0;
+  const updated = 0;
   const call = await fetchMigrationEndpoint("/inputDefinitions");
   const list = await call.json();
   const inputDefinitionsList: InputDefinition[] = list.inputDefinitions;
@@ -1389,7 +1397,7 @@ export async function retrieveInputDefinitions() {
 export async function retrieveReportPeriods() {
   await assertDevMigrationAccess();
   let inserted = 0;
-  let updated = 0;
+  const updated = 0;
   const call = await fetchMigrationEndpoint("/reportPeriods");
   const list = await call.json();
   const reportPeriodsList: ReportPeriod[] = list;
@@ -1528,7 +1536,7 @@ export async function retrieveReportPeriods() {
 export async function retrieveEnergyResources() {
   await assertDevMigrationAccess();
   let inserted = 0;
-  let updated = 0;
+  const updated = 0;
   let skippedInvalidForeignKeys = 0;
   const call = await fetchMigrationEndpoint("/generators");
   const list = await call.json();
@@ -1733,8 +1741,8 @@ export async function retrieveEnergyResources() {
 
 export async function backfillEnergyResourcePeriods() {
   await assertDevMigrationAccess();
-  let inserted = 0;
-  let updated = 0;
+  const inserted = 0;
+  const updated = 0;
 
   try {
     const reportPeriodRows = await db
@@ -1846,8 +1854,8 @@ export async function backfillEnergyResourcePeriods() {
 
 export async function retrieveKpiDefinitions() {
   await assertDevMigrationAccess();
-  let inserted = 0;
-  let updated = 0;
+  const inserted = 0;
+  const updated = 0;
   const call = await fetchMigrationEndpoint("/kpi");
   const list = await call.json();
   const kpiDefinitionsList: KpiDefinition[] = list;
@@ -2521,6 +2529,16 @@ export async function retrieveDataEntries(options?: {
   let updated = 0;
   let cursor: number | null = null;
   let hasMore = true;
+  let utilityBackfillResult: UtilityContextBackfillResult = {
+    inserted: 0,
+    skippedNoPreviousPeriodData: 0,
+    targetPeriodsConsidered: 0,
+  };
+  let countryBackfillResult: UtilityContextBackfillResult = {
+    inserted: 0,
+    skippedNoPreviousPeriodData: 0,
+    targetPeriodsConsidered: 0,
+  };
 
   const skippedSamples: Array<{
     sourceId: number | null;
@@ -2660,6 +2678,38 @@ export async function retrieveDataEntries(options?: {
 
       const page: SourceDataEntryPage = await call.json();
 
+      if (page.dataEntry.length === 0) {
+        cursor = page.pagination.nextCursor;
+        hasMore = page.pagination.hasMore === true && cursor != null;
+        continue;
+      }
+
+      // Phase 1: Normalize all rows, collecting keys for batch existence check
+      type PreKey = {
+        reportPeriodId: number;
+        inputDefId: number;
+        serviceAreaId: number | null;
+        energyResourceId: number | null;
+        energyProviderId: number | null;
+        energySourceId: number | null;
+        customerTypeId: number | null;
+        paymentModeId: number | null;
+      };
+      const preKeys: PreKey[] = [];
+      const preRows: Array<{
+        row: SourceDataEntryRow;
+        reportPeriodId: number;
+        inputDefId: number;
+        sourceTrainingDlDefId: number | null;
+        serviceAreaId: number | null;
+        energyResourceId: number | null;
+        energyProviderId: number | null;
+        energySourceId: number | null;
+        customerTypeId: number | null;
+        paymentModeId: number | null;
+        updateMediumId: number | null;
+      }> = [];
+
       for (const row of page.dataEntry) {
         const reportPeriodId = normalizeRequiredId(row.report_period_id);
         let inputDefId: number | null = null;
@@ -2771,38 +2821,91 @@ export async function retrieveDataEntries(options?: {
           rawPaymentModeId,
           targetManagedListItemIds,
         );
-        const updateMediumId = normalizeOptionalFkId(
-          rawUpdateMediumId,
-          targetManagedListItemIds,
-        );
+
+        preKeys.push({
+          reportPeriodId,
+          inputDefId,
+          serviceAreaId,
+          energyResourceId: scopedEnergyResourceId,
+          energyProviderId,
+          energySourceId,
+          customerTypeId,
+          paymentModeId,
+        });
+        preRows.push({
+          row,
+          reportPeriodId,
+          inputDefId,
+          sourceTrainingDlDefId,
+          serviceAreaId,
+          energyResourceId: scopedEnergyResourceId,
+          energyProviderId,
+          energySourceId,
+          customerTypeId,
+          paymentModeId,
+          updateMediumId: normalizeOptionalFkId(
+            rawUpdateMediumId,
+            targetManagedListItemIds,
+          ),
+        });
+      }
+
+      // Phase 2: Batch SELECT existing rows
+      const existingMap = new Map<string, string>();
+      if (preKeys.length > 0) {
+        const uniqueReportPeriodIds = [...new Set(preKeys.map((k) => k.reportPeriodId))];
+        const uniqueInputDefIds = [...new Set(preKeys.map((k) => k.inputDefId))];
+
+        const existingRows = await db
+          .select({
+            id: dataEntries.id,
+            report_period_id: dataEntries.report_period_id,
+            input_def_id: dataEntries.input_def_id,
+            service_area_id: dataEntries.service_area_id,
+            energy_resource_id: dataEntries.energy_resource_id,
+            energy_provider_id: dataEntries.energy_provider_id,
+            energy_source_id: dataEntries.energy_source_id,
+            customer_type_id: dataEntries.customer_type_id,
+            payment_mode_id: dataEntries.payment_mode_id,
+          })
+          .from(dataEntries)
+          .where(
+            and(
+              inArray(dataEntries.report_period_id, uniqueReportPeriodIds),
+              inArray(dataEntries.input_def_id, uniqueInputDefIds),
+            ),
+          );
+
+        for (const ex of existingRows) {
+          const key = [
+            ex.report_period_id,
+            ex.input_def_id,
+            nullableKeyPart(ex.service_area_id),
+            nullableKeyPart(ex.energy_resource_id),
+            nullableKeyPart(ex.energy_provider_id),
+            nullableKeyPart(ex.energy_source_id),
+            nullableKeyPart(ex.customer_type_id),
+            nullableKeyPart(ex.payment_mode_id),
+          ].join("|");
+          existingMap.set(key, ex.id);
+        }
+      }
+
+      // Phase 3: Process each normalized row with pre-computed map
+      for (const pr of preRows) {
+        const { row, reportPeriodId, inputDefId } = pr;
+        const scopedEnergyResourceId = pr.energyResourceId;
+        const serviceAreaId = pr.serviceAreaId;
+        const energyProviderId = pr.energyProviderId;
+        const energySourceId = pr.energySourceId;
+        const customerTypeId = pr.customerTypeId;
+        const paymentModeId = pr.paymentModeId;
+        const updateMediumId = pr.updateMediumId;
 
         const updatedAt = row.updated_at
           ? new Date(row.updated_at)
           : new Date();
         const comments = toStructuredComments(row.comments, updatedAt);
-
-        const conditions = [
-          eq(dataEntries.report_period_id, reportPeriodId),
-          eq(dataEntries.input_def_id, inputDefId),
-          serviceAreaId == null
-            ? isNull(dataEntries.service_area_id)
-            : eq(dataEntries.service_area_id, serviceAreaId),
-          scopedEnergyResourceId == null
-            ? isNull(dataEntries.energy_resource_id)
-            : eq(dataEntries.energy_resource_id, scopedEnergyResourceId),
-          energyProviderId == null
-            ? isNull(dataEntries.energy_provider_id)
-            : eq(dataEntries.energy_provider_id, energyProviderId),
-          energySourceId == null
-            ? isNull(dataEntries.energy_source_id)
-            : eq(dataEntries.energy_source_id, energySourceId),
-          customerTypeId == null
-            ? isNull(dataEntries.customer_type_id)
-            : eq(dataEntries.customer_type_id, customerTypeId),
-          paymentModeId == null
-            ? isNull(dataEntries.payment_mode_id)
-            : eq(dataEntries.payment_mode_id, paymentModeId),
-        ];
 
         const payload = {
           report_period_id: reportPeriodId,
@@ -2823,17 +2926,24 @@ export async function retrieveDataEntries(options?: {
           updatedById: null,
         };
 
-        const [existing] = await db
-          .select({ id: dataEntries.id })
-          .from(dataEntries)
-          .where(and(...conditions))
-          .limit(1);
+        const rowKey = [
+          reportPeriodId,
+          inputDefId,
+          nullableKeyPart(serviceAreaId),
+          nullableKeyPart(scopedEnergyResourceId),
+          nullableKeyPart(energyProviderId),
+          nullableKeyPart(energySourceId),
+          nullableKeyPart(customerTypeId),
+          nullableKeyPart(paymentModeId),
+        ].join("|");
 
-        if (existing) {
+        const existingId = existingMap.get(rowKey);
+        if (existingId) {
           await db
             .update(dataEntries)
             .set(payload)
-            .where(eq(dataEntries.id, existing.id));
+            .where(eq(dataEntries.id, existingId));
+          updated += 1;
         } else {
           try {
             await db.insert(dataEntries).values(payload);
@@ -2874,6 +2984,7 @@ export async function retrieveDataEntries(options?: {
               .update(dataEntries)
               .set(payload)
               .where(eq(dataEntries.id, existingByUniqueIndex.id));
+            updated += 1;
 
           }
         }
@@ -2883,16 +2994,35 @@ export async function retrieveDataEntries(options?: {
       hasMore = page.pagination.hasMore === true && cursor != null;
     }
 
-    await backfillUtilityContextDataEntriesFromPreviousPeriods({
+    utilityBackfillResult = await backfillUtilityContextDataEntriesFromPreviousPeriods({
+      reportPeriodId: options?.reportPeriodId,
+    });
+
+    countryBackfillResult = await backfillCountryContextDataEntriesFromPreviousPeriods({
       reportPeriodId: options?.reportPeriodId,
     });
 
   } catch (error: unknown) {
     logMigrationError(error);
+    return {
+      ok: false,
+      inserted,
+      updated,
+      total: inserted + updated,
+      utilityContextBackfill: utilityBackfillResult,
+      countryContextBackfill: countryBackfillResult,
+    };
   }
 
   revalidatePath("/migration");
-  return { ok: true, inserted, updated, total: inserted + updated };
+  return {
+    ok: true,
+    inserted,
+    updated,
+    total: inserted + updated,
+    utilityContextBackfill: utilityBackfillResult,
+    countryContextBackfill: countryBackfillResult,
+  };
 }
 
 type SourceGenerationRelevanceRow = {
@@ -3155,8 +3285,8 @@ export async function retrieveTransmissionRelevance(options?: {
   batchSize?: number;
 }) {
   await assertDevMigrationAccess();
-  let inserted = 0;
-  let updated = 0;
+  const inserted = 0;
+  const updated = 0;
   let cursor: number | null = null;
   let hasMore = true;
 
@@ -3329,8 +3459,8 @@ export async function retrieveTariffRelevance(options?: {
 }) {
   await assertDevMigrationAccess();
 
-  let inserted = 0;
-  let updated = 0;
+  const inserted = 0;
+  const updated = 0;
   let cursor: number | null = null;
   let hasMore = true;
 
@@ -3829,6 +3959,65 @@ export async function compareDataEntries(
     }
   }
 
+  const mappingRows = await db
+    .select({
+      trainingDlDefId: inputDlDefMappings.training_dl_def_id,
+      inputDefId: inputDlDefMappings.input_def_id,
+      updatedAt: inputDlDefMappings.updated_at,
+    })
+    .from(inputDlDefMappings);
+
+  const inputByTrainingDlDefId = new Map<
+    number,
+    { inputDefId: number; updatedAt: Date | null }
+  >();
+  for (const mapping of mappingRows) {
+    const existing = inputByTrainingDlDefId.get(mapping.trainingDlDefId);
+    if (!existing) {
+      inputByTrainingDlDefId.set(mapping.trainingDlDefId, {
+        inputDefId: mapping.inputDefId,
+        updatedAt: mapping.updatedAt,
+      });
+      continue;
+    }
+
+    const existingTime = existing.updatedAt?.getTime() ?? 0;
+    const currentTime = mapping.updatedAt?.getTime() ?? 0;
+    if (currentTime >= existingTime) {
+      inputByTrainingDlDefId.set(mapping.trainingDlDefId, {
+        inputDefId: mapping.inputDefId,
+        updatedAt: mapping.updatedAt,
+      });
+    }
+  }
+
+  const targetServiceAreaIds = new Set<number>(
+    (await db.select({ id: serviceAreas.id }).from(serviceAreas)).map((r) => r.id),
+  );
+
+  const targetEnergyResources = await db
+    .select({
+      id: energyResources.id,
+      periodEntries: energyResources.period_entries,
+    })
+    .from(energyResources);
+  const targetEnergyResourceIds = new Set<number>(
+    targetEnergyResources.map((r) => r.id),
+  );
+  const targetEnergyResourceActivePeriodIds = new Map<number, Set<number>>(
+    targetEnergyResources.map((resource) => [
+      resource.id,
+      getActivePeriodIds(resource.periodEntries),
+    ]),
+  );
+
+  const targetManagedListItemIds = new Set<number>(
+    (await db
+      .select({ id: managedListItems.id })
+      .from(managedListItems)
+    ).map((r) => r.id),
+  );
+
   const sourceByKey = new Map<
     string,
     {
@@ -3845,7 +4034,19 @@ export async function compareDataEntries(
 
   for (const row of boundedSourceRows) {
     const normalizedReportPeriodId = normalizeRequiredId(row.report_period_id);
-    let normalizedInputDefId = normalizeRequiredId(row.input_def_id);
+    let normalizedInputDefId: number | null = null;
+
+    const sourceTrainingDlDefId = toNumberOrNull(row.input_def_id);
+    if (sourceTrainingDlDefId != null) {
+      const mapped = inputByTrainingDlDefId.get(sourceTrainingDlDefId);
+      if (mapped) {
+        normalizedInputDefId = mapped.inputDefId;
+      }
+    }
+
+    if (normalizedInputDefId == null) {
+      normalizedInputDefId = normalizeRequiredId(row.input_def_id);
+    }
 
     if (
       normalizedInputDefId != null &&
@@ -3884,15 +4085,55 @@ export async function compareDataEntries(
       continue;
     }
 
+    const rawServiceAreaId = normalizeOptionalId(row.service_area_id);
+    const rawEnergyResourceId = normalizeOptionalId(row.energy_resource_id);
+    const rawEnergyProviderId = normalizeOptionalId(row.energy_provider_id);
+    const rawEnergySourceId = normalizeOptionalId(row.energy_source_id);
+    const rawCustomerTypeId = normalizeOptionalId(row.customer_type_id);
+    const rawPaymentModeId = normalizeOptionalId(row.payment_mode_id);
+
+    const serviceAreaId = normalizeOptionalFkId(
+      rawServiceAreaId,
+      targetServiceAreaIds,
+    );
+    const energyResourceId = normalizeOptionalFkId(
+      rawEnergyResourceId,
+      targetEnergyResourceIds,
+    );
+    const isEnergyResourceActiveForReportPeriod =
+      energyResourceId != null &&
+      targetEnergyResourceActivePeriodIds
+        .get(energyResourceId)
+        ?.has(normalizedReportPeriodId) === true;
+    const scopedEnergyResourceId = isEnergyResourceActiveForReportPeriod
+      ? energyResourceId
+      : null;
+    const energyProviderId = normalizeOptionalFkId(
+      rawEnergyProviderId,
+      targetManagedListItemIds,
+    );
+    const energySourceId = normalizeOptionalFkId(
+      rawEnergySourceId,
+      targetManagedListItemIds,
+    );
+    const customerTypeId = normalizeOptionalFkId(
+      rawCustomerTypeId,
+      targetManagedListItemIds,
+    );
+    const paymentModeId = normalizeOptionalFkId(
+      rawPaymentModeId,
+      targetManagedListItemIds,
+    );
+
     const normalized = {
       report_period_id: normalizedReportPeriodId,
       input_def_id: normalizedInputDefId,
-      service_area_id: normalizeOptionalId(row.service_area_id),
-      energy_resource_id: normalizeOptionalId(row.energy_resource_id),
-      energy_provider_id: normalizeOptionalId(row.energy_provider_id),
-      energy_source_id: normalizeOptionalId(row.energy_source_id),
-      customer_type_id: normalizeOptionalId(row.customer_type_id),
-      payment_mode_id: normalizeOptionalId(row.payment_mode_id),
+      service_area_id: serviceAreaId,
+      energy_resource_id: scopedEnergyResourceId,
+      energy_provider_id: energyProviderId,
+      energy_source_id: energySourceId,
+      customer_type_id: customerTypeId,
+      payment_mode_id: paymentModeId,
     };
     const key = buildDataEntryComparisonKey(normalized);
     if (!sourceByKey.has(key)) {
