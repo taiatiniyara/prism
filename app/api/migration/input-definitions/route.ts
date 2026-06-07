@@ -4,7 +4,7 @@ import {
   managedListItems,
 } from "@/db/schema/managedLists";
 import { aliasedTable, and, asc, eq } from "drizzle-orm";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 
 function parseOptionalInt(value: string | null): number | null {
   if (value == null) return null;
@@ -12,10 +12,10 @@ function parseOptionalInt(value: string | null): number | null {
   return Number.isFinite(parsed) ? Math.trunc(parsed) : null;
 }
 
-export async function GET(request: Request) {
+export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url);
-    const limit = parseOptionalInt(searchParams.get("limit")) ?? null;
+    const searchParams = request.nextUrl.searchParams;
+    const limit = parseOptionalInt(searchParams.get("limit"));
     const offset = parseOptionalInt(searchParams.get("offset")) ?? 0;
     const includeInactive = searchParams.get("includeInactive") === "true";
 
