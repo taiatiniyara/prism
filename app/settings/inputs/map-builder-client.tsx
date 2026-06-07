@@ -155,8 +155,8 @@ export default function MapBuilderClient(props: MapBuilderClientProps) {
 
     return {
       trainingDlDefId: dl.id,
-      trainingDlLegacyId: dl.legacy_id,
-      trainingSourceId: dl.source_id,
+      trainingDlLegacyId: String(dl.id),
+      trainingSourceId: null,
       trainingName: dl.name,
       trainingVariableName: dl.variable_name,
       score: 0,

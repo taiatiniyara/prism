@@ -597,8 +597,6 @@ export async function getInputsBySubcategory(
 
 export interface TrainingDataLabelDefinition {
   id: number;
-  legacy_id: string;
-  source_id: number | null;
   name: string;
   variable_name: string | null;
   category_id: number;
@@ -610,8 +608,6 @@ export interface TrainingDataLabelDefinition {
   data_type_id: number;
   data_type_name: string | null;
   agg_level_id: number;
-  is_active: boolean;
-  is_aggregated: boolean;
 }
 
 export interface InputDlMapCandidate {
@@ -659,7 +655,7 @@ export interface InputDlMapBuilderResult {
 }
 
 interface TrainingDlDefEndpointResponse {
-  data: TrainingDataLabelDefinition[];
+  data: unknown[][];
   pagination?: {
     nextCursor: number | null;
     hasMore: boolean;
@@ -794,8 +790,8 @@ function scoreMapping(
 
   return {
     trainingDlDefId: training.id,
-    trainingDlLegacyId: training.legacy_id,
-    trainingSourceId: training.source_id,
+    trainingDlLegacyId: String(training.id),
+    trainingSourceId: null,
     trainingName: training.name,
     trainingVariableName: training.variable_name,
     score,
@@ -847,7 +843,23 @@ async function fetchTrainingDataLabelDefinitions() {
 
     const payload =
       (await response.json()) as Partial<TrainingDlDefEndpointResponse>;
-    const rows = Array.isArray(payload.data) ? payload.data : [];
+    const rawRows = Array.isArray(payload.data) ? payload.data : [];
+    const rows: TrainingDataLabelDefinition[] = rawRows
+      .filter((r): r is unknown[] => Array.isArray(r))
+      .map((r) => ({
+        id: Number(r[0]) || 0,
+        name: String(r[1] ?? ""),
+        variable_name: r[2] != null ? String(r[2]) : null,
+        category_id: Number(r[3]) || 0,
+        category_name: r[4] != null ? String(r[4]) : null,
+        subcategory_id: Number(r[5]) || 0,
+        subcategory_name: r[6] != null ? String(r[6]) : null,
+        unit_id: Number(r[7]) || 0,
+        unit_name: r[8] != null ? String(r[8]) : null,
+        data_type_id: Number(r[9]) || 0,
+        data_type_name: r[10] != null ? String(r[10]) : null,
+        agg_level_id: Number(r[11]) || 0,
+      }));
     all.push(...rows);
 
     const hasMore = Boolean(payload.pagination?.hasMore);
@@ -1086,8 +1098,8 @@ export async function SaveInputDlMappings(
         matchedBySuffix.length > 0
           ? matchedBySuffix.map((dl) => ({
               trainingDlDefId: dl.id,
-              trainingDlLegacyId: dl.legacy_id,
-              trainingSourceId: dl.source_id,
+              trainingDlLegacyId: String(dl.id),
+              trainingSourceId: null,
               trainingName: dl.name,
               trainingVariableName: dl.variable_name,
               score: candidate.score,

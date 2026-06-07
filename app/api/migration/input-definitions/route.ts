@@ -80,32 +80,19 @@ export async function GET(request: NextRequest) {
 
     const rows = await query;
 
-    const data = rows.map((r) => ({
-      id: r.id,
-      name: r.name,
-      description: r.description,
-      variable_name: r.variable_name,
-      formula: r.formula,
-      formula_inputs: r.formula_inputs,
-      category_id: r.category_id,
-      category_name: r.category_name,
-      subcategory_id: r.subcategory_id,
-      subcategory_name: r.subcategory_name,
-      unit_id: r.unit_id,
-      unit_name: r.unit_name,
-      data_type_id: r.data_type_id,
-      data_type_name: r.data_type_name,
-      is_descriptive: r.is_descriptive,
-      is_currency: r.is_currency,
-      is_aggregated: r.is_aggregated,
-      is_active: r.is_active,
-      is_mandatory: r.is_mandatory,
-      is_system_generated: r.is_system_generated,
-      is_calculated: r.is_calculated,
-      is_kpi: r.is_kpi,
-      is_kpi_input: r.is_kpi_input,
-      sort_order: r.sort_order,
-    }));
+    const data = rows.map((r) => [
+      r.id,
+      r.name,
+      r.variable_name,
+      r.category_id,
+      r.category_name,
+      r.subcategory_id,
+      r.subcategory_name,
+      r.unit_id,
+      r.unit_name,
+      r.data_type_id,
+      r.data_type_name,
+    ]);
 
     return NextResponse.json({ data, count: data.length });
   } catch (error) {
