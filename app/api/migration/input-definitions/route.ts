@@ -15,9 +15,13 @@ export async function GET(request: Request) {
       ORDER BY i.id
     `);
 
-    const data = (result.rows as Record<string, unknown>[]).map((r) =>
-      Object.values(r),
-    );
+    const data = result.rows.map((row) => {
+      return {
+        ...row,
+        category_name: row.category_name || null,
+        subcategory_name: row.subcategory_name || null,
+      };
+    });
 
     return NextResponse.json(data);
   } catch (error) {
