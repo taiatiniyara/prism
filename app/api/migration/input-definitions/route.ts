@@ -5,6 +5,7 @@ import {
 } from "@/db/schema/managedLists";
 import { aliasedTable, and, asc, eq } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
+import { assertMigrationKey } from "../prism-training/_lib";
 
 function parseOptionalInt(value: string | null): number | null {
   if (value == null) return null;
@@ -14,6 +15,7 @@ function parseOptionalInt(value: string | null): number | null {
 
 export async function GET(request: NextRequest) {
   try {
+    assertMigrationKey(request);
     const searchParams = request.nextUrl.searchParams;
     const limit = parseOptionalInt(searchParams.get("limit"));
     const offset = parseOptionalInt(searchParams.get("offset")) ?? 0;
