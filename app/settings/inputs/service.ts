@@ -604,9 +604,7 @@ export interface TrainingDataLabelDefinition {
   subcategory_id: number;
   subcategory_name: string | null;
   unit_id: number;
-  unit_name: string | null;
   data_type_id: number;
-  data_type_name: string | null;
   agg_level_id: number;
 }
 
@@ -651,15 +649,6 @@ export interface InputDlMapBuilderResult {
     baseUrl: string;
     endpoint: string;
     error?: string;
-  };
-}
-
-interface TrainingDlDefEndpointResponse {
-  data: unknown[][];
-  pagination?: {
-    nextCursor: number | null;
-    hasMore: boolean;
-    returned: number;
   };
 }
 
@@ -813,66 +802,47 @@ async function fetchTrainingDataLabelDefinitions() {
     : `${baseUrl}/api/migration/dlDef`;
   const migrationKey = process.env.PRISM_TRAINING_MIGRATION_KEY;
 
-  let cursor: number | null = null;
-  const all: TrainingDataLabelDefinition[] = [];
+  const params = new URLSearchParams({
+    limit: "10000",
+    includeAggregated: "false",
+    includeInactive: "false",
+  });
 
-  while (true) {
-    const params = new URLSearchParams({
-      limit: "2000",
-      includeAggregated: "false",
-      includeInactive: "false",
-    });
-    if (cursor != null) {
-      params.set("cursor", String(cursor));
-    }
+  const response = await fetch(`${endpoint}?${params.toString()}`, {
+    headers: migrationKey
+      ? {
+          "x-migration-key": migrationKey,
+        }
+      : undefined,
+    cache: "no-store",
+  });
 
-    const response = await fetch(`${endpoint}?${params.toString()}`, {
-      headers: migrationKey
-        ? {
-            "x-migration-key": migrationKey,
-          }
-        : undefined,
-      cache: "no-store",
-    });
-
-    if (!response.ok) {
-      throw new Error(
-        `Failed pulling data-label-definitions (${response.status}).`,
-      );
-    }
-
-    const payload =
-      (await response.json()) as Partial<TrainingDlDefEndpointResponse>;
-    const rawRows = Array.isArray(payload.data) ? payload.data : [];
-    const rows: TrainingDataLabelDefinition[] = rawRows
-      .filter((r): r is unknown[] => Array.isArray(r))
-      .map((r) => ({
-        id: Number(r[0]) || 0,
-        name: String(r[1] ?? ""),
-        variable_name: r[2] != null ? String(r[2]) : null,
-        category_id: Number(r[3]) || 0,
-        category_name: r[4] != null ? String(r[4]) : null,
-        subcategory_id: Number(r[5]) || 0,
-        subcategory_name: r[6] != null ? String(r[6]) : null,
-        unit_id: Number(r[7]) || 0,
-        unit_name: r[8] != null ? String(r[8]) : null,
-        data_type_id: Number(r[9]) || 0,
-        data_type_name: r[10] != null ? String(r[10]) : null,
-        agg_level_id: Number(r[11]) || 0,
-      }));
-    all.push(...rows);
-
-    const hasMore = Boolean(payload.pagination?.hasMore);
-    cursor = payload.pagination?.nextCursor ?? null;
-    if (!hasMore || cursor == null) {
-      break;
-    }
+  if (!response.ok) {
+    throw new Error(
+      `Failed pulling data-label-definitions (${response.status}).`,
+    );
   }
+
+  const rawRows = (await response.json()) as unknown[];
+  const rows: TrainingDataLabelDefinition[] = (Array.isArray(rawRows) ? rawRows : [])
+    .filter((r): r is unknown[] => Array.isArray(r))
+    .map((r) => ({
+      id: Number(r[1]) || 0,
+      name: String(r[2] ?? ""),
+      variable_name: r[3] != null ? String(r[3]) : null,
+      category_id: Number(r[9]) || 0,
+      subcategory_id: Number(r[10]) || 0,
+      unit_id: Number(r[18]) || 0,
+      data_type_id: Number(r[19]) || 0,
+      agg_level_id: Number(r[27]) || 0,
+      category_name: r[41] != null ? String(r[41]) : null,
+      subcategory_name: r[42] != null ? String(r[42]) : null,
+    }));
 
   return {
     baseUrl,
     endpoint,
-    data: all,
+    data: rows,
   };
 }
 

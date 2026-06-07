@@ -291,12 +291,6 @@ export default function MapBuilderClient(props: MapBuilderClientProps) {
                   {dl.subcategory_name ? (
                     <span>/ {dl.subcategory_name}</span>
                   ) : null}
-                  {dl.unit_name ? (
-                    <span>· {dl.unit_name}</span>
-                  ) : null}
-                  {dl.data_type_name ? (
-                    <span>· {dl.data_type_name}</span>
-                  ) : null}
                 </div>
                 {isMapped ? (
                   <div className="mt-1 text-[11px] text-emerald-700">
