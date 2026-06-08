@@ -19,6 +19,7 @@ import {
   retrieveUtilityData,
   logMigrationStep,
   getMigrationHistory,
+  purgeAllDataEntryRecords,
   type MigrationStepResult,
 } from "./service";
 
@@ -72,6 +73,8 @@ export default function MigrationButtons() {
   const [results, setResults] = useState<StepResult[]>([]);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [showHistory, setShowHistory] = useState(false);
+  const [purging, setPurging] = useState(false);
+  const [purgeResult, setPurgeResult] = useState<string | null>(null);
 
   useEffect(() => {
     getMigrationHistory().then(setHistory).catch(() => {});
@@ -117,6 +120,27 @@ export default function MigrationButtons() {
     getMigrationHistory().then(setHistory).catch(() => {});
   }
 
+  async function purgeAll() {
+    if (purging) return;
+    setPurging(true);
+    setPurgeResult(null);
+    try {
+      const result = await purgeAllDataEntryRecords();
+      if (result.ok) {
+        const parts = Object.entries(result.tables)
+          .filter(([, count]) => count > 0)
+          .map(([table, count]) => `${table}: ${count}`);
+        setPurgeResult(parts.length > 0 ? parts.join(", ") : "No records found.");
+      } else {
+        setPurgeResult(`Error: ${result.error ?? "Unknown error"}`);
+      }
+    } catch (err) {
+      setPurgeResult(`Error: ${err instanceof Error ? err.message : String(err)}`);
+    } finally {
+      setPurging(false);
+    }
+  }
+
   const passed = results.filter((r) => r.ok).length;
   const failed = results.filter((r) => !r.ok).length;
   const lastRun = history.length > 0 ? history.filter((h) => h.run_at === history[0].run_at) : [];
@@ -129,11 +153,23 @@ export default function MigrationButtons() {
         <Button disabled={running} onClick={syncAll} className="text-base px-6">
           {running ? `Syncing: ${steps[currentStep]?.label}...` : "Sync All from prism-training"}
         </Button>
+        <Button
+          disabled={running || purging}
+          variant="destructive"
+          onClick={purgeAll}
+          className="text-base px-6"
+        >
+          {purging ? "Purging..." : "Purge All Data Entry Records"}
+        </Button>
         {running && <span className="text-sm text-slate-500">Step {currentStep + 1} of {steps.length}</span>}
         {history.length > 0 && !running && (
           <span className="text-xs text-slate-400">Last run: {lastPassed} passed{lastFailed > 0 ? `, ${lastFailed} failed` : ""}</span>
         )}
       </div>
+
+      {purgeResult ? (
+        <p className="text-sm text-muted-foreground">Purge: {purgeResult}</p>
+      ) : null}
 
       {results.length > 0 && (
         <div className="space-y-1">

@@ -9,14 +9,16 @@ import { countries, Country, SubRegion, subRegions } from "@/db/schema/country";
 import {
   DataEntryComment,
   dataEntries,
+  dataEntryLogs,
   DataEntryStatusId,
   generationRelevance,
   generationToggleRelevance,
   InputDefinition,
   inputDlDefMappings,
   inputDefinitions,
+  inputRelevance,
 } from "@/db/schema/dataEntry";
-import { KpiDefinition, kpiDefinitions } from "@/db/schema/kpi";
+import { KpiDefinition, kpi, kpiCalculationAttempts, kpiDefinitions } from "@/db/schema/kpi";
 import {
   ManagedList,
   ManagedListItem,
@@ -2095,21 +2097,6 @@ const normalizeOptionalFkId = (
   return validIds.has(value) ? value : null;
 };
 
-const getActivePeriodIds = (
-  periodEntries: EnergyResourcePeriodEntry[] | null | undefined,
-): Set<number> => {
-  const ids = new Set<number>();
-  if (!Array.isArray(periodEntries)) return ids;
-
-  for (const periodEntry of periodEntries) {
-    if (periodEntry?.is_active !== true) continue;
-    if (typeof periodEntry.report_period_id !== "number") continue;
-    ids.add(Math.trunc(periodEntry.report_period_id));
-  }
-
-  return ids;
-};
-
 const mapStatus = (row: SourceDataEntryRow): DataEntryStatusId => {
   if (row.data_not_available) return DataEntryStatusId.Not_Available;
   if ((row.value ?? "").trim().length > 0) return DataEntryStatusId.Entered;
@@ -2659,12 +2646,6 @@ export async function retrieveDataEntries(options?: {
   const targetEnergyResourceIds = new Set<number>(
     targetEnergyResources.map((r) => r.id),
   );
-  const targetEnergyResourceActivePeriodIds = new Map<number, Set<number>>(
-    targetEnergyResources.map((resource) => [
-      resource.id,
-      getActivePeriodIds(resource.periodEntries),
-    ]),
-  );
 
   const targetServiceAreas = await db
     .select({ id: serviceAreas.id })
@@ -2819,14 +2800,6 @@ export async function retrieveDataEntries(options?: {
           rawEnergyResourceId,
           targetEnergyResourceIds,
         );
-        const isEnergyResourceActiveForReportPeriod =
-          energyResourceId != null &&
-          targetEnergyResourceActivePeriodIds
-            .get(energyResourceId)
-            ?.has(reportPeriodId) === true;
-        const scopedEnergyResourceId = isEnergyResourceActiveForReportPeriod
-          ? energyResourceId
-          : null;
         const energyProviderId = normalizeOptionalFkId(
           rawEnergyProviderId,
           targetManagedListItemIds,
@@ -2848,7 +2821,7 @@ export async function retrieveDataEntries(options?: {
           reportPeriodId,
           inputDefId,
           serviceAreaId,
-          energyResourceId: scopedEnergyResourceId,
+          energyResourceId: energyResourceId,
           energyProviderId,
           energySourceId,
           customerTypeId,
@@ -2860,7 +2833,7 @@ export async function retrieveDataEntries(options?: {
           inputDefId,
           sourceTrainingDlDefId,
           serviceAreaId,
-          energyResourceId: scopedEnergyResourceId,
+          energyResourceId: energyResourceId,
           energyProviderId,
           energySourceId,
           customerTypeId,
@@ -2914,13 +2887,29 @@ export async function retrieveDataEntries(options?: {
             nullableKeyPart(ex.payment_mode_id),
           ].join("|");
           existingMap.set(key, ex.id);
+
+          if (ex.energy_resource_id != null) {
+            const nullErKey = [
+              ex.report_period_id,
+              ex.input_def_id,
+              nullableKeyPart(ex.service_area_id),
+              "null",
+              nullableKeyPart(ex.energy_provider_id),
+              nullableKeyPart(ex.energy_source_id),
+              nullableKeyPart(ex.customer_type_id),
+              nullableKeyPart(ex.payment_mode_id),
+            ].join("|");
+            if (!existingMap.has(nullErKey)) {
+              existingMap.set(nullErKey, ex.id);
+            }
+          }
         }
       }
 
       // Phase 3: Process each normalized row with pre-computed map
       for (const pr of preRows) {
         const { row, reportPeriodId, inputDefId } = pr;
-        const scopedEnergyResourceId = pr.energyResourceId;
+        const energyResourceId = pr.energyResourceId;
         const serviceAreaId = pr.serviceAreaId;
         const energyProviderId = pr.energyProviderId;
         const energySourceId = pr.energySourceId;
@@ -2937,7 +2926,7 @@ export async function retrieveDataEntries(options?: {
           report_period_id: reportPeriodId,
           input_def_id: inputDefId,
           service_area_id: serviceAreaId,
-          energy_resource_id: scopedEnergyResourceId,
+          energy_resource_id: energyResourceId,
           energy_provider_id: energyProviderId,
           energy_source_id: energySourceId,
           customer_type_id: customerTypeId,
@@ -2956,7 +2945,7 @@ export async function retrieveDataEntries(options?: {
           reportPeriodId,
           inputDefId,
           nullableKeyPart(serviceAreaId),
-          nullableKeyPart(scopedEnergyResourceId),
+          nullableKeyPart(energyResourceId),
           nullableKeyPart(energyProviderId),
           nullableKeyPart(energySourceId),
           nullableKeyPart(customerTypeId),
@@ -2985,9 +2974,9 @@ export async function retrieveDataEntries(options?: {
               serviceAreaId == null
                 ? isNull(dataEntries.service_area_id)
                 : eq(dataEntries.service_area_id, serviceAreaId),
-              scopedEnergyResourceId == null
+              energyResourceId == null
                 ? isNull(dataEntries.energy_resource_id)
-                : eq(dataEntries.energy_resource_id, scopedEnergyResourceId),
+                : eq(dataEntries.energy_resource_id, energyResourceId),
               energyProviderId == null
                 ? isNull(dataEntries.energy_provider_id)
                 : eq(dataEntries.energy_provider_id, energyProviderId),
@@ -3278,7 +3267,6 @@ export async function retrieveGenerationRelevance(options?: {
         } else {
           await db.insert(generationRelevance).values(payload);
           inserted += 1;
-          inserted += 1;
         }
       }
 
@@ -3310,8 +3298,7 @@ export async function retrieveTransmissionRelevance(options?: {
   batchSize?: number;
 }) {
   await assertDevMigrationAccess();
-  const inserted = 0;
-  const updated = 0;
+  let updated = 0;
   let cursor: number | null = null;
   let hasMore = true;
 
@@ -3441,26 +3428,9 @@ export async function retrieveTransmissionRelevance(options?: {
               updatedById: null,
             })
             .where(eq(dataEntries.id, existing.id));
+          updated += 1;
           continue;
         }
-
-        await db.insert(dataEntries).values({
-          report_period_id: reportPeriodId,
-          service_area_id: serviceAreaId,
-          input_def_id: inputDefId,
-          energy_resource_id: null,
-          energy_provider_id: null,
-          energy_source_id: null,
-          payment_mode_id: null,
-          customer_type_id: null,
-          value: null,
-          comments: null,
-          status_id: DataEntryStatusId.Entered,
-          is_relevant: row.is_relevant ?? true,
-          is_deleted: row.is_deleted ?? false,
-          updatedAt,
-          updatedById: null,
-        });
       }
 
       cursor = page.pagination.nextCursor;
@@ -3474,7 +3444,7 @@ export async function retrieveTransmissionRelevance(options?: {
   revalidatePath("/settings/relevance");
   revalidatePath("/data-entry");
 
-  return { ok: true, inserted, updated, total: inserted + updated };
+  return { ok: true, inserted: 0, updated, total: updated };
 }
 
 export async function retrieveTariffRelevance(options?: {
@@ -3483,8 +3453,7 @@ export async function retrieveTariffRelevance(options?: {
 }) {
   await assertDevMigrationAccess();
 
-  const inserted = 0;
-  const updated = 0;
+  let updated = 0;
   let cursor: number | null = null;
   let hasMore = true;
 
@@ -3625,26 +3594,9 @@ export async function retrieveTariffRelevance(options?: {
               updatedById: null,
             })
             .where(eq(dataEntries.id, existing.id));
+          updated += 1;
           continue;
         }
-
-        await db.insert(dataEntries).values({
-          report_period_id: reportPeriodId,
-          service_area_id: serviceAreaId,
-          input_def_id: inputDefId,
-          energy_resource_id: null,
-          energy_provider_id: null,
-          energy_source_id: null,
-          payment_mode_id: paymentModeId,
-          customer_type_id: customerTypeId,
-          value: null,
-          comments: null,
-          status_id: DataEntryStatusId.Entered,
-          is_relevant: row.is_relevant ?? true,
-          is_deleted: row.is_deleted ?? false,
-          updatedAt,
-          updatedById: null,
-        });
       }
 
       cursor = page.pagination.nextCursor;
@@ -3667,7 +3619,7 @@ export async function retrieveTariffRelevance(options?: {
   revalidatePath("/settings/relevance");
   revalidatePath("/data-entry");
 
-  return { ok: true, inserted, updated, total: inserted + updated };
+  return { ok: true, inserted: 0, updated, total: updated };
 }
 
 const toOptionalNumber = (
@@ -4035,12 +3987,6 @@ export async function compareDataEntries(
   const targetEnergyResourceIds = new Set<number>(
     targetEnergyResources.map((r) => r.id),
   );
-  const targetEnergyResourceActivePeriodIds = new Map<number, Set<number>>(
-    targetEnergyResources.map((resource) => [
-      resource.id,
-      getActivePeriodIds(resource.periodEntries),
-    ]),
-  );
 
   const targetManagedListItemIds = new Set<number>(
     (await db.select({ id: managedListItems.id }).from(managedListItems)).map(
@@ -4130,14 +4076,6 @@ export async function compareDataEntries(
       rawEnergyResourceId,
       targetEnergyResourceIds,
     );
-    const isEnergyResourceActiveForReportPeriod =
-      energyResourceId != null &&
-      targetEnergyResourceActivePeriodIds
-        .get(energyResourceId)
-        ?.has(normalizedReportPeriodId) === true;
-    const scopedEnergyResourceId = isEnergyResourceActiveForReportPeriod
-      ? energyResourceId
-      : null;
     const energyProviderId = normalizeOptionalFkId(
       rawEnergyProviderId,
       targetManagedListItemIds,
@@ -4159,7 +4097,7 @@ export async function compareDataEntries(
       report_period_id: normalizedReportPeriodId,
       input_def_id: normalizedInputDefId,
       service_area_id: serviceAreaId,
-      energy_resource_id: scopedEnergyResourceId,
+      energy_resource_id: energyResourceId,
       energy_provider_id: energyProviderId,
       energy_source_id: energySourceId,
       customer_type_id: customerTypeId,
@@ -4814,4 +4752,51 @@ async function queryV2Breakdown(
     subcategoryName: r.subcategoryName,
     entryCount: Number(r.entryCount),
   }));
+}
+
+export async function purgeAllDataEntryRecords(): Promise<{
+  ok: boolean;
+  tables: Record<string, number>;
+  error?: string;
+}> {
+  await assertDevMigrationAccess();
+
+  const counts: Record<string, number> = {};
+
+  try {
+    const r1 = await db.delete(kpiCalculationAttempts);
+    counts["kpi_calculation_attempts"] = r1.rowCount ?? 0;
+
+    const r2 = await db.delete(dataEntryLogs);
+    counts["data_entry_logs"] = r2.rowCount ?? 0;
+
+    const r3 = await db.delete(kpi);
+    counts["kpi"] = r3.rowCount ?? 0;
+
+    const r4 = await db.delete(dataEntries);
+    counts["data_entries"] = r4.rowCount ?? 0;
+
+    const r5 = await db.delete(generationRelevance);
+    counts["generation_relevance"] = r5.rowCount ?? 0;
+
+    const r6 = await db.delete(generationToggleRelevance);
+    counts["generation_toggle_relevance"] = r6.rowCount ?? 0;
+
+    const r7 = await db.delete(inputRelevance);
+    counts["input_relevance"] = r7.rowCount ?? 0;
+
+    const r8 = await db.delete(migrationLogs);
+    counts["migration_logs"] = r8.rowCount ?? 0;
+
+    revalidatePath("/migration");
+    revalidatePath("/data-entry");
+    revalidatePath("/settings/relevance");
+
+    return { ok: true, tables: counts };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : String(error);
+    console.error("[purge] Failed to purge data entry records:", message);
+    return { ok: false, tables: counts, error: message };
+  }
 }
