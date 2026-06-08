@@ -17,9 +17,11 @@ import {
   retrieveUtilityContextData,
   retrieveUsers,
   retrieveUtilityData,
+  retrieveInputDlDefMappings,
   logMigrationStep,
   getMigrationHistory,
   purgeAllDataEntryRecords,
+  deduplicateDataEntries,
   type MigrationStepResult,
 } from "./service";
 
@@ -47,8 +49,9 @@ const steps: Step[] = [
   { label: "Report Periods", fn: retrieveReportPeriods as () => Promise<MigrationStepResult> },
   { label: "Energy Resources", fn: retrieveEnergyResources as () => Promise<MigrationStepResult> },
   { label: "Energy Resource Periods", fn: backfillEnergyResourcePeriods as () => Promise<MigrationStepResult> },
-  { label: "Country Context", fn: retrieveCountryContextData as () => Promise<MigrationStepResult> },
-  { label: "Utility Context", fn: retrieveUtilityContextData as () => Promise<MigrationStepResult> },
+  { label: "Input DL Def Mappings", fn: retrieveInputDlDefMappings, heavy: true },
+  { label: "Country Context", fn: retrieveCountryContextData as () => Promise<MigrationStepResult>, heavy: true },
+  { label: "Utility Context", fn: retrieveUtilityContextData as () => Promise<MigrationStepResult>, heavy: true },
   { label: "Generation Relevance", fn: retrieveGenerationRelevance as () => Promise<MigrationStepResult>, heavy: true },
   { label: "Transmission Relevance", fn: retrieveTransmissionRelevance as () => Promise<MigrationStepResult>, heavy: true },
   { label: "Tariff Relevance", fn: retrieveTariffRelevance as () => Promise<MigrationStepResult>, heavy: true },
@@ -75,6 +78,8 @@ export default function MigrationButtons() {
   const [showHistory, setShowHistory] = useState(false);
   const [purging, setPurging] = useState(false);
   const [purgeResult, setPurgeResult] = useState<string | null>(null);
+  const [deduping, setDeduping] = useState(false);
+  const [dedupResult, setDedupResult] = useState<string | null>(null);
 
   useEffect(() => {
     getMigrationHistory().then(setHistory).catch(() => {});
@@ -141,6 +146,30 @@ export default function MigrationButtons() {
     }
   }
 
+  async function dedup() {
+    if (deduping) return;
+    setDeduping(true);
+    setDedupResult(null);
+    try {
+      const result = await deduplicateDataEntries();
+      if (result.ok) {
+        setDedupResult(
+          result.deleted > 0
+            ? `${result.deleted} duplicate rows removed.`
+            : "No duplicates found.",
+        );
+      } else {
+        setDedupResult(`Error: ${result.error ?? "Unknown error"}`);
+      }
+    } catch (err) {
+      setDedupResult(
+        `Error: ${err instanceof Error ? err.message : String(err)}`,
+      );
+    } finally {
+      setDeduping(false);
+    }
+  }
+
   const passed = results.filter((r) => r.ok).length;
   const failed = results.filter((r) => !r.ok).length;
   const lastRun = history.length > 0 ? history.filter((h) => h.run_at === history[0].run_at) : [];
@@ -161,6 +190,14 @@ export default function MigrationButtons() {
         >
           {purging ? "Purging..." : "Purge All Data Entry Records"}
         </Button>
+        <Button
+          disabled={running || deduping}
+          variant="outline"
+          onClick={dedup}
+          className="text-base px-6"
+        >
+          {deduping ? "Deduping..." : "Deduplicate Data Entries"}
+        </Button>
         {running && <span className="text-sm text-slate-500">Step {currentStep + 1} of {steps.length}</span>}
         {history.length > 0 && !running && (
           <span className="text-xs text-slate-400">Last run: {lastPassed} passed{lastFailed > 0 ? `, ${lastFailed} failed` : ""}</span>
@@ -169,6 +206,9 @@ export default function MigrationButtons() {
 
       {purgeResult ? (
         <p className="text-sm text-muted-foreground">Purge: {purgeResult}</p>
+      ) : null}
+      {dedupResult ? (
+        <p className="text-sm text-muted-foreground">Dedup: {dedupResult}</p>
       ) : null}
 
       {results.length > 0 && (

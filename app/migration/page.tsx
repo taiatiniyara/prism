@@ -1,4 +1,5 @@
 import { connection } from "next/server";
+import { Suspense } from "react";
 import { getCurrentUser } from "@/lib/user.service";
 
 import MigrationButtons from "./buttons";
@@ -32,13 +33,15 @@ export default async function MigrationPage({
   return (
     <div>
       <MigrationButtons />
-      <DataEntryBreakdownPanel
-        options={breakdownOptions}
-        initialUtility={params.utility as string | undefined}
-        initialReportPeriod={params.reportPeriod as string | undefined}
-        initialCategory={params.category as string | undefined}
-        initialSubcategory={params.subcategory as string | undefined}
-      />
+      <Suspense fallback={<div className="text-sm text-muted-foreground">Loading breakdown...</div>}>
+        <DataEntryBreakdownPanel
+          options={breakdownOptions}
+          initialUtility={params.utility as string | undefined}
+          initialReportPeriod={params.reportPeriod as string | undefined}
+          initialCategory={params.category as string | undefined}
+          initialSubcategory={params.subcategory as string | undefined}
+        />
+      </Suspense>
       <DataEntryComparisonPanel options={comparisonOptions} />
     </div>
   );

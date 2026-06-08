@@ -4,6 +4,32 @@ import crypto from "node:crypto";
 import http from "node:http";
 import https from "node:https";
 import { db } from "@/db/connection";
+
+function stringSimilarity(a: string, b: string): number {
+  const s1 = a.toLowerCase().replace(/[^a-z0-9]/g, "");
+  const s2 = b.toLowerCase().replace(/[^a-z0-9]/g, "");
+  if (!s1 || !s2) return 0;
+  if (s1 === s2) return 1;
+
+  const m = s1.length;
+  const n = s2.length;
+  const dp: number[] = Array.from({ length: n + 1 }, (_, i) => i);
+
+  for (let i = 1; i <= m; i++) {
+    let prev = dp[0];
+    dp[0] = i;
+    for (let j = 1; j <= n; j++) {
+      const temp = dp[j];
+      dp[j] = s1[i - 1] === s2[j - 1]
+        ? prev
+        : 1 + Math.min(prev, dp[j], dp[j - 1]);
+      prev = temp;
+    }
+  }
+
+  const maxLen = Math.max(m, n);
+  return 1 - dp[n] / maxLen;
+}
 import { Role, roles, type UserStatus, user } from "@/db/schema/auth-schema";
 import { countries, Country, SubRegion, subRegions } from "@/db/schema/country";
 import {
@@ -16,7 +42,6 @@ import {
   InputDefinition,
   inputDlDefMappings,
   inputDefinitions,
-  inputRelevance,
 } from "@/db/schema/dataEntry";
 import { KpiDefinition, kpi, kpiCalculationAttempts, kpiDefinitions } from "@/db/schema/kpi";
 import {
@@ -46,6 +71,7 @@ import {
   eq,
   inArray,
   isNull,
+  sql,
 } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { migrationLogs } from "@/db/schema/migration-log";
@@ -477,9 +503,16 @@ const fetchMigrationEndpoint = async (path: string) => {
     ),
   ];
 
+  const maxFailures = 4;
+  const shownFailures = allFailures.slice(0, maxFailures);
+  const truncated =
+    allFailures.length > maxFailures
+      ? ` (and ${allFailures.length - maxFailures} more)`
+      : "";
+
   const errorMsg = [
     `Unable to reach migration endpoint for ${path}.`,
-    `Tried: ${allFailures.join(" | ")}`,
+    `Tried ${allFailures.length} URL(s)${truncated}: ${shownFailures.join(" | ")}`,
     "Set PRISM_TRAINING_MIGRATION_URL or PRISM_TRAINING_API_BASE_URL in prism/.env to the prism-training API host.",
   ].join(" ");
   throw new Error(errorMsg);
@@ -1407,6 +1440,172 @@ export async function retrieveInputDefinitions() {
   return { ok: true, inserted, updated, total: inserted + updated };
 }
 
+export async function retrieveInputDlDefMappings(): Promise<MigrationStepResult> {
+  await assertDevMigrationAccess();
+  let inserted = 0;
+  const updated = 0;
+
+  try {
+    // Get all prism input definitions
+    const prismDefs = await db
+      .select({
+        id: inputDefinitions.id,
+        name: inputDefinitions.name,
+        variableName: inputDefinitions.variable_name,
+      })
+      .from(inputDefinitions);
+
+    const byVarName = new Map<string, number>();
+    const byName = new Map<string, number>();
+    for (const d of prismDefs) {
+      const vn = (d.variableName ?? "").trim().toLowerCase();
+      const nm = (d.name ?? "").trim().toLowerCase();
+      if (vn && !byVarName.has(vn)) byVarName.set(vn, d.id);
+      if (nm && !byName.has(nm)) byName.set(nm, d.id);
+    }
+
+    // Get existing mappings
+    const existingMappings = await db
+      .select({ trainingDlDefId: inputDlDefMappings.training_dl_def_id })
+      .from(inputDlDefMappings);
+    const existingTrainingIds = new Set(
+      existingMappings.map((m) => m.trainingDlDefId),
+    );
+
+    const dlDefs: Array<{ id: number; name: string; variableName: string | null }> = [];
+
+    // Try the dlDef endpoint — parse text to handle BigInt values
+    try {
+      const call = await fetchLegacyMigEndpoint("/dlDef");
+      const text = await call.text();
+      // Parse manually, converting BigInt-like values
+      const rows = JSON.parse(text, (_, v) =>
+        typeof v === "bigint" ? Number(v) : v,
+      ) as Array<Array<unknown>>;
+
+      if (Array.isArray(rows)) {
+        for (const row of rows) {
+          if (!Array.isArray(row)) continue;
+          const id = Number(row[0]);
+          const name = String(row[1] ?? "");
+          const varName = typeof row[2] === "string" ? String(row[2]) : null;
+          if (!id || !name) continue;
+          dlDefs.push({ id, name, variableName: varName });
+        }
+      }
+    } catch {
+      console.warn(
+        "[mapping] dlDef endpoint unavailable, trying dataEntry source IDs",
+      );
+    }
+
+    // If dlDef didn't work, collect training IDs from the data entry migration endpoint
+    if (dlDefs.length === 0) {
+      let cursor: number | null = null;
+      let hasMore = true;
+      const seenIds = new Set<number>();
+
+      while (hasMore) {
+        const params = new URLSearchParams();
+        params.set("limit", "2000");
+        if (cursor != null) params.set("cursor", String(cursor));
+
+        try {
+          const call = await fetchMigrationEndpoint(
+            `/dataEntry?${params.toString()}`,
+          );
+          const page = (await call.json()) as {
+            dataEntry?: Array<{ input_def_id?: number; input_def_name?: string; input_def_variable_name?: string }>;
+          };
+          const entries = page.dataEntry ?? [];
+          for (const e of entries) {
+            const id = e.input_def_id;
+            if (id == null || seenIds.has(id)) continue;
+            seenIds.add(id);
+            dlDefs.push({
+              id,
+              name: e.input_def_name ?? "",
+              variableName: e.input_def_variable_name ?? null,
+            });
+          }
+          cursor = (page as { pagination?: { nextCursor?: number; hasMore?: boolean } }).pagination?.nextCursor ?? null;
+          hasMore = cursor != null && entries.length > 0;
+        } catch {
+          hasMore = false;
+        }
+      }
+    }
+
+    // Match and insert mappings
+    const SIMILARITY_THRESHOLD = 0.8;
+
+    for (const dl of dlDefs) {
+      if (existingTrainingIds.has(dl.id)) continue;
+
+      const vn = (dl.variableName ?? "").trim().toLowerCase();
+      const nm = dl.name.trim().toLowerCase();
+
+      let prismId: number | null = null;
+      let confidence = "low";
+      const reasons: string[] = [];
+
+      if (vn && byVarName.has(vn)) {
+        prismId = byVarName.get(vn)!;
+        confidence = "high";
+        reasons.push("variable_name exact match");
+      } else if (nm && byName.has(nm)) {
+        prismId = byName.get(nm)!;
+        confidence = "medium";
+        reasons.push("name exact match");
+      } else {
+        // Fuzzy match by name
+        let bestScore = 0;
+        let bestId: number | null = null;
+        for (const d of prismDefs) {
+          const score = stringSimilarity(dl.name, d.name);
+          if (score > bestScore && score >= SIMILARITY_THRESHOLD) {
+            bestScore = score;
+            bestId = d.id;
+          }
+        }
+        if (bestId != null) {
+          prismId = bestId;
+          confidence = bestScore >= 0.95 ? "medium" : "low";
+          reasons.push(`fuzzy name match (${(bestScore * 100).toFixed(0)}%)`);
+        }
+      }
+
+      if (prismId == null) {
+        continue;
+      }
+
+      existingTrainingIds.add(dl.id);
+
+      await db.insert(inputDlDefMappings).values({
+        input_def_id: prismId,
+        training_dl_def_id: dl.id,
+        training_dl_legacy_id: String(dl.id),
+        training_source_id: null,
+        training_dl_name: dl.name,
+        training_variable_name: dl.variableName,
+        score: Math.round((confidence === "high" ? 100 : confidence === "medium" ? 70 : 50)),
+        confidence,
+        reasons,
+        is_auto: true,
+        is_approved: true,
+        approved_at: new Date(),
+      });
+      inserted++;
+    }
+  } catch (error: unknown) {
+    logMigrationError(error);
+    return { ok: false, inserted, updated, total: inserted + updated };
+  }
+
+  revalidatePath("/migration");
+  return { ok: true, inserted, updated, total: inserted + updated };
+}
+
 export async function retrieveReportPeriods() {
   await assertDevMigrationAccess();
   let inserted = 0;
@@ -1988,6 +2187,7 @@ export type DataEntryBreakdownRow = {
   subcategoryName: string;
   v1Count: number;
   v2Count: number;
+  expectedCount: number;
   reportPeriodId: number | null;
   reportPeriodLabel: string;
 };
@@ -1995,6 +2195,8 @@ export type DataEntryBreakdownRow = {
 export type DataEntryBreakdownFilterOptions = {
   utilities: Array<{ id: number; name: string }>;
   reportPeriods: Array<{ id: number; utilityId: number; label: string }>;
+  reportTypes: Array<{ id: number; name: string }>;
+  years: number[];
   categories: Array<{ id: number; name: string }>;
   subcategories: Array<{ id: number; name: string }>;
   subcategoryIdsByCategoryId: Record<number, number[]>;
@@ -2002,7 +2204,22 @@ export type DataEntryBreakdownFilterOptions = {
 
 export type DataEntryBreakdownResult = {
   rows: DataEntryBreakdownRow[];
-  v1Error: string | null;
+  inputSummary: {
+    totalInputs: number;
+    operational: number;
+    tariffStructure: number;
+    generation: number;
+    other: number;
+    saCount: number;
+    genCount: number;
+    reportPeriodCount: number;
+    utilities: Array<{
+      name: string;
+      reportPeriods: number;
+      sas: number;
+      gens: number;
+    }>;
+  } | null;
 };
 
 const normalizeSourceDataEntryPage = (
@@ -2557,6 +2774,8 @@ export async function retrieveDataEntries(options?: {
     sourceInputDefId: number | null;
   }> = [];
 
+  const fuzzyMatchCache = new Map<string, number | null>();
+
   const recordSkippedSample = (
     row: SourceDataEntryRow,
     reason: string,
@@ -2662,6 +2881,8 @@ export async function retrieveDataEntries(options?: {
   );
 
   try {
+    const loopStartedAt = Date.now();
+    const LOOP_MAX_MS = 120_000;
     while (hasMore) {
       const params = new URLSearchParams();
       params.set("includeDeleted", "1");
@@ -2748,6 +2969,29 @@ export async function retrieveDataEntries(options?: {
             const resolved = targetInputDefByName.get(byName);
             if (resolved != null) {
               inputDefId = resolved;
+            }
+          }
+
+          if (inputDefId == null && row.input_def_name) {
+            const rawName = row.input_def_name.trim().toLowerCase();
+            const cached = fuzzyMatchCache.get(rawName);
+            if (cached !== undefined) {
+              inputDefId = cached;
+            } else {
+              let bestScore = 0;
+              let bestId: number | null = null;
+              for (const def of targetInputDefs) {
+                const score = stringSimilarity(
+                  rawName,
+                  (def.name ?? "").trim().toLowerCase(),
+                );
+                if (score > bestScore && score >= 0.8) {
+                  bestScore = score;
+                  bestId = def.id;
+                }
+              }
+              fuzzyMatchCache.set(rawName, bestId);
+              inputDefId = bestId;
             }
           }
         }
@@ -3006,6 +3250,15 @@ export async function retrieveDataEntries(options?: {
 
       cursor = page.pagination.nextCursor;
       hasMore = page.pagination.hasMore === true && cursor != null;
+
+      if (hasMore && Date.now() - loopStartedAt > LOOP_MAX_MS) {
+        console.warn(
+          `[migration] retrieveDataEntries time budget exhausted after ${inserted + updated} ops ` +
+            `(inserted=${inserted}, updated=${updated}), ` +
+            `deferring remaining pages (next cursor: ${cursor}). Re-run to continue.`,
+        );
+        break;
+      }
     }
 
     utilityBackfillResult =
@@ -3506,6 +3759,8 @@ export async function retrieveTariffRelevance(options?: {
   );
 
   try {
+    const loopStartedAt = Date.now();
+    const LOOP_MAX_MS = 60_000;
     while (hasMore) {
       const params = new URLSearchParams();
       params.set("limit", String(batchSize));
@@ -3601,6 +3856,15 @@ export async function retrieveTariffRelevance(options?: {
 
       cursor = page.pagination.nextCursor;
       hasMore = page.pagination.hasMore === true && cursor != null;
+
+      if (hasMore && Date.now() - loopStartedAt > LOOP_MAX_MS) {
+        console.warn(
+          `[migration] retrieveTariffRelevance time budget exhausted after ${updated} ops ` +
+            `(updated=${updated}), ` +
+            `deferring remaining pages (next cursor: ${cursor}). Re-run to continue.`,
+        );
+        break;
+      }
     }
   } catch (error: unknown) {
     console.error(
@@ -4463,6 +4727,8 @@ export async function getDataEntryBreakdownFilterOptions(): Promise<DataEntryBre
       .map((u) => ({ id: u.id, name: u.name }))
       .sort((a, b) => a.name.localeCompare(b.name)),
     reportPeriods: await fetchReportPeriodOptionsWithUtility(),
+    reportTypes: await fetchReportTypeOptions(),
+    years: await fetchYearOptions(),
     categories: categoryItems
       .map((c) => ({ id: c.id, name: c.name }))
       .sort((a, b) => a.name.localeCompare(b.name)),
@@ -4471,6 +4737,152 @@ export async function getDataEntryBreakdownFilterOptions(): Promise<DataEntryBre
       .sort((a, b) => a.name.localeCompare(b.name)),
     subcategoryIdsByCategoryId,
   };
+}
+
+async function fetchYearOptions(): Promise<number[]> {
+  const rows = await db.execute(sql`
+    SELECT DISTINCT EXTRACT(YEAR FROM report_date)::int AS year
+    FROM report_periods
+    ORDER BY year DESC
+  `);
+  return rows.rows.map((r) => Number(r.year));
+}
+
+type V1BreakdownRow = {
+  utilityName: string;
+  categoryName: string;
+  subcategoryName: string;
+  entryCount: number;
+};
+
+export type InputBreakdownRow = {
+  inputName: string;
+  categoryName: string;
+  subcategoryName: string;
+  v2Count: number;
+};
+
+export async function getInputBreakdown(
+  utilityId: number,
+  reportPeriodId: number | null,
+  reportTypeId: number | null,
+  year: number | null,
+  categoryId: number,
+  subcategoryId: number,
+  utilityName?: string,
+): Promise<{ rows: InputBreakdownRow[]; totalV2: number; utilityId: number | null }> {
+  await assertDevMigrationAccess();
+
+  const catAlias = aliasedTable(managedListItems, "cat");
+  const subAlias = aliasedTable(managedListItems, "sub");
+
+  // Resolve utility ID from name if ID is missing
+  let resolvedUtilityId = utilityId > 0 ? utilityId : null;
+  if (!resolvedUtilityId && utilityName) {
+    const [org] = await db
+      .select({ id: organisations.id })
+      .from(organisations)
+      .where(eq(organisations.name, utilityName))
+      .limit(1);
+    if (org) resolvedUtilityId = org.id;
+  }
+
+  const defConditions = [eq(inputDefinitions.is_active, true)];
+  if (categoryId != null) defConditions.push(eq(inputDefinitions.category_id, categoryId));
+  if (subcategoryId != null) defConditions.push(eq(inputDefinitions.subcategory_id, subcategoryId));
+
+  const defs = await db
+    .select({
+      id: inputDefinitions.id,
+      name: inputDefinitions.name,
+      categoryName: catAlias.name,
+      subcategoryName: subAlias.name,
+    })
+    .from(inputDefinitions)
+    .innerJoin(catAlias, eq(inputDefinitions.category_id, catAlias.id))
+    .innerJoin(subAlias, eq(inputDefinitions.subcategory_id, subAlias.id))
+    .where(and(...defConditions))
+    .orderBy(inputDefinitions.name);
+
+  const rpConditions: Array<ReturnType<typeof eq> | ReturnType<typeof sql>> = [];
+  if (reportPeriodId != null) rpConditions.push(eq(reportPeriods.id, reportPeriodId));
+  if (resolvedUtilityId != null) rpConditions.push(eq(reportPeriods.utility_id, resolvedUtilityId));
+  if (reportTypeId != null) rpConditions.push(eq(reportPeriods.report_type_id, reportTypeId));
+  if (year != null) rpConditions.push(sql`EXTRACT(YEAR FROM ${reportPeriods.report_date}) = ${year}`);
+
+  const rps = await db
+    .select({ id: reportPeriods.id })
+    .from(reportPeriods)
+    .innerJoin(organisations, eq(reportPeriods.utility_id, organisations.id))
+    .where(and(eq(organisations.is_utility, true), ...(rpConditions.length > 0 ? rpConditions : [undefined])));
+  const rpIds = rps.map((r) => r.id);
+
+  if (rpIds.length === 0) return { rows: [], totalV2: 0, utilityId: resolvedUtilityId };
+
+  const v2Rows = await db
+    .select({
+      inputDefId: dataEntries.input_def_id,
+      cnt: count(dataEntries.id),
+    })
+    .from(dataEntries)
+    .innerJoin(inputDefinitions, eq(dataEntries.input_def_id, inputDefinitions.id))
+    .where(
+      and(
+        inArray(dataEntries.report_period_id, rpIds),
+        eq(dataEntries.is_deleted, false),
+        categoryId > 0 ? eq(inputDefinitions.category_id, categoryId) : undefined,
+        subcategoryId > 0 ? eq(inputDefinitions.subcategory_id, subcategoryId) : undefined,
+      ),
+    )
+    .groupBy(dataEntries.input_def_id);
+
+  const v2ByInput = new Map<number, number>();
+  let totalV2 = 0;
+  for (const r of v2Rows) {
+    const c = Number(r.cnt);
+    v2ByInput.set(r.inputDefId, c);
+    totalV2 += c;
+  }
+
+  const rows: InputBreakdownRow[] = defs.map((def) => ({
+    inputName: def.name,
+    categoryName: def.categoryName ?? "",
+    subcategoryName: def.subcategoryName ?? "",
+    v2Count: v2ByInput.get(def.id) ?? 0,
+  }));
+
+  return { rows, totalV2, utilityId: resolvedUtilityId };
+}
+
+async function fetchV1Breakdown(): Promise<{ rows: V1BreakdownRow[] }> {
+  try {
+    const response = await fetchMigrationEndpoint("/breakdown");
+    const data = await response.json();
+    const rows = (data as { rows?: V1BreakdownRow[] })?.rows;
+    if (!Array.isArray(rows)) return { rows: [] };
+    return { rows };
+  } catch {
+    return { rows: [] };
+  }
+}
+
+async function fetchReportTypeOptions(): Promise<
+  Array<{ id: number; name: string }>
+> {
+  const rows = await db
+    .selectDistinct({ id: reportPeriods.report_type_id })
+    .from(reportPeriods);
+
+  const ids = rows.map((r) => r.id);
+  if (ids.length === 0) return [];
+
+  const items = await db
+    .select({ id: managedListItems.id, name: managedListItems.name })
+    .from(managedListItems)
+    .where(inArray(managedListItems.id, ids))
+    .orderBy(managedListItems.name);
+
+  return items.map((i) => ({ id: i.id, name: i.name }));
 }
 
 async function fetchReportPeriodOptionsWithUtility(): Promise<
@@ -4500,18 +4912,12 @@ async function fetchReportPeriodOptionsWithUtility(): Promise<
 export async function getDataEntryBreakdown(
   utilityId: number | null,
   reportPeriodId: number | null,
+  reportTypeId: number | null,
+  year: number | null,
   categoryId: number | null,
   subcategoryId: number | null,
 ): Promise<DataEntryBreakdownResult> {
   await assertDevMigrationAccess();
-
-  const [v1Result, v2Rows, v1FilterNames] = await Promise.all([
-    fetchV1Breakdown(),
-    queryV2Breakdown(utilityId, reportPeriodId, categoryId, subcategoryId),
-    resolveBreakdownFilterNames(utilityId, categoryId, subcategoryId),
-  ]);
-
-  const { rows: v1Rows, error: v1Error } = v1Result;
 
   let resolvedReportPeriodLabel = "";
   if (reportPeriodId != null) {
@@ -4535,62 +4941,464 @@ export async function getDataEntryBreakdown(
     }
   }
 
+  // 1. Identify managed list item IDs for the special categories/subcategories
+  //    by finding which ones are actually referenced from input_definitions
+  const catAlias = aliasedTable(managedListItems, "cat");
+  const subAlias = aliasedTable(managedListItems, "sub");
+
+  const catLookup = await db
+    .selectDistinct({
+      id: inputDefinitions.category_id,
+      name: catAlias.name,
+    })
+    .from(inputDefinitions)
+    .innerJoin(catAlias, eq(inputDefinitions.category_id, catAlias.id))
+    .where(
+      sql`LOWER(${catAlias.name}) IN ('operational', 'tariff structure', 'generation', 'country & utility context', 'hr & safety', 'governance', 'financial')`,
+    );
+
+  const subLookup = await db
+    .selectDistinct({
+      id: inputDefinitions.subcategory_id,
+      name: subAlias.name,
+    })
+    .from(inputDefinitions)
+    .innerJoin(subAlias, eq(inputDefinitions.subcategory_id, subAlias.id))
+    .where(
+      sql`LOWER(${subAlias.name}) IN ('operational', 'tariff structure', 'generation', 'country context', 'utility context')`,
+    );
+
+  let operationalCatId: number | null = null;
+  let tariffStructureSubId: number | null = null;
+  let generationSubId: number | null = null;
+  let countryUtilCatId: number | null = null;
+  let countryContextSubId: number | null = null;
+  let utilityContextSubId: number | null = null;
+  let hrSafetyCatId: number | null = null;
+  let governanceCatId: number | null = null;
+  let financialCatId: number | null = null;
+
+  for (const item of catLookup) {
+    const n = item.name.toLowerCase();
+    if (n === "operational" && operationalCatId == null) operationalCatId = item.id;
+    if (n === "country & utility context" && countryUtilCatId == null)
+      countryUtilCatId = item.id;
+    if (n === "hr & safety" && hrSafetyCatId == null) hrSafetyCatId = item.id;
+    if (n === "governance" && governanceCatId == null) governanceCatId = item.id;
+    if (n === "financial" && financialCatId == null) financialCatId = item.id;
+  }
+  for (const item of subLookup) {
+    const n = item.name.toLowerCase();
+    if (n === "tariff structure" && tariffStructureSubId == null)
+      tariffStructureSubId = item.id;
+    if (n === "generation" && generationSubId == null)
+      generationSubId = item.id;
+    if (n === "country context" && countryContextSubId == null)
+      countryContextSubId = item.id;
+    if (n === "utility context" && utilityContextSubId == null)
+      utilityContextSubId = item.id;
+  }
+
+  // 2. Get all relevant input definitions
+  const inputDefConditions = [eq(inputDefinitions.is_active, true)];
+  if (categoryId != null)
+    inputDefConditions.push(eq(inputDefinitions.category_id, categoryId));
+  if (subcategoryId != null)
+    inputDefConditions.push(eq(inputDefinitions.subcategory_id, subcategoryId));
+
+  const allInputDefs = await db
+    .select({
+      id: inputDefinitions.id,
+      categoryId: inputDefinitions.category_id,
+      categoryName: catAlias.name,
+      subcategoryId: inputDefinitions.subcategory_id,
+      subcategoryName: subAlias.name,
+    })
+    .from(inputDefinitions)
+    .innerJoin(catAlias, eq(inputDefinitions.category_id, catAlias.id))
+    .innerJoin(subAlias, eq(inputDefinitions.subcategory_id, subAlias.id))
+    .where(and(...inputDefConditions));
+
+  // 3. Get relevant report periods with utility info
+  const rpConditions = [];
+  if (reportPeriodId != null) {
+    rpConditions.push(eq(reportPeriods.id, reportPeriodId));
+  }
+  if (utilityId != null) {
+    rpConditions.push(eq(reportPeriods.utility_id, utilityId));
+  }
+  if (reportTypeId != null) {
+    rpConditions.push(eq(reportPeriods.report_type_id, reportTypeId));
+  }
+  if (year != null) {
+    rpConditions.push(
+      sql`EXTRACT(YEAR FROM ${reportPeriods.report_date}) = ${year}`,
+    );
+  }
+
+  const relevantPeriods = await db
+    .select({
+      id: reportPeriods.id,
+      utilityId: reportPeriods.utility_id,
+      utilityName: organisations.name,
+    })
+    .from(reportPeriods)
+    .innerJoin(organisations, eq(reportPeriods.utility_id, organisations.id))
+    .where(
+      and(eq(organisations.is_utility, true), ...(rpConditions.length > 0 ? rpConditions : [undefined])),
+    );
+
+  // Gather unique utility IDs
+  const utilityIds = [...new Set(relevantPeriods.map((p) => p.utilityId))];
+  const rpIds = relevantPeriods.map((p) => p.id);
+
+  // 4. Count distinct (input, SA) and (input, gen) pairs per utility
+  //    These represent the actual cardinality of data per reporting period
+  const opTariffPairByUtility = new Map<number, number>();
+  const hrSafetyPairByUtility = new Map<number, number>();
+  const governancePairByUtility = new Map<number, number>();
+  const financialPairByUtility = new Map<number, number>();
+  const ctxPairByUtility = new Map<number, number>();
+  const genPairByUtility = new Map<number, number>();
+
+  if (utilityIds.length > 0 && rpIds.length > 0) {
+    // Distinct (input, SA) pairs for Operational/Tariff
+    const opTariffRows = await db
+      .selectDistinct({
+        utilityId: reportPeriods.utility_id,
+        inputId: dataEntries.input_def_id,
+        saId: dataEntries.service_area_id,
+      })
+      .from(dataEntries)
+      .innerJoin(reportPeriods, eq(dataEntries.report_period_id, reportPeriods.id))
+      .innerJoin(inputDefinitions, eq(dataEntries.input_def_id, inputDefinitions.id))
+      .where(
+        and(
+          inArray(reportPeriods.utility_id, utilityIds),
+          inArray(dataEntries.report_period_id, rpIds),
+          eq(dataEntries.is_deleted, false),
+          sql`${dataEntries.service_area_id} IS NOT NULL`,
+          sql`(
+            ${inputDefinitions.category_id} = ${operationalCatId ?? -1}
+            OR ${inputDefinitions.subcategory_id} = ${tariffStructureSubId ?? -1}
+            OR ${inputDefinitions.category_id} = ${hrSafetyCatId ?? -1}
+            OR ${inputDefinitions.category_id} = ${governanceCatId ?? -1}
+            OR ${inputDefinitions.category_id} = ${financialCatId ?? -1}
+          )`,
+        ),
+      );
+    for (const r of opTariffRows) {
+      opTariffPairByUtility.set(r.utilityId, (opTariffPairByUtility.get(r.utilityId) ?? 0) + 1);
+    }
+
+    // Distinct (input, SA) pairs for HR & Safety
+    if (hrSafetyCatId != null) {
+      const rows = await db
+        .selectDistinct({ utilityId: reportPeriods.utility_id, inputId: dataEntries.input_def_id, saId: dataEntries.service_area_id })
+        .from(dataEntries)
+        .innerJoin(reportPeriods, eq(dataEntries.report_period_id, reportPeriods.id))
+        .innerJoin(inputDefinitions, eq(dataEntries.input_def_id, inputDefinitions.id))
+        .where(and(inArray(reportPeriods.utility_id, utilityIds), inArray(dataEntries.report_period_id, rpIds), eq(dataEntries.is_deleted, false), sql`${dataEntries.service_area_id} IS NOT NULL`, sql`${inputDefinitions.category_id} = ${hrSafetyCatId}`));
+      for (const r of rows) hrSafetyPairByUtility.set(r.utilityId, (hrSafetyPairByUtility.get(r.utilityId) ?? 0) + 1);
+    }
+    if (governanceCatId != null) {
+      const rows = await db
+        .selectDistinct({ utilityId: reportPeriods.utility_id, inputId: dataEntries.input_def_id, saId: dataEntries.service_area_id })
+        .from(dataEntries)
+        .innerJoin(reportPeriods, eq(dataEntries.report_period_id, reportPeriods.id))
+        .innerJoin(inputDefinitions, eq(dataEntries.input_def_id, inputDefinitions.id))
+        .where(and(inArray(reportPeriods.utility_id, utilityIds), inArray(dataEntries.report_period_id, rpIds), eq(dataEntries.is_deleted, false), sql`${dataEntries.service_area_id} IS NOT NULL`, sql`${inputDefinitions.category_id} = ${governanceCatId}`));
+      for (const r of rows) governancePairByUtility.set(r.utilityId, (governancePairByUtility.get(r.utilityId) ?? 0) + 1);
+    }
+    if (financialCatId != null) {
+      const rows = await db
+        .selectDistinct({ utilityId: reportPeriods.utility_id, inputId: dataEntries.input_def_id, saId: dataEntries.service_area_id })
+        .from(dataEntries)
+        .innerJoin(reportPeriods, eq(dataEntries.report_period_id, reportPeriods.id))
+        .innerJoin(inputDefinitions, eq(dataEntries.input_def_id, inputDefinitions.id))
+        .where(and(inArray(reportPeriods.utility_id, utilityIds), inArray(dataEntries.report_period_id, rpIds), eq(dataEntries.is_deleted, false), sql`${dataEntries.service_area_id} IS NOT NULL`, sql`${inputDefinitions.category_id} = ${financialCatId}`));
+      for (const r of rows) financialPairByUtility.set(r.utilityId, (financialPairByUtility.get(r.utilityId) ?? 0) + 1);
+    }
+
+    // Distinct (input, SA) pairs for Country/Utility Context
+    const ctxRows = await db
+      .selectDistinct({
+        utilityId: reportPeriods.utility_id,
+        inputId: dataEntries.input_def_id,
+        saId: dataEntries.service_area_id,
+      })
+      .from(dataEntries)
+      .innerJoin(reportPeriods, eq(dataEntries.report_period_id, reportPeriods.id))
+      .innerJoin(inputDefinitions, eq(dataEntries.input_def_id, inputDefinitions.id))
+      .where(
+        and(
+          inArray(reportPeriods.utility_id, utilityIds),
+          inArray(dataEntries.report_period_id, rpIds),
+          eq(dataEntries.is_deleted, false),
+          sql`${dataEntries.service_area_id} IS NOT NULL`,
+          sql`(
+            ${inputDefinitions.category_id} = ${countryUtilCatId ?? -1}
+            OR ${inputDefinitions.subcategory_id} = ${countryContextSubId ?? -1}
+            OR ${inputDefinitions.subcategory_id} = ${utilityContextSubId ?? -1}
+          )`,
+        ),
+      );
+    for (const r of ctxRows) {
+      ctxPairByUtility.set(r.utilityId, (ctxPairByUtility.get(r.utilityId) ?? 0) + 1);
+    }
+
+    // Distinct (input, gen) pairs for Generation inputs
+    const genPairRows = await db
+      .selectDistinct({
+        utilityId: reportPeriods.utility_id,
+        inputId: dataEntries.input_def_id,
+        genId: dataEntries.energy_resource_id,
+      })
+      .from(dataEntries)
+      .innerJoin(reportPeriods, eq(dataEntries.report_period_id, reportPeriods.id))
+      .innerJoin(
+        inputDefinitions,
+        eq(dataEntries.input_def_id, inputDefinitions.id),
+      )
+      .where(
+        and(
+          inArray(reportPeriods.utility_id, utilityIds),
+          inArray(dataEntries.report_period_id, rpIds),
+          eq(dataEntries.is_deleted, false),
+          sql`${dataEntries.energy_resource_id} IS NOT NULL`,
+          sql`${inputDefinitions.subcategory_id} = ${generationSubId ?? -1}`,
+        ),
+      );
+    for (const r of genPairRows) {
+      genPairByUtility.set(
+        r.utilityId,
+        (genPairByUtility.get(r.utilityId) ?? 0) + 1,
+      );
+    }
+  }
+
+  // Also count SAs/gens for display purposes
+  const saCountByUtility = new Map<number, number>();
+  const genCountByUtility = new Map<number, number>();
+  if (utilityIds.length > 0 && rpIds.length > 0) {
+    const saRows = await db
+      .selectDistinct({ utilityId: serviceAreas.utility_id, saId: serviceAreas.id })
+      .from(serviceAreas)
+      .innerJoin(dataEntries, eq(serviceAreas.id, dataEntries.service_area_id))
+      .where(
+        and(
+          eq(serviceAreas.is_virtual, false),
+          inArray(serviceAreas.utility_id, utilityIds),
+          inArray(dataEntries.report_period_id, rpIds),
+          eq(dataEntries.is_deleted, false),
+        ),
+      );
+    for (const r of saRows) {
+      saCountByUtility.set(r.utilityId, (saCountByUtility.get(r.utilityId) ?? 0) + 1);
+    }
+    const genRows = await db
+      .selectDistinct({ utilityId: energyResources.utility_id, genId: energyResources.id })
+      .from(energyResources)
+      .innerJoin(dataEntries, eq(energyResources.id, dataEntries.energy_resource_id))
+      .where(
+        and(
+          inArray(energyResources.utility_id, utilityIds),
+          inArray(dataEntries.report_period_id, rpIds),
+          eq(dataEntries.is_deleted, false),
+        ),
+      );
+    for (const r of genRows) {
+      genCountByUtility.set(r.utilityId, (genCountByUtility.get(r.utilityId) ?? 0) + 1);
+    }
+  }
+
+  // 5. Pre-count inputs per type for averaging
+  const opInputCount = allInputDefs.filter(
+    (d) => operationalCatId != null && d.categoryId === operationalCatId,
+  ).length;
+  const tarInputCount = allInputDefs.filter(
+    (d) =>
+      tariffStructureSubId != null &&
+      d.subcategoryId === tariffStructureSubId &&
+      !(operationalCatId != null && d.categoryId === operationalCatId),
+  ).length;
+  const ctxInputCount = allInputDefs.filter(
+    (d) =>
+      (countryUtilCatId != null && d.categoryId === countryUtilCatId) ||
+      (countryContextSubId != null && d.subcategoryId === countryContextSubId) ||
+      (utilityContextSubId != null && d.subcategoryId === utilityContextSubId),
+  ).length;
+  const genInputCount = allInputDefs.filter(
+    (d) => generationSubId != null && d.subcategoryId === generationSubId,
+  ).length;
+  const hrSafetyInputCount = allInputDefs.filter(
+    (d) => hrSafetyCatId != null && d.categoryId === hrSafetyCatId,
+  ).length;
+  const governanceInputCount = allInputDefs.filter(
+    (d) => governanceCatId != null && d.categoryId === governanceCatId,
+  ).length;
+  const financialInputCount = allInputDefs.filter(
+    (d) => financialCatId != null && d.categoryId === financialCatId,
+  ).length;
+
+  // 6. Compute expected counts: for each (period, inputDef), multiply by the appropriate factor
   const key = (r: {
     utilityName: string;
     categoryName: string;
     subcategoryName: string;
   }) => `${r.utilityName}||${r.categoryName}||${r.subcategoryName}`;
 
-  const v1Map = new Map<string, number>();
-  for (const r of v1Rows) {
-    if (v1FilterNames) {
-      if (
-        v1FilterNames.utilityName &&
-        r.utilityName !== v1FilterNames.utilityName
-      )
-        continue;
-      if (
-        v1FilterNames.categoryName &&
-        r.categoryName !== v1FilterNames.categoryName
-      )
-        continue;
-      if (
-        v1FilterNames.subcategoryName &&
-        r.subcategoryName !== v1FilterNames.subcategoryName
-      )
-        continue;
+  const expectedMap = new Map<string, number>();
+  const idLookup = new Map<
+    string,
+    { utilityId: number; categoryId: number; subcategoryId: number }
+  >();
+
+  for (const period of relevantPeriods) {
+    const opTariffPairs = opTariffPairByUtility.get(period.utilityId) ?? 0;
+    const hrPairs = hrSafetyPairByUtility.get(period.utilityId) ?? 0;
+    const govPairs = governancePairByUtility.get(period.utilityId) ?? 0;
+    const finPairs = financialPairByUtility.get(period.utilityId) ?? 0;
+    const ctxPairs = ctxPairByUtility.get(period.utilityId) ?? 0;
+    const genPairs = genPairByUtility.get(period.utilityId) ?? 0;
+    const opTariffTotal = opInputCount + tarInputCount;
+    const avgOpTariff = opTariffTotal > 0 ? opTariffPairs / opTariffTotal : 0;
+    const avgHr = hrSafetyInputCount > 0 ? hrPairs / hrSafetyInputCount : 0;
+    const avgGov = governanceInputCount > 0 ? govPairs / governanceInputCount : 0;
+    const avgFin = financialInputCount > 0 ? finPairs / financialInputCount : 0;
+    const avgCtx = ctxInputCount > 0 ? ctxPairs / ctxInputCount : 0;
+    const avgGen = genInputCount > 0 ? genPairs / genInputCount : 0;
+
+    for (const def of allInputDefs) {
+      let multiplier = 1;
+      const isOperational =
+        operationalCatId != null && def.categoryId === operationalCatId;
+      const isTariffStructure =
+        tariffStructureSubId != null &&
+        def.subcategoryId === tariffStructureSubId;
+      const isHrSafety =
+        hrSafetyCatId != null && def.categoryId === hrSafetyCatId;
+      const isGovernance =
+        governanceCatId != null && def.categoryId === governanceCatId;
+      const isFinancial =
+        financialCatId != null && def.categoryId === financialCatId;
+      const isGeneration =
+        generationSubId != null && def.subcategoryId === generationSubId;
+      const isCountryUtil =
+        (countryUtilCatId != null && def.categoryId === countryUtilCatId) ||
+        (countryContextSubId != null && def.subcategoryId === countryContextSubId) ||
+        (utilityContextSubId != null && def.subcategoryId === utilityContextSubId);
+
+      if (isGeneration) {
+        multiplier = avgGen;
+      } else if (isCountryUtil && avgCtx > 0) {
+        multiplier = avgCtx;
+      } else if (isHrSafety) {
+        multiplier = avgHr;
+      } else if (isGovernance) {
+        multiplier = avgGov;
+      } else if (isFinancial) {
+        multiplier = avgFin;
+      } else if (isOperational || isTariffStructure) {
+        multiplier = avgOpTariff;
+      }
+
+      const k = key({
+        utilityName: period.utilityName,
+        categoryName: def.categoryName ?? "",
+        subcategoryName: def.subcategoryName ?? "",
+      });
+      expectedMap.set(k, (expectedMap.get(k) ?? 0) + multiplier);
+
+      if (!idLookup.has(k)) {
+        idLookup.set(k, {
+          utilityId: period.utilityId,
+          categoryId: def.categoryId,
+          subcategoryId: def.subcategoryId,
+        });
+      }
     }
-    const k = key(r);
-    v1Map.set(k, (v1Map.get(k) ?? 0) + r.entryCount);
   }
+
+  // 7. Query v2 actual counts from data_entries
+  const deConditions = [eq(dataEntries.is_deleted, false)];
+  if (rpIds.length > 0) {
+    deConditions.push(inArray(dataEntries.report_period_id, rpIds));
+  }
+  if (categoryId != null)
+    deConditions.push(eq(inputDefinitions.category_id, categoryId));
+  if (subcategoryId != null)
+    deConditions.push(eq(inputDefinitions.subcategory_id, subcategoryId));
 
   const v2Map = new Map<string, number>();
-  for (const r of v2Rows) {
-    v2Map.set(key(r), r.entryCount);
+  if (rpIds.length > 0) {
+    const v2Rows = await db
+      .select({
+        utilityName: organisations.name,
+        categoryId: catAlias.id,
+        categoryName: catAlias.name,
+        subcategoryId: subAlias.id,
+        subcategoryName: subAlias.name,
+        entryCount: count(dataEntries.id),
+      })
+      .from(dataEntries)
+      .innerJoin(
+        reportPeriods,
+        eq(dataEntries.report_period_id, reportPeriods.id),
+      )
+      .innerJoin(organisations, eq(reportPeriods.utility_id, organisations.id))
+      .innerJoin(inputDefinitions, eq(dataEntries.input_def_id, inputDefinitions.id))
+      .innerJoin(catAlias, eq(inputDefinitions.category_id, catAlias.id))
+      .innerJoin(subAlias, eq(inputDefinitions.subcategory_id, subAlias.id))
+      .where(and(...deConditions))
+      .groupBy(
+        organisations.name,
+        catAlias.id,
+        catAlias.name,
+        subAlias.id,
+        subAlias.name,
+      );
+
+    for (const r of v2Rows) {
+      v2Map.set(
+        key({ utilityName: r.utilityName, categoryName: r.categoryName, subcategoryName: r.subcategoryName }),
+        Number(r.entryCount),
+      );
+    }
   }
 
-  const v2Lookup = new Map<string, V2BreakdownRow>();
-  for (const r of v2Rows) {
-    v2Lookup.set(key(r), r);
+  // 8. Fetch v1 counts from prism-training
+  const v1Map = new Map<string, number>();
+  try {
+    const v1Result = await fetchV1Breakdown();
+    for (const r of v1Result.rows) {
+      v1Map.set(
+        key({ utilityName: r.utilityName, categoryName: r.categoryName, subcategoryName: r.subcategoryName }),
+        (v1Map.get(key(r)) ?? 0) + r.entryCount,
+      );
+    }
+  } catch {
+    // v1 unavailable — v1 bars will show 0
   }
 
-  const allKeys = new Set([...v1Map.keys(), ...v2Map.keys()]);
-
+  // 9. Merge v1, v2, and expected
+  const allKeys = new Set([...expectedMap.keys(), ...v2Map.keys(), ...v1Map.keys()]);
   const merged: DataEntryBreakdownRow[] = [];
 
   for (const k of allKeys) {
     const [utilityName, categoryName, subcategoryName] = k.split("||");
-    const v2Ref = v2Lookup.get(k);
+    const ref = idLookup.get(k);
     merged.push({
-      utilityId: v2Ref?.utilityId ?? 0,
+      utilityId: ref?.utilityId ?? 0,
       utilityName,
-      categoryId: v2Ref?.categoryId ?? 0,
+      categoryId: ref?.categoryId ?? 0,
       categoryName,
-      subcategoryId: v2Ref?.subcategoryId ?? 0,
+      subcategoryId: ref?.subcategoryId ?? 0,
       subcategoryName,
       v1Count: v1Map.get(k) ?? 0,
       v2Count: v2Map.get(k) ?? 0,
-      reportPeriodId: reportPeriodId,
+      expectedCount: Math.round(expectedMap.get(k) ?? 0),
+      reportPeriodId,
       reportPeriodLabel: resolvedReportPeriodLabel,
     });
   }
@@ -4603,155 +5411,62 @@ export async function getDataEntryBreakdown(
     return a.subcategoryName.localeCompare(b.subcategoryName);
   });
 
-  return { rows: merged, v1Error };
-}
+  // 9. Compute input summary for the frontend
+  const utilityBreakdown: Array<{
+    name: string;
+    reportPeriods: number;
+    sas: number;
+    gens: number;
+  }> = [];
 
-type BreakdownFilterNames = {
-  utilityName: string | null;
-  categoryName: string | null;
-  subcategoryName: string | null;
-};
-
-async function resolveBreakdownFilterNames(
-  utilityId: number | null,
-  categoryId: number | null,
-  subcategoryId: number | null,
-): Promise<BreakdownFilterNames | null> {
-  if (utilityId == null && categoryId == null && subcategoryId == null)
-    return null;
-
-  const [utilityName, categoryName, subcategoryName] = await Promise.all([
-    utilityId != null
-      ? db
-          .select({ name: organisations.name })
-          .from(organisations)
-          .where(eq(organisations.id, utilityId))
-          .limit(1)
-          .then((r) => r[0]?.name ?? null)
-      : null,
-    categoryId != null
-      ? db
-          .select({ name: managedListItems.name })
-          .from(managedListItems)
-          .where(eq(managedListItems.id, categoryId))
-          .limit(1)
-          .then((r) => r[0]?.name ?? null)
-      : null,
-    subcategoryId != null
-      ? db
-          .select({ name: managedListItems.name })
-          .from(managedListItems)
-          .where(eq(managedListItems.id, subcategoryId))
-          .limit(1)
-          .then((r) => r[0]?.name ?? null)
-      : null,
-  ]);
-
-  return { utilityName, categoryName, subcategoryName };
-}
-
-type V1BreakdownRow = {
-  utilityName: string;
-  categoryName: string;
-  subcategoryName: string;
-  entryCount: number;
-};
-
-async function fetchV1Breakdown(): Promise<{
-  rows: V1BreakdownRow[];
-  error: string | null;
-}> {
-  try {
-    const response = await fetchMigrationEndpoint("/breakdown");
-    const data = await response.json();
-    const rows = (data as { rows?: V1BreakdownRow[] })?.rows;
-    if (!Array.isArray(rows)) {
-      const msg = `v1 breakdown: unexpected response format (${typeof data})`;
-      console.error(`[breakdown] ${msg}`);
-      return { rows: [], error: msg };
+  for (const period of relevantPeriods) {
+    const existing = utilityBreakdown.find(
+      (u) => u.name === period.utilityName,
+    );
+    if (existing) {
+      existing.reportPeriods++;
+    } else {
+      utilityBreakdown.push({
+        name: period.utilityName,
+        reportPeriods: 1,
+        sas: saCountByUtility.get(period.utilityId) ?? 0,
+        gens: genCountByUtility.get(period.utilityId) ?? 0,
+      });
     }
-    return { rows, error: null };
-  } catch (error) {
-    const msg =
-      error instanceof Error ? error.message : String(error ?? "unknown error");
-    console.error("[breakdown] v1 fetch failed", error);
-    return { rows: [], error: `v1 breakdown unavailable: ${msg}` };
   }
-}
 
-type V2BreakdownRow = {
-  utilityId: number;
-  utilityName: string;
-  categoryId: number;
-  categoryName: string;
-  subcategoryId: number;
-  subcategoryName: string;
-  entryCount: number;
-};
+  const inputSummary = {
+    totalInputs: allInputDefs.length,
+    operational: 0,
+    tariffStructure: 0,
+    generation: 0,
+    other: 0,
+    saCount: [...saCountByUtility.values()].reduce((a, b) => a + b, 0),
+    genCount: [...genCountByUtility.values()].reduce((a, b) => a + b, 0),
+    saPairs: [...opTariffPairByUtility.values()].reduce((a, b) => a + b, 0),
+    genPairs: [...genPairByUtility.values()].reduce((a, b) => a + b, 0),
+    reportPeriodCount: relevantPeriods.length,
+    utilities: utilityBreakdown,
+  };
 
-async function queryV2Breakdown(
-  utilityId: number | null,
-  reportPeriodId: number | null,
-  categoryId: number | null,
-  subcategoryId: number | null,
-): Promise<V2BreakdownRow[]> {
-  const catAlias = aliasedTable(managedListItems, "cat");
-  const subAlias = aliasedTable(managedListItems, "sub");
+  for (const def of allInputDefs) {
+    if (generationSubId != null && def.subcategoryId === generationSubId) {
+      inputSummary.generation++;
+    } else if (
+      (operationalCatId != null && def.categoryId === operationalCatId) ||
+      (tariffStructureSubId != null && def.subcategoryId === tariffStructureSubId)
+    ) {
+      if (tariffStructureSubId != null && def.subcategoryId === tariffStructureSubId) {
+        inputSummary.tariffStructure++;
+      } else {
+        inputSummary.operational++;
+      }
+    } else {
+      inputSummary.other++;
+    }
+  }
 
-  const conditions = [
-    eq(organisations.is_utility, true),
-    eq(dataEntries.is_deleted, false),
-  ];
-  if (utilityId != null) conditions.push(eq(organisations.id, utilityId));
-  if (reportPeriodId != null)
-    conditions.push(eq(reportPeriods.id, reportPeriodId));
-  if (categoryId != null)
-    conditions.push(eq(inputDefinitions.category_id, categoryId));
-  if (subcategoryId != null)
-    conditions.push(eq(inputDefinitions.subcategory_id, subcategoryId));
-
-  const rows = await db
-    .select({
-      utilityId: organisations.id,
-      utilityName: organisations.name,
-      categoryId: catAlias.id,
-      categoryName: catAlias.name,
-      subcategoryId: subAlias.id,
-      subcategoryName: subAlias.name,
-      entryCount: count(dataEntries.id),
-    })
-    .from(dataEntries)
-    .innerJoin(
-      reportPeriods,
-      eq(dataEntries.report_period_id, reportPeriods.id),
-    )
-    .innerJoin(organisations, eq(reportPeriods.utility_id, organisations.id))
-    .innerJoin(
-      inputDefinitions,
-      eq(dataEntries.input_def_id, inputDefinitions.id),
-    )
-    .innerJoin(catAlias, eq(inputDefinitions.category_id, catAlias.id))
-    .innerJoin(subAlias, eq(inputDefinitions.subcategory_id, subAlias.id))
-    .where(and(...conditions))
-    .groupBy(
-      organisations.id,
-      organisations.name,
-      catAlias.id,
-      catAlias.name,
-      subAlias.id,
-      subAlias.name,
-    )
-    .orderBy(organisations.name, catAlias.name, subAlias.name);
-
-  return rows.map((r) => ({
-    utilityId: r.utilityId,
-    utilityName: r.utilityName,
-    categoryId: r.categoryId,
-    categoryName: r.categoryName,
-    subcategoryId: r.subcategoryId,
-    subcategoryName: r.subcategoryName,
-    entryCount: Number(r.entryCount),
-  }));
+  return { rows: merged, inputSummary };
 }
 
 export async function purgeAllDataEntryRecords(): Promise<{
@@ -4782,11 +5497,8 @@ export async function purgeAllDataEntryRecords(): Promise<{
     const r6 = await db.delete(generationToggleRelevance);
     counts["generation_toggle_relevance"] = r6.rowCount ?? 0;
 
-    const r7 = await db.delete(inputRelevance);
-    counts["input_relevance"] = r7.rowCount ?? 0;
-
-    const r8 = await db.delete(migrationLogs);
-    counts["migration_logs"] = r8.rowCount ?? 0;
+    const r7 = await db.delete(migrationLogs);
+    counts["migration_logs"] = r7.rowCount ?? 0;
 
     revalidatePath("/migration");
     revalidatePath("/data-entry");
@@ -4798,5 +5510,132 @@ export async function purgeAllDataEntryRecords(): Promise<{
       error instanceof Error ? error.message : String(error);
     console.error("[purge] Failed to purge data entry records:", message);
     return { ok: false, tables: counts, error: message };
+  }
+}
+
+export async function deduplicateDataEntries(): Promise<{
+  ok: boolean;
+  deleted: number;
+  error?: string;
+}> {
+  await assertDevMigrationAccess();
+
+  try {
+    const idsToDelete: string[] = [];
+
+    // Pass 1: 6-field duplicates (uniq_entry index)
+    const dupes6 = await db.execute(sql`
+      WITH dupes AS (
+        SELECT
+          report_period_id, input_def_id, service_area_id,
+          energy_source_id, energy_provider_id, energy_resource_id,
+          COUNT(*) as cnt,
+          array_agg(id ORDER BY updated_at DESC) as ids
+        FROM data_entries
+        WHERE is_deleted = false
+        GROUP BY 1, 2, 3, 4, 5, 6
+        HAVING COUNT(*) > 1
+      )
+      SELECT ids[2:] as to_delete FROM dupes
+    `);
+    for (const row of dupes6.rows) {
+      const arr = row.to_delete as string[];
+      if (arr && arr.length > 0) idsToDelete.push(...arr);
+    }
+
+    // Pass 2: 8-field duplicates (exact duplicates including customer_type_id/payment_mode_id)
+    const dupes8 = await db.execute(sql`
+      WITH dupes AS (
+        SELECT
+          report_period_id, input_def_id, service_area_id,
+          energy_resource_id, energy_provider_id, energy_source_id,
+          customer_type_id, payment_mode_id,
+          COUNT(*) as cnt,
+          array_agg(id ORDER BY updated_at DESC) as ids
+        FROM data_entries
+        WHERE is_deleted = false
+        GROUP BY 1, 2, 3, 4, 5, 6, 7, 8
+        HAVING COUNT(*) > 1
+      )
+      SELECT ids[2:] as to_delete FROM dupes
+    `);
+    for (const row of dupes8.rows) {
+      const arr = row.to_delete as string[];
+      if (arr && arr.length > 0) idsToDelete.push(...arr);
+    }
+
+    // Pass 3: "Other" inputs with duplicate NULL/non-NULL SA/gen context
+    //   For inputs NOT in Operational/Tariff/Generation, keep only the row
+    //   with NULL service_area_id/energy_resource_id.
+    //   Delete rows where SA/ER/EP/ES are non-null when a NULL version exists
+    //   for the same (report_period_id, input_def_id).
+    const dupesNull = await db.execute(sql`
+      WITH pairs AS (
+        SELECT de1.id as keep_id, de2.id as delete_id
+        FROM data_entries de1
+        JOIN data_entries de2
+          ON de1.report_period_id = de2.report_period_id
+         AND de1.input_def_id = de2.input_def_id
+         AND de1.is_deleted = false AND de2.is_deleted = false
+         AND de1.id != de2.id
+         AND de1.service_area_id IS NULL
+         AND de1.energy_resource_id IS NULL
+         AND de1.energy_provider_id IS NULL
+         AND de1.energy_source_id IS NULL
+         AND (de2.service_area_id IS NOT NULL
+           OR de2.energy_resource_id IS NOT NULL
+           OR de2.energy_provider_id IS NOT NULL
+           OR de2.energy_source_id IS NOT NULL)
+        JOIN input_definitions id ON de1.input_def_id = id.id
+        WHERE id.category_id NOT IN (
+          SELECT DISTINCT category_id FROM input_definitions
+          WHERE category_id IS NOT NULL
+            AND category_id IN (
+              SELECT id FROM managed_list_items WHERE LOWER(name) = 'operational'
+            )
+        )
+        AND id.subcategory_id NOT IN (
+          SELECT DISTINCT subcategory_id FROM input_definitions
+          WHERE subcategory_id IS NOT NULL
+            AND subcategory_id IN (
+              SELECT id FROM managed_list_items WHERE LOWER(name) IN ('tariff structure', 'generation')
+            )
+        )
+        AND id.category_id NOT IN (
+          SELECT DISTINCT category_id FROM input_definitions
+          WHERE category_id IS NOT NULL
+            AND category_id IN (
+            SELECT id FROM managed_list_items WHERE LOWER(name) IN ('hr & safety', 'governance', 'financial')
+          )
+        )
+      )
+      SELECT delete_id FROM pairs
+    `);
+    for (const row of dupesNull.rows) {
+      const id = row.delete_id as string;
+      if (id) idsToDelete.push(id);
+    }
+
+    if (idsToDelete.length === 0) {
+      return { ok: true, deleted: 0 };
+    }
+
+    await db.delete(dataEntryLogs).where(
+      inArray(dataEntryLogs.data_entry_id, idsToDelete),
+    );
+
+    const result = await db.delete(dataEntries).where(
+      inArray(dataEntries.id, idsToDelete),
+    );
+
+    revalidatePath("/migration");
+    revalidatePath("/data-entry");
+
+    return { ok: true, deleted: result.rowCount ?? idsToDelete.length };
+  } catch (error) {
+    const message =
+      error instanceof Error ? error.message : String(error);
+    console.error("[dedup] Failed:", message);
+    return { ok: false, deleted: 0, error: message };
   }
 }
