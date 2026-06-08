@@ -36,7 +36,15 @@ import {
 import { formatReportPeriodDisplay } from "@/lib/formatters";
 import { getCurrentUser } from "@/lib/user.service";
 import { generateRandomNumber } from "@/lib/utils";
-import { aliasedTable, and, count, desc, eq, inArray, isNull } from "drizzle-orm";
+import {
+  aliasedTable,
+  and,
+  count,
+  desc,
+  eq,
+  inArray,
+  isNull,
+} from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { migrationLogs } from "@/db/schema/migration-log";
 
@@ -716,7 +724,6 @@ export async function retrieveUtilityContextData(options?: {
     await backfillCountryContextDataEntriesFromPreviousPeriods({
       reportPeriodId: options?.reportPeriodId,
     });
-
   } catch (error: unknown) {
     logMigrationError(error);
     revalidatePath("/migration");
@@ -839,7 +846,7 @@ export async function retrieveCountryContextData(options?: {
         is_deleted: row.is_deleted ?? false,
         updatedAt,
         updatedById: null,
-      }; 
+      };
 
       const [existing] = await db
         .select({ id: dataEntries.id })
@@ -872,7 +879,6 @@ export async function retrieveCountryContextData(options?: {
     await backfillCountryContextDataEntriesFromPreviousPeriods({
       reportPeriodId: options?.reportPeriodId,
     });
-
   } catch (error: unknown) {
     logMigrationError(error);
     revalidatePath("/migration");
@@ -900,7 +906,7 @@ export async function retrieveRoles() {
 
       if (!existing) {
         await db.insert(roles).values(sourceRole);
-          inserted += 1;
+        inserted += 1;
         inserted += 1;
         continue;
       }
@@ -918,7 +924,6 @@ export async function retrieveRoles() {
           .where(eq(roles.id, sourceRole.id));
       }
     }
-
   } catch (error: unknown) {
     logMigrationError(error);
   }
@@ -1019,7 +1024,6 @@ export async function retrieveUsers() {
       existingUserIdSet.add(insertId);
       existingUserIdByEmail.set(normalizedEmail, insertId);
     }
-
   } catch (error: unknown) {
     logMigrationError(error);
   }
@@ -1151,15 +1155,15 @@ export async function retrieveUtilityData() {
   try {
     if (normalizedOrgs.length > 0) {
       await db.insert(organisations).values(normalizedOrgs);
-        inserted += normalizedOrgs.length;
+      inserted += normalizedOrgs.length;
     }
     if (normalizedServiceAreas.length > 0) {
       await db.insert(serviceAreas).values(normalizedServiceAreas);
-        inserted += normalizedServiceAreas.length;
+      inserted += normalizedServiceAreas.length;
     }
     if (normalizedReportPeriods.length > 0) {
       await db.insert(reportPeriods).values(normalizedReportPeriods);
-        inserted += normalizedReportPeriods.length;
+      inserted += normalizedReportPeriods.length;
     }
 
     const allReportPeriods = await db.select().from(reportPeriods);
@@ -1172,15 +1176,21 @@ export async function retrieveUtilityData() {
 
     for (const newRp of normalizedReportPeriods) {
       const utilityPeriods = reportPeriodsByUtility.get(newRp.utility_id) || [];
-      utilityPeriods.sort((a, b) => a.report_date.getTime() - b.report_date.getTime());
+      utilityPeriods.sort(
+        (a, b) => a.report_date.getTime() - b.report_date.getTime(),
+      );
 
       const newRpInList = utilityPeriods.find(
-        (rp) => rp.report_date.getTime() === newRp.report_date.getTime() && rp.utility_id === newRp.utility_id,
+        (rp) =>
+          rp.report_date.getTime() === newRp.report_date.getTime() &&
+          rp.utility_id === newRp.utility_id,
       );
       if (!newRpInList) continue;
 
       const prevRp = utilityPeriods.find(
-        (rp) => rp.report_date.getTime() < newRpInList.report_date.getTime() && rp.id !== newRpInList.id,
+        (rp) =>
+          rp.report_date.getTime() < newRpInList.report_date.getTime() &&
+          rp.id !== newRpInList.id,
       );
       if (!prevRp) continue;
 
@@ -1261,11 +1271,12 @@ export async function retrieveUtilityData() {
           updatedById: gtr.updatedById,
         }));
 
-        await db.insert(generationToggleRelevance).values(newGenToggleRelevance);
+        await db
+          .insert(generationToggleRelevance)
+          .values(newGenToggleRelevance);
         inserted += newGenToggleRelevance.length;
       }
     }
-
   } catch (error: unknown) {
     logMigrationError(error);
   }
@@ -1298,7 +1309,7 @@ export async function retrieveCountries() {
   try {
     if (nonExistingSubRegions.length > 0) {
       await db.insert(subRegions).values(nonExistingSubRegions);
-        inserted += nonExistingSubRegions.length;
+      inserted += nonExistingSubRegions.length;
     }
     if (nonExistingCountries.length > 0) {
       await db.insert(countries).values(
@@ -1345,11 +1356,11 @@ export async function retrieveManagedLists() {
   try {
     if (nonExistingManagedLists.length > 0) {
       await db.insert(managedLists).values(nonExistingManagedLists);
-        inserted += nonExistingManagedLists.length;
+      inserted += nonExistingManagedLists.length;
     }
     if (nonExistingManagedListItems.length > 0) {
       await db.insert(managedListItems).values(nonExistingManagedListItems);
-        inserted += nonExistingManagedListItems.length;
+      inserted += nonExistingManagedListItems.length;
     }
   } catch (error: unknown) {
     logMigrationError(error);
@@ -1432,13 +1443,17 @@ export async function retrieveReportPeriods() {
 
     for (const newRp of nonExistingReportPeriods) {
       const utilityPeriods = reportPeriodsByUtility.get(newRp.utility_id) || [];
-      utilityPeriods.sort((a, b) => a.report_date.getTime() - b.report_date.getTime());
+      utilityPeriods.sort(
+        (a, b) => a.report_date.getTime() - b.report_date.getTime(),
+      );
 
       const newRpInList = utilityPeriods.find((rp) => rp.id === newRp.id);
       if (!newRpInList) continue;
 
       const prevRp = utilityPeriods.find(
-        (rp) => rp.report_date.getTime() < newRpInList.report_date.getTime() && rp.id !== newRp.id,
+        (rp) =>
+          rp.report_date.getTime() < newRpInList.report_date.getTime() &&
+          rp.id !== newRp.id,
       );
       if (!prevRp) continue;
 
@@ -1519,11 +1534,12 @@ export async function retrieveReportPeriods() {
           updatedById: gtr.updatedById,
         }));
 
-        await db.insert(generationToggleRelevance).values(newGenToggleRelevance);
+        await db
+          .insert(generationToggleRelevance)
+          .values(newGenToggleRelevance);
         inserted += newGenToggleRelevance.length;
       }
     }
-
   } catch (error: unknown) {
     logMigrationError(error);
   }
@@ -1652,7 +1668,7 @@ export async function retrieveEnergyResources() {
         capacity_mw: null,
         is_active: false,
       });
-      }
+    }
 
     resource.period_entries.sort(
       (a, b) => a.report_period_id - b.report_period_id,
@@ -1721,7 +1737,7 @@ export async function retrieveEnergyResources() {
   try {
     if (validatedEnergyResources.length > 0) {
       await db.insert(energyResources).values(validatedEnergyResources);
-        inserted += validatedEnergyResources.length;
+      inserted += validatedEnergyResources.length;
     }
 
     if (skippedInvalidForeignKeys > 0) {
@@ -1729,7 +1745,6 @@ export async function retrieveEnergyResources() {
         `[migration] retrieveEnergyResources skipped ${skippedInvalidForeignKeys} rows with invalid foreign keys`,
       );
     }
-
   } catch (error: unknown) {
     logMigrationError(error);
   }
@@ -1842,7 +1857,6 @@ export async function backfillEnergyResourcePeriods() {
           .where(eq(energyResources.id, resource.id));
       }
     }
-
   } catch (error: unknown) {
     logMigrationError(error);
   }
@@ -1867,7 +1881,7 @@ export async function retrieveKpiDefinitions() {
 
   if (nonExistingKpiDefinitions.length > 0) {
     await db.insert(kpiDefinitions).values(
-        nonExistingKpiDefinitions.map((kd) => {
+      nonExistingKpiDefinitions.map((kd) => {
         kd.id = generateRandomNumber(3);
         return kd;
       }),
@@ -1972,13 +1986,21 @@ export type DataEntryBreakdownRow = {
   subcategoryName: string;
   v1Count: number;
   v2Count: number;
+  reportPeriodId: number | null;
+  reportPeriodLabel: string;
 };
 
 export type DataEntryBreakdownFilterOptions = {
   utilities: Array<{ id: number; name: string }>;
-  reportPeriods: Array<{ id: number; label: string }>;
+  reportPeriods: Array<{ id: number; utilityId: number; label: string }>;
   categories: Array<{ id: number; name: string }>;
   subcategories: Array<{ id: number; name: string }>;
+  subcategoryIdsByCategoryId: Record<number, number[]>;
+};
+
+export type DataEntryBreakdownResult = {
+  rows: DataEntryBreakdownRow[];
+  v1Error: string | null;
 };
 
 const normalizeSourceDataEntryPage = (
@@ -2853,8 +2875,12 @@ export async function retrieveDataEntries(options?: {
       // Phase 2: Batch SELECT existing rows
       const existingMap = new Map<string, string>();
       if (preKeys.length > 0) {
-        const uniqueReportPeriodIds = [...new Set(preKeys.map((k) => k.reportPeriodId))];
-        const uniqueInputDefIds = [...new Set(preKeys.map((k) => k.inputDefId))];
+        const uniqueReportPeriodIds = [
+          ...new Set(preKeys.map((k) => k.reportPeriodId)),
+        ];
+        const uniqueInputDefIds = [
+          ...new Set(preKeys.map((k) => k.inputDefId)),
+        ];
 
         const existingRows = await db
           .select({
@@ -2947,7 +2973,7 @@ export async function retrieveDataEntries(options?: {
         } else {
           try {
             await db.insert(dataEntries).values(payload);
-        inserted += 1;
+            inserted += 1;
           } catch (error: unknown) {
             if (!isUniqueViolationError(error)) {
               throw error;
@@ -2985,7 +3011,6 @@ export async function retrieveDataEntries(options?: {
               .set(payload)
               .where(eq(dataEntries.id, existingByUniqueIndex.id));
             updated += 1;
-
           }
         }
       }
@@ -2994,14 +3019,15 @@ export async function retrieveDataEntries(options?: {
       hasMore = page.pagination.hasMore === true && cursor != null;
     }
 
-    utilityBackfillResult = await backfillUtilityContextDataEntriesFromPreviousPeriods({
-      reportPeriodId: options?.reportPeriodId,
-    });
+    utilityBackfillResult =
+      await backfillUtilityContextDataEntriesFromPreviousPeriods({
+        reportPeriodId: options?.reportPeriodId,
+      });
 
-    countryBackfillResult = await backfillCountryContextDataEntriesFromPreviousPeriods({
-      reportPeriodId: options?.reportPeriodId,
-    });
-
+    countryBackfillResult =
+      await backfillCountryContextDataEntriesFromPreviousPeriods({
+        reportPeriodId: options?.reportPeriodId,
+      });
   } catch (error: unknown) {
     logMigrationError(error);
     return {
@@ -3251,7 +3277,7 @@ export async function retrieveGenerationRelevance(options?: {
           updated += 1;
         } else {
           await db.insert(generationRelevance).values(payload);
-        inserted += 1;
+          inserted += 1;
           inserted += 1;
         }
       }
@@ -3262,13 +3288,12 @@ export async function retrieveGenerationRelevance(options?: {
       if (hasMore && Date.now() - loopStartedAt > LOOP_MAX_MS) {
         console.warn(
           `[migration] retrieveGenerationRelevance time budget exhausted after ${inserted + updated} ops ` +
-          `(inserted=${inserted}, updated=${updated}, skipped=${skipped}), ` +
-          `deferring remaining pages (next cursor: ${cursor}). Re-run to continue.`,
+            `(inserted=${inserted}, updated=${updated}, skipped=${skipped}), ` +
+            `deferring remaining pages (next cursor: ${cursor}). Re-run to continue.`,
         );
         break;
       }
     }
-
   } catch (error: unknown) {
     logMigrationError(error);
   }
@@ -3441,7 +3466,6 @@ export async function retrieveTransmissionRelevance(options?: {
       cursor = page.pagination.nextCursor;
       hasMore = page.pagination.hasMore === true && cursor != null;
     }
-
   } catch (error: unknown) {
     logMigrationError(error);
   }
@@ -3626,7 +3650,6 @@ export async function retrieveTariffRelevance(options?: {
       cursor = page.pagination.nextCursor;
       hasMore = page.pagination.hasMore === true && cursor != null;
     }
-
   } catch (error: unknown) {
     console.error(
       "[migration:tariffRelevance] ERROR:",
@@ -3713,7 +3736,10 @@ const parseDataEntryComparisonKey = (key: string) => {
   };
 };
 
-const buildReportPeriodLabel = (reportDate: Date, reportTypeName?: string | null): string => {
+const buildReportPeriodLabel = (
+  reportDate: Date,
+  reportTypeName?: string | null,
+): string => {
   return formatReportPeriodDisplay(reportDate, reportTypeName);
 };
 
@@ -3731,7 +3757,10 @@ export async function getDataEntryComparisonFilterOptions(): Promise<DataEntryCo
       reportTypeName: managedListItems.name,
     })
     .from(reportPeriods)
-    .leftJoin(managedListItems, eq(reportPeriods.report_type_id, managedListItems.id));
+    .leftJoin(
+      managedListItems,
+      eq(reportPeriods.report_type_id, managedListItems.id),
+    );
 
   const inputDefList = await db
     .select({
@@ -3992,7 +4021,9 @@ export async function compareDataEntries(
   }
 
   const targetServiceAreaIds = new Set<number>(
-    (await db.select({ id: serviceAreas.id }).from(serviceAreas)).map((r) => r.id),
+    (await db.select({ id: serviceAreas.id }).from(serviceAreas)).map(
+      (r) => r.id,
+    ),
   );
 
   const targetEnergyResources = await db
@@ -4012,10 +4043,9 @@ export async function compareDataEntries(
   );
 
   const targetManagedListItemIds = new Set<number>(
-    (await db
-      .select({ id: managedListItems.id })
-      .from(managedListItems)
-    ).map((r) => r.id),
+    (await db.select({ id: managedListItems.id }).from(managedListItems)).map(
+      (r) => r.id,
+    ),
   );
 
   const sourceByKey = new Map<
@@ -4218,7 +4248,10 @@ export async function compareDataEntries(
             reportTypeName: managedListItems.name,
           })
           .from(reportPeriods)
-          .leftJoin(managedListItems, eq(reportPeriods.report_type_id, managedListItems.id))
+          .leftJoin(
+            managedListItems,
+            eq(reportPeriods.report_type_id, managedListItems.id),
+          )
           .where(inArray(reportPeriods.id, reportPeriodIds));
 
   const inputDefList =
@@ -4462,6 +4495,16 @@ export async function getDataEntryBreakdownFilterOptions(): Promise<DataEntryBre
     ),
   );
 
+  const subcategoryIdsByCategoryId: Record<number, number[]> = {};
+  for (const def of inputDefList) {
+    if (def.categoryId == null || def.subcategoryId == null) continue;
+    const existing = subcategoryIdsByCategoryId[def.categoryId] ?? [];
+    if (!existing.includes(def.subcategoryId)) {
+      existing.push(def.subcategoryId);
+    }
+    subcategoryIdsByCategoryId[def.categoryId] = existing;
+  }
+
   const [categoryItems, subcategoryItems] = await Promise.all([
     categoryIds.length === 0
       ? Promise.resolve([] as Array<{ id: number; name: string }>)
@@ -4481,29 +4524,37 @@ export async function getDataEntryBreakdownFilterOptions(): Promise<DataEntryBre
     utilities: utilityList
       .map((u) => ({ id: u.id, name: u.name }))
       .sort((a, b) => a.name.localeCompare(b.name)),
-    reportPeriods: await fetchReportPeriodOptions(),
+    reportPeriods: await fetchReportPeriodOptionsWithUtility(),
     categories: categoryItems
       .map((c) => ({ id: c.id, name: c.name }))
       .sort((a, b) => a.name.localeCompare(b.name)),
     subcategories: subcategoryItems
       .map((c) => ({ id: c.id, name: c.name }))
       .sort((a, b) => a.name.localeCompare(b.name)),
+    subcategoryIdsByCategoryId,
   };
 }
 
-async function fetchReportPeriodOptions(): Promise<Array<{ id: number; label: string }>> {
+async function fetchReportPeriodOptionsWithUtility(): Promise<
+  Array<{ id: number; utilityId: number; label: string }>
+> {
   const rows = await db
     .select({
       id: reportPeriods.id,
+      utilityId: reportPeriods.utility_id,
       reportDate: reportPeriods.report_date,
       typeName: managedListItems.name,
     })
     .from(reportPeriods)
-    .leftJoin(managedListItems, eq(reportPeriods.report_type_id, managedListItems.id))
+    .leftJoin(
+      managedListItems,
+      eq(reportPeriods.report_type_id, managedListItems.id),
+    )
     .orderBy(desc(reportPeriods.report_date));
 
   return rows.map((r) => ({
     id: r.id,
+    utilityId: r.utilityId,
     label: formatReportPeriodDisplay(r.reportDate, r.typeName),
   }));
 }
@@ -4513,24 +4564,63 @@ export async function getDataEntryBreakdown(
   reportPeriodId: number | null,
   categoryId: number | null,
   subcategoryId: number | null,
-): Promise<DataEntryBreakdownRow[]> {
+): Promise<DataEntryBreakdownResult> {
   await assertDevMigrationAccess();
 
-  const [v1Rows, v2Rows, v1FilterNames] = await Promise.all([
+  const [v1Result, v2Rows, v1FilterNames] = await Promise.all([
     fetchV1Breakdown(),
     queryV2Breakdown(utilityId, reportPeriodId, categoryId, subcategoryId),
     resolveBreakdownFilterNames(utilityId, categoryId, subcategoryId),
   ]);
 
-  const key = (r: { utilityName: string; categoryName: string; subcategoryName: string }) =>
-    `${r.utilityName}||${r.categoryName}||${r.subcategoryName}`;
+  const { rows: v1Rows, error: v1Error } = v1Result;
+
+  let resolvedReportPeriodLabel = "";
+  if (reportPeriodId != null) {
+    const rp = await db
+      .select({
+        reportDate: reportPeriods.report_date,
+        typeName: managedListItems.name,
+      })
+      .from(reportPeriods)
+      .leftJoin(
+        managedListItems,
+        eq(reportPeriods.report_type_id, managedListItems.id),
+      )
+      .where(eq(reportPeriods.id, reportPeriodId))
+      .limit(1);
+    if (rp[0]) {
+      resolvedReportPeriodLabel = formatReportPeriodDisplay(
+        rp[0].reportDate,
+        rp[0].typeName,
+      );
+    }
+  }
+
+  const key = (r: {
+    utilityName: string;
+    categoryName: string;
+    subcategoryName: string;
+  }) => `${r.utilityName}||${r.categoryName}||${r.subcategoryName}`;
 
   const v1Map = new Map<string, number>();
   for (const r of v1Rows) {
     if (v1FilterNames) {
-      if (v1FilterNames.utilityName && r.utilityName !== v1FilterNames.utilityName) continue;
-      if (v1FilterNames.categoryName && r.categoryName !== v1FilterNames.categoryName) continue;
-      if (v1FilterNames.subcategoryName && r.subcategoryName !== v1FilterNames.subcategoryName) continue;
+      if (
+        v1FilterNames.utilityName &&
+        r.utilityName !== v1FilterNames.utilityName
+      )
+        continue;
+      if (
+        v1FilterNames.categoryName &&
+        r.categoryName !== v1FilterNames.categoryName
+      )
+        continue;
+      if (
+        v1FilterNames.subcategoryName &&
+        r.subcategoryName !== v1FilterNames.subcategoryName
+      )
+        continue;
     }
     const k = key(r);
     v1Map.set(k, (v1Map.get(k) ?? 0) + r.entryCount);
@@ -4541,24 +4631,30 @@ export async function getDataEntryBreakdown(
     v2Map.set(key(r), r.entryCount);
   }
 
+  const v2Lookup = new Map<string, V2BreakdownRow>();
+  for (const r of v2Rows) {
+    v2Lookup.set(key(r), r);
+  }
+
   const allKeys = new Set([...v1Map.keys(), ...v2Map.keys()]);
 
   const merged: DataEntryBreakdownRow[] = [];
-  let syntheticId = 0;
 
   for (const k of allKeys) {
     const [utilityName, categoryName, subcategoryName] = k.split("||");
+    const v2Ref = v2Lookup.get(k);
     merged.push({
-      utilityId: syntheticId,
+      utilityId: v2Ref?.utilityId ?? 0,
       utilityName,
-      categoryId: syntheticId,
+      categoryId: v2Ref?.categoryId ?? 0,
       categoryName,
-      subcategoryId: syntheticId,
+      subcategoryId: v2Ref?.subcategoryId ?? 0,
       subcategoryName,
       v1Count: v1Map.get(k) ?? 0,
       v2Count: v2Map.get(k) ?? 0,
+      reportPeriodId: reportPeriodId,
+      reportPeriodLabel: resolvedReportPeriodLabel,
     });
-    syntheticId++;
   }
 
   merged.sort((a, b) => {
@@ -4569,7 +4665,7 @@ export async function getDataEntryBreakdown(
     return a.subcategoryName.localeCompare(b.subcategoryName);
   });
 
-  return merged;
+  return { rows: merged, v1Error };
 }
 
 type BreakdownFilterNames = {
@@ -4583,7 +4679,8 @@ async function resolveBreakdownFilterNames(
   categoryId: number | null,
   subcategoryId: number | null,
 ): Promise<BreakdownFilterNames | null> {
-  if (utilityId == null && categoryId == null && subcategoryId == null) return null;
+  if (utilityId == null && categoryId == null && subcategoryId == null)
+    return null;
 
   const [utilityName, categoryName, subcategoryName] = await Promise.all([
     utilityId != null
@@ -4622,19 +4719,25 @@ type V1BreakdownRow = {
   entryCount: number;
 };
 
-async function fetchV1Breakdown(): Promise<V1BreakdownRow[]> {
+async function fetchV1Breakdown(): Promise<{
+  rows: V1BreakdownRow[];
+  error: string | null;
+}> {
   try {
     const response = await fetchMigrationEndpoint("/breakdown");
     const data = await response.json();
     const rows = (data as { rows?: V1BreakdownRow[] })?.rows;
     if (!Array.isArray(rows)) {
-      console.error("[breakdown] v1 response missing rows array", typeof data);
-      return [];
+      const msg = `v1 breakdown: unexpected response format (${typeof data})`;
+      console.error(`[breakdown] ${msg}`);
+      return { rows: [], error: msg };
     }
-    return rows;
+    return { rows, error: null };
   } catch (error) {
+    const msg =
+      error instanceof Error ? error.message : String(error ?? "unknown error");
     console.error("[breakdown] v1 fetch failed", error);
-    return [];
+    return { rows: [], error: `v1 breakdown unavailable: ${msg}` };
   }
 }
 
@@ -4662,9 +4765,12 @@ async function queryV2Breakdown(
     eq(dataEntries.is_deleted, false),
   ];
   if (utilityId != null) conditions.push(eq(organisations.id, utilityId));
-  if (reportPeriodId != null) conditions.push(eq(reportPeriods.id, reportPeriodId));
-  if (categoryId != null) conditions.push(eq(inputDefinitions.category_id, categoryId));
-  if (subcategoryId != null) conditions.push(eq(inputDefinitions.subcategory_id, subcategoryId));
+  if (reportPeriodId != null)
+    conditions.push(eq(reportPeriods.id, reportPeriodId));
+  if (categoryId != null)
+    conditions.push(eq(inputDefinitions.category_id, categoryId));
+  if (subcategoryId != null)
+    conditions.push(eq(inputDefinitions.subcategory_id, subcategoryId));
 
   const rows = await db
     .select({
@@ -4677,9 +4783,15 @@ async function queryV2Breakdown(
       entryCount: count(dataEntries.id),
     })
     .from(dataEntries)
-    .innerJoin(reportPeriods, eq(dataEntries.report_period_id, reportPeriods.id))
+    .innerJoin(
+      reportPeriods,
+      eq(dataEntries.report_period_id, reportPeriods.id),
+    )
     .innerJoin(organisations, eq(reportPeriods.utility_id, organisations.id))
-    .innerJoin(inputDefinitions, eq(dataEntries.input_def_id, inputDefinitions.id))
+    .innerJoin(
+      inputDefinitions,
+      eq(dataEntries.input_def_id, inputDefinitions.id),
+    )
     .innerJoin(catAlias, eq(inputDefinitions.category_id, catAlias.id))
     .innerJoin(subAlias, eq(inputDefinitions.subcategory_id, subAlias.id))
     .where(and(...conditions))

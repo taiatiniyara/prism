@@ -20,9 +20,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
 import {
   DataEntryBreakdownFilterOptions,
   DataEntryBreakdownRow,
+  DataEntryBreakdownResult,
   getDataEntryBreakdown,
 } from "./service";
 
@@ -45,33 +47,65 @@ export default function DataEntryBreakdownPanel({
   const searchParams = useSearchParams();
 
   const utility = searchParams.get("utility") ?? initialUtility ?? "";
-  const reportPeriod = searchParams.get("reportPeriod") ?? initialReportPeriod ?? "";
+  const reportPeriod =
+    searchParams.get("reportPeriod") ?? initialReportPeriod ?? "";
   const category = searchParams.get("category") ?? initialCategory ?? "";
-  const subcategory = searchParams.get("subcategory") ?? initialSubcategory ?? "";
+  const subcategory =
+    searchParams.get("subcategory") ?? initialSubcategory ?? "";
 
   const [rows, setRows] = useState<DataEntryBreakdownRow[] | null>(null);
   const [loading, setLoading] = useState(false);
+  const [v1Error, setV1Error] = useState<string | null>(null);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
-  const updateParam = (key: string, value: string) => {
+  const scopedReportPeriods = useMemo(() => {
+    if (!utility) return options.reportPeriods;
+    const utilityId = Number(utility);
+    if (!Number.isFinite(utilityId)) return options.reportPeriods;
+    return options.reportPeriods.filter((rp) => rp.utilityId === utilityId);
+  }, [options.reportPeriods, utility]);
+
+  const scopedSubcategories = useMemo(() => {
+    if (!category) return options.subcategories;
+    const categoryId = Number(category);
+    if (!Number.isFinite(categoryId)) return options.subcategories;
+    const allowedIds =
+      options.subcategoryIdsByCategoryId[categoryId];
+    if (!allowedIds || allowedIds.length === 0) return [];
+    const allowedSet = new Set(allowedIds);
+    return options.subcategories.filter((s) => allowedSet.has(s.id));
+  }, [options.subcategories, options.subcategoryIdsByCategoryId, category]);
+
+  const updateParams = (updates: Record<string, string>) => {
     const next = new URLSearchParams(searchParams.toString());
-    if (value) {
-      next.set(key, value);
-    } else {
-      next.delete(key);
+    for (const [key, value] of Object.entries(updates)) {
+      if (value) {
+        next.set(key, value);
+      } else {
+        next.delete(key);
+      }
     }
     router.replace(`?${next.toString()}`, { scroll: false });
   };
 
   const fetchBreakdown = useCallback(async () => {
     setLoading(true);
+    setV1Error(null);
+    setFetchError(null);
     try {
-      const result = await getDataEntryBreakdown(
+      const result: DataEntryBreakdownResult = await getDataEntryBreakdown(
         utility ? Number(utility) : null,
         reportPeriod ? Number(reportPeriod) : null,
         category ? Number(category) : null,
         subcategory ? Number(subcategory) : null,
       );
-      setRows(result);
+      setRows(result.rows);
+      setV1Error(result.v1Error);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : String(error);
+      setFetchError(message);
+      setRows(null);
     } finally {
       setLoading(false);
     }
@@ -105,11 +139,24 @@ export default function DataEntryBreakdownPanel({
 
   const subcategoryBreakdown = useMemo(() => {
     if (!rows) return [];
-    const map = new Map<string, { category: string; subcategory: string; v1: number; v2: number }>();
+    const map = new Map<
+      string,
+      { category: string; subcategory: string; v1: number; v2: number }
+    >();
     for (const r of rows) {
       const key = `${r.categoryName}||${r.subcategoryName}`;
-      const prev = map.get(key) ?? { category: r.categoryName, subcategory: r.subcategoryName, v1: 0, v2: 0 };
-      map.set(key, { category: r.categoryName, subcategory: r.subcategoryName, v1: prev.v1 + r.v1Count, v2: prev.v2 + r.v2Count });
+      const prev = map.get(key) ?? {
+        category: r.categoryName,
+        subcategory: r.subcategoryName,
+        v1: 0,
+        v2: 0,
+      };
+      map.set(key, {
+        category: r.categoryName,
+        subcategory: r.subcategoryName,
+        v1: prev.v1 + r.v1Count,
+        v2: prev.v2 + r.v2Count,
+      });
     }
     return Array.from(map.entries())
       .map(([, data]) => ({
@@ -121,6 +168,16 @@ export default function DataEntryBreakdownPanel({
       }))
       .sort((a, b) => b.gap - a.gap);
   }, [rows]);
+
+  const chartMaxHeight = 400;
+  const categoryChartHeight = Math.min(
+    chartMaxHeight,
+    Math.max(200, categoryBreakdown.length * 32),
+  );
+  const subcategoryChartHeight = Math.min(
+    chartMaxHeight,
+    Math.max(200, subcategoryBreakdown.length * 32),
+  );
 
   return (
     <Card className="mt-6">
@@ -141,9 +198,12 @@ export default function DataEntryBreakdownPanel({
               value={utility}
               disabled={loading}
               onChange={(e) => {
-                updateParam("utility", e.target.value);
-                updateParam("category", "");
-                updateParam("subcategory", "");
+                updateParams({
+                  utility: e.target.value,
+                  category: "",
+                  subcategory: "",
+                  reportPeriod: "",
+                });
               }}
             >
               <option value="">All</option>
@@ -161,10 +221,10 @@ export default function DataEntryBreakdownPanel({
               className="w-full rounded-md border border-slate-300 bg-white px-2 py-2"
               value={reportPeriod}
               disabled={loading}
-              onChange={(e) => updateParam("reportPeriod", e.target.value)}
+              onChange={(e) => updateParams({ reportPeriod: e.target.value })}
             >
               <option value="">All</option>
-              {options.reportPeriods.map((o) => (
+              {scopedReportPeriods.map((o) => (
                 <option key={o.id} value={o.id}>
                   {o.label}
                 </option>
@@ -179,8 +239,10 @@ export default function DataEntryBreakdownPanel({
               value={category}
               disabled={loading}
               onChange={(e) => {
-                updateParam("category", e.target.value);
-                updateParam("subcategory", "");
+                updateParams({
+                  category: e.target.value,
+                  subcategory: "",
+                });
               }}
             >
               <option value="">All</option>
@@ -198,10 +260,10 @@ export default function DataEntryBreakdownPanel({
               className="w-full rounded-md border border-slate-300 bg-white px-2 py-2"
               value={subcategory}
               disabled={loading}
-              onChange={(e) => updateParam("subcategory", e.target.value)}
+              onChange={(e) => updateParams({ subcategory: e.target.value })}
             >
               <option value="">All</option>
-              {options.subcategories.map((o) => (
+              {scopedSubcategories.map((o) => (
                 <option key={o.id} value={o.id}>
                   {o.name}
                 </option>
@@ -211,108 +273,205 @@ export default function DataEntryBreakdownPanel({
         </div>
 
         {loading ? (
-          <p className="text-sm text-slate-500">Loading...</p>
-        ) : !rows ? null : rows.length === 0 ? (
+          <div className="space-y-3">
+            <Skeleton className="h-5 w-72" />
+            <Skeleton className="h-48 w-full" />
+            <Skeleton className="h-48 w-full" />
+            <Skeleton className="h-64 w-full" />
+          </div>
+        ) : fetchError ? (
+          <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+            Unable to load breakdown: {fetchError}
+          </p>
+        ) : !rows ? null : rows.length === 0 && !v1Error ? (
           <p className="text-sm text-slate-500">
             No data entries found for the selected filters.
           </p>
         ) : (
           <div className="space-y-2">
-            <div className="flex gap-6 text-sm">
-              <span>
-                PRISM v1 total:{" "}
-                <span className="font-semibold">{totalV1}</span>
-              </span>
-              <span>
-                PRISM v2 total:{" "}
-                <span className="font-semibold">{totalV2}</span>
-              </span>
-              <span>
-                across {rows.length} row{rows.length !== 1 ? "s" : ""}
-              </span>
-            </div>
+            {v1Error ? (
+              <p className="rounded border border-amber-200 bg-amber-50 px-3 py-2 text-sm text-amber-800">
+                {v1Error}
+              </p>
+            ) : null}
 
-            <div className="space-y-1">
-              <h3 className="text-sm font-medium">By Category</h3>
-              {categoryBreakdown.length === 0 ? (
-                <p className="text-sm text-slate-500">No category data.</p>
-              ) : (
-                <div className="rounded border bg-white" style={{ height: Math.max(200, categoryBreakdown.length * 32) }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={categoryBreakdown.map((c) => ({ name: c.name, Expected: c.v1Count, Actual: c.v2Count }))}
-                      layout="vertical"
-                      margin={{ top: 8, right: 20, left: 10, bottom: 8 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                      <XAxis type="number" tick={{ fontSize: 11 }} />
-                      <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={140} />
-                      <Tooltip formatter={(value) => (value != null ? Number(value).toLocaleString() : "0")} />
-                      <Legend />
-                      <Bar dataKey="Expected" fill="#94a3b8" radius={[0, 2, 2, 0]} />
-                      <Bar dataKey="Actual" fill="#3b82f6" radius={[0, 2, 2, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+            {rows.length > 0 ? (
+              <>
+                <div className="flex gap-6 text-sm">
+                  <span>
+                    PRISM v1 total:{" "}
+                    <span className="font-semibold">{totalV1}</span>
+                  </span>
+                  <span>
+                    PRISM v2 total:{" "}
+                    <span className="font-semibold">{totalV2}</span>
+                  </span>
+                  <span>
+                    across {rows.length} row{rows.length !== 1 ? "s" : ""}
+                  </span>
                 </div>
-              )}
-            </div>
 
-            <div className="space-y-1">
-              <h3 className="text-sm font-medium">By Subcategory</h3>
-              {subcategoryBreakdown.length === 0 ? (
-                <p className="text-sm text-slate-500">No subcategory data.</p>
-              ) : (
-                <div className="rounded border bg-white" style={{ height: Math.max(200, subcategoryBreakdown.length * 32) }}>
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart
-                      data={subcategoryBreakdown.map((s) => ({ name: `${s.categoryName} / ${s.subcategoryName}`, Expected: s.v1Count, Actual: s.v2Count }))}
-                      layout="vertical"
-                      margin={{ top: 8, right: 20, left: 10, bottom: 8 }}
+                <div className="space-y-1">
+                  <h3 className="text-sm font-medium">By Category</h3>
+                  {categoryBreakdown.length === 0 ? (
+                    <p className="text-sm text-slate-500">
+                      No category data.
+                    </p>
+                  ) : (
+                    <div
+                      className="rounded border bg-white"
+                      style={{ height: categoryChartHeight }}
                     >
-                      <CartesianGrid strokeDasharray="3 3" horizontal={false} />
-                      <XAxis type="number" tick={{ fontSize: 11 }} />
-                      <YAxis type="category" dataKey="name" tick={{ fontSize: 11 }} width={200} />
-                      <Tooltip formatter={(value) => (value != null ? Number(value).toLocaleString() : "0")} />
-                      <Legend />
-                      <Bar dataKey="Expected" fill="#94a3b8" radius={[0, 2, 2, 0]} />
-                      <Bar dataKey="Actual" fill="#3b82f6" radius={[0, 2, 2, 0]} />
-                    </BarChart>
-                  </ResponsiveContainer>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={categoryBreakdown.map((c) => ({
+                            name: c.name,
+                            Expected: c.v1Count,
+                            Actual: c.v2Count,
+                          }))}
+                          layout="vertical"
+                          margin={{
+                            top: 8,
+                            right: 20,
+                            left: 10,
+                            bottom: 8,
+                          }}
+                        >
+                          <CartesianGrid
+                            strokeDasharray="3 3"
+                            horizontal={false}
+                          />
+                          <XAxis type="number" tick={{ fontSize: 11 }} />
+                          <YAxis
+                            type="category"
+                            dataKey="name"
+                            tick={{ fontSize: 11 }}
+                            width={140}
+                          />
+                          <Tooltip
+                            formatter={(value) =>
+                              value != null
+                                ? Number(value).toLocaleString()
+                                : "0"
+                            }
+                          />
+                          <Legend />
+                          <Bar
+                            dataKey="Expected"
+                            fill="#94a3b8"
+                            radius={[0, 2, 2, 0]}
+                          />
+                          <Bar
+                            dataKey="Actual"
+                            fill="#3b82f6"
+                            radius={[0, 2, 2, 0]}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            <div className="max-h-105 overflow-auto rounded border">
-              <table className="min-w-full text-left text-sm">
-                <thead className="sticky top-0 bg-slate-100">
-                  <tr>
-                    <th className="px-3 py-2">Utility</th>
-                    <th className="px-3 py-2">Category</th>
-                    <th className="px-3 py-2">Sub-Category</th>
-                    <th className="px-3 py-2 text-right">PRISM v1</th>
-                    <th className="px-3 py-2 text-right">PRISM v2</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {rows.map((row, index) => (
-                    <tr
-                      key={`${row.utilityName}-${row.categoryName}-${row.subcategoryName}-${index}`}
-                      className="border-t hover:bg-slate-50"
+                <div className="space-y-1">
+                  <h3 className="text-sm font-medium">By Subcategory</h3>
+                  {subcategoryBreakdown.length === 0 ? (
+                    <p className="text-sm text-slate-500">
+                      No subcategory data.
+                    </p>
+                  ) : (
+                    <div
+                      className="rounded border bg-white"
+                      style={{ height: subcategoryChartHeight }}
                     >
-                      <td className="px-3 py-2">{row.utilityName}</td>
-                      <td className="px-3 py-2">{row.categoryName}</td>
-                      <td className="px-3 py-2">{row.subcategoryName}</td>
-                      <td className="px-3 py-2 text-right font-mono">
-                        {row.v1Count}
-                      </td>
-                      <td className="px-3 py-2 text-right font-mono">
-                        {row.v2Count}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart
+                          data={subcategoryBreakdown.map((s) => ({
+                            name: `${s.categoryName} / ${s.subcategoryName}`,
+                            Expected: s.v1Count,
+                            Actual: s.v2Count,
+                          }))}
+                          layout="vertical"
+                          margin={{
+                            top: 8,
+                            right: 20,
+                            left: 10,
+                            bottom: 8,
+                          }}
+                        >
+                          <CartesianGrid
+                            strokeDasharray="3 3"
+                            horizontal={false}
+                          />
+                          <XAxis type="number" tick={{ fontSize: 11 }} />
+                          <YAxis
+                            type="category"
+                            dataKey="name"
+                            tick={{ fontSize: 11 }}
+                            width={200}
+                          />
+                          <Tooltip
+                            formatter={(value) =>
+                              value != null
+                                ? Number(value).toLocaleString()
+                                : "0"
+                            }
+                          />
+                          <Legend />
+                          <Bar
+                            dataKey="Expected"
+                            fill="#94a3b8"
+                            radius={[0, 2, 2, 0]}
+                          />
+                          <Bar
+                            dataKey="Actual"
+                            fill="#3b82f6"
+                            radius={[0, 2, 2, 0]}
+                          />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
+                </div>
+
+                <div className="max-h-105 overflow-auto rounded border">
+                  <table className="min-w-full text-left text-sm">
+                    <thead className="sticky top-0 bg-slate-100">
+                      <tr>
+                        <th className="px-3 py-2">Utility</th>
+                        <th className="px-3 py-2">Report Period</th>
+                        <th className="px-3 py-2">Category</th>
+                        <th className="px-3 py-2">Sub-Category</th>
+                        <th className="px-3 py-2 text-right">PRISM v1</th>
+                        <th className="px-3 py-2 text-right">PRISM v2</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((row, index) => (
+                        <tr
+                          key={`${row.utilityName}-${row.categoryName}-${row.subcategoryName}-${index}`}
+                          className="border-t hover:bg-slate-50"
+                        >
+                          <td className="px-3 py-2">
+                            {row.utilityName}
+                          </td>
+                          <td>{row.reportPeriodLabel || "All"}</td>
+                          <td className="px-3 py-2">{row.categoryName}</td>
+                          <td className="px-3 py-2">
+                            {row.subcategoryName}
+                          </td>
+                          <td className="px-3 py-2 text-right font-mono">
+                            {row.v1Count}
+                          </td>
+                          <td className="px-3 py-2 text-right font-mono">
+                            {row.v2Count}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            ) : null}
           </div>
         )}
       </CardContent>
