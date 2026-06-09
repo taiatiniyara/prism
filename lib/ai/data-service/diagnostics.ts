@@ -1,5 +1,9 @@
 import { listReviewKpiRows } from "@/app/data-entry/review-kpi/service";
+import { db } from "@/db/connection";
+import { reportPeriods } from "@/db/schema/reportPeriods";
+import { eq } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
+import { hasGlobalUtilityAccess } from "@/lib/user.service";
 import { createToolMetadata } from "./common";
 import type { AiToolResult } from "../types";
 
@@ -40,6 +44,32 @@ export const getKpiDiagnostics = async (
       }),
       error: "No report period specified",
     };
+  }
+
+  if (!hasGlobalUtilityAccess(user) && user.org_id != null) {
+    const [period] = await db
+      .select({ utility_id: reportPeriods.utility_id })
+      .from(reportPeriods)
+      .where(eq(reportPeriods.id, options.report_period_id))
+      .limit(1);
+
+    if (!period || period.utility_id !== user.org_id) {
+      return {
+        data: {
+          status_counts: {},
+          missing_input_kpis: [],
+          error_kpis: [],
+          stale_kpis: [],
+          unresolved_comments_count: 0,
+          total_kpis_in_scope: 0,
+        },
+        metadata: createToolMetadata({
+          completeness_pct: 0,
+          source: "review_kpi",
+        }),
+        error: "Report period not found",
+      };
+    }
   }
 
   const rows = await listReviewKpiRows({

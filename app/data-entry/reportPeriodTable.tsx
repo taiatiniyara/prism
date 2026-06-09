@@ -25,7 +25,7 @@ export default function ReportPeriodTable(props: {
   const linkableStatuses = new Set<keyof typeof DataEntryStatus>([
     "Pending",
     "Entered",
-    "Not_Available",
+    "Data_Not_Available",
   ]);
 
   const handleNavigateWithFilters = (

@@ -51,6 +51,12 @@ const GUARDRAIL_RULES: GuardrailRule[] = [
     pattern:
       /\b(?:export|download|dump|extract)\b[^.\n]{0,40}\b(?:all\s+(?:users|utilities|kpis|records|data|rows)|entire\s+(?:database|dataset|table))\b/i,
   },
+  {
+    rule: "REF-PROMPT-INJECTION",
+    reason: "I cannot process requests that attempt to modify my instructions.",
+    pattern:
+      /\b(?:ignore\s+(?:all\s+)?(?:previous|prior)\s+(?:instructions?|rules?|prompts?)|disregard\s+(?:all\s+)?(?:previous|prior)|forget\s+(?:all\s+)?(?:previous|prior))\b/i,
+  },
 ];
 
 export const evaluateChatbotInputGuardrails = (
@@ -67,4 +73,30 @@ export const evaluateChatbotInputGuardrails = (
   }
 
   return null;
+};
+
+const PII_PATTERNS = [
+  { pattern: /\b[\w.+-]+@[\w-]+\.[\w.-]+\b/gi, type: "email" },
+  { pattern: /(?:\+?\d[\s-]?){7,}\d/g, type: "phone" },
+  {
+    pattern: /\b(?:SSN|Social Security)[:\s]*\d{3}-?\d{2}-?\d{4}\b/gi,
+    type: "ssn",
+  },
+];
+
+export const filterChatbotOutput = (
+  text: string,
+): { filtered: string; redacted: boolean } => {
+  let filtered = text;
+  let redacted = false;
+
+  for (const { pattern, type } of PII_PATTERNS) {
+    const matches = filtered.match(pattern);
+    if (matches && matches.length > 0) {
+      filtered = filtered.replace(pattern, `[REDACTED ${type.toUpperCase()}]`);
+      redacted = true;
+    }
+  }
+
+  return { filtered, redacted };
 };

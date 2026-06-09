@@ -1,5 +1,6 @@
 import { GetReportPeriods } from "@/app/data-entry/service";
 import type { CurrentUser } from "@/lib/user.service";
+import { hasGlobalUtilityAccess } from "@/lib/user.service";
 import { createToolMetadata } from "./common";
 import type { AiToolResult } from "../types";
 
@@ -32,9 +33,11 @@ export const getBenchmarkingData = async (
   options: {
     report_period_id?: number | null;
     limit?: number;
+    all_utilities?: boolean;
   } = {},
 ): Promise<AiToolResult<BenchmarkingData>> => {
-  const periods = await GetReportPeriods(user, { forceAllUtilities: true });
+  const forceAllUtilities = options.all_utilities === true && hasGlobalUtilityAccess(user);
+  const periods = await GetReportPeriods(user, { forceAllUtilities });
 
   if (periods.length === 0) {
     return {
@@ -83,15 +86,16 @@ export const getBenchmarkingData = async (
   const defaultUtility = periods[0]?.Utility ?? null;
   let userUtility: BenchmarkingData["user_utility"] = null;
 
-  if (defaultUtility) {
-    const userRecords = ranked.filter((r) => r.utility_name === defaultUtility);
+  const userUtilityName = defaultUtility;
+  if (userUtilityName) {
+    const userRecords = ranked.filter((r) => r.utility_name === userUtilityName);
     const userRecord = userRecords[0];
 
     if (userRecord) {
       const peerRecords = ranked.filter(
         (r) =>
           r.report_period === userRecord.report_period &&
-          r.utility_name !== defaultUtility,
+          r.utility_name !== userUtilityName,
       );
 
       const peerAvg =
@@ -101,7 +105,7 @@ export const getBenchmarkingData = async (
           : 0;
 
       userUtility = {
-        name: defaultUtility,
+        name: userUtilityName,
         rank: userRecord.rank,
         completion_rate: userRecord.completion_rate,
         peer_average: peerAvg,

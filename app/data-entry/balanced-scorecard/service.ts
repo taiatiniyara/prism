@@ -26,6 +26,7 @@ import type {
   ScorecardUpdatePayload,
 } from "@/app/data-entry/balanced-scorecard/types";
 import type { CurrentUser } from "@/lib/user.service";
+import { hasGlobalUtilityAccess } from "@/lib/user.service";
 
 export const getScorecardResponse = async (
   user: CurrentUser,
@@ -33,7 +34,8 @@ export const getScorecardResponse = async (
 ): Promise<ScorecardResponse> => {
   assertScorecardReadAccess(user);
   const context = sanitizeScorecardFilterContext(inputContext);
-  const rows = await listScorecardInputRows(context);
+  const userOrgId = !hasGlobalUtilityAccess(user) ? (user.org_id ?? null) : null;
+  const rows = await listScorecardInputRows(context, userOrgId);
   const relationships = await listScorecardRelationships(context);
   const snapshot = buildScorecardSnapshot(rows);
   return toScorecardResponse(context, snapshot, rows, relationships);

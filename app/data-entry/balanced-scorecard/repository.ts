@@ -244,6 +244,7 @@ const flattenHierarchy = (
 
 export const listScorecardInputRows = async (
   context: ScorecardFilterContext,
+  userOrgId?: number | null,
 ): Promise<ScorecardInputRow[]> => {
   const predicates = [];
 
@@ -259,6 +260,10 @@ export const listScorecardInputRows = async (
     predicates.push(
       eq(kpiDefinitions.subcategory_id, context.kpiSubcategoryId),
     );
+  }
+
+  if (userOrgId != null) {
+    predicates.push(eq(reportPeriods.utility_id, userOrgId));
   }
 
   const rows = await db

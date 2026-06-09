@@ -26,30 +26,32 @@ export function ChatSidebar({
   onDeleteSession,
 }: ChatSidebarProps) {
   return (
-    <div className="border-border flex h-full w-64 flex-col border-r">
+    <div className="border-border flex h-full w-64 flex-col border-r" role="navigation" aria-label="Chat sessions">
       <div className="border-border border-b p-3">
-        <Button onClick={onNewSession} className="w-full" variant="outline">
+        <Button onClick={onNewSession} className="w-full" variant="outline" aria-label="Start new chat">
           <Plus className="mr-2 size-4" />
           New Chat
         </Button>
       </div>
 
       <ScrollArea className="flex-1">
-        <div className="p-2">
+        <div className="p-2" role="list">
           {sessions.length === 0 ? (
             <p className="text-muted-foreground px-3 py-2 text-sm">
               No conversations yet
             </p>
           ) : (
             sessions.map((session) => (
-              <div
+              <button
                 key={session.id}
-                className={`group flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors ${
+                className={`group flex w-full cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-left text-sm transition-colors ${
                   activeSessionId === session.id
                     ? "bg-muted"
                     : "hover:bg-muted/50"
                 }`}
                 onClick={() => onSelectSession(session.id)}
+                aria-current={activeSessionId === session.id ? "true" : undefined}
+                aria-label={session.title}
               >
                 <MessageSquare className="text-muted-foreground size-4 shrink-0" />
                 <span className="flex-1 truncate">{session.title}</span>
@@ -61,10 +63,11 @@ export function ChatSidebar({
                     e.stopPropagation();
                     onDeleteSession(session.id);
                   }}
+                  aria-label={`Delete chat "${session.title}"`}
                 >
                   <Trash2 className="size-3" />
                 </Button>
-              </div>
+              </button>
             ))
           )}
         </div>

@@ -25,8 +25,8 @@ async function testApiEndpoint(): Promise<TestResult> {
     } else {
       return { success: false, message: `Unexpected status: ${healthCheck.status}` };
     }
-  } catch (error: any) {
-    return { success: false, message: 'Server not running', error: error.message };
+  } catch (error: unknown) {
+    return { success: false, message: 'Server not running', error: error instanceof Error ? error.message : String(error) };
   }
 
   // Step 2: Try to get a session cookie by logging in
@@ -123,11 +123,11 @@ async function testApiEndpoint(): Promise<TestResult> {
       };
     }
 
-  } catch (error: any) {
+  } catch (error: unknown) {
     return { 
       success: false, 
       message: 'Request failed', 
-      error: error.message 
+      error: error instanceof Error ? error.message : String(error) 
     };
   }
 }

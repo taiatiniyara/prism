@@ -1,6 +1,10 @@
 import { listReviewKpiRows } from "@/app/data-entry/review-kpi/service";
 import { getScorecardResponse } from "@/app/data-entry/balanced-scorecard/service";
+import { db } from "@/db/connection";
+import { reportPeriods } from "@/db/schema/reportPeriods";
+import { eq } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
+import { hasGlobalUtilityAccess } from "@/lib/user.service";
 import { createToolMetadata } from "./common";
 import type { AiToolResult } from "../types";
 
@@ -44,6 +48,31 @@ export const getPerformanceSnapshot = async (
       }),
       error: "No report period specified",
     };
+  }
+
+  if (!hasGlobalUtilityAccess(user) && user.org_id != null) {
+    const [period] = await db
+      .select({ utility_id: reportPeriods.utility_id })
+      .from(reportPeriods)
+      .where(eq(reportPeriods.id, options.report_period_id))
+      .limit(1);
+
+    if (!period || period.utility_id !== user.org_id) {
+      return {
+        data: {
+          review_status_counts: {},
+          weakest_kpis: [],
+          scorecard_overall_score: null,
+          weakest_perspectives: [],
+          total_kpis_in_scope: 0,
+        },
+        metadata: createToolMetadata({
+          completeness_pct: 0,
+          source: "review_kpi",
+        }),
+        error: "Report period not found",
+      };
+    }
   }
 
   const reviewRows = await listReviewKpiRows({

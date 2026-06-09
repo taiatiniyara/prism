@@ -74,6 +74,7 @@ export function MessageBubble({ message, onFeedback }: MessageBubbleProps) {
               onClick={() => handleFeedback("positive")}
               disabled={feedbackGiven !== null}
               className={feedbackGiven === "positive" ? "text-green-500" : ""}
+              aria-label="Thumbs up"
             >
               <ThumbsUp className="size-3" />
             </Button>
@@ -83,6 +84,7 @@ export function MessageBubble({ message, onFeedback }: MessageBubbleProps) {
               onClick={() => handleFeedback("negative")}
               disabled={feedbackGiven !== null}
               className={feedbackGiven === "negative" ? "text-red-500" : ""}
+              aria-label="Thumbs down"
             >
               <ThumbsDown className="size-3" />
             </Button>

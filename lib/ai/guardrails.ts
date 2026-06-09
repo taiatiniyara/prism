@@ -78,7 +78,7 @@ export const validateInput = (message: string): AiGuardrailResult => {
   return { passed: true };
 };
 
-const ADMIN_ONLY_TOOLS: AiToolName[] = [];
+const ADMIN_ONLY_TOOLS: AiToolName[] = ["get_governance_audit", "get_configuration_options"];
 
 export const validateToolAccess = (
   toolName: AiToolName,

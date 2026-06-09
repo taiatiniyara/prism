@@ -55,6 +55,7 @@ export function ChatInput({
         disabled={disabled}
         className="min-h-[44px] max-h-[200px] resize-none"
         rows={1}
+        aria-label="Message input"
       />
       {isLoading ? (
         <Button
@@ -62,6 +63,7 @@ export function ChatInput({
           size="icon"
           onClick={onStop}
           className="shrink-0"
+          aria-label="Stop generating"
         >
           <Square className="size-4" />
         </Button>
@@ -71,6 +73,7 @@ export function ChatInput({
           disabled={!input.trim() || disabled}
           size="icon"
           className="shrink-0"
+          aria-label="Send message"
         >
           <Send className="size-4" />
         </Button>

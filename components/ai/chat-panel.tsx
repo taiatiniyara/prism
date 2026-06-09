@@ -16,6 +16,7 @@ interface ChatMessage {
   id: string;
   role: "user" | "assistant";
   content: string;
+  turnId?: number;
 }
 
 interface ChatPanelProps {
@@ -143,8 +144,15 @@ export function ChatPanel({ showSidebar = true }: ChatPanelProps) {
       }
 
       const sessionIdHeader = response.headers.get("X-Session-Id");
+      const turnIdHeader = response.headers.get("X-Turn-Id");
+      let turnId: number | undefined;
+
       if (sessionIdHeader && !activeSessionId) {
         setActiveSessionId(parseInt(sessionIdHeader, 10));
+      }
+
+      if (turnIdHeader) {
+        turnId = parseInt(turnIdHeader, 10);
       }
 
       const reader = response.body?.getReader();
@@ -169,6 +177,7 @@ export function ChatPanel({ showSidebar = true }: ChatPanelProps) {
         id: `assistant-${Date.now()}`,
         role: "assistant",
         content: fullContent,
+        turnId,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -242,7 +251,7 @@ export function ChatPanel({ showSidebar = true }: ChatPanelProps) {
       )}
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
+        <div ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto" role="log" aria-live="polite" aria-label="Chat messages">
           <div className="mx-auto max-w-3xl space-y-6 p-6">
             {displayMessages.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
@@ -258,7 +267,7 @@ export function ChatPanel({ showSidebar = true }: ChatPanelProps) {
                   key={message.id}
                   message={message}
                   onFeedback={(sentiment: "positive" | "negative", correction?: string) =>
-                    handleFeedback(0, sentiment, correction)
+                    handleFeedback(message.turnId ?? 0, sentiment, correction)
                   }
                 />
               ))

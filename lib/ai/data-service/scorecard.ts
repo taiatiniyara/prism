@@ -1,5 +1,9 @@
 import { getScorecardResponse } from "@/app/data-entry/balanced-scorecard/service";
+import { db } from "@/db/connection";
+import { reportPeriods } from "@/db/schema/reportPeriods";
+import { eq } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
+import { hasGlobalUtilityAccess } from "@/lib/user.service";
 import { createToolMetadata } from "./common";
 import type { AiToolResult } from "../types";
 
@@ -51,6 +55,32 @@ export const getScorecardSummary = async (
       }),
       error: "No report period specified",
     };
+  }
+
+  if (!hasGlobalUtilityAccess(user) && user.org_id != null) {
+    const [period] = await db
+      .select({ utility_id: reportPeriods.utility_id })
+      .from(reportPeriods)
+      .where(eq(reportPeriods.id, options.report_period_id))
+      .limit(1);
+
+    if (!period || period.utility_id !== user.org_id) {
+      return {
+        data: {
+          overall_score: null,
+          total_excluded: 0,
+          perspectives: [],
+          weakest_kpis: [],
+          exclusion_reasons: [],
+          report_period: null,
+        },
+        metadata: createToolMetadata({
+          completeness_pct: 0,
+          source: "scorecard",
+        }),
+        error: "Report period not found",
+      };
+    }
   }
 
   try {

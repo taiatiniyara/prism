@@ -1,5 +1,6 @@
 import { GetReportPeriods } from "@/app/data-entry/service";
 import type { CurrentUser } from "@/lib/user.service";
+import { hasGlobalUtilityAccess } from "@/lib/user.service";
 import { createToolMetadata, formatPercent } from "./common";
 import type { AiToolResult } from "../types";
 
@@ -39,8 +40,9 @@ export const getKpiStatus = async (
     all_utilities?: boolean;
   } = {},
 ): Promise<AiToolResult<KpiStatusData>> => {
+  const forceAllUtilities = options.all_utilities === true && hasGlobalUtilityAccess(user);
   const periods = await GetReportPeriods(user, {
-    forceAllUtilities: options.all_utilities === true,
+    forceAllUtilities,
   });
 
   if (periods.length === 0) {
@@ -53,7 +55,7 @@ export const getKpiStatus = async (
           total_completed: 0,
           overall_completion_rate: 0,
         },
-        scope: options.all_utilities ? "all_utilities" : "single_utility",
+        scope: forceAllUtilities ? "all_utilities" : "single_utility",
         default_utility: null,
       },
       metadata: createToolMetadata({
@@ -64,7 +66,7 @@ export const getKpiStatus = async (
   }
 
   const defaultUtility = periods[0]?.Utility ?? null;
-  const scopedPeriods = options.all_utilities
+  const scopedPeriods = forceAllUtilities
     ? periods
     : periods.filter((p) => p.Utility === defaultUtility);
 
@@ -114,7 +116,7 @@ export const getKpiStatus = async (
     data: {
       periods: summaries,
       aggregate,
-      scope: options.all_utilities ? "all_utilities" : "single_utility",
+      scope: forceAllUtilities ? "all_utilities" : "single_utility",
       default_utility: defaultUtility,
     },
     metadata: createToolMetadata({

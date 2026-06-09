@@ -20,9 +20,8 @@ function stringSimilarity(a: string, b: string): number {
     dp[0] = i;
     for (let j = 1; j <= n; j++) {
       const temp = dp[j];
-      dp[j] = s1[i - 1] === s2[j - 1]
-        ? prev
-        : 1 + Math.min(prev, dp[j], dp[j - 1]);
+      dp[j] =
+        s1[i - 1] === s2[j - 1] ? prev : 1 + Math.min(prev, dp[j], dp[j - 1]);
       prev = temp;
     }
   }
@@ -43,7 +42,12 @@ import {
   inputDlDefMappings,
   inputDefinitions,
 } from "@/db/schema/dataEntry";
-import { KpiDefinition, kpi, kpiCalculationAttempts, kpiDefinitions } from "@/db/schema/kpi";
+import {
+  KpiDefinition,
+  kpi,
+  kpiCalculationAttempts,
+  kpiDefinitions,
+} from "@/db/schema/kpi";
 import {
   ManagedList,
   ManagedListItem,
@@ -87,9 +91,9 @@ const JSON_HEADERS = {
   "Content-Type": "application/json",
   Accept: "application/json",
 } as const;
-const DATA_ENTRY_PAGE_LIMIT = Number(
-  process.env.MIGRATION_DATA_ENTRY_PAGE_LIMIT ?? "2000",
-);
+// const DATA_ENTRY_PAGE_LIMIT = Number(
+//   process.env.MIGRATION_DATA_ENTRY_PAGE_LIMIT ?? "2000",
+// );
 const MIGRATION_FETCH_TIMEOUT_MS = Number(
   process.env.MIGRATION_FETCH_TIMEOUT_MS ?? "12000",
 );
@@ -269,13 +273,13 @@ const resolveTimeoutMs = (requestUrl: string): number => {
   return defaultTimeoutMs;
 };
 
-const resolveDataEntryPageLimit = (): number => {
-  if (!Number.isFinite(DATA_ENTRY_PAGE_LIMIT) || DATA_ENTRY_PAGE_LIMIT <= 0) {
-    return 500;
-  }
+// const resolveDataEntryPageLimit = (): number => {
+//   if (!Number.isFinite(DATA_ENTRY_PAGE_LIMIT) || DATA_ENTRY_PAGE_LIMIT <= 0) {
+//     return 500;
+//   }
 
-  return Math.max(1, Math.min(2000, Math.trunc(DATA_ENTRY_PAGE_LIMIT)));
-};
+//   return Math.max(1, Math.min(2000, Math.trunc(DATA_ENTRY_PAGE_LIMIT)));
+// };
 
 const requestWithInsecureHttpParser = async (
   requestUrl: string,
@@ -1472,7 +1476,11 @@ export async function retrieveInputDlDefMappings(): Promise<MigrationStepResult>
       existingMappings.map((m) => m.trainingDlDefId),
     );
 
-    const dlDefs: Array<{ id: number; name: string; variableName: string | null }> = [];
+    const dlDefs: Array<{
+      id: number;
+      name: string;
+      variableName: string | null;
+    }> = [];
 
     // Try the dlDef endpoint — parse text to handle BigInt values
     try {
@@ -1515,7 +1523,11 @@ export async function retrieveInputDlDefMappings(): Promise<MigrationStepResult>
             `/dataEntry?${params.toString()}`,
           );
           const page = (await call.json()) as {
-            dataEntry?: Array<{ input_def_id?: number; input_def_name?: string; input_def_variable_name?: string }>;
+            dataEntry?: Array<{
+              input_def_id?: number;
+              input_def_name?: string;
+              input_def_variable_name?: string;
+            }>;
           };
           const entries = page.dataEntry ?? [];
           for (const e of entries) {
@@ -1528,7 +1540,12 @@ export async function retrieveInputDlDefMappings(): Promise<MigrationStepResult>
               variableName: e.input_def_variable_name ?? null,
             });
           }
-          cursor = (page as { pagination?: { nextCursor?: number; hasMore?: boolean } }).pagination?.nextCursor ?? null;
+          cursor =
+            (
+              page as {
+                pagination?: { nextCursor?: number; hasMore?: boolean };
+              }
+            ).pagination?.nextCursor ?? null;
           hasMore = cursor != null && entries.length > 0;
         } catch {
           hasMore = false;
@@ -1588,7 +1605,9 @@ export async function retrieveInputDlDefMappings(): Promise<MigrationStepResult>
         training_source_id: null,
         training_dl_name: dl.name,
         training_variable_name: dl.variableName,
-        score: Math.round((confidence === "high" ? 100 : confidence === "medium" ? 70 : 50)),
+        score: Math.round(
+          confidence === "high" ? 100 : confidence === "medium" ? 70 : 50,
+        ),
         confidence,
         reasons,
         is_auto: true,
@@ -2884,11 +2903,11 @@ export async function retrieveDataEntries(options?: {
 
   try {
     const loopStartedAt = Date.now();
-    const LOOP_MAX_MS = 120_000;
+    const LOOP_MAX_MS = 300_000;
     while (hasMore) {
       const params = new URLSearchParams();
       params.set("includeDeleted", "1");
-      params.set("limit", String(resolveDataEntryPageLimit()));
+      params.set("limit", "2000");
 
       if (cursor != null) params.set("cursor", String(cursor));
       if (options?.reportPeriodId != null) {
@@ -4772,7 +4791,11 @@ export async function getInputBreakdown(
   categoryId: number,
   subcategoryId: number,
   utilityName?: string,
-): Promise<{ rows: InputBreakdownRow[]; totalV2: number; utilityId: number | null }> {
+): Promise<{
+  rows: InputBreakdownRow[];
+  totalV2: number;
+  utilityId: number | null;
+}> {
   await assertDevMigrationAccess();
 
   const catAlias = aliasedTable(managedListItems, "cat");
@@ -4790,8 +4813,10 @@ export async function getInputBreakdown(
   }
 
   const defConditions = [eq(inputDefinitions.is_active, true)];
-  if (categoryId != null) defConditions.push(eq(inputDefinitions.category_id, categoryId));
-  if (subcategoryId != null) defConditions.push(eq(inputDefinitions.subcategory_id, subcategoryId));
+  if (categoryId != null)
+    defConditions.push(eq(inputDefinitions.category_id, categoryId));
+  if (subcategoryId != null)
+    defConditions.push(eq(inputDefinitions.subcategory_id, subcategoryId));
 
   const defs = await db
     .select({
@@ -4806,20 +4831,33 @@ export async function getInputBreakdown(
     .where(and(...defConditions))
     .orderBy(inputDefinitions.name);
 
-  const rpConditions: Array<ReturnType<typeof eq> | ReturnType<typeof sql>> = [];
-  if (reportPeriodId != null) rpConditions.push(eq(reportPeriods.id, reportPeriodId));
-  if (resolvedUtilityId != null) rpConditions.push(eq(reportPeriods.utility_id, resolvedUtilityId));
-  if (reportTypeId != null) rpConditions.push(eq(reportPeriods.report_type_id, reportTypeId));
-  if (year != null) rpConditions.push(sql`EXTRACT(YEAR FROM ${reportPeriods.report_date}) = ${year}`);
+  const rpConditions: Array<ReturnType<typeof eq> | ReturnType<typeof sql>> =
+    [];
+  if (reportPeriodId != null)
+    rpConditions.push(eq(reportPeriods.id, reportPeriodId));
+  if (resolvedUtilityId != null)
+    rpConditions.push(eq(reportPeriods.utility_id, resolvedUtilityId));
+  if (reportTypeId != null)
+    rpConditions.push(eq(reportPeriods.report_type_id, reportTypeId));
+  if (year != null)
+    rpConditions.push(
+      sql`EXTRACT(YEAR FROM ${reportPeriods.report_date}) = ${year}`,
+    );
 
   const rps = await db
     .select({ id: reportPeriods.id })
     .from(reportPeriods)
     .innerJoin(organisations, eq(reportPeriods.utility_id, organisations.id))
-    .where(and(eq(organisations.is_utility, true), ...(rpConditions.length > 0 ? rpConditions : [undefined])));
+    .where(
+      and(
+        eq(organisations.is_utility, true),
+        ...(rpConditions.length > 0 ? rpConditions : [undefined]),
+      ),
+    );
   const rpIds = rps.map((r) => r.id);
 
-  if (rpIds.length === 0) return { rows: [], totalV2: 0, utilityId: resolvedUtilityId };
+  if (rpIds.length === 0)
+    return { rows: [], totalV2: 0, utilityId: resolvedUtilityId };
 
   const v2Rows = await db
     .select({
@@ -4827,13 +4865,20 @@ export async function getInputBreakdown(
       cnt: count(dataEntries.id),
     })
     .from(dataEntries)
-    .innerJoin(inputDefinitions, eq(dataEntries.input_def_id, inputDefinitions.id))
+    .innerJoin(
+      inputDefinitions,
+      eq(dataEntries.input_def_id, inputDefinitions.id),
+    )
     .where(
       and(
         inArray(dataEntries.report_period_id, rpIds),
         eq(dataEntries.is_deleted, false),
-        categoryId > 0 ? eq(inputDefinitions.category_id, categoryId) : undefined,
-        subcategoryId > 0 ? eq(inputDefinitions.subcategory_id, subcategoryId) : undefined,
+        categoryId > 0
+          ? eq(inputDefinitions.category_id, categoryId)
+          : undefined,
+        subcategoryId > 0
+          ? eq(inputDefinitions.subcategory_id, subcategoryId)
+          : undefined,
       ),
     )
     .groupBy(dataEntries.input_def_id);
@@ -4982,11 +5027,13 @@ export async function getDataEntryBreakdown(
 
   for (const item of catLookup) {
     const n = item.name.toLowerCase();
-    if (n === "operational" && operationalCatId == null) operationalCatId = item.id;
+    if (n === "operational" && operationalCatId == null)
+      operationalCatId = item.id;
     if (n === "country & utility context" && countryUtilCatId == null)
       countryUtilCatId = item.id;
     if (n === "hr & safety" && hrSafetyCatId == null) hrSafetyCatId = item.id;
-    if (n === "governance" && governanceCatId == null) governanceCatId = item.id;
+    if (n === "governance" && governanceCatId == null)
+      governanceCatId = item.id;
     if (n === "financial" && financialCatId == null) financialCatId = item.id;
   }
   for (const item of subLookup) {
@@ -5047,7 +5094,10 @@ export async function getDataEntryBreakdown(
     .from(reportPeriods)
     .innerJoin(organisations, eq(reportPeriods.utility_id, organisations.id))
     .where(
-      and(eq(organisations.is_utility, true), ...(rpConditions.length > 0 ? rpConditions : [undefined])),
+      and(
+        eq(organisations.is_utility, true),
+        ...(rpConditions.length > 0 ? rpConditions : [undefined]),
+      ),
     );
 
   // Gather unique utility IDs
@@ -5072,8 +5122,14 @@ export async function getDataEntryBreakdown(
         saId: dataEntries.service_area_id,
       })
       .from(dataEntries)
-      .innerJoin(reportPeriods, eq(dataEntries.report_period_id, reportPeriods.id))
-      .innerJoin(inputDefinitions, eq(dataEntries.input_def_id, inputDefinitions.id))
+      .innerJoin(
+        reportPeriods,
+        eq(dataEntries.report_period_id, reportPeriods.id),
+      )
+      .innerJoin(
+        inputDefinitions,
+        eq(dataEntries.input_def_id, inputDefinitions.id),
+      )
       .where(
         and(
           inArray(reportPeriods.utility_id, utilityIds),
@@ -5090,36 +5146,105 @@ export async function getDataEntryBreakdown(
         ),
       );
     for (const r of opTariffRows) {
-      opTariffPairByUtility.set(r.utilityId, (opTariffPairByUtility.get(r.utilityId) ?? 0) + 1);
+      opTariffPairByUtility.set(
+        r.utilityId,
+        (opTariffPairByUtility.get(r.utilityId) ?? 0) + 1,
+      );
     }
 
     // Distinct (input, SA) pairs for HR & Safety
     if (hrSafetyCatId != null) {
       const rows = await db
-        .selectDistinct({ utilityId: reportPeriods.utility_id, inputId: dataEntries.input_def_id, saId: dataEntries.service_area_id })
+        .selectDistinct({
+          utilityId: reportPeriods.utility_id,
+          inputId: dataEntries.input_def_id,
+          saId: dataEntries.service_area_id,
+        })
         .from(dataEntries)
-        .innerJoin(reportPeriods, eq(dataEntries.report_period_id, reportPeriods.id))
-        .innerJoin(inputDefinitions, eq(dataEntries.input_def_id, inputDefinitions.id))
-        .where(and(inArray(reportPeriods.utility_id, utilityIds), inArray(dataEntries.report_period_id, rpIds), eq(dataEntries.is_deleted, false), sql`${dataEntries.service_area_id} IS NOT NULL`, sql`${inputDefinitions.category_id} = ${hrSafetyCatId}`));
-      for (const r of rows) hrSafetyPairByUtility.set(r.utilityId, (hrSafetyPairByUtility.get(r.utilityId) ?? 0) + 1);
+        .innerJoin(
+          reportPeriods,
+          eq(dataEntries.report_period_id, reportPeriods.id),
+        )
+        .innerJoin(
+          inputDefinitions,
+          eq(dataEntries.input_def_id, inputDefinitions.id),
+        )
+        .where(
+          and(
+            inArray(reportPeriods.utility_id, utilityIds),
+            inArray(dataEntries.report_period_id, rpIds),
+            eq(dataEntries.is_deleted, false),
+            sql`${dataEntries.service_area_id} IS NOT NULL`,
+            sql`${inputDefinitions.category_id} = ${hrSafetyCatId}`,
+          ),
+        );
+      for (const r of rows)
+        hrSafetyPairByUtility.set(
+          r.utilityId,
+          (hrSafetyPairByUtility.get(r.utilityId) ?? 0) + 1,
+        );
     }
     if (governanceCatId != null) {
       const rows = await db
-        .selectDistinct({ utilityId: reportPeriods.utility_id, inputId: dataEntries.input_def_id, saId: dataEntries.service_area_id })
+        .selectDistinct({
+          utilityId: reportPeriods.utility_id,
+          inputId: dataEntries.input_def_id,
+          saId: dataEntries.service_area_id,
+        })
         .from(dataEntries)
-        .innerJoin(reportPeriods, eq(dataEntries.report_period_id, reportPeriods.id))
-        .innerJoin(inputDefinitions, eq(dataEntries.input_def_id, inputDefinitions.id))
-        .where(and(inArray(reportPeriods.utility_id, utilityIds), inArray(dataEntries.report_period_id, rpIds), eq(dataEntries.is_deleted, false), sql`${dataEntries.service_area_id} IS NOT NULL`, sql`${inputDefinitions.category_id} = ${governanceCatId}`));
-      for (const r of rows) governancePairByUtility.set(r.utilityId, (governancePairByUtility.get(r.utilityId) ?? 0) + 1);
+        .innerJoin(
+          reportPeriods,
+          eq(dataEntries.report_period_id, reportPeriods.id),
+        )
+        .innerJoin(
+          inputDefinitions,
+          eq(dataEntries.input_def_id, inputDefinitions.id),
+        )
+        .where(
+          and(
+            inArray(reportPeriods.utility_id, utilityIds),
+            inArray(dataEntries.report_period_id, rpIds),
+            eq(dataEntries.is_deleted, false),
+            sql`${dataEntries.service_area_id} IS NOT NULL`,
+            sql`${inputDefinitions.category_id} = ${governanceCatId}`,
+          ),
+        );
+      for (const r of rows)
+        governancePairByUtility.set(
+          r.utilityId,
+          (governancePairByUtility.get(r.utilityId) ?? 0) + 1,
+        );
     }
     if (financialCatId != null) {
       const rows = await db
-        .selectDistinct({ utilityId: reportPeriods.utility_id, inputId: dataEntries.input_def_id, saId: dataEntries.service_area_id })
+        .selectDistinct({
+          utilityId: reportPeriods.utility_id,
+          inputId: dataEntries.input_def_id,
+          saId: dataEntries.service_area_id,
+        })
         .from(dataEntries)
-        .innerJoin(reportPeriods, eq(dataEntries.report_period_id, reportPeriods.id))
-        .innerJoin(inputDefinitions, eq(dataEntries.input_def_id, inputDefinitions.id))
-        .where(and(inArray(reportPeriods.utility_id, utilityIds), inArray(dataEntries.report_period_id, rpIds), eq(dataEntries.is_deleted, false), sql`${dataEntries.service_area_id} IS NOT NULL`, sql`${inputDefinitions.category_id} = ${financialCatId}`));
-      for (const r of rows) financialPairByUtility.set(r.utilityId, (financialPairByUtility.get(r.utilityId) ?? 0) + 1);
+        .innerJoin(
+          reportPeriods,
+          eq(dataEntries.report_period_id, reportPeriods.id),
+        )
+        .innerJoin(
+          inputDefinitions,
+          eq(dataEntries.input_def_id, inputDefinitions.id),
+        )
+        .where(
+          and(
+            inArray(reportPeriods.utility_id, utilityIds),
+            inArray(dataEntries.report_period_id, rpIds),
+            eq(dataEntries.is_deleted, false),
+            sql`${dataEntries.service_area_id} IS NOT NULL`,
+            sql`${inputDefinitions.category_id} = ${financialCatId}`,
+          ),
+        );
+      for (const r of rows)
+        financialPairByUtility.set(
+          r.utilityId,
+          (financialPairByUtility.get(r.utilityId) ?? 0) + 1,
+        );
     }
 
     // Distinct (input, SA) pairs for Country/Utility Context
@@ -5130,8 +5255,14 @@ export async function getDataEntryBreakdown(
         saId: dataEntries.service_area_id,
       })
       .from(dataEntries)
-      .innerJoin(reportPeriods, eq(dataEntries.report_period_id, reportPeriods.id))
-      .innerJoin(inputDefinitions, eq(dataEntries.input_def_id, inputDefinitions.id))
+      .innerJoin(
+        reportPeriods,
+        eq(dataEntries.report_period_id, reportPeriods.id),
+      )
+      .innerJoin(
+        inputDefinitions,
+        eq(dataEntries.input_def_id, inputDefinitions.id),
+      )
       .where(
         and(
           inArray(reportPeriods.utility_id, utilityIds),
@@ -5146,7 +5277,10 @@ export async function getDataEntryBreakdown(
         ),
       );
     for (const r of ctxRows) {
-      ctxPairByUtility.set(r.utilityId, (ctxPairByUtility.get(r.utilityId) ?? 0) + 1);
+      ctxPairByUtility.set(
+        r.utilityId,
+        (ctxPairByUtility.get(r.utilityId) ?? 0) + 1,
+      );
     }
 
     // Distinct (input, gen) pairs for Generation inputs
@@ -5157,7 +5291,10 @@ export async function getDataEntryBreakdown(
         genId: dataEntries.energy_resource_id,
       })
       .from(dataEntries)
-      .innerJoin(reportPeriods, eq(dataEntries.report_period_id, reportPeriods.id))
+      .innerJoin(
+        reportPeriods,
+        eq(dataEntries.report_period_id, reportPeriods.id),
+      )
       .innerJoin(
         inputDefinitions,
         eq(dataEntries.input_def_id, inputDefinitions.id),
@@ -5184,7 +5321,10 @@ export async function getDataEntryBreakdown(
   const genCountByUtility = new Map<number, number>();
   if (utilityIds.length > 0 && rpIds.length > 0) {
     const saRows = await db
-      .selectDistinct({ utilityId: serviceAreas.utility_id, saId: serviceAreas.id })
+      .selectDistinct({
+        utilityId: serviceAreas.utility_id,
+        saId: serviceAreas.id,
+      })
       .from(serviceAreas)
       .innerJoin(dataEntries, eq(serviceAreas.id, dataEntries.service_area_id))
       .where(
@@ -5196,12 +5336,21 @@ export async function getDataEntryBreakdown(
         ),
       );
     for (const r of saRows) {
-      saCountByUtility.set(r.utilityId, (saCountByUtility.get(r.utilityId) ?? 0) + 1);
+      saCountByUtility.set(
+        r.utilityId,
+        (saCountByUtility.get(r.utilityId) ?? 0) + 1,
+      );
     }
     const genRows = await db
-      .selectDistinct({ utilityId: energyResources.utility_id, genId: energyResources.id })
+      .selectDistinct({
+        utilityId: energyResources.utility_id,
+        genId: energyResources.id,
+      })
       .from(energyResources)
-      .innerJoin(dataEntries, eq(energyResources.id, dataEntries.energy_resource_id))
+      .innerJoin(
+        dataEntries,
+        eq(energyResources.id, dataEntries.energy_resource_id),
+      )
       .where(
         and(
           inArray(energyResources.utility_id, utilityIds),
@@ -5210,7 +5359,10 @@ export async function getDataEntryBreakdown(
         ),
       );
     for (const r of genRows) {
-      genCountByUtility.set(r.utilityId, (genCountByUtility.get(r.utilityId) ?? 0) + 1);
+      genCountByUtility.set(
+        r.utilityId,
+        (genCountByUtility.get(r.utilityId) ?? 0) + 1,
+      );
     }
   }
 
@@ -5227,7 +5379,8 @@ export async function getDataEntryBreakdown(
   const ctxInputCount = allInputDefs.filter(
     (d) =>
       (countryUtilCatId != null && d.categoryId === countryUtilCatId) ||
-      (countryContextSubId != null && d.subcategoryId === countryContextSubId) ||
+      (countryContextSubId != null &&
+        d.subcategoryId === countryContextSubId) ||
       (utilityContextSubId != null && d.subcategoryId === utilityContextSubId),
   ).length;
   const genInputCount = allInputDefs.filter(
@@ -5266,7 +5419,8 @@ export async function getDataEntryBreakdown(
     const opTariffTotal = opInputCount + tarInputCount;
     const avgOpTariff = opTariffTotal > 0 ? opTariffPairs / opTariffTotal : 0;
     const avgHr = hrSafetyInputCount > 0 ? hrPairs / hrSafetyInputCount : 0;
-    const avgGov = governanceInputCount > 0 ? govPairs / governanceInputCount : 0;
+    const avgGov =
+      governanceInputCount > 0 ? govPairs / governanceInputCount : 0;
     const avgFin = financialInputCount > 0 ? finPairs / financialInputCount : 0;
     const avgCtx = ctxInputCount > 0 ? ctxPairs / ctxInputCount : 0;
     const avgGen = genInputCount > 0 ? genPairs / genInputCount : 0;
@@ -5288,8 +5442,10 @@ export async function getDataEntryBreakdown(
         generationSubId != null && def.subcategoryId === generationSubId;
       const isCountryUtil =
         (countryUtilCatId != null && def.categoryId === countryUtilCatId) ||
-        (countryContextSubId != null && def.subcategoryId === countryContextSubId) ||
-        (utilityContextSubId != null && def.subcategoryId === utilityContextSubId);
+        (countryContextSubId != null &&
+          def.subcategoryId === countryContextSubId) ||
+        (utilityContextSubId != null &&
+          def.subcategoryId === utilityContextSubId);
 
       if (isGeneration) {
         multiplier = avgGen;
@@ -5349,7 +5505,10 @@ export async function getDataEntryBreakdown(
         eq(dataEntries.report_period_id, reportPeriods.id),
       )
       .innerJoin(organisations, eq(reportPeriods.utility_id, organisations.id))
-      .innerJoin(inputDefinitions, eq(dataEntries.input_def_id, inputDefinitions.id))
+      .innerJoin(
+        inputDefinitions,
+        eq(dataEntries.input_def_id, inputDefinitions.id),
+      )
       .innerJoin(catAlias, eq(inputDefinitions.category_id, catAlias.id))
       .innerJoin(subAlias, eq(inputDefinitions.subcategory_id, subAlias.id))
       .where(and(...deConditions))
@@ -5363,7 +5522,11 @@ export async function getDataEntryBreakdown(
 
     for (const r of v2Rows) {
       v2Map.set(
-        key({ utilityName: r.utilityName, categoryName: r.categoryName, subcategoryName: r.subcategoryName }),
+        key({
+          utilityName: r.utilityName,
+          categoryName: r.categoryName,
+          subcategoryName: r.subcategoryName,
+        }),
         Number(r.entryCount),
       );
     }
@@ -5375,7 +5538,11 @@ export async function getDataEntryBreakdown(
     const v1Result = await fetchV1Breakdown();
     for (const r of v1Result.rows) {
       v1Map.set(
-        key({ utilityName: r.utilityName, categoryName: r.categoryName, subcategoryName: r.subcategoryName }),
+        key({
+          utilityName: r.utilityName,
+          categoryName: r.categoryName,
+          subcategoryName: r.subcategoryName,
+        }),
         (v1Map.get(key(r)) ?? 0) + r.entryCount,
       );
     }
@@ -5384,7 +5551,11 @@ export async function getDataEntryBreakdown(
   }
 
   // 9. Merge v1, v2, and expected
-  const allKeys = new Set([...expectedMap.keys(), ...v2Map.keys(), ...v1Map.keys()]);
+  const allKeys = new Set([
+    ...expectedMap.keys(),
+    ...v2Map.keys(),
+    ...v1Map.keys(),
+  ]);
   const merged: DataEntryBreakdownRow[] = [];
 
   for (const k of allKeys) {
@@ -5456,9 +5627,13 @@ export async function getDataEntryBreakdown(
       inputSummary.generation++;
     } else if (
       (operationalCatId != null && def.categoryId === operationalCatId) ||
-      (tariffStructureSubId != null && def.subcategoryId === tariffStructureSubId)
+      (tariffStructureSubId != null &&
+        def.subcategoryId === tariffStructureSubId)
     ) {
-      if (tariffStructureSubId != null && def.subcategoryId === tariffStructureSubId) {
+      if (
+        tariffStructureSubId != null &&
+        def.subcategoryId === tariffStructureSubId
+      ) {
         inputSummary.tariffStructure++;
       } else {
         inputSummary.operational++;
@@ -5508,8 +5683,7 @@ export async function purgeAllDataEntryRecords(): Promise<{
 
     return { ok: true, tables: counts };
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : String(error);
+    const message = error instanceof Error ? error.message : String(error);
     console.error("[purge] Failed to purge data entry records:", message);
     return { ok: false, tables: counts, error: message };
   }
@@ -5622,21 +5796,20 @@ export async function deduplicateDataEntries(): Promise<{
       return { ok: true, deleted: 0 };
     }
 
-    await db.delete(dataEntryLogs).where(
-      inArray(dataEntryLogs.data_entry_id, idsToDelete),
-    );
+    await db
+      .delete(dataEntryLogs)
+      .where(inArray(dataEntryLogs.data_entry_id, idsToDelete));
 
-    const result = await db.delete(dataEntries).where(
-      inArray(dataEntries.id, idsToDelete),
-    );
+    const result = await db
+      .delete(dataEntries)
+      .where(inArray(dataEntries.id, idsToDelete));
 
     revalidatePath("/migration");
     revalidatePath("/data-entry");
 
     return { ok: true, deleted: result.rowCount ?? idsToDelete.length };
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : String(error);
+    const message = error instanceof Error ? error.message : String(error);
     console.error("[dedup] Failed:", message);
     return { ok: false, deleted: 0, error: message };
   }

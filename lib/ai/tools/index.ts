@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { tool } from "ai";
 import type { CurrentUser } from "@/lib/user.service";
+import { validateToolAccess } from "../guardrails";
 import {
   getKpiStatus,
   getBenchmarkingData,
@@ -36,9 +37,10 @@ export const createAiTools = (user: CurrentUser) => {
       inputSchema: z.object({
         report_period_id: z.number().optional().describe("Specific report period ID for comparison."),
         limit: z.number().optional().describe("Maximum number of records to return. Defaults to 20."),
+        all_utilities: z.boolean().optional().describe("Set to true to compare across all utilities (requires global access)."),
       }),
-      execute: async ({ report_period_id, limit }) => {
-        return getBenchmarkingData(user, { report_period_id, limit });
+      execute: async ({ report_period_id, limit, all_utilities }) => {
+        return getBenchmarkingData(user, { report_period_id, limit, all_utilities });
       },
     }),
 
@@ -107,6 +109,10 @@ export const createAiTools = (user: CurrentUser) => {
         all_utilities: z.boolean().optional().describe("Set to true to audit across all utilities."),
       }),
       execute: async ({ all_utilities }) => {
+        const accessCheck = validateToolAccess("get_governance_audit", user);
+        if (!accessCheck.passed) {
+          return { error: accessCheck.reason };
+        }
         return getGovernanceAudit(user, { all_utilities });
       },
     }),
@@ -116,6 +122,10 @@ export const createAiTools = (user: CurrentUser) => {
         "Get available configuration options including report types, report periods, KPI categories, subcategories, and service areas.",
       inputSchema: z.object({}),
       execute: async () => {
+        const accessCheck = validateToolAccess("get_configuration_options", user);
+        if (!accessCheck.passed) {
+          return { error: accessCheck.reason };
+        }
         return getConfigurationOptions(user);
       },
     }),

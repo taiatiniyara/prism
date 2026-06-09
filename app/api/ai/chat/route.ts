@@ -2,7 +2,7 @@ import { db } from "@/db/connection";
 import { aiChatSession, aiChatTurn, aiToolCall } from "@/db/schema/ai";
 import { getPromptVersion } from "@/lib/ai";
 import { validateInput } from "@/lib/ai/guardrails";
-import { checkRateLimit, recordRequest } from "@/lib/ai/rate-limit";
+import { checkRateLimit, recordRequest, recordError, recordToolCall } from "@/lib/ai/rate-limit";
 import type { AiChatMessage } from "@/lib/ai/types";
 import { getCurrentUser } from "@/lib/user.service";
 import { streamText, stepCountIs } from "ai";
@@ -163,6 +163,11 @@ export async function POST(request: Request) {
                 tool_args: toolCall.input,
                 status: "success",
               });
+              try {
+                await recordToolCall(user.id);
+              } catch {
+                // Non-critical
+              }
             }
           }
 
@@ -184,7 +189,15 @@ export async function POST(request: Request) {
       },
     });
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unexpected error";
-    return Response.json({ message }, { status: 500 });
+    console.error("AI chat error:", error instanceof Error ? error.message : String(error));
+    try {
+      await recordError(user.id);
+    } catch {
+      // Non-critical: error recording failure should not block the response
+    }
+    return Response.json(
+      { message: "An unexpected error occurred. Please try again." },
+      { status: 500 },
+    );
   }
 }

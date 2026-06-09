@@ -1,6 +1,7 @@
 import { db } from "@/db/connection";
 import { chatMessages, chatSessions } from "@/db/schema/chat-history";
-import { evaluateChatbotInputGuardrails } from "@/lib/chatbot/guardrails";
+import { evaluateChatbotInputGuardrails, filterChatbotOutput } from "@/lib/chatbot/guardrails";
+import { logError } from "@/lib/error-log.service";
 import { consumeChatbotRateLimit } from "@/lib/chatbot/rate-limit";
 import { runChatbotQuery, runChatbotQueryStream } from "@/lib/chatbot/service";
 import type {
@@ -305,6 +306,19 @@ export async function POST(request: Request) {
             message: message.replace("TIMEOUT:", ""),
           });
         } else {
+          console.error("Chatbot stream error:", message);
+          try {
+            await logError({
+              source: "chatbot",
+              errorType: "stream_error",
+              message: message.length > 500 ? message.slice(0, 497) + "..." : message,
+              userId: currentUser.id,
+              userEmail: currentUser.email,
+              userRole: currentUser.role,
+            });
+          } catch {
+            // Non-critical: don't break the response for failed logging
+          }
           sendEvent(controller, {
             type: "error",
             message: "Unable to complete chatbot response.",
@@ -366,7 +380,8 @@ export async function POST(request: Request) {
         if (!reply) {
           try {
             const fallback = await runChatbotQuery(body.messages, currentUser);
-            const fallbackReply = fallback.reply.trim();
+            const { filtered: fallbackFiltered } = filterChatbotOutput(fallback.reply);
+            const fallbackReply = fallbackFiltered.trim();
 
             if (fallbackReply) {
               await persistAssistantReply(
@@ -428,13 +443,15 @@ export async function POST(request: Request) {
           }
         }
 
+        const { filtered: filteredReply } = filterChatbotOutput(finalizedReply);
+
         await persistAssistantReply(
-          finalizedReply,
+          filteredReply,
           streamResult.model,
           streamResult.capabilitiesUsed,
           streamResult.recommendedView,
         );
-        sendEvent(controller, { type: "done", reply: finalizedReply });
+        sendEvent(controller, { type: "done", reply: filteredReply });
       } catch (error) {
         const message =
           error instanceof DOMException && error.name === "AbortError"
