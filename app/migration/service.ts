@@ -2212,6 +2212,8 @@ export type DataEntryBreakdownResult = {
     other: number;
     saCount: number;
     genCount: number;
+    saPairs: number;
+    genPairs: number;
     reportPeriodCount: number;
     utilities: Array<{
       name: string;

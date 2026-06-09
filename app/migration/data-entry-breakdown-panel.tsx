@@ -11,7 +11,7 @@ import {
   Tooltip,
   XAxis,
   YAxis,
-  type TooltipProps,
+  type TooltipContentProps,
 } from "recharts";
 
 import {
@@ -41,13 +41,13 @@ function BreakdownTooltip({
   active,
   payload,
   label,
-}: TooltipProps<number, string>) {
+}: TooltipContentProps) {
   if (!active || !payload?.length) return null;
   return (
     <div className="rounded border bg-white p-2 text-xs shadow">
       <div className="mb-1 font-medium">{label}</div>
       {payload.map((entry) => (
-        <div key={entry.dataKey} className="flex justify-between gap-3">
+        <div key={String(entry.dataKey)} className="flex justify-between gap-3">
           <span style={{ color: entry.color }}>{entry.name}:</span>
           <span className="font-mono font-semibold">
             {entry.value != null ? Number(entry.value).toLocaleString() : "0"}
@@ -58,8 +58,8 @@ function BreakdownTooltip({
         Expected total:{" "}
         <span className="font-mono font-semibold">
           {Number(
-            (payload.find((p) => p.dataKey === "v2")?.value ?? 0) +
-              (payload.find((p) => p.dataKey === "Gap")?.value ?? 0),
+            Number(payload.find((p) => p.dataKey === "v2")?.value ?? 0) +
+              Number(payload.find((p) => p.dataKey === "Gap")?.value ?? 0),
           ).toLocaleString()}
         </span>
       </div>
@@ -516,7 +516,7 @@ export default function DataEntryBreakdownPanel({
                         tick={{ fontSize: 11 }}
                         width={140}
                       />
-                      <Tooltip content={<BreakdownTooltip />} />
+                      <Tooltip content={BreakdownTooltip} />
                       <Legend />
                       <Bar
                         dataKey="v1"
@@ -596,7 +596,7 @@ export default function DataEntryBreakdownPanel({
                         tick={{ fontSize: 11 }}
                         width={200}
                       />
-                      <Tooltip content={<BreakdownTooltip />} />
+                      <Tooltip content={BreakdownTooltip} />
                       <Legend />
                       <Bar
                         dataKey="v1"
