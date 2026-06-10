@@ -1,5 +1,7 @@
 import type { BscTemplateLevel } from "@/db/schema/bsc-builder";
 import type {
+  BscActivityKind,
+  BscProjectStatus,
   CreateTemplateNodePayload,
   KpiLinkInput,
   KpiTargetRow,
@@ -22,6 +24,22 @@ const LEVELS: BscTemplateLevel[] = [
 ];
 
 const TRAJECTORIES: KpiTrajectory[] = ["increase", "decrease", "same"];
+
+const PROJECT_STATUSES: BscProjectStatus[] = [
+  "planned",
+  "in_progress",
+  "complete",
+  "on_hold",
+];
+
+// Accept an ISO date string (YYYY-MM-DD) or null.
+const asDateOrNull = (value: unknown, field: string): string | null => {
+  if (value == null || value === "") return null;
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}$/.test(value.trim())) {
+    throw new Error(`VALIDATION:${field} must be a YYYY-MM-DD date.`);
+  }
+  return value.trim();
+};
 
 const isPlainObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value != null && !Array.isArray(value);
@@ -84,10 +102,31 @@ const parseInitiative = (raw: unknown, path: string): InitiativeInput => {
   if (title.length === 0) {
     throw new Error(`VALIDATION:${path}.title is required.`);
   }
+  const kind: BscActivityKind = raw.kind === "project" ? "project" : "initiative";
+
+  let status: BscProjectStatus | null = null;
+  if (raw.status != null && raw.status !== "") {
+    if (
+      typeof raw.status !== "string" ||
+      !PROJECT_STATUSES.includes(raw.status as BscProjectStatus)
+    ) {
+      throw new Error(`VALIDATION:${path}.status is invalid.`);
+    }
+    status = raw.status as BscProjectStatus;
+  }
+
   const kpisRaw = Array.isArray(raw.kpis) ? raw.kpis : [];
   return {
     title,
     description: asTrimmed(raw.description) || null,
+    kind,
+    // Project fields only apply to projects.
+    startDate: kind === "project" ? asDateOrNull(raw.startDate, `${path}.startDate`) : null,
+    targetCompletionDate:
+      kind === "project"
+        ? asDateOrNull(raw.targetCompletionDate, `${path}.targetCompletionDate`)
+        : null,
+    status: kind === "project" ? status : null,
     ord: asOrd(raw.ord),
     kpis: kpisRaw.map((k, i) => parseKpiLink(k, `${path}.kpis[${i}]`)),
   };

@@ -28,9 +28,18 @@ Source of the framework: `BSC Hierarchy Structure.pdf` (DHI/PPA).
 | 8 | KPI (+ trajectory + targets) | Selected from KPI list (incl. custom) | many per Initiative |
 
 Rules:
-- KPIs **always** hang under an Initiative. At least one Initiative is required under a Specific Objective before KPIs can be assigned.
-- The **same KPI may appear under multiple Initiatives** (a real project often pushes several measures; several projects push one measure). For roll-up/scoring, KPIs are **deduped** so they aren't double-counted.
-- The Specific Objective carries no measure of its own; achievement is derived (later) from its Initiatives' KPIs if needed.
+- KPIs **always** hang under an activity (Initiative or Project). At least one is required under a Specific Objective before KPIs can be assigned.
+- The **same KPI may appear under multiple activities** (a real project often pushes several measures; several activities push one measure). For roll-up/scoring, KPIs are **deduped** so they aren't double-counted.
+- The Specific Objective carries no measure of its own; achievement is derived (later) from its activities' KPIs if needed.
+
+### 3a. Initiatives vs Projects (level 7)
+
+Level 7 activities carry a `kind` discriminator: **`initiative`** (ongoing improvement effort) or **`project`** (discrete, time-bound work). Both sit under a Specific Objective and carry KPIs identically — the distinction is a **type on the same level**, not a separate hierarchy level (they're structurally identical, so splitting them would duplicate machinery for no gain).
+
+- **Initiative**: name + description only.
+- **Project**: name + description **plus light strategic fields** — `start_date`, `target_completion_date`, and `status` (planned / in_progress / complete / on_hold). Deliberately *not* a full project-management module (no milestones, % complete, budget) — BSC stays a strategy tool.
+- UI: separate **"+ Initiative"** and **"+ Project"** buttons under each Specific Objective.
+- KPIs/targets/trajectory work the same for both kinds.
 
 ## 4. Template semantics
 

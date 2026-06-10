@@ -43,6 +43,8 @@ import {
 } from "@/app/data-entry/balanced-scorecard/new-bsc/client";
 import NewBscKpiTargets from "@/components/data-entry/new-bsc-kpi-targets";
 import type {
+  BscActivityKind,
+  BscProjectStatus,
   BscTemplateLevel,
   KpiOption,
   KpiTrajectory,
@@ -67,7 +69,18 @@ type WorkingInitiative = {
   key: string;
   title: string;
   description: string | null;
+  kind: BscActivityKind;
+  startDate: string | null;
+  targetCompletionDate: string | null;
+  status: BscProjectStatus | null;
   kpis: WorkingKpi[];
+};
+
+const PROJECT_STATUS_LABEL: Record<BscProjectStatus, string> = {
+  planned: "Planned",
+  in_progress: "In progress",
+  complete: "Complete",
+  on_hold: "On hold",
 };
 
 type WorkingObjective = {
@@ -127,6 +140,10 @@ const mapObjectives = (
       key: genKey(),
       title: initiative.title,
       description: initiative.description,
+      kind: initiative.kind,
+      startDate: initiative.startDate,
+      targetCompletionDate: initiative.targetCompletionDate,
+      status: initiative.status,
       kpis: initiative.kpis.map((kpi) => ({
         key: genKey(),
         kpiDefinitionId: kpi.kpiDefinitionId,
@@ -199,6 +216,10 @@ const serializeNode = (node: WorkingNode, ord: number): OverlayNodeInput => ({
           initiatives: objective.initiatives.map((initiative, ii) => ({
             title: initiative.title,
             description: initiative.description,
+            kind: initiative.kind,
+            startDate: initiative.startDate,
+            targetCompletionDate: initiative.targetCompletionDate,
+            status: initiative.status,
             ord: ii,
             kpis: initiative.kpis
               .filter(
@@ -454,6 +475,55 @@ export default function NewBscBuilder({
       })),
     );
 
+  const addActivity = (
+    perspectiveKey: string,
+    leverKey: string,
+    objectiveKey: string,
+    kind: BscActivityKind,
+  ) =>
+    updateLever(perspectiveKey, leverKey, (objectives) =>
+      objectives.map((item) =>
+        item.key === objectiveKey
+          ? {
+              ...item,
+              initiatives: [
+                ...item.initiatives,
+                {
+                  key: genKey(),
+                  title: "",
+                  description: null,
+                  kind,
+                  startDate: null,
+                  targetCompletionDate: null,
+                  status: kind === "project" ? "planned" : null,
+                  kpis: [],
+                },
+              ],
+            }
+          : item,
+      ),
+    );
+
+  const patchInitiative = (
+    perspectiveKey: string,
+    leverKey: string,
+    objectiveKey: string,
+    initiativeKey: string,
+    patch: Partial<WorkingInitiative>,
+  ) =>
+    updateLever(perspectiveKey, leverKey, (objectives) =>
+      objectives.map((item) =>
+        item.key === objectiveKey
+          ? {
+              ...item,
+              initiatives: item.initiatives.map((ini) =>
+                ini.key === initiativeKey ? { ...ini, ...patch } : ini,
+              ),
+            }
+          : item,
+      ),
+    );
+
   const setTrajectoryEverywhere = (
     kpiDefinitionId: number,
     trajectory: KpiTrajectory | null,
@@ -561,25 +631,30 @@ export default function NewBscBuilder({
             {objective.initiatives.map((initiative) => (
               <div key={initiative.key} className="rounded border bg-white p-2">
                 <div className="flex items-center gap-2">
+                  <Badge
+                    variant={
+                      initiative.kind === "project" ? "default" : "secondary"
+                    }
+                    className="text-[10px]"
+                  >
+                    {initiative.kind === "project" ? "Project" : "Initiative"}
+                  </Badge>
                   <Input
                     className="h-8 text-xs"
-                    placeholder="Initiative / Project"
+                    placeholder={
+                      initiative.kind === "project"
+                        ? "Project name"
+                        : "Initiative name"
+                    }
                     value={initiative.title}
                     disabled={!canBuild}
                     onChange={(event) =>
-                      updateLever(perspectiveKey, lever.key, (objectives) =>
-                        objectives.map((item) =>
-                          item.key === objective.key
-                            ? {
-                                ...item,
-                                initiatives: item.initiatives.map((ini) =>
-                                  ini.key === initiative.key
-                                    ? { ...ini, title: event.target.value }
-                                    : ini,
-                                ),
-                              }
-                            : item,
-                        ),
+                      patchInitiative(
+                        perspectiveKey,
+                        lever.key,
+                        objective.key,
+                        initiative.key,
+                        { title: event.target.value },
                       )
                     }
                   />
@@ -606,6 +681,66 @@ export default function NewBscBuilder({
                     <Trash2 className="size-3.5" />
                   </Button>
                 </div>
+
+                {initiative.kind === "project" ? (
+                  <div className="mt-2 flex flex-wrap items-center gap-2 pl-2 text-[11px]">
+                    <label className="text-muted-foreground">Start</label>
+                    <Input
+                      type="date"
+                      className="h-7 w-36 text-xs"
+                      value={initiative.startDate ?? ""}
+                      disabled={!canBuild}
+                      onChange={(event) =>
+                        patchInitiative(
+                          perspectiveKey,
+                          lever.key,
+                          objective.key,
+                          initiative.key,
+                          { startDate: event.target.value || null },
+                        )
+                      }
+                    />
+                    <label className="text-muted-foreground">Target</label>
+                    <Input
+                      type="date"
+                      className="h-7 w-36 text-xs"
+                      value={initiative.targetCompletionDate ?? ""}
+                      disabled={!canBuild}
+                      onChange={(event) =>
+                        patchInitiative(
+                          perspectiveKey,
+                          lever.key,
+                          objective.key,
+                          initiative.key,
+                          { targetCompletionDate: event.target.value || null },
+                        )
+                      }
+                    />
+                    <Select
+                      value={initiative.status ?? "planned"}
+                      disabled={!canBuild}
+                      onValueChange={(value) =>
+                        patchInitiative(
+                          perspectiveKey,
+                          lever.key,
+                          objective.key,
+                          initiative.key,
+                          { status: value as BscProjectStatus },
+                        )
+                      }
+                    >
+                      <SelectTrigger className="h-7 w-32 bg-white text-xs">
+                        <SelectValue placeholder="Status" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="planned">Planned</SelectItem>
+                        <SelectItem value="in_progress">In progress</SelectItem>
+                        <SelectItem value="complete">Complete</SelectItem>
+                        <SelectItem value="on_hold">On hold</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ) : null}
 
                 {/* KPIs under the initiative */}
                 <div className="mt-2 space-y-1 pl-2">
@@ -746,34 +881,40 @@ export default function NewBscBuilder({
             ))}
 
             {canBuild ? (
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-7 text-xs"
-                onClick={() =>
-                  updateLever(perspectiveKey, lever.key, (objectives) =>
-                    objectives.map((item) =>
-                      item.key === objective.key
-                        ? {
-                            ...item,
-                            initiatives: [
-                              ...item.initiatives,
-                              {
-                                key: genKey(),
-                                title: "",
-                                description: null,
-                                kpis: [],
-                              },
-                            ],
-                          }
-                        : item,
-                    ),
-                  )
-                }
-              >
-                <Plus className="mr-1 size-3" /> Initiative
-              </Button>
+              <div className="flex gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() =>
+                    addActivity(
+                      perspectiveKey,
+                      lever.key,
+                      objective.key,
+                      "initiative",
+                    )
+                  }
+                >
+                  <Plus className="mr-1 size-3" /> Initiative
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() =>
+                    addActivity(
+                      perspectiveKey,
+                      lever.key,
+                      objective.key,
+                      "project",
+                    )
+                  }
+                >
+                  <Plus className="mr-1 size-3" /> Project
+                </Button>
+              </div>
             ) : null}
           </div>
         </div>
@@ -924,7 +1065,23 @@ export default function NewBscBuilder({
                     style={{ paddingLeft: 14 }}
                     className="text-[11px]"
                   >
-                    – {initiative.title || "(unnamed initiative)"}
+                    {initiative.kind === "project" ? "▣" : "–"}{" "}
+                    {initiative.title ||
+                      (initiative.kind === "project"
+                        ? "(unnamed project)"
+                        : "(unnamed initiative)")}
+                    {initiative.kind === "project" ? (
+                      <span className="ml-1 text-muted-foreground">
+                        (Project
+                        {initiative.status
+                          ? ` · ${PROJECT_STATUS_LABEL[initiative.status]}`
+                          : ""}
+                        {initiative.targetCompletionDate
+                          ? ` · due ${initiative.targetCompletionDate}`
+                          : ""}
+                        )
+                      </span>
+                    ) : null}
                     {initiative.kpis.length > 0 ? (
                       <span className="ml-1">
                         [

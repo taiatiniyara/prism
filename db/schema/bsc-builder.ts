@@ -1,12 +1,14 @@
 import {
   type AnyPgColumn,
   boolean,
+  date,
   index,
   integer,
   pgTable,
   text,
   timestamp,
   uuid,
+  varchar,
 } from "drizzle-orm/pg-core";
 
 import { kpiDefinitions } from "./kpi";
@@ -138,6 +140,16 @@ export const bscSpecificObjectives = pgTable(
 export type BscSpecificObjective = typeof bscSpecificObjectives.$inferSelect;
 export type NewBscSpecificObjective = typeof bscSpecificObjectives.$inferInsert;
 
+// An activity driving a Specific Objective's KPIs. `kind` distinguishes an
+// ongoing Initiative from a time-bound Project; project fields are only
+// meaningful when kind = "project".
+export type BscActivityKind = "initiative" | "project";
+export type BscProjectStatus =
+  | "planned"
+  | "in_progress"
+  | "complete"
+  | "on_hold";
+
 export const bscInitiatives = pgTable(
   "bsc_initiative",
   {
@@ -150,6 +162,14 @@ export const bscInitiatives = pgTable(
       .references(() => bscSpecificObjectives.id, { onDelete: "cascade" }),
     title: text("title").notNull(),
     description: text("description"),
+    kind: varchar("kind", { length: 16 })
+      .$type<BscActivityKind>()
+      .notNull()
+      .default("initiative"),
+    // Project-only fields (null for initiatives).
+    start_date: date("start_date"),
+    target_completion_date: date("target_completion_date"),
+    status: varchar("status", { length: 16 }).$type<BscProjectStatus>(),
     ord: integer("ord").notNull().default(0),
     created_at: timestamp("created_at").notNull().defaultNow(),
     updated_at: timestamp("updated_at").notNull().defaultNow(),

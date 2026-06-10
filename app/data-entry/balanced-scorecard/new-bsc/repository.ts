@@ -220,6 +220,10 @@ export const getUtilityScorecard = async (
       id: ini.id,
       title: ini.title,
       description: ini.description,
+      kind: ini.kind,
+      startDate: ini.start_date,
+      targetCompletionDate: ini.target_completion_date,
+      status: ini.status,
       ord: ini.ord,
       kpis: linksByInitiative.get(ini.id) ?? [],
     });
@@ -347,6 +351,10 @@ export const replacePerspectiveOverlay = async (
               specific_objective_id: objRow.id,
               title: initiative.title,
               description: initiative.description,
+              kind: initiative.kind,
+              start_date: initiative.startDate,
+              target_completion_date: initiative.targetCompletionDate,
+              status: initiative.status,
               ord: initiative.ord,
             })
             .returning({ id: bscInitiatives.id });

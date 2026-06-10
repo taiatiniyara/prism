@@ -1,7 +1,11 @@
-import type { BscTemplateLevel } from "@/db/schema/bsc-builder";
+import type {
+  BscActivityKind,
+  BscProjectStatus,
+  BscTemplateLevel,
+} from "@/db/schema/bsc-builder";
 import type { KpiTrajectory } from "@/db/schema/kpi";
 
-export type { BscTemplateLevel, KpiTrajectory };
+export type { BscActivityKind, BscProjectStatus, BscTemplateLevel, KpiTrajectory };
 
 // ---------------------------------------------------------------------------
 // Master template (shared)
@@ -44,6 +48,10 @@ export type ScorecardInitiative = {
   id: string;
   title: string;
   description: string | null;
+  kind: BscActivityKind;
+  startDate: string | null;
+  targetCompletionDate: string | null;
+  status: BscProjectStatus | null;
   ord: number;
   kpis: ScorecardKpiLink[];
 };
@@ -85,6 +93,10 @@ export type KpiLinkInput = {
 export type InitiativeInput = {
   title: string;
   description: string | null;
+  kind: BscActivityKind;
+  startDate: string | null;
+  targetCompletionDate: string | null;
+  status: BscProjectStatus | null;
   ord: number;
   kpis: KpiLinkInput[];
 };
