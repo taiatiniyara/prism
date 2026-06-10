@@ -1,6 +1,5 @@
 export * from "./ai";
 export * from "./auth-schema";
-export * from "./chat-history";
 export * from "./country";
 export * from "./custom-kpi-requests";
 export * from "./dataEntry";

@@ -101,34 +101,13 @@ primary endpoint.
 - `POWERBI_EMBED_URL`
 - `POWERBI_DATASET_ID`
 
-### Chatbot Integration
+### AI (Anthropic Claude)
 
-- `OPENAI_API_KEY`
-- Chatbot model is fixed to `gpt-5`
-- `CHATBOT_TIMEOUT_MS` (optional, defaults to `45000`)
-- `CHATBOT_MAX_OUTPUT_TOKENS` (optional, defaults to `2500`)
-
-The chatbot route `POST /api/chatbot` supports capability-grounded responses and
-may return:
-
-- `capabilitiesUsed`: resolved backend capability names used to ground the reply
-- `recommendedView`: rendering hint (`text`, `table`, `bar-chart`, `line-chart`,
-  `leaderboard`, `sankey`, `heatmap`, `radar`, `scatter`, `dashboard`)
-- `sessionId` (stream `meta` event): persisted chat session id used for this
-  turn
-
-Chat persistence APIs:
-
-- `GET /api/chatbot/sessions`: list current user's recent chat sessions
-- `POST /api/chatbot/sessions`: create a new chat session
-- `GET /api/chatbot/sessions/[sessionId]/messages`: get messages for a session
-- `PATCH /api/chatbot/sessions/[sessionId]`: rename a session
-- `DELETE /api/chatbot/sessions/[sessionId]`: delete a session
-
-Current capability domains include report-period status, performance snapshots,
-scorecard snapshots, review-KPI diagnostics, benchmarking, trend signals,
-anomaly/change-digest signals, governance/audit context, configuration/setup
-options, and visual presentation hints.
+- `ANTHROPIC_API_KEY`
+- Access via `/prism-ai` page or floating chat button (bottom-right on all pages)
+- 26 AI tools covering KPI status, scorecards, benchmarking, trends, diagnostics, governance, compliance, what-if analysis, and on-the-fly KPI calculation
+- Session persistence via `GET/POST/DELETE /api/ai/sessions`
+- Full documentation: `docs/ai-capabilities.md`
 
 ## Scripts
 

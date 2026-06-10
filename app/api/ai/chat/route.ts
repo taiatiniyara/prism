@@ -1,20 +1,28 @@
 import { db } from "@/db/connection";
 import { aiChatSession, aiChatTurn, aiToolCall } from "@/db/schema/ai";
 import { getPromptVersion } from "@/lib/ai";
-import { validateInput } from "@/lib/ai/guardrails";
-import { checkRateLimit, recordRequest, recordError, recordToolCall } from "@/lib/ai/rate-limit";
+import { validateInput, filterOutput } from "@/lib/ai/guardrails";
+import { checkRateLimit, recordRequest, recordError, recordToolCall, acquireConcurrencySlot, releaseConcurrencySlot } from "@/lib/ai/rate-limit";
 import type { AiChatMessage } from "@/lib/ai/types";
 import { getCurrentUser } from "@/lib/user.service";
 import { streamText, stepCountIs } from "ai";
 import { and, eq, sql } from "drizzle-orm";
 import { createAiTools } from "@/lib/ai/tools";
 import { getSystemPrompt } from "@/lib/ai/prompt";
-import { openai } from "@ai-sdk/openai";
+import { anthropic } from "@ai-sdk/anthropic";
 import { AI_MODELS, AI_RATE_LIMITS } from "@/lib/ai/types";
 
 export const maxDuration = 60;
 
+const deriveSessionTitle = (message: string): string => {
+  const normalized = message.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+  const capped = normalized.length > 40 ? normalized.slice(0, 37) + "..." : normalized;
+  return capped || "New chat";
+};
+
 export async function POST(request: Request) {
+  const startedAt = Date.now();
+
   let user;
   try {
     user = await getCurrentUser();
@@ -33,6 +41,18 @@ export async function POST(request: Request) {
     return Response.json({ message: "Messages are required." }, { status: 400 });
   }
 
+  for (const msg of body.messages) {
+    if (msg.role === "user" && typeof msg.content === "string") {
+      const validation = validateInput(msg.content);
+      if (!validation.passed) {
+        return Response.json(
+          { message: validation.reason, rule: validation.rule },
+          { status: 400 },
+        );
+      }
+    }
+  }
+
   const lastUserMessage = body.messages.filter((m) => m.role === "user").pop();
   if (!lastUserMessage || typeof lastUserMessage.content !== "string") {
     return Response.json({ message: "No user message found." }, { status: 400 });
@@ -48,8 +68,12 @@ export async function POST(request: Request) {
 
   const rateLimitInfo = await checkRateLimit(user.id);
   if (!rateLimitInfo.allowed) {
+    const reason =
+      (rateLimitInfo.concurrent_count ?? 0) >= 5
+        ? "Too many concurrent requests. Please wait for your other requests to complete."
+        : "Rate limit exceeded. Please try again later.";
     return Response.json(
-      { message: "Rate limit exceeded. Please try again later." },
+      { message: reason },
       {
         status: 429,
         headers: {
@@ -60,8 +84,12 @@ export async function POST(request: Request) {
     );
   }
 
+  acquireConcurrencySlot(user.id);
+
   let sessionId: number;
   let turnNumber: number;
+
+  const cleanup = () => releaseConcurrencySlot(user.id);
 
   try {
     if (body.sessionId) {
@@ -78,6 +106,7 @@ export async function POST(request: Request) {
         .limit(1);
 
       if (!existingSession) {
+        cleanup();
         return Response.json({ message: "Session not found." }, { status: 404 });
       }
 
@@ -90,7 +119,7 @@ export async function POST(request: Request) {
 
       turnNumber = (maxTurn?.max_turn ?? 0) + 1;
     } else {
-      const title = lastUserMessage.content.slice(0, 120) || "New chat";
+      const title = deriveSessionTitle(lastUserMessage.content);
       const [createdSession] = await db
         .insert(aiChatSession)
         .values({
@@ -119,39 +148,44 @@ export async function POST(request: Request) {
       .where(eq(aiChatSession.id, sessionId));
 
     const modelName = rateLimitInfo.degraded_mode ? AI_MODELS.fallback : AI_MODELS.primary;
-    const isReasoningModel = /^(gpt-5|o1|o3|o4)/i.test(modelName);
+    const isThinkingModel = /^claude-sonnet-4/i.test(modelName);
 
     const preparedMessages = body.messages
       .slice(-AI_RATE_LIMITS.max_history_turns * 2)
       .map((msg: AiChatMessage) => ({
         role: msg.role,
-        content: msg.content as string,
-      }));
+        content: (msg.content as string).trim(),
+      }))
+      .filter((msg) => msg.content.length > 0);
 
     const tools = createAiTools(user);
     const systemPrompt = getSystemPrompt();
 
     const result = streamText({
-      model: openai(modelName),
+      model: anthropic(modelName),
       system: systemPrompt,
       messages: preparedMessages,
       tools,
-      maxOutputTokens: isReasoningModel ? 8000 : 2500,
+      maxOutputTokens: isThinkingModel ? 8000 : 2500,
       stopWhen: stepCountIs(10),
-      ...(isReasoningModel
-        ? { providerOptions: { openai: { reasoningEffort: "low" as const } } }
+      ...(isThinkingModel
+        ? { providerOptions: { anthropic: { thinking: { type: "enabled" as const, budgetTokens: 12000 } } } }
         : {}),
       onFinish: async ({ text, usage, toolCalls }) => {
+        const turnLatencyMs = Date.now() - startedAt;
+
         try {
+          const { filtered } = filterOutput(text);
+
           await db
             .update(aiChatTurn)
             .set({
-              assistant_response: text,
+              assistant_response: filtered,
               model_used: modelName,
               model_was_fallback: rateLimitInfo.degraded_mode,
               token_count_input: usage?.inputTokens ?? 0,
               token_count_output: usage?.outputTokens ?? 0,
-              latency_ms: 0,
+              latency_ms: turnLatencyMs,
             })
             .where(eq(aiChatTurn.id, createdTurn.id));
 
@@ -177,6 +211,8 @@ export async function POST(request: Request) {
           );
         } catch {
           // Persistence failure shouldn't break the response
+        } finally {
+          cleanup();
         }
       },
     });
@@ -190,10 +226,25 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("AI chat error:", error instanceof Error ? error.message : String(error));
+    cleanup();
+    const turnLatencyMs = Date.now() - startedAt;
+
+    try {
+      await db
+        .update(aiChatTurn)
+        .set({
+          error_message: error instanceof Error ? error.message.slice(0, 500) : "Unknown error",
+          latency_ms: turnLatencyMs,
+        })
+        .where(sql`${aiChatTurn.id} IS NOT NULL`);
+    } catch {
+      // Non-critical
+    }
+
     try {
       await recordError(user.id);
     } catch {
-      // Non-critical: error recording failure should not block the response
+      // Non-critical
     }
     return Response.json(
       { message: "An unexpected error occurred. Please try again." },

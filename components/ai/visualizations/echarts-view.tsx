@@ -1,5 +1,6 @@
 "use client";
 
+import { useMemo } from "react";
 import ReactECharts from "echarts-for-react";
 import type { EChartsOption } from "echarts";
 import type { AiVisualization } from "@/lib/ai/types";
@@ -9,7 +10,7 @@ interface EChartsViewProps {
 }
 
 export default function EChartsView({ visualization }: EChartsViewProps) {
-  const getOption = (): EChartsOption => {
+  const option = useMemo((): EChartsOption => {
     switch (visualization.type) {
       case "sankey":
         return {
@@ -24,7 +25,9 @@ export default function EChartsView({ visualization }: EChartsViewProps) {
           ],
         };
 
-      case "heatmap":
+      case "heatmap": {
+        const flat = visualization.values?.flat?.() ?? [];
+        const maxVal = flat.length > 0 ? Math.max(...flat) : 0;
         return {
           title: { text: visualization.title, left: "center" },
           tooltip: { position: "top" },
@@ -32,36 +35,37 @@ export default function EChartsView({ visualization }: EChartsViewProps) {
           yAxis: { type: "category", data: visualization.yAxis },
           visualMap: {
             min: 0,
-            max: Math.max(...visualization.values.flat()),
+            max: maxVal,
             calculable: true,
           },
           series: [
             {
               type: "heatmap",
-              data: visualization.values.flatMap((row, yIdx) =>
+              data: visualization.values?.flatMap?.((row, yIdx) =>
                 row.map((value, xIdx) => [xIdx, yIdx, value]),
-              ),
+              ) ?? [],
               label: { show: true },
             },
           ],
         };
+      }
 
       case "radar":
         return {
           title: { text: visualization.title, left: "center" },
           radar: {
-            indicator: visualization.indicators.map((ind) => ({
+            indicator: visualization.indicators?.map?.((ind) => ({
               name: ind.name,
               max: ind.max,
-            })),
+            })) ?? [],
           },
           series: [
             {
               type: "radar",
-              data: visualization.series.map((s) => ({
+              data: visualization.series?.map?.((s) => ({
                 name: s.name,
                 value: s.values,
-              })),
+              })) ?? [],
             },
           ],
         };
@@ -74,10 +78,10 @@ export default function EChartsView({ visualization }: EChartsViewProps) {
           series: [
             {
               type: "scatter",
-              data: visualization.points.map((p) => ({
+              data: visualization.points?.map?.((p) => ({
                 value: [p.x, p.y],
                 name: p.label,
-              })),
+              })) ?? [],
             },
           ],
         };
@@ -85,11 +89,29 @@ export default function EChartsView({ visualization }: EChartsViewProps) {
       default:
         return {};
     }
-  };
+  }, [visualization]);
+
+  const hasData = (() => {
+    switch (visualization.type) {
+      case "sankey": return (visualization.nodes?.length ?? 0) > 0;
+      case "heatmap": return (visualization.values?.length ?? 0) > 0;
+      case "radar": return (visualization.indicators?.length ?? 0) > 0;
+      case "scatter": return (visualization.points?.length ?? 0) > 0;
+      default: return false;
+    }
+  })();
+
+  if (!hasData) {
+    return (
+      <div className="border-border rounded-md border p-4 text-center text-sm text-muted-foreground dark:border-border dark:text-muted-foreground">
+        No data available
+      </div>
+    );
+  }
 
   return (
-    <div className="border-border rounded-md border p-4">
-      <ReactECharts option={getOption()} style={{ height: "300px" }} />
+    <div className="border-border rounded-md border p-4 dark:border-border">
+      <ReactECharts option={option} style={{ height: "300px" }} />
     </div>
   );
 }

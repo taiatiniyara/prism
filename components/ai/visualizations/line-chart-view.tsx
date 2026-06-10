@@ -16,18 +16,27 @@ interface LineChartViewProps {
 }
 
 export function LineChartView({ data }: LineChartViewProps) {
+  if (!data.series?.length) {
+    return (
+      <div className="border-border rounded-md border p-4 text-center text-sm text-muted-foreground dark:border-border dark:text-muted-foreground">
+        No data available
+      </div>
+    );
+  }
+
   return (
-    <div className="border-border rounded-md border p-4">
-      <h4 className="mb-3 text-sm font-medium">{data.title}</h4>
+    <div className="border-border rounded-md border p-4 dark:border-border">
+      <h4 className="mb-3 text-sm font-medium dark:text-foreground">{data.title}</h4>
       <ResponsiveContainer width="100%" height={250}>
         <RechartsLineChart data={data.series}>
-          <CartesianGrid strokeDasharray="3 3" className="stroke-muted" />
+          <CartesianGrid strokeDasharray="3 3" className="stroke-muted dark:stroke-muted" />
           <XAxis
             dataKey="label"
             tick={{ fontSize: 12 }}
-            className="text-muted-foreground"
+            className="text-muted-foreground dark:text-muted-foreground"
+            tickFormatter={(v: string) => v.length > 20 ? v.slice(0, 18) + "..." : v}
           />
-          <YAxis tick={{ fontSize: 12 }} className="text-muted-foreground" />
+          <YAxis tick={{ fontSize: 12 }} className="text-muted-foreground dark:text-muted-foreground" />
           <Tooltip
             contentStyle={{
               backgroundColor: "hsl(var(--popover))",

@@ -1,7 +1,7 @@
 import { getScorecardResponse } from "@/app/data-entry/balanced-scorecard/service";
 import { db } from "@/db/connection";
 import { reportPeriods } from "@/db/schema/reportPeriods";
-import { eq } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
 import { hasGlobalUtilityAccess } from "@/lib/user.service";
 import { createToolMetadata } from "./common";
@@ -33,13 +33,42 @@ export interface ScorecardData {
   report_period: string | null;
 }
 
+const resolvePeriodId = async (
+  user: CurrentUser,
+  options: { report_period_id?: number | null; year?: number | null },
+): Promise<number | null> => {
+  if (options.report_period_id) return options.report_period_id;
+
+  const predicates = [];
+  if (!hasGlobalUtilityAccess(user) && user.org_id != null) {
+    predicates.push(eq(reportPeriods.utility_id, user.org_id));
+  }
+  if (options.year) {
+    predicates.push(
+      sql`EXTRACT(YEAR FROM ${reportPeriods.report_date}) = ${options.year}`,
+    );
+  }
+
+  const [period] = await db
+    .select({ id: reportPeriods.id })
+    .from(reportPeriods)
+    .where(predicates.length > 0 ? and(...predicates) : undefined)
+    .orderBy(desc(reportPeriods.report_date))
+    .limit(1);
+
+  return period?.id ?? null;
+};
+
 export const getScorecardSummary = async (
   user: CurrentUser,
   options: {
     report_period_id?: number | null;
+    year?: number | null;
   } = {},
 ): Promise<AiToolResult<ScorecardData>> => {
-  if (!options.report_period_id) {
+  const resolvedPeriodId = await resolvePeriodId(user, options);
+
+  if (!resolvedPeriodId) {
     return {
       data: {
         overall_score: null,
@@ -53,7 +82,9 @@ export const getScorecardSummary = async (
         completeness_pct: 0,
         source: "scorecard",
       }),
-      error: "No report period specified",
+      error: options.year
+        ? `No report period found for year ${options.year}`
+        : "No report period found",
     };
   }
 
@@ -61,7 +92,7 @@ export const getScorecardSummary = async (
     const [period] = await db
       .select({ utility_id: reportPeriods.utility_id })
       .from(reportPeriods)
-      .where(eq(reportPeriods.id, options.report_period_id))
+      .where(eq(reportPeriods.id, resolvedPeriodId))
       .limit(1);
 
     if (!period || period.utility_id !== user.org_id) {
@@ -85,12 +116,12 @@ export const getScorecardSummary = async (
 
   try {
     const scorecard = await getScorecardResponse(user, {
-      reportPeriodId: options.report_period_id,
+      reportPeriodId: resolvedPeriodId,
       reportTypeId: null,
       serviceAreaId: null,
       kpiCategoryId: null,
       kpiSubcategoryId: null,
-    });
+    }, { includeUnapproved: true, includeAllDefinitions: true });
 
     const perspectives: ScorecardPerspective[] =
       scorecard.snapshot.perspectiveScores.map((p) => ({

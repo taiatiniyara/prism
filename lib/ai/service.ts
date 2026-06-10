@@ -1,4 +1,4 @@
-import { openai } from "@ai-sdk/openai";
+import { anthropic } from "@ai-sdk/anthropic";
 import { streamText, generateText, stepCountIs } from "ai";
 import type { CurrentUser } from "@/lib/user.service";
 import { createAiTools } from "./tools";
@@ -22,6 +22,9 @@ interface AiStreamResult {
   promptVersion: string;
 }
 
+const APPROX_CHARS_PER_TOKEN = 4;
+const MAX_INPUT_TOKENS = 20000;
+
 const prepareMessages = (
   messages: AiChatMessage[],
   maxHistoryTurns: number,
@@ -29,22 +32,32 @@ const prepareMessages = (
   const maxMessages = maxHistoryTurns * 2;
   const recentMessages = messages.slice(-maxMessages);
 
-  return recentMessages.map((msg) => ({
-    role: msg.role,
-    content: msg.content,
-  }));
+  let totalChars = 0;
+  const trimmed: AiChatMessage[] = [];
+  for (const msg of recentMessages) {
+    const content = typeof msg.content === "string" ? msg.content : "";
+    const cleaned = content.trim();
+    if (!cleaned) continue;
+    totalChars += cleaned.length;
+    trimmed.push({ role: msg.role, content: cleaned });
+    if (totalChars / APPROX_CHARS_PER_TOKEN > MAX_INPUT_TOKENS) break;
+  }
+
+  return trimmed;
 };
+
+const isThinkingModel = (modelName: string): boolean =>
+  /^claude-sonnet-4/i.test(modelName);
 
 const getModelConfig = (degradedMode: boolean) => {
   const modelName = degradedMode ? AI_MODELS.fallback : AI_MODELS.primary;
-  const isReasoningModel = /^(gpt-5|o1|o3|o4)/i.test(modelName);
 
   return {
-    model: openai(modelName),
+    model: anthropic(modelName),
     modelName,
-    maxOutputTokens: isReasoningModel ? 8000 : 2500,
-    providerOptions: isReasoningModel
-      ? { openai: { reasoningEffort: "low" as const } }
+    maxOutputTokens: isThinkingModel(modelName) ? 8000 : 2500,
+    providerOptions: isThinkingModel(modelName)
+      ? { anthropic: { thinking: { type: "enabled" as const, budgetTokens: 12000 } } }
       : undefined,
   };
 };
@@ -110,9 +123,7 @@ export const runAiStream = async (
           tools,
           maxOutputTokens: fallbackConfig.maxOutputTokens,
           stopWhen: stepCountIs(10),
-          ...(fallbackConfig.providerOptions
-            ? { providerOptions: fallbackConfig.providerOptions }
-            : {}),
+          ...(fallbackConfig.providerOptions ? { providerOptions: fallbackConfig.providerOptions } : {}),
         });
 
         return {
@@ -214,9 +225,7 @@ export const runAiGenerate = async (
           tools,
           maxOutputTokens: fallbackConfig.maxOutputTokens,
           stopWhen: stepCountIs(10),
-          ...(fallbackConfig.providerOptions
-            ? { providerOptions: fallbackConfig.providerOptions }
-            : {}),
+          ...(fallbackConfig.providerOptions ? { providerOptions: fallbackConfig.providerOptions } : {}),
         });
 
         const { filtered } = filterOutput(result.text);

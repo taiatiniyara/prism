@@ -142,6 +142,7 @@ export interface AiRateLimitInfo {
   remaining_tokens: number;
   reset_at: Date;
   degraded_mode: boolean;
+  concurrent_count?: number;
 }
 
 export interface AiGuardrailResult {
@@ -150,12 +151,12 @@ export interface AiGuardrailResult {
   reason?: string;
 }
 
-export const AI_PROMPT_VERSION = "2026-06-04";
+export const AI_PROMPT_VERSION = "2026-06-10";
 
 export const AI_MODELS = {
-  primary: "gpt-5",
-  fallback: "gpt-4o",
-  mini: "gpt-4o-mini",
+  primary: "claude-sonnet-4-6",
+  fallback: "claude-haiku-4-5-20251001",
+  mini: "claude-haiku-4-5-20251001",
 } as const;
 
 export const AI_RATE_LIMITS = {

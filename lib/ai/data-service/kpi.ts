@@ -1,6 +1,7 @@
 import { GetReportPeriods } from "@/app/data-entry/service";
 import type { CurrentUser } from "@/lib/user.service";
 import { hasGlobalUtilityAccess } from "@/lib/user.service";
+import { withCache } from "../cache";
 import { createToolMetadata, formatPercent } from "./common";
 import type { AiToolResult } from "../types";
 
@@ -41,9 +42,10 @@ export const getKpiStatus = async (
   } = {},
 ): Promise<AiToolResult<KpiStatusData>> => {
   const forceAllUtilities = options.all_utilities === true && hasGlobalUtilityAccess(user);
-  const periods = await GetReportPeriods(user, {
-    forceAllUtilities,
-  });
+  const periods = await withCache(
+    `report_periods:${forceAllUtilities}:${user.id}`,
+    () => GetReportPeriods(user, { forceAllUtilities }),
+  );
 
   if (periods.length === 0) {
     return {

@@ -12,6 +12,11 @@ interface RateLimitState {
 
 const inMemoryStore = new Map<string, RateLimitState>();
 
+// In-memory concurrency tracker — per-user active request count.
+// For multi-instance deployments, replace with Redis/DB atomic counter.
+const MAX_CONCURRENT_REQUESTS = 5;
+const activeRequests = new Map<string, number>();
+
 const getTodayStart = (): Date => {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -25,6 +30,8 @@ const getWindowStart = (): Date => {
 export const checkRateLimit = async (
   userId: string,
 ): Promise<AiRateLimitInfo> => {
+  const concurrent = activeRequests.get(userId) ?? 0;
+
   const todayStart = getTodayStart();
   const windowStart = getWindowStart();
 
@@ -67,12 +74,27 @@ export const checkRateLimit = async (
   const resetAt = new Date(windowStart.getTime() + 60 * 1000);
 
   return {
-    allowed: remainingRequests > 0 && remainingTokens > 0,
+    allowed: remainingRequests > 0 && remainingTokens > 0 && concurrent < MAX_CONCURRENT_REQUESTS,
     remaining_requests: remainingRequests,
     remaining_tokens: remainingTokens,
     reset_at: resetAt,
     degraded_mode: degraded,
+    concurrent_count: concurrent,
   };
+};
+
+export const acquireConcurrencySlot = (userId: string): void => {
+  const current = activeRequests.get(userId) ?? 0;
+  activeRequests.set(userId, current + 1);
+};
+
+export const releaseConcurrencySlot = (userId: string): void => {
+  const current = activeRequests.get(userId) ?? 0;
+  if (current <= 1) {
+    activeRequests.delete(userId);
+  } else {
+    activeRequests.set(userId, current - 1);
+  }
 };
 
 export const recordRequest = async (
