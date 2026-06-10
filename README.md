@@ -106,10 +106,15 @@ primary endpoint.
 - `ANTHROPIC_API_KEY`
 - Access via `/prism-ai` page or floating chat button (bottom-right on all
   pages)
-- 26 AI tools covering KPI status, scorecards, benchmarking, trends,
-  diagnostics, governance, compliance, what-if analysis, and on-the-fly KPI
-  calculation
+- 34 AI tools covering KPI status, scorecards, benchmarking, trends,
+  diagnostics, governance, compliance, what-if analysis, sensitivity analysis,
+  correlation analysis, peer comparison, export, industry benchmarks, and
+  on-the-fly KPI calculation
+- Streaming responses with character-by-character `requestAnimationFrame`
+  animation, animated typing/thinking indicators, and live tool status display
 - Session persistence via `GET/POST/DELETE /api/ai/sessions`
+- No rate limiting (removed for development agility; usage tracking retained)
+- All KPI data visible regardless of approval state
 - Full documentation: `docs/ai-capabilities.md`
 
 ## Scripts

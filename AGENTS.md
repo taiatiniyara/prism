@@ -33,6 +33,10 @@ npm run dev                    # webpack dev server on http://localhost:3554
 - **`proxy.ts`** — middleware protecting `/dashboard/*`, `/data-entry/*`, `/settings/*`, `/profile/*`, `/docs/*`
 - **Path alias**: `@/*` → project root (in tsconfig and vitest config)
 - **DB connection** (`db/connection.ts`) uses a global `__prismPool` to survive hot-reloads; PG pool timeouts all set to 30s
+- **AI/chatbot**: Anthropic Claude (Sonnet 4.6 primary, Haiku 4.5 fallback), 34 tools, AI SDK v6.0.168
+- **AI streaming**: Character-by-character `requestAnimationFrame` reveal, animated thinking/typing indicators, tool status display
+- **Rate limiting**: Removed from AI chat route; usage tracking retained for analytics only
+- **Scorecard**: Shows all KPI data regardless of approval state (`includeUnapproved: true`)
 
 ## Testing
 

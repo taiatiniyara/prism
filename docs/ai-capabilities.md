@@ -20,7 +20,7 @@ Generated 2026-06-10. Maps every AI tool to the user questions it answers.
 | 10 | `get_kpi_diagnostics` | Which KPIs are stale/error/missing-input? How many unresolved comments? What's the root cause? |
 | 11 | `render_visualization` | (internal) Renders table, bar/line chart, leaderboard, sankey, heatmap, radar, scatter |
 | 12 | `suggest_follow_ups` | (internal) What should the user ask next? |
-| 13 | `dashboard_link` | (internal) Where in PRISM can the user take action? |
+| 13 | `dashboard_link` | (internal) Where in PRISM can the user take action? Generate deep links with pre-applied filters. |
 | 14 | `calculate_kpi` | What's our SAIDI value? Compute a specific KPI from formula + inputs. What-if: what happens if X changes by Y%? |
 | 15 | `get_review_queue` | What KPIs need my attention? Who needs to approve what? What's stuck? |
 | 16 | `get_input_status` | Which specific inputs are missing for KPI X? What data do I need to enter? |
@@ -32,7 +32,16 @@ Generated 2026-06-10. Maps every AI tool to the user questions it answers.
 | 22 | `get_data_quality_report` | Are there any suspicious values? Negative values where they shouldn't be? Values outside expected ranges? |
 | 23 | `compare_periods` | How does 2022 compare to 2023? What changed between the two periods? Side-by-side delta view. |
 | 24 | `get_what_changed` | Which KPIs moved the most between periods? Biggest improvers and decliners? |
-| 25 | `dashboard_link` | (internal) Generate deep links with pre-applied filters. |
+| 25 | `get_compliance_status` | Which KPIs are out of regulatory limits? Critical vs warning issues? |
+| 26 | `get_kpi_targets` | What targets should we set? What's the peer median / top quartile / bottom quartile? |
+| 27 | `get_kpi_correlation` | Do utilities with high system losses also have high SAIDI? Pearson correlation coefficients. |
+| 28 | `compare_kpis_across_utilities` | Compare actual KPI values across multiple utilities with per-utility rankings. |
+| 29 | `generate_export` | Generate downloadable CSV or Excel report from analysis results. |
+| 30 | `get_country_hierarchy` | What's the Pacific country and sub-region hierarchy? ISO codes, UN regional classifications, ADB membership. |
+| 31 | `get_industry_benchmarks` | What are the industry-standard benchmarks for Pacific electricity utility KPIs? World Bank, ADB, IRENA, PPA targets. |
+| 32 | `get_executive_digest` | Generate an executive briefing digest with key metrics, trends, top actions, risks, and benchmark context. |
+| 33 | `get_review_queue_entries` | View the AI review queue — flagged conversations needing human review. Admin only (DEV/BMO). |
+| 34 | `get_guided_entry` | Step-by-step data entry guidance for a specific KPI. Which inputs to fill, where to find them, expected values. |
 
 ---
 
@@ -89,6 +98,21 @@ Generated 2026-06-10. Maps every AI tool to the user questions it answers.
 | If we reduce pending KPIs from 200 to 50, what's our new completion rate? | 14 |
 | What would it take to go from off-track to on-track? | 14 |
 
+#### Targets & Goal Setting
+| Question | Tool(s) |
+|---|---|
+| What KPI targets should we set for next year? | 26 |
+| What's the peer median for system losses? | 26 |
+| How does our performance compare to top-quartile utilities? | 26 |
+| Are targets realistic based on peer benchmarks? | 26, 31 |
+
+#### Data Entry Guidance
+| Question | Tool(s) |
+|---|---|
+| How do I enter data for SAIDI? | 34 |
+| What inputs do I need to fill in? | 34, 16 |
+| Where in PRISM do I find the data entry form? | 34 |
+
 ---
 
 ### DONOR
@@ -120,6 +144,15 @@ Generated 2026-06-10. Maps every AI tool to the user questions it answers.
 | Which utilities have the biggest performance gap to close? | 2, 20 |
 | Are KPIs showing anomalous values that need investigation? | 6, 22 |
 | What's the trend for generation capacity across the region? | 5, 14 |
+| How do KPI correlations reveal systemic issues? | 27 |
+| What's the Pacific regional benchmark context? | 31 |
+
+#### Export & Reporting
+| Question | Tool(s) |
+|---|---|
+| Can I download this analysis as a CSV? | 29 |
+| Generate a summary report for my stakeholders. | 29, 32 |
+| Give me an executive briefing on regional performance. | 32 |
 
 ---
 
@@ -128,11 +161,13 @@ Generated 2026-06-10. Maps every AI tool to the user questions it answers.
 #### Compliance & Standards
 | Question | Tool(s) |
 |---|---|
-| Which utilities met their regulatory targets? | 14 |
+| Which utilities met their regulatory targets? | 14, 25 |
+| Which KPIs are out of regulatory compliance? | 25 |
 | Are there any implausible or out-of-range KPI values? | 22 |
 | Which utilities have negative values where they shouldn't? | 22 |
 | Has any utility's data quality declined? | 6, 22 |
 | How complete is the data across the sector? | 1, 2 |
+| What are the industry benchmarks for Pacific utilities? | 31 |
 
 #### Governance & Audit
 | Question | Tool(s) |
@@ -172,6 +207,7 @@ Generated 2026-06-10. Maps every AI tool to the user questions it answers.
 | Which KPIs are benchmarking type vs custom? | 17 |
 | What custom KPI requests are in the pipeline? | 18 |
 | How do I explain KPI X to a utility manager? | 17 |
+| Are there KPIs that correlate strongly? | 27 |
 
 #### System Health
 | Question | Tool(s) |
@@ -180,6 +216,7 @@ Generated 2026-06-10. Maps every AI tool to the user questions it answers.
 | Which utilities haven't submitted any data? | 1, 2 |
 | How many total KPIs are in scope across all utilities? | 1 |
 | What's the data quality status across the platform? | 22 |
+| Are there flagged AI conversations needing review? | 33 |
 
 ---
 
@@ -193,6 +230,8 @@ Generated 2026-06-10. Maps every AI tool to the user questions it answers.
 | How is SAIDI / SAIFI / System Loss calculated? | 17 |
 | What's a balanced scorecard? | (system prompt) |
 | How do I get access to PRISM? | (system prompt) |
+| Which countries are in the Pacific region? | 30 |
+| What are the industry benchmarks for utility performance? | 31 |
 
 ---
 
@@ -221,6 +260,16 @@ Generated 2026-06-10. Maps every AI tool to the user questions it answers.
 - Renewable energy share, capital expenditure vs budget
 - **Tools**: 4, 14, 17
 
+### Cross-Cutting
+- KPI correlations (do high-loss utilities also have high SAIDI?)
+- Multi-utility value comparisons with rankings
+- Exportable reports (CSV, Excel)
+- Executive briefing digests
+- Country/sub-region hierarchy reference
+- Industry benchmarks (World Bank, ADB, IRENA, PPA)
+- Guided data entry workflows
+- **Tools**: 27, 28, 29, 30, 31, 32, 34
+
 ---
 
 ## Coverage Status
@@ -234,9 +283,13 @@ Generated 2026-06-10. Maps every AI tool to the user questions it answers.
 | Prioritisation / ranking | 100% |
 | Governance / audit | 100% |
 | Definition / explainer | 100% |
-| What-if / scenario | 80% — calculate_kpi supports hypothetical values |
-| Action / next steps | 95% — review queue + input status + dashboard links |
+| What-if / scenario | 100% — calculate_kpi supports hypothetical values + sensitivity analysis |
+| Regulatory compliance | 100% |
+| Action / next steps | 100% — review queue + input status + dashboard links + guided entry |
 | Data quality | 100% |
 | Risk assessment | 100% |
+| Correlation / analysis | 100% |
+| Export / reporting | 100% |
+| Reference / hierarchy | 100% |
 
-**Total: ~200 question patterns covered by 25 tools.**
+**Total: ~200 question patterns covered by 34 tools.**
