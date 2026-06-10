@@ -29,6 +29,43 @@ interface ChatPanelProps {
 
 const MAX_CHARS = 4000;
 
+const TOOL_ACTION_MAP: Record<string, string> = {
+  get_kpi_status: "Checking KPI status",
+  get_benchmarking_data: "Fetching benchmarking data",
+  get_completeness_breakdown: "Analyzing completeness",
+  get_scorecard_summary: "Loading scorecard",
+  get_trend_analysis: "Analyzing trends",
+  get_anomaly_insights: "Detecting anomalies",
+  get_governance_audit: "Running governance audit",
+  get_configuration_options: "Loading configuration",
+  get_performance_snapshot: "Loading performance snapshot",
+  get_kpi_diagnostics: "Running diagnostics",
+  render_visualization: "Rendering visualization",
+  suggest_follow_ups: "Generating suggestions",
+  calculate_kpi: "Calculating KPI values",
+  dashboard_link: "Creating dashboard link",
+  get_review_queue: "Checking review queue",
+  get_input_status: "Checking input status",
+  explain_kpi: "Looking up KPI definition",
+  get_custom_kpi_status: "Checking custom KPI status",
+  get_service_area_breakdown: "Analyzing service areas",
+  get_peer_group_analysis: "Comparing peer groups",
+  get_risk_assessment: "Assessing risk",
+  get_data_quality_report: "Checking data quality",
+  compare_periods: "Comparing periods",
+  get_what_changed: "Detecting changes",
+  get_compliance_status: "Checking compliance",
+  get_kpi_targets: "Computing targets",
+  get_kpi_correlation: "Analyzing correlations",
+  compare_kpis_across_utilities: "Comparing utilities",
+  generate_export: "Generating export",
+  get_country_hierarchy: "Loading country data",
+  get_industry_benchmarks: "Loading benchmarks",
+  get_executive_digest: "Generating executive digest",
+  get_review_queue_entries: "Checking review queue",
+  get_guided_entry: "Loading data entry guide",
+};
+
 export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelProps) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
@@ -39,10 +76,12 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [activeToolName, setActiveToolName] = useState<string | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const isStreamingRef = useRef(false);
   const messagesRef = useRef(messages);
+  const pendingContentRef = useRef("");
 
   messagesRef.current = messages;
 
@@ -65,12 +104,6 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
   }, [refreshSessions]);
 
   const initialSessionLoaded = useRef(false);
-  useEffect(() => {
-    if (initialSessionId && !initialSessionLoaded.current) {
-      initialSessionLoaded.current = true;
-      handleSelectSession(initialSessionId);
-    }
-  }, [initialSessionId]);
 
   const scrollToBottom = useCallback((smooth = false) => {
     if (scrollRef.current) {
@@ -104,7 +137,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
     setSidebarOpen(false);
   };
 
-  const handleSelectSession = async (sessionId: number) => {
+  const handleSelectSession = useCallback(async (sessionId: number) => {
     if (abortControllerRef.current) {
       abortControllerRef.current.abort();
     }
@@ -148,7 +181,14 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
       setIsLoadingHistory(false);
       setTimeout(() => scrollToBottom(), 50);
     }
-  };
+  }, [scrollToBottom]);
+
+  useEffect(() => {
+    if (initialSessionId && !initialSessionLoaded.current) {
+      initialSessionLoaded.current = true;
+      handleSelectSession(initialSessionId);
+    }
+  }, [initialSessionId, handleSelectSession]);
 
   const handleDeleteSession = async (sessionId: number) => {
     try {
@@ -202,6 +242,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
     setMessages(updatedMessages);
     setIsLoading(true);
     setStreamingContent("");
+    pendingContentRef.current = "";
     isStreamingRef.current = true;
 
     abortControllerRef.current = new AbortController();
@@ -261,6 +302,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
 
         const chunk = decoder.decode(value, { stream: true });
         fullContent += chunk;
+        pendingContentRef.current = fullContent;
         setStreamingContent(fullContent);
       }
 
@@ -274,9 +316,26 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
       const finalMessages = [...messagesRef.current, assistantMessage];
       setMessages(finalMessages);
       setStreamingContent("");
+      setActiveToolName(null);
       await refreshSessions();
+
+      if (turnId && fullContent.trim().length > 100) {
+        fetch("/api/ai/chat/response", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ turnId, content: fullContent }),
+        }).catch(() => {});
+      }
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
+        if (pendingContentRef.current) {
+          const partialAssistant: ChatMessage = {
+            id: `assistant-${Date.now()}`,
+            role: "assistant",
+            content: pendingContentRef.current + "\n\n*[Generation stopped]*",
+          };
+          setMessages((prev) => [...prev, partialAssistant]);
+        }
         return;
       }
       const msg = error instanceof Error ? error.message : "Sorry, I encountered an error. Please try again.";
@@ -291,6 +350,8 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
     } finally {
       setIsLoading(false);
       setStreamingContent("");
+      setActiveToolName(null);
+      pendingContentRef.current = "";
       abortControllerRef.current = null;
       isStreamingRef.current = false;
     }
@@ -409,21 +470,95 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
             aria-live="polite"
             aria-label="Chat messages"
           >
-            <div className="mx-auto max-w-3xl space-y-6 p-6">
+            <div className="mx-auto max-w-3xl space-y-10 p-6">
               {isLoadingHistory ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="text-muted-foreground size-5 animate-spin" />
                 </div>
               ) : displayMessages.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="flex flex-col items-center justify-center py-8 text-center">
                   <h2 className="mb-2 text-xl font-semibold">PRISM AI</h2>
-                  <p className="text-muted-foreground max-w-md">
+                  <p className="text-muted-foreground mb-8 max-w-md">
                     Ask me about your utility&apos;s performance, benchmarking data,
                     KPI status, or how to use the PRISM platform.
                   </p>
+                  <div className="grid w-full max-w-2xl grid-cols-1 gap-4 md:grid-cols-2">
+                    <div className="border-border rounded-lg border p-4 text-left dark:border-border">
+                      <h3 className="mb-2 text-sm font-medium">Performance &amp; Scorecard</h3>
+                      <div className="space-y-1">
+                        {[
+                          "How was my utility's performance in 2023?",
+                          "What is our balanced scorecard looking like?",
+                          "Which KPIs are our weakest?",
+                        ].map((q) => (
+                          <button
+                            key={q}
+                            onClick={() => handleSendMessage(q)}
+                            className="text-muted-foreground hover:text-foreground block w-full text-left text-xs transition-colors"
+                          >
+                            &quot;{q}&quot;
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="border-border rounded-lg border p-4 text-left dark:border-border">
+                      <h3 className="mb-2 text-sm font-medium">Benchmarking &amp; Targets</h3>
+                      <div className="space-y-1">
+                        {[
+                          "How do we compare to other utilities?",
+                          "What targets should we set for next year?",
+                          "Compare SAIDI across all utilities.",
+                        ].map((q) => (
+                          <button
+                            key={q}
+                            onClick={() => handleSendMessage(q)}
+                            className="text-muted-foreground hover:text-foreground block w-full text-left text-xs transition-colors"
+                          >
+                            &quot;{q}&quot;
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="border-border rounded-lg border p-4 text-left dark:border-border">
+                      <h3 className="mb-2 text-sm font-medium">Diagnostics &amp; Action</h3>
+                      <div className="space-y-1">
+                        {[
+                          "What's in my review queue?",
+                          "Which KPIs are missing inputs?",
+                          "What changed since last period?",
+                        ].map((q) => (
+                          <button
+                            key={q}
+                            onClick={() => handleSendMessage(q)}
+                            className="text-muted-foreground hover:text-foreground block w-full text-left text-xs transition-colors"
+                          >
+                            &quot;{q}&quot;
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                    <div className="border-border rounded-lg border p-4 text-left dark:border-border">
+                      <h3 className="mb-2 text-sm font-medium">Risk &amp; Compliance</h3>
+                      <div className="space-y-1">
+                        {[
+                          "Which utilities are at highest risk?",
+                          "Are any KPIs out of regulatory compliance?",
+                          "What's the data quality looking like?",
+                        ].map((q) => (
+                          <button
+                            key={q}
+                            onClick={() => handleSendMessage(q)}
+                            className="text-muted-foreground hover:text-foreground block w-full text-left text-xs transition-colors"
+                          >
+                            &quot;{q}&quot;
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
                 </div>
               ) : (
-                <div>
+                <div className="space-y-10">
                   {activeSessionId && (
                     <div className="flex justify-end">
                       <Button variant="ghost" size="sm" onClick={handleShare}>
@@ -460,6 +595,12 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
                 <div className="flex items-center gap-2 text-sm">
                   <Loader2 className="text-muted-foreground size-4 animate-spin" />
                   <span className="text-muted-foreground">PRISM AI is thinking...</span>
+                </div>
+              )}
+              {isLoading && activeToolName && (
+                <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground animate-pulse">
+                  <Loader2 className="size-3 animate-spin" />
+                  <span>{TOOL_ACTION_MAP[activeToolName] ?? `Running ${activeToolName}`}...</span>
                 </div>
               )}
             </div>

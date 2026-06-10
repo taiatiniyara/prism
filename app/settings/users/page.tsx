@@ -1,5 +1,5 @@
 import DataTable from "@/components/tables/data-table";
-import { AllUsers, CreateUser } from "./service";
+import { AllUsers, CreateUser, UpdateUser } from "./service";
 import { User } from "@/db/schema/auth-schema";
 import { AllRoles } from "../roles/roles.service";
 import { AllOrganisations } from "../organisations/orgs.service";
@@ -61,11 +61,40 @@ export default async function UsersSettingsPage() {
     });
   }
 
+  const updateFields = [
+    { key: "name" as keyof User, type: "text" as const },
+    { key: "email" as keyof User, type: "email" as const },
+    {
+      key: "role_id" as keyof User,
+      type: "select" as const,
+      selectList: roles.map((role) => ({
+        value: role.id,
+        label: role.description || role.name,
+      })),
+    },
+    {
+      key: "organisation_id" as keyof User,
+      type: "select" as const,
+      selectList: orgs.map((org) => ({ value: org.id, label: org.name })),
+    },
+    {
+      key: "status" as keyof User,
+      type: "select" as const,
+      selectList: [
+        { value: "active", label: "Active" },
+        { value: "pending", label: "Pending" },
+        { value: "deactivated", label: "Deactivated" },
+      ],
+    },
+    { key: "data_access_reason" as keyof User, type: "textarea" as const },
+    { key: "dataset_required" as keyof User, type: "textarea" as const },
+  ];
+
+  const isAdmin = currentUser.role === "DEV" || currentUser.role === "BMO";
+
   return (
     <>
-      {(currentUser.role === "DEV" || currentUser.role === "BMO") && (
-        <PendingUserDecisionPanel />
-      )}
+      {isAdmin && <PendingUserDecisionPanel />}
       <DataTable<User>
         data={users}
         columns={columns}
@@ -74,6 +103,14 @@ export default async function UsersSettingsPage() {
           formAction: CreateUser,
           fields: createFields,
         }}
+        updateFormProps={
+          isAdmin
+            ? {
+                formAction: UpdateUser,
+                fields: updateFields,
+              }
+            : undefined
+        }
       />
     </>
   );

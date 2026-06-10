@@ -27,9 +27,11 @@ export const evaluateFormula = (
 
     entries.forEach(([name, value], index) => {
       const safeName = `__v${index}`;
+      /* eslint-disable security/detect-non-literal-regexp -- name is sanitized via escapeRegExp before constructing the RegExp */
       const pattern = isIdentifier(name)
         ? new RegExp(`\\b${escapeRegExp(name)}\\b`, "g")
         : new RegExp(escapeRegExp(name), "g");
+      /* eslint-enable security/detect-non-literal-regexp */
 
       rewrittenFormula = rewrittenFormula.replace(pattern, safeName);
       safeNames.push(safeName);

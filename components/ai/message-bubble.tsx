@@ -3,8 +3,8 @@
 import { useMemo, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Bot, User, ThumbsUp, ThumbsDown, Copy, Check } from "lucide-react";
-import { Button } from "@/components/ui/button";
+import type { Components } from "react-markdown";
+import { ThumbsUp, ThumbsDown, Copy, Check } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { VisualizationRenderer } from "./visualizations/visualization-renderer";
 import type { AiVisualization } from "@/lib/ai/types";
@@ -22,6 +22,55 @@ interface MessageBubbleProps {
   onCopy?: (content: string) => void;
   copied?: boolean;
 }
+
+const markdownComponents: Components = {
+  code({ className, children, ...props }) {
+    const isBlock = className?.startsWith("language-");
+    if (isBlock && className) {
+      const lang = className.replace("language-", "");
+      return (
+        <div className="my-3 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+          {lang && (
+            <div className="border-b border-slate-200 bg-slate-50 px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-500">
+              {lang}
+            </div>
+          )}
+          <pre className="overflow-x-auto bg-slate-50 p-4 text-[13px] leading-relaxed dark:bg-slate-900">
+            <code className={className} {...props}>
+              {children}
+            </code>
+          </pre>
+        </div>
+      );
+    }
+    return (
+      <code className="rounded bg-slate-100 px-1.5 py-0.5 text-[13px] font-medium text-slate-800 dark:bg-slate-800 dark:text-slate-200" {...props}>
+        {children}
+      </code>
+    );
+  },
+  table({ children }) {
+    return (
+      <div className="my-3 overflow-x-auto rounded-lg border border-slate-200 dark:border-slate-700">
+        <table className="w-full text-[13px]">{children}</table>
+      </div>
+    );
+  },
+  th({ children }) {
+    return (
+      <th className="border-b border-slate-200 bg-slate-50 px-3 py-2 text-left text-[11px] font-semibold uppercase tracking-wider text-slate-500 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-400">
+        {children}
+      </th>
+    );
+  },
+  td({ children }) {
+    return (
+      <td className="border-b border-slate-100 px-3 py-2 dark:border-slate-800">
+        {children}
+      </td>
+    );
+  },
+};
 
 export function MessageBubble({ message, onFeedback, onCopy, copied }: MessageBubbleProps) {
   const isUser = message.role === "user";
@@ -54,96 +103,96 @@ export function MessageBubble({ message, onFeedback, onCopy, copied }: MessageBu
   };
 
   return (
-    <div className={`flex gap-3 ${isUser ? "flex-row-reverse" : ""}`}>
+    <div className={`flex gap-3 ${isUser ? "flex-row-reverse" : ""} animate-in fade-in slide-in-from-bottom-1 duration-200`}>
       <div
-        className={`flex size-8 shrink-0 items-center justify-center rounded-full ${
-          isUser ? "bg-primary dark:bg-primary" : "bg-muted dark:bg-muted"
+        className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${
+          isUser
+            ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
+            : "bg-slate-100 text-slate-500 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700"
         }`}
       >
-        {isUser ? (
-          <User className="text-primary-foreground size-4" />
-        ) : (
-          <Bot className="size-4 dark:text-foreground" />
-        )}
+        {isUser ? "Y" : "AI"}
       </div>
 
-      <div className={`flex max-w-[80%] flex-col gap-2 ${isUser ? "items-end" : ""}`}>
+      <div className={`flex max-w-[80%] flex-col ${isUser ? "items-end" : "items-start"}`}>
         <div
-          className={`rounded-lg px-4 py-2 ${
+          className={`text-sm leading-relaxed ${
             isUser
-              ? "bg-primary text-primary-foreground dark:bg-primary dark:text-primary-foreground"
+              ? "rounded-2xl rounded-br-md bg-slate-100 px-4 py-2.5 text-slate-800 dark:bg-slate-800 dark:text-slate-100"
               : message.isError
-                ? "bg-destructive/10 text-destructive dark:bg-destructive/20"
-                : "bg-muted dark:bg-muted dark:text-foreground"
+                ? "rounded-2xl rounded-bl-md bg-red-50 px-4 py-2.5 text-red-700 dark:bg-red-950 dark:text-red-300"
+                : "px-1 py-0.5 text-slate-700 dark:text-slate-300"
           }`}
         >
-          <div className="prose prose-sm dark:prose-invert max-w-none">
-            <ReactMarkdown remarkPlugins={[remarkGfm]}>
+          <div className="chat-prose">
+            <ReactMarkdown
+              remarkPlugins={[remarkGfm]}
+              components={markdownComponents}
+            >
               {message.content}
             </ReactMarkdown>
           </div>
         </div>
 
         {visualizations.length > 0 && visualizations.map((viz, index) => (
-          <div key={`viz-${index}`} className="w-full">
+          <div key={`viz-${index}`} className="mt-2 w-full overflow-hidden rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
             <VisualizationRenderer visualization={viz} />
           </div>
         ))}
 
         {!isUser && message.id && message.id !== "streaming" && (
-          <div className="flex items-center gap-1">
+          <div className="mt-1 flex items-center gap-0.5">
             {onCopy && (
-              <Button
-                variant="ghost"
-                size="icon-xs"
+              <button
                 onClick={() => onCopy(message.content)}
+                className="rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
                 aria-label="Copy message"
               >
-                {copied ? <Check className="size-3 text-green-500" /> : <Copy className="size-3" />}
-              </Button>
+                {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
+              </button>
             )}
             {onFeedback && (
               <>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
+                <button
                   onClick={() => handleFeedback("positive")}
-                  className={feedbackGiven === "positive" ? "text-green-500" : ""}
+                  className={`rounded-md p-1 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 ${
+                    feedbackGiven === "positive" ? "text-emerald-500" : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                  }`}
                   aria-label="Thumbs up"
                 >
                   <ThumbsUp className="size-3" />
-                </Button>
-                <Button
-                  variant="ghost"
-                  size="icon-xs"
+                </button>
+                <button
                   onClick={() => handleFeedback("negative")}
-                  className={feedbackGiven === "negative" ? "text-red-500" : ""}
+                  className={`rounded-md p-1 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 ${
+                    feedbackGiven === "negative" ? "text-red-500" : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                  }`}
                   aria-label="Thumbs down"
                 >
                   <ThumbsDown className="size-3" />
-                </Button>
+                </button>
               </>
             )}
           </div>
         )}
 
         {showCorrection && (
-          <div className="w-full space-y-1">
+          <div className="mt-2 w-full space-y-2 rounded-xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
             <Textarea
               value={correctionText}
               onChange={(e) => setCorrectionText(e.target.value)}
               placeholder="What went wrong? (optional)"
-              className="min-h-[44px] text-xs"
+              className="min-h-[44px] border-slate-200 text-xs dark:border-slate-700"
               rows={2}
               aria-label="Correction feedback"
             />
-            <div className="flex gap-1">
-              <Button size="sm" variant="outline" onClick={submitCorrection}>
+            <div className="flex gap-1.5">
+              <button onClick={submitCorrection} className="rounded-lg bg-slate-900 px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">
                 Submit
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => setShowCorrection(false)}>
+              </button>
+              <button onClick={() => setShowCorrection(false)} className="rounded-lg px-3 py-1.5 text-[11px] font-medium text-slate-500 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">
                 Cancel
-              </Button>
+              </button>
             </div>
           </div>
         )}

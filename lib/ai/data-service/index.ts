@@ -16,3 +16,5 @@ export * from "./analysis";
 export * from "./insights";
 export * from "./compliance";
 export * from "./advanced";
+export * from "./benchmarks";
+export * from "./utils";

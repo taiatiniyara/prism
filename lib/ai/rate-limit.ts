@@ -17,14 +17,11 @@ const inMemoryStore = new Map<string, RateLimitState>();
 const MAX_CONCURRENT_REQUESTS = 5;
 const activeRequests = new Map<string, number>();
 
+const WINDOW_MS = 60 * 1000;
+
 const getTodayStart = (): Date => {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
-};
-
-const getWindowStart = (): Date => {
-  const now = new Date();
-  return new Date(now.getTime() - 60 * 1000);
 };
 
 export const checkRateLimit = async (
@@ -33,16 +30,17 @@ export const checkRateLimit = async (
   const concurrent = activeRequests.get(userId) ?? 0;
 
   const todayStart = getTodayStart();
-  const windowStart = getWindowStart();
+  const now = Date.now();
+  const threshold = now - WINDOW_MS;
 
   const key = `user:${userId}`;
   let state = inMemoryStore.get(key);
 
-  if (!state || state.window_start < windowStart) {
+  if (!state || state.window_start.getTime() <= threshold) {
     state = {
       request_count: 0,
       token_count: 0,
-      window_start: windowStart,
+      window_start: new Date(now),
     };
     inMemoryStore.set(key, state);
   }
@@ -71,7 +69,7 @@ export const checkRateLimit = async (
     AI_RATE_LIMITS.tokens_per_day - dailyTokens,
   );
 
-  const resetAt = new Date(windowStart.getTime() + 60 * 1000);
+  const resetAt = new Date(state.window_start.getTime() + WINDOW_MS);
 
   return {
     allowed: remainingRequests > 0 && remainingTokens > 0 && concurrent < MAX_CONCURRENT_REQUESTS,
@@ -103,10 +101,17 @@ export const recordRequest = async (
 ): Promise<void> => {
   const key = `user:${userId}`;
   const state = inMemoryStore.get(key);
+  const now = Date.now();
 
   if (state) {
-    state.request_count++;
-    state.token_count += tokenCount;
+    if (state.window_start.getTime() <= now - WINDOW_MS) {
+      state.request_count = 1;
+      state.token_count = tokenCount;
+      state.window_start = new Date(now);
+    } else {
+      state.request_count++;
+      state.token_count += tokenCount;
+    }
   }
 
   const todayStart = getTodayStart();

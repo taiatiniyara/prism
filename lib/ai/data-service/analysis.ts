@@ -81,7 +81,7 @@ export const getServiceAreaBreakdown = async (
   }
 
   const serviceAreas: ServiceAreaBreakdown[] = Array.from(byServiceArea.entries())
-    .map(([id, data]) => ({
+    .map(([_id, data]) => ({
       service_area: data.name,
       kpi_count: data.total,
       completeness_pct: data.total > 0 ? Math.round((data.completed / data.total) * 100) : 0,

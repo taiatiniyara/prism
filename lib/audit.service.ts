@@ -19,9 +19,7 @@ export type AuditAction =
   | "migration.import"
   | "migration.export"
   | "auth.login"
-  | "auth.login_failed"
-  | "auth.mfa_enabled"
-  | "auth.mfa_disabled";
+  | "auth.login_failed";
 
 export interface AuditEntryInput {
   action: AuditAction;

@@ -2,6 +2,7 @@ import { z } from "zod";
 import { tool } from "ai";
 import type { CurrentUser } from "@/lib/user.service";
 import { validateToolAccess } from "../guardrails";
+import { recordToolFailure } from "../data-service/utils";
 import {
   getKpiStatus,
   getBenchmarkingData,
@@ -31,6 +32,10 @@ import {
   compareKpisAcrossUtilities,
   generateExport,
   getCountryHierarchy,
+  getIndustryBenchmarks,
+  getExecutiveDigest,
+  getReviewQueueEntries,
+  getGuidedEntry,
 } from "../data-service";
 
 const TOOL_TIMEOUT_MS = 15000;
@@ -39,7 +44,10 @@ const withTimeout = <T>(promise: Promise<T>, toolName: string): Promise<T> => {
   const timeout = new Promise<never>((_, reject) =>
     setTimeout(() => reject(new Error(`TOOL_TIMEOUT:${toolName} exceeded ${TOOL_TIMEOUT_MS}ms`)), TOOL_TIMEOUT_MS),
   );
-  return Promise.race([promise, timeout]);
+  return Promise.race([promise, timeout]).catch((err: unknown) => {
+    recordToolFailure(toolName);
+    throw err;
+  });
 };
 
 export const createAiTools = (user: CurrentUser) => {
@@ -440,6 +448,44 @@ export const createAiTools = (user: CurrentUser) => {
       inputSchema: z.object({}),
       execute: async () => {
         return withTimeout(getCountryHierarchy(), "get_country_hierarchy");
+      },
+    }),
+
+    get_industry_benchmarks: tool({
+      description:
+        "Get industry-standard benchmarks for Pacific electricity utility KPIs. Includes SAIDI, SAIFI, system losses, tariff recovery, electrification rate, renewable penetration, and more. Provides developing nation, developed nation, and Pacific regional averages plus PPA targets. Source data from World Bank, ADB, IRENA, and PPA Benchmarking Reports. Use this to contextualise performance — 'You are at 320 minutes — the PPA target is 360, the top quartile is 120.'",
+      inputSchema: z.object({}),
+      execute: async () => {
+        return withTimeout(getIndustryBenchmarks(), "get_industry_benchmarks");
+      },
+    }),
+
+    get_executive_digest: tool({
+      description:
+        "Generate an executive briefing digest. Tells the LLM which tools to call to produce a structured summary with key metrics, trends, top actions, risks, and benchmark context. Use this when asked for a summary, briefing, highlights, or 'what should I know for my Monday meeting?'",
+      inputSchema: z.object({}),
+      execute: async () => {
+        return withTimeout(getExecutiveDigest(), "get_executive_digest");
+      },
+    }),
+
+    get_review_queue_entries: tool({
+      description:
+        "View the AI review queue — flagged conversations that need human review. Shows pending and reviewed entries with status. Admin only (DEV/BMO).",
+      inputSchema: z.object({}),
+      execute: async () => {
+        return withTimeout(getReviewQueueEntries(user), "get_review_queue_entries");
+      },
+    }),
+
+    get_guided_entry: tool({
+      description:
+        "Get step-by-step guidance for entering data for a specific KPI. Tells the user which inputs to fill, where to find them in PRISM, and what values are expected.",
+      inputSchema: z.object({
+        kpi_name: z.string().describe("Name of the KPI to get data entry guidance for."),
+      }),
+      execute: async ({ kpi_name }) => {
+        return withTimeout(getGuidedEntry(user, { kpi_name }), "get_guided_entry");
       },
     }),
   };

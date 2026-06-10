@@ -19,6 +19,7 @@ export type CompletenessDimension =
   | "payment_mode";
 
 export interface CompletenessBreakdownItem {
+  id?: number;
   name: string;
   count: number;
   percentage: number;
@@ -60,13 +61,13 @@ export const getCompletenessBreakdown = async (
 
   switch (dimension) {
     case "category":
-      items = filterOptions.kpiCategories.map((i) => ({ name: i.name, count: 0, percentage: 0 }));
+      items = filterOptions.kpiCategories.map((i) => ({ id: i.id, name: i.name, count: 0, percentage: 0 }));
       break;
     case "subcategory":
-      items = filterOptions.kpiSubcategories.map((i) => ({ name: i.name, count: 0, percentage: 0 }));
+      items = filterOptions.kpiSubcategories.map((i) => ({ id: i.id, name: i.name, count: 0, percentage: 0 }));
       break;
     case "service_area":
-      items = filterOptions.serviceAreas.map((i) => ({ name: i.name, count: 0, percentage: 0 }));
+      items = filterOptions.serviceAreas.map((i) => ({ id: i.id, name: i.name, count: 0, percentage: 0 }));
       break;
     case "energy_source": {
       const sources = await fetchManagedListItems(12);
@@ -119,9 +120,9 @@ export const getCompletenessBreakdown = async (
     for (const item of items) {
       const matching = rows.filter((r) => {
         switch (dimension) {
-          case "category": return r.categoryId === item.count || item.name === (r as any).categoryName;
-          case "subcategory": return r.subcategoryId === item.count;
-          case "service_area": return r.serviceAreaId === item.count;
+          case "category": return r.categoryId === item.id;
+          case "subcategory": return r.subcategoryId === item.id;
+          case "service_area": return r.serviceAreaId === item.id;
           default: return r.result.status !== null;
         }
       });

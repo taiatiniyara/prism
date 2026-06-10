@@ -1,11 +1,15 @@
+import { timingSafeEqual } from "node:crypto";
 import { db } from "@/db/connection";
 import { user, roles } from "@/db/schema/auth-schema";
 import { organisations } from "@/db/schema/utility";
 
 export async function GET(req: Request) {
-  const apiKey = process.env.API_KEY;
-  const inputApiKey = req.headers.get("Authorization");
-  if (apiKey !== inputApiKey) {
+  const apiKey = process.env.API_KEY ?? "";
+  const inputApiKey = req.headers.get("Authorization") ?? "";
+  if (
+    apiKey.length !== inputApiKey.length ||
+    !timingSafeEqual(Buffer.from(apiKey), Buffer.from(inputApiKey))
+  ) {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
   }
 

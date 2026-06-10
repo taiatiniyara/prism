@@ -153,9 +153,10 @@ export const getComplianceStatus = async (
 
   return {
     data: {
-      issues: issues.filter((i) => i.severity !== "ok").sort((a, b) =>
-        a.severity === "critical" ? -1 : 1,
-      ).slice(0, 50),
+      issues: issues.filter((i) => i.severity !== "ok").sort((a, b) => {
+        if (a.severity === b.severity) return 0;
+        return a.severity === "critical" ? -1 : 1;
+      }).slice(0, 50),
       summary: { total_kpis_checked: issues.length, critical, warnings, compliant },
       report_period: match?.Period ?? null,
     },

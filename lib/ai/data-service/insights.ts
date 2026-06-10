@@ -227,7 +227,7 @@ export interface WhatChangedData {
 
 export const getWhatChanged = async (
   user: CurrentUser,
-  options: {
+  _options: {
     report_period_id?: number | null;
     year?: number | null;
   } = {},

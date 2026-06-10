@@ -2,17 +2,18 @@ import { db } from "@/db/connection";
 import { aiChatSession, aiChatTurn, aiToolCall } from "@/db/schema/ai";
 import { getPromptVersion } from "@/lib/ai";
 import { validateInput, filterOutput } from "@/lib/ai/guardrails";
-import { checkRateLimit, recordRequest, recordError, recordToolCall, acquireConcurrencySlot, releaseConcurrencySlot } from "@/lib/ai/rate-limit";
+import { recordRequest, recordError, recordToolCall } from "@/lib/ai/rate-limit";
 import type { AiChatMessage } from "@/lib/ai/types";
 import { getCurrentUser } from "@/lib/user.service";
 import { streamText, stepCountIs } from "ai";
 import { and, eq, sql } from "drizzle-orm";
 import { createAiTools } from "@/lib/ai/tools";
 import { getSystemPrompt } from "@/lib/ai/prompt";
+import { checkUserUtility } from "@/lib/ai/data-service/utils";
 import { anthropic } from "@ai-sdk/anthropic";
 import { AI_MODELS, AI_RATE_LIMITS } from "@/lib/ai/types";
 
-export const maxDuration = 60;
+export const maxDuration = 120;
 
 const deriveSessionTitle = (message: string): string => {
   const normalized = message.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
@@ -66,30 +67,8 @@ export async function POST(request: Request) {
     );
   }
 
-  const rateLimitInfo = await checkRateLimit(user.id);
-  if (!rateLimitInfo.allowed) {
-    const reason =
-      (rateLimitInfo.concurrent_count ?? 0) >= 5
-        ? "Too many concurrent requests. Please wait for your other requests to complete."
-        : "Rate limit exceeded. Please try again later.";
-    return Response.json(
-      { message: reason },
-      {
-        status: 429,
-        headers: {
-          "Retry-After": String(Math.ceil((rateLimitInfo.reset_at.getTime() - Date.now()) / 1000)),
-          "X-RateLimit-Remaining": String(rateLimitInfo.remaining_requests),
-        },
-      },
-    );
-  }
-
-  acquireConcurrencySlot(user.id);
-
   let sessionId: number;
   let turnNumber: number;
-
-  const cleanup = () => releaseConcurrencySlot(user.id);
 
   try {
     if (body.sessionId) {
@@ -106,7 +85,6 @@ export async function POST(request: Request) {
         .limit(1);
 
       if (!existingSession) {
-        cleanup();
         return Response.json({ message: "Session not found." }, { status: 404 });
       }
 
@@ -147,7 +125,7 @@ export async function POST(request: Request) {
       .set({ last_turn_at: new Date() })
       .where(eq(aiChatSession.id, sessionId));
 
-    const modelName = rateLimitInfo.degraded_mode ? AI_MODELS.fallback : AI_MODELS.primary;
+    const modelName = AI_MODELS.primary;
     const isThinkingModel = /^claude-sonnet-4/i.test(modelName);
 
     const preparedMessages = body.messages
@@ -158,8 +136,18 @@ export async function POST(request: Request) {
       }))
       .filter((msg) => msg.content.length > 0);
 
+    const conversationTurns = preparedMessages.length;
+    const shouldSummarize = conversationTurns > 8;
+
     const tools = createAiTools(user);
-    const systemPrompt = getSystemPrompt();
+    const utilityCheck = checkUserUtility(user);
+    const systemPrompt = getSystemPrompt() +
+      (!utilityCheck.valid
+        ? `\n\nIMPORTANT: ${utilityCheck.message}`
+        : "") +
+      (shouldSummarize
+        ? `\n\nNOTE: This conversation has ${conversationTurns} messages. Before answering, briefly summarise the key context from earlier messages in 1-2 sentences, then answer the latest question concisely.`
+        : "");
 
     const result = streamText({
       model: anthropic(modelName),
@@ -175,6 +163,12 @@ export async function POST(request: Request) {
         const turnLatencyMs = Date.now() - startedAt;
 
         try {
+          if (!text || text.trim().length === 0) {
+            console.error("[ai-chat] onFinish received empty text for turn", createdTurn.id);
+          } else if (text.trim().length < 50) {
+            console.warn("[ai-chat] onFinish received suspiciously short response (" + text.trim().length + " chars) for turn", createdTurn.id, "preview:", text.slice(0, 200));
+          }
+
           const { filtered } = filterOutput(text);
 
           await db
@@ -182,7 +176,7 @@ export async function POST(request: Request) {
             .set({
               assistant_response: filtered,
               model_used: modelName,
-              model_was_fallback: rateLimitInfo.degraded_mode,
+              model_was_fallback: false,
               token_count_input: usage?.inputTokens ?? 0,
               token_count_output: usage?.outputTokens ?? 0,
               latency_ms: turnLatencyMs,
@@ -209,15 +203,13 @@ export async function POST(request: Request) {
             user.id,
             (usage?.inputTokens ?? 0) + (usage?.outputTokens ?? 0),
           );
-        } catch {
-          // Persistence failure shouldn't break the response
-        } finally {
-          cleanup();
+        } catch (err) {
+          console.error("[ai-chat] Failed to persist turn response:", err instanceof Error ? err.message : String(err));
         }
       },
     });
-
     return result.toTextStreamResponse({
+
       headers: {
         "X-Session-Id": String(sessionId),
         "X-Turn-Id": String(createdTurn.id),
@@ -226,7 +218,6 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     console.error("AI chat error:", error instanceof Error ? error.message : String(error));
-    cleanup();
     const turnLatencyMs = Date.now() - startedAt;
 
     try {

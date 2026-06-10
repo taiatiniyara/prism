@@ -31,12 +31,31 @@ export async function POST(request: Request) {
     );
   }
 
+  const MAX_COLUMNS = 50;
+  const MAX_ROWS = 1000;
+  const MAX_CELL_LENGTH = 500;
+
+  if (body.data.columns.length > MAX_COLUMNS) {
+    return Response.json({ message: `Maximum ${MAX_COLUMNS} columns allowed.` }, { status: 400 });
+  }
+  if (body.data.rows.length > MAX_ROWS) {
+    return Response.json({ message: `Maximum ${MAX_ROWS} rows allowed.` }, { status: 400 });
+  }
+
+  const sanitizedRows = body.data.rows.map((row) =>
+    row.map((cell) => {
+      if (cell === null || cell === undefined) return "";
+      const str = String(cell).slice(0, MAX_CELL_LENGTH);
+      return str;
+    }),
+  );
+
   const filename = body.filename || body.data.title || "export";
 
   if (body.format === "csv") {
     const csvRows = [
       body.data.columns.join(","),
-      ...body.data.rows.map((row) =>
+      ...sanitizedRows.map((row) =>
         row
           .map((cell) => {
             if (cell === null || cell === undefined) return "";
@@ -66,7 +85,7 @@ export async function POST(request: Request) {
 
     worksheet.addRow(body.data.columns);
 
-    for (const row of body.data.rows) {
+    for (const row of sanitizedRows) {
       worksheet.addRow(row);
     }
 

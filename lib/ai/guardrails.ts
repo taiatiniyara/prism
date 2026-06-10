@@ -100,7 +100,10 @@ export const validateToolAccess = (
 
 const PII_PATTERNS = [
   { pattern: /\b[\w.+-]+@[\w-]+\.[\w.-]+\b/gi, type: "email" },
-  { pattern: /(?:\+?\d[\s-]?){7,}\d/g, type: "phone" },
+  {
+    pattern: /(?:\+?\d[\s-]?){8,}\d/g,
+    type: "phone",
+  },
   {
     pattern: /\b(?:SSN|Social Security)[:\s]*\d{3}-?\d{2}-?\d{4}\b/gi,
     type: "ssn",

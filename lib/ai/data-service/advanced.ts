@@ -101,7 +101,7 @@ export const getKpiTargets = async (
     const median = values[Math.floor(values.length / 2)];
     const topQ = values[Math.floor(values.length * 0.75)];
     const botQ = values[Math.floor(values.length * 0.25)];
-    const current = values.find((v) => true) ?? median;
+    const current = values[0] ?? median;
 
     const gapToTopQ = topQ - current;
     const difficulty: KpiTargetRecommendation["difficulty"] =
