@@ -9,7 +9,7 @@ function PrismAiContent() {
   const sessionId = searchParams.get("session");
 
   return (
-    <main className="h-[calc(100vh-4rem)] w-full">
+    <main className="h-full w-full">
       <ChatPanel showSidebar={true} initialSessionId={sessionId ? parseInt(sessionId, 10) : undefined} />
     </main>
   );
@@ -17,7 +17,7 @@ function PrismAiContent() {
 
 export default function PrismAiPage() {
   return (
-    <Suspense fallback={<main className="h-[calc(100vh-4rem)] w-full" />}>
+    <Suspense fallback={<main className="h-full w-full" />}>
       <PrismAiContent />
     </Suspense>
   );

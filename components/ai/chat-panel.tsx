@@ -80,6 +80,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
   const abortControllerRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const isStreamingRef = useRef(false);
+  const animFrameRef = useRef<number | null>(null);
   const messagesRef = useRef(messages);
   const pendingContentRef = useRef("");
 
@@ -294,17 +295,36 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
         throw new Error("No response body");
       }
 
-      let fullContent = "";
+      let displayedLen = 0;
+
+      const revealNext = () => {
+        const target = pendingContentRef.current;
+        if (displayedLen < target.length) {
+          displayedLen = Math.min(displayedLen + 3, target.length);
+          setStreamingContent(target.slice(0, displayedLen));
+          animFrameRef.current = requestAnimationFrame(revealNext);
+        } else {
+          animFrameRef.current = null;
+        }
+      };
 
       while (true) {
         const { done, value } = await reader.read();
         if (done) break;
 
         const chunk = decoder.decode(value, { stream: true });
-        fullContent += chunk;
-        pendingContentRef.current = fullContent;
-        setStreamingContent(fullContent);
+        pendingContentRef.current += chunk;
+        if (!animFrameRef.current) {
+          animFrameRef.current = requestAnimationFrame(revealNext);
+        }
       }
+
+      if (animFrameRef.current !== null) {
+        cancelAnimationFrame(animFrameRef.current);
+        animFrameRef.current = null;
+      }
+      const fullContent = pendingContentRef.current;
+      setStreamingContent(fullContent);
 
       const assistantMessage: ChatMessage = {
         id: `assistant-${Date.now()}`,
@@ -348,6 +368,10 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
       setMessages((prev) => [...prev, errorMessage]);
       toast.error(msg.length > 120 ? "An error occurred" : msg);
     } finally {
+      if (animFrameRef.current !== null) {
+        cancelAnimationFrame(animFrameRef.current);
+        animFrameRef.current = null;
+      }
       setIsLoading(false);
       setStreamingContent("");
       setActiveToolName(null);
@@ -592,13 +616,31 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
               )}
 
               {isLoading && !streamingContent && (
-                <div className="flex items-center gap-2 text-sm">
-                  <Loader2 className="text-muted-foreground size-4 animate-spin" />
-                  <span className="text-muted-foreground">PRISM AI is thinking...</span>
+                <div className="flex items-center gap-3">
+                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700">
+                    <span className="text-[11px] font-semibold">AI</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <span className="inline-block size-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:0s]" />
+                    <span className="inline-block size-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:0.15s]" />
+                    <span className="inline-block size-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:0.3s]" />
+                  </div>
+                </div>
+              )}
+              {streamingContent && (
+                <div className="mt-6 flex items-center gap-3">
+                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700">
+                    <span className="text-[11px] font-semibold">AI</span>
+                  </div>
+                  <div className="flex items-center gap-1.5">
+                    <span className="inline-block size-2 rounded-full bg-slate-300 animate-[pulse_1.4s_ease-in-out_infinite] [animation-delay:0s]" />
+                    <span className="inline-block size-2 rounded-full bg-slate-300 animate-[pulse_1.4s_ease-in-out_infinite] [animation-delay:0.2s]" />
+                    <span className="inline-block size-2 rounded-full bg-slate-300 animate-[pulse_1.4s_ease-in-out_infinite] [animation-delay:0.4s]" />
+                  </div>
                 </div>
               )}
               {isLoading && activeToolName && (
-                <div className="mt-3 flex items-center gap-2 text-xs text-muted-foreground animate-pulse">
+                <div className="mt-3 flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50 px-3 py-1.5 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
                   <Loader2 className="size-3 animate-spin" />
                   <span>{TOOL_ACTION_MAP[activeToolName] ?? `Running ${activeToolName}`}...</span>
                 </div>

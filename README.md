@@ -104,8 +104,11 @@ primary endpoint.
 ### AI (Anthropic Claude)
 
 - `ANTHROPIC_API_KEY`
-- Access via `/prism-ai` page or floating chat button (bottom-right on all pages)
-- 26 AI tools covering KPI status, scorecards, benchmarking, trends, diagnostics, governance, compliance, what-if analysis, and on-the-fly KPI calculation
+- Access via `/prism-ai` page or floating chat button (bottom-right on all
+  pages)
+- 26 AI tools covering KPI status, scorecards, benchmarking, trends,
+  diagnostics, governance, compliance, what-if analysis, and on-the-fly KPI
+  calculation
 - Session persistence via `GET/POST/DELETE /api/ai/sessions`
 - Full documentation: `docs/ai-capabilities.md`
 
@@ -129,8 +132,10 @@ primary endpoint.
 - `app/`: routes, layouts, and API handlers
 - `components/`: shared UI and feature components
 - `db/`: Drizzle config, connection, schema, scripts, migrations output
-- `lib/`: auth/session/business service modules, shared utilities (logger, dim route helper)
-- `test/`: Vitest setup, unit tests, integration tests, fixtures, manual test scripts
+- `lib/`: auth/session/business service modules, shared utilities (logger, dim
+  route helper)
+- `test/`: Vitest setup, unit tests, integration tests, fixtures, manual test
+  scripts
 - `specs/`: feature specs and planning artifacts
 - `graphify-out/`: knowledge graph outputs (HTML, JSON, report)
 - `docs/`: security review reports
@@ -145,10 +150,10 @@ primary endpoint.
   endpoint names.
 - Dim routes share a common helper at `lib/dim-route-helper.ts` which
   consolidates authentication and managed-list lookup patterns.
-- Structured logging is available via `lib/logger.ts` — import `logger` and
-  use `logger.info()`, `logger.warn()`, `logger.error()`, `logger.debug()`.
-  Set `LOG_LEVEL` env var to control verbosity (defaults to `info` in
-  production, `debug` in development).
+- Structured logging is available via `lib/logger.ts` — import `logger` and use
+  `logger.info()`, `logger.warn()`, `logger.error()`, `logger.debug()`. Set
+  `LOG_LEVEL` env var to control verbosity (defaults to `info` in production,
+  `debug` in development).
 
 ## Testing
 
