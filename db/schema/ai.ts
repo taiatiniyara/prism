@@ -8,6 +8,7 @@ import {
   serial,
   jsonb,
   boolean,
+  unique,
 } from "drizzle-orm/pg-core";
 import { user } from "./auth-schema";
 
@@ -173,7 +174,7 @@ export const aiUsageMetrics = pgTable(
   },
   (table) => [
     index("ai_usage_metrics_user_date_idx").on(table.user_id, table.date),
-    (t) => ({ unq: t.unique().on(table.user_id, table.date) }),
+    unique("ai_usage_metrics_user_date_unique").on(table.user_id, table.date),
   ],
 );
 

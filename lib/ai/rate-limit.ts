@@ -1,6 +1,6 @@
 import { db } from "@/db/connection";
 import { aiUsageMetrics } from "@/db/schema/ai";
-import { and, eq, gte } from "drizzle-orm";
+import { and, eq, gte, sql } from "drizzle-orm";
 import type { AiRateLimitInfo } from "./types";
 import { AI_RATE_LIMITS } from "./types";
 

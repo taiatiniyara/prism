@@ -42,7 +42,7 @@ type TemplateRow = {
   valid_polarity_id: number | null;
   valid_polarity_name: string | null;
   value: string;
-  is_data_not_available: boolean;
+  is_not_available: boolean;
   comments: string;
 };
 
@@ -64,8 +64,7 @@ interface EnterDataTemplatePanelProps {
 const SHEET_NAME = "Enter Data";
 
 const HEADER_DISPLAY_NAMES: Record<string, string> = {
-  is_data_not_available:
-    "Data Not Available (Select true if data is not available)",
+  is_not_available: "Data Not Available (Select true if data is not available)",
 };
 const getDisplayHeader = (key: string): string =>
   HEADER_DISPLAY_NAMES[key] ?? key;
@@ -439,7 +438,7 @@ const flattenTemplateRows = (
       valid_polarity_id: row.validPolarityId ?? null,
       valid_polarity_name: row.validPolarityName ?? null,
       value: row.value ?? "",
-      is_data_not_available: row.isDataNotAvailable ?? false,
+      is_not_available: row.isDataNotAvailable ?? false,
       comments: row.comments ?? "",
     }));
   }
@@ -464,7 +463,7 @@ const flattenTemplateRows = (
         valid_polarity_id: row.validPolarityId ?? null,
         valid_polarity_name: row.validPolarityName ?? null,
         value: row.value ?? "",
-        is_data_not_available: row.isDataNotAvailable ?? false,
+        is_not_available: row.isDataNotAvailable ?? false,
         comments: row.comments ?? "",
       })),
     );
@@ -493,7 +492,7 @@ const flattenTemplateRows = (
         valid_polarity_id: row.validPolarityId ?? null,
         valid_polarity_name: row.validPolarityName ?? null,
         value: row.value ?? "",
-        is_data_not_available: row.isDataNotAvailable ?? false,
+        is_not_available: row.isDataNotAvailable ?? false,
         comments: row.comments ?? "",
       })),
     ),
@@ -582,9 +581,9 @@ export default function EnterDataTemplatePanel({
       freezeTopRow(worksheet);
       applyHeaderFilter(worksheet, headers.length);
 
-      // Add TRUE/FALSE data validation dropdown to the is_data_not_available column.
+      // Add TRUE/FALSE data validation dropdown to the is_not_available column.
       const valueColIndex = headers.indexOf("value");
-      const dnaColIndex = headers.indexOf("is_data_not_available");
+      const dnaColIndex = headers.indexOf("is_not_available");
       if (dnaColIndex >= 0) {
         const dnaCol = dnaColIndex + 1; // ExcelJS columns are 1-based
         for (
@@ -647,7 +646,7 @@ export default function EnterDataTemplatePanel({
 
       await lockTemplateWorksheet(worksheet, [
         "value",
-        normalizeHeader(getDisplayHeader("is_data_not_available")),
+        normalizeHeader(getDisplayHeader("is_not_available")),
         "comments",
       ]);
 
@@ -694,7 +693,7 @@ export default function EnterDataTemplatePanel({
       "input_name",
       "unit_name",
       "value",
-      "is_data_not_available",
+      "is_not_available",
     ];
 
     for (const requiredHeader of requiredHeaders) {
@@ -753,9 +752,7 @@ export default function EnterDataTemplatePanel({
         paymentModeId: matchedTemplateRow.payment_mode_id,
         customerTypeId: matchedTemplateRow.customer_type_id,
         value: String(getCell(row, "value") ?? "").trim(),
-        isDataNotAvailable: toBooleanFlag(
-          getCell(row, "is_data_not_available"),
-        ),
+        isDataNotAvailable: toBooleanFlag(getCell(row, "is_not_available")),
         comments:
           commentsIndex >= 0
             ? String(getCell(row, "comments") ?? "").trim()

@@ -563,7 +563,7 @@ type SourceUtilityContextRow = {
   comments?: string | null;
   updated_date?: string | Date | null;
   updated_at?: string | Date | null;
-  data_not_available?: boolean;
+  not_available?: boolean;
   is_deleted?: boolean;
   energy_provider_id?: number | null;
   energy_source_id?: number | null;
@@ -580,7 +580,7 @@ type SourceCountryContextRow = {
   comments?: string | null;
   updated_date?: string | Date | null;
   updated_at?: string | Date | null;
-  data_not_available?: boolean;
+  not_available?: boolean;
   is_deleted?: boolean;
   country_id?: number | null;
 };
@@ -711,7 +711,7 @@ export async function retrieveUtilityContextData(options?: {
         comments: toStructuredComments(row.comments ?? null, updatedAt),
         update_medium_id: null,
         status_id:
-          row.data_not_available === true
+          row.not_available === true
             ? DataEntryStatusId.Not_Available
             : DataEntryStatusId.Entered,
         is_relevant: true,
@@ -878,7 +878,7 @@ export async function retrieveCountryContextData(options?: {
         comments: toStructuredComments(row.comments ?? null, updatedAt),
         update_medium_id: null,
         status_id:
-          row.data_not_available === true
+          row.not_available === true
             ? DataEntryStatusId.Not_Available
             : DataEntryStatusId.Entered,
         is_relevant: true,
@@ -2126,7 +2126,7 @@ type SourceDataEntryRow = {
   comments: string | null;
   update_medium_id: number | null;
   status_legacy_id: number | null;
-  data_not_available: boolean;
+  not_available: boolean;
   is_relevant: boolean | null;
   is_deleted: boolean;
   energy_provider_id: number | null;
@@ -2336,7 +2336,7 @@ const normalizeOptionalFkId = (
 };
 
 const mapStatus = (row: SourceDataEntryRow): DataEntryStatusId => {
-  if (row.data_not_available) return DataEntryStatusId.Not_Available;
+  if (row.not_available) return DataEntryStatusId.Not_Available;
   if ((row.value ?? "").trim().length > 0) return DataEntryStatusId.Entered;
   return DataEntryStatusId.Pending;
 };

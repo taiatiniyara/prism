@@ -13,7 +13,7 @@ export async function GET(req: Request) {
   }
 
   const allEntries = await db
-    .select({ report_period_id: dataEntries.report_period_id, status: dataEntries.status })
+    .select({ report_period_id: dataEntries.report_period_id, status_id: dataEntries.status_id })
     .from(dataEntries)
     .where(eq(dataEntries.is_deleted, false))
     .limit(50000);

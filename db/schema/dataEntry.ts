@@ -91,9 +91,7 @@ export type InputDefinition = typeof inputDefinitions.$inferSelect & {
 export type NewInputDefinition = typeof inputDefinitions.$inferInsert;
 
 export const inputRelevance = pgTable("input_relevance", {
-  id: serial("id")
-    .primaryKey()
-    .notNull(),
+  id: serial("id").primaryKey().notNull(),
   input_def_id: integer("input_def_id")
     .notNull()
     .references(() => inputDefinitions.id, { onDelete: "cascade" }),
@@ -148,7 +146,7 @@ export const DataEntryStatus = {
   Requested: DataEntryStatusId.Requested,
   Pending: DataEntryStatusId.Pending,
   Entered: DataEntryStatusId.Entered,
-  Data_Not_Available: DataEntryStatusId.Not_Available,
+  Not_Available: DataEntryStatusId.Not_Available,
   Reviewed: DataEntryStatusId.Reviewed,
   Approved: DataEntryStatusId.Approved,
   Endorsed: DataEntryStatusId.Endorsed,
@@ -158,7 +156,7 @@ export const dataEntryStatusColors = {
   Requested: "#fb923c",
   Pending: "#facc15",
   Entered: "#a3e635",
-  Data_Not_Available: "#94a3b8",
+  Not_Available: "#94a3b8",
   Reviewed: "#34d399",
   Approved: "#38bdf8",
   Endorsed: "#a78bfa",
@@ -363,9 +361,9 @@ export type NewInputDlDefMapping = typeof inputDlDefMappings.$inferInsert;
 
 export const dataEntryLogs = pgTable("data_entry_logs", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
-    data_entry_id: uuid("data_entry_id")
-      .notNull()
-      .references(() => dataEntries.id, { onDelete: "cascade" }),
+  data_entry_id: uuid("data_entry_id")
+    .notNull()
+    .references(() => dataEntries.id, { onDelete: "cascade" }),
   previous_value: varchar("previous_value", { length: 255 }).notNull(),
   new_value: varchar("new_value", { length: 255 }).notNull(),
   updated_by_id: text("updated_by_id")

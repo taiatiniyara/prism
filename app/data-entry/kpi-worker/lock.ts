@@ -35,11 +35,11 @@ export const acquireScopeLock = async (
   const key = buildScopeLockKey(scope);
   const lockId = toLockId(key);
 
-  const [result] = await db.execute<{ acquired: boolean }>(
+  const result = await db.execute<{ acquired: boolean }>(
     sql`SELECT pg_try_advisory_lock(${sql.raw(lockId)}::bigint) AS acquired`,
   );
 
-  return (result as unknown as { acquired: boolean })?.acquired === true;
+  return result.rows[0]?.acquired === true;
 };
 
 const activeLocks = new Set<string>();

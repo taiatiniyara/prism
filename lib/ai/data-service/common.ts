@@ -101,7 +101,7 @@ export const resolvePeriod = async (
 ): Promise<{
   id: number;
   display: Date;
-  utility: string;
+  utility: string | null;
   utilityId: number;
 } | null> => {
   if (options.report_period_id) {
