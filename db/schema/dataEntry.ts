@@ -17,7 +17,6 @@ import { reportPeriods } from "./reportPeriods";
 import { energyResources, serviceAreas } from "./utility";
 import { user } from "./auth-schema";
 import { relations } from "drizzle-orm";
-import { generateRandomNumber } from "@/lib/utils";
 
 export interface FormulaInput {
   input_def_id: number;
@@ -94,14 +93,13 @@ export type NewInputDefinition = typeof inputDefinitions.$inferInsert;
 export const inputRelevance = pgTable("input_relevance", {
   id: serial("id")
     .primaryKey()
-    .notNull()
-    .$default(() => generateRandomNumber(5)),
+    .notNull(),
   input_def_id: integer("input_def_id")
     .notNull()
-    .references(() => inputDefinitions.id),
+    .references(() => inputDefinitions.id, { onDelete: "cascade" }),
   dimension_id: integer("dimension_id")
     .notNull()
-    .references(() => managedListItems.id),
+    .references(() => managedListItems.id, { onDelete: "restrict" }),
   is_relevant: boolean("is_relevant").default(true).notNull(),
 });
 export type InputRelevance = typeof inputRelevance.$inferSelect & {
@@ -188,7 +186,7 @@ export const dataEntries = pgTable(
     id: uuid("id").primaryKey().notNull().defaultRandom(),
     report_period_id: integer("report_period_id")
       .notNull()
-      .references(() => reportPeriods.id),
+      .references(() => reportPeriods.id, { onDelete: "restrict" }),
     energy_resource_id: integer("energy_resource_id").references(
       () => energyResources.id,
     ),
@@ -329,7 +327,7 @@ export const inputDlDefMappings = pgTable(
     id: serial("id").primaryKey().notNull(),
     input_def_id: integer("input_def_id")
       .notNull()
-      .references(() => inputDefinitions.id),
+      .references(() => inputDefinitions.id, { onDelete: "cascade" }),
     training_dl_def_id: bigint("training_dl_def_id", {
       mode: "number",
     }).notNull(),
@@ -365,9 +363,9 @@ export type NewInputDlDefMapping = typeof inputDlDefMappings.$inferInsert;
 
 export const dataEntryLogs = pgTable("data_entry_logs", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),
-  data_entry_id: uuid("data_entry_id")
-    .notNull()
-    .references(() => dataEntries.id),
+    data_entry_id: uuid("data_entry_id")
+      .notNull()
+      .references(() => dataEntries.id, { onDelete: "cascade" }),
   previous_value: varchar("previous_value", { length: 255 }).notNull(),
   new_value: varchar("new_value", { length: 255 }).notNull(),
   updated_by_id: text("updated_by_id")

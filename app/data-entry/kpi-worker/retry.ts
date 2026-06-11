@@ -12,7 +12,13 @@ export const isTransientKpiError = (error: unknown): boolean => {
     message.includes("timeout") ||
     message.includes("connection") ||
     message.includes("tempor") ||
-    message.includes("econn")
+    message.includes("econn") ||
+    message.includes("40p01") ||
+    message.includes("deadlock") ||
+    message.includes("40001") ||
+    message.includes("serialization") ||
+    message.includes("pool exhausted") ||
+    message.includes("too many clients")
   );
 };
 
@@ -39,7 +45,9 @@ export const executeWithRetry = async <T>(
         await onRetry(retries, error);
       }
 
-      await delay(baseDelayMs * retries);
+      const exponentialDelay = baseDelayMs * Math.pow(2, retries);
+      const jitter = Math.floor(Math.random() * baseDelayMs);
+      await delay(exponentialDelay + jitter);
     }
   }
 };

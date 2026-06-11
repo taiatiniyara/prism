@@ -23,7 +23,7 @@ npm run dev                    # webpack dev server on http://localhost:3554
 | `npm run test:watch` | Vitest interactive watch |
 | `npm run db-push-safe` | Runs `db-fix-uuid-timestamps` then `db-push` |
 | `npm run db-push` | `drizzle-kit push --config ./db/config.ts` |
-| `npm run git-push` | Generates chatbot prompt, builds, commits, pushes |
+| `npm run git-push` | Builds, commits, pushes |
 
 ## Architecture
 
@@ -33,6 +33,10 @@ npm run dev                    # webpack dev server on http://localhost:3554
 - **`proxy.ts`** — middleware protecting `/dashboard/*`, `/data-entry/*`, `/settings/*`, `/profile/*`, `/docs/*`
 - **Path alias**: `@/*` → project root (in tsconfig and vitest config)
 - **DB connection** (`db/connection.ts`) uses a global `__prismPool` to survive hot-reloads; PG pool timeouts all set to 30s
+- **AI/chatbot**: Anthropic Claude (Sonnet 4.6 primary, Haiku 4.5 fallback), 34 tools, AI SDK v6.0.168
+- **AI streaming**: Character-by-character `requestAnimationFrame` reveal, animated thinking/typing indicators, tool status display
+- **Rate limiting**: Removed from AI chat route; usage tracking retained for analytics only
+- **Scorecard**: Shows all KPI data regardless of approval state (`includeUnapproved: true`)
 
 ## Testing
 
@@ -48,7 +52,7 @@ npm run dev                    # webpack dev server on http://localhost:3554
 - `NEXT_PUBLIC_BETTER_AUTH_URL` (auth client)
 - `PRISM_TRAINING_API_BASE_URL` — legacy `/api/fact*`/`/api/dim*` proxy
 - `PRISM_TRAINING_MIGRATION_URL` — production migration sync (falls back `/api/mig/*`)
-- `OPENAI_API_KEY` — chatbot model fixed to `gpt-5`
+- `ANTHROPIC_API_KEY` — AI/chatbot uses Claude (Sonnet 4.6 primary, Haiku 4.5 fallback)
 - Power BI: `POWERBI_CLIENT_ID`, `POWERBI_CLIENT_SECRET`, `POWERBI_TENANT_ID`, `POWERBI_WORKSPACE_ID`, `POWERBI_REPORT_ID`, `POWERBI_EMBED_URL`, `POWERBI_DATASET_ID`
 - SMTP for magic-link emails: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`
 
@@ -58,5 +62,5 @@ npm run dev                    # webpack dev server on http://localhost:3554
 - `package.json` overrides pin `postcss` to 8.5.10 and `esbuild` to 0.28.0
 - shadcn/ui style is `radix-vega` (not default), with lucide icons
 - `npm run deploy-dev` rebuilds locally, pushes to `main`, then drops/recreates DB on server — **development-only**
-- `npm run git-push` auto-generates chatbot prompt, builds, stages all, commits, and pushes — run instead of manual push
+- `npm run git-push` auto-generates PRISM AI prompt, builds, stages all, commits, and pushes — run instead of manual push
 - `.github/copilot-instructions.md` exists with generic guidance — `AGENTS.md` supersedes it for OpenCode

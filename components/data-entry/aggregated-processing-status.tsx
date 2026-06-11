@@ -10,7 +10,8 @@ interface AggregatedRunSummary {
   runId: string;
   startedAt: string;
   completedAt?: string;
-  status: "running" | "completed";
+  status: "running" | "completed" | "failed";
+  error?: string | null;
   calculated: number;
   skipped: number;
 }
@@ -173,8 +174,18 @@ export function AggregatedProcessingStatus({
         {mode === "aggregated" && latestRun ? (
           <>
             <p>
-              Latest run: <strong>{latestRun.status}</strong>
+              Latest run:{" "}
+              <strong
+                className={
+                  latestRun.status === "failed" ? "text-red-600" : ""
+                }
+              >
+                {latestRun.status}
+              </strong>
             </p>
+            {latestRun.error ? (
+              <p className="text-red-600 text-xs">{latestRun.error}</p>
+            ) : null}
             <div className="flex items-center gap-2">
               <AggregatedOutcomeBadge status="calculated" />
               <span>{latestRun.calculated}</span>

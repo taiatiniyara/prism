@@ -46,7 +46,17 @@ export const evaluateKpiFormula = (
   }
 
   try {
-    // Formula text is configured by trusted admin workflows.
+    const allowedChars = /^[A-Za-z_][A-Za-z0-9_]*$/;
+    for (const name of names) {
+      if (!allowedChars.test(name)) {
+        return {
+          status: "error",
+          failureType: "formula-invalid",
+          failureReason: `Variable name "${name}" contains invalid characters.`,
+        };
+      }
+    }
+
     const evaluator = new Function(...names, `return (${normalizedFormula});`);
     const computed = evaluator(...(values as number[]));
     const numeric = Number(computed);

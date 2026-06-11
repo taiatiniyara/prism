@@ -11,7 +11,7 @@ const FxRateTrainingId = 4213040060;
 
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
-  if (authorize.success === false) return Response.json(authorize.message);
+  if (authorize.success === false) return Response.json({ message: authorize.message }, { status: 401 });
 
   const idMap = await resolveDlIds([FxRateTrainingId]);
   const prismId = idMap.get(FxRateTrainingId);

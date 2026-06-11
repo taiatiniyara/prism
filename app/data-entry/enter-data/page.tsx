@@ -23,6 +23,21 @@ export default async function EnterDataPage() {
 
   return (
     <div className="space-y-6">
+      {model.kpiWorker.latestFailureReason ? (
+        <div className="rounded-md border border-red-300 bg-red-50 px-4 py-3 text-sm text-red-800">
+          <strong>KPI Calculation Issue:</strong>{" "}
+          {model.kpiWorker.latestFailureReason}
+          {model.kpiWorker.latestFailureUpdatedAt ? (
+            <span className="text-red-600 ml-2 text-xs">
+              (last failed:{" "}
+              {new Date(
+                model.kpiWorker.latestFailureUpdatedAt,
+              ).toLocaleString()}
+              )
+            </span>
+          ) : null}
+        </div>
+      ) : null}
       <FilterStatePanel
         isEmpty={noFilterOptions}
         emptyMessage="No data-entry filter options are available for your account."

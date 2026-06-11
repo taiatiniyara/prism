@@ -9,6 +9,14 @@ const eslintConfig = defineConfig([
   {
     plugins: { security: securityPlugin },
     rules: {
+      "@typescript-eslint/no-unused-vars": [
+        "warn",
+        {
+          argsIgnorePattern: "^_",
+          varsIgnorePattern: "^_",
+          destructuredArrayIgnorePattern: "^_",
+        },
+      ],
       "security/detect-eval-with-expression": "error",
       "security/detect-no-csrf-before-method-override": "error",
       "security/detect-non-literal-fs-filename": "warn",

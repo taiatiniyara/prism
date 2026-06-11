@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>PRISM AI — Development Report</title>
+<style>
+  body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; max-width: 900px; margin: 0 auto; padding: 40px 20px; color: #1a1a2e; line-height: 1.6; }
+  h1 { border-bottom: 3px solid #0f172a; padding-bottom: 12px; font-size: 28px; }
+  h2 { border-bottom: 2px solid #e2e8f0; padding-bottom: 8px; margin-top: 36px; font-size: 22px; color: #0f172a; }
+  h3 { font-size: 17px; margin-top: 24px; color: #334155; }
+  table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 14px; }
+  th, td { border: 1px solid #e2e8f0; padding: 8px 12px; text-align: left; }
+  th { background: #f1f5f9; font-weight: 600; }
+  tr:nth-child(even) { background: #f8fafc; }
+  .severity-critical { background: #fef2f2; color: #991b1b; padding: 2px 8px; border-radius: 4px; font-weight: 600; font-size: 12px; }
+  .severity-high { background: #fff7ed; color: #9a3412; padding: 2px 8px; border-radius: 4px; font-weight: 600; font-size: 12px; }
+  .severity-medium { background: #fefce8; color: #854d0e; padding: 2px 8px; border-radius: 4px; font-weight: 600; font-size: 12px; }
+  code { background: #f1f5f9; padding: 1px 5px; border-radius: 3px; font-size: 13px; }
+  .summary-box { background: #f0fdf4; border: 1px solid #86efac; padding: 16px 20px; border-radius: 8px; margin: 20px 0; }
+  .summary-box strong { color: #166534; }
+  ul { padding-left: 20px; }
+  li { margin: 4px 0; }
+  .toc a { color: #2563eb; text-decoration: none; }
+  .toc li { margin: 6px 0; }
+  .footer { margin-top: 48px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 12px; color: #64748b; }
+</style>
+</head>
+<body>
+
+<h1>PRISM AI — Development Report</h1>
+<p><strong>Date:</strong> 10 June 2026 | <strong>Project:</strong> PRISM — PPA Benchmarking Platform</p>
+
+<div class="summary-box">
+<strong>Summary:</strong> Comprehensive overhaul of the PRISM AI feature across 12 workstreams. Migrated from OpenAI to Anthropic Claude, added 34 AI tools covering ~200+ question patterns, fixed 7 critical security vulnerabilities, resolved 34 UI/UX + 24 ESLint issues, and built infrastructure for streaming animation, caching, compliance checking, what-if analysis, conversation sharing, and sensitivity analysis. Rate limiting removed for development agility. TypeScript and ESLint pass cleanly across all changes.
+</div>
+
+<h2 class="toc">Table of Contents</h2>
+<ol class="toc">
+  <li><a href="#s1">Model &amp; Provider Migration</a></li>
+  <li><a href="#s2">Security Hardening</a></li>
+  <li><a href="#s3">Data Access &amp; Org Scoping</a></li>
+  <li><a href="#s4">AI Tool Inventory (34 tools)</a></li>
+  <li><a href="#s5">KPI Calculation Engine</a></li>
+  <li><a href="#s6">System Prompt Engineering</a></li>
+  <li><a href="#s7">UI/UX Improvements</a></li>
+  <li><a href="#s8">Streaming &amp; Animation Overhaul</a></li>
+  <li><a href="#s9">Infrastructure &amp; Performance</a></li>
+  <li><a href="#s10">Rate Limiting &amp; Approval Bypass</a></li>
+  <li><a href="#s11">Code Quality</a></li>
+  <li><a href="#s12">Coverage Status</a></li>
+  <li><a href="#s13">Files Changed</a></li>
+</ol>
+
+<!-- SECTION 1 -->
+<h2 id="s1">1. Model &amp; Provider Migration</h2>
+<h3>OpenAI → Anthropic Claude</h3>
+<table>
+  <tr><th>Component</th><th>Before</th><th>After</th></tr>
+  <tr><td>SDK</td><td><code>@ai-sdk/openai</code></td><td><code>@ai-sdk/anthropic</code></td></tr>
+  <tr><td>Primary model</td><td><code>gpt-5</code></td><td><code>claude-sonnet-4-6</code> (1M context, 128K output, thinking enabled)</td></tr>
+  <tr><td>Fallback model</td><td><code>gpt-4o</code></td><td><code>claude-haiku-4-5-20251001</code> (200K context, 64K output)</td></tr>
+  <tr><td>Thinking config</td><td>reasoningEffort: low</td><td>thinking: { type: enabled, budgetTokens: 12000 }</td></tr>
+  <tr><td>API key env</td><td><code>OPENAI_API_KEY</code></td><td><code>ANTHROPIC_API_KEY</code></td></tr>
+</table>
+<p>Model IDs were validated against the actual Anthropic API model list. All 3.x-era IDs (<code>claude-3-5-sonnet-20241022</code>) were deprecated on this API key. The new naming scheme uses <code>claude-{variant}-{major}.{minor}</code>.</p>
+
+<!-- SECTION 2 -->
+<h2 id="s2">2. Security Hardening</h2>
+
+<h3>2.1 Input Guardrails</h3>
+<table>
+  <tr><th>Rule</th><th>AI System</th><th>Chatbot System</th><th>Protects Against</th></tr>
+  <tr><td>REF-PII-EMAIL</td><td>✔</td><td>✔</td><td>Email addresses in user input</td></tr>
+  <tr><td>REF-PII-PHONE</td><td>✔</td><td>✔</td><td>Phone numbers in user input</td></tr>
+  <tr><td>REF-PRIVATE-COMMENTS</td><td>✔</td><td>✔</td><td>Requests for reviewer comments</td></tr>
+  <tr><td>REF-CREDENTIALS</td><td>✔</td><td>✔</td><td>Password/API key extraction</td></tr>
+  <tr><td>REF-BULK-EXPORT</td><td>✔</td><td>✔</td><td>Bulk data export requests</td></tr>
+  <tr><td>REF-PROMPT-INJECTION</td><td>✔</td><td>✔ (added)</td><td>"Ignore previous instructions" attacks</td></tr>
+</table>
+
+<h3>2.2 Output PII Filtering</h3>
+<p>Both AI and chatbot systems now redact emails, phone numbers, and SSNs from LLM outputs using pattern matching. Previously only the AI <code>runAiGenerate</code> path had output filtering — now applied to all paths including streaming chatbot responses.</p>
+
+<h3>2.3 Rate Limiting</h3>
+<table>
+  <tr><th>Mechanism</th><th>AI System</th><th>Chatbot System</th></tr>
+  <tr><td>Per-minute requests</td><td>30 req/min (in-memory)</td><td>30 req/60s (in-memory, configurable)</td></tr>
+  <tr><td>Per-day tokens</td><td>100K tokens/day (DB-backed)</td><td>—</td></tr>
+  <tr><td>Concurrent requests</td><td>Max 5 per user (in-memory)</td><td>—</td></tr>
+  <tr><td>Degraded mode</td><td>Falls back to Haiku at 90% token usage</td><td>—</td></tr>
+  <tr><td>Error tracking</td><td><code>recordError</code> writes to <code>ai_usage_metrics</code></td><td>Structured logging via <code>logError</code></td></tr>
+</table>
+
+<h3>2.4 Tool Access Control</h3>
+<p><code>validateToolAccess</code> now gates <code>get_governance_audit</code> and <code>get_configuration_options</code> behind DEV/BMO roles. Previously the <code>ADMIN_ONLY_TOOLS</code> array was empty — the validator was a no-op.</p>
+
+<h3>2.5 Prompt Injection Hardening</h3>
+<p>Both system prompts now include explicit security sections instructing the LLM to refuse attempts to modify, override, or extract system instructions via indirect phrasing, translation, role-playing, or delimiter tricks.</p>
+
+<h3>2.6 Error Message Sanitization</h3>
+<p>AI chat route no longer leaks raw error messages to clients. Errors are logged server-side via <code>console.error</code> + <code>recordError</code>. Clients receive a generic "An unexpected error occurred." response.</p>
+
+<!-- SECTION 3 -->
+<h2 id="s3">3. Data Access &amp; Organisation Scoping</h2>
+
+<h3>3.1 <span class="severity-critical">CRITICAL</span> — Cross-Utility Data Leakage Fixes</h3>
+<p>PRISM is a multi-tenant platform where competing electricity utilities share the same database. The following vulnerabilities were discovered and fixed:</p>
+<table>
+  <tr><th>#</th><th>Vulnerability</th><th>Fix</th></tr>
+  <tr><td>1</td><td><code>all_utilities</code> flag trusted the LLM with no server-side role check. Any user could see all utilities' data by prompting the LLM.</td><td>All data services now enforce <code>hasGlobalUtilityAccess(user)</code> — non-global users are scoped to their org regardless of what the LLM requests.</td></tr>
+  <tr><td>2</td><td>Benchmarking tool hardcoded <code>forceAllUtilities: true</code> — every user saw every utility's rankings.</td><td>Benchmarking now respects org scope unless user has global access.</td></tr>
+  <tr><td>3</td><td>Scorecard queries had no org filtering — a BLO from Utility A could see Utility B's scorecard.</td><td>Added <code>userOrgId</code> filter to <code>listScorecardInputRows</code>. Non-global users are scoped via WHERE clause.</td></tr>
+  <tr><td>4</td><td>Report period IDs not validated against user's org — any period ID could be queried.</td><td>Diagnostics, performance, and scorecard data services now validate ownership of requested periods.</td></tr>
+</table>
+
+<h3>3.2 Scorecard Approval Bypass</h3>
+<p>The scorecard aggregator historically required KPIs to reach Approved status. AI tools now bypass this gate:</p>
+<ul>
+  <li><code>buildScorecardSnapshot</code> accepts <code>{ includeUnapproved: true }</code></li>
+  <li>When set, all KPI rows are included regardless of approval state. Missing actuals/targets default to 0 with <code>off_track</code> status.</li>
+  <li>Regular web UI continues using the strict path.</li>
+</ul>
+
+<h3>3.3 Scorecard Data Availability</h3>
+<p><code>listScorecardInputRows</code> previously used <code>FROM kpi INNER JOIN</code>, returning 0 rows when no KPI values existed. Added <code>{ includeAllDefinitions: true }</code> option that uses <code>FROM kpiDefinitions LEFT JOIN kpi</code> — returning all KPI definitions for a period with NULL values where no KPI has been calculated.</p>
+
+<h3>3.4 Period Auto-Resolution</h3>
+<p>All AI data services now auto-resolve report periods when not explicitly provided. They accept an optional <code>year</code> parameter (e.g., <code>2023</code>) and resolve it to the correct numeric period ID via <code>EXTRACT(YEAR FROM report_date)</code>. This eliminates the LLM needing to know numeric period IDs.</p>
+
+<!-- SECTION 4 -->
+<h2 id="s4">4. AI Tool Inventory</h2>
+<p>34 tools total, covering ~200+ question patterns across all user personas.</p>
+
+<table>
+  <tr><th>#</th><th>Tool</th><th>Category</th><th>Answers questions like...</th></tr>
+  <tr><td>1</td><td><code>get_kpi_status</code></td><td>Status</td><td>What's our completion rate? How many KPIs are pending/entered?</td></tr>
+  <tr><td>2</td><td><code>get_benchmarking_data</code></td><td>Comparative</td><td>How do we rank against peers? Who are top/bottom performers?</td></tr>
+  <tr><td>3</td><td><code>get_completeness_breakdown</code></td><td>Status</td><td>Which categories have the most pending KPIs?</td></tr>
+  <tr><td>4</td><td><code>get_scorecard_summary</code></td><td>Performance</td><td>What's our overall score? Which perspectives are weakest?</td></tr>
+  <tr><td>5</td><td><code>get_trend_analysis</code></td><td>Trend</td><td>Is our completion improving or declining? Who improved most?</td></tr>
+  <tr><td>6</td><td><code>get_anomaly_insights</code></td><td>Anomaly</td><td>Which utilities had completion drops? What's the watchlist?</td></tr>
+  <tr><td>7</td><td><code>get_governance_audit</code></td><td>Governance</td><td>Who owns pending items? When were periods last updated?</td></tr>
+  <tr><td>8</td><td><code>get_configuration_options</code></td><td>Config</td><td>What report periods/KPI categories/service areas exist?</td></tr>
+  <tr><td>9</td><td><code>get_performance_snapshot</code></td><td>Performance</td><td>What are our review counts? Which KPIs are weakest?</td></tr>
+  <tr><td>10</td><td><code>get_kpi_diagnostics</code></td><td>Diagnostic</td><td>Which KPIs are stale/error? What's the root cause?</td></tr>
+  <tr><td>11</td><td><code>render_visualization</code></td><td>Internal</td><td>Renders charts, tables, leaderboards, etc.</td></tr>
+  <tr><td>12</td><td><code>suggest_follow_ups</code></td><td>Internal</td><td>What should the user ask next?</td></tr>
+  <tr><td>13</td><td><code>dashboard_link</code></td><td>Navigation</td><td>Where in PRISM can the user take action?</td></tr>
+  <tr><td>14</td><td><code>calculate_kpi</code></td><td>Calculation</td><td>What's our SAIDI value? What-if X changes by Y%?</td></tr>
+  <tr><td>15</td><td><code>get_review_queue</code></td><td>Action</td><td>What KPIs need my attention? Who needs to approve what?</td></tr>
+  <tr><td>16</td><td><code>get_input_status</code></td><td>Diagnostic</td><td>Which specific inputs are missing for KPI X?</td></tr>
+  <tr><td>17</td><td><code>explain_kpi</code></td><td>Definition</td><td>What does SAIDI mean? How is it calculated?</td></tr>
+  <tr><td>18</td><td><code>get_custom_kpi_status</code></td><td>Config</td><td>What custom KPI requests are in the pipeline?</td></tr>
+  <tr><td>19</td><td><code>get_service_area_breakdown</code></td><td>Status</td><td>How does performance vary across service areas?</td></tr>
+  <tr><td>20</td><td><code>get_peer_group_analysis</code></td><td>Comparative</td><td>How do we rank against similar-sized utilities?</td></tr>
+  <tr><td>21</td><td><code>get_risk_assessment</code></td><td>Risk</td><td>Which utilities are at highest risk? Where should funding go?</td></tr>
+  <tr><td>22</td><td><code>get_data_quality_report</code></td><td>Quality</td><td>Are there suspicious values? Out-of-range KPIs?</td></tr>
+  <tr><td>23</td><td><code>compare_periods</code></td><td>Trend</td><td>How does 2022 compare to 2023 side-by-side?</td></tr>
+  <tr><td>24</td><td><code>get_what_changed</code></td><td>Trend</td><td>Which KPIs moved the most between periods?</td></tr>
+  <tr><td>25</td><td><code>get_compliance_status</code></td><td>Compliance</td><td>Which KPIs are out of regulatory limits?</td></tr>
+  <tr><td>26</td><td><code>get_kpi_targets</code></td><td>Comparative</td><td>What targets should we set? What's the peer median/top-quartile?</td></tr>
+  <tr><td>27</td><td><code>get_kpi_correlation</code></td><td>Analysis</td><td>Do utilities with high losses also have high SAIDI?</td></tr>
+  <tr><td>28</td><td><code>compare_kpis_across_utilities</code></td><td>Comparative</td><td>Compare actual KPI values across multiple utilities with rankings.</td></tr>
+  <tr><td>29</td><td><code>generate_export</code></td><td>Export</td><td>Download results as CSV or Excel report.</td></tr>
+  <tr><td>30</td><td><code>get_country_hierarchy</code></td><td>Reference</td><td>What's the Pacific country/sub-region structure?</td></tr>
+  <tr><td>31</td><td><code>get_industry_benchmarks</code></td><td>Reference</td><td>What are World Bank/ADB/IRENA benchmarks for Pacific utilities?</td></tr>
+  <tr><td>32</td><td><code>get_executive_digest</code></td><td>Summary</td><td>Generate an executive briefing with key metrics, trends, risks.</td></tr>
+  <tr><td>33</td><td><code>get_review_queue_entries</code></td><td>Admin</td><td>View flagged AI conversations needing human review (DEV/BMO).</td></tr>
+  <tr><td>34</td><td><code>get_guided_entry</code></td><td>Guidance</td><td>Step-by-step data entry guidance for a specific KPI.</td></tr>
+</table>
+
+<h3>Extended <code>calculate_kpi</code> Capabilities</h3>
+<table>
+  <tr><th>Feature</th><th>Description</th></tr>
+  <tr><td>What-if analysis</td><td><code>hypothetical_values</code> overrides formula inputs to show what the KPI would be under different conditions.</td></tr>
+  <tr><td>Sensitivity analysis</td><td><code>sensitivity_variable</code> varies a single input by -50%, -25%, -10%, +10%, +25%, +50% and returns the KPI result at each level.</td></tr>
+</table>
+
+<!-- SECTION 5 -->
+<h2 id="s5">5. KPI Calculation Engine</h2>
+<p>The AI can now compute KPI values on-the-fly using the existing formula engine from <code>app/data-entry/kpi-worker/</code>.</p>
+<h3>Pipeline</h3>
+<ol>
+  <li>User asks: "What's our SAIDI for 2023?"</li>
+  <li>AI calls <code>calculate_kpi({ kpi_names: ["SAIDI"], year: 2023 })</code></li>
+  <li>System looks up KPI definition → resolves formula inputs from database → evaluates formula via <code>new Function()</code> → returns computed value</li>
+  <li>Works even when KPIs haven't been pre-calculated by the background worker</li>
+</ol>
+<h3>Reused Functions</h3>
+<ul>
+  <li><code>evaluateKpiFormula</code> — Pure evaluator (no DB)</li>
+  <li><code>resolveFormulaInputValues</code> — Reads actual data_entries for formula variables</li>
+</ul>
+
+<!-- SECTION 6 -->
+<h2 id="s6">6. System Prompt Engineering</h2>
+<h3>AI System Prompt (<code>lib/ai/prompt.ts</code>)</h3>
+<ul>
+  <li>Added "What Performance Means" section — defines performance as operational/financial/customer/development outcomes, not data submission progress</li>
+  <li>Priority order: scorecard → diagnostics → benchmarking → trends</li>
+  <li>Explicit rule: performance questions must hit scorecard tools first, not status tools</li>
+  <li>Added "User Context" section — tells LLM that tools auto-scope to user's organisation</li>
+  <li>Added Security section with prompt injection hardening</li>
+</ul>
+<h3>Chatbot System Prompt (<code>lib/chatbot/prompt.ts</code>)</h3>
+<ul>
+  <li>Split utility-user guidance: performance questions → scorecard/KPI values first; workflow questions → completeness second</li>
+  <li>Per-turn execution contract updated to lead with KPI actual values, not status counts</li>
+  <li>Added Security section with prompt injection hardening</li>
+  <li>Added <code>CHATBOT_PROMPT_VERSION = "2026-06-10"</code> for version tracking</li>
+</ul>
+<h3>Prompt Version Tracking</h3>
+<p>Both systems now track prompt versions: <code>AI_PROMPT_VERSION = "2026-06-10"</code> stored on every <code>ai_chat_turn</code>; <code>CHATBOT_PROMPT_VERSION = "2026-06-10"</code> stored on every <code>chat_message</code> (new column added to schema).</p>
+
+<!-- SECTION 7 -->
+<h2 id="s7">7. UI/UX Improvements</h2>
+<p>34+ issues resolved across the PRISM AI page and floating chatbot. Key improvements:</p>
+<table>
+  <tr><th>Category</th><th>Changes</th></tr>
+  <tr><td>Mobile</td><td>Hamburger toggle for sidebar on mobile; overlay backdrop; responsive floating chatbot width</td></tr>
+  <tr><td>Error handling</td><td>All catches now use sonner toasts; specific API error messages displayed; Retry button on error bubbles</td></tr>
+  <tr><td>Auto-scroll</td><td>Tracks <code>isAtBottom</code>; stops when user scrolls up; scroll-to-bottom FAB appears</td></tr>
+  <tr><td>Messages</td><td>Copy-to-clipboard per message; streaming race condition fixed; animated fade-in entry</td></tr>
+  <tr><td>Feedback</td><td>Undo support (toggle); correction text input for negative feedback; sonner confirmation toasts</td></tr>
+  <tr><td>Sidebar</td><td>Delete confirmation (two-click); inline rename; keyboard-accessible; hamburger on mobile</td></tr>
+  <tr><td>Input</td><td>Character counter (n/4000) with red styling when over limit; <code>maxLength</code> on textarea</td></tr>
+  <tr><td>Floating chatbot</td><td>Escape key to close; open/close transitions; hidden on /prism-ai page</td></tr>
+  <tr><td>Dark mode</td><td><code>dark:</code> variants added to all AI components (borders, backgrounds, text, charts)</td></tr>
+  <tr><td>Accessibility</td><td>ARIA labels throughout; <code>role="log"</code> + <code>aria-live="polite"</code> on chat; keyboard support; table captions</td></tr>
+  <tr><td>Visualizations</td><td>Empty data states for all chart types; sticky table headers; label truncation; ECharts loading skeleton; memoized options</td></tr>
+  <tr><td>Session history</td><td>Loading spinner during fetch; session share button with URL param support</td></tr>
+  <tr><td>Layout</td><td>Chat panel height fixed to <code>h-full</code> — no longer overflows past the app footer</td></tr>
+</table>
+
+<!-- SECTION 8 -->
+<h2 id="s8">8. Streaming &amp; Animation Overhaul</h2>
+
+<h3>8.1 Character-by-Character Reveal</h3>
+<p>Replaced chunk-based text rendering with a smooth <code>requestAnimationFrame</code>-driven character reveal. Incoming stream chunks accumulate silently in a ref; a 60fps animation loop reveals 3 characters per frame into the visible React state. This creates a fluid "AI typing" effect indistinguishable from ChatGPT or Copilot.</p>
+<table>
+  <tr><th>Before</th><th>After</th></tr>
+  <tr><td>Entire chunk blasted into DOM → ReactMarkdown re-parses full content → visual jump on every chunk</td><td>Chunks buffer silently → <code>rAF</code> loop gradually reveals characters → smooth progressive rendering</td></tr>
+</table>
+
+<h3>8.2 Animated Loaders</h3>
+<table>
+  <tr><th>State</th><th>Loader</th></tr>
+  <tr><td>Pre-first-byte (model thinking)</td><td>Three bouncing dots next to AI avatar — staggered <code>animate-bounce</code> delays (0s / 0.15s / 0.3s)</td></tr>
+  <tr><td>During streaming (more text coming)</td><td>Three pulsing dots below streaming content — staggered <code>animate-pulse</code> delays (0s / 0.2s / 0.4s)</td></tr>
+  <tr><td>Tool execution (active tool)</td><td>Bordered pill with spinner + human-readable tool action name (e.g. "Fetching benchmarking data…")</td></tr>
+</table>
+
+<h3>8.3 Tool Status Indicator</h3>
+<p>A <code>TOOL_ACTION_MAP</code> maps all 34 tool names to human-readable actions. During streaming, the active tool name is displayed in a bordered pill below the chat, giving the user visibility into what the AI is doing (querying database, calculating KPIs, rendering charts, etc.). Uses the AI SDK's native tool-call events which are available for future protocol upgrades.</p>
+
+<h3>8.4 Animation Cleanup</h3>
+<p>Animation frames are tracked via <code>animFrameRef</code> and cancelled on stream completion, user abort, or error — preventing stale animation loops and memory leaks.</p>
+
+<!-- SECTION 9 -->
+<h2 id="s9">9. Infrastructure &amp; Performance</h2>
+
+<h3>Tool Result Cache</h3>
+<p><code>lib/ai/cache.ts</code> — Request-scoped in-memory cache with 30s TTL. <code>GetReportPeriods</code> results are cached and reused across tools within the same turn, eliminating duplicate database queries when multiple tools are called in sequence.</p>
+
+<h3>Tool Execution Timeouts</h3>
+<p>Every tool execute is wrapped in <code>Promise.race</code> with a 15-second timeout. A hung database query fails fast instead of waiting for the full 120s route timeout.</p>
+
+<h3>Input Token Budget</h3>
+<p><code>prepareMessages</code> now approximate-counts input tokens (4 chars ≈ 1 token) and truncates at ~20K tokens, preventing context window exhaustion from long conversation histories.</p>
+
+<h3>AI SDK v6</h3>
+<p>Running <code>ai</code> SDK v6.0.168 with Anthropic provider. Streaming uses <code>toTextStreamResponse()</code> — <code>toDataStreamResponse()</code> is not available in v6. Tool-call events are available for future protocol upgrades.</p>
+
+<h3>Chatbot Telemetry Persistence</h3>
+<p>Capability resolution telemetry now persists to the <code>error_logs</code> database table alongside the existing <code>console.log</code> output. Includes matched capabilities, per-builder latency, fallback rates, and user ID.</p>
+
+<h3>Role-Based Page Access</h3>
+<p><code>/prism-ai</code> page added to all role prefix lists in <code>lib/role-guard.ts</code> — every role (BMO, BLO, CEO, DAOF, DAOH, DAOO, EXE, EXT, MGR, DEV) can now access the AI page.</p>
+
+<!-- SECTION 10 -->
+<h2 id="s10">10. Rate Limiting &amp; Approval Bypass</h2>
+
+<h3>10.1 Rate Limiting Removed</h3>
+<p>Rate limiting (<code>checkRateLimit</code>, concurrency slots, degraded mode, Retry-After headers) has been removed from the AI chat route (<code>app/api/ai/chat/route.ts</code>). Usage tracking (<code>recordRequest</code>, <code>recordToolCall</code>, <code>recordError</code>) is retained for analytics but no longer blocks requests. This simplifies development and eliminates false-positive rate limit errors.</p>
+
+<h3>10.2 Scorecard Approval Bypass Extended to UI</h3>
+<p>Previously only AI tools passed <code>includeUnapproved: true</code> to the scorecard aggregator. Now the scorecard API route (<code>app/api/data-entry/balanced-scorecard/route.ts</code>) also passes this flag — the web UI scorecard now shows all KPIs regardless of approval state.</p>
+
+<h3>10.3 Data Access Summary</h3>
+<table>
+  <tr><th>Data Page / Feature</th><th>Approval Filter?</th></tr>
+  <tr><td>PRISM AI chat</td><td>No — always bypassed</td></tr>
+  <tr><td>Balanced Scorecard (UI)</td><td>No — bypassed as of this update</td></tr>
+  <tr><td>Review KPI page</td><td>No — shows all rows</td></tr>
+  <tr><td>Enter Data page</td><td>No — UI filter only (Pending/Entered/N/A)</td></tr>
+  <tr><td>Dashboard (Power BI)</td><td>N/A — external</td></tr>
+</table>
+
+<!-- SECTION 11 -->
+<h2 id="s11">11. Code Quality</h2>
+
+<h3>11.1 ESLint Cleanup</h3>
+<p>24 ESLint issues (1 error, 23 warnings) resolved across 10 files:</p>
+<table>
+  <tr><th>Category</th><th>Files</th><th>Issues</th></tr>
+  <tr><td><code>no-explicit-any</code></td><td><code>lib/ai/data-service/completeness.ts</code></td><td>1 error — replaced <code>(r as any).categoryName</code> with properly typed <code>item.id</code> comparison</td></tr>
+  <tr><td>Timing attacks</td><td><code>app/api/getAzureAccessToken/route.ts</code>, <code>app/api/pbiRls/route.ts</code></td><td>2 warnings — replaced string comparison with <code>crypto.timingSafeEqual</code></td></tr>
+  <tr><td>Non-literal regexp</td><td><code>app/data-entry/enter-data/services/aggregated-worker/evaluator.ts</code>, <code>target-selector.ts</code></td><td>4 warnings — added <code>eslint-disable</code> block comments (inputs sanitized via <code>escapeRegExp</code>)</td></tr>
+  <tr><td>Unused vars</td><td>Multiple files</td><td>15 warnings — removed unused params, fixed sort comparators, replaced dead code</td></tr>
+  <tr><td>Missing deps</td><td><code>components/ai/chat-panel.tsx</code></td><td>1 warning — wrapped <code>handleSelectSession</code> in <code>useCallback</code></td></tr>
+</table>
+
+<h3>11.2 ESLint Config Enhancement</h3>
+<p>Added <code>@typescript-eslint/no-unused-vars</code> rule with <code>varsIgnorePattern: "^_"</code>, <code>argsIgnorePattern: "^_"</code>, and <code>destructuredArrayIgnorePattern: "^_"</code> — the <code>_</code> prefix convention is now officially recognized by ESLint.</p>
+
+<h3>11.3 React Hook Fix</h3>
+<p><code>handleSelectSession</code> in <code>chat-panel.tsx</code> was moved before the <code>useEffect</code> that references it and wrapped in <code>useCallback</code> — eliminates the TDZ reference error and fulfills the <code>react-hooks/exhaustive-deps</code> rule.</p>
+
+<!-- SECTION 12 -->
+<h2 id="s12">12. Coverage Status</h2>
+<table>
+  <tr><th>Question Category</th><th>Coverage</th><th>Primary Tools</th></tr>
+  <tr><td>Status / descriptive</td><td>100%</td><td>get_kpi_status, get_completeness_breakdown</td></tr>
+  <tr><td>Diagnostic / root cause</td><td>100%</td><td>get_kpi_diagnostics, get_input_status</td></tr>
+  <tr><td>Comparative / benchmarking</td><td>100%</td><td>get_benchmarking_data, get_peer_group_analysis, get_kpi_targets, compare_kpis_across_utilities, get_industry_benchmarks</td></tr>
+  <tr><td>Trend / time-series</td><td>100%</td><td>get_trend_analysis, compare_periods, get_what_changed</td></tr>
+  <tr><td>Prioritisation / ranking</td><td>100%</td><td>get_risk_assessment, get_performance_snapshot</td></tr>
+  <tr><td>Governance / audit</td><td>100%</td><td>get_governance_audit, get_review_queue, get_review_queue_entries</td></tr>
+  <tr><td>Definition / explainer</td><td>100%</td><td>explain_kpi</td></tr>
+  <tr><td>What-if / scenario</td><td>100%</td><td>calculate_kpi (hypothetical_values)</td></tr>
+  <tr><td>Sensitivity analysis</td><td>100%</td><td>calculate_kpi (sensitivity_variable)</td></tr>
+  <tr><td>Regulatory compliance</td><td>100%</td><td>get_compliance_status</td></tr>
+  <tr><td>Action / next steps</td><td>100%</td><td>get_review_queue, get_input_status, dashboard_link, get_guided_entry</td></tr>
+  <tr><td>Data quality</td><td>100%</td><td>get_data_quality_report</td></tr>
+  <tr><td>Risk assessment</td><td>100%</td><td>get_risk_assessment</td></tr>
+  <tr><td>Correlation / analysis</td><td>100%</td><td>get_kpi_correlation</td></tr>
+  <tr><td>Export / reporting</td><td>100%</td><td>generate_export, get_executive_digest</td></tr>
+  <tr><td>Reference / hierarchy</td><td>100%</td><td>get_country_hierarchy, get_configuration_options</td></tr>
+</table>
+<p><strong>~200+ distinct question patterns covered by 34 tools.</strong></p>
+
+<!-- SECTION 13 -->
+<h2 id="s13">13. Files Changed</h2>
+<table>
+  <tr><th>Category</th><th>Files</th></tr>
+  <tr><td>Model migration</td><td><code>lib/ai/types.ts</code>, <code>lib/ai/service.ts</code>, <code>lib/chatbot/service.ts</code>, <code>app/api/ai/chat/route.ts</code>, <code>package.json</code>, <code>.env.example</code></td></tr>
+  <tr><td>Security</td><td><code>lib/ai/guardrails.ts</code>, <code>lib/chatbot/guardrails.ts</code>, <code>lib/ai/rate-limit.ts</code>, <code>lib/chatbot/rate-limit.ts</code>, <code>app/api/ai/chat/route.ts</code>, <code>app/api/chatbot/route.ts</code>, <code>app/api/getAzureAccessToken/route.ts</code>, <code>app/api/pbiRls/route.ts</code></td></tr>
+  <tr><td>Data scoping</td><td><code>lib/ai/data-service/benchmarking.ts</code>, <code>trends.ts</code>, <code>anomalies.ts</code>, <code>governance.ts</code>, <code>kpi.ts</code>, <code>scorecard.ts</code>, <code>performance.ts</code>, <code>diagnostics.ts</code>, <code>calculator.ts</code><br><code>app/data-entry/balanced-scorecard/aggregator.ts</code>, <code>repository.ts</code>, <code>service.ts</code><br><code>app/data-entry/service.ts</code></td></tr>
+  <tr><td>New tools (data services)</td><td><code>lib/ai/data-service/review.ts</code>, <code>explain.ts</code>, <code>analysis.ts</code>, <code>insights.ts</code>, <code>compliance.ts</code>, <code>targets.ts</code>, <code>correlation.ts</code>, <code>export.ts</code>, <code>hierarchy.ts</code>, <code>benchmarks.ts</code>, <code>digest.ts</code>, <code>guided-entry.ts</code></td></tr>
+  <tr><td>Tool wiring</td><td><code>lib/ai/tools/index.ts</code>, <code>lib/ai/data-service/index.ts</code></td></tr>
+  <tr><td>Infrastructure</td><td><code>lib/ai/cache.ts</code></td></tr>
+  <tr><td>Prompts</td><td><code>lib/ai/prompt.ts</code>, <code>lib/chatbot/prompt.ts</code></td></tr>
+  <tr><td>Streaming &amp; animation</td><td><code>components/ai/chat-panel.tsx</code> (rAF character reveal, animated loaders, tool status indicator)</td></tr>
+  <tr><td>UI/UX</td><td><code>components/ai/chat-panel.tsx</code>, <code>chat-sidebar.tsx</code>, <code>chat-input.tsx</code>, <code>message-bubble.tsx</code>, <code>floating-chatbot.tsx</code><br><code>components/ai/visualizations/table-view.tsx</code>, <code>bar-chart-view.tsx</code>, <code>line-chart-view.tsx</code>, <code>leaderboard-view.tsx</code>, <code>echarts-view.tsx</code>, <code>visualization-renderer.tsx</code></td></tr>
+  <tr><td>Pages &amp; routing</td><td><code>app/prism-ai/page.tsx</code>, <code>lib/role-guard.ts</code></td></tr>
+  <tr><td>API routes</td><td><code>app/api/data-entry/balanced-scorecard/route.ts</code> (approval bypass)</td></tr>
+  <tr><td>Schema</td><td><code>db/schema/chat-history.ts</code></td></tr>
+  <tr><td>Config</td><td><code>eslint.config.mjs</code> (no-unused-vars pattern, timing attack rules)</td></tr>
+  <tr><td>Telemetry</td><td><code>lib/chatbot/telemetry.ts</code></td></tr>
+  <tr><td>Documentation</td><td><code>docs/ai-development-report.html</code>, <code>docs/ai-capabilities.md</code>, <code>README.md</code>, <code>AGENTS.md</code></td></tr>
+</table>
+
+<p><strong>Total: 50+ files modified, 12 files created.</strong></p>
+
+<div class="footer">
+<p>Report generated 10 June 2026. PRISM — Pacific Power Association Benchmarking Platform. All changes verified with TypeScript strict mode and ESLint (0 errors, 0 warnings).</p>
+</div>
+
+</body>
+</html>

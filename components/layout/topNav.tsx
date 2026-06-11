@@ -17,10 +17,10 @@ interface NavItem {
 const navList: NavItem[] = [
   { label: "Home", href: "/" },
   { label: "Dashboard", href: "/dashboard" },
+  { label: "PRISM AI", href: "/prism-ai" },
   { label: "Data Entry", href: "/data-entry" },
   { label: "Settings", href: "/settings" },
   { label: "Docs", href: "/docs" },
-  { label: "PRISM AI", href: "/prism-ai" },
 ];
 
 export default function TopNav(props: {

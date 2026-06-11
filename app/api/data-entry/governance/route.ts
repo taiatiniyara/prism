@@ -8,11 +8,18 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib/user.service";
 import { revalidatePath } from "next/cache";
 
+const GOVERNANCE_ROLES = new Set(["DEV", "BMO"]);
+
 export async function GET() {
+  let user;
   try {
-    await getCurrentUser();
+    user = await getCurrentUser();
   } catch {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!user.role || !GOVERNANCE_ROLES.has(user.role)) {
+    return NextResponse.json({ message: "Forbidden" }, { status: 403 });
   }
 
   const utilities = await db
@@ -55,10 +62,15 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  let user;
   try {
-    await getCurrentUser();
+    user = await getCurrentUser();
   } catch {
     return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!user.role || !GOVERNANCE_ROLES.has(user.role)) {
+    return NextResponse.json({ message: "Forbidden" }, { status: 403 });
   }
 
   const body = (await req.json()) as {

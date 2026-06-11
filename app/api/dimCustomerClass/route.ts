@@ -26,7 +26,7 @@ async function getManagedListByName(
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
   if (authorize.success === false) {
-    return Response.json(authorize.message);
+    return Response.json({ message: authorize.message }, { status: 401 });
   }
 
   const customerTypes = (

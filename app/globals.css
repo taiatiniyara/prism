@@ -45,6 +45,8 @@
   --radius-2xl: calc(var(--radius) + 8px);
   --radius-3xl: calc(var(--radius) + 12px);
   --radius-4xl: calc(var(--radius) + 16px);
+  --animate-glow: glow 3s ease-in-out infinite;
+  --animate-bobble: bobble 5s ease-in-out infinite;
 }
 
 :root {
@@ -213,4 +215,43 @@
   .prism-thinking-rail-fill {
     animation: none;
   }
+}
+
+/* ---------- AI chat prose ---------- */
+.chat-prose h1 { font-size: 1.15rem; font-weight: 700; margin: 0.75rem 0 0.25rem; }
+.chat-prose h2 { font-size: 1.05rem; font-weight: 600; margin: 0.65rem 0 0.2rem; }
+.chat-prose h3 { font-size: 0.95rem; font-weight: 600; margin: 0.5rem 0 0.15rem; }
+.chat-prose p { margin: 0.35rem 0; }
+.chat-prose ul, .chat-prose ol { padding-left: 1.25rem; margin: 0.35rem 0; }
+.chat-prose li { margin: 0.125rem 0; }
+.chat-prose li > p { margin: 0; }
+.chat-prose strong { font-weight: 600; }
+.chat-prose a { color: #2563eb; text-decoration: none; }
+.chat-prose a:hover { text-decoration: underline; }
+.chat-prose blockquote {
+  border-left: 2px solid #e2e8f0;
+  padding-left: 0.75rem;
+  margin: 0.5rem 0;
+  color: #64748b;
+}
+.chat-prose hr { border: none; border-top: 1px solid #e2e8f0; margin: 0.75rem 0; }
+.chat-prose img { border-radius: 0.5rem; max-width: 100%; }
+.chat-prose cite { font-size: 0.75rem; color: #94a3b8; }
+
+.dark .chat-prose blockquote { border-color: #475569; color: #94a3b8; }
+.dark .chat-prose hr { border-color: #334155; }
+.dark .chat-prose a { color: #60a5fa; }
+
+@keyframes glow {
+  0%, 100% {
+    box-shadow: 0 0 16px 4px hsl(var(--primary) / 0.4), 0 0 32px 8px hsl(var(--primary) / 0.2), 0 0 48px 12px hsl(var(--primary) / 0.1);
+  }
+  50% {
+    box-shadow: 0 0 28px 8px hsl(var(--primary) / 0.6), 0 0 56px 16px hsl(var(--primary) / 0.35), 0 0 72px 20px hsl(var(--primary) / 0.2);
+  }
+}
+
+@keyframes bobble {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
 }

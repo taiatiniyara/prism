@@ -245,7 +245,9 @@ const flattenHierarchy = (
 export const listScorecardInputRows = async (
   context: ScorecardFilterContext,
   userOrgId?: number | null,
+  options?: { includeAllDefinitions?: boolean },
 ): Promise<ScorecardInputRow[]> => {
+  const includeAllDefs = options?.includeAllDefinitions === true;
   const predicates = [];
 
   if (context.reportTypeId != null) {
@@ -266,20 +268,49 @@ export const listScorecardInputRows = async (
     predicates.push(eq(reportPeriods.utility_id, userOrgId));
   }
 
-  const rows = await db
-    .select({
-      kpiId: kpi.id,
-      kpiDefinitionId: kpi.kpi_def_id,
-      kpiName: kpiDefinitions.name,
-      targetValue: kpi.target_value,
-      actualValue: kpi.actual_value,
-      calculatedAt: kpi.calculated_at,
-      utilityId: reportPeriods.utility_id,
-    })
-    .from(kpi)
-    .innerJoin(kpiDefinitions, eq(kpi.kpi_def_id, kpiDefinitions.id))
-    .innerJoin(reportPeriods, eq(kpi.report_period_id, reportPeriods.id))
-    .where(and(...predicates));
+  let rows;
+
+  if (includeAllDefs) {
+    const allDefsPredicates = [
+      eq(kpiDefinitions.is_active, true),
+      ...predicates,
+    ];
+    rows = await db
+      .select({
+        kpiId: kpi.id,
+        kpiDefinitionId: kpiDefinitions.id,
+        kpiName: kpiDefinitions.name,
+        targetValue: kpi.target_value,
+        actualValue: kpi.actual_value,
+        calculatedAt: kpi.calculated_at,
+        utilityId: reportPeriods.utility_id,
+      })
+      .from(kpiDefinitions)
+      .leftJoin(
+        kpi,
+        and(
+          eq(kpi.kpi_def_id, kpiDefinitions.id),
+          eq(kpi.report_period_id, context.reportPeriodId),
+        ),
+      )
+      .innerJoin(reportPeriods, eq(reportPeriods.id, context.reportPeriodId))
+      .where(and(...allDefsPredicates));
+  } else {
+    rows = await db
+      .select({
+        kpiId: kpi.id,
+        kpiDefinitionId: kpi.kpi_def_id,
+        kpiName: kpiDefinitions.name,
+        targetValue: kpi.target_value,
+        actualValue: kpi.actual_value,
+        calculatedAt: kpi.calculated_at,
+        utilityId: reportPeriods.utility_id,
+      })
+      .from(kpi)
+      .innerJoin(kpiDefinitions, eq(kpi.kpi_def_id, kpiDefinitions.id))
+      .innerJoin(reportPeriods, eq(kpi.report_period_id, reportPeriods.id))
+      .where(and(...predicates));
+  }
 
   const utilityIds = Array.from(new Set(rows.map((row) => row.utilityId)));
   const hierarchyByUtility = new Map<
@@ -332,7 +363,7 @@ export const listScorecardInputRows = async (
     );
 
     return {
-      kpiId: row.kpiId,
+      kpiId: row.kpiId ?? `kpi-def-${row.kpiDefinitionId}`,
       kpiDefinitionId: row.kpiDefinitionId,
       kpiName: row.kpiName,
       objective: assignment?.strategicObjective ?? null,
@@ -349,7 +380,7 @@ export const listScorecardInputRows = async (
       targetValue,
       status: inferStatus(actualValue, targetValue),
       approvalStateId: 5,
-      updatedAt: row.calculatedAt,
+      updatedAt: row.calculatedAt ?? new Date(),
       filterScopeKey:
         context.reportPeriodId > 0
           ? `period:${context.reportPeriodId}`

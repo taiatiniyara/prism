@@ -39,6 +39,7 @@ const aggregateStatus = (rows: ScorecardInputRow[]) => {
 
 const dedupeLatestApproved = (
   rows: ScorecardInputRow[],
+  includeUnapproved = false,
 ): { included: ScorecardInputRow[]; excluded: ExcludedScoreRow[] } => {
   const groups = new Map<string, ScorecardInputRow[]>();
   const excluded: ExcludedScoreRow[] = [];
@@ -53,6 +54,23 @@ const dedupeLatestApproved = (
   const included: ScorecardInputRow[] = [];
 
   for (const groupRows of groups.values()) {
+    if (includeUnapproved) {
+      const sorted = [...groupRows].sort(
+        (a, b) => (b.updatedAt?.getTime() ?? 0) - (a.updatedAt?.getTime() ?? 0),
+      );
+      included.push(sorted[0]);
+      for (let i = 1; i < sorted.length; i++) {
+        excluded.push(
+          toReason(
+            sorted[i].kpiId,
+            "DUPLICATE_SUPERSEDED",
+            "Superseded by latest row for this KPI scope.",
+          ),
+        );
+      }
+      continue;
+    }
+
     const approved = groupRows
       .filter((row) => row.approvalStateId === APPROVED_STATUS_ID)
       .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
@@ -88,11 +106,24 @@ const dedupeLatestApproved = (
 
 const validateRows = (
   rows: ScorecardInputRow[],
+  relaxed = false,
 ): { validRows: ScorecardInputRow[]; excluded: ExcludedScoreRow[] } => {
   const validRows: ScorecardInputRow[] = [];
   const excluded: ExcludedScoreRow[] = [];
 
   for (const row of rows) {
+    if (relaxed) {
+      validRows.push({
+        ...row,
+        actualValue: row.actualValue ?? 0,
+        targetValue: row.targetValue ?? 0,
+        status: row.actualValue == null || row.targetValue == null
+          ? "off_track"
+          : row.status,
+      });
+      continue;
+    }
+
     if (row.actualValue == null) {
       excluded.push(
         toReason(row.kpiId, "MISSING_ACTUAL", "Missing actual value."),
@@ -136,11 +167,17 @@ const scoreOf = (row: ScorecardInputRow): number => {
   return Math.max(0, Math.min(100, (row.actualValue / row.targetValue) * 100));
 };
 
+export interface ScorecardOptions {
+  includeUnapproved?: boolean;
+}
+
 export const buildScorecardSnapshot = (
   rows: ScorecardInputRow[],
+  options: ScorecardOptions = {},
 ): ScorecardSnapshot => {
-  const deduped = dedupeLatestApproved(rows);
-  const validated = validateRows(deduped.included);
+  const { includeUnapproved = false } = options;
+  const deduped = dedupeLatestApproved(rows, includeUnapproved);
+  const validated = validateRows(deduped.included, includeUnapproved);
   const allExcluded = [...deduped.excluded, ...validated.excluded];
 
   const byPerspective = new Map<number, ScorecardInputRow[]>();

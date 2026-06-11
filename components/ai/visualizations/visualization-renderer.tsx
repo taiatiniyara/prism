@@ -7,7 +7,17 @@ import { BarChartView } from "./bar-chart-view";
 import { LineChartView } from "./line-chart-view";
 import { LeaderboardView } from "./leaderboard-view";
 
-const EChartsView = dynamic(() => import("./echarts-view"), { ssr: false });
+const EChartsView = dynamic(() => import("./echarts-view"), {
+  ssr: false,
+  loading: () => (
+    <div className="border-border rounded-md border p-4 dark:border-border">
+      <div className="animate-pulse space-y-3">
+        <div className="bg-muted dark:bg-muted mx-auto h-4 w-1/3 rounded" />
+        <div className="bg-muted dark:bg-muted h-[250px] rounded" />
+      </div>
+    </div>
+  ),
+});
 
 interface VisualizationRendererProps {
   visualization: AiVisualization;

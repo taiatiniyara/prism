@@ -381,9 +381,9 @@ export async function GetReportPeriods(
     const pending = Math.max(requested - completed, 0);
 
     const entered = enteredOnly;
-    const reviewed = entered + dataNotAvailable;
-    const approved = entered + dataNotAvailable - reviewed;
-    const endorsed = entered + dataNotAvailable - reviewed - approved;
+    const reviewed = reviewedOnly;
+    const approved = approvedOnly;
+    const endorsed = endorsedOnly;
 
     return {
       Id: rpId,

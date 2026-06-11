@@ -3,13 +3,11 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { magicLink } from "better-auth/plugins";
-import { twoFactor as twoFactorPlugin } from "better-auth/plugins/two-factor";
 import { buildMagicLinkEmail, sendEmail } from "./email.service";
 import {
   account,
   rateLimit,
   session,
-  twoFactor,
   user,
   verification,
 } from "@/db/schema/auth-schema";
@@ -80,7 +78,6 @@ export const auth = betterAuth({
       account,
       rateLimit,
       session,
-      twoFactor,
     },
   }),
   session: {
@@ -111,6 +108,5 @@ export const auth = betterAuth({
         });
       },
     }),
-    twoFactorPlugin(),
   ],
 });

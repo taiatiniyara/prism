@@ -420,10 +420,8 @@ const toBooleanFlag = (value: unknown): boolean => {
 const flattenTemplateRows = (
   inputs: DataEntryPageViewModel["inputs"],
 ): TemplateRow[] => {
-  console.log("[flattenTemplateRows] inputs.mode:", inputs.mode);
-
   if (inputs.mode === "flat") {
-    const result = inputs.rows.map((row) => ({
+    return inputs.rows.map((row) => ({
       context_mode: "flat" as const,
       input_def_id: row.inputDefId,
       input_name: row.inputName,
@@ -444,19 +442,10 @@ const flattenTemplateRows = (
       is_data_not_available: row.isDataNotAvailable ?? false,
       comments: row.comments ?? "",
     }));
-    console.log("[flattenTemplateRows] flat mode: %d input rows → %d template rows", inputs.rows.length, result.length);
-    console.log("[flattenTemplateRows] sample rows:", result.slice(0, 3));
-    return result;
   }
 
   if (inputs.mode === "grouped-by-generator") {
-    console.log("[flattenTemplateRows] grouped-by-generator: %d groups", inputs.groups.length);
-    inputs.groups.forEach((group, gi) => {
-      console.log("[flattenTemplateRows]   group[%d]: generatorId=%d, generatorName=%s, rows=%d",
-        gi, group.generatorId, group.generatorName, group.rows.length);
-    });
-
-    const result = inputs.groups.flatMap((group) =>
+    return inputs.groups.flatMap((group) =>
       group.rows.map((row) => ({
         context_mode: "grouped-by-generator" as const,
         input_def_id: row.inputDefId,
@@ -479,9 +468,6 @@ const flattenTemplateRows = (
         comments: row.comments ?? "",
       })),
     );
-    console.log("[flattenTemplateRows] grouped-by-generator result: %d template rows", result.length);
-    console.log("[flattenTemplateRows] sample rows:", result.slice(0, 3));
-    return result;
   }
 
   return inputs.groups.flatMap((paymentModeGroup) =>
@@ -527,12 +513,7 @@ export default function EnterDataTemplatePanel({
     useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
-  const templateRows = useMemo(() => {
-    const rows = flattenTemplateRows(inputs);
-    console.log("[EnterDataTemplatePanel] templateRows computed: %d rows, mode=%s, context=%o",
-      rows.length, inputs.mode, context);
-    return rows;
-  }, [inputs, context]);
+  const templateRows = useMemo(() => flattenTemplateRows(inputs), [inputs]);
   const inputCategoryName = useMemo(
     () => resolveOptionName(options.inputCategories, context.inputCategoryId),
     [options.inputCategories, context.inputCategoryId],

@@ -80,12 +80,39 @@ export type AiToolName =
   | "get_anomaly_insights"
   | "get_governance_audit"
   | "get_configuration_options"
-  | "get_kpi_diagnostics"
   | "get_performance_snapshot"
-  | "get_value_lookup"
+  | "get_kpi_diagnostics"
   | "render_visualization"
   | "suggest_follow_ups"
-  | "dashboard_link";
+  | "calculate_kpi"
+  | "dashboard_link"
+  | "get_review_queue"
+  | "get_input_status"
+  | "explain_kpi"
+  | "get_custom_kpi_status"
+  | "get_service_area_breakdown"
+  | "get_peer_group_analysis"
+  | "get_risk_assessment"
+  | "get_data_quality_report"
+  | "compare_periods"
+  | "get_what_changed"
+  | "get_compliance_status"
+  | "get_kpi_targets"
+  | "get_kpi_correlation"
+  | "compare_kpis_across_utilities"
+  | "generate_export"
+  | "get_country_hierarchy"
+  | "get_industry_benchmarks"
+  | "get_executive_digest"
+  | "get_review_queue_entries"
+  | "get_guided_entry"
+  | "query_power_bi"
+  | "diagnose_power_bi"
+  | "discover_datasets"
+  | "discover_schema"
+  | "discover_report"
+  | "discover_visuals"
+  | "query_visual";
 
 export interface AiToolMetadata {
   data_freshness?: Date | null;
@@ -142,6 +169,7 @@ export interface AiRateLimitInfo {
   remaining_tokens: number;
   reset_at: Date;
   degraded_mode: boolean;
+  concurrent_count?: number;
 }
 
 export interface AiGuardrailResult {
@@ -150,12 +178,12 @@ export interface AiGuardrailResult {
   reason?: string;
 }
 
-export const AI_PROMPT_VERSION = "2026-06-04";
+export const AI_PROMPT_VERSION = "2026-06-11";
 
 export const AI_MODELS = {
-  primary: "gpt-5",
-  fallback: "gpt-4o",
-  mini: "gpt-4o-mini",
+  primary: "claude-sonnet-4-6",
+  fallback: "claude-haiku-4-5-20251001",
+  mini: "claude-haiku-4-5-20251001",
 } as const;
 
 export const AI_RATE_LIMITS = {

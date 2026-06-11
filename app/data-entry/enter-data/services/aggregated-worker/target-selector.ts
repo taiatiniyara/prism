@@ -43,9 +43,11 @@ export const inferFormulaInputs = (
     );
 
   for (const candidate of orderedCandidates) {
+    /* eslint-disable security/detect-non-literal-regexp -- variableName is sanitized via escapeRegExp before constructing the RegExp */
     const pattern = isIdentifier(candidate.variableName)
       ? new RegExp(`\\b${escapeRegExp(candidate.variableName)}\\b`, "g")
       : new RegExp(escapeRegExp(candidate.variableName), "g");
+    /* eslint-enable security/detect-non-literal-regexp */
 
     let match = pattern.exec(formula);
     while (match) {

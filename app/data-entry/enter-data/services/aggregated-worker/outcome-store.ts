@@ -6,7 +6,8 @@ export interface AggregatedWorkerRunRecord {
   scope: AggregatedWorkerScope;
   startedAt: string;
   completedAt?: string;
-  status: "running" | "completed";
+  status: "running" | "completed" | "failed";
+  error?: string | null;
   outcomes: AggregatedTargetOutcome[];
 }
 
@@ -14,6 +15,23 @@ const runStore = new Map<string, AggregatedWorkerRunRecord>();
 
 export const storeRunStart = (run: AggregatedWorkerRunRecord): void => {
   runStore.set(run.runId, run);
+};
+
+export const storeRunFailure = (
+  runId: string,
+  error: string,
+): void => {
+  const current = runStore.get(runId);
+  if (!current) {
+    return;
+  }
+
+  runStore.set(runId, {
+    ...current,
+    status: "failed",
+    completedAt: new Date().toISOString(),
+    error,
+  });
 };
 
 export const storeRunOutcomes = (

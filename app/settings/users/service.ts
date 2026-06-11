@@ -89,6 +89,60 @@ export async function CreateUser(
   };
 }
 
+export async function UpdateUser(
+  data: Partial<User>,
+): Promise<DataTableFormResponse<User>> {
+  const currentUser = await getCurrentUser();
+  assertAdminRole(currentUser.role);
+
+  const { id, ...allFields } = data as Partial<User> & { id?: string };
+  delete allFields.role;
+  delete allFields.organisation;
+
+  if (!id) {
+    return { success: false, message: "User ID is required" };
+  }
+
+  if (allFields.email) {
+    const [existing] = await db
+      .select({ id: user.id })
+      .from(user)
+      .where(eq(user.email, allFields.email))
+      .limit(1);
+    if (existing && existing.id !== id) {
+      return {
+        success: false,
+        message: "A user with this email already exists",
+      };
+    }
+  }
+
+  if (allFields.role_id !== undefined) {
+    allFields.role_id = Number(allFields.role_id);
+  }
+  if (allFields.organisation_id !== undefined) {
+    allFields.organisation_id = Number(allFields.organisation_id);
+  }
+
+  await db.update(user).set(allFields).where(eq(user.id, id));
+
+  writeAuditLog({
+    action: "user.role_change",
+    actorUserId: currentUser.id,
+    actorEmail: currentUser.email,
+    actorRole: currentUser.role,
+    targetType: "user",
+    targetId: id,
+    details: allFields as Record<string, unknown>,
+  }).catch((err) => console.error("[audit] user.update failed", err));
+
+  revalidatePath("/settings/users");
+  return {
+    success: true,
+    message: "User updated successfully",
+  };
+}
+
 function assertAdminRole(role?: string | null) {
   if (role !== "DEV" && role !== "BMO") {
     throw new Error("FORBIDDEN: only BMO/DEV users can perform this action");

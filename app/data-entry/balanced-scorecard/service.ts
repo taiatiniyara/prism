@@ -31,13 +31,16 @@ import { hasGlobalUtilityAccess } from "@/lib/user.service";
 export const getScorecardResponse = async (
   user: CurrentUser,
   inputContext: ScorecardFilterContext,
+  aggregatorOptions?: { includeUnapproved?: boolean; includeAllDefinitions?: boolean },
 ): Promise<ScorecardResponse> => {
   assertScorecardReadAccess(user);
   const context = sanitizeScorecardFilterContext(inputContext);
   const userOrgId = !hasGlobalUtilityAccess(user) ? (user.org_id ?? null) : null;
-  const rows = await listScorecardInputRows(context, userOrgId);
+  const rows = await listScorecardInputRows(context, userOrgId, {
+    includeAllDefinitions: aggregatorOptions?.includeAllDefinitions,
+  });
   const relationships = await listScorecardRelationships(context);
-  const snapshot = buildScorecardSnapshot(rows);
+  const snapshot = buildScorecardSnapshot(rows, aggregatorOptions);
   return toScorecardResponse(context, snapshot, rows, relationships);
 };
 

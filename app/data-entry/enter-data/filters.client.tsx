@@ -1,7 +1,7 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useState, useTransition } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 
 import {
   DataEntryStatusSelect,
@@ -19,6 +19,7 @@ import { applyFilterCascade } from "@/app/data-entry/filterContext.rules";
 import { DataEntryFilterOptions } from "@/app/data-entry/types";
 import { updateFilterContextAction } from "@/app/data-entry/enter-data/service";
 import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 interface DataEntryFiltersClientProps {
   context: DataEntryFilterContext;
@@ -35,18 +36,45 @@ const keyMap: Record<DataEntryFilterCookieKey, keyof DataEntryFilterContext> = {
   dataEntryStatusId: "dataEntryStatusId",
 };
 
+const parseNullableInt = (value: string | null): number | null => {
+  if (value == null || value.trim() === "") return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+};
+
 export default function DataEntryFiltersClient({
   context,
   options,
   showServiceAreaSelector,
 }: DataEntryFiltersClientProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [isPending, startTransition] = useTransition();
-  const [localContext, setLocalContext] = useState(context);
+
+  const urlContext = useMemo<Partial<DataEntryFilterContext>>(() => ({
+    reportTypeId: parseNullableInt(searchParams.get("reportTypeId")),
+    reportPeriodId: parseNullableInt(searchParams.get("reportPeriodId")),
+    inputCategoryId: parseNullableInt(searchParams.get("inputCategoryId")),
+    inputSubcategoryId: parseNullableInt(searchParams.get("inputSubcategoryId")),
+    serviceAreaId: parseNullableInt(searchParams.get("serviceAreaId")),
+    dataEntryStatusId: parseNullableInt(searchParams.get("dataEntryStatusId")),
+  }), [searchParams]);
+
+  const mergedContext = useMemo<DataEntryFilterContext>(() => {
+    const merged = { ...context };
+    for (const key of Object.keys(merged) as (keyof DataEntryFilterContext)[]) {
+      if (urlContext[key] !== undefined) {
+        (merged as Record<string, number | null>)[key] = urlContext[key];
+      }
+    }
+    return merged;
+  }, [context, urlContext]);
+
+  const [localContext, setLocalContext] = useState(mergedContext);
 
   useEffect(() => {
-    setLocalContext(context);
-  }, [context]);
+    setLocalContext(mergedContext);
+  }, [mergedContext]);
 
   const handleChange = (
     key: DataEntryFilterCookieKey,
@@ -59,6 +87,15 @@ export default function DataEntryFiltersClient({
       void (async () => {
         try {
           await updateFilterContextAction(contextKey, value);
+          const nextParams = new URLSearchParams(searchParams.toString());
+          if (value == null) {
+            nextParams.delete(String(key));
+          } else {
+            nextParams.set(String(key), String(value));
+          }
+          router.replace(`/data-entry/enter-data?${nextParams.toString()}`, {
+            scroll: false,
+          });
           router.refresh();
         } catch {
           toast.error("Failed to update filter. Please try again.");
@@ -113,6 +150,9 @@ export default function DataEntryFiltersClient({
         compact
         onChange={(value) => handleChange("dataEntryStatusId", value)}
       />
+      {isPending ? (
+        <Loader2 className="size-4 animate-spin text-muted-foreground self-center" />
+      ) : null}
     </section>
   );
 }

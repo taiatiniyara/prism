@@ -1,7 +1,7 @@
 import { db } from "@/db/connection";
-import { aiChatTurn, aiFeedback, aiReviewQueue } from "@/db/schema/ai";
+import { aiChatSession, aiChatTurn, aiFeedback, aiReviewQueue } from "@/db/schema/ai";
 import { getCurrentUser } from "@/lib/user.service";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 export async function POST(request: Request) {
   let user;
@@ -38,9 +38,15 @@ export async function POST(request: Request) {
   }
 
   const [turn] = await db
-    .select()
+    .select({ id: aiChatTurn.id, session_id: aiChatTurn.session_id })
     .from(aiChatTurn)
-    .where(eq(aiChatTurn.id, body.turn_id))
+    .innerJoin(aiChatSession, eq(aiChatTurn.session_id, aiChatSession.id))
+    .where(
+      and(
+        eq(aiChatTurn.id, body.turn_id),
+        eq(aiChatSession.user_id, user.id),
+      ),
+    )
     .limit(1);
 
   if (!turn) {

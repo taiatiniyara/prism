@@ -23,6 +23,7 @@ import {
   dataEntries,
   DataEntryComment,
   DataEntryStatusId,
+  dataEntryLogs,
   generationRelevance,
   inputDefinitions,
   inputRelevance,
@@ -1557,13 +1558,6 @@ export const getDataEntryFilterViewModel =
         context.dataEntryStatusId,
       );
 
-      console.log("[getDataEntryFilterViewModel] generation mode: %d groups, serviceAreaId=%d",
-        groups.length, context.serviceAreaId);
-      groups.forEach((g, i) => {
-        console.log("[getDataEntryFilterViewModel]   group[%d]: generatorId=%d, generatorName=%s, rows=%d",
-          i, g.generatorId, g.generatorName, g.rows.length);
-      });
-
       return toPageModel(
         context,
         options,
@@ -1619,7 +1613,6 @@ export const getTemplateInputsForDownloadAction = async (
 ): Promise<DataEntryPageViewModel["inputs"]> => {
   if (scope === "subcategory") {
     const viewModel = await getDataEntryFilterViewModel();
-    console.log("[getTemplateInputsForDownloadAction] subcategory scope → inputs.mode=%s", viewModel.inputs.mode);
     return viewModel.inputs;
   }
 
@@ -1635,7 +1628,6 @@ export const getTemplateInputsForDownloadAction = async (
     categoryContext.dataEntryStatusId,
   );
 
-  console.log("[getTemplateInputsForDownloadAction] category scope → flat mode, %d rows", rows.length);
   return {
     mode: "flat",
     rows,
@@ -1913,9 +1905,16 @@ const revalidateEnterData = () => {
   revalidatePath("/data-entry/enter-data");
 };
 
-export const updateDataEntryValueAction = async (
+interface SaveDataEntryValueResult {
+  sourceDataEntryId: string | null;
+  scopedServiceAreaId: number | null;
+  energyResourceId: number | null;
+  reportPeriodId: number;
+}
+
+const saveDataEntryValueInternal = async (
   payload: UpdateDataEntryValuePayload,
-): Promise<{ kpiRunResult: KpiWorkerRunResult | null }> => {
+): Promise<SaveDataEntryValueResult> => {
   const {
     user,
     context,
@@ -1988,15 +1987,15 @@ export const updateDataEntryValueAction = async (
       inputDefId: payload.inputDefId,
     })
   ) {
-    const serviceAreaScopedInputDefinitionIds =
-      await getServiceAreaScopedInputDefinitionIds([payload.inputDefId]);
-    const irrelevantInputDefinitionIds =
-      await getIrrelevantInputDefinitionIdsForContext(
-        context,
-        [payload.inputDefId],
-        serviceAreaScopedInputDefinitionIds,
-      );
-    if (irrelevantInputDefinitionIds.has(payload.inputDefId)) {
+    const saScopedIds = await getServiceAreaScopedInputDefinitionIds([
+      payload.inputDefId,
+    ]);
+    const irrelevantIds = await getIrrelevantInputDefinitionIdsForContext(
+      context,
+      [payload.inputDefId],
+      saScopedIds,
+    );
+    if (irrelevantIds.has(payload.inputDefId)) {
       throw new Error(
         resolveBuilderValidationMessage({
           config: builderConfig,
@@ -2030,6 +2029,46 @@ export const updateDataEntryValueAction = async (
     );
   }
 
+  if (
+    normalizedValue != null &&
+    mapDataTypeToControlType(validationMetadata.dataTypeName) === "managedLists"
+  ) {
+    const [definitionMeta] = await db
+      .select({ inputName: inputDefinitions.name })
+      .from(inputDefinitions)
+      .where(eq(inputDefinitions.id, payload.inputDefId))
+      .limit(1);
+
+    if (definitionMeta) {
+      const managedListRows = await db
+        .select({
+          itemName: managedListItems.name,
+        })
+        .from(managedListItems)
+        .innerJoin(
+          managedLists,
+          eq(managedListItems.list_id, managedLists.id),
+        )
+        .where(
+          and(
+            like(managedLists.name, `%${definitionMeta.inputName}%`),
+            eq(managedListItems.is_active, true),
+            eq(managedLists.is_active, true),
+          ),
+        );
+
+      const validNames = new Set(
+        managedListRows.map((row) => row.itemName.trim().toLowerCase()),
+      );
+
+      if (validNames.size > 0 && !validNames.has(normalizedValue.toLowerCase())) {
+        throw new Error(
+          `"${normalizedValue}" is not a valid option for ${definitionMeta.inputName}.`,
+        );
+      }
+    }
+  }
+
   const existingConditions = buildExistingDataEntryConditions({
     reportPeriodId,
     inputDefId: payload.inputDefId,
@@ -2039,71 +2078,105 @@ export const updateDataEntryValueAction = async (
     paymentModeId: payload.paymentModeId ?? null,
   });
 
-  const [existing] = await db
-    .select({ id: dataEntries.id })
-    .from(dataEntries)
-    .where(and(...existingConditions))
-    .limit(1);
+  const now = new Date();
 
-  const values = {
-    report_period_id: reportPeriodId,
-    input_def_id: payload.inputDefId,
-    service_area_id: scopedServiceAreaId,
-    energy_resource_id: energyResourceId,
-    value: normalizedValue,
-    status_id: DataEntryStatusId.Entered,
-    energy_source_id: energyMetadata?.energySourceId,
-    energy_type_id: energyMetadata?.energyTypeId,
-    energy_provider_id: energyMetadata?.energyProviderId,
-    customer_type_id: payload.customerTypeId,
-    payment_mode_id: payload.paymentModeId,
-    is_deleted: false,
-    updatedAt: new Date(),
-    updatedById: user.id,
-  };
+  const writeResult = await db.transaction(async (tx) => {
+    const [existing] = await tx
+      .select({ id: dataEntries.id, value: dataEntries.value })
+      .from(dataEntries)
+      .where(and(...existingConditions))
+      .limit(1);
 
-  let sourceDataEntryId = existing?.id ?? null;
+    const previousValue = existing?.value ?? null;
 
-  if (existing) {
-    await db
-      .update(dataEntries)
-      .set(values)
-      .where(eq(dataEntries.id, existing.id));
-  } else {
-    const [inserted] = await db
-      .insert(dataEntries)
-      .values(values)
-      .returning({ id: dataEntries.id });
-    sourceDataEntryId = inserted?.id ?? null;
-  }
+    const values = {
+      report_period_id: reportPeriodId,
+      input_def_id: payload.inputDefId,
+      service_area_id: scopedServiceAreaId,
+      energy_resource_id: energyResourceId,
+      value: normalizedValue,
+      status_id: DataEntryStatusId.Entered,
+      energy_source_id: energyMetadata?.energySourceId,
+      energy_type_id: energyMetadata?.energyTypeId,
+      energy_provider_id: energyMetadata?.energyProviderId,
+      customer_type_id: payload.customerTypeId,
+      payment_mode_id: payload.paymentModeId,
+      is_deleted: false,
+      updatedAt: now,
+      updatedById: user.id,
+    };
 
-  runAggregatedWorkerAsync(user, {
-    reportPeriodId,
-    serviceAreaId: scopedServiceAreaId,
-    energyResourceId,
+    let sourceDataEntryId = existing?.id ?? null;
+
+    if (existing) {
+      await tx
+        .update(dataEntries)
+        .set(values)
+        .where(eq(dataEntries.id, existing.id));
+    } else {
+      const [inserted] = await tx
+        .insert(dataEntries)
+        .values(values)
+        .returning({ id: dataEntries.id });
+      sourceDataEntryId = inserted?.id ?? null;
+    }
+
+    if (sourceDataEntryId) {
+      await tx.insert(dataEntryLogs).values({
+        data_entry_id: sourceDataEntryId,
+        previous_value: previousValue ?? "",
+        new_value: normalizedValue ?? "",
+        updated_by_id: user.id,
+        updated_at: now,
+      });
+    }
+
+    return { sourceDataEntryId };
   });
+
+  return {
+    sourceDataEntryId: writeResult.sourceDataEntryId,
+    scopedServiceAreaId,
+    energyResourceId,
+    reportPeriodId,
+  };
+};
+
+export const updateDataEntryValueAction = async (
+  payload: UpdateDataEntryValuePayload,
+): Promise<{ kpiRunResult: KpiWorkerRunResult | null }> => {
+  const result = await saveDataEntryValueInternal(payload);
+
+  runAggregatedWorkerAsync(
+    await getCurrentUser(),
+    {
+      reportPeriodId: result.reportPeriodId,
+      serviceAreaId: result.scopedServiceAreaId,
+      energyResourceId: result.energyResourceId,
+    },
+  );
 
   let kpiRunResult: KpiWorkerRunResult | null = null;
 
-  if (sourceDataEntryId) {
+  if (result.sourceDataEntryId) {
     kpiRunResult = await triggerKpiWorker(
       {
-        sourceDataEntryId,
+        sourceDataEntryId: result.sourceDataEntryId,
         inputDefId: payload.inputDefId,
-        triggeredByUserId: user.id,
+        triggeredByUserId: (await getCurrentUser()).id,
         scope: {
-          reportPeriodId,
-          organizationId: user.org_id,
-          serviceAreaId: scopedServiceAreaId,
-          energyResourceId,
-          energyProviderId: energyMetadata?.energyProviderId ?? null,
-          energyTypeId: energyMetadata?.energyTypeId ?? null,
-          energySourceId: energyMetadata?.energySourceId ?? null,
+          reportPeriodId: result.reportPeriodId,
+          organizationId: (await getCurrentUser()).org_id,
+          serviceAreaId: result.scopedServiceAreaId,
+          energyResourceId: result.energyResourceId,
+          energyProviderId: null,
+          energyTypeId: null,
+          energySourceId: null,
           customerTypeId: payload.customerTypeId ?? null,
           paymentModeId: payload.paymentModeId ?? null,
         },
       },
-      user,
+      await getCurrentUser(),
     );
   }
 
@@ -2134,9 +2207,15 @@ export const updateDataEntryCommentAction = async (
     throw new Error("A report period is required before saving comments.");
   }
 
+  const COMMENT_MAX_LENGTH = 2000;
   const normalizedComment = payload.comment.trim();
   if (normalizedComment.length === 0) {
     throw new Error("A comment is required.");
+  }
+  if (normalizedComment.length > COMMENT_MAX_LENGTH) {
+    throw new Error(
+      `Comment must be ${COMMENT_MAX_LENGTH} characters or fewer.`,
+    );
   }
 
   const existingConditions = buildExistingDataEntryConditions({
@@ -2246,6 +2325,7 @@ export const updateDataEntryAvailabilityAction = async (
       .update(dataEntries)
       .set({
         status_id: nextStatusId,
+        value: payload.isDataNotAvailable ? null : undefined,
         customer_type_id: payload.customerTypeId,
         payment_mode_id: payload.paymentModeId,
         is_deleted: false,
@@ -2324,16 +2404,8 @@ export const uploadDataEntryTemplateAction = async (
     };
   }
 
-  let processed = 0;
-  let skipped = 0;
-
   for (const [index, row] of rows.entries()) {
     const hasValue = (row.value?.trim().length ?? 0) > 0;
-
-    if (!hasValue && !row.isDataNotAvailable) {
-      skipped += 1;
-      continue;
-    }
 
     if (hasValue && row.isDataNotAvailable) {
       throw new Error(
@@ -2341,23 +2413,52 @@ export const uploadDataEntryTemplateAction = async (
       );
     }
 
+    if (!hasValue && !row.isDataNotAvailable && row.comments.trim().length === 0) {
+      continue;
+    }
+  }
+
+  let processed = 0;
+  let skipped = 0;
+  const workerScopes = new Set<string>();
+
+  for (const row of rows) {
+    const hasValue = (row.value?.trim().length ?? 0) > 0;
+
+    if (!hasValue && !row.isDataNotAvailable && row.comments.trim().length === 0) {
+      skipped += 1;
+      continue;
+    }
+
     if (row.isDataNotAvailable) {
-      await updateDataEntryAvailabilityAction({
+      const result = await saveDataEntryValueInternal({
         inputDefId: row.inputDefId,
         energyResourceId: row.energyResourceId ?? null,
         customerTypeId: row.customerTypeId ?? null,
         paymentModeId: row.paymentModeId ?? null,
-        isDataNotAvailable: true,
+        value: null,
       });
+      await db
+        .update(dataEntries)
+        .set({ status_id: DataEntryStatusId.Not_Available })
+        .where(eq(dataEntries.id, result.sourceDataEntryId!));
+
+      workerScopes.add(
+        `${result.reportPeriodId}:${result.scopedServiceAreaId ?? "null"}:${result.energyResourceId ?? "null"}`,
+      );
       processed += 1;
-    } else {
-      await updateDataEntryValueAction({
+    } else if (hasValue) {
+      const result = await saveDataEntryValueInternal({
         inputDefId: row.inputDefId,
         energyResourceId: row.energyResourceId ?? null,
         customerTypeId: row.customerTypeId ?? null,
         paymentModeId: row.paymentModeId ?? null,
         value: row.value,
       });
+
+      workerScopes.add(
+        `${result.reportPeriodId}:${result.scopedServiceAreaId ?? "null"}:${result.energyResourceId ?? "null"}`,
+      );
       processed += 1;
     }
 
@@ -2371,6 +2472,18 @@ export const uploadDataEntryTemplateAction = async (
       });
     }
   }
+
+  const user = await getCurrentUser();
+  for (const scopeKey of workerScopes) {
+    const parts = scopeKey.split(":");
+    runAggregatedWorkerAsync(user, {
+      reportPeriodId: Number(parts[0]),
+      serviceAreaId: parts[1] === "null" ? null : Number(parts[1]),
+      energyResourceId: parts[2] === "null" ? null : Number(parts[2]),
+    });
+  }
+
+  revalidateEnterData();
 
   return {
     processed,

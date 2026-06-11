@@ -5,7 +5,7 @@ import { reportPeriods } from "@/db/schema/reportPeriods";
 import { eq } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
 import { hasGlobalUtilityAccess } from "@/lib/user.service";
-import { createToolMetadata } from "./common";
+import { createToolMetadata, resolvePeriodId, getSeverityScore } from "./common";
 import type { AiToolResult } from "../types";
 
 export interface PerformanceKpi {
@@ -31,9 +31,12 @@ export const getPerformanceSnapshot = async (
   user: CurrentUser,
   options: {
     report_period_id?: number | null;
+    year?: number | null;
   } = {},
 ): Promise<AiToolResult<PerformanceData>> => {
-  if (!options.report_period_id) {
+  const resolvedPeriodId = await resolvePeriodId(user, options);
+
+  if (!resolvedPeriodId) {
     return {
       data: {
         review_status_counts: {},
@@ -46,7 +49,9 @@ export const getPerformanceSnapshot = async (
         completeness_pct: 0,
         source: "review_kpi",
       }),
-      error: "No report period specified",
+      error: options.year
+        ? `No report period found for year ${options.year}`
+        : "No report period found",
     };
   }
 
@@ -54,7 +59,7 @@ export const getPerformanceSnapshot = async (
     const [period] = await db
       .select({ utility_id: reportPeriods.utility_id })
       .from(reportPeriods)
-      .where(eq(reportPeriods.id, options.report_period_id))
+      .where(eq(reportPeriods.id, resolvedPeriodId))
       .limit(1);
 
     if (!period || period.utility_id !== user.org_id) {
@@ -77,7 +82,7 @@ export const getPerformanceSnapshot = async (
 
   const reviewRows = await listReviewKpiRows({
     reportTypeId: null,
-    reportPeriodId: options.report_period_id,
+    reportPeriodId: resolvedPeriodId,
     kpiCategoryId: null,
     kpiSubcategoryId: null,
     serviceAreaId: null,
@@ -97,12 +102,12 @@ export const getPerformanceSnapshot = async (
 
   try {
     const scorecard = await getScorecardResponse(user, {
-      reportPeriodId: options.report_period_id,
+      reportPeriodId: resolvedPeriodId,
       reportTypeId: null,
       serviceAreaId: null,
       kpiCategoryId: null,
       kpiSubcategoryId: null,
-    });
+    }, { includeUnapproved: true, includeAllDefinitions: true });
 
     scorecardOverallScore = scorecard.snapshot.overallScore;
 
@@ -152,11 +157,3 @@ export const getPerformanceSnapshot = async (
   };
 };
 
-const getSeverityScore = (status: string | null): number => {
-  if (!status) return 0;
-  const normalized = status.toLowerCase();
-  if (normalized.includes("off")) return 3;
-  if (normalized.includes("risk")) return 2;
-  if (normalized.includes("track") || normalized.includes("good")) return 1;
-  return 0;
-};

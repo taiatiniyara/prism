@@ -1,10 +1,10 @@
-import { openai } from "@ai-sdk/openai";
+import { anthropic } from "@ai-sdk/anthropic";
 import { streamText, generateText, stepCountIs } from "ai";
 import type { CurrentUser } from "@/lib/user.service";
 import { createAiTools } from "./tools";
 import { getSystemPrompt, getPromptVersion } from "./prompt";
 import { validateInput, filterOutput } from "./guardrails";
-import { checkRateLimit, recordRequest, recordError } from "./rate-limit";
+import { checkRateLimit, recordRequest, recordError, acquireConcurrencySlot, releaseConcurrencySlot } from "./rate-limit";
 import { AI_MODELS, AI_RATE_LIMITS, type AiChatMessage } from "./types";
 
 interface AiServiceOptions {
@@ -12,6 +12,15 @@ interface AiServiceOptions {
   user: CurrentUser;
   sessionId?: number;
   maxHistoryTurns?: number;
+  systemPromptOverride?: string;
+  onFinish?: (info: {
+    text: string;
+    usage: { inputTokens: number; outputTokens: number };
+    toolCalls: Array<{ toolName: string; input: unknown }>;
+    model: string;
+    wasFallback: boolean;
+    promptVersion: string;
+  }) => Promise<void>;
 }
 
 interface AiStreamResult {
@@ -22,6 +31,9 @@ interface AiStreamResult {
   promptVersion: string;
 }
 
+const APPROX_CHARS_PER_TOKEN = 4;
+const MAX_INPUT_TOKENS = 20000;
+
 const prepareMessages = (
   messages: AiChatMessage[],
   maxHistoryTurns: number,
@@ -29,22 +41,37 @@ const prepareMessages = (
   const maxMessages = maxHistoryTurns * 2;
   const recentMessages = messages.slice(-maxMessages);
 
-  return recentMessages.map((msg) => ({
-    role: msg.role,
-    content: msg.content,
-  }));
+  let totalChars = 0;
+  const trimmed: AiChatMessage[] = [];
+  for (const msg of recentMessages) {
+    const content = typeof msg.content === "string" ? msg.content : "";
+    const cleaned = content.trim();
+    if (!cleaned) continue;
+    totalChars += cleaned.length;
+    trimmed.push({ role: msg.role, content: cleaned });
+    if (totalChars / APPROX_CHARS_PER_TOKEN > MAX_INPUT_TOKENS) break;
+  }
+
+  return trimmed;
 };
+
+const isThinkingModel = (modelName: string): boolean =>
+  /^claude-sonnet-4/i.test(modelName);
 
 const getModelConfig = (degradedMode: boolean) => {
   const modelName = degradedMode ? AI_MODELS.fallback : AI_MODELS.primary;
-  const isReasoningModel = /^(gpt-5|o1|o3|o4)/i.test(modelName);
+
+  const baseConfig = {
+    model: anthropic(modelName),
+    modelName,
+    maxOutputTokens: isThinkingModel(modelName) ? 8000 : 2500,
+    temperature: degradedMode ? 0.3 : 0.4,
+  };
 
   return {
-    model: openai(modelName),
-    modelName,
-    maxOutputTokens: isReasoningModel ? 8000 : 2500,
-    providerOptions: isReasoningModel
-      ? { openai: { reasoningEffort: "low" as const } }
+    ...baseConfig,
+    providerOptions: isThinkingModel(modelName)
+      ? { anthropic: { thinking: { type: "enabled" as const, budgetTokens: 12000 } } }
       : undefined,
   };
 };
@@ -52,7 +79,7 @@ const getModelConfig = (degradedMode: boolean) => {
 export const runAiStream = async (
   options: AiServiceOptions,
 ): Promise<AiStreamResult> => {
-  const { messages, user, maxHistoryTurns = AI_RATE_LIMITS.max_history_turns } =
+  const { messages, user, maxHistoryTurns = AI_RATE_LIMITS.max_history_turns, systemPromptOverride, onFinish } =
     options;
 
   const lastUserMessage = messages.filter((m) => m.role === "user").pop();
@@ -73,23 +100,64 @@ export const runAiStream = async (
     );
   }
 
+  let slotReleased = false;
+  acquireConcurrencySlot(user.id);
+
   const preparedMessages = prepareMessages(messages, maxHistoryTurns);
   const tools = createAiTools(user);
-  const systemPrompt = getSystemPrompt();
+  const systemPrompt = systemPromptOverride ?? getSystemPrompt();
   const promptVersion = getPromptVersion();
 
   const config = getModelConfig(rateLimitInfo.degraded_mode);
 
-  try {
-    const result = streamText({
+  const releaseOnce = () => {
+    if (!slotReleased) {
+      slotReleased = true;
+      releaseConcurrencySlot(user.id);
+    }
+  };
+
+  const buildOnFinish = (modelName: string, isFallback: boolean) =>
+    async (finish: { text: string; usage?: { inputTokens?: number; outputTokens?: number }; toolCalls: Array<{ toolName: string; input: unknown }> }) => {
+      releaseOnce();
+      try {
+        const tokenCount = (finish.usage?.inputTokens ?? 0) + (finish.usage?.outputTokens ?? 0);
+        await recordRequest(user.id, tokenCount);
+      } catch {
+        // best-effort
+      }
+      if (onFinish) {
+        try {
+          await onFinish({
+            text: finish.text,
+            usage: { inputTokens: finish.usage?.inputTokens ?? 0, outputTokens: finish.usage?.outputTokens ?? 0 },
+            toolCalls: finish.toolCalls.map((tc) => ({ toolName: tc.toolName, input: tc.input })),
+            model: modelName,
+            wasFallback: isFallback,
+            promptVersion,
+          });
+        } catch (err) {
+          console.error("[ai-service] onFinish callback failed:", err instanceof Error ? err.message : String(err));
+        }
+      }
+    };
+
+  const doStream = async () => {
+    return streamText({
       model: config.model,
       system: systemPrompt,
       messages: preparedMessages,
       tools,
       maxOutputTokens: config.maxOutputTokens,
       stopWhen: stepCountIs(10),
+      temperature: config.temperature,
       ...(config.providerOptions ? { providerOptions: config.providerOptions } : {}),
+      onFinish: buildOnFinish(config.modelName, rateLimitInfo.degraded_mode),
     });
+  };
+
+  try {
+    const result = await doStream();
 
     return {
       stream: result.textStream,
@@ -99,6 +167,8 @@ export const runAiStream = async (
       promptVersion,
     };
   } catch (error) {
+    releaseOnce();
+
     if (!rateLimitInfo.degraded_mode) {
       try {
         const fallbackConfig = getModelConfig(true);
@@ -110,9 +180,9 @@ export const runAiStream = async (
           tools,
           maxOutputTokens: fallbackConfig.maxOutputTokens,
           stopWhen: stepCountIs(10),
-          ...(fallbackConfig.providerOptions
-            ? { providerOptions: fallbackConfig.providerOptions }
-            : {}),
+          temperature: fallbackConfig.temperature,
+          ...(fallbackConfig.providerOptions ? { providerOptions: fallbackConfig.providerOptions } : {}),
+          onFinish: buildOnFinish(fallbackConfig.modelName, true),
         });
 
         return {
@@ -147,7 +217,7 @@ interface AiGenerateResult {
 export const runAiGenerate = async (
   options: AiServiceOptions,
 ): Promise<AiGenerateResult> => {
-  const { messages, user, maxHistoryTurns = AI_RATE_LIMITS.max_history_turns } =
+  const { messages, user, maxHistoryTurns = AI_RATE_LIMITS.max_history_turns, systemPromptOverride } =
     options;
 
   const lastUserMessage = messages.filter((m) => m.role === "user").pop();
@@ -168,9 +238,11 @@ export const runAiGenerate = async (
     );
   }
 
+  acquireConcurrencySlot(user.id);
+
   const preparedMessages = prepareMessages(messages, maxHistoryTurns);
   const tools = createAiTools(user);
-  const systemPrompt = getSystemPrompt();
+  const systemPrompt = systemPromptOverride ?? getSystemPrompt();
   const promptVersion = getPromptVersion();
 
   const config = getModelConfig(rateLimitInfo.degraded_mode);
@@ -183,8 +255,11 @@ export const runAiGenerate = async (
       tools,
       maxOutputTokens: config.maxOutputTokens,
       stopWhen: stepCountIs(10),
+      temperature: config.temperature,
       ...(config.providerOptions ? { providerOptions: config.providerOptions } : {}),
     });
+
+    releaseConcurrencySlot(user.id);
 
     const { filtered } = filterOutput(result.text);
 
@@ -203,6 +278,8 @@ export const runAiGenerate = async (
       tokenUsage,
     };
   } catch (error) {
+    releaseConcurrencySlot(user.id);
+
     if (!rateLimitInfo.degraded_mode) {
       try {
         const fallbackConfig = getModelConfig(true);
@@ -214,10 +291,11 @@ export const runAiGenerate = async (
           tools,
           maxOutputTokens: fallbackConfig.maxOutputTokens,
           stopWhen: stepCountIs(10),
-          ...(fallbackConfig.providerOptions
-            ? { providerOptions: fallbackConfig.providerOptions }
-            : {}),
+          temperature: fallbackConfig.temperature,
+          ...(fallbackConfig.providerOptions ? { providerOptions: fallbackConfig.providerOptions } : {}),
         });
+
+        releaseConcurrencySlot(user.id);
 
         const { filtered } = filterOutput(result.text);
 

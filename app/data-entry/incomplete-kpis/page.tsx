@@ -52,7 +52,9 @@ function IncompleteKpiCard({ kpi }: { kpi: IncompleteKpiRow }) {
       </div>
 
       <div className="flex justify-end">
-        <Link href={`/data-entry/review-kpi`}>
+        <Link
+          href={`/data-entry/review-kpi?reportTypeId=${kpi.reportTypeId ?? ""}&reportPeriodId=${kpi.reportPeriodId ?? ""}&kpiCategoryId=${kpi.kpiCategoryId ?? ""}`}
+        >
           <Button size="sm" variant="outline" className="text-xs">
             Review KPI <ArrowRight className="ml-1 h-3 w-3" />
           </Button>
