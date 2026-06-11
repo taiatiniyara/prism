@@ -7,6 +7,7 @@
     "dev:turbo": "next dev -p 3554",
     "build": "next build --webpack",
     "start": "next start -p 3555",
+    "start:3554": "next start -p 3554",
     "lint": "eslint",
     "test": "vitest run",
     "test:unit": "vitest run test/unit",
@@ -15,6 +16,7 @@
     "db-push": "drizzle-kit push --config ./db/config.ts",
     "db-push-safe": "npm run db-push",
     "db-seed": "npx tsx scripts/seed.ts",
+    "db-seed-bsc": "npx tsx scripts/seed-bsc-template.ts",
     "deploy": "bash ./scripts/deploy.sh",
     "git-push": "git add . && git commit -m 'Update' && git push"
   },
