@@ -8,6 +8,8 @@ import { MessageBubble } from "./message-bubble";
 import { ChatInput } from "./chat-input";
 import { ChatSidebar } from "./chat-sidebar";
 
+import type { AiToolName } from "@/lib/ai/types";
+
 interface ChatSession {
   id: number;
   title: string;
@@ -29,7 +31,7 @@ interface ChatPanelProps {
 
 const MAX_CHARS = 4000;
 
-const TOOL_ACTION_MAP: Record<string, string> = {
+const TOOL_ACTION_MAP: Record<AiToolName, string> = {
   get_kpi_status: "Checking KPI status",
   get_benchmarking_data: "Fetching benchmarking data",
   get_completeness_breakdown: "Analyzing completeness",
@@ -64,6 +66,13 @@ const TOOL_ACTION_MAP: Record<string, string> = {
   get_executive_digest: "Generating executive digest",
   get_review_queue_entries: "Checking review queue",
   get_guided_entry: "Loading data entry guide",
+  query_power_bi: "Querying Power BI",
+  diagnose_power_bi: "Diagnosing Power BI",
+  discover_datasets: "Discovering datasets",
+  discover_schema: "Discovering schema",
+  discover_report: "Exploring report",
+  discover_visuals: "Discovering visuals",
+  query_visual: "Querying visual",
 };
 
 export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelProps) {
@@ -112,7 +121,6 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
         top: scrollRef.current.scrollHeight,
         behavior: smooth ? "smooth" : "auto",
       });
-      setIsAtBottom(true);
     }
   }, []);
 
@@ -312,10 +320,43 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
         const { done, value } = await reader.read();
         if (done) break;
 
-        const chunk = decoder.decode(value, { stream: true });
-        pendingContentRef.current += chunk;
-        if (!animFrameRef.current) {
-          animFrameRef.current = requestAnimationFrame(revealNext);
+        const raw = decoder.decode(value, { stream: true });
+
+        // Protocol: Lines starting with "0:" are text, "2:" are tool events
+        const lines = raw.split("\n");
+        for (const line of lines) {
+          if (line.startsWith("0:")) {
+            try {
+              const textContent = JSON.parse(line.slice(2));
+              pendingContentRef.current += textContent;
+              if (!animFrameRef.current) {
+                animFrameRef.current = requestAnimationFrame(revealNext);
+              }
+            } catch {
+              // Fallback: treat raw text as content (backward compat)
+              pendingContentRef.current += line;
+              if (!animFrameRef.current) {
+                animFrameRef.current = requestAnimationFrame(revealNext);
+              }
+            }
+          } else if (line.startsWith("2:")) {
+            try {
+              const toolEvent = JSON.parse(line.slice(2));
+              if (toolEvent.type === "tool-call" && toolEvent.toolName) {
+                setActiveToolName(toolEvent.toolName);
+              } else if (toolEvent.type === "tool-result" && toolEvent.toolName) {
+                setActiveToolName(null);
+              }
+            } catch {
+              // ignore malformed tool events
+            }
+          } else if (line.length > 0) {
+            // Backward compatibility: unmarked lines are text
+            pendingContentRef.current += line + "\n";
+            if (!animFrameRef.current) {
+              animFrameRef.current = requestAnimationFrame(revealNext);
+            }
+          }
         }
       }
 
@@ -333,19 +374,10 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
         turnId,
       };
 
-      const finalMessages = [...messagesRef.current, assistantMessage];
-      setMessages(finalMessages);
+      setMessages((prev) => [...prev, assistantMessage]);
       setStreamingContent("");
       setActiveToolName(null);
       await refreshSessions();
-
-      if (turnId && fullContent.trim().length > 100) {
-        fetch("/api/ai/chat/response", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ turnId, content: fullContent }),
-        }).catch(() => {});
-      }
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
         if (pendingContentRef.current) {
@@ -653,7 +685,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
               variant="outline"
               size="icon-sm"
               className="absolute bottom-2 left-1/2 z-10 -translate-x-1/2 rounded-full shadow"
-              onClick={() => scrollToBottom(true)}
+              onClick={() => { scrollToBottom(true); setIsAtBottom(true); }}
               aria-label="Scroll to bottom"
             >
               <ArrowDown className="size-4" />

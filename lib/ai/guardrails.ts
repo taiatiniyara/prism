@@ -7,6 +7,8 @@ interface GuardrailRule {
   pattern: RegExp;
 }
 
+const ADMIN_ROLES = new Set(["BMO", "DEV"]);
+
 const INPUT_GUARDRAIL_RULES: GuardrailRule[] = [
   {
     rule: "REF-PII-EMAIL",
@@ -85,7 +87,7 @@ export const validateToolAccess = (
   user: CurrentUser,
 ): AiGuardrailResult => {
   if (ADMIN_ONLY_TOOLS.includes(toolName)) {
-    const isAdmin = user.role === "BMO" || user.role === "DEV";
+    const isAdmin = user.role != null && ADMIN_ROLES.has(user.role.toUpperCase());
     if (!isAdmin) {
       return {
         passed: false,

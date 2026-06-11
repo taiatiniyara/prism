@@ -9,7 +9,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { Search } from "lucide-react";
 
 export interface DataEntrySelectOption {
   value: string;
@@ -44,6 +46,7 @@ interface DataEntrySelectProps extends Omit<
   size?: keyof typeof triggerSizeClassName;
   triggerClassName?: string;
   contentClassName?: string;
+  searchable?: boolean;
 }
 
 export function DataEntrySelect({
@@ -54,9 +57,17 @@ export function DataEntrySelect({
   size = "default",
   triggerClassName,
   contentClassName,
+  searchable = false,
   ...props
 }: DataEntrySelectProps) {
   const triggerSize = size === "compact" ? "sm" : "default";
+  const [search, setSearch] = React.useState("");
+
+  const filteredOptions = searchable
+    ? options.filter((option) =>
+        option.label.toLowerCase().includes(search.toLowerCase()),
+      )
+    : options;
 
   return (
     <Select {...props}>
@@ -69,7 +80,19 @@ export function DataEntrySelect({
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent className={contentClassName}>
-        {options.map((option) => (
+        {searchable ? (
+          <div className="flex items-center border-b px-3 py-2 sticky top-0 bg-white z-10">
+            <Search className="size-3.5 text-muted-foreground mr-1.5 shrink-0" />
+            <Input
+              className="h-7 border-0 p-0 text-xs shadow-none focus-visible:ring-0"
+              placeholder="Search..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.stopPropagation()}
+            />
+          </div>
+        ) : null}
+        {filteredOptions.map((option) => (
           <SelectItem
             key={option.value}
             value={option.value}
@@ -78,6 +101,11 @@ export function DataEntrySelect({
             {option.label}
           </SelectItem>
         ))}
+        {searchable && filteredOptions.length === 0 ? (
+          <p className="px-3 py-2 text-xs text-muted-foreground">
+            No results found.
+          </p>
+        ) : null}
       </SelectContent>
     </Select>
   );

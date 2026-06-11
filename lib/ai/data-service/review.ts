@@ -1,10 +1,9 @@
 import { listReviewKpiRows } from "@/app/data-entry/review-kpi/service";
 import { db } from "@/db/connection";
 import { reportPeriods } from "@/db/schema/reportPeriods";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
-import { hasGlobalUtilityAccess } from "@/lib/user.service";
-import { createToolMetadata } from "./common";
+import { createToolMetadata, resolvePeriod } from "./common";
 import type { AiToolResult } from "../types";
 
 export interface ReviewQueueItem {
@@ -23,26 +22,7 @@ export interface ReviewQueueData {
   report_period: string | null;
 }
 
-const resolvePeriod = async (
-  user: CurrentUser,
-  options: { report_period_id?: number | null; year?: number | null },
-) => {
-  if (options.report_period_id) return options.report_period_id;
-  const predicates = [];
-  if (!hasGlobalUtilityAccess(user) && user.org_id != null) {
-    predicates.push(eq(reportPeriods.utility_id, user.org_id));
-  }
-  if (options.year) {
-    predicates.push(sql`EXTRACT(YEAR FROM ${reportPeriods.report_date}) = ${options.year}`);
-  }
-  const [period] = await db
-    .select({ id: reportPeriods.id })
-    .from(reportPeriods)
-    .where(predicates.length > 0 ? and(...predicates) : undefined)
-    .orderBy(desc(reportPeriods.report_date))
-    .limit(1);
-  return period?.id ?? null;
-};
+
 
 export const getReviewQueue = async (
   user: CurrentUser,
@@ -51,8 +31,8 @@ export const getReviewQueue = async (
     year?: number | null;
   } = {},
 ): Promise<AiToolResult<ReviewQueueData>> => {
-  const periodId = await resolvePeriod(user, options);
-  if (!periodId) {
+  const period = await resolvePeriod(user, options);
+  if (!period) {
     return {
       data: { items: [], summary: { total: 0, by_status: {} }, report_period: null },
       metadata: createToolMetadata({ source: "review_kpi" }),
@@ -62,7 +42,7 @@ export const getReviewQueue = async (
 
   const rows = await listReviewKpiRows({
     reportTypeId: null,
-    reportPeriodId: periodId,
+    reportPeriodId: period.id,
     kpiCategoryId: null,
     kpiSubcategoryId: null,
     serviceAreaId: null,
@@ -89,7 +69,7 @@ export const getReviewQueue = async (
   const [p] = await db
     .select({ display: reportPeriods.report_date })
     .from(reportPeriods)
-    .where(eq(reportPeriods.id, periodId))
+    .where(eq(reportPeriods.id, period.id))
     .limit(1);
 
   return {
@@ -123,8 +103,8 @@ export const getInputStatus = async (
     year?: number | null;
   } = { kpi_name: "" },
 ): Promise<AiToolResult<InputStatusData>> => {
-  const periodId = await resolvePeriod(user, options);
-  if (!periodId) {
+  const period = await resolvePeriod(user, options);
+  if (!period) {
     return {
       data: { kpi_name: options.kpi_name, formula: null, inputs: [], missing_inputs: [] },
       metadata: createToolMetadata({ source: "review_kpi" }),
@@ -134,7 +114,7 @@ export const getInputStatus = async (
 
   const rows = await listReviewKpiRows({
     reportTypeId: null,
-    reportPeriodId: periodId,
+    reportPeriodId: period.id,
     kpiCategoryId: null,
     kpiSubcategoryId: null,
     serviceAreaId: null,

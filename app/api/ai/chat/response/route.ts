@@ -29,7 +29,7 @@ export async function POST(request: Request) {
       .update(aiChatTurn)
       .set({ assistant_response: filtered })
       .where(eq(aiChatTurn.id, body.turnId))
-      .returning({ id: aiChatTurn.id });
+      .returning({ id: aiChatTurn.id, session_id: aiChatTurn.session_id });
 
     if (!updated) {
       return Response.json({ message: "Turn not found." }, { status: 404 });

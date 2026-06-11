@@ -38,7 +38,14 @@ export const evaluateFormula = (
       values.push(value);
     });
 
-    // Formula text is authored in controlled input definition settings.
+    const SANITIZED_REGEX = /^[\s\d+\-*/%().,<>=!&|?:A-Za-z_]+$/;
+    if (!SANITIZED_REGEX.test(rewrittenFormula)) {
+      return {
+        status: "skipped",
+        reason: "evaluation-error",
+      };
+    }
+
     const expression = new Function(
       ...safeNames,
       `return (${rewrittenFormula});`,

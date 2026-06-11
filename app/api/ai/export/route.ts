@@ -8,6 +8,17 @@ export async function POST(request: Request) {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
   }
 
+  const origin = request.headers.get("origin");
+  const referer = request.headers.get("referer");
+  const host = request.headers.get("host") || "";
+  const isSameOrigin = !origin && !referer
+    || (!!origin && origin.includes(host))
+    || (!!referer && referer.includes(host));
+
+  if (!isSameOrigin) {
+    return Response.json({ message: "Cross-origin requests are not allowed." }, { status: 403 });
+  }
+
   let body: {
     format: "csv" | "excel";
     data: {

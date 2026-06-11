@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import { ArrowUp, Square } from "lucide-react";
+import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
 
 interface ChatInputProps {
@@ -34,7 +35,10 @@ export function ChatInput({
   const handleSubmit = () => {
     const trimmed = input.trim();
     if (!trimmed || isLoading || disabled) return;
-    if (maxLength && trimmed.length > maxLength) return;
+    if (maxLength && trimmed.length > maxLength) {
+      toast.error(`Message exceeds the ${maxLength} character limit.`);
+      return;
+    }
     onSend(trimmed);
     setInput("");
   };

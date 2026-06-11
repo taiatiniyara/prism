@@ -21,7 +21,7 @@ export const ROLE_ROUTE_PREFIXES: Record<string, string[]> = {
     "/data-entry/downloads",
     "/prism-ai",
   ],
-  BLO: ["/dashboard", "/data-entry", "/profile", "/prism-ai"],
+  BLO: ["/dashboard", "/data-entry", "/settings", "/profile", "/prism-ai"],
   CEO: ["/dashboard", "/data-entry", "/profile", "/prism-ai"],
   DAOF: ["/dashboard", "/data-entry", "/profile", "/prism-ai"],
   DAOH: ["/dashboard", "/data-entry", "/profile", "/prism-ai"],

@@ -45,7 +45,7 @@ export default function ReportPeriodTable(props: {
   };
 
   return (
-    <div className="max-h-[calc(100vh-100px)] border overflow-scroll">
+    <div className="max-h-[calc(100vh-100px)] border overflow-scroll [touch-action:pan-x_pan-y] [-webkit-overflow-scrolling:touch]">
       <table className="text-xs w-full">
         <thead className="sticky top-0 bg-slate-200">
           <tr>

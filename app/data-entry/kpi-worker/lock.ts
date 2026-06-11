@@ -1,6 +1,8 @@
+import { db } from "@/db/connection";
+import { sql } from "drizzle-orm";
 import type { KpiWorkerScope } from "./types";
+import crypto from "node:crypto";
 
-const inFlightScopes = new Set<string>();
 const deferredFollowUps = new Set<string>();
 
 const normalizeScopeValue = (value: number | null | undefined): number | null =>
@@ -22,18 +24,43 @@ export const buildScopeLockKey = (scope: KpiWorkerScope): string => {
   return JSON.stringify(payload);
 };
 
-export const acquireScopeLock = (scope: KpiWorkerScope): boolean => {
-  const key = buildScopeLockKey(scope);
-  if (inFlightScopes.has(key)) {
-    return false;
-  }
-
-  inFlightScopes.add(key);
-  return true;
+const toLockId = (key: string): string => {
+  const hash = crypto.createHash("sha256").update(key).digest("hex");
+  return BigInt("0x" + hash.substring(0, 16)).toString();
 };
 
-export const releaseScopeLock = (scope: KpiWorkerScope): void => {
-  inFlightScopes.delete(buildScopeLockKey(scope));
+export const acquireScopeLock = async (
+  scope: KpiWorkerScope,
+): Promise<boolean> => {
+  const key = buildScopeLockKey(scope);
+  const lockId = toLockId(key);
+
+  const [result] = await db.execute<{ acquired: boolean }>(
+    sql`SELECT pg_try_advisory_lock(${sql.raw(lockId)}::bigint) AS acquired`,
+  );
+
+  return (result as unknown as { acquired: boolean })?.acquired === true;
+};
+
+const activeLocks = new Set<string>();
+
+export const releaseScopeLock = async (
+  scope: KpiWorkerScope,
+): Promise<void> => {
+  const key = buildScopeLockKey(scope);
+  const lockId = toLockId(key);
+
+  if (!activeLocks.has(key)) return;
+
+  try {
+    await db.execute(
+      sql`SELECT pg_advisory_unlock(${sql.raw(lockId)}::bigint)`,
+    );
+  } catch {
+    // lock may have been released by connection close
+  }
+
+  activeLocks.delete(key);
 };
 
 export const markDeferredFollowUp = (scope: KpiWorkerScope): void => {

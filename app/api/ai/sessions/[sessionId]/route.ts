@@ -1,7 +1,7 @@
 import { db } from "@/db/connection";
 import { aiChatSession, aiChatTurn, aiToolCall } from "@/db/schema/ai";
 import { getCurrentUser } from "@/lib/user.service";
-import { and, asc, eq, sql } from "drizzle-orm";
+import { and, asc, eq, inArray, sql } from "drizzle-orm";
 
 export async function GET(
   request: Request,
@@ -43,19 +43,25 @@ export async function GET(
     .where(eq(aiChatTurn.session_id, sessionIdNum))
     .orderBy(asc(aiChatTurn.turn_number));
 
-  const turnsWithToolCalls = await Promise.all(
-    turns.map(async (turn) => {
-      const toolCalls = await db
-        .select()
-        .from(aiToolCall)
-        .where(eq(aiToolCall.turn_id, turn.id));
+  const turnIds = turns.map((t) => t.id);
 
-      return {
-        ...turn,
-        tool_calls: toolCalls,
-      };
-    }),
-  );
+  const toolCallsByTurnId: Record<number, typeof aiToolCall.$inferSelect[]> = {};
+  if (turnIds.length > 0) {
+    const allToolCalls = await db
+      .select()
+      .from(aiToolCall)
+      .where(inArray(aiToolCall.turn_id, turnIds));
+    for (const tc of allToolCalls) {
+      const arr = toolCallsByTurnId[tc.turn_id] || [];
+      arr.push(tc);
+      toolCallsByTurnId[tc.turn_id] = arr;
+    }
+  }
+
+  const turnsWithToolCalls = turns.map((turn) => ({
+    ...turn,
+    tool_calls: toolCallsByTurnId[turn.id] || [],
+  }));
 
   return Response.json({ session, turns: turnsWithToolCalls });
 }

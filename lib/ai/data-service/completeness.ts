@@ -3,7 +3,7 @@ import { db } from "@/db/connection";
 import { managedListItems } from "@/db/schema/managedLists";
 import { eq, and } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
-import { createToolMetadata } from "./common";
+import { createToolMetadata, MANAGED_LIST_PARENT_IDS } from "./common";
 import type { AiToolResult } from "../types";
 
 export type CompletenessDimension =
@@ -70,37 +70,37 @@ export const getCompletenessBreakdown = async (
       items = filterOptions.serviceAreas.map((i) => ({ id: i.id, name: i.name, count: 0, percentage: 0 }));
       break;
     case "energy_source": {
-      const sources = await fetchManagedListItems(12);
+      const sources = await fetchManagedListItems(MANAGED_LIST_PARENT_IDS.ENERGY_SOURCE);
       items = sources.map((i) => ({ name: i.name, count: 0, percentage: 0 }));
       break;
     }
     case "energy_provider": {
-      const providers = await fetchManagedListItems(13);
+      const providers = await fetchManagedListItems(MANAGED_LIST_PARENT_IDS.ENERGY_PROVIDER);
       items = providers.map((i) => ({ name: i.name, count: 0, percentage: 0 }));
       break;
     }
     case "energy_type": {
-      const types = await fetchManagedListItems(15);
+      const types = await fetchManagedListItems(MANAGED_LIST_PARENT_IDS.ENERGY_TYPE);
       items = types.map((i) => ({ name: i.name, count: 0, percentage: 0 }));
       break;
     }
     case "energy_resource": {
-      const resources = await fetchManagedListItems(20);
+      const resources = await fetchManagedListItems(MANAGED_LIST_PARENT_IDS.ENERGY_RESOURCE);
       items = resources.map((i) => ({ name: i.name, count: 0, percentage: 0 }));
       break;
     }
     case "aggregation_level": {
-      const levels = await fetchManagedListItems(27);
+      const levels = await fetchManagedListItems(MANAGED_LIST_PARENT_IDS.AGGREGATION_LEVEL);
       items = levels.map((i) => ({ name: i.name, count: 0, percentage: 0 }));
       break;
     }
     case "customer_type": {
-      const types = await fetchManagedListItems(29);
+      const types = await fetchManagedListItems(MANAGED_LIST_PARENT_IDS.CUSTOMER_TYPE);
       items = types.map((i) => ({ name: i.name, count: 0, percentage: 0 }));
       break;
     }
     case "payment_mode": {
-      const modes = await fetchManagedListItems(31);
+      const modes = await fetchManagedListItems(MANAGED_LIST_PARENT_IDS.PAYMENT_MODE);
       items = modes.map((i) => ({ name: i.name, count: 0, percentage: 0 }));
       break;
     }

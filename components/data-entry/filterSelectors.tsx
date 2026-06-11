@@ -66,6 +66,7 @@ export function FilterSelect({
         triggerClassName={
           compact ? "data-[size=sm]:h-7 px-1 text-[10px]" : "h-8"
         }
+        searchable={options.length > 10}
       />
     </div>
   );

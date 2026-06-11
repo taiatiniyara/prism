@@ -18,3 +18,4 @@ export * from "./compliance";
 export * from "./advanced";
 export * from "./benchmarks";
 export * from "./utils";
+export * from "./powerbi";

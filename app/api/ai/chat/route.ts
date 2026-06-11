@@ -2,23 +2,120 @@ import { db } from "@/db/connection";
 import { aiChatSession, aiChatTurn, aiToolCall } from "@/db/schema/ai";
 import { getPromptVersion } from "@/lib/ai";
 import { validateInput, filterOutput } from "@/lib/ai/guardrails";
-import { recordRequest, recordError, recordToolCall } from "@/lib/ai/rate-limit";
+import { recordError, recordToolCall } from "@/lib/ai/rate-limit";
 import type { AiChatMessage } from "@/lib/ai/types";
 import { getCurrentUser } from "@/lib/user.service";
-import { streamText, stepCountIs } from "ai";
-import { and, eq, sql } from "drizzle-orm";
-import { createAiTools } from "@/lib/ai/tools";
+import { eq, sql, and } from "drizzle-orm";
 import { getSystemPrompt } from "@/lib/ai/prompt";
 import { checkUserUtility } from "@/lib/ai/data-service/utils";
-import { anthropic } from "@ai-sdk/anthropic";
-import { AI_MODELS, AI_RATE_LIMITS } from "@/lib/ai/types";
+import { runAiStream, runAiGenerate } from "@/lib/ai/service";
 
 export const maxDuration = 120;
+
+class RateLimitError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "RateLimitError";
+  }
+}
+
+class GuardrailError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "GuardrailError";
+  }
+}
+
+const ADMIN_ROLES = new Set(["BMO", "DEV"]);
+const isAdminRole = (role: string | null | undefined): boolean =>
+  role != null && ADMIN_ROLES.has(role.toUpperCase());
 
 const deriveSessionTitle = (message: string): string => {
   const normalized = message.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
   const capped = normalized.length > 40 ? normalized.slice(0, 37) + "..." : normalized;
   return capped || "New chat";
+};
+
+const summarizeConversation = async (
+  sessionId: number,
+  userId: string,
+): Promise<void> => {
+  try {
+    const turns = await db
+      .select({
+        user_message: aiChatTurn.user_message,
+        assistant_response: aiChatTurn.assistant_response,
+      })
+      .from(aiChatTurn)
+      .where(eq(aiChatTurn.session_id, sessionId))
+      .orderBy(sql`${aiChatTurn.turn_number} ASC`);
+
+    if (turns.length < 8) return;
+
+    const conversationText = turns
+      .slice(0, -2)
+      .map((t, i) => `[Turn ${i + 1}] User: ${t.user_message}\nAssistant: ${(t.assistant_response ?? "").slice(0, 300)}`)
+      .join("\n\n");
+
+    const { reply } = await runAiGenerate({
+      messages: [
+        {
+          role: "user",
+          content: `Summarise the following PRISM AI conversation into a concise JSON object with these keys:
+- utility_ids (array of mentioned utility IDs or names)
+- report_periods (array of mentioned period IDs or years)
+- topics (array of 3-5 main topics discussed)
+- key_findings (array of 1-3 important findings or conclusions)
+
+Only use information explicitly present in the conversation. Return valid JSON only.
+
+Conversation:
+${conversationText}`,
+        },
+      ],
+      user: { id: userId, role: null, org_id: null } as never,
+      maxHistoryTurns: 1,
+    });
+
+    const jsonStart = reply.indexOf("{");
+    const jsonEnd = reply.lastIndexOf("}") + 1;
+    if (jsonStart >= 0 && jsonEnd > jsonStart) {
+      const parsed = JSON.parse(reply.slice(jsonStart, jsonEnd));
+      await db
+        .update(aiChatSession)
+        .set({ context_summary: parsed })
+        .where(eq(aiChatSession.id, sessionId));
+    }
+  } catch (err) {
+    console.error("[ai-chat] Summarization failed:", err instanceof Error ? err.message : String(err));
+    recordError(userId).catch(() => {});
+  }
+};
+
+const sanitizeClientMessages = (messages: AiChatMessage[]): AiChatMessage[] => {
+  return messages.map((msg) => {
+    if (msg.role === "user" || msg.role === "assistant") {
+      return { role: msg.role, content: msg.content };
+    }
+    return {
+      role: msg.role,
+      content: typeof msg.content === "string" ? msg.content : "",
+    };
+  });
+};
+
+const validateContextSummary = (ctx: unknown): Record<string, unknown> | null => {
+  if (!ctx || typeof ctx !== "object") return null;
+  const obj = ctx as Record<string, unknown>;
+  const isValidStringArray = (v: unknown): v is string[] =>
+    Array.isArray(v) && v.every((item) => typeof item === "string" && item.length <= 200);
+  const result: Record<string, unknown> = {};
+  if (isValidStringArray(obj.topics)) result.topics = obj.topics.slice(0, 5);
+  if (isValidStringArray(obj.key_findings)) result.key_findings = obj.key_findings.slice(0, 5);
+  if (isValidStringArray(obj.utility_ids)) result.utility_ids = obj.utility_ids.slice(0, 10);
+  if (Array.isArray(obj.report_periods) && obj.report_periods.every((p) => typeof p === "string" || typeof p === "number"))
+    result.report_periods = obj.report_periods.slice(0, 5);
+  return Object.keys(result).length > 0 ? result : null;
 };
 
 export async function POST(request: Request) {
@@ -42,7 +139,9 @@ export async function POST(request: Request) {
     return Response.json({ message: "Messages are required." }, { status: 400 });
   }
 
-  for (const msg of body.messages) {
+  const cleanMessages = sanitizeClientMessages(body.messages);
+
+  for (const msg of cleanMessages) {
     if (msg.role === "user" && typeof msg.content === "string") {
       const validation = validateInput(msg.content);
       if (!validation.passed) {
@@ -54,7 +153,7 @@ export async function POST(request: Request) {
     }
   }
 
-  const lastUserMessage = body.messages.filter((m) => m.role === "user").pop();
+  const lastUserMessage = cleanMessages.filter((m) => m.role === "user").pop();
   if (!lastUserMessage || typeof lastUserMessage.content !== "string") {
     return Response.json({ message: "No user message found." }, { status: 400 });
   }
@@ -67,13 +166,16 @@ export async function POST(request: Request) {
     );
   }
 
-  let sessionId: number;
-  let turnNumber: number;
+  // Declared outside try so accessible in catch for error recovery
+  let sessionId = 0;
+  let turnNumber = 0;
+  let turnId = 0;
+  let existingContextSummary: unknown = null;
 
   try {
     if (body.sessionId) {
       const [existingSession] = await db
-        .select({ id: aiChatSession.id })
+        .select({ id: aiChatSession.id, context_summary: aiChatSession.context_summary })
         .from(aiChatSession)
         .where(
           and(
@@ -89,6 +191,7 @@ export async function POST(request: Request) {
       }
 
       sessionId = existingSession.id;
+      existingContextSummary = existingSession.context_summary;
 
       const [maxTurn] = await db
         .select({ max_turn: sql<number>`COALESCE(MAX(${aiChatTurn.turn_number}), 0)` })
@@ -120,28 +223,44 @@ export async function POST(request: Request) {
       })
       .returning({ id: aiChatTurn.id });
 
+    turnId = createdTurn.id;
+
     await db
       .update(aiChatSession)
       .set({ last_turn_at: new Date() })
       .where(eq(aiChatSession.id, sessionId));
 
-    const modelName = AI_MODELS.primary;
-    const isThinkingModel = /^claude-sonnet-4/i.test(modelName);
-
-    const preparedMessages = body.messages
-      .slice(-AI_RATE_LIMITS.max_history_turns * 2)
-      .map((msg: AiChatMessage) => ({
-        role: msg.role,
-        content: (msg.content as string).trim(),
-      }))
-      .filter((msg) => msg.content.length > 0);
-
-    const conversationTurns = preparedMessages.length;
+    const conversationTurns = cleanMessages.length;
     const shouldSummarize = conversationTurns > 8;
 
-    const tools = createAiTools(user);
     const utilityCheck = checkUserUtility(user);
+    let contextBlock = "";
+
+    const validatedContext = validateContextSummary(existingContextSummary);
+    if (validatedContext) {
+      const parts: string[] = [];
+      if (Array.isArray(validatedContext.topics)) parts.push(`Previous topics: ${validatedContext.topics.join(", ")}`);
+      if (Array.isArray(validatedContext.key_findings)) parts.push(`Previous findings: ${validatedContext.key_findings.join(", ")}`);
+      if (parts.length) contextBlock = `\n\nConversation context from earlier turns: ${parts.join(". ")}`;
+    }
+
+    const roleContext = user.role
+      ? `\n\nCurrent user role: ${user.role}. ${
+          isAdminRole(user.role)
+            ? "This user is a platform administrator. They can access all utilities, approve custom KPIs, and manage configuration. Be thorough and technical."
+            : user.role === "BLO"
+              ? "This user is a blended learning officer. They need actionable insights for their utility with clear next steps and educational context."
+              : user.role === "CEO"
+                ? "This user is a CEO/executive. Prioritise strategic insights, trends, and high-level summaries. Avoid operational minutiae."
+                : user.role === "EXT"
+                  ? "This user is an external stakeholder. They have limited data access. Focus on what's available and provide context about PRISM's structure."
+                  : "This user manages data entry and review. Focus on actionable tasks, data quality, and what needs attention."
+        }`
+      : "";
+
     const systemPrompt = getSystemPrompt() +
+      roleContext +
+      contextBlock +
       (!utilityCheck.valid
         ? `\n\nIMPORTANT: ${utilityCheck.message}`
         : "") +
@@ -149,46 +268,47 @@ export async function POST(request: Request) {
         ? `\n\nNOTE: This conversation has ${conversationTurns} messages. Before answering, briefly summarise the key context from earlier messages in 1-2 sentences, then answer the latest question concisely.`
         : "");
 
-    const result = streamText({
-      model: anthropic(modelName),
-      system: systemPrompt,
-      messages: preparedMessages,
-      tools,
-      maxOutputTokens: isThinkingModel ? 8000 : 2500,
-      stopWhen: stepCountIs(10),
-      ...(isThinkingModel
-        ? { providerOptions: { anthropic: { thinking: { type: "enabled" as const, budgetTokens: 12000 } } } }
-        : {}),
-      onFinish: async ({ text, usage, toolCalls }) => {
+    const { stream, fullStream, model, wasFallback, promptVersion } = await runAiStream({
+      messages: cleanMessages,
+      user,
+      systemPromptOverride: systemPrompt,
+      onFinish: async ({ text, usage, toolCalls: toolCallsFromStream, model: usedModel, wasFallback: fallbackFlag }) => {
         const turnLatencyMs = Date.now() - startedAt;
 
         try {
-          if (!text || text.trim().length === 0) {
-            console.error("[ai-chat] onFinish received empty text for turn", createdTurn.id);
-          } else if (text.trim().length < 50) {
-            console.warn("[ai-chat] onFinish received suspiciously short response (" + text.trim().length + " chars) for turn", createdTurn.id, "preview:", text.slice(0, 200));
-          }
-
           const { filtered } = filterOutput(text);
+          const finalText = filtered.trim() || "I received your question but was unable to generate a response. This may be due to model output limits. Could you try rephrasing or asking a more specific question?";
+
+          const updateData: Record<string, unknown> = {
+            assistant_response: finalText,
+            model_used: usedModel,
+            model_was_fallback: fallbackFlag,
+            token_count_input: usage.inputTokens,
+            token_count_output: usage.outputTokens,
+            latency_ms: turnLatencyMs,
+          };
+
+          const [existingTurn] = await db
+            .select({ assistant_response: aiChatTurn.assistant_response })
+            .from(aiChatTurn)
+            .where(eq(aiChatTurn.id, turnId))
+            .limit(1);
+
+          if (existingTurn?.assistant_response) {
+            updateData.assistant_response = existingTurn.assistant_response + finalText;
+          }
 
           await db
             .update(aiChatTurn)
-            .set({
-              assistant_response: filtered,
-              model_used: modelName,
-              model_was_fallback: false,
-              token_count_input: usage?.inputTokens ?? 0,
-              token_count_output: usage?.outputTokens ?? 0,
-              latency_ms: turnLatencyMs,
-            })
-            .where(eq(aiChatTurn.id, createdTurn.id));
+            .set(updateData)
+            .where(eq(aiChatTurn.id, turnId));
 
-          if (toolCalls && toolCalls.length > 0) {
-            for (const toolCall of toolCalls) {
+          if (toolCallsFromStream && toolCallsFromStream.length > 0) {
+            for (const toolCall of toolCallsFromStream) {
               await db.insert(aiToolCall).values({
-                turn_id: createdTurn.id,
+                turn_id: turnId,
                 tool_name: toolCall.toolName,
-                tool_args: toolCall.input,
+                tool_args: toolCall.input as Record<string, unknown>,
                 status: "success",
               });
               try {
@@ -199,35 +319,112 @@ export async function POST(request: Request) {
             }
           }
 
-          await recordRequest(
-            user.id,
-            (usage?.inputTokens ?? 0) + (usage?.outputTokens ?? 0),
-          );
+          // Best-effort summarization
+          if (shouldSummarize) {
+            summarizeConversation(sessionId, user.id).catch(() => {});
+          }
         } catch (err) {
           console.error("[ai-chat] Failed to persist turn response:", err instanceof Error ? err.message : String(err));
         }
       },
     });
-    return result.toTextStreamResponse({
 
+    const encoder = new TextEncoder();
+
+    let fullStreamReader: ReadableStreamDefaultReader<unknown> | null = null;
+    try {
+      fullStreamReader = fullStream.getReader();
+    } catch {
+      // fullStream not available, fall back to text-only
+    }
+
+    const combined = new ReadableStream({
+      async start(controller) {
+        const textReader = stream.pipeThrough(new TransformStream()).getReader();
+
+        let textDone = false;
+        let toolDone = !fullStreamReader;
+
+        const readText = async () => {
+          try {
+            while (true) {
+              const { done, value } = await textReader.read();
+              if (done) break;
+
+              const text = typeof value === "string" ? value : new TextDecoder().decode(value);
+              if (text.length > 0) {
+                controller.enqueue(encoder.encode(`0:${JSON.stringify(text)}\n`));
+              }
+            }
+          } catch {
+            // stream error
+          }
+          textDone = true;
+          if (toolDone) {
+            try { controller.close(); } catch { /* already closed */ }
+          }
+        };
+
+        const readTools = async () => {
+          if (!fullStreamReader) return;
+          try {
+            while (true) {
+              const { done, value } = await fullStreamReader.read();
+              if (done) break;
+
+              if (value && typeof value === "object") {
+                const event = value as Record<string, unknown>;
+                if ((event.type === "tool-call" || event.type === "tool-result") && event.toolName) {
+                  const payload = JSON.stringify({
+                    type: event.type,
+                    toolName: event.toolName,
+                  });
+                  controller.enqueue(encoder.encode(`2:${payload}\n`));
+                }
+              }
+            }
+          } catch {
+            // stream ended or errored
+          }
+          toolDone = true;
+          if (textDone) {
+            try { controller.close(); } catch { /* already closed */ }
+          }
+        };
+
+        readText();
+        readTools();
+      },
+    });
+
+    return new Response(combined, {
       headers: {
+        "Content-Type": "text/plain; charset=utf-8",
+        "Cache-Control": "no-cache",
+        Connection: "keep-alive",
         "X-Session-Id": String(sessionId),
-        "X-Turn-Id": String(createdTurn.id),
-        "X-Model": modelName,
+        "X-Turn-Id": String(turnId),
+        "X-Model": model,
+        "X-Was-Fallback": String(wasFallback),
+        "X-Prompt-Version": promptVersion,
+        "X-Protocol-Version": "2",
       },
     });
   } catch (error) {
-    console.error("AI chat error:", error instanceof Error ? error.message : String(error));
+    const errMsg = error instanceof Error ? error.message : String(error);
+    console.error("AI chat error:", errMsg);
     const turnLatencyMs = Date.now() - startedAt;
 
     try {
-      await db
-        .update(aiChatTurn)
-        .set({
-          error_message: error instanceof Error ? error.message.slice(0, 500) : "Unknown error",
-          latency_ms: turnLatencyMs,
-        })
-        .where(sql`${aiChatTurn.id} IS NOT NULL`);
+      if (turnId > 0) {
+        await db
+          .update(aiChatTurn)
+          .set({
+            error_message: errMsg.slice(0, 500),
+            latency_ms: turnLatencyMs,
+          })
+          .where(eq(aiChatTurn.id, turnId));
+      }
     } catch {
       // Non-critical
     }
@@ -237,6 +434,29 @@ export async function POST(request: Request) {
     } catch {
       // Non-critical
     }
+
+    if (error instanceof RateLimitError) {
+      return Response.json(
+        { message: errMsg },
+        { status: 429, headers: { "Retry-After": "60" } },
+      );
+    }
+
+    if (error instanceof GuardrailError) {
+      return Response.json({ message: errMsg }, { status: 400 });
+    }
+
+    if (errMsg.startsWith("RATE_LIMIT:")) {
+      return Response.json(
+        { message: errMsg.slice(11) },
+        { status: 429, headers: { "Retry-After": "60" } },
+      );
+    }
+
+    if (errMsg.startsWith("GUARDRAIL:")) {
+      return Response.json({ message: errMsg.slice(10) }, { status: 400 });
+    }
+
     return Response.json(
       { message: "An unexpected error occurred. Please try again." },
       { status: 500 },

@@ -1,3 +1,5 @@
+import { db } from "@/db/connection";
+import { aiBenchmark } from "@/db/schema/ai";
 import type { AiToolResult } from "../types";
 import { createToolMetadata } from "./common";
 
@@ -14,7 +16,7 @@ export interface IndustryBenchmark {
   source: string;
 }
 
-const BENCHMARKS: IndustryBenchmark[] = [
+const SEED_BENCHMARKS: Omit<IndustryBenchmark, "id" | "created_at" | "updated_at">[] = [
   {
     kpi_name: "SAIDI",
     category: "Customer / Reliability",
@@ -185,6 +187,35 @@ const BENCHMARKS: IndustryBenchmark[] = [
   },
 ];
 
+let seedAttempted = false;
+
+const seedBenchmarks = async (): Promise<void> => {
+  if (seedAttempted) return;
+  seedAttempted = true;
+
+  try {
+    for (const b of SEED_BENCHMARKS) {
+      await db
+        .insert(aiBenchmark)
+        .values({
+          kpi_name: b.kpi_name,
+          category: b.category,
+          description: b.description,
+          unit: b.unit,
+          direction: b.direction,
+          developing_nation_benchmark: b.developing_nation_benchmark ? Math.round(b.developing_nation_benchmark) : null,
+          developed_nation_benchmark: b.developed_nation_benchmark ? Math.round(b.developed_nation_benchmark) : null,
+          pacific_regional_average: b.pacific_regional_average ? Math.round(b.pacific_regional_average) : null,
+          ppa_target: b.ppa_target ? Math.round(b.ppa_target) : null,
+          source: b.source,
+        })
+        .onConflictDoNothing();
+    }
+  } catch {
+    // Table may not exist yet, fall back to in-memory data
+  }
+};
+
 export interface BenchmarkData {
   benchmarks: IndustryBenchmark[];
   categories: Record<string, IndustryBenchmark[]>;
@@ -192,15 +223,52 @@ export interface BenchmarkData {
 
 export const getIndustryBenchmarks = async (
 ): Promise<AiToolResult<BenchmarkData>> => {
+  try {
+    await seedBenchmarks();
+
+    const rows = await db.select().from(aiBenchmark);
+
+    if (rows.length > 0) {
+      const benchmarks: IndustryBenchmark[] = rows.map((r) => ({
+        kpi_name: r.kpi_name,
+        category: r.category,
+        description: r.description ?? "",
+        unit: r.unit,
+        direction: r.direction,
+        developing_nation_benchmark: r.developing_nation_benchmark,
+        developed_nation_benchmark: r.developed_nation_benchmark,
+        pacific_regional_average: r.pacific_regional_average,
+        ppa_target: r.ppa_target,
+        source: r.source ?? "",
+      }));
+
+      const categories: Record<string, IndustryBenchmark[]> = {};
+      for (const b of benchmarks) {
+        const arr = categories[b.category] ?? [];
+        arr.push(b);
+        categories[b.category] = arr;
+      }
+
+      return {
+        data: { benchmarks, categories },
+        metadata: createToolMetadata({ source: "industry_reference", freshness: new Date("2024-01-01") }),
+      };
+    }
+  } catch {
+    // DB table not available, fall through to in-memory data
+  }
+
+  // Fallback: in-memory data
+  const benchmarks = SEED_BENCHMARKS as IndustryBenchmark[];
   const categories: Record<string, IndustryBenchmark[]> = {};
-  for (const b of BENCHMARKS) {
+  for (const b of benchmarks) {
     const arr = categories[b.category] ?? [];
     arr.push(b);
     categories[b.category] = arr;
   }
 
   return {
-    data: { benchmarks: BENCHMARKS, categories },
+    data: { benchmarks, categories },
     metadata: createToolMetadata({ source: "industry_reference", freshness: new Date("2024-01-01") }),
   };
 };
@@ -225,20 +293,29 @@ export const getExecutiveDigest = async (
 ): Promise<AiToolResult<ExecutiveDigestData>> => {
   return {
     data: {
-      utility_name: "Your Utility",
-      period: "Latest Period",
-      overview: "Use get_kpi_status, get_scorecard_summary, and get_risk_assessment to populate this digest. Key metrics will auto-populate based on your utility's data.",
-      key_metrics: [
-        { label: "Scorecard Score", value: "Pending", trend: "flat", status: "warning" },
-        { label: "Completion Rate", value: "Query status", trend: "flat", status: "warning" },
-        { label: "Approved KPIs", value: "Query status", trend: "flat", status: "warning" },
-        { label: "Review Queue", value: "Query review", trend: "flat", status: "warning" },
+      utility_name: "Resolved from context",
+      period: "Resolved from context",
+      overview: "Use the tools listed in top_actions and risks to populate this digest with actual data.",
+      key_metrics: [],
+      top_actions: [
+        "Call get_scorecard_summary for the latest balanced scorecard overview",
+        "Call get_kpi_diagnostics for stale, error, and missing-input KPIs",
+        "Call get_risk_assessment to identify high-risk utilities",
+        "Call get_compliance_status for regulatory compliance issues",
+        "Call get_benchmarking_data to see peer rankings",
+        "Call get_industry_benchmarks for regional performance targets",
+        "Call get_trend_analysis for year-over-year direction",
+        "Call get_what_changed for the biggest KPI movers since last period",
       ],
-      top_actions: ["Query get_review_queue for pending approvals", "Query get_kpi_diagnostics for stale/error KPIs", "Query get_risk_assessment for risk profile"],
-      risks: ["Query get_risk_assessment for risk flags", "Query get_compliance_status for compliance issues"],
+      risks: [
+        "Check get_risk_assessment for at-risk utilities and severity flags",
+        "Check get_compliance_status for KPIs outside regulatory limits",
+        "Check get_kpi_diagnostics for KPIs with calculation errors",
+        "Review get_review_queue for approval bottlenecks",
+      ],
       data_completeness_pct: 0,
-      benchmark_context: "Query get_industry_benchmarks for regional standards and targets.",
+      benchmark_context: "After calling get_industry_benchmarks, compare your utility's actual values against PPA targets and developing/developed nation benchmarks. Use compare_kpis_across_utilities for multi-utility context.",
     },
-    metadata: createToolMetadata({ source: "executive_digest", freshness: new Date() }),
+    metadata: createToolMetadata({ source: "executive_digest" }),
   };
 };

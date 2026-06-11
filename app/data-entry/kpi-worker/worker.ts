@@ -108,7 +108,7 @@ export async function runKpiWorker(
     await assertKpiWorkerScopeAuthorization(user, trigger.scope);
   }
 
-  if (!acquireScopeLock(trigger.scope)) {
+  if (!(await acquireScopeLock(trigger.scope))) {
     markDeferredFollowUp(trigger.scope);
     await markDeferredFollowUpForScope(
       trigger.scope.reportPeriodId,
@@ -312,7 +312,7 @@ export async function runKpiWorker(
       failedKpiCount: 1,
     };
   } finally {
-    releaseScopeLock(trigger.scope);
+    await releaseScopeLock(trigger.scope);
 
     if (consumeDeferredFollowUp(trigger.scope)) {
       queueMicrotask(() => {

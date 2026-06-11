@@ -3,37 +3,10 @@ import { kpi, kpiDefinitions } from "@/db/schema/kpi";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { organisations } from "@/db/schema/utility";
 import { countries, subRegions } from "@/db/schema/country";
-import { eq, and, sql, desc } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
-import { hasGlobalUtilityAccess } from "@/lib/user.service";
-import { createToolMetadata } from "./common";
+import { createToolMetadata, resolvePeriodId } from "./common";
 import type { AiToolResult } from "../types";
-
-const resolvePeriodId = async (
-  user: CurrentUser,
-  reportPeriodId?: number | null,
-  year?: number | null,
-  month?: number | null,
-): Promise<number | null> => {
-  if (reportPeriodId) return reportPeriodId;
-  const predicates = [];
-  if (!hasGlobalUtilityAccess(user) && user.org_id != null) {
-    predicates.push(eq(reportPeriods.utility_id, user.org_id));
-  }
-  if (year) {
-    predicates.push(sql`EXTRACT(YEAR FROM ${reportPeriods.report_date}) = ${year}`);
-  }
-  if (month) {
-    predicates.push(sql`EXTRACT(MONTH FROM ${reportPeriods.report_date}) = ${month}`);
-  }
-  const [period] = await db
-    .select({ id: reportPeriods.id })
-    .from(reportPeriods)
-    .where(predicates.length > 0 ? and(...predicates) : undefined)
-    .orderBy(desc(reportPeriods.report_date))
-    .limit(1);
-  return period?.id ?? null;
-};
 
 // --- PEER-BASED TARGET SETTING ---
 
@@ -64,7 +37,7 @@ export const getKpiTargets = async (
     all_utilities?: boolean;
   } = {},
 ): Promise<AiToolResult<TargetSettingData>> => {
-  const periodId = await resolvePeriodId(user, options.report_period_id, options.year, options.month);
+  const periodId = await resolvePeriodId(user, { report_period_id: options.report_period_id, year: options.year, month: options.month });
   if (!periodId) {
     return { data: { recommendations: [], peer_count: 0, report_period: null }, metadata: createToolMetadata({ source: "kpi_values" }), error: "No period found" };
   }
@@ -152,7 +125,7 @@ export const getKpiCorrelation = async (
     month?: number | null;
   } = {},
 ): Promise<AiToolResult<CorrelationData>> => {
-  const periodId = await resolvePeriodId(user, options.report_period_id, options.year, options.month);
+  const periodId = await resolvePeriodId(user, { report_period_id: options.report_period_id, year: options.year, month: options.month });
   if (!periodId) {
     return { data: { pairs: [], utility_count: 0, report_period: null }, metadata: createToolMetadata({ source: "kpi_values" }), error: "No period found" };
   }
@@ -244,7 +217,7 @@ export const compareKpisAcrossUtilities = async (
     month?: number | null;
   },
 ): Promise<AiToolResult<MultiUtilityKpiData[]>> => {
-  const periodId = await resolvePeriodId(user, options.report_period_id, options.year, options.month);
+  const periodId = await resolvePeriodId(user, { report_period_id: options.report_period_id, year: options.year, month: options.month });
   if (!periodId) {
     return { data: [], metadata: createToolMetadata({ source: "kpi_values" }), error: "No period found" };
   }

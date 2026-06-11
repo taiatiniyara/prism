@@ -139,6 +139,7 @@ export const aiReviewQueue = pgTable(
     flagged_reason: text("flagged_reason"),
     flagged_by_feedback_id: integer("flagged_by_feedback_id").references(
       () => aiFeedback.id,
+      { onDelete: "set null" },
     ),
     reviewer_user_id: text("reviewer_user_id").references(() => user.id),
     decision: text("decision").$type<AiReviewDecision>(),
@@ -172,6 +173,30 @@ export const aiUsageMetrics = pgTable(
   },
   (table) => [
     index("ai_usage_metrics_user_date_idx").on(table.user_id, table.date),
+    (t) => ({ unq: t.unique().on(table.user_id, table.date) }),
+  ],
+);
+
+export const aiBenchmark = pgTable(
+  "ai_benchmark",
+  {
+    id: serial("id").primaryKey(),
+    kpi_name: text("kpi_name").notNull().unique(),
+    category: text("category").notNull(),
+    description: text("description"),
+    unit: text("unit").notNull(),
+    direction: text("direction").notNull().$type<"lower_is_better" | "higher_is_better">(),
+    developing_nation_benchmark: integer("developing_nation_benchmark"),
+    developed_nation_benchmark: integer("developed_nation_benchmark"),
+    pacific_regional_average: integer("pacific_regional_average"),
+    ppa_target: integer("ppa_target"),
+    source: text("source"),
+    created_at: timestamp("created_at").defaultNow().notNull(),
+    updated_at: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()).notNull(),
+  },
+  (table) => [
+    index("ai_benchmark_kpi_name_idx").on(table.kpi_name),
+    index("ai_benchmark_category_idx").on(table.category),
   ],
 );
 
@@ -222,3 +247,5 @@ export type AiReviewQueue = typeof aiReviewQueue.$inferSelect;
 export type NewAiReviewQueue = typeof aiReviewQueue.$inferInsert;
 export type AiUsageMetrics = typeof aiUsageMetrics.$inferSelect;
 export type NewAiUsageMetrics = typeof aiUsageMetrics.$inferInsert;
+export type AiBenchmark = typeof aiBenchmark.$inferSelect;
+export type NewAiBenchmark = typeof aiBenchmark.$inferInsert;

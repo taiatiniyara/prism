@@ -1,10 +1,10 @@
 import { getScorecardResponse } from "@/app/data-entry/balanced-scorecard/service";
 import { db } from "@/db/connection";
 import { reportPeriods } from "@/db/schema/reportPeriods";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
 import { hasGlobalUtilityAccess } from "@/lib/user.service";
-import { createToolMetadata } from "./common";
+import { createToolMetadata, resolvePeriodId, getSeverityScore } from "./common";
 import type { AiToolResult } from "../types";
 
 export interface ScorecardPerspective {
@@ -32,32 +32,6 @@ export interface ScorecardData {
   exclusion_reasons: Array<{ reason: string; count: number }>;
   report_period: string | null;
 }
-
-const resolvePeriodId = async (
-  user: CurrentUser,
-  options: { report_period_id?: number | null; year?: number | null },
-): Promise<number | null> => {
-  if (options.report_period_id) return options.report_period_id;
-
-  const predicates = [];
-  if (!hasGlobalUtilityAccess(user) && user.org_id != null) {
-    predicates.push(eq(reportPeriods.utility_id, user.org_id));
-  }
-  if (options.year) {
-    predicates.push(
-      sql`EXTRACT(YEAR FROM ${reportPeriods.report_date}) = ${options.year}`,
-    );
-  }
-
-  const [period] = await db
-    .select({ id: reportPeriods.id })
-    .from(reportPeriods)
-    .where(predicates.length > 0 ? and(...predicates) : undefined)
-    .orderBy(desc(reportPeriods.report_date))
-    .limit(1);
-
-  return period?.id ?? null;
-};
 
 export const getScorecardSummary = async (
   user: CurrentUser,
@@ -200,11 +174,3 @@ export const getScorecardSummary = async (
   }
 };
 
-const getSeverityScore = (status: string | null): number => {
-  if (!status) return 0;
-  const normalized = status.toLowerCase();
-  if (normalized.includes("off")) return 3;
-  if (normalized.includes("risk")) return 2;
-  if (normalized.includes("track") || normalized.includes("good")) return 1;
-  return 0;
-};

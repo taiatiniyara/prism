@@ -1,5 +1,8 @@
 import { db } from "@/db/connection";
 import { aiReviewQueue } from "@/db/schema/ai";
+import { kpiDefinitions } from "@/db/schema/kpi";
+import { inputDefinitions } from "@/db/schema/dataEntry";
+import { like, inArray } from "drizzle-orm";
 import { desc } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
 import { createToolMetadata } from "./common";
@@ -120,16 +123,117 @@ export const getGuidedEntry = async (
   user: CurrentUser,
   options: { kpi_name: string } = { kpi_name: "" },
 ): Promise<AiToolResult<GuidedEntryData>> => {
-  return {
-    data: {
-      kpi_name: options.kpi_name || "Unknown",
-      steps: [],
-      total_steps: 0,
-      completed_steps: 0,
-      message: `To enter data for "${options.kpi_name}", navigate to /data-entry/enter-data in PRISM. First use get_input_status to identify which inputs are missing, then find those inputs in the data entry module. You can also use the dashboard_link tool to generate a direct link to the correct page.`,
-    },
-    metadata: createToolMetadata({ source: "data_entry" }),
-  };
+  const kpiName = options.kpi_name?.trim();
+  if (!kpiName) {
+    return {
+      data: {
+        kpi_name: "",
+        steps: [],
+        total_steps: 0,
+        completed_steps: 0,
+        message: "No KPI name provided. Please specify a KPI name for data entry guidance.",
+      },
+      metadata: createToolMetadata({ source: "data_entry" }),
+    };
+  }
+
+  try {
+    const defs = await db
+      .select({
+        id: kpiDefinitions.id,
+        name: kpiDefinitions.name,
+        formula: kpiDefinitions.formula,
+      })
+      .from(kpiDefinitions)
+      .where(like(kpiDefinitions.name, `%${kpiName}%`))
+      .limit(5);
+
+    if (defs.length === 0) {
+      return {
+        data: {
+          kpi_name: kpiName,
+          steps: [],
+          total_steps: 0,
+          completed_steps: 0,
+          message: `No KPI definition found matching "${kpiName}". Try using get_kpi_status or explain_kpi to find the correct KPI name first.`,
+        },
+        metadata: createToolMetadata({ source: "data_entry" }),
+      };
+    }
+
+    const allSteps: GuidedEntryStep[] = [];
+    const inputDefIds = new Set<number>();
+
+    for (const def of defs) {
+      if (def.formula && Array.isArray(def.formula)) {
+        for (const fi of def.formula as Array<{ input_def_id?: number }>) {
+          if (fi.input_def_id) inputDefIds.add(fi.input_def_id);
+        }
+      }
+    }
+
+    const inputs = inputDefIds.size > 0
+      ? await db
+          .select({
+            id: inputDefinitions.id,
+            name: inputDefinitions.name,
+            description: inputDefinitions.description,
+            variable_name: inputDefinitions.variable_name,
+          })
+          .from(inputDefinitions)
+          .where(inArray(inputDefinitions.id, [...inputDefIds]))
+          .limit(50)
+      : [];
+
+    for (let i = 0; i < inputs.length; i++) {
+        const inp = inputs[i];
+        allSteps.push({
+          step: allSteps.length + 1,
+          input_name: inp.name || `Input ${i + 1}`,
+          input_def_id: inp.id,
+          description: inp.description || `Enter a value for ${inp.name || inp.variable_name || `input ${i + 1}`}`,
+          current_value: null,
+          required: true,
+          formula_variable: inp.variable_name,
+          example: null,
+        });
+      }
+
+    if (allSteps.length === 0) {
+      return {
+        data: {
+          kpi_name: defs[0].name,
+          steps: [],
+          total_steps: 0,
+          completed_steps: 0,
+          message: `"${defs[0].name}" has no formula inputs defined directly. It may be a composite KPI calculated from other KPIs. Try using explain_kpi to understand how it's computed, then enter data for its component KPIs via /data-entry/enter-data.`,
+        },
+        metadata: createToolMetadata({ source: "data_entry" }),
+      };
+    }
+
+    return {
+      data: {
+        kpi_name: defs[0].name,
+        steps: allSteps,
+        total_steps: allSteps.length,
+        completed_steps: 0,
+        message: `Found ${allSteps.length} input${allSteps.length !== 1 ? "s" : ""} for "${defs[0].name}". Navigate to /data-entry/enter-data to fill in these values. Use get_input_status to check which inputs are already filled.`,
+      },
+      metadata: createToolMetadata({ source: "data_entry", freshness: new Date() }),
+    };
+  } catch {
+    return {
+      data: {
+        kpi_name: kpiName,
+        steps: [],
+        total_steps: 0,
+        completed_steps: 0,
+        message: `Failed to load input definitions for "${kpiName}". Navigate to /data-entry/enter-data in PRISM to manually enter data. Use get_input_status to identify which inputs are missing.`,
+      },
+      metadata: createToolMetadata({ source: "data_entry" }),
+    };
+  }
 };
 
 // ---- USER-WITHOUT-UTILITY CHECK ----

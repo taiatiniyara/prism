@@ -89,6 +89,7 @@ export default function ReviewKpiFiltersClient({
   ) => {
     setError(null);
 
+    const previous = localContext;
     const next = applyLocalFilterCascade(localContext, key, value);
     setLocalContext(next);
 
@@ -98,6 +99,7 @@ export default function ReviewKpiFiltersClient({
           await updateReviewKpiFilterContextAction(key, value);
           router.refresh();
         } catch {
+          setLocalContext(previous);
           setError("Unable to apply filters. Please try again.");
         }
       })();

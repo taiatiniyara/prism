@@ -36,6 +36,13 @@ import {
   getExecutiveDigest,
   getReviewQueueEntries,
   getGuidedEntry,
+  queryPowerBi,
+  diagnosePowerBi,
+  discoverDatasets,
+  discoverSchema,
+  discoverReport,
+  discoverVisuals,
+  queryVisual,
 } from "../data-service";
 
 const TOOL_TIMEOUT_MS = 15000;
@@ -487,6 +494,77 @@ export const createAiTools = (user: CurrentUser) => {
       execute: async ({ kpi_name }) => {
         return withTimeout(getGuidedEntry(user, { kpi_name }), "get_guided_entry");
       },
+    }),
+
+    query_power_bi: tool({
+      description:
+        "Query a Power BI dataset using DAX. First use discover_datasets to find available datasets, then discover_schema to see tables/columns/measures in a dataset, then run custom DAX queries. Supports custom_dax with optional dataset_id.",
+      inputSchema: z.object({
+        custom_dax: z.string().optional().describe("Custom DAX query. Use EVALUATE table_name or EVALUATE SUMMARIZECOLUMNS(...)."),
+        dataset_id: z.string().optional().describe("Specific dataset ID to query. Use the ID from discover_datasets."),
+      }),
+      execute: async ({ custom_dax, dataset_id }) => {
+        return withTimeout(queryPowerBi({ custom_dax, dataset_id }), "query_power_bi");
+      },
+    }),
+
+    diagnose_power_bi: tool({
+      description:
+        "Diagnose the Power BI connection. Tests whether the service principal can access datasets and lists available datasets with IDs. Use this when Power BI queries fail or to check connectivity.",
+      inputSchema: z.object({}),
+      execute: async () => {
+        return withTimeout(diagnosePowerBi(), "diagnose_power_bi");
+      },
+    }),
+
+    discover_datasets: tool({
+      description:
+        "List all Power BI datasets available. Returns dataset names, IDs, and metadata. Use this FIRST when asked about Power BI data — it shows what's available to query.",
+      inputSchema: z.object({}),
+      execute: async () => withTimeout(discoverDatasets(), "discover_datasets"),
+    }),
+
+    discover_schema: tool({
+      description:
+        "Get the schema of a specific Power BI dataset. Returns all tables with their columns (name, dataType) and measures (name, DAX expression). Use this after discover_datasets to understand what data is in a dataset before writing DAX queries.",
+      inputSchema: z.object({
+        dataset_id: z.string().optional().describe("Dataset ID from discover_datasets. Uses default if omitted."),
+      }),
+      execute: async ({ dataset_id }) =>
+        withTimeout(discoverSchema({ dataset_id }), "discover_schema"),
+    }),
+
+    discover_report: tool({
+      description:
+        "Discover the pages in a Power BI report. Lists all pages with names and order. Use this to explore the structure of a Power BI report before drilling into specific visuals.",
+      inputSchema: z.object({
+        report_id: z.string().optional().describe("Report ID. Uses the default POWERBI_REPORT_ID if omitted."),
+      }),
+      execute: async ({ report_id }) =>
+        withTimeout(discoverReport({ report_id }), "discover_report"),
+    }),
+
+    discover_visuals: tool({
+      description:
+        "Discover the visuals on a specific Power BI report page. Lists all visuals with names, titles, and types. Use this after discover_report to understand what charts, tables, and visuals are on a page.",
+      inputSchema: z.object({
+        page_name: z.string().describe("Page name from discover_report."),
+        report_id: z.string().optional().describe("Report ID. Uses default if omitted."),
+      }),
+      execute: async ({ page_name, report_id }) =>
+        withTimeout(discoverVisuals({ page_name, report_id }), "discover_visuals"),
+    }),
+
+    query_visual: tool({
+      description:
+        "Export and query the underlying data from a specific Power BI visual. Returns the data behind a chart, table, or visual as structured JSON. Use this to get the actual numbers driving a Power BI dashboard visual.",
+      inputSchema: z.object({
+        page_name: z.string().describe("Page name from discover_report."),
+        visual_name: z.string().describe("Visual name from discover_visuals."),
+        report_id: z.string().optional().describe("Report ID. Uses default if omitted."),
+      }),
+      execute: async ({ page_name, visual_name, report_id }) =>
+        withTimeout(queryVisual({ page_name, visual_name, report_id }), "query_visual"),
     }),
   };
 };

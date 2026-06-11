@@ -10,6 +10,7 @@ import {
 import {
   storeRunOutcomes,
   storeRunStart,
+  storeRunFailure,
 } from "@/app/data-entry/enter-data/services/aggregated-worker/outcome-store";
 import { assertScopeAuthorization } from "@/app/data-entry/enter-data/services/aggregated-worker/scope-auth";
 import {
@@ -333,14 +334,26 @@ export const runAggregatedWorkerAsync = (
   user: CurrentUser,
   scope: AggregatedWorkerScope,
 ): void => {
+  const runId = `async-${randomUUID()}`;
+  storeRunStart({
+    runId,
+    scope,
+    startedAt: new Date().toISOString(),
+    status: "running",
+    outcomes: [],
+  });
+
   queueMicrotask(() => {
     void runAggregatedWorker(user, scope).catch((error) => {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown aggregated worker error";
       console.error("[Aggregated worker] run failed", {
         reportPeriodId: scope.reportPeriodId,
         serviceAreaId: scope.serviceAreaId ?? null,
         energyResourceId: scope.energyResourceId ?? null,
-        error,
+        error: errorMessage,
       });
+      storeRunFailure(runId, errorMessage);
     });
   });
 };

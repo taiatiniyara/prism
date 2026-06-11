@@ -1,9 +1,10 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 
 import { DataEntryGeneratorGroupView } from "@/app/data-entry/types";
 import { DataEntryStatusId } from "@/db/schema/dataEntry";
+import { updateDataEntryAvailabilityAction } from "@/app/data-entry/enter-data/service";
 
 import InputCell from "@/app/data-entry/enter-data/inputCell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +15,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { toast } from "sonner";
+import { Ban, Loader2 } from "lucide-react";
 
 const STATUS_ID_TO_LABEL: Record<number, string> = {
   [DataEntryStatusId.Pending]: "pending",
@@ -31,9 +35,56 @@ export default function GeneratorGroups({
   dataEntryStatusId,
 }: GeneratorGroupsProps) {
   const [openGeneratorId, setOpenGeneratorId] = useState<number | null>(null);
+  const [isMarkingAll, startMarkAllTransition] = useTransition();
   const selectedGroup = groups.find(
     (group) => group.generatorId === openGeneratorId,
   );
+
+  const handleMarkAllNotAvailable = () => {
+    if (!selectedGroup) return;
+
+    startMarkAllTransition(() => {
+      void (async () => {
+        const pendingRows = selectedGroup.rows.filter((row) => {
+          const hasValue = String(row.value ?? "").trim().length > 0;
+          return !hasValue && !row.isDataNotAvailable;
+        });
+
+        if (pendingRows.length === 0) {
+          toast.info("All inputs are already entered or marked as not available.");
+          return;
+        }
+
+        let successCount = 0;
+        let failCount = 0;
+
+        for (const row of pendingRows) {
+          try {
+            await updateDataEntryAvailabilityAction({
+              inputDefId: row.inputDefId,
+              energyResourceId: row.energyResourceId ?? null,
+              customerTypeId: row.customerTypeId ?? null,
+              paymentModeId: row.paymentModeId ?? null,
+              isDataNotAvailable: true,
+            });
+            successCount += 1;
+          } catch {
+            failCount += 1;
+          }
+        }
+
+        if (failCount === 0) {
+          toast.success(
+            `Marked ${successCount} input(s) as not available.`,
+          );
+        } else {
+          toast.warning(
+            `Marked ${successCount} as not available, ${failCount} failed.`,
+          );
+        }
+      })();
+    });
+  };
 
   if (groups.length === 0) {
     return (
@@ -129,29 +180,48 @@ export default function GeneratorGroups({
             </DialogDescription>
           </DialogHeader>
           {selectedGroup ? (
-            <div className="grid grid-cols-1 gap-6 py-2 lg:grid-cols-2">
-              {selectedGroup.rows.map((row) => (
-                <div
-                  key={`${selectedGroup.generatorId}-${row.inputDefId}`}
-                  className="space-y-1"
+            <>
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleMarkAllNotAvailable}
+                  disabled={isMarkingAll}
+                  aria-label="Mark all pending inputs as not available"
                 >
-                  <div className="flex items-end justify-between">
-                    <span className="text-sm font-semibold">
-                      {row.inputName}
-                    </span>
-                    {row.unitName ? (
-                      <span className="text-xs text-slate-500">
-                        {row.unitName}
+                  {isMarkingAll ? (
+                    <Loader2 className="size-3.5 animate-spin mr-1" />
+                  ) : (
+                    <Ban className="size-3.5 mr-1" />
+                  )}
+                  Mark All as Not Available
+                </Button>
+              </div>
+              <div className="grid grid-cols-1 gap-6 py-2 lg:grid-cols-2">
+                {selectedGroup.rows.map((row) => (
+                  <div
+                    key={`${selectedGroup.generatorId}-${row.inputDefId}`}
+                    className="space-y-1"
+                  >
+                    <div className="flex items-end justify-between">
+                      <span className="text-sm font-semibold">
+                        {row.inputName}
                       </span>
-                    ) : null}
+                      {row.unitName ? (
+                        <span className="text-xs text-slate-500">
+                          {row.unitName}
+                        </span>
+                      ) : null}
+                    </div>
+                    <InputCell
+                      key={`${selectedGroup.generatorId}-${row.inputDefId}-${row.dataEntryId ?? "new"}-${row.updatedAt ?? "na"}-${row.isDataNotAvailable ? 1 : 0}`}
+                      row={row}
+                    />
                   </div>
-                  <InputCell
-                    key={`${selectedGroup.generatorId}-${row.inputDefId}-${row.dataEntryId ?? "new"}-${row.updatedAt ?? "na"}-${row.isDataNotAvailable ? 1 : 0}`}
-                    row={row}
-                  />
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            </>
           ) : null}
         </DialogContent>
       </Dialog>

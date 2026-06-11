@@ -107,7 +107,16 @@ export const getRangeOrPolarityValidationMessage = (
   }
 
   const numericValue = parseNumericCandidate(value);
+  const hasRangeConstraints =
+    metadata.validRangeMin != null ||
+    metadata.validRangeMax != null ||
+    (metadata.isCurrency && metadata.validRangeMax == null);
+  const hasPolarityConstraints = metadata.validPolarityId != null;
+
   if (numericValue === null) {
+    if (hasRangeConstraints || hasPolarityConstraints) {
+      return `${metadata.inputName} expects a numeric value.`;
+    }
     return null;
   }
 

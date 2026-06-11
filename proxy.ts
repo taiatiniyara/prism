@@ -29,12 +29,12 @@ export async function proxy(request: NextRequest) {
     return NextResponse.redirect(new URL("/auth", request.url));
   }
 
-  if (isRscRequest) {
-    return NextResponse.next();
-  }
-
   if (!currentUser.emailVerified) {
-    if (!pathname.startsWith("/profile") && !pathname.startsWith("/api")) {
+    if (
+      !pathname.startsWith("/profile") &&
+      !pathname.startsWith("/api") &&
+      !isRscRequest
+    ) {
       return NextResponse.redirect(new URL("/profile?verify=required", request.url));
     }
   }

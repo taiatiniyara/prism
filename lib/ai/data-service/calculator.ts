@@ -1,15 +1,12 @@
 import { db } from "@/db/connection";
 import { kpiDefinitions } from "@/db/schema/kpi";
-import { reportPeriods } from "@/db/schema/reportPeriods";
-import { organisations } from "@/db/schema/utility";
-import { desc, eq, and, like, sql, or, inArray } from "drizzle-orm";
+import { eq, and, like, or, inArray } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
-import { hasGlobalUtilityAccess } from "@/lib/user.service";
 import { evaluateKpiFormula } from "@/app/data-entry/kpi-worker/evaluator";
 import { resolveFormulaInputValues } from "@/app/data-entry/kpi-worker/resolveInputs";
 import type { FormulaInput } from "@/db/schema/dataEntry";
 import type { KpiWorkerScope } from "@/app/data-entry/kpi-worker/types";
-import { createToolMetadata } from "./common";
+import { createToolMetadata, resolvePeriod } from "./common";
 import type { AiToolResult } from "../types";
 
 export interface CalculatedKpi {
@@ -50,50 +47,7 @@ export interface CalculatorData {
   } | null;
 }
 
-const resolvePeriod = async (
-  user: CurrentUser,
-  options: { report_period_id?: number | null; year?: number | null },
-) => {
-  if (options.report_period_id) {
-    const [period] = await db
-      .select({
-        id: reportPeriods.id,
-        display: reportPeriods.report_date,
-        utility: organisations.acronym,
-        utilityId: reportPeriods.utility_id,
-      })
-      .from(reportPeriods)
-      .innerJoin(organisations, eq(reportPeriods.utility_id, organisations.id))
-      .where(eq(reportPeriods.id, options.report_period_id))
-      .limit(1);
-    return period ?? null;
-  }
 
-  const predicates = [];
-  if (!hasGlobalUtilityAccess(user) && user.org_id != null) {
-    predicates.push(eq(reportPeriods.utility_id, user.org_id));
-  }
-  if (options.year) {
-    predicates.push(
-      sql`EXTRACT(YEAR FROM ${reportPeriods.report_date}) = ${options.year}`,
-    );
-  }
-
-  const [period] = await db
-    .select({
-      id: reportPeriods.id,
-      display: reportPeriods.report_date,
-      utility: organisations.acronym,
-      utilityId: reportPeriods.utility_id,
-    })
-    .from(reportPeriods)
-    .innerJoin(organisations, eq(reportPeriods.utility_id, organisations.id))
-    .where(predicates.length > 0 ? and(...predicates) : undefined)
-    .orderBy(desc(reportPeriods.report_date))
-    .limit(1);
-
-  return period ?? null;
-};
 
 const formatPeriodDisplay = (date: Date): string => {
   const d = new Date(date);

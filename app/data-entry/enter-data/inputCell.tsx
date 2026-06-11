@@ -1,6 +1,6 @@
 "use client";
 
-import { KeyboardEvent, useMemo, useState, useTransition } from "react";
+import { KeyboardEvent, useCallback, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { CheckedState } from "@radix-ui/react-checkbox";
 
@@ -15,26 +15,76 @@ import DataEntryManagedListInput from "@/components/data-entry/managed-list-inpu
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
+import { Loader2, RotateCcw } from "lucide-react";
 
 interface InputCellProps {
   row: DataEntryInputRowView;
 }
 
+const DRAFT_STORAGE_PREFIX = "prism:draft:";
+
+const getDraftKey = (row: DataEntryInputRowView): string =>
+  `${DRAFT_STORAGE_PREFIX}${row.inputDefId}:${row.energyResourceId ?? "na"}:${row.paymentModeId ?? "na"}:${row.customerTypeId ?? "na"}`;
+
+const readDraft = (key: string): string | null => {
+  if (typeof window === "undefined") return null;
+  try {
+    return localStorage.getItem(key);
+  } catch {
+    return null;
+  }
+};
+
+const writeDraft = (key: string, value: string): void => {
+  if (typeof window === "undefined") return;
+  try {
+    if (value) {
+      localStorage.setItem(key, value);
+    } else {
+      localStorage.removeItem(key);
+    }
+  } catch {
+    // localStorage unavailable
+  }
+};
+
+const removeDraft = (key: string): void => {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem(key);
+  } catch {
+    // localStorage unavailable
+  }
+};
+
 export default function InputCell({ row }: InputCellProps) {
   const router = useRouter();
-  const [isSaving, startTransition] = useTransition();
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [lastSavedValue, setLastSavedValue] = useState<string | null>(null);
   const [commentDraft, setCommentDraft] = useState("");
   const [isDataNotAvailable, setIsDataNotAvailable] = useState(
     row.isDataNotAvailable ?? false,
   );
-  const displayValue = row.value ?? "";
+  const [isCommentSaving, setIsCommentSaving] = useState(false);
+  const [localComments, setLocalComments] = useState<
+    { comment: string }[] | null
+  >(null);
+  const valueInputRef = useRef<HTMLInputElement | null>(null);
+  const draftKey = useMemo(() => getDraftKey(row), [row]);
+
+  const draftValue = useMemo(() => {
+    const draft = readDraft(draftKey);
+    return draft ?? "";
+  }, [draftKey]);
+
+  const displayValue = draftValue || (row.value ?? "");
 
   const existingComments = useMemo(() => {
-    if (!row.comments) {
-      return [] as { comment: string }[];
-    }
-
+    if (localComments) return localComments;
+    if (!row.comments) return [] as { comment: string }[];
     try {
       const parsed = JSON.parse(row.comments) as Array<{ comment?: unknown }>;
       return parsed
@@ -43,141 +93,169 @@ export default function InputCell({ row }: InputCellProps) {
     } catch {
       return [] as { comment: string }[];
     }
-  }, [row.comments]);
+  }, [row.comments, localComments]);
 
   const handleCommitOnEnter = (event: KeyboardEvent<HTMLInputElement>) => {
-    if (event.key !== "Enter") {
-      return;
-    }
-
+    if (event.key !== "Enter") return;
     event.preventDefault();
     persistValue(event.currentTarget.value);
     event.currentTarget.blur();
   };
 
-  const persistValue = (nextValue: string) => {
-    const normalizedCurrent = (row.value ?? "").trim();
-    const normalizedNext = nextValue.trim();
+  const persistValue = useCallback(
+    (nextValue: string) => {
+      const normalizedCurrent = (row.value ?? "").trim();
+      const normalizedNext = nextValue.trim();
 
-    if (normalizedCurrent === normalizedNext) {
-      return;
-    }
+      if (normalizedCurrent === normalizedNext) {
+        removeDraft(draftKey);
+        return;
+      }
 
-    startTransition(() => {
-      void (async () => {
-        const loadingToastId = toast.loading(
-          "Saving value and recalculating KPI...",
-        );
+      writeDraft(draftKey, nextValue);
+      setIsSaving(true);
+      setSaveError(null);
 
-        try {
-          await updateDataEntryValueAction({
-            inputDefId: row.inputDefId,
-            energyResourceId: row.energyResourceId ?? null,
-            customerTypeId: row.customerTypeId ?? null,
-            paymentModeId: row.paymentModeId ?? null,
-            value: nextValue,
-          });
+      const loadingToastId = toast.loading(
+        "Saving value and recalculating KPI...",
+      );
 
+      updateDataEntryValueAction({
+        inputDefId: row.inputDefId,
+        energyResourceId: row.energyResourceId ?? null,
+        customerTypeId: row.customerTypeId ?? null,
+        paymentModeId: row.paymentModeId ?? null,
+        value: nextValue,
+      })
+        .then(() => {
+          removeDraft(draftKey);
+          setLastSavedValue(nextValue);
+          setSaveError(null);
           router.refresh();
-
           toast.success("Data update was successful.", {
             id: loadingToastId,
           });
-        } catch {
-          toast.error("Failed to save value or recalculate KPI.", {
+        })
+        .catch((error) => {
+          const message =
+            error instanceof Error
+              ? error.message
+              : "Failed to save value or recalculate KPI.";
+          setSaveError(message);
+          toast.error(message, {
             id: loadingToastId,
+            duration: 6000,
           });
-        }
-      })();
-    });
-  };
+        })
+        .finally(() => {
+          setIsSaving(false);
+        });
+    },
+    [row, draftKey, router],
+  );
+
+  const retrySave = useCallback(() => {
+    if (valueInputRef.current) {
+      persistValue(valueInputRef.current.value);
+    }
+  }, [persistValue]);
 
   const persistDataNotAvailable = (checked: boolean) => {
-    if (isSaving || checked === isDataNotAvailable) {
-      return;
-    }
+    if (isSaving || checked === isDataNotAvailable) return;
 
     const previousValue = isDataNotAvailable;
     setIsDataNotAvailable(checked);
+    setIsSaving(true);
+    setSaveError(null);
 
-    startTransition(() => {
-      void (async () => {
-        const loadingToastId = toast.loading("Updating availability status...");
+    const loadingToastId = toast.loading("Updating availability status...");
 
-        try {
-          await updateDataEntryAvailabilityAction({
-            inputDefId: row.inputDefId,
-            energyResourceId: row.energyResourceId ?? null,
-            customerTypeId: row.customerTypeId ?? null,
-            paymentModeId: row.paymentModeId ?? null,
-            isDataNotAvailable: checked,
-          });
-
-          router.refresh();
-
-          toast.success("Availability status updated.", {
-            id: loadingToastId,
-          });
-        } catch {
-          setIsDataNotAvailable(previousValue);
-          toast.error("Failed to update availability status.", {
-            id: loadingToastId,
-          });
-        }
-      })();
-    });
+    updateDataEntryAvailabilityAction({
+      inputDefId: row.inputDefId,
+      energyResourceId: row.energyResourceId ?? null,
+      customerTypeId: row.customerTypeId ?? null,
+      paymentModeId: row.paymentModeId ?? null,
+      isDataNotAvailable: checked,
+    })
+      .then(() => {
+        removeDraft(draftKey);
+        router.refresh();
+        toast.success("Availability status updated.", {
+          id: loadingToastId,
+        });
+      })
+      .catch((error) => {
+        setIsDataNotAvailable(previousValue);
+        const message =
+          error instanceof Error
+            ? error.message
+            : "Failed to update availability status.";
+        setSaveError(message);
+        toast.error(message, {
+          id: loadingToastId,
+          duration: 6000,
+        });
+      })
+      .finally(() => {
+        setIsSaving(false);
+      });
   };
 
-  const persistComment = (
-    nextComment?: string,
-    options?: { showEmptyToast?: boolean },
-  ) => {
-    const normalized = (nextComment ?? commentDraft).trim();
+  const persistComment = useCallback(
+    (
+      nextComment?: string,
+      options?: { showEmptyToast?: boolean },
+    ) => {
+      const normalized = (nextComment ?? commentDraft).trim();
 
-    if (isSaving) {
-      return;
-    }
+      if (isCommentSaving) return;
 
-    if (normalized.length === 0) {
-      if (options?.showEmptyToast !== false) {
-        toast.error("Please enter a comment before saving.");
+      if (normalized.length === 0) {
+        if (options?.showEmptyToast !== false) {
+          toast.error("Please enter a comment before saving.");
+        }
+        return;
       }
-      return;
-    }
 
-    startTransition(() => {
-      void (async () => {
-        const loadingToastId = toast.loading("Saving comment...");
+      setIsCommentSaving(true);
 
-        try {
-          await updateDataEntryCommentAction({
-            inputDefId: row.inputDefId,
-            energyResourceId: row.energyResourceId ?? null,
-            customerTypeId: row.customerTypeId ?? null,
-            paymentModeId: row.paymentModeId ?? null,
-            comment: normalized,
-          });
+      const optimisticComment = {
+        comment: normalized,
+      };
+      setLocalComments((prev) => [...(prev ?? existingComments), optimisticComment]);
+      setCommentDraft("");
 
-          setCommentDraft("");
+      const loadingToastId = toast.loading("Saving comment...");
+
+      updateDataEntryCommentAction({
+        inputDefId: row.inputDefId,
+        energyResourceId: row.energyResourceId ?? null,
+        customerTypeId: row.customerTypeId ?? null,
+        paymentModeId: row.paymentModeId ?? null,
+        comment: normalized,
+      })
+        .then(() => {
           router.refresh();
-
           toast.success("Comment saved.", {
             id: loadingToastId,
           });
-        } catch {
+        })
+        .catch(() => {
+          setLocalComments(existingComments);
           toast.error("Failed to save comment.", {
             id: loadingToastId,
+            duration: 6000,
           });
-        }
-      })();
-    });
-  };
+        })
+        .finally(() => {
+          setIsCommentSaving(false);
+        });
+    },
+    [row, commentDraft, existingComments, isCommentSaving, router],
+  );
 
   const handleCommentOnEnter = (event: KeyboardEvent<HTMLTextAreaElement>) => {
-    if (event.key !== "Enter" || event.shiftKey) {
-      return;
-    }
-
+    if (event.key !== "Enter" || event.shiftKey) return;
     event.preventDefault();
     persistComment(event.currentTarget.value, { showEmptyToast: false });
     event.currentTarget.blur();
@@ -190,13 +268,16 @@ export default function InputCell({ row }: InputCellProps) {
       case "number":
         return (
           <Input
+            ref={valueInputRef}
             className={`${
-              row.value ? "border-l-lime-300" : "border-l-red-200"
+              row.value || draftValue ? "border-l-lime-300" : "border-l-red-200"
             } border border-l-7 w-full rounded-l-none`}
             type="number"
+            inputMode="decimal"
             defaultValue={displayValue}
             disabled={inputDisabled}
             name={row.inputName}
+            aria-label={`Enter value for ${row.inputName}`}
             onKeyDown={handleCommitOnEnter}
             onBlur={(event) => persistValue(event.target.value)}
           />
@@ -208,13 +289,14 @@ export default function InputCell({ row }: InputCellProps) {
             disabled={inputDisabled}
             size="input"
             placeholder="Select"
+            ariaLabel={`Select boolean value for ${row.inputName}`}
             options={[
               { value: "Yes", label: "Yes" },
               { value: "No", label: "No" },
             ]}
             onValueChange={(nextValue) => persistValue(nextValue)}
             triggerClassName={`border-l-7 rounded-l-none rounded-r-lg ${
-              row.value ? "border-l-lime-200" : "border-l-red-200"
+              row.value || draftValue ? "border-l-lime-200" : "border-l-red-200"
             }`}
           />
         );
@@ -224,6 +306,7 @@ export default function InputCell({ row }: InputCellProps) {
             type="date"
             defaultValue={displayValue}
             disabled={inputDisabled}
+            aria-label={`Enter date for ${row.inputName}`}
             onKeyDown={handleCommitOnEnter}
             onBlur={(event) => persistValue(event.target.value)}
           />
@@ -233,6 +316,7 @@ export default function InputCell({ row }: InputCellProps) {
           <Input
             defaultValue={displayValue}
             disabled={inputDisabled}
+            aria-label={`Enter value for ${row.inputName}`}
             onKeyDown={handleCommitOnEnter}
             onBlur={(event) => persistValue(event.target.value)}
           />
@@ -242,6 +326,7 @@ export default function InputCell({ row }: InputCellProps) {
           <Input
             defaultValue={displayValue}
             disabled={inputDisabled}
+            aria-label={`Enter value for ${row.inputName}`}
             onKeyDown={handleCommitOnEnter}
             onBlur={(event) => persistValue(event.target.value)}
           />
@@ -252,7 +337,7 @@ export default function InputCell({ row }: InputCellProps) {
             managedListName={row.inputName}
             inputName={`input_${row.inputDefId}`}
             valueName={displayValue}
-            hasValue={Boolean(row.value)}
+            hasValue={Boolean(row.value || draftValue)}
             disabled={inputDisabled}
             onValueNameChange={(selectedName) => persistValue(selectedName)}
           />
@@ -264,20 +349,21 @@ export default function InputCell({ row }: InputCellProps) {
             disabled={inputDisabled}
             size="input"
             placeholder="Select"
+            ariaLabel={`Select gender for ${row.inputName}`}
             options={[
               { value: "Male", label: "Male" },
               { value: "Female", label: "Female" },
             ]}
             onValueChange={(nextValue) => persistValue(nextValue)}
             triggerClassName={`border-l-7 rounded-l-none rounded-r-lg ${
-              row.value ? "border-l-lime-200" : "border-l-red-200"
+              row.value || draftValue ? "border-l-lime-200" : "border-l-red-200"
             }`}
           />
         );
       case "fallback":
       default:
         return (
-          <span className="text-amber-700">
+          <span className="text-amber-700" aria-label={`${row.inputName}: ${displayValue || "unsupported"}`}>
             {displayValue || "Unsupported data type"}
           </span>
         );
@@ -291,15 +377,9 @@ export default function InputCell({ row }: InputCellProps) {
     )
     .join(" - ");
   const updatedAtLabel = useMemo(() => {
-    if (!row.updatedAt) {
-      return null;
-    }
-
+    if (!row.updatedAt) return null;
     const date = new Date(row.updatedAt);
-    if (Number.isNaN(date.getTime())) {
-      return null;
-    }
-
+    if (Number.isNaN(date.getTime())) return null;
     return new Intl.DateTimeFormat(undefined, {
       dateStyle: "medium",
       timeStyle: "short",
@@ -312,26 +392,61 @@ export default function InputCell({ row }: InputCellProps) {
     )
     .join(" on ");
 
+  const hasUnsavedDraft = Boolean(draftValue && draftValue !== (row.value ?? ""));
+
   return (
-    <div className="space-y-2 border p-4 rounded-lg bg-white shadow-md">
+    <div
+      className="space-y-2 border p-4 rounded-lg bg-white shadow-md"
+      role="group"
+      aria-label={`Input cell for ${row.inputName}`}
+    >
       {inputControl}
+
+      {hasUnsavedDraft ? (
+        <p className="text-[11px] text-amber-600">
+          Unsaved draft
+        </p>
+      ) : null}
+
+      {saveError ? (
+        <div className="flex items-center gap-1">
+          <p className="text-[11px] text-red-600 flex-1">{saveError}</p>
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="h-6 px-1.5 text-[11px]"
+            onClick={retrySave}
+            disabled={isSaving}
+            aria-label="Retry save"
+          >
+            <RotateCcw className="size-3 mr-0.5" />
+            Retry
+          </Button>
+        </div>
+      ) : null}
+
+      {isSaving ? (
+        <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+          <Loader2 className="size-3 animate-spin" />
+          Saving...
+        </div>
+      ) : null}
+
       {latestComment ? (
         <p className="text-[11px] text-muted-foreground line-clamp-2">
           Latest comment: {latestComment}
         </p>
       ) : null}
+
       <Textarea
         value={commentDraft}
         onChange={(event) => setCommentDraft(event.target.value)}
         onKeyDown={handleCommentOnEnter}
-        onBlur={(event) =>
-          persistComment(event.currentTarget.value, {
-            showEmptyToast: false,
-          })
-        }
-        placeholder="Add comment"
-        disabled={isSaving || isDataNotAvailable}
+        placeholder="Add comment (Enter to save)"
+        disabled={isSaving || isDataNotAvailable || isCommentSaving}
         className="min-h-16 text-xs"
+        aria-label={`Add comment for ${row.inputName}`}
       />
       <div className="mt-4 flex items-center justify-between">
         <label
@@ -346,6 +461,7 @@ export default function InputCell({ row }: InputCellProps) {
               persistDataNotAvailable(checked === true);
             }}
             className="size-5"
+            aria-label={`Data not available for ${row.inputName}`}
           />
           <span>Data Not Available</span>
         </label>
@@ -355,6 +471,25 @@ export default function InputCell({ row }: InputCellProps) {
           </p>
         ) : null}
       </div>
+      {lastSavedValue && !saveError && !isSaving ? (
+        <p className="text-[10px] text-lime-600">
+          Saved: {lastSavedValue}
+          <button
+            type="button"
+            className="ml-2 underline text-muted-foreground hover:text-foreground"
+            onClick={() => {
+              if (valueInputRef.current) {
+                const prev = row.value ?? "";
+                valueInputRef.current.value = prev;
+                persistValue(prev);
+              }
+            }}
+            aria-label={`Undo last change for ${row.inputName}`}
+          >
+            Undo
+          </button>
+        </p>
+      ) : null}
     </div>
   );
 }

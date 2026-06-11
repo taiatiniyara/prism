@@ -1,35 +1,15 @@
 import { db } from "@/db/connection";
-import { reportPeriods } from "@/db/schema/reportPeriods";
 import { organisations } from "@/db/schema/utility";
 import { countries, subRegions } from "@/db/schema/country";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
 import { hasGlobalUtilityAccess } from "@/lib/user.service";
 import { GetReportPeriods } from "@/app/data-entry/service";
 import { listReviewKpiRows } from "@/app/data-entry/review-kpi/service";
-import { createToolMetadata } from "./common";
+import { createToolMetadata, resolvePeriod } from "./common";
 import type { AiToolResult } from "../types";
 
-const resolvePeriod = async (
-  user: CurrentUser,
-  options: { report_period_id?: number | null; year?: number | null },
-) => {
-  if (options.report_period_id) return options.report_period_id;
-  const predicates = [];
-  if (!hasGlobalUtilityAccess(user) && user.org_id != null) {
-    predicates.push(eq(reportPeriods.utility_id, user.org_id));
-  }
-  if (options.year) {
-    predicates.push(sql`EXTRACT(YEAR FROM ${reportPeriods.report_date}) = ${options.year}`);
-  }
-  const [period] = await db
-    .select({ id: reportPeriods.id })
-    .from(reportPeriods)
-    .where(predicates.length > 0 ? and(...predicates) : undefined)
-    .orderBy(desc(reportPeriods.report_date))
-    .limit(1);
-  return period?.id ?? null;
-};
+
 
 export interface ServiceAreaBreakdown {
   service_area: string;
@@ -54,8 +34,8 @@ export const getServiceAreaBreakdown = async (
     year?: number | null;
   } = {},
 ): Promise<AiToolResult<ServiceAreaBreakdownData>> => {
-  const periodId = await resolvePeriod(user, options);
-  if (!periodId) {
+  const period = await resolvePeriod(user, options);
+  if (!period) {
     return {
       data: { service_areas: [], total_kpis: 0, report_period: null },
       metadata: createToolMetadata({ source: "review_kpi" }),
@@ -65,7 +45,7 @@ export const getServiceAreaBreakdown = async (
 
   const rows = await listReviewKpiRows({
     reportTypeId: null,
-    reportPeriodId: periodId,
+    reportPeriodId: period.id,
     kpiCategoryId: null,
     kpiSubcategoryId: null,
     serviceAreaId: null,
@@ -93,7 +73,7 @@ export const getServiceAreaBreakdown = async (
     .sort((a, b) => a.completeness_pct - b.completeness_pct);
 
   const periods = await GetReportPeriods(user, { forceAllUtilities: hasGlobalUtilityAccess(user) });
-  const match = periods.find((p) => p.Id === periodId);
+  const match = periods.find((p) => p.Id === period.id);
 
   return {
     data: {
