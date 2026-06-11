@@ -41,6 +41,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { generateRandomNumber } from "@/lib/utils";
 import ScorecardBuilderTree from "@/components/data-entry/scorecard-builder-tree";
+import NewBscBuilder from "@/components/data-entry/new-bsc-builder";
 import ScorecardPerspectiveHierarchyFlow from "@/components/data-entry/scorecard-perspective-hierarchy-flow";
 import ScorecardStrategyMap from "@/components/data-entry/scorecard-strategy-map";
 import { Download, Save, Upload } from "lucide-react";
@@ -328,7 +329,7 @@ export default function ScorecardPageClient({
   ] = useState(false);
   const [isProcessingTemplate, setIsProcessingTemplate] = useState(false);
   const [activeMainTab, setActiveMainTab] = useState<
-    "strategic-map" | "builder" | "strategy-tracker" | "tree-view"
+    "strategic-map" | "builder" | "strategy-tracker" | "tree-view" | "new-bsc"
   >("builder");
   const quickTemplateUploadInputRef = useRef<HTMLInputElement | null>(null);
   const autoSaveWorkerRef = useRef<Worker | null>(null);
@@ -1612,12 +1613,14 @@ export default function ScorecardPageClient({
                 | "strategic-map"
                 | "builder"
                 | "strategy-tracker"
-                | "tree-view",
+                | "tree-view"
+                | "new-bsc",
             )
           }
           className="space-y-0"
         >
           <TabsList>
+            <TabsTrigger value="new-bsc">BSC Builder</TabsTrigger>
             <TabsTrigger value="builder">BSC Strategy Builder</TabsTrigger>
             <TabsTrigger value="strategic-map">BSC Strategy Map</TabsTrigger>
             <TabsTrigger value="tree-view">BSC Tree View</TabsTrigger>
@@ -1812,6 +1815,10 @@ export default function ScorecardPageClient({
             <p className="text-[11px] text-muted-foreground">{saveMessage}</p>
           ) : null}
         </div>
+      ) : null}
+
+      {mode !== "builder" && activeMainTab === "new-bsc" ? (
+        <NewBscBuilder />
       ) : null}
 
       {mode !== "builder" && activeMainTab === "strategic-map" ? (

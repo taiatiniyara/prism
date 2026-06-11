@@ -47,10 +47,15 @@ if (!isProduction) {
   );
 }
 
+// Email verification is on by default; can be disabled for local/dev runs
+// via AUTH_REQUIRE_EMAIL_VERIFICATION=false (never set this in production).
+const requireEmailVerification =
+  process.env.AUTH_REQUIRE_EMAIL_VERIFICATION !== "false";
+
 export const auth = betterAuth({
   emailAndPassword: {
     enabled: true,
-    requireEmailVerification: true,
+    requireEmailVerification,
   },
   emailVerification: {
     sendVerificationEmail: async ({ user: u, url }) => {

@@ -109,6 +109,7 @@ async function seedSidebar() {
     { name: "Managed Lists", page: "/settings/managed-lists", roles: "DEV", order: 19 },
     { name: "Inputs", page: "/settings/inputs", roles: "DEV", order: 20 },
     { name: "KPI", page: "/settings/kpi", roles: "DEV", order: 21 },
+    { name: "BSC Template", page: "/settings/bsc-template", roles: "DEV,BMO", order: 27 },
     { name: "Relevance", page: "/settings/relevance", roles: "DEV", order: 22 },
     { name: "Reporting", page: "/settings/reporting", roles: "DEV", order: 23 },
     { name: "Email Schedules", page: "/settings/email-schedules", roles: "DEV,BMO", order: 24 },

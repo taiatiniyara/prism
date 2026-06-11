@@ -7,6 +7,7 @@ import {
   serial,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
@@ -227,3 +228,35 @@ export const bsc = pgTable("bsc", {
 });
 export type Bsc = typeof bsc.$inferSelect;
 export type NewBsc = typeof bsc.$inferInsert;
+
+// KPI trajectory — a per-(utility, KPI) summary of the desired target trend,
+// stored alongside the KPI targets and reused everywhere that KPI appears in
+// the utility's BSC. See docs/bsc-builder-spec.md (section 5).
+export type KpiTrajectory = "increase" | "decrease" | "same";
+
+export const kpiTargetTrajectory = pgTable(
+  "kpi_target_trajectory",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    utility_id: integer("utility_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    kpi_def_id: integer("kpi_def_id")
+      .notNull()
+      .references(() => kpiDefinitions.id, { onDelete: "cascade" }),
+    trajectory: varchar("trajectory", { length: 16 })
+      .$type<KpiTrajectory>()
+      .notNull(),
+    updated_by_id: text("updated_by_id").references(() => user.id),
+    updated_at: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    // One trajectory per utility per KPI.
+    uniqueIndex("kpi_target_trajectory_utility_kpi_idx").on(
+      table.utility_id,
+      table.kpi_def_id,
+    ),
+  ],
+);
+export type KpiTargetTrajectory = typeof kpiTargetTrajectory.$inferSelect;
+export type NewKpiTargetTrajectory = typeof kpiTargetTrajectory.$inferInsert;
