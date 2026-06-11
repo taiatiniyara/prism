@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { logRegistrationClarificationInboundReply } from "@/app/settings/users/service";
 
 type InboundWebhookBody = {
@@ -56,7 +57,8 @@ export async function POST(request: Request) {
     request.headers.get("x-webhook-secret")?.trim() ||
     "";
 
-  if (providedSecret !== configuredSecret) {
+  if (providedSecret.length !== configuredSecret.length ||
+      !timingSafeEqual(Buffer.from(providedSecret), Buffer.from(configuredSecret))) {
     return Response.json({ message: "Forbidden" }, { status: 403 });
   }
 

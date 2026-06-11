@@ -36,7 +36,8 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline'",
               "img-src 'self' data: blob: https:",
               "font-src 'self'",
-              "connect-src 'self' https://prismdashboard.org https://api.powerbi.com https://login.microsoftonline.com",
+              "connect-src 'self' https://api.powerbi.com https://login.microsoftonline.com" +
+              (process.env.NEXT_PUBLIC_APP_URL ? ` ${process.env.NEXT_PUBLIC_APP_URL}` : ""),
               "frame-src https://app.powerbi.com",
               "frame-ancestors 'self'",
               "object-src 'none'",

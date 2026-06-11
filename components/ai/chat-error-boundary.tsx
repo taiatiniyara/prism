@@ -1,6 +1,7 @@
 "use client";
 
 import { Component, type ReactNode } from "react";
+import { logger } from "@/lib/logger";
 
 interface Props {
   children: ReactNode;
@@ -23,7 +24,7 @@ export class ChatErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-    console.error("[ai-chat] Render error:", error.message, errorInfo.componentStack);
+    logger.error("[ai-chat] Render error", { error: error.message, componentStack: errorInfo.componentStack });
   }
 
   render() {

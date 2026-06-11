@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { logger } from "@/lib/logger";
 
 export default function DataEntryError({
   error,
@@ -12,7 +13,7 @@ export default function DataEntryError({
   reset: () => void;
 }) {
   useEffect(() => {
-    console.error("Data entry page error:", error);
+    logger.error("Data entry page error", { error: error.message });
   }, [error]);
 
   return (

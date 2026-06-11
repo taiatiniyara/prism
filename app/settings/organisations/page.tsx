@@ -6,8 +6,14 @@ import {
   UpdateOrganisation,
 } from "./orgs.service";
 import { Organisation } from "@/db/schema/utility";
+import { getCurrentUser } from "@/lib/user.service";
+import { redirect } from "next/navigation";
 
 export default async function OrganisationsSettingsPage() {
+  const currentUser = await getCurrentUser();
+  if (currentUser.role !== "BMO" && currentUser.role !== "DEV") {
+    redirect("/settings");
+  }
   const orgs = await AllOrganisations();
   const countries = await AllCountries();
   return (

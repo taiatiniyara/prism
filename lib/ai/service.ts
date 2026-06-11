@@ -6,6 +6,7 @@ import { getSystemPrompt, getPromptVersion } from "./prompt";
 import { validateInput, filterOutput } from "./guardrails";
 import { checkRateLimit, recordRequest, recordError, acquireConcurrencySlot, releaseConcurrencySlot } from "./rate-limit";
 import { AI_MODELS, AI_RATE_LIMITS, type AiChatMessage } from "./types";
+import { logger } from "@/lib/logger";
 
 interface AiServiceOptions {
   messages: AiChatMessage[];
@@ -137,7 +138,7 @@ export const runAiStream = async (
             promptVersion,
           });
         } catch (err) {
-          console.error("[ai-service] onFinish callback failed:", err instanceof Error ? err.message : String(err));
+          logger.error("[ai-service] onFinish callback failed", { error: err instanceof Error ? err.message : String(err) });
         }
       }
     };

@@ -1,4 +1,5 @@
 import { getCurrentUser } from "./user.service";
+import { logger } from "@/lib/logger";
 
 interface PowerBiConfig {
   clientID: string;
@@ -120,7 +121,7 @@ export async function powerBiDetails() {
 
   if (!response.ok) {
     const errorBody = await response.text();
-    console.error("Power BI API Error:", errorBody);
+    logger.error("Power BI API Error", { error: errorBody });
     throw new Error("Failed to get Power BI token");
   }
 

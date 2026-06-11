@@ -3,6 +3,7 @@ import { db } from "@/db/connection";
 import { errorLogs, NewErrorLog } from "@/db/schema/error-log";
 import { roles, user } from "@/db/schema/auth-schema";
 import { sendEmail } from "@/lib/email.service";
+import { logger } from "@/lib/logger";
 
 export type ErrorLogInput = Omit<
   NewErrorLog,
@@ -76,7 +77,7 @@ export async function logErrorAndNotifyDev(input: ErrorLogInput): Promise<void> 
   <table role="presentation" cellspacing="0" cellpadding="0" border="0" width="100%" style="max-width:640px;margin:0 auto;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid #dce3ef;border-radius:14px;overflow:hidden">
     <tr>
       <td style="padding:16px 24px;background:#0f172a;text-align:center">
-        <img src="https://dev.prismdashboard.org/logo.png" alt="PRISM" width="140" style="display:block;height:auto;margin:0 auto">
+        <img src="${process.env.EMAIL_LOGO_URL || process.env.NEXT_PUBLIC_APP_URL ? `${process.env.NEXT_PUBLIC_APP_URL}/logo.png` : "https://prismdashboard.org/logo.png"}" alt="PRISM" width="140" style="display:block;height:auto;margin:0 auto">
       </td>
     </tr>
     <tr>
@@ -125,7 +126,7 @@ export async function logErrorAndNotifyDev(input: ErrorLogInput): Promise<void> 
       ),
     );
   } catch (notifyError) {
-    console.error("Failed to notify DEV users about error log entry", {
+    logger.error("Failed to notify DEV users about error log entry", {
       error:
         notifyError instanceof Error ? notifyError.message : "Unknown error",
     });

@@ -4,6 +4,7 @@ import crypto from "node:crypto";
 import http from "node:http";
 import https from "node:https";
 import { db } from "@/db/connection";
+import { logger } from "@/lib/logger";
 
 function stringSimilarity(a: string, b: string): number {
   const s1 = a.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -188,7 +189,7 @@ const legacyMigBaseUrls = Array.from(
 );
 
 const logMigrationError = (error: unknown) => {
-  console.error("[migration] operation failed", error);
+  logger.error("[migration] operation failed", { error: error instanceof Error ? error.message : String(error) });
 };
 
 const isProtocolHeaderError = (error: unknown): boolean => {
@@ -946,7 +947,6 @@ export async function retrieveRoles() {
       if (!existing) {
         await db.insert(roles).values(sourceRole);
         inserted += 1;
-        inserted += 1;
         continue;
       }
 
@@ -987,8 +987,8 @@ type MigrationUserDto = {
 
 export async function retrieveUsers() {
   await assertDevMigrationAccess();
-  const inserted = 0;
-  const updated = 0;
+  let inserted = 0;
+  let updated = 0;
 
   try {
     const call = await fetchMigrationEndpoint("/users");
@@ -1045,6 +1045,7 @@ export async function retrieveUsers() {
           .update(user)
           .set(updatePayload)
           .where(eq(user.id, existingIdForEmail));
+        updated += 1;
         continue;
       }
 
@@ -1062,6 +1063,7 @@ export async function retrieveUsers() {
 
       existingUserIdSet.add(insertId);
       existingUserIdByEmail.set(normalizedEmail, insertId);
+      inserted += 1;
     }
   } catch (error: unknown) {
     logMigrationError(error);
@@ -1502,7 +1504,7 @@ export async function retrieveInputDlDefMappings(): Promise<MigrationStepResult>
         }
       }
     } catch {
-      console.warn(
+      logger.warn(
         "[mapping] dlDef endpoint unavailable, trying dataEntry source IDs",
       );
     }
@@ -1961,9 +1963,9 @@ export async function retrieveEnergyResources() {
     }
 
     if (skippedInvalidForeignKeys > 0) {
-      console.warn(
-        `[migration] retrieveEnergyResources skipped ${skippedInvalidForeignKeys} rows with invalid foreign keys`,
-      );
+        logger.warn(
+          `[migration] retrieveEnergyResources skipped ${skippedInvalidForeignKeys} rows with invalid foreign keys`,
+        );
     }
   } catch (error: unknown) {
     logMigrationError(error);
@@ -3273,7 +3275,7 @@ export async function retrieveDataEntries(options?: {
       hasMore = page.pagination.hasMore === true && cursor != null;
 
       if (hasMore && Date.now() - loopStartedAt > LOOP_MAX_MS) {
-        console.warn(
+        logger.warn(
           `[migration] retrieveDataEntries time budget exhausted after ${inserted + updated} ops ` +
             `(inserted=${inserted}, updated=${updated}), ` +
             `deferring remaining pages (next cursor: ${cursor}). Re-run to continue.`,
@@ -3548,7 +3550,7 @@ export async function retrieveGenerationRelevance(options?: {
       hasMore = page.pagination.hasMore === true && cursor != null;
 
       if (hasMore && Date.now() - loopStartedAt > LOOP_MAX_MS) {
-        console.warn(
+        logger.warn(
           `[migration] retrieveGenerationRelevance time budget exhausted after ${inserted + updated} ops ` +
             `(inserted=${inserted}, updated=${updated}, skipped=${skipped}), ` +
             `deferring remaining pages (next cursor: ${cursor}). Re-run to continue.`,
@@ -3879,7 +3881,7 @@ export async function retrieveTariffRelevance(options?: {
       hasMore = page.pagination.hasMore === true && cursor != null;
 
       if (hasMore && Date.now() - loopStartedAt > LOOP_MAX_MS) {
-        console.warn(
+        logger.warn(
           `[migration] retrieveTariffRelevance time budget exhausted after ${updated} ops ` +
             `(updated=${updated}), ` +
             `deferring remaining pages (next cursor: ${cursor}). Re-run to continue.`,
@@ -3888,14 +3890,14 @@ export async function retrieveTariffRelevance(options?: {
       }
     }
   } catch (error: unknown) {
-    console.error(
-      "[migration:tariffRelevance] ERROR:",
-      error instanceof Error
+    logger.error(
+      "[migration:tariffRelevance] ERROR",
+      { error: error instanceof Error
         ? {
             message: error.message,
             stack: error.stack,
           }
-        : error,
+        : error },
     );
     logMigrationError(error);
   }
@@ -5674,9 +5676,6 @@ export async function purgeAllDataEntryRecords(): Promise<{
     const r6 = await db.delete(generationToggleRelevance);
     counts["generation_toggle_relevance"] = r6.rowCount ?? 0;
 
-    const r7 = await db.delete(migrationLogs);
-    counts["migration_logs"] = r7.rowCount ?? 0;
-
     revalidatePath("/migration");
     revalidatePath("/data-entry");
     revalidatePath("/settings/relevance");
@@ -5684,7 +5683,7 @@ export async function purgeAllDataEntryRecords(): Promise<{
     return { ok: true, tables: counts };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("[purge] Failed to purge data entry records:", message);
+    logger.error("[purge] Failed to purge data entry records:", { error: message });
     return { ok: false, tables: counts, error: message };
   }
 }
@@ -5810,7 +5809,7 @@ export async function deduplicateDataEntries(): Promise<{
     return { ok: true, deleted: result.rowCount ?? idsToDelete.length };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    console.error("[dedup] Failed:", message);
+    logger.error("[dedup] Failed", { error: message });
     return { ok: false, deleted: 0, error: message };
   }
 }

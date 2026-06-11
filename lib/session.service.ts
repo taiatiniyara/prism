@@ -107,7 +107,7 @@ export async function getSession() {
     isUtilityContextScoped,
     orgAcronym: org?.acronym,
     sidebarList: sidebarList
-      .filter((item) => item.roles.split(",").includes(role!.name))
+      .filter((item) => item.roles.split(",").includes(role?.name ?? ""))
       .map((item) => {
         return {
           name: item.name,

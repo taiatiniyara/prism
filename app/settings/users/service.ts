@@ -51,7 +51,7 @@ export async function CreateUser(
   if (currentUser.role !== "DEV" && currentUser.role !== "BMO") {
     data.organisation_id = currentUser.org_id!;
   }
-  registerUser({
+  await registerUser({
     email: data.email,
     firstName: data.name.split(" ")[0],
     lastName: data.name.split(" ").pop() || "",
@@ -59,29 +59,30 @@ export async function CreateUser(
     dataAccessReason: data.data_access_reason || "",
     organisationId: data.organisation_id || 1,
     roleId: Number(data.role_id) || 1,
-    }).then(async () => {
-      await db
-        .update(user)
-        .set({
-          status: "active",
-        })
-        .where(eq(user.email, data.email))
-        .returning();
+  });
 
-      writeAuditLog({
-        action: "user.activate",
-        actorUserId: currentUser.id,
-        actorEmail: currentUser.email,
-        actorRole: currentUser.role,
-        targetType: "user",
-        targetId: data.email,
-        details: {
-          name: data.name,
-          roleId: data.role_id,
-          organisationId: data.organisation_id,
-        },
-      }).catch((err) => console.error("[audit] user.create failed", err));
-    });
+  await db
+    .update(user)
+    .set({
+      status: "active",
+    })
+    .where(eq(user.email, data.email))
+    .returning();
+
+  writeAuditLog({
+    action: "user.activate",
+    actorUserId: currentUser.id,
+    actorEmail: currentUser.email,
+    actorRole: currentUser.role,
+    targetType: "user",
+    targetId: data.email,
+    details: {
+      name: data.name,
+      roleId: data.role_id,
+      organisationId: data.organisation_id,
+    },
+  }).catch((err) => console.error("[audit] user.create failed", err));
+
   revalidatePath("/settings/users");
   return {
     success: true,

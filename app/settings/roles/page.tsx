@@ -1,8 +1,14 @@
 import DataTable from "@/components/tables/data-table";
 import { AllRoles, CreateRole, UpdateRole } from "./roles.service";
 import { Role } from "@/db/schema/auth-schema";
+import { getCurrentUser } from "@/lib/user.service";
+import { redirect } from "next/navigation";
 
 export default async function RolesSettingsPage() {
+  const currentUser = await getCurrentUser();
+  if (currentUser.role !== "BMO" && currentUser.role !== "DEV") {
+    redirect("/settings");
+  }
   const list = await AllRoles();
   return (
     <DataTable<Role>

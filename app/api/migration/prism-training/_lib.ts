@@ -55,7 +55,7 @@ export const parseOffset = (raw: string | null) => {
 };
 
 export const assertMigrationKey = (request: Request) => {
-  const required = process.env.MIGRATION_API_KEY;
+  const required = process.env.PRISM_TRAINING_MIGRATION_KEY ?? process.env.MIGRATION_API_KEY;
   if (!required) {
     throw new Error("MIGRATION_API_KEY is not configured on this server.");
   }

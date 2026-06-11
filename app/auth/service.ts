@@ -6,6 +6,7 @@ import { authClient } from "@/lib/auth-client";
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import crypto from "node:crypto";
+import { logger } from "@/lib/logger";
 
 const getForwardedAuthHeaders = async () => {
   const headersList = await headers();
@@ -94,7 +95,7 @@ export async function registerUser(data: {
 
     sent = true;
   } catch (error) {
-    console.error("[auth] registerUser failed", error);
+    logger.error("[auth] registerUser failed", { error: error instanceof Error ? error.message : String(error) });
     sent = false;
   }
 
