@@ -1138,69 +1138,136 @@ export default function NewBscBuilder({
 
   // --- Render: preview mode (mandatory + selected/populated only) -----------
 
+  // Uniform indentation step for every preview level.
+  const PREVIEW_STEP = 16;
+
+  const previewChevron = (key: string, hasChildren: boolean) =>
+    hasChildren ? (
+      <button
+        type="button"
+        onClick={() => toggleCollapsed(key)}
+        className="shrink-0 text-muted-foreground"
+      >
+        {collapsed.has(key) ? (
+          <ChevronRight className="size-3.5" />
+        ) : (
+          <ChevronDown className="size-3.5" />
+        )}
+      </button>
+    ) : (
+      <span className="inline-block w-3.5 shrink-0" />
+    );
+
+  const PILL_BASE =
+    "shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium";
+
+  const renderPreviewInitiative = (
+    initiative: WorkingInitiative,
+    depth: number,
+  ) => (
+    <div
+      key={initiative.key}
+      style={{ paddingLeft: depth * PREVIEW_STEP }}
+      className="flex flex-wrap items-center gap-2 py-0.5 text-xs"
+    >
+      <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
+      <span
+        className={
+          initiative.kind === "project"
+            ? `${PILL_BASE} min-w-[72px] text-center border-violet-200 bg-violet-50 text-violet-700`
+            : `${PILL_BASE} min-w-[72px] text-center border-emerald-200 bg-emerald-50 text-emerald-700`
+        }
+      >
+        {initiative.kind === "project" ? "Project" : "Initiative"}
+      </span>
+      <span>
+        {initiative.title ||
+          (initiative.kind === "project"
+            ? "(unnamed project)"
+            : "(unnamed initiative)")}
+      </span>
+      {initiative.kind === "project" &&
+      (initiative.status || initiative.targetCompletionDate) ? (
+        <span className="text-[10px] text-muted-foreground">
+          (
+          {[
+            initiative.status ? PROJECT_STATUS_LABEL[initiative.status] : null,
+            initiative.targetCompletionDate
+              ? `due ${initiative.targetCompletionDate}`
+              : null,
+          ]
+            .filter(Boolean)
+            .join(" · ")}
+          )
+        </span>
+      ) : null}
+      {initiative.kpis.length > 0 ? (
+        <span className="text-blue-600">
+          {initiative.kpis
+            .map(
+              (kpi) =>
+                `${kpi.kpiName ?? "KPI"}${
+                  kpi.trajectory ? ` ${TRAJECTORY_LABEL[kpi.trajectory]}` : ""
+                }`,
+            )
+            .join(", ")}
+        </span>
+      ) : null}
+    </div>
+  );
+
+  const renderPreviewObjective = (
+    objective: WorkingObjective,
+    depth: number,
+  ) => (
+    <div key={objective.key}>
+      <div
+        style={{ paddingLeft: depth * PREVIEW_STEP }}
+        className="flex items-center gap-2 py-0.5 text-xs"
+      >
+        {previewChevron(objective.key, objective.initiatives.length > 0)}
+        <span>{objective.description || "(unnamed objective)"}</span>
+        <span className={`${PILL_BASE} bg-muted text-muted-foreground`}>
+          Specific Objective
+        </span>
+      </div>
+      {!collapsed.has(objective.key)
+        ? objective.initiatives.map((initiative) =>
+            renderPreviewInitiative(initiative, depth + 1),
+          )
+        : null}
+    </div>
+  );
+
   const renderPreviewNode = (node: WorkingNode, depth: number) => {
     if (!node.selected) return null;
+    const isCollapsed = collapsed.has(node.key);
+    const hasChildren =
+      node.children.some((child) => child.selected) ||
+      (node.level === "strategic_lever" &&
+        node.specificObjectives.length > 0);
     return (
-      <div key={node.key} style={{ paddingLeft: depth * 14 }} className="py-0.5">
-        <div className="text-xs">
+      <div key={node.key}>
+        <div
+          style={{ paddingLeft: depth * PREVIEW_STEP }}
+          className="flex items-center gap-2 py-0.5 text-xs"
+        >
+          {previewChevron(node.key, hasChildren)}
           <span className="font-medium">{node.label}</span>
-          <span className="ml-2 text-[10px] text-muted-foreground">
+          <span className={`${PILL_BASE} bg-muted text-muted-foreground`}>
             {LEVEL_LABEL[node.level]}
           </span>
         </div>
-        {node.children.map((child) => renderPreviewNode(child, depth + 1))}
-        {node.level === "strategic_lever"
-          ? node.specificObjectives.map((objective) => (
-              <div
-                key={objective.key}
-                style={{ paddingLeft: (depth + 1) * 14 }}
-                className="text-xs text-muted-foreground"
-              >
-                ◦ {objective.description || "(unnamed objective)"}
-                {objective.initiatives.map((initiative) => (
-                  <div
-                    key={initiative.key}
-                    style={{ paddingLeft: 14 }}
-                    className="text-[11px]"
-                  >
-                    {initiative.kind === "project" ? "▣" : "–"}{" "}
-                    {initiative.title ||
-                      (initiative.kind === "project"
-                        ? "(unnamed project)"
-                        : "(unnamed initiative)")}
-                    {initiative.kind === "project" ? (
-                      <span className="ml-1 text-muted-foreground">
-                        (Project
-                        {initiative.status
-                          ? ` · ${PROJECT_STATUS_LABEL[initiative.status]}`
-                          : ""}
-                        {initiative.targetCompletionDate
-                          ? ` · due ${initiative.targetCompletionDate}`
-                          : ""}
-                        )
-                      </span>
-                    ) : null}
-                    {initiative.kpis.length > 0 ? (
-                      <span className="ml-1">
-                        [
-                        {initiative.kpis
-                          .map(
-                            (kpi) =>
-                              `${kpi.kpiName ?? "KPI"}${
-                                kpi.trajectory
-                                  ? ` ${TRAJECTORY_LABEL[kpi.trajectory]}`
-                                  : ""
-                              }`,
-                          )
-                          .join(", ")}
-                        ]
-                      </span>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            ))
-          : null}
+        {!isCollapsed ? (
+          <>
+            {node.children.map((child) => renderPreviewNode(child, depth + 1))}
+            {node.level === "strategic_lever"
+              ? node.specificObjectives.map((objective) =>
+                  renderPreviewObjective(objective, depth + 1),
+                )
+              : null}
+          </>
+        ) : null}
       </div>
     );
   };
