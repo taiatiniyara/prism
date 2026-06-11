@@ -40,10 +40,23 @@ export const energyResourceTypeRelevance = pgTable(
   "energy_resource_type_relevance",
   {
     id: serial("id").primaryKey().notNull(),
-    energy_resource_type_id: integer("energy_resource_type_id").notNull(),
-    energy_type_id: integer("energy_type_id").notNull(),
-    energy_source_id: integer("energy_source_id").notNull(),
+    energy_resource_type_id: integer("energy_resource_type_id")
+      .notNull()
+      .references(() => managedListItems.id, { onDelete: "restrict" }),
+    energy_type_id: integer("energy_type_id")
+      .notNull()
+      .references(() => managedListItems.id, { onDelete: "restrict" }),
+    energy_source_id: integer("energy_source_id")
+      .notNull()
+      .references(() => managedListItems.id, { onDelete: "restrict" }),
   },
+  (table) => [
+    index("energy_resource_type_relevance_type_idx").on(
+      table.energy_resource_type_id,
+      table.energy_type_id,
+      table.energy_source_id,
+    ),
+  ],
 );
 export type EnergyResourceTypeRelevance =
   typeof energyResourceTypeRelevance.$inferSelect;

@@ -17,7 +17,6 @@ import { reportPeriods } from "./reportPeriods";
 import { energyResources, serviceAreas } from "./utility";
 import { user } from "./auth-schema";
 import { relations } from "drizzle-orm";
-import { generateRandomNumber } from "@/lib/utils";
 
 export interface FormulaInput {
   input_def_id: number;
