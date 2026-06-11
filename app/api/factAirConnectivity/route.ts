@@ -18,7 +18,7 @@ async function getDlItemId(name: string): Promise<number | null> {
 
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
-  if (authorize.success === false) return Response.json(authorize.message);
+  if (authorize.success === false) return Response.json({ message: authorize.message }, { status: 401 });
 
   const [iataId, acp1000Id, acpuGdpId] = await Promise.all([
     getDlItemId("IATA Air Connectivity Score"),

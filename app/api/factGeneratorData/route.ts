@@ -15,7 +15,7 @@ const trainingIds = {
 
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
-  if (authorize.success === false) return Response.json(authorize.message);
+  if (authorize.success === false) return Response.json({ message: authorize.message }, { status: 401 });
 
   const idMap = await resolveDlIds(Object.values(trainingIds));
   const totalHoursId = idMap.get(trainingIds.TotalHoursInPeriod);

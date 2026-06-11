@@ -27,7 +27,7 @@ async function fetchRates(): Promise<Record<string, number>> {
 
 export async function getExchangeRate(
   currencyCode: string,
-): Promise<number> {
+): Promise<number | null> {
   const rates = await fetchRates();
   const upper = currencyCode.toUpperCase();
   if (upper === "USD") return 1;

@@ -1,31 +1,39 @@
 import { getCurrentUser } from "./user.service";
 
-const getRequiredEnv = (key: string): string => {
-  const value = process.env[key]?.trim();
-  if (!value) {
-    throw new Error(`Missing Power BI environment variable: ${key}`);
+interface PowerBiConfig {
+  clientID: string;
+  clientSecret: string;
+  tenantID: string;
+  workspaceID: string;
+  reportID: string;
+  embedURL: string;
+  datasetId: string;
+}
+
+let cachedConfig: PowerBiConfig | null | undefined = undefined;
+
+export function getEnv(): PowerBiConfig | null {
+  if (cachedConfig !== undefined) return cachedConfig;
+
+  const clientID = process.env.POWERBI_CLIENT_ID?.trim();
+  const clientSecret = process.env.POWERBI_CLIENT_SECRET?.trim();
+  const tenantID = process.env.POWERBI_TENANT_ID?.trim();
+  const workspaceID = process.env.POWERBI_WORKSPACE_ID?.trim();
+  const reportID = process.env.POWERBI_REPORT_ID?.trim();
+  const embedURL = process.env.POWERBI_EMBED_URL?.trim();
+  const datasetId = process.env.POWERBI_DATASET_ID?.trim();
+
+  if (!clientID || !clientSecret || !tenantID || !workspaceID || !reportID || !embedURL || !datasetId) {
+    cachedConfig = null;
+    return null;
   }
-  return value;
-};
 
-export const powerBiCLientID = getRequiredEnv("POWERBI_CLIENT_ID");
-export const powerBiClientSecret = getRequiredEnv("POWERBI_CLIENT_SECRET");
-export const powerBiTenantID = getRequiredEnv("POWERBI_TENANT_ID");
-export const powerBiWorkspaceID = getRequiredEnv("POWERBI_WORKSPACE_ID");
-export const powerBiReportID = getRequiredEnv("POWERBI_REPORT_ID");
-export const powerBiEmbedURL = getRequiredEnv("POWERBI_EMBED_URL");
-export const datasetID = getRequiredEnv("POWERBI_DATASET_ID");
+  cachedConfig = { clientID, clientSecret, tenantID, workspaceID, reportID, embedURL, datasetId };
+  return cachedConfig;
+}
 
-if (
-  !powerBiCLientID ||
-  !powerBiClientSecret ||
-  !powerBiTenantID ||
-  !powerBiWorkspaceID ||
-  !powerBiReportID ||
-  !powerBiEmbedURL ||
-  !datasetID
-) {
-  throw new Error("Missing Power BI environment variables");
+export function isConfigured(): boolean {
+  return getEnv() !== null;
 }
 
 interface AzureTokenResponse {
@@ -36,11 +44,14 @@ interface AzureTokenResponse {
 }
 
 export async function getAzureToken() {
-  const loginURL = `https://login.microsoftonline.com/${powerBiTenantID}/oauth2/v2.0/token`;
+  const config = getEnv();
+  if (!config) throw new Error("Power BI is not configured");
+
+  const loginURL = `https://login.microsoftonline.com/${config.tenantID}/oauth2/v2.0/token`;
 
   const requestParams = new URLSearchParams({
-    client_id: powerBiCLientID,
-    client_secret: powerBiClientSecret,
+    client_id: config.clientID,
+    client_secret: config.clientSecret,
     grant_type: "client_credentials",
     scope: "https://analysis.windows.net/powerbi/api/.default",
   });
@@ -62,6 +73,9 @@ export async function getAzureToken() {
 }
 
 export async function powerBiDetails() {
+  const config = getEnv();
+  if (!config) throw new Error("Power BI is not configured");
+
   const azureResponse = await getAzureToken();
   const user = await getCurrentUser();
   const pbiUrl = "https://api.powerbi.com/v1.0/myorg/GenerateToken";
@@ -69,24 +83,24 @@ export async function powerBiDetails() {
   const body = {
     reports: [
       {
-        id: powerBiReportID,
+        id: config.reportID,
       },
     ],
     datasets: [
       {
-        id: datasetID,
+        id: config.datasetId,
       },
     ],
     targetWorkspaces: [
       {
-        id: powerBiWorkspaceID,
+        id: config.workspaceID,
       },
     ],
     identities: [
       {
         username: user.email,
         roles: [user.role, "ALL"],
-        datasets: [datasetID],
+        datasets: [config.datasetId],
       },
     ],
   };
@@ -112,8 +126,8 @@ export async function powerBiDetails() {
 
   const data = (await response.json()) as { token: string };
   return {
-    reportId: powerBiReportID,
-    embedUrl: powerBiEmbedURL,
+    reportId: config.reportID,
+    embedUrl: config.embedURL,
     token: data.token,
   };
 }
@@ -126,9 +140,12 @@ export interface PowerBiQueryResult {
 export async function executeDaxQuery(
   dax: string,
 ): Promise<PowerBiQueryResult> {
+  const config = getEnv();
+  if (!config) throw new Error("Power BI is not configured");
+
   const azureResponse = await getAzureToken();
   const bearerToken = `${azureResponse.token_type} ${azureResponse.access_token}`;
-  const url = `https://api.powerbi.com/v1.0/myorg/datasets/${datasetID}/executeQueries`;
+  const url = `https://api.powerbi.com/v1.0/myorg/datasets/${config.datasetId}/executeQueries`;
 
   const body = {
     queries: [{ query: dax }],
@@ -173,6 +190,8 @@ export interface DatasetInfo {
 }
 
 export async function listDatasets(): Promise<DatasetInfo[]> {
+  if (!getEnv()) throw new Error("Power BI is not configured");
+
   const azureResponse = await getAzureToken();
   const bearerToken = `${azureResponse.token_type} ${azureResponse.access_token}`;
 
@@ -203,7 +222,10 @@ export interface TableInfo {
 }
 
 export async function getDatasetSchema(datasetId?: string): Promise<TableInfo[]> {
-  const id = datasetId || datasetID;
+  const config = getEnv();
+  if (!config) throw new Error("Power BI is not configured");
+
+  const id = datasetId || config.datasetId;
   const azureResponse = await getAzureToken();
   const bearerToken = `${azureResponse.token_type} ${azureResponse.access_token}`;
 
@@ -238,7 +260,10 @@ export async function executeDaxOnDataset(
   dax: string,
   datasetId?: string,
 ): Promise<PowerBiQueryResult> {
-  const id = datasetId || datasetID;
+  const config = getEnv();
+  if (!config) throw new Error("Power BI is not configured");
+
+  const id = datasetId || config.datasetId;
   const azureResponse = await getAzureToken();
   const bearerToken = `${azureResponse.token_type} ${azureResponse.access_token}`;
 
@@ -329,7 +354,10 @@ export interface ReportVisual {
 }
 
 export async function getReportPages(reportId?: string): Promise<ReportPage[]> {
-  const id = reportId || powerBiReportID;
+  const config = getEnv();
+  if (!config) throw new Error("Power BI is not configured");
+
+  const id = reportId || config.reportID;
   const azureResponse = await getAzureToken();
   const bearerToken = `${azureResponse.token_type} ${azureResponse.access_token}`;
 
@@ -350,7 +378,10 @@ export async function getReportVisuals(
   pageName: string,
   reportId?: string,
 ): Promise<ReportVisual[]> {
-  const id = reportId || powerBiReportID;
+  const config = getEnv();
+  if (!config) throw new Error("Power BI is not configured");
+
+  const id = reportId || config.reportID;
   const azureResponse = await getAzureToken();
   const bearerToken = `${azureResponse.token_type} ${azureResponse.access_token}`;
 
@@ -372,7 +403,10 @@ export async function exportReportVisual(
   visualName: string,
   reportId?: string,
 ): Promise<string> {
-  const id = reportId || powerBiReportID;
+  const config = getEnv();
+  if (!config) throw new Error("Power BI is not configured");
+
+  const id = reportId || config.reportID;
   const azureResponse = await getAzureToken();
   const bearerToken = `${azureResponse.token_type} ${azureResponse.access_token}`;
 

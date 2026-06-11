@@ -11,7 +11,7 @@ import { getAllExchangeRates } from "@/lib/exchange-rates";
 
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
-  if (authorize.success === false) return Response.json(authorize.message);
+  if (authorize.success === false) return Response.json({ message: authorize.message }, { status: 401 });
 
   const entries = await db.select().from(dataEntries).where(eq(dataEntries.is_deleted, false));
   const rps = await db.select().from(reportPeriods).where(isNotNull(reportPeriods.status_id));

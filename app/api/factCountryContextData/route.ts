@@ -10,7 +10,7 @@ import { dlValue, formatReportPeriodIso } from "@/lib/legacy-dl-resolver";
 
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
-  if (authorize.success === false) return Response.json(authorize.message);
+  if (authorize.success === false) return Response.json({ message: authorize.message }, { status: 401 });
 
   const rps = await db.select().from(reportPeriods).where(isNotNull(reportPeriods.status_id));
   const allUtils = await db.select().from(organisations).where(and(eq(organisations.is_utility, true), eq(organisations.is_active, true)));
