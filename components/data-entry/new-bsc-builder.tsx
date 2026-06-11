@@ -219,11 +219,18 @@ const serializeNode = (node: WorkingNode, ord: number): OverlayNodeInput => ({
     .map((child, index) => serializeNode(child, index)),
   specificObjectives:
     node.level === "strategic_lever"
-      ? node.specificObjectives.map((objective, oi) => ({
-          description: objective.description,
+      ? node.specificObjectives
+          // Skip in-progress objectives with no description yet — they would
+          // fail server validation and shouldn't be persisted until named.
+          .filter((objective) => objective.description.trim().length > 0)
+          .map((objective, oi) => ({
+          description: objective.description.trim(),
           ord: oi,
-          initiatives: objective.initiatives.map((initiative, ii) => ({
-            title: initiative.title,
+          initiatives: objective.initiatives
+            // Likewise skip unnamed initiatives/projects.
+            .filter((initiative) => initiative.title.trim().length > 0)
+            .map((initiative, ii) => ({
+            title: initiative.title.trim(),
             description: initiative.description,
             kind: initiative.kind,
             startDate: initiative.startDate,
