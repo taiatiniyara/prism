@@ -3,7 +3,7 @@ import { dataEntries } from "@/db/schema/dataEntry";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { organisations } from "@/db/schema/utility";
 import { managedListItems, managedLists } from "@/db/schema/managedLists";
-import { eq, and, isNotNull, inArray } from "drizzle-orm";
+import { eq, and, isNotNull } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
 
 export async function GET(req: Request) {

@@ -1,7 +1,6 @@
 import { db } from "@/db/connection";
 import { user, roles } from "@/db/schema/auth-schema";
 import { organisations } from "@/db/schema/utility";
-import { eq } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
 
 export async function GET(req: Request) {

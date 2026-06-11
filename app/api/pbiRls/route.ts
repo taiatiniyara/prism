@@ -13,22 +13,39 @@ export async function GET(req: Request) {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
   }
 
-  const allUsers = await db.select().from(user);
-  const allOrgs = await db.select().from(organisations);
-  const allRoles = await db.select().from(roles);
+  const allUsers = await db
+    .select({
+      id: user.id,
+      email: user.email,
+      name: user.name,
+      organisation_id: user.organisation_id,
+      role_id: user.role_id,
+    })
+    .from(user)
+    .limit(1000);
 
-  const output = allUsers.map((u) => {
-    const role = allRoles.find((r) => r.id === u.role_id);
-    const org = allOrgs.find((o) => o.id === u.organisation_id);
-    return {
-      "User ID": u.id,
-      Username: u.email,
-      "Organisation ID": org?.id,
-      Organisation: org?.name,
-      "Role ID": role?.id,
-      Role: role?.name ?? "",
-    };
-  });
+  const allOrgs = await db
+    .select({ id: organisations.id, name: organisations.name })
+    .from(organisations)
+    .limit(500);
 
-  return Response.json(output);
+  const allRoles = await db.select({ id: roles.id, name: roles.name }).from(roles);
+
+  const orgById = new Map(allOrgs.map((o) => [o.id, o]));
+
+  return Response.json(
+    allUsers.map((u) => {
+      const role = allRoles.find((r) => r.id === u.role_id);
+      const org = u.organisation_id ? orgById.get(u.organisation_id) : undefined;
+      return {
+        "User ID": u.id,
+        Username: u.email,
+        Name: u.name,
+        "Organisation ID": org?.id,
+        Organisation: org?.name,
+        "Role ID": role?.id,
+        Role: role?.name ?? "",
+      };
+    }),
+  );
 }

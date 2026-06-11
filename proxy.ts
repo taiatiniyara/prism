@@ -6,6 +6,9 @@ import { roles, user } from "@/db/schema/auth-schema";
 import { eq } from "drizzle-orm";
 import { canAccessRoute, getDefaultPageForRole } from "@/lib/role-guard";
 
+const userRoleCache = new Map<string, { user: typeof user.$inferSelect; roleName: string | null; ts: number }>();
+const CACHE_TTL_MS = 5000;
+
 export async function proxy(request: NextRequest) {
   const isRscRequest = request.headers.get("RSC") === "1";
 
@@ -18,15 +21,39 @@ export async function proxy(request: NextRequest) {
   }
 
   const { pathname } = request.nextUrl;
+  const userId = session.user.id;
+  const now = Date.now();
 
-  const [currentUser] = await db
-    .select()
-    .from(user)
-    .where(eq(user.id, session.user.id))
-    .limit(1);
+  let currentUser;
+  let roleName: string | null = null;
 
-  if (!currentUser) {
-    return NextResponse.redirect(new URL("/auth", request.url));
+  const cached = userRoleCache.get(userId);
+  if (cached && now - cached.ts < CACHE_TTL_MS) {
+    currentUser = cached.user;
+    roleName = cached.roleName;
+  } else {
+    const [fetchedUser] = await db
+      .select()
+      .from(user)
+      .where(eq(user.id, userId))
+      .limit(1);
+
+    if (!fetchedUser) {
+      return NextResponse.redirect(new URL("/auth", request.url));
+    }
+
+    currentUser = fetchedUser;
+
+    if (currentUser.role_id) {
+      const [role] = await db
+        .select()
+        .from(roles)
+        .where(eq(roles.id, currentUser.role_id))
+        .limit(1);
+      roleName = role?.name ?? null;
+    }
+
+    userRoleCache.set(userId, { user: currentUser, roleName, ts: now });
   }
 
   if (!currentUser.emailVerified) {
@@ -38,16 +65,6 @@ export async function proxy(request: NextRequest) {
       return NextResponse.redirect(new URL("/profile?verify=required", request.url));
     }
   }
-
-  const [role] = currentUser.role_id
-    ? await db
-        .select()
-        .from(roles)
-        .where(eq(roles.id, currentUser.role_id))
-        .limit(1)
-    : [null];
-
-  const roleName = role?.name ?? null;
 
   if (!canAccessRoute(roleName, pathname)) {
     const defaultPage = getDefaultPageForRole(roleName);

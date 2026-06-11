@@ -31,12 +31,11 @@ export function stripSpecialCharacters(input: string): string {
   return input.replace(/[^a-zA-Z0-9-.]/g, "");
 }
 
-export function convertToInt(value?: string | null) {
+export function convertToNumber(value?: string | null): number | null {
   if (value === null || value === undefined || value === "") {
     return null;
-  } else if (isNaN(Number(stripSpecialCharacters(value)))) {
-    return value;
-  } else {
-    return parseFloat(stripSpecialCharacters(value));
   }
+  const cleaned = stripSpecialCharacters(value);
+  const num = Number(cleaned);
+  return isNaN(num) ? null : num;
 }
