@@ -5,20 +5,26 @@ import {
   assertNewBscBuildAccess,
   assertNewBscReadAccess,
   assertNewBscTemplateAdminAccess,
+  assertNewBscThemeAdminAccess,
+  canEditBscTheme,
 } from "./authz";
 import {
   createTemplateNode,
   deleteTemplateNode,
+  getThemeStyles,
   getUtilityScorecard,
   listBuilderKpiOptions,
   listKpiTargets,
   listTemplateTree,
   replacePerspectiveOverlay,
   saveKpiTargets,
+  saveThemeStyles,
   setKpiTrajectory,
   updateTemplateNode,
 } from "./repository";
+import { sanitizeThemeStyles } from "./theme";
 import type {
+  BscThemeStyles,
   CreateTemplateNodePayload,
   KpiOption,
   KpiTargetRow,
@@ -27,6 +33,7 @@ import type {
   SavePerspectiveOverlayPayload,
   SetTrajectoryPayload,
   TemplateTreeResponse,
+  ThemeResponse,
   UpdateTemplateNodePayload,
 } from "./types";
 
@@ -70,6 +77,22 @@ export const editTemplateNode = async (
 export const removeTemplateNode = async (user: CurrentUser, id: string) => {
   assertNewBscTemplateAdminAccess(user);
   await deleteTemplateNode(id);
+};
+
+// --- Theme (read for all with access; write for DEV) ------------------------
+
+export const getTheme = async (user: CurrentUser): Promise<ThemeResponse> => {
+  assertNewBscReadAccess(user);
+  const styles = await getThemeStyles();
+  return { styles, canEdit: canEditBscTheme(user) };
+};
+
+export const saveTheme = async (
+  user: CurrentUser,
+  styles: BscThemeStyles,
+): Promise<void> => {
+  assertNewBscThemeAdminAccess(user);
+  await saveThemeStyles(user.id, sanitizeThemeStyles(styles));
 };
 
 // --- Utility scorecard ------------------------------------------------------

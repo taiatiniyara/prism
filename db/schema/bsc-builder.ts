@@ -4,13 +4,16 @@ import {
   date,
   index,
   integer,
+  json,
   pgTable,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
 
+import { user } from "./auth-schema";
 import { kpiDefinitions } from "./kpi";
 import { customKpiRequests } from "./custom-kpi-requests";
 import { organisations } from "./utility";
@@ -213,3 +216,35 @@ export const bscKpiLinks = pgTable(
 
 export type BscKpiLink = typeof bscKpiLinks.$inferSelect;
 export type NewBscKpiLink = typeof bscKpiLinks.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// BSC theme — DEV-editable, product-wide styling overrides for BSC elements.
+// A single "global" row holds a map of element-type -> curated style props.
+// ---------------------------------------------------------------------------
+
+export type BscElementStyle = {
+  textColor?: string;
+  backgroundColor?: string;
+  borderColor?: string;
+  fontSize?: number;
+  fontWeight?: number;
+  padding?: number;
+};
+
+// Keyed by styleable element id (see new-bsc/theme.ts STYLEABLE_ELEMENTS).
+export type BscThemeStyles = Record<string, BscElementStyle>;
+
+export const bscTheme = pgTable(
+  "bsc_theme",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    scope: varchar("scope", { length: 32 }).notNull().default("global"),
+    styles: json("styles").$type<BscThemeStyles>().notNull().default({}),
+    updated_by_id: text("updated_by_id").references(() => user.id),
+    updated_at: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [uniqueIndex("bsc_theme_scope_idx").on(table.scope)],
+);
+
+export type BscTheme = typeof bscTheme.$inferSelect;
+export type NewBscTheme = typeof bscTheme.$inferInsert;

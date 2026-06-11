@@ -280,6 +280,15 @@ export const parseCreateTemplateNodePayload = (
   };
 };
 
+// The service sanitizes styles (drops unknown keys / invalid values), so this
+// only needs to surface the raw styles object.
+export const parseSaveThemePayload = (body: unknown): { styles: unknown } => {
+  if (!isPlainObject(body) || !isPlainObject(body.styles)) {
+    throw new Error("VALIDATION:styles must be an object.");
+  }
+  return { styles: body.styles };
+};
+
 export const parseUpdateTemplateNodePayload = (
   body: unknown,
 ): UpdateTemplateNodePayload => {

@@ -2,10 +2,12 @@ import { and, asc, eq, or } from "drizzle-orm";
 
 import { db } from "@/db/connection";
 import {
+  type BscThemeStyles,
   bscInitiatives,
   bscKpiLinks,
   bscSpecificObjectives,
   bscTemplateNodes,
+  bscTheme,
   bscUtilityNodes,
 } from "@/db/schema/bsc-builder";
 import { kpiDefinitions, kpiTargetTrajectory } from "@/db/schema/kpi";
@@ -24,6 +26,34 @@ import type {
   TemplateNode,
   UpdateTemplateNodePayload,
 } from "./types";
+
+// ---------------------------------------------------------------------------
+// Theme (single global row)
+// ---------------------------------------------------------------------------
+
+const GLOBAL_THEME_SCOPE = "global";
+
+export const getThemeStyles = async (): Promise<BscThemeStyles> => {
+  const [row] = await db
+    .select({ styles: bscTheme.styles })
+    .from(bscTheme)
+    .where(eq(bscTheme.scope, GLOBAL_THEME_SCOPE))
+    .limit(1);
+  return row?.styles ?? {};
+};
+
+export const saveThemeStyles = async (
+  userId: string,
+  styles: BscThemeStyles,
+): Promise<void> => {
+  await db
+    .insert(bscTheme)
+    .values({ scope: GLOBAL_THEME_SCOPE, styles, updated_by_id: userId })
+    .onConflictDoUpdate({
+      target: bscTheme.scope,
+      set: { styles, updated_by_id: userId, updated_at: new Date() },
+    });
+};
 
 // ---------------------------------------------------------------------------
 // Master template

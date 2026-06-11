@@ -1,4 +1,5 @@
 import type {
+  BscThemeStyles,
   CreateTemplateNodePayload,
   KpiOption,
   KpiTargetRow,
@@ -7,6 +8,7 @@ import type {
   SavePerspectiveOverlayPayload,
   SetTrajectoryPayload,
   TemplateTreeResponse,
+  ThemeResponse,
   UpdateTemplateNodePayload,
 } from "./types";
 
@@ -63,6 +65,20 @@ export const saveTrajectory = async (
     body: JSON.stringify(payload),
   });
   await asJson<{ message: string }>(response, "Unable to save trajectory.");
+};
+
+export const fetchTheme = async (): Promise<ThemeResponse> => {
+  const response = await fetch(`${BASE}/theme`, { cache: "no-store" });
+  return asJson<ThemeResponse>(response, "Unable to load BSC theme.");
+};
+
+export const saveTheme = async (styles: BscThemeStyles): Promise<void> => {
+  const response = await fetch(`${BASE}/theme`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ styles }),
+  });
+  await asJson<{ message: string }>(response, "Unable to save BSC theme.");
 };
 
 // --- Template admin (DEV/BMO) ----------------------------------------------

@@ -5,6 +5,7 @@ import {
   ChevronDown,
   ChevronRight,
   Lock,
+  Palette,
   Plus,
   Trash2,
 } from "lucide-react";
@@ -38,20 +39,28 @@ import {
   fetchKpiOptions,
   fetchScorecard,
   fetchTemplate,
+  fetchTheme,
   savePerspectiveOverlay,
+  saveTheme,
   saveTrajectory,
 } from "@/app/data-entry/balanced-scorecard/new-bsc/client";
+import {
+  generateThemeCss,
+  STYLEABLE_ELEMENTS,
+} from "@/app/data-entry/balanced-scorecard/new-bsc/theme";
 import NewBscKpiTargets from "@/components/data-entry/new-bsc-kpi-targets";
 import type {
   BscActivityKind,
   BscProjectStatus,
   BscTemplateLevel,
+  BscThemeStyles,
   KpiOption,
   KpiTrajectory,
   OverlayNodeInput,
   ScorecardNode,
   TemplateNode,
 } from "@/app/data-entry/balanced-scorecard/new-bsc/types";
+import type { BscElementStyle } from "@/db/schema/bsc-builder";
 
 // ---------------------------------------------------------------------------
 // Working-tree model (template merged with the utility's overlay)
@@ -302,7 +311,17 @@ export default function NewBscBuilder({
   const [pendingDeselect, setPendingDeselect] =
     useState<PendingDeselect | null>(null);
 
+  // DEV-only styling theme.
+  const [themeStyles, setThemeStyles] = useState<BscThemeStyles>({});
+  const [canEditTheme, setCanEditTheme] = useState(false);
+  const [designMode, setDesignMode] = useState(false);
+  const [selectedEl, setSelectedEl] = useState<string>(
+    STYLEABLE_ELEMENTS[0].id,
+  );
+
   const perspectivesRef = useRef<WorkingNode[] | null>(null);
+  const themeRef = useRef<BscThemeStyles>({});
+  const themeSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const saveTimers = useRef<Map<string, ReturnType<typeof setTimeout>>>(
     new Map(),
   );
@@ -312,17 +331,24 @@ export default function NewBscBuilder({
   }, [perspectives]);
 
   useEffect(() => {
+    themeRef.current = themeStyles;
+  }, [themeStyles]);
+
+  useEffect(() => {
     let active = true;
     (async () => {
       try {
-        const [template, scorecard, options] = await Promise.all([
+        const [template, scorecard, options, theme] = await Promise.all([
           fetchTemplate(),
           fetchScorecard(),
           fetchKpiOptions().catch(() => [] as KpiOption[]),
+          fetchTheme().catch(() => ({ styles: {}, canEdit: false })),
         ]);
         if (!active) return;
         setPerspectives(mergeChildren(template.nodes, scorecard.perspectives));
         setKpiOptions(options);
+        setThemeStyles(theme.styles);
+        setCanEditTheme(theme.canEdit);
       } catch (err) {
         if (!active) return;
         setError(err instanceof Error ? err.message : "Unable to load BSC.");
@@ -334,6 +360,48 @@ export default function NewBscBuilder({
       active = false;
     };
   }, []);
+
+  const themeCss = useMemo(() => generateThemeCss(themeStyles), [themeStyles]);
+
+  const scheduleThemeSave = useCallback(() => {
+    if (themeSaveTimer.current) clearTimeout(themeSaveTimer.current);
+    themeSaveTimer.current = setTimeout(() => {
+      void saveTheme(themeRef.current).catch((err) =>
+        toast.error(
+          err instanceof Error ? err.message : "Failed to save theme.",
+        ),
+      );
+    }, 800);
+  }, []);
+
+  const updateElementStyle = useCallback(
+    (elId: string, patch: Partial<BscElementStyle>) => {
+      setThemeStyles((prev) => {
+        const merged: BscElementStyle = { ...(prev[elId] ?? {}), ...patch };
+        (Object.keys(merged) as (keyof BscElementStyle)[]).forEach((key) => {
+          if (merged[key] == null) delete merged[key];
+        });
+        const next = { ...prev };
+        if (Object.keys(merged).length === 0) delete next[elId];
+        else next[elId] = merged;
+        return next;
+      });
+      scheduleThemeSave();
+    },
+    [scheduleThemeSave],
+  );
+
+  const resetElementStyle = useCallback(
+    (elId: string) => {
+      setThemeStyles((prev) => {
+        const next = { ...prev };
+        delete next[elId];
+        return next;
+      });
+      scheduleThemeSave();
+    },
+    [scheduleThemeSave],
+  );
 
   const kpiSelectOptions = useMemo(
     () =>
@@ -594,6 +662,7 @@ export default function NewBscBuilder({
         <div
           key={objective.key}
           className="rounded-md border bg-muted/30 p-2 space-y-2"
+          data-bsc-el="objectiveBlock"
         >
           <div className="flex items-start gap-2">
             <Textarea
@@ -629,18 +698,24 @@ export default function NewBscBuilder({
           {/* Initiatives */}
           <div className="space-y-2 pl-2">
             {objective.initiatives.map((initiative) => (
-              <div key={initiative.key} className="rounded border bg-white p-2">
+              <div
+                key={initiative.key}
+                className="rounded border bg-white p-2"
+                data-bsc-el="initiativeCard"
+              >
                 <div className="flex items-center gap-2">
+                  {/* Left column: type badge + name */}
                   <Badge
                     variant={
                       initiative.kind === "project" ? "default" : "secondary"
                     }
                     className="text-[10px]"
+                    data-bsc-el="badge"
                   >
                     {initiative.kind === "project" ? "Project" : "Initiative"}
                   </Badge>
                   <Input
-                    className="h-8 text-xs"
+                    className="h-8 min-w-0 flex-1 text-xs"
                     placeholder={
                       initiative.kind === "project"
                         ? "Project name"
@@ -658,10 +733,77 @@ export default function NewBscBuilder({
                       )
                     }
                   />
+
+                  {/* Right column: project timing/status, right-aligned */}
+                  {initiative.kind === "project" ? (
+                    <div className="flex shrink-0 items-center gap-2 text-[11px]">
+                      <label className="text-muted-foreground">Start</label>
+                      <Input
+                        type="date"
+                        className="h-7 w-32 text-xs"
+                        value={initiative.startDate ?? ""}
+                        disabled={!canBuild}
+                        onChange={(event) =>
+                          patchInitiative(
+                            perspectiveKey,
+                            lever.key,
+                            objective.key,
+                            initiative.key,
+                            { startDate: event.target.value || null },
+                          )
+                        }
+                      />
+                      <label className="text-muted-foreground">Target</label>
+                      <Input
+                        type="date"
+                        className="h-7 w-32 text-xs"
+                        value={initiative.targetCompletionDate ?? ""}
+                        disabled={!canBuild}
+                        onChange={(event) =>
+                          patchInitiative(
+                            perspectiveKey,
+                            lever.key,
+                            objective.key,
+                            initiative.key,
+                            {
+                              targetCompletionDate: event.target.value || null,
+                            },
+                          )
+                        }
+                      />
+                      <Select
+                        value={initiative.status ?? "planned"}
+                        disabled={!canBuild}
+                        onValueChange={(value) =>
+                          patchInitiative(
+                            perspectiveKey,
+                            lever.key,
+                            objective.key,
+                            initiative.key,
+                            { status: value as BscProjectStatus },
+                          )
+                        }
+                      >
+                        <SelectTrigger className="h-7 w-32 bg-white text-xs">
+                          <SelectValue placeholder="Status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="planned">Planned</SelectItem>
+                          <SelectItem value="in_progress">
+                            In progress
+                          </SelectItem>
+                          <SelectItem value="complete">Complete</SelectItem>
+                          <SelectItem value="on_hold">On hold</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  ) : null}
+
                   <Button
                     type="button"
                     variant="ghost"
                     size="icon"
+                    className="shrink-0"
                     disabled={!canBuild}
                     onClick={() =>
                       updateLever(perspectiveKey, lever.key, (objectives) =>
@@ -682,70 +824,10 @@ export default function NewBscBuilder({
                   </Button>
                 </div>
 
-                {initiative.kind === "project" ? (
-                  <div className="mt-2 flex flex-wrap items-center gap-2 pl-2 text-[11px]">
-                    <label className="text-muted-foreground">Start</label>
-                    <Input
-                      type="date"
-                      className="h-7 w-36 text-xs"
-                      value={initiative.startDate ?? ""}
-                      disabled={!canBuild}
-                      onChange={(event) =>
-                        patchInitiative(
-                          perspectiveKey,
-                          lever.key,
-                          objective.key,
-                          initiative.key,
-                          { startDate: event.target.value || null },
-                        )
-                      }
-                    />
-                    <label className="text-muted-foreground">Target</label>
-                    <Input
-                      type="date"
-                      className="h-7 w-36 text-xs"
-                      value={initiative.targetCompletionDate ?? ""}
-                      disabled={!canBuild}
-                      onChange={(event) =>
-                        patchInitiative(
-                          perspectiveKey,
-                          lever.key,
-                          objective.key,
-                          initiative.key,
-                          { targetCompletionDate: event.target.value || null },
-                        )
-                      }
-                    />
-                    <Select
-                      value={initiative.status ?? "planned"}
-                      disabled={!canBuild}
-                      onValueChange={(value) =>
-                        patchInitiative(
-                          perspectiveKey,
-                          lever.key,
-                          objective.key,
-                          initiative.key,
-                          { status: value as BscProjectStatus },
-                        )
-                      }
-                    >
-                      <SelectTrigger className="h-7 w-32 bg-white text-xs">
-                        <SelectValue placeholder="Status" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="planned">Planned</SelectItem>
-                        <SelectItem value="in_progress">In progress</SelectItem>
-                        <SelectItem value="complete">Complete</SelectItem>
-                        <SelectItem value="on_hold">On hold</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                ) : null}
-
                 {/* KPIs under the initiative */}
                 <div className="mt-2 space-y-1 pl-2">
                   {initiative.kpis.map((kpi) => (
-                    <div key={kpi.key} className="space-y-1">
+                    <div key={kpi.key} className="space-y-1" data-bsc-el="kpiRow">
                       <div className="flex items-center gap-2 text-xs">
                         <span className="flex-1 truncate">
                           {kpi.kpiName ??
@@ -951,7 +1033,12 @@ export default function NewBscBuilder({
     const isLever = node.level === "strategic_lever";
 
     return (
-      <div key={node.key} style={{ paddingLeft: depth * 14 }} className="py-0.5">
+      <div
+        key={node.key}
+        style={{ paddingLeft: depth * 14 }}
+        className="py-0.5"
+        data-bsc-el="nodeRow"
+      >
         <div className="flex items-center gap-2">
           {node.children.length > 0 || isLever ? (
             <button
@@ -1002,7 +1089,11 @@ export default function NewBscBuilder({
             <Lock className="size-3 text-muted-foreground" />
           ) : null}
           {node.isCustom ? (
-            <Badge variant="secondary" className="text-[10px]">
+            <Badge
+              variant="secondary"
+              className="text-[10px]"
+              data-bsc-el="badge"
+            >
               Custom
             </Badge>
           ) : null}
@@ -1107,34 +1198,179 @@ export default function NewBscBuilder({
     );
   };
 
+  // --- Render: DEV design panel (curated, per element-type styling) ---------
+
+  const renderDesignPanel = () => {
+    const current: BscElementStyle = themeStyles[selectedEl] ?? {};
+    const colorRow = (
+      label: string,
+      prop: "textColor" | "backgroundColor" | "borderColor",
+    ) => (
+      <div className="flex items-center gap-1">
+        <span className="text-muted-foreground">{label}</span>
+        <input
+          type="color"
+          className="h-6 w-8 cursor-pointer rounded border"
+          value={current[prop] ?? "#000000"}
+          onChange={(event) =>
+            updateElementStyle(selectedEl, { [prop]: event.target.value })
+          }
+        />
+        {current[prop] ? (
+          <button
+            type="button"
+            className="text-muted-foreground"
+            aria-label={`Clear ${label}`}
+            onClick={() => updateElementStyle(selectedEl, { [prop]: undefined })}
+          >
+            ✕
+          </button>
+        ) : null}
+      </div>
+    );
+
+    return (
+      <div className="space-y-2 rounded-md border bg-muted/20 p-3">
+        <div className="flex items-center gap-2">
+          <span className="text-xs font-medium">Style element:</span>
+          <Select value={selectedEl} onValueChange={setSelectedEl}>
+            <SelectTrigger className="h-7 w-60 bg-white text-xs">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              {STYLEABLE_ELEMENTS.map((element) => (
+                <SelectItem key={element.id} value={element.id}>
+                  {element.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            className="ml-auto h-7 text-xs"
+            onClick={() => resetElementStyle(selectedEl)}
+          >
+            Reset
+          </Button>
+        </div>
+
+        <div className="flex flex-wrap items-center gap-4 text-[11px]">
+          {colorRow("Text", "textColor")}
+          {colorRow("Background", "backgroundColor")}
+          {colorRow("Border", "borderColor")}
+          <div className="flex items-center gap-1">
+            <span className="text-muted-foreground">Font size</span>
+            <Input
+              type="number"
+              className="h-7 w-16 text-xs"
+              value={current.fontSize ?? ""}
+              onChange={(event) =>
+                updateElementStyle(selectedEl, {
+                  fontSize: event.target.value
+                    ? Number(event.target.value)
+                    : undefined,
+                })
+              }
+            />
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-muted-foreground">Weight</span>
+            <Select
+              value={current.fontWeight ? String(current.fontWeight) : "default"}
+              onValueChange={(value) =>
+                updateElementStyle(selectedEl, {
+                  fontWeight: value === "default" ? undefined : Number(value),
+                })
+              }
+            >
+              <SelectTrigger className="h-7 w-28 bg-white text-xs">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="default">Default</SelectItem>
+                <SelectItem value="400">Regular</SelectItem>
+                <SelectItem value="500">Medium</SelectItem>
+                <SelectItem value="600">Semibold</SelectItem>
+                <SelectItem value="700">Bold</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-muted-foreground">Padding</span>
+            <Input
+              type="number"
+              className="h-7 w-16 text-xs"
+              value={current.padding ?? ""}
+              onChange={(event) =>
+                updateElementStyle(selectedEl, {
+                  padding: event.target.value
+                    ? Number(event.target.value)
+                    : undefined,
+                })
+              }
+            />
+          </div>
+        </div>
+        <p className="text-[10px] text-muted-foreground">
+          Changes apply to all “{STYLEABLE_ELEMENTS.find((e) => e.id === selectedEl)?.label}”
+          elements across the BSC and save automatically.
+        </p>
+      </div>
+    );
+  };
+
   return (
-    <div className="space-y-3 rounded-md border bg-background p-3 sm:p-4">
-      <div className="flex items-center justify-between">
+    <div
+      className="bsc-themed space-y-3 rounded-md border bg-background p-3 sm:p-4"
+      data-bsc-el="container"
+    >
+      {themeCss ? <style>{themeCss}</style> : null}
+      <div className="flex items-center justify-between gap-2">
         <p className="text-[11px] text-muted-foreground">
           Tick the framework items that apply, add custom branches, then author
           specific objectives, initiatives and KPIs under each strategic lever.
         </p>
-        <div className="inline-flex overflow-hidden rounded-md border">
-          <button
-            type="button"
-            onClick={() => setView("build")}
-            className={`px-3 py-1 text-xs ${
-              view === "build" ? "bg-lime-500 text-white" : "bg-white"
-            }`}
-          >
-            Build
-          </button>
-          <button
-            type="button"
-            onClick={() => setView("preview")}
-            className={`px-3 py-1 text-xs ${
-              view === "preview" ? "bg-lime-500 text-white" : "bg-white"
-            }`}
-          >
-            BSC Preview
-          </button>
+        <div className="flex items-center gap-2">
+          {canEditTheme ? (
+            <Button
+              type="button"
+              variant={designMode ? "default" : "outline"}
+              size="sm"
+              className="h-7 text-xs"
+              onClick={() => setDesignMode((on) => !on)}
+            >
+              <Palette className="mr-1 size-3" />
+              {designMode ? "Done styling" : "Design"}
+            </Button>
+          ) : null}
+          <div className="inline-flex overflow-hidden rounded-md border">
+            <button
+              type="button"
+              onClick={() => setView("build")}
+              className={`px-3 py-1 text-xs ${
+                view === "build" ? "bg-lime-500 text-white" : "bg-white"
+              }`}
+            >
+              Build
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("preview")}
+              className={`px-3 py-1 text-xs ${
+                view === "preview" ? "bg-lime-500 text-white" : "bg-white"
+              }`}
+            >
+              BSC Preview
+            </button>
+          </div>
         </div>
       </div>
+
+      {canEditTheme && designMode
+        ? renderDesignPanel()
+        : null}
 
       {!canBuild ? (
         <div className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-xs text-amber-800">
@@ -1144,8 +1380,15 @@ export default function NewBscBuilder({
 
       <div className="space-y-3">
         {perspectives.map((perspective) => (
-          <div key={perspective.key} className="rounded-md border p-2">
-            <div className="mb-1 text-sm font-semibold">
+          <div
+            key={perspective.key}
+            className="rounded-md border p-2"
+            data-bsc-el="perspectiveCard"
+          >
+            <div
+              className="mb-1 text-sm font-semibold"
+              data-bsc-el="perspectiveTitle"
+            >
               {perspective.label}
             </div>
             {view === "build"

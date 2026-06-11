@@ -2,10 +2,22 @@ import type {
   BscActivityKind,
   BscProjectStatus,
   BscTemplateLevel,
+  BscThemeStyles,
 } from "@/db/schema/bsc-builder";
 import type { KpiTrajectory } from "@/db/schema/kpi";
 
-export type { BscActivityKind, BscProjectStatus, BscTemplateLevel, KpiTrajectory };
+export type {
+  BscActivityKind,
+  BscProjectStatus,
+  BscTemplateLevel,
+  BscThemeStyles,
+  KpiTrajectory,
+};
+
+export type ThemeResponse = {
+  styles: BscThemeStyles;
+  canEdit: boolean;
+};
 
 // ---------------------------------------------------------------------------
 // Master template (shared)
