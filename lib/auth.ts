@@ -6,7 +6,6 @@ import { magicLink } from "better-auth/plugins";
 import { buildMagicLinkEmail, sendEmail } from "./email.service";
 import {
   account,
-  rateLimit,
   session,
   user,
   verification,
@@ -76,18 +75,12 @@ export const auth = betterAuth({
       user,
       verification,
       account,
-      rateLimit,
       session,
     },
   }),
   session: {
     expiresIn: 60 * 60 * 24, // 24 hours
     updateAge: 60 * 60, // Refresh session every hour of activity
-  },
-  rateLimit: {
-    window: 15 * 60 * 1000, // 15 minutes
-    max: 100, // limit each IP to 100 requests per windowMs
-    storage: "database",
   },
   accountLocking: {
     enabled: true,

@@ -163,15 +163,6 @@ export interface AiUserContext {
   default_utility_name: string | null;
 }
 
-export interface AiRateLimitInfo {
-  allowed: boolean;
-  remaining_requests: number;
-  remaining_tokens: number;
-  reset_at: Date;
-  degraded_mode: boolean;
-  concurrent_count?: number;
-}
-
 export interface AiGuardrailResult {
   passed: boolean;
   rule?: string;
@@ -186,9 +177,7 @@ export const AI_MODELS = {
   mini: "claude-haiku-4-5-20251001",
 } as const;
 
-export const AI_RATE_LIMITS = {
-  requests_per_minute: 30,
-  tokens_per_day: 100_000,
+export const AI_DEFAULTS = {
   max_message_length: 4000,
-  max_history_turns: 6,
+  max_history_turns: 4,
 } as const;

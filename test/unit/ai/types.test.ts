@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { AI_MODELS, AI_RATE_LIMITS, AI_PROMPT_VERSION } from "@/lib/ai/types";
+import { AI_MODELS, AI_DEFAULTS, AI_PROMPT_VERSION } from "@/lib/ai/types";
 
 describe("AI_MODELS", () => {
   it("has a primary model", () => {
@@ -22,21 +22,13 @@ describe("AI_MODELS", () => {
   });
 });
 
-describe("AI_RATE_LIMITS", () => {
-  it("defines requests_per_minute", () => {
-    expect(AI_RATE_LIMITS.requests_per_minute).toBeGreaterThan(0);
-  });
-
-  it("defines tokens_per_day", () => {
-    expect(AI_RATE_LIMITS.tokens_per_day).toBeGreaterThan(0);
-  });
-
+describe("AI_DEFAULTS", () => {
   it("defines max_message_length", () => {
-    expect(AI_RATE_LIMITS.max_message_length).toBeGreaterThan(0);
+    expect(AI_DEFAULTS.max_message_length).toBeGreaterThan(0);
   });
 
   it("defines max_history_turns", () => {
-    expect(AI_RATE_LIMITS.max_history_turns).toBeGreaterThan(0);
+    expect(AI_DEFAULTS.max_history_turns).toBeGreaterThan(0);
   });
 });
 

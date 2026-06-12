@@ -146,7 +146,7 @@ export async function executeDaxQuery(
 
   const azureResponse = await getAzureToken();
   const bearerToken = `${azureResponse.token_type} ${azureResponse.access_token}`;
-  const url = `https://api.powerbi.com/v1.0/myorg/datasets/${config.datasetId}/executeQueries`;
+  const url = `https://api.powerbi.com/v1.0/myorg/groups/${config.workspaceID}/datasets/${config.datasetId}/executeQueries`;
 
   const body = {
     queries: [{ query: dax }],
@@ -191,13 +191,14 @@ export interface DatasetInfo {
 }
 
 export async function listDatasets(): Promise<DatasetInfo[]> {
-  if (!getEnv()) throw new Error("Power BI is not configured");
+  const config = getEnv();
+  if (!config) throw new Error("Power BI is not configured");
 
   const azureResponse = await getAzureToken();
   const bearerToken = `${azureResponse.token_type} ${azureResponse.access_token}`;
 
   const resp = await fetch(
-    `https://api.powerbi.com/v1.0/myorg/datasets`,
+    `https://api.powerbi.com/v1.0/myorg/groups/${config.workspaceID}/datasets`,
     { headers: { Authorization: bearerToken } },
   );
 
@@ -232,7 +233,7 @@ export async function getDatasetSchema(datasetId?: string): Promise<TableInfo[]>
 
   // Get tables
   const tablesResp = await fetch(
-    `https://api.powerbi.com/v1.0/myorg/datasets/${id}/tables`,
+    `https://api.powerbi.com/v1.0/myorg/groups/${config.workspaceID}/datasets/${id}/tables`,
     { headers: { Authorization: bearerToken } },
   );
 
@@ -268,7 +269,7 @@ export async function executeDaxOnDataset(
   const azureResponse = await getAzureToken();
   const bearerToken = `${azureResponse.token_type} ${azureResponse.access_token}`;
 
-  const url = `https://api.powerbi.com/v1.0/myorg/datasets/${id}/executeQueries`;
+  const url = `https://api.powerbi.com/v1.0/myorg/groups/${config.workspaceID}/datasets/${id}/executeQueries`;
 
   const body = {
     queries: [{ query: dax }],
@@ -303,8 +304,13 @@ export async function testPowerBiConnection(): Promise<{
     const azureResponse = await getAzureToken();
     const bearerToken = `${azureResponse.token_type} ${azureResponse.access_token}`;
 
+    const config = getEnv();
+    if (!config) {
+      return { ok: false, datasets_accessible: false, message: "Power BI is not configured." };
+    }
+
     const resp = await fetch(
-      `https://api.powerbi.com/v1.0/myorg/datasets`,
+      `https://api.powerbi.com/v1.0/myorg/groups/${config.workspaceID}/datasets`,
       {
         headers: { Authorization: bearerToken },
       },
@@ -363,7 +369,7 @@ export async function getReportPages(reportId?: string): Promise<ReportPage[]> {
   const bearerToken = `${azureResponse.token_type} ${azureResponse.access_token}`;
 
   const resp = await fetch(
-    `https://api.powerbi.com/v1.0/myorg/reports/${id}/pages`,
+    `https://api.powerbi.com/v1.0/myorg/groups/${config.workspaceID}/reports/${id}/pages`,
     { headers: { Authorization: bearerToken } },
   );
 
@@ -387,7 +393,7 @@ export async function getReportVisuals(
   const bearerToken = `${azureResponse.token_type} ${azureResponse.access_token}`;
 
   const resp = await fetch(
-    `https://api.powerbi.com/v1.0/myorg/reports/${id}/pages/${pageName}/visuals`,
+    `https://api.powerbi.com/v1.0/myorg/groups/${config.workspaceID}/reports/${id}/pages/${pageName}/visuals`,
     { headers: { Authorization: bearerToken } },
   );
 
@@ -412,7 +418,7 @@ export async function exportReportVisual(
   const bearerToken = `${azureResponse.token_type} ${azureResponse.access_token}`;
 
   const resp = await fetch(
-    `https://api.powerbi.com/v1.0/myorg/reports/${id}/pages/${pageName}/visuals/${visualName}/ExportData`,
+    `https://api.powerbi.com/v1.0/myorg/groups/${config.workspaceID}/reports/${id}/pages/${pageName}/visuals/${visualName}/ExportData`,
     {
       method: "GET",
       headers: { Authorization: bearerToken },

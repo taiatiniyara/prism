@@ -4,8 +4,8 @@ import type { CurrentUser } from "@/lib/user.service";
 import { createAiTools } from "./tools";
 import { getSystemPrompt, getPromptVersion } from "./prompt";
 import { validateInput, filterOutput } from "./guardrails";
-import { checkRateLimit, recordRequest, recordError, acquireConcurrencySlot, releaseConcurrencySlot } from "./rate-limit";
-import { AI_MODELS, AI_RATE_LIMITS, type AiChatMessage } from "./types";
+import { recordRequest, recordError } from "./rate-limit";
+import { AI_MODELS, AI_DEFAULTS, type AiChatMessage } from "./types";
 import { logger } from "@/lib/logger";
 
 interface AiServiceOptions {
@@ -59,14 +59,14 @@ const prepareMessages = (
 const isThinkingModel = (modelName: string): boolean =>
   /^claude-sonnet-4/i.test(modelName);
 
-const getModelConfig = (degradedMode: boolean) => {
-  const modelName = degradedMode ? AI_MODELS.fallback : AI_MODELS.primary;
+const getModelConfig = (fallback: boolean) => {
+  const modelName = fallback ? AI_MODELS.fallback : AI_MODELS.primary;
 
   const baseConfig = {
     model: anthropic(modelName),
     modelName,
     maxOutputTokens: isThinkingModel(modelName) ? 8000 : 2500,
-    temperature: degradedMode ? 0.3 : 0.4,
+    temperature: fallback ? 0.3 : 0.4,
   };
 
   return {
@@ -80,11 +80,10 @@ const getModelConfig = (degradedMode: boolean) => {
 export const runAiStream = async (
   options: AiServiceOptions,
 ): Promise<AiStreamResult> => {
-  const { messages, user, maxHistoryTurns = AI_RATE_LIMITS.max_history_turns, systemPromptOverride, onFinish } =
+  const { messages, user, maxHistoryTurns = AI_DEFAULTS.max_history_turns, systemPromptOverride, onFinish } =
     options;
 
   const lastUserMessage = messages.filter((m) => m.role === "user").pop();
-
   if (!lastUserMessage || typeof lastUserMessage.content !== "string") {
     throw new Error("No user message found");
   }
@@ -94,33 +93,15 @@ export const runAiStream = async (
     throw new Error(`GUARDRAIL:${inputValidation.reason}`);
   }
 
-  const rateLimitInfo = await checkRateLimit(user.id);
-  if (!rateLimitInfo.allowed) {
-    throw new Error(
-      "RATE_LIMIT:You have exceeded your rate limit. Please try again later.",
-    );
-  }
-
-  let slotReleased = false;
-  acquireConcurrencySlot(user.id);
-
   const preparedMessages = prepareMessages(messages, maxHistoryTurns);
   const tools = createAiTools(user);
   const systemPrompt = systemPromptOverride ?? getSystemPrompt();
   const promptVersion = getPromptVersion();
 
-  const config = getModelConfig(rateLimitInfo.degraded_mode);
-
-  const releaseOnce = () => {
-    if (!slotReleased) {
-      slotReleased = true;
-      releaseConcurrencySlot(user.id);
-    }
-  };
+  const config = getModelConfig(false);
 
   const buildOnFinish = (modelName: string, isFallback: boolean) =>
     async (finish: { text: string; usage?: { inputTokens?: number; outputTokens?: number }; toolCalls: Array<{ toolName: string; input: unknown }> }) => {
-      releaseOnce();
       try {
         const tokenCount = (finish.usage?.inputTokens ?? 0) + (finish.usage?.outputTokens ?? 0);
         await recordRequest(user.id, tokenCount);
@@ -153,54 +134,45 @@ export const runAiStream = async (
       stopWhen: stepCountIs(10),
       temperature: config.temperature,
       ...(config.providerOptions ? { providerOptions: config.providerOptions } : {}),
-      onFinish: buildOnFinish(config.modelName, rateLimitInfo.degraded_mode),
+      onFinish: buildOnFinish(config.modelName, false),
     });
   };
 
   try {
     const result = await doStream();
-
     return {
       stream: result.textStream,
       fullStream: result.fullStream,
       model: config.modelName,
-      wasFallback: rateLimitInfo.degraded_mode,
+      wasFallback: false,
       promptVersion,
     };
-  } catch (error) {
-    releaseOnce();
+  } catch {
+    try {
+      const fallbackConfig = getModelConfig(true);
+      const result = streamText({
+        model: fallbackConfig.model,
+        system: systemPrompt,
+        messages: preparedMessages,
+        tools,
+        maxOutputTokens: fallbackConfig.maxOutputTokens,
+        stopWhen: stepCountIs(10),
+        temperature: fallbackConfig.temperature,
+        ...(fallbackConfig.providerOptions ? { providerOptions: fallbackConfig.providerOptions } : {}),
+        onFinish: buildOnFinish(fallbackConfig.modelName, true),
+      });
 
-    if (!rateLimitInfo.degraded_mode) {
-      try {
-        const fallbackConfig = getModelConfig(true);
-
-        const result = streamText({
-          model: fallbackConfig.model,
-          system: systemPrompt,
-          messages: preparedMessages,
-          tools,
-          maxOutputTokens: fallbackConfig.maxOutputTokens,
-          stopWhen: stepCountIs(10),
-          temperature: fallbackConfig.temperature,
-          ...(fallbackConfig.providerOptions ? { providerOptions: fallbackConfig.providerOptions } : {}),
-          onFinish: buildOnFinish(fallbackConfig.modelName, true),
-        });
-
-        return {
-          stream: result.textStream,
-          fullStream: result.fullStream,
-          model: fallbackConfig.modelName,
-          wasFallback: true,
-          promptVersion,
-        };
-      } catch (fallbackError) {
-        await recordError(user.id);
-        throw fallbackError;
-      }
+      return {
+        stream: result.textStream,
+        fullStream: result.fullStream,
+        model: fallbackConfig.modelName,
+        wasFallback: true,
+        promptVersion,
+      };
+    } catch (fallbackError) {
+      await recordError(user.id);
+      throw fallbackError;
     }
-
-    await recordError(user.id);
-    throw error;
   }
 };
 
@@ -218,11 +190,10 @@ interface AiGenerateResult {
 export const runAiGenerate = async (
   options: AiServiceOptions,
 ): Promise<AiGenerateResult> => {
-  const { messages, user, maxHistoryTurns = AI_RATE_LIMITS.max_history_turns, systemPromptOverride } =
+  const { messages, user, maxHistoryTurns = AI_DEFAULTS.max_history_turns, systemPromptOverride } =
     options;
 
   const lastUserMessage = messages.filter((m) => m.role === "user").pop();
-
   if (!lastUserMessage || typeof lastUserMessage.content !== "string") {
     throw new Error("No user message found");
   }
@@ -232,21 +203,12 @@ export const runAiGenerate = async (
     throw new Error(`GUARDRAIL:${inputValidation.reason}`);
   }
 
-  const rateLimitInfo = await checkRateLimit(user.id);
-  if (!rateLimitInfo.allowed) {
-    throw new Error(
-      "RATE_LIMIT:You have exceeded your rate limit. Please try again later.",
-    );
-  }
-
-  acquireConcurrencySlot(user.id);
-
   const preparedMessages = prepareMessages(messages, maxHistoryTurns);
   const tools = createAiTools(user);
   const systemPrompt = systemPromptOverride ?? getSystemPrompt();
   const promptVersion = getPromptVersion();
 
-  const config = getModelConfig(rateLimitInfo.degraded_mode);
+  const config = getModelConfig(false);
 
   try {
     const result = await generateText({
@@ -260,8 +222,6 @@ export const runAiGenerate = async (
       ...(config.providerOptions ? { providerOptions: config.providerOptions } : {}),
     });
 
-    releaseConcurrencySlot(user.id);
-
     const { filtered } = filterOutput(result.text);
 
     const tokenUsage = {
@@ -274,53 +234,44 @@ export const runAiGenerate = async (
     return {
       reply: filtered,
       model: config.modelName,
-      wasFallback: rateLimitInfo.degraded_mode,
+      wasFallback: false,
       promptVersion,
       tokenUsage,
     };
-  } catch (error) {
-    releaseConcurrencySlot(user.id);
+  } catch {
+    try {
+      const fallbackConfig = getModelConfig(true);
 
-    if (!rateLimitInfo.degraded_mode) {
-      try {
-        const fallbackConfig = getModelConfig(true);
+      const result = await generateText({
+        model: fallbackConfig.model,
+        system: systemPrompt,
+        messages: preparedMessages,
+        tools,
+        maxOutputTokens: fallbackConfig.maxOutputTokens,
+        stopWhen: stepCountIs(10),
+        temperature: fallbackConfig.temperature,
+        ...(fallbackConfig.providerOptions ? { providerOptions: fallbackConfig.providerOptions } : {}),
+      });
 
-        const result = await generateText({
-          model: fallbackConfig.model,
-          system: systemPrompt,
-          messages: preparedMessages,
-          tools,
-          maxOutputTokens: fallbackConfig.maxOutputTokens,
-          stopWhen: stepCountIs(10),
-          temperature: fallbackConfig.temperature,
-          ...(fallbackConfig.providerOptions ? { providerOptions: fallbackConfig.providerOptions } : {}),
-        });
+      const { filtered } = filterOutput(result.text);
 
-        releaseConcurrencySlot(user.id);
+      const tokenUsage = {
+        input: result.usage?.inputTokens ?? 0,
+        output: result.usage?.outputTokens ?? 0,
+      };
 
-        const { filtered } = filterOutput(result.text);
+      await recordRequest(user.id, tokenUsage.input + tokenUsage.output);
 
-        const tokenUsage = {
-          input: result.usage?.inputTokens ?? 0,
-          output: result.usage?.outputTokens ?? 0,
-        };
-
-        await recordRequest(user.id, tokenUsage.input + tokenUsage.output);
-
-        return {
-          reply: filtered,
-          model: fallbackConfig.modelName,
-          wasFallback: true,
-          promptVersion,
-          tokenUsage,
-        };
-      } catch (fallbackError) {
-        await recordError(user.id);
-        throw fallbackError;
-      }
+      return {
+        reply: filtered,
+        model: fallbackConfig.modelName,
+        wasFallback: true,
+        promptVersion,
+        tokenUsage,
+      };
+    } catch (fallbackError) {
+      await recordError(user.id);
+      throw fallbackError;
     }
-
-    await recordError(user.id);
-    throw error;
   }
 };

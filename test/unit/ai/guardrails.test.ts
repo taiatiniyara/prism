@@ -96,10 +96,23 @@ describe("filterOutput", () => {
 });
 
 describe("validateToolAccess", () => {
-  const adminUser = { id: "user-1", role: "BMO" as const, org_id: 1 };
-  const devUser = { id: "user-2", role: "DEV" as const, org_id: 1 };
-  const regularUser = { id: "user-3", role: "BLO" as const, org_id: 1 };
-  const noRoleUser = { id: "user-4", role: null, org_id: 1 };
+  const makeUser = (overrides: Partial<{ id: string; role: string; org_id: number | null }>) => ({
+    id: "user-1",
+    name: "Test User",
+    role: "BMO" as const,
+    email: "test@test.com",
+    role_id: 1,
+    org_id: 1,
+    is_utility_context_scoped: false,
+    status: "active" as const,
+    reject_reason: null,
+    ...overrides,
+  });
+
+  const adminUser = makeUser({});
+  const devUser = makeUser({ role: "DEV" });
+  const regularUser = makeUser({ role: "BLO" });
+  const noRoleUser = makeUser({ role: "" });
 
   it("allows admin (BMO) to access governance audit", () => {
     const result = validateToolAccess("get_governance_audit", adminUser);

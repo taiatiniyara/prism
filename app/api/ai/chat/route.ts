@@ -446,13 +446,6 @@ export async function POST(request: Request) {
       return Response.json({ message: errMsg }, { status: 400 });
     }
 
-    if (errMsg.startsWith("RATE_LIMIT:")) {
-      return Response.json(
-        { message: errMsg.slice(11) },
-        { status: 429, headers: { "Retry-After": "60" } },
-      );
-    }
-
     if (errMsg.startsWith("GUARDRAIL:")) {
       return Response.json({ message: errMsg.slice(10) }, { status: 400 });
     }

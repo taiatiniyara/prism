@@ -2,7 +2,6 @@ import { relations } from "drizzle-orm";
 import {
   pgTable,
   text,
-  bigint,
   timestamp,
   boolean,
   integer,
@@ -170,13 +169,6 @@ export const externalRegistrations = pgTable("external_registrations", {
 export type ExternalRegistration = typeof externalRegistrations.$inferSelect;
 export type NewExternalRegistration =
   typeof externalRegistrations.$inferInsert;
-
-export const rateLimit = pgTable("rate_limit", {
-  id: text("id").primaryKey(),
-  key: text("key"),
-  count: integer("count"),
-  lastRequest: bigint("last_request", { mode: "number" }),
-});
 
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),
