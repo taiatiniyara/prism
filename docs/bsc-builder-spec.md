@@ -113,5 +113,45 @@ Lives under **Settings** (`/settings/bsc-template`), visible to **DEV/BMO only**
 - Per-period structural versioning / historical snapshots.
 - Per-placement targets (targets remain shared per-Utility-per-KPI).
 - Perspective filtering of the KPI picker (no category→perspective mapping today; flat searchable list for now).
-- Merging BSC Preview into the Strategy Map visualization (later phase).
 - Retiring the legacy BSC Strategy Builder (follow-up after sign-off).
+
+(The Strategy Map — previously deferred — is now specified in §13.)
+
+## 13. Strategy Map (Tier-1)
+
+A one-page, board-level view derived from the same overlay + Preview filter. It is **not** a render of the full 8-level tree: it collapses the hierarchy to a 2–3 level "spine" and adds the one thing the tree can't express — **cause-and-effect between objectives**.
+
+### 13.1 What's on the map
+
+- **Bands** = the 4 Perspectives (Financial top → Customer → Processes → Learning & Growth bottom).
+- **Nodes** = utility nodes flagged as **map nodes**, restricted to the **Preview set** (mandatory or selected/populated). Normally `strategic_objective` level; **Financial promotes its `key_focus_area`** (its level-4 labels are full sentences). "On map" is therefore an explicit flag, not a level rule.
+- **Theme columns** (optional) = group a band's nodes by their `key_focus_area` ancestor.
+- **Edges** = directed cause-effect arrows between map nodes (`source drives target`). Per-Utility — each utility authors its own. Shown only when **both endpoints are currently visible** map nodes.
+- KPIs are **not** on the map — they stay in the companion scorecard table (objective → measure → target).
+
+### 13.2 Data model (migration `0028_bsc_strategy_map.sql`)
+
+- `bsc_objective_link` — per-Utility edges: `utility_id`, `source_node_id`/`target_node_id` → `bsc_utility_node` (cascade delete), `relation` (`drives` default; `enables`/`constrains` reserved), `note`, `ord`. Unique on `(utility_id, source, target)`.
+- `bsc_template_node` gains `map_label` (short caption) + `is_map_node` (PPA default, `not null default false`).
+- `bsc_utility_node` gains nullable overrides `map_label`, `is_map_node` (null = inherit template), and `map_x` / `map_y` (drag-to-position; null = auto-layout).
+
+Resolution: effective label = `coalesce(utility.map_label, template.map_label, label)`; effective on-map = `coalesce(utility.is_map_node, template.is_map_node, false)` (custom nodes use the utility value).
+
+### 13.3 Layout
+
+Auto-layout by (perspective band, theme column, `ord`). When `map_x`/`map_y` are set they override auto-layout for that node — written only when a user drags. **Both ship in v1.**
+
+### 13.4 Edge rules
+
+| Rule | Where | Action |
+|---|---|---|
+| `source ≠ target` | service | reject |
+| both endpoints same utility | service | reject |
+| duplicate edge | unique index | reject / upsert no-op |
+| endpoint not a map node | service | reject (flag the node first) |
+| introduces a cycle | service | **warn, allow** (map is usually a DAG; feedback loops not forbidden) |
+| skip-level link (e.g. L&G → Financial) | — | allowed |
+
+### 13.5 Roles
+
+Authoring edges + `map_label`/position overrides: **CEO, EXE, MGR, BLO** (same as overlay editing). Template `map_label`/`is_map_node` defaults: **DEV/BMO** via `/settings/bsc-template`. PPA seeds defaults in `seed-bsc-template.ts`; edges are never seeded (per-Utility).

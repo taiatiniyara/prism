@@ -12,6 +12,13 @@
  * Perspectives and Overall Objectives are inherently mandatory (the fixed
  * framework). Everything else is optional. Red text in the PDF is ignored.
  *
+ * Strategy Map (spec §13): `mapNode` flags the node shown on the Tier-1 strategy
+ * map, with `mapLabel` as its short caption. Map nodes are normally at
+ * strategic_objective level, EXCEPT Financial, which promotes its two
+ * key_focus_area nodes (Revenue growth / Productivity) — the level-4 labels there
+ * are full sentences, so "on map" is a flag, not a level rule. These are
+ * PPA defaults; utilities can override mapLabel / is_map_node in their overlay.
+ *
  * NOTE: two labels preserve PDF spelling verbatim ("Business Apps Responsivenss",
  * "Planning Processess"). Correct them later via the admin template editor if
  * desired rather than silently diverging from the source here.
@@ -27,6 +34,9 @@ type SeedNode = {
   label: string;
   level: BscTemplateLevel;
   mandatory?: boolean;
+  // Strategy-map defaults (spec §13).
+  mapNode?: boolean;
+  mapLabel?: string;
   children?: SeedNode[];
 };
 
@@ -42,8 +52,12 @@ const TEMPLATE: SeedNode[] = [
         mandatory: true,
         children: [
           {
+            // Financial promotes the KFA to the map (level-4 labels below are
+            // full sentences, unsuitable as map captions).
             label: "Revenue Growth",
             level: "key_focus_area",
+            mapNode: true,
+            mapLabel: "Revenue growth",
             children: [
               {
                 label: "Optimizing returns within regulatory constraints",
@@ -63,6 +77,8 @@ const TEMPLATE: SeedNode[] = [
           {
             label: "Productivity Strategy",
             level: "key_focus_area",
+            mapNode: true,
+            mapLabel: "Productivity",
             children: [
               {
                 label: "Balancing capital deployment with cost discipline",
@@ -99,11 +115,15 @@ const TEMPLATE: SeedNode[] = [
               {
                 label: "Improve Image",
                 level: "strategic_objective",
+                mapNode: true,
+                mapLabel: "Brand & image",
                 children: [{ label: "Branding", level: "strategic_lever" }],
               },
               {
                 label: "Improve Relationship",
                 level: "strategic_objective",
+                mapNode: true,
+                mapLabel: "Customer relationships",
                 children: [
                   { label: "Service", level: "strategic_lever" },
                   { label: "Partnership", level: "strategic_lever" },
@@ -112,6 +132,8 @@ const TEMPLATE: SeedNode[] = [
               {
                 label: "Improve Product & Service Attributes",
                 level: "strategic_objective",
+                mapNode: true,
+                mapLabel: "Product & service",
                 children: [
                   { label: "Price", level: "strategic_lever" },
                   { label: "Quality", level: "strategic_lever" },
@@ -143,6 +165,8 @@ const TEMPLATE: SeedNode[] = [
               {
                 label: "Improve Procurement Processes",
                 level: "strategic_objective",
+                mapNode: true,
+                mapLabel: "Procurement",
                 children: [
                   {
                     label: "Timely Items Availability",
@@ -153,6 +177,8 @@ const TEMPLATE: SeedNode[] = [
               {
                 label: "Improve Finance Processes",
                 level: "strategic_objective",
+                mapNode: true,
+                mapLabel: "Finance",
                 children: [
                   { label: "Month-End Reporting", level: "strategic_lever" },
                   { label: "Financial Liquidity", level: "strategic_lever" },
@@ -162,6 +188,8 @@ const TEMPLATE: SeedNode[] = [
               {
                 label: "Improve HR Processes",
                 level: "strategic_objective",
+                mapNode: true,
+                mapLabel: "HR",
                 children: [
                   { label: "Payroll Processing", level: "strategic_lever" },
                   { label: "Leave Processing", level: "strategic_lever" },
@@ -171,6 +199,8 @@ const TEMPLATE: SeedNode[] = [
               {
                 label: "Improve Legal Processes",
                 level: "strategic_objective",
+                mapNode: true,
+                mapLabel: "Legal",
                 children: [
                   {
                     label: "Project Contracts Review",
@@ -182,6 +212,8 @@ const TEMPLATE: SeedNode[] = [
               {
                 label: "Improve ICT Processes",
                 level: "strategic_objective",
+                mapNode: true,
+                mapLabel: "ICT",
                 children: [
                   {
                     label: "Business Apps Availability",
@@ -206,6 +238,8 @@ const TEMPLATE: SeedNode[] = [
               {
                 label: "Improve Regulatory Processes",
                 level: "strategic_objective",
+                mapNode: true,
+                mapLabel: "Regulatory",
                 children: [
                   { label: "Regulatory Reporting", level: "strategic_lever" },
                   { label: "Compliance Reporting", level: "strategic_lever" },
@@ -215,6 +249,8 @@ const TEMPLATE: SeedNode[] = [
               {
                 label: "Improve Social Processes",
                 level: "strategic_objective",
+                mapNode: true,
+                mapLabel: "Social / ESG",
                 children: [
                   {
                     label: "Renewable Energy/Carbon Emissions Reporting",
@@ -231,6 +267,8 @@ const TEMPLATE: SeedNode[] = [
               {
                 label: "Improve Customer Management",
                 level: "strategic_objective",
+                mapNode: true,
+                mapLabel: "Customer management",
                 children: [
                   { label: "Contact Responsiveness", level: "strategic_lever" },
                   { label: "Proactive Notifications", level: "strategic_lever" },
@@ -250,6 +288,8 @@ const TEMPLATE: SeedNode[] = [
               {
                 label: "Improve Operations Management",
                 level: "strategic_objective",
+                mapNode: true,
+                mapLabel: "Operations management",
                 children: [
                   { label: "Production Efficiency", level: "strategic_lever" },
                   { label: "Production Availability", level: "strategic_lever" },
@@ -281,6 +321,8 @@ const TEMPLATE: SeedNode[] = [
               {
                 label: "Improve Innovation Processes",
                 level: "strategic_objective",
+                mapNode: true,
+                mapLabel: "Innovation",
                 children: [
                   { label: "Do things Differently", level: "strategic_lever" },
                   { label: "Do New things", level: "strategic_lever" },
@@ -309,6 +351,8 @@ const TEMPLATE: SeedNode[] = [
               {
                 label: "Maintain & Improve capabilities",
                 level: "strategic_objective",
+                mapNode: true,
+                mapLabel: "Workforce capability",
                 children: [
                   { label: "In-House Training", level: "strategic_lever" },
                   {
@@ -336,6 +380,8 @@ const TEMPLATE: SeedNode[] = [
                 label:
                   "Secure & Timely Access to Decision-Making Information",
                 level: "strategic_objective",
+                mapNode: true,
+                mapLabel: "Decision-info access",
                 children: [
                   { label: "Data Acquisition", level: "strategic_lever" },
                   { label: "ICT Infrastructure", level: "strategic_lever" },
@@ -354,6 +400,8 @@ const TEMPLATE: SeedNode[] = [
               {
                 label: "Effective Business Culture",
                 level: "strategic_objective",
+                mapNode: true,
+                mapLabel: "Business culture",
                 children: [
                   {
                     label: "Organisational Culture",
@@ -364,6 +412,8 @@ const TEMPLATE: SeedNode[] = [
               {
                 label: "Effective Leadership",
                 level: "strategic_objective",
+                mapNode: true,
+                mapLabel: "Leadership",
                 children: [
                   {
                     label: "Leadership Cultural Alignment",
@@ -374,6 +424,8 @@ const TEMPLATE: SeedNode[] = [
               {
                 label: "Cohesive Teamwork",
                 level: "strategic_objective",
+                mapNode: true,
+                mapLabel: "Teamwork",
                 children: [
                   {
                     label: "Synchronised Teamwork",
@@ -384,6 +436,8 @@ const TEMPLATE: SeedNode[] = [
               {
                 label: "Aligned with Org. Vision, Mission and Values",
                 level: "strategic_objective",
+                mapNode: true,
+                mapLabel: "Vision & values",
                 children: [
                   { label: "Values Assessment", level: "strategic_lever" },
                   { label: "Safety-first culture", level: "strategic_lever" },
@@ -412,6 +466,8 @@ async function insertNodes(
         level: node.level,
         label: node.label,
         is_mandatory: node.mandatory ?? false,
+        map_label: node.mapLabel ?? null,
+        is_map_node: node.mapNode ?? false,
         ord: i,
       })
       .returning({ id: bscTemplateNodes.id });
