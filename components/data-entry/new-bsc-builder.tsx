@@ -37,6 +37,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import BscStrategyMap from "@/components/data-entry/bsc-strategy-map";
 
 import {
   fetchKpiOptions,
@@ -345,7 +346,7 @@ export default function NewBscBuilder({
   const [kpiOptions, setKpiOptions] = useState<KpiOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [view, setView] = useState<"build" | "preview">("build");
+  const [view, setView] = useState<"build" | "preview" | "map">("build");
   const [targetPlans, setTargetPlans] = useState<
     Record<number, TargetPlanSummary>
   >({});
@@ -1602,6 +1603,15 @@ export default function NewBscBuilder({
             >
               Preview
             </button>
+            <button
+              type="button"
+              onClick={() => setView("map")}
+              className={`px-3 py-1 text-xs ${
+                view === "map" ? "bg-lime-500 text-white" : "bg-white"
+              }`}
+            >
+              Strategy map
+            </button>
           </div>
         </div>
       </div>
@@ -1616,29 +1626,33 @@ export default function NewBscBuilder({
         </div>
       ) : null}
 
-      <div className="space-y-3">
-        {perspectives.map((perspective) => (
-          <div
-            key={perspective.key}
-            className="rounded-md border p-2"
-            data-bsc-el="perspectiveCard"
-          >
+      {view === "map" ? (
+        <BscStrategyMap canBuild={canBuild} />
+      ) : (
+        <div className="space-y-3">
+          {perspectives.map((perspective) => (
             <div
-              className="mb-1 text-sm font-semibold"
-              data-bsc-el="perspectiveTitle"
+              key={perspective.key}
+              className="rounded-md border p-2"
+              data-bsc-el="perspectiveCard"
             >
-              {perspective.label}
+              <div
+                className="mb-1 text-sm font-semibold"
+                data-bsc-el="perspectiveTitle"
+              >
+                {perspective.label}
+              </div>
+              {view === "build"
+                ? perspective.children.map((child) =>
+                    renderNode(perspective.key, child, 1),
+                  )
+                : perspective.children.map((child) =>
+                    renderPreviewNode(child, 1),
+                  )}
             </div>
-            {view === "build"
-              ? perspective.children.map((child) =>
-                  renderNode(perspective.key, child, 1),
-                )
-              : perspective.children.map((child) =>
-                  renderPreviewNode(child, 1),
-                )}
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       <AlertDialog
         open={pendingDeselect != null}
