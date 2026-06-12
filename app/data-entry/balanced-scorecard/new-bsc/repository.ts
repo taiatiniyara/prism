@@ -5,17 +5,22 @@ import {
   type BscThemeStyles,
   bscInitiatives,
   bscKpiLinks,
+  bscKpiTargetPlan,
   bscSpecificObjectives,
   bscTemplateNodes,
   bscTheme,
   bscUtilityNodes,
 } from "@/db/schema/bsc-builder";
 import { kpiDefinitions, kpiTargetTrajectory } from "@/db/schema/kpi";
+import { managedListItems, managedLists } from "@/db/schema/managedLists";
 
 import type {
   CreateTemplateNodePayload,
   KpiOption,
   KpiTargetRow,
+  ReportTypeOption,
+  TargetPlanInput,
+  TargetPlanSummary,
   KpiTrajectory,
   OverlayNodeInput,
   ScorecardInitiative,
@@ -135,6 +140,32 @@ export const deleteTemplateNode = async (id: string): Promise<void> => {
 };
 
 // ---------------------------------------------------------------------------
+// Tracking-frequency options (the "Report Type" managed list)
+// ---------------------------------------------------------------------------
+
+export const listReportTypeOptions = async (): Promise<ReportTypeOption[]> => {
+  const [list] = await db
+    .select({ id: managedLists.id })
+    .from(managedLists)
+    .where(eq(managedLists.name, "Report Type"))
+    .limit(1);
+  if (!list) return [];
+
+  const rows = await db
+    .select({ id: managedListItems.id, name: managedListItems.name })
+    .from(managedListItems)
+    .where(
+      and(
+        eq(managedListItems.list_id, list.id),
+        eq(managedListItems.is_active, true),
+      ),
+    )
+    .orderBy(asc(managedListItems.id));
+
+  return rows;
+};
+
+// ---------------------------------------------------------------------------
 // KPI picker options (active + visible to the utility; report-period agnostic)
 // ---------------------------------------------------------------------------
 
@@ -145,8 +176,13 @@ export const listBuilderKpiOptions = async (
     .select({
       kpiDefinitionId: kpiDefinitions.id,
       name: kpiDefinitions.name,
+      unit: managedListItems.name,
     })
     .from(kpiDefinitions)
+    .leftJoin(
+      managedListItems,
+      eq(kpiDefinitions.unit_id, managedListItems.id),
+    )
     .where(
       and(
         eq(kpiDefinitions.is_active, true),
@@ -194,11 +230,16 @@ export const getUtilityScorecard = async (
             bscKpiLinks.pending_custom_kpi_request_id,
           ord: bscKpiLinks.ord,
           kpi_name: kpiDefinitions.name,
+          unit: managedListItems.name,
         })
         .from(bscKpiLinks)
         .leftJoin(
           kpiDefinitions,
           eq(bscKpiLinks.kpi_def_id, kpiDefinitions.id),
+        )
+        .leftJoin(
+          managedListItems,
+          eq(kpiDefinitions.unit_id, managedListItems.id),
         )
         .where(eq(bscKpiLinks.utility_id, utilityId))
         .orderBy(asc(bscKpiLinks.ord)),
@@ -232,6 +273,7 @@ export const getUtilityScorecard = async (
       id: link.id,
       kpiDefinitionId: link.kpi_def_id,
       kpiName: link.kpi_name,
+      unit: link.unit,
       pendingCustomKpiRequestId: link.pending_custom_kpi_request_id,
       trajectory:
         link.kpi_def_id != null
@@ -475,6 +517,66 @@ export const saveKpiTargets = async (
     .update(kpiDefinitions)
     .set({ targets: [...others, ...byKey.values()] })
     .where(eq(kpiDefinitions.id, kpiDefId));
+};
+
+// ---------------------------------------------------------------------------
+// Target plan (generated period set per utility/KPI — for status pills)
+// ---------------------------------------------------------------------------
+
+export const saveKpiTargetPlan = async (
+  utilityId: number,
+  userId: string,
+  kpiDefId: number,
+  plan: TargetPlanInput,
+): Promise<void> => {
+  await db
+    .insert(bscKpiTargetPlan)
+    .values({
+      utility_id: utilityId,
+      kpi_def_id: kpiDefId,
+      frequency: plan.frequency,
+      start_date: plan.startDate || null,
+      periods: plan.periods,
+      updated_by_id: userId,
+    })
+    .onConflictDoUpdate({
+      target: [bscKpiTargetPlan.utility_id, bscKpiTargetPlan.kpi_def_id],
+      set: {
+        frequency: plan.frequency,
+        start_date: plan.startDate || null,
+        periods: plan.periods,
+        updated_by_id: userId,
+        updated_at: new Date(),
+      },
+    });
+};
+
+export const listTargetPlans = async (
+  utilityId: number,
+): Promise<TargetPlanSummary[]> => {
+  const rows = await db
+    .select({
+      kpi_def_id: bscKpiTargetPlan.kpi_def_id,
+      periods: bscKpiTargetPlan.periods,
+    })
+    .from(bscKpiTargetPlan)
+    .where(eq(bscKpiTargetPlan.utility_id, utilityId));
+
+  return rows.map((row) => {
+    const periods = row.periods ?? [];
+    const values = periods.map((p) => {
+      const trimmed = String(p.value ?? "").trim();
+      if (trimmed.length === 0) return null;
+      const n = Number(trimmed);
+      return Number.isFinite(n) ? n : null;
+    });
+    return {
+      kpiDefinitionId: row.kpi_def_id,
+      total: periods.length,
+      filled: values.filter((v) => v != null).length,
+      values,
+    };
+  });
 };
 
 // ---------------------------------------------------------------------------

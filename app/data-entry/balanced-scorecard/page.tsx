@@ -48,6 +48,7 @@ export default async function BalancedScorecardPage() {
         filterOptions={options}
         kpiOptions={kpiOptions}
         customKpiReferenceOptions={customKpiReferenceOptions}
+        scopedUtilityId={user.org_id ?? null}
       />
     );
   } catch {

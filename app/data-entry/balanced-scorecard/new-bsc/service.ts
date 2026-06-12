@@ -15,9 +15,12 @@ import {
   getUtilityScorecard,
   listBuilderKpiOptions,
   listKpiTargets,
+  listReportTypeOptions,
   listTemplateTree,
+  listTargetPlans,
   replacePerspectiveOverlay,
   saveKpiTargets,
+  saveKpiTargetPlan,
   saveThemeStyles,
   setKpiTrajectory,
   updateTemplateNode,
@@ -28,7 +31,9 @@ import type {
   CreateTemplateNodePayload,
   KpiOption,
   KpiTargetRow,
+  ReportTypeOption,
   SaveKpiTargetsPayload,
+  TargetPlanSummary,
   ScorecardResponse,
   SavePerspectiveOverlayPayload,
   SetTrajectoryPayload,
@@ -113,6 +118,13 @@ export const getKpiOptions = async (
   return listBuilderKpiOptions(utilityId);
 };
 
+export const getReportTypeOptions = async (
+  user: CurrentUser,
+): Promise<ReportTypeOption[]> => {
+  assertNewBscReadAccess(user);
+  return listReportTypeOptions();
+};
+
 export const savePerspective = async (
   user: CurrentUser,
   payload: SavePerspectiveOverlayPayload,
@@ -151,5 +163,23 @@ export const saveKpiTargetsForBsc = async (
 ) => {
   assertNewBscBuildAccess(user);
   const utilityId = requireUtilityId(user);
+  // Filled values write through to the shared KPI target store (scoring);
+  // the full plan (incl. blanks) is kept for status reporting.
   await saveKpiTargets(utilityId, payload.kpiDefinitionId, payload.targets);
+  if (payload.plan) {
+    await saveKpiTargetPlan(
+      utilityId,
+      user.id,
+      payload.kpiDefinitionId,
+      payload.plan,
+    );
+  }
+};
+
+export const getTargetPlans = async (
+  user: CurrentUser,
+): Promise<TargetPlanSummary[]> => {
+  assertNewBscReadAccess(user);
+  const utilityId = requireUtilityId(user);
+  return listTargetPlans(utilityId);
 };

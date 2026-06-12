@@ -2,6 +2,8 @@
 
 import { useState } from "react";
 import {
+  ArrowDown,
+  ArrowUp,
   ChevronDown,
   ChevronRight,
   Plus,
@@ -121,6 +123,32 @@ export default function BscTemplateEditor({
       await updateTemplateNode(node.id, { isMandatory });
     });
 
+  // Reorder a node among its siblings by normalising sibling `ord` to the new
+  // positions (only changed rows are persisted).
+  const moveNode = (
+    node: TemplateNode,
+    siblings: TemplateNode[],
+    direction: "up" | "down",
+  ) => {
+    const index = siblings.findIndex((s) => s.id === node.id);
+    const target = direction === "up" ? index - 1 : index + 1;
+    if (target < 0 || target >= siblings.length) return;
+    const reordered = [...siblings];
+    [reordered[index], reordered[target]] = [
+      reordered[target],
+      reordered[index],
+    ];
+    void withBusy(async () => {
+      await Promise.all(
+        reordered.map((sibling, idx) =>
+          sibling.ord === idx
+            ? Promise.resolve()
+            : updateTemplateNode(sibling.id, { ord: idx }),
+        ),
+      );
+    });
+  };
+
   const confirmDelete = () => {
     if (!pendingDelete) return;
     const node = pendingDelete;
@@ -131,9 +159,16 @@ export default function BscTemplateEditor({
     });
   };
 
-  const renderNode = (node: TemplateNode, depth: number) => {
+  const renderNode = (
+    node: TemplateNode,
+    depth: number,
+    siblings: TemplateNode[],
+  ) => {
     const childLevel = CHILD_LEVEL[node.level];
     const isCollapsed = collapsed.has(node.id);
+    const index = siblings.findIndex((s) => s.id === node.id);
+    const canUp = index > 0;
+    const canDown = index < siblings.length - 1;
     return (
       <div key={node.id} style={{ paddingLeft: depth * 16 }} className="py-0.5">
         <div className="flex items-center gap-2">
@@ -192,6 +227,27 @@ export default function BscTemplateEditor({
             type="button"
             variant="ghost"
             size="icon"
+            disabled={busy || !canUp}
+            aria-label="Move up"
+            onClick={() => moveNode(node, siblings, "up")}
+          >
+            <ArrowUp className="size-3.5" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            disabled={busy || !canDown}
+            aria-label="Move down"
+            onClick={() => moveNode(node, siblings, "down")}
+          >
+            <ArrowDown className="size-3.5" />
+          </Button>
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
             disabled={busy}
             onClick={() => setPendingDelete(node)}
           >
@@ -200,7 +256,9 @@ export default function BscTemplateEditor({
         </div>
 
         {!isCollapsed
-          ? node.children.map((child) => renderNode(child, depth + 1))
+          ? node.children.map((child) =>
+              renderNode(child, depth + 1, node.children),
+            )
           : null}
       </div>
     );
@@ -210,8 +268,9 @@ export default function BscTemplateEditor({
     <div className="space-y-2 rounded-md border bg-background p-3">
       <div className="flex items-center justify-between">
         <p className="text-[11px] text-muted-foreground">
-          Edit labels inline (saved on blur). Toggle mandatory, add child nodes,
-          or delete (deletes the node and all descendants).
+          Edit labels inline (saved on blur). Toggle mandatory, reorder with the
+          up/down arrows, add child nodes, or delete (deletes the node and all
+          descendants).
         </p>
         <Button
           type="button"
@@ -231,7 +290,7 @@ export default function BscTemplateEditor({
           <code>npm run db-seed-bsc</code> or add a perspective above.
         </p>
       ) : (
-        nodes.map((node) => renderNode(node, 0))
+        nodes.map((node) => renderNode(node, 0, nodes))
       )}
 
       <AlertDialog

@@ -317,3 +317,43 @@ export const bscTheme = pgTable(
 
 export type BscTheme = typeof bscTheme.$inferSelect;
 export type NewBscTheme = typeof bscTheme.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// BSC KPI target plan — the generated period set for a (utility, KPI), so we
+// can tell how many periods were expected vs filled (Targets status). Filled
+// values are still written through to kpiDefinitions.targets for scoring.
+// ---------------------------------------------------------------------------
+
+export type BscTargetPlanPeriod = {
+  label: string;
+  year: number;
+  month: number | null;
+  value: string;
+};
+
+export const bscKpiTargetPlan = pgTable(
+  "bsc_kpi_target_plan",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    utility_id: integer("utility_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    kpi_def_id: integer("kpi_def_id")
+      .notNull()
+      .references(() => kpiDefinitions.id, { onDelete: "cascade" }),
+    frequency: text("frequency"),
+    start_date: date("start_date"),
+    periods: json("periods").$type<BscTargetPlanPeriod[]>().notNull().default([]),
+    updated_by_id: text("updated_by_id").references(() => user.id),
+    updated_at: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("bsc_kpi_target_plan_utility_kpi_idx").on(
+      table.utility_id,
+      table.kpi_def_id,
+    ),
+  ],
+);
+
+export type BscKpiTargetPlan = typeof bscKpiTargetPlan.$inferSelect;
+export type NewBscKpiTargetPlan = typeof bscKpiTargetPlan.$inferInsert;

@@ -15,7 +15,19 @@ export const STYLEABLE_ELEMENTS: ReadonlyArray<{ id: string; label: string }> = 
   { id: "objectiveBlock", label: "Specific objective block" },
   { id: "initiativeCard", label: "Initiative / Project card" },
   { id: "kpiRow", label: "KPI row" },
-  { id: "badge", label: "Badges" },
+  { id: "badge", label: "Custom badge" },
+  { id: "pillOverallObjective", label: "Pills — Overall Objective" },
+  { id: "pillKeyFocusArea", label: "Pills — Key Focus Area" },
+  { id: "pillStrategicObjective", label: "Pills — Strategic Objective" },
+  { id: "pillStrategicLever", label: "Pills — Strategic Lever" },
+  { id: "pillSpecificObjective", label: "Pills — Specific Objective" },
+  { id: "initiativePill", label: "Pills — Initiative" },
+  { id: "projectPill", label: "Pills — Project" },
+  { id: "targetStatusNotSet", label: "Pills — target: not set" },
+  { id: "targetStatusPartial", label: "Pills — target: partially set" },
+  { id: "targetStatusFull", label: "Pills — target: fully set" },
+  { id: "trajectoryMatched", label: "Pills — trajectory: matched" },
+  { id: "trajectoryMismatched", label: "Pills — trajectory: mismatched" },
 ];
 
 const STYLEABLE_IDS = new Set(STYLEABLE_ELEMENTS.map((element) => element.id));

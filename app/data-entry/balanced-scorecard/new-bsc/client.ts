@@ -3,7 +3,9 @@ import type {
   CreateTemplateNodePayload,
   KpiOption,
   KpiTargetRow,
+  ReportTypeOption,
   SaveKpiTargetsPayload,
+  TargetPlanSummary,
   ScorecardResponse,
   SavePerspectiveOverlayPayload,
   SetTrajectoryPayload,
@@ -113,6 +115,28 @@ export const updateTemplateNode = async (
 export const deleteTemplateNode = async (id: string): Promise<void> => {
   const response = await fetch(`${BASE}/template/${id}`, { method: "DELETE" });
   await asJson<{ message: string }>(response, "Unable to delete template node.");
+};
+
+export const fetchTargetPlans = async (): Promise<
+  Record<number, TargetPlanSummary>
+> => {
+  const response = await fetch(`${BASE}/target-plans`, { cache: "no-store" });
+  const data = await asJson<{ plans: TargetPlanSummary[] }>(
+    response,
+    "Unable to load target plans.",
+  );
+  const map: Record<number, TargetPlanSummary> = {};
+  for (const plan of data.plans) map[plan.kpiDefinitionId] = plan;
+  return map;
+};
+
+export const fetchReportTypes = async (): Promise<ReportTypeOption[]> => {
+  const response = await fetch(`${BASE}/report-types`, { cache: "no-store" });
+  const data = await asJson<{ options: ReportTypeOption[] }>(
+    response,
+    "Unable to load tracking frequencies.",
+  );
+  return data.options;
 };
 
 export const fetchKpiTargets = async (
