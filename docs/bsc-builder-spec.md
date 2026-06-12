@@ -155,3 +155,12 @@ Auto-layout by (perspective band, theme column, `ord`). When `map_x`/`map_y` are
 ### 13.5 Roles
 
 Authoring edges + `map_label`/position overrides: **CEO, EXE, MGR, BLO** (same as overlay editing). Template `map_label`/`is_map_node` defaults: **DEV/BMO** via `/settings/bsc-template`. PPA seeds defaults in `seed-bsc-template.ts`; edges are never seeded (per-Utility).
+
+### 13.6 Implementation (backend — done)
+
+Read model + link CRUD live in dedicated modules (kept separate from the builder's files):
+- `new-bsc/strategy-map.types.ts` · `strategy-map.repository.ts` (read model + link CRUD + node display overrides) · `strategy-map.service.ts` (authz wrappers) · `strategy-map.client.ts`.
+- API: `GET /strategy-map`; `POST /strategy-map/links`; `PUT|DELETE /strategy-map/links/[id]`; `PUT /strategy-map/nodes/[id]` (label/on-off/drag position). Validators in `_lib/strategy-map.validators.ts`.
+- The read model resolves effective `map_label`/`is_map_node` (`coalesce(utility, template, …)`), walks ancestors for band (perspective) + theme (key focus area), filters edges to currently-visible endpoints, and exposes `x`/`y` for layout.
+
+Backfill: `scripts/backfill-bsc-map-defaults.ts` applies the §13 map defaults onto an already-seeded template (the seed is idempotent and skips existing rows). It matches by `(level, label)` against the canonical seed labels; admin-edited templates that have diverged need their flags reconciled directly. **Pending: the Strategy Map UI** (auto-layout renderer, drag-to-position, edge drawing).
