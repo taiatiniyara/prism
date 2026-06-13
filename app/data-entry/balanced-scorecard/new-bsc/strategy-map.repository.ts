@@ -82,13 +82,28 @@ const effectiveFullLabel = (row: OverlayRow): string =>
 export const getStrategyMap = async (
   utilityId: number,
 ): Promise<StrategyMapResponse> => {
-  const [rows, linkRows] = await Promise.all([
+  const [rows, linkRows, templatePerspectives] = await Promise.all([
     fetchOverlayRows(utilityId),
     db
       .select()
       .from(bscObjectiveLinks)
       .where(eq(bscObjectiveLinks.utility_id, utilityId))
       .orderBy(asc(bscObjectiveLinks.ord)),
+    db
+      .select({
+        id: bscTemplateNodes.id,
+        label: bscTemplateNodes.label,
+        mapLabel: bscTemplateNodes.map_label,
+        ord: bscTemplateNodes.ord,
+      })
+      .from(bscTemplateNodes)
+      .where(
+        and(
+          eq(bscTemplateNodes.level, "perspective"),
+          eq(bscTemplateNodes.is_active, true),
+        ),
+      )
+      .orderBy(asc(bscTemplateNodes.ord)),
   ]);
 
   const byId = new Map(rows.map((r) => [r.id, r]));
@@ -106,28 +121,46 @@ export const getStrategyMap = async (
     return null;
   };
 
-  const perspectives: StrategyMapPerspective[] = rows
-    .filter((r) => r.level === "perspective")
-    .map((r) => ({
-      id: r.id,
-      templateNodeId: r.templateNodeId,
-      label: effectiveMapLabel(r),
-      ord: r.ord,
-    }))
-    .sort((a, b) => a.ord - b.ord);
+  // Bands = the canonical template perspectives, ALWAYS shown (a strategy map
+  // is a fixed four-band frame even before a utility has populated a band),
+  // keyed by template id. Any custom (non-template) perspective is appended.
+  const bands = new Map<string, StrategyMapPerspective>();
+  for (const tp of templatePerspectives) {
+    bands.set(tp.id, {
+      id: tp.id,
+      templateNodeId: tp.id,
+      label: tp.mapLabel ?? tp.label,
+      ord: tp.ord,
+    });
+  }
+
+  const bandIdFor = (row: OverlayRow): string | null => {
+    const perspective = ancestorAt(row, "perspective");
+    if (!perspective) return null;
+    const bandId = perspective.templateNodeId ?? perspective.id;
+    if (!bands.has(bandId)) {
+      bands.set(bandId, {
+        id: bandId,
+        templateNodeId: perspective.templateNodeId,
+        label: effectiveMapLabel(perspective),
+        ord: 1000 + perspective.ord,
+      });
+    }
+    return bandId;
+  };
 
   const nodes: StrategyMapNode[] = [];
   for (const row of rows) {
     if (!effectiveIsMapNode(row)) continue;
-    const perspective = ancestorAt(row, "perspective");
-    if (!perspective) continue; // map nodes must live under a perspective band
+    const bandId = bandIdFor(row);
+    if (!bandId) continue; // map nodes must live under a perspective band
     const theme = ancestorAt(row, "key_focus_area");
     nodes.push({
       id: row.id,
       label: effectiveMapLabel(row),
       fullLabel: effectiveFullLabel(row),
       level: row.level,
-      perspectiveId: perspective.id,
+      perspectiveId: bandId,
       themeId: theme?.id ?? null,
       themeLabel: theme ? effectiveMapLabel(theme) : null,
       themeOrd: theme?.ord ?? 0,
@@ -136,6 +169,8 @@ export const getStrategyMap = async (
       ord: row.ord,
     });
   }
+
+  const perspectives = [...bands.values()].sort((a, b) => a.ord - b.ord);
 
   // Only show edges whose endpoints are both currently visible map nodes.
   const visible = new Set(nodes.map((n) => n.id));

@@ -117,8 +117,14 @@ const computeLayout = (
         laid.set(n.id, { node: n, x: placed.x, y: placed.y });
         x += NW + GAP;
       }
+      // Dedupe: when a theme holds a single node whose label equals the theme
+      // (e.g. Financial's promoted key focus areas), drop the redundant caption.
+      const redundant =
+        g.nodes.length === 1 &&
+        g.label != null &&
+        g.nodes[0].label.trim().toLowerCase() === g.label.trim().toLowerCase();
       themes.push({
-        label: g.label,
+        label: redundant ? null : g.label,
         x: startX,
         y: top + 5,
         w: Math.max(x - GAP - startX, NW),
