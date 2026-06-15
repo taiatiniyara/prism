@@ -287,8 +287,8 @@ const computeLayout = (
   for (const r of regionList) {
     const box = boxes.get(r.persp.id);
     if (!box) continue;
-    // Sized boxes pad from the left; full-width boxes center their content.
-    const originX = box.x + Math.max(REGION_PAD, (box.w - r.content.contentW) / 2);
+    // Left-align content in every box (sized and full-width) for a tidy read.
+    const originX = box.x + REGION_PAD;
     const originY = box.y + REGION_TITLE_H + REGION_PAD;
     for (const n of r.nodes) {
       const local = r.content.placements.get(n.id);
