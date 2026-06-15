@@ -21,48 +21,174 @@ import type {
 // so pointer deltas map 1:1 to canvas coordinates — no CTM math needed).
 const NW = 158;
 const NH = 50;
-const GAP = 16;
-const THEME_GAP = 30;
-const LABEL_W = 132;
-const CONTENT_X = LABEL_W + 10;
-const BAND_PAD_TOP = 24;
-const BAND_PAD_BOT = 14;
-const BAND_VGAP = 16;
-// Vertical gap between a band's overall-objective header row and its body row.
-const ROW_GAP = 30;
+const GAP = 16; // horizontal gap between sibling nodes
+const ROW_V = 30; // vertical gap between levels within a perspective
+const THEME_GAP = 34; // horizontal gap between theme clusters
+const THEME_CAP_H = 16; // height reserved for a theme caption
+const REGION_PAD = 14; // inner padding inside a perspective box
+const REGION_TITLE_H = 26; // space for the perspective title
+const REGION_GAP = 24; // gap between perspective boxes
 const MIN_W = 900;
 const DRAG_THRESHOLD = 5;
 
-// One ramp per perspective band, keyed by band order. Tailwind classes so they
+// One ramp per perspective, keyed by perspective order. Tailwind classes so they
 // adapt to light/dark. Falls back to slate for any extra perspectives.
 const BAND_COLORS = [
-  { band: "bg-violet-500/5", bar: "bg-violet-500", chip: "border-violet-300 bg-violet-50 text-violet-900" },
-  { band: "bg-sky-500/5", bar: "bg-sky-500", chip: "border-sky-300 bg-sky-50 text-sky-900" },
-  { band: "bg-teal-500/5", bar: "bg-teal-500", chip: "border-teal-300 bg-teal-50 text-teal-900" },
-  { band: "bg-amber-500/5", bar: "bg-amber-500", chip: "border-amber-300 bg-amber-50 text-amber-900" },
-  { band: "bg-slate-500/5", bar: "bg-slate-500", chip: "border-slate-300 bg-slate-50 text-slate-900" },
+  { band: "border-violet-300 bg-violet-500/5", bar: "bg-violet-500", chip: "border-violet-300 bg-violet-50 text-violet-900" },
+  { band: "border-sky-300 bg-sky-500/5", bar: "bg-sky-500", chip: "border-sky-300 bg-sky-50 text-sky-900" },
+  { band: "border-teal-300 bg-teal-500/5", bar: "bg-teal-500", chip: "border-teal-300 bg-teal-50 text-teal-900" },
+  { band: "border-amber-300 bg-amber-500/5", bar: "bg-amber-500", chip: "border-amber-300 bg-amber-50 text-amber-900" },
+  { band: "border-slate-300 bg-slate-500/5", bar: "bg-slate-500", chip: "border-slate-300 bg-slate-50 text-slate-900" },
 ];
 
 type Pos = { x: number; y: number };
 
 type LaidNode = { node: StrategyMapNode; x: number; y: number };
 
-type ThemeBox = { label: string | null; x: number; y: number; w: number };
+type ThemeBox = { label: string; x: number; y: number; w: number };
 
-type BandLayout = {
+// A perspective rendered as a titled box (Kaplan & Norton quadrant frame).
+type RegionBox = {
   perspective: StrategyMapPerspective;
   colorIndex: number;
-  top: number;
-  height: number;
+  x: number;
+  y: number;
+  w: number;
+  h: number;
   themes: ThemeBox[];
 };
 
 type Layout = {
   laid: Map<string, LaidNode>;
-  bands: BandLayout[];
+  regions: RegionBox[];
   width: number;
   height: number;
   perspectiveColor: Map<string, number>;
+};
+
+type Slot = "tl" | "tr" | "mid" | "bottom" | "extra";
+
+// Canonical strategy-map quadrants: Customer top-left, Financial top-right,
+// Processes a full-width middle band, Learning & Growth a full-width bottom band.
+const slotFor = (label: string): Slot => {
+  const l = label.toLowerCase();
+  if (l.includes("customer")) return "tl";
+  if (l.includes("financial")) return "tr";
+  if (l.includes("process")) return "mid";
+  if (l.includes("learning") || l.includes("growth")) return "bottom";
+  return "extra";
+};
+
+type RegionContent = {
+  placements: Map<string, Pos>; // node id -> local position (origin = content top-left)
+  themeCaps: ThemeBox[]; // local coords
+  contentW: number;
+  contentH: number;
+};
+
+// Lay out one perspective's nodes as a top-down tree in LOCAL coordinates:
+// overall objective at the apex, key focus areas (when they are map nodes) as a
+// row beneath, and the remaining objectives grouped into theme clusters below,
+// each cluster captioned by its key focus area. Causal arrows then read upward.
+const layoutPerspective = (nodes: StrategyMapNode[]): RegionContent => {
+  const byOrd = (a: StrategyMapNode, b: StrategyMapNode) => a.ord - b.ord;
+  const apex = nodes
+    .filter((n) => n.level === "overall_objective")
+    .sort(byOrd);
+  const kfaChips = nodes
+    .filter((n) => n.level === "key_focus_area")
+    .sort(byOrd);
+  const rest = nodes.filter(
+    (n) => n.level !== "overall_objective" && n.level !== "key_focus_area",
+  );
+
+  type Col = {
+    header: StrategyMapNode | null;
+    caption: string | null;
+    ord: number;
+    objs: StrategyMapNode[];
+  };
+  const cols = new Map<string, Col>();
+  for (const k of kfaChips) {
+    cols.set(k.id, { header: k, caption: null, ord: k.ord, objs: [] });
+  }
+  for (const n of rest) {
+    const key = n.themeId ?? "__none__";
+    let c = cols.get(key);
+    if (!c) {
+      c = {
+        header: null,
+        caption: n.themeId ? n.themeLabel : null,
+        ord: n.themeId ? n.themeOrd : Number.MAX_SAFE_INTEGER,
+        objs: [],
+      };
+      cols.set(key, c);
+    }
+    c.objs.push(n);
+  }
+  const columns = [...cols.values()].sort((a, b) => a.ord - b.ord);
+  for (const c of columns) c.objs.sort(byOrd);
+
+  const hasApex = apex.length > 0;
+  const hasHeaderChips = columns.some((c) => c.header != null);
+  const hasCaptions = columns.some((c) => c.caption != null);
+
+  // Stack the present levels: apex row, optional caption strip, header-chip row,
+  // then the objectives row.
+  let cy = 0;
+  if (hasApex) cy += NH + ROW_V;
+  let captionY = -1;
+  if (hasCaptions) {
+    captionY = cy;
+    cy += THEME_CAP_H + 4;
+  }
+  let headerY = -1;
+  if (hasHeaderChips) {
+    headerY = cy;
+    cy += NH + ROW_V;
+  }
+  const objY = cy;
+
+  const placements = new Map<string, Pos>();
+  const themeCaps: ThemeBox[] = [];
+  let x = 0;
+  for (const c of columns) {
+    const objsW =
+      c.objs.length > 0 ? c.objs.length * NW + (c.objs.length - 1) * GAP : NW;
+    const colW = Math.max(NW, objsW);
+    if (c.objs.length > 0) {
+      let ox = x + (colW - objsW) / 2;
+      for (const o of c.objs) {
+        placements.set(o.id, { x: ox, y: objY });
+        ox += NW + GAP;
+      }
+    }
+    if (c.header) {
+      placements.set(c.header.id, {
+        x: x + (colW - NW) / 2,
+        y: headerY >= 0 ? headerY : objY,
+      });
+    }
+    if (c.caption && captionY >= 0) {
+      themeCaps.push({ label: c.caption, x, y: captionY, w: colW });
+    }
+    x += colW + THEME_GAP;
+  }
+  const contentW = Math.max(NW, x - THEME_GAP);
+
+  if (hasApex) {
+    const apexW = apex.length * NW + (apex.length - 1) * GAP;
+    let ax = Math.max(0, (contentW - apexW) / 2);
+    for (const a of apex) {
+      placements.set(a.id, { x: ax, y: 0 });
+      ax += NW + GAP;
+    }
+  }
+
+  let contentH = 0;
+  for (const p of placements.values()) contentH = Math.max(contentH, p.y + NH);
+
+  return { placements, themeCaps, contentW, contentH };
 };
 
 const computeLayout = (
@@ -76,105 +202,110 @@ const computeLayout = (
     nodesByPersp.set(n.perspectiveId, arr);
   }
 
-  const laid = new Map<string, LaidNode>();
-  const bands: BandLayout[] = [];
   const perspectiveColor = new Map<string, number>();
-  let top = 0;
-  let maxX = MIN_W;
-
+  type Region = {
+    persp: StrategyMapPerspective;
+    colorIndex: number;
+    slot: Slot;
+    content: RegionContent;
+    boxW: number;
+    boxH: number;
+    nodes: StrategyMapNode[];
+  };
+  const regionList: Region[] = [];
   data.perspectives.forEach((p, idx) => {
     const colorIndex = Math.min(idx, BAND_COLORS.length - 1);
     perspectiveColor.set(p.id, colorIndex);
     const ns = nodesByPersp.get(p.id) ?? [];
-
-    // Overall-objective map nodes render as a centered header row above the
-    // band's body nodes (e.g. Financial's "Improve Shareholder Value" sits
-    // above its key focus areas). Everything else flows in the body row.
-    const headerNodes = ns
-      .filter((n) => n.level === "overall_objective")
-      .sort((a, b) => a.ord - b.ord);
-    const bodyNodes = ns.filter((n) => n.level !== "overall_objective");
-    const hasHeader = headerNodes.length > 0;
-
-    // Group body nodes by theme (key focus area), ordered by themeOrd; untyped last.
-    const groupsMap = new Map<
-      string,
-      { label: string | null; ord: number; nodes: StrategyMapNode[] }
-    >();
-    for (const n of bodyNodes) {
-      const key = n.themeId ?? "__none__";
-      const g = groupsMap.get(key) ?? {
-        label: n.themeLabel,
-        ord: n.themeId ? n.themeOrd : Number.MAX_SAFE_INTEGER,
-        nodes: [],
-      };
-      g.nodes.push(n);
-      groupsMap.set(key, g);
-    }
-    const groups = [...groupsMap.values()].sort((a, b) => a.ord - b.ord);
-
-    const bodyRowY = top + BAND_PAD_TOP + (hasHeader ? NH + ROW_GAP : 0);
-    let x = CONTENT_X;
-    const themes: ThemeBox[] = [];
-
-    for (const g of groups) {
-      const startX = x;
-      g.nodes.sort((a, b) => a.ord - b.ord);
-      for (const n of g.nodes) {
-        const ov = overrides.get(n.id);
-        const placed: Pos =
-          ov ??
-          (n.x != null && n.y != null ? { x: n.x, y: n.y } : { x, y: bodyRowY });
-        laid.set(n.id, { node: n, x: placed.x, y: placed.y });
-        x += NW + GAP;
-      }
-      // Dedupe: when a theme holds a single node whose label equals the theme
-      // (e.g. Financial's promoted key focus areas), drop the redundant caption.
-      const redundant =
-        g.nodes.length === 1 &&
-        g.label != null &&
-        g.nodes[0].label.trim().toLowerCase() === g.label.trim().toLowerCase();
-      themes.push({
-        label: redundant ? null : g.label,
-        x: startX,
-        y: bodyRowY - 19,
-        w: Math.max(x - GAP - startX, NW),
-      });
-      x += THEME_GAP - GAP;
-    }
-
-    // Place header node(s) centered across the body's content width.
-    if (hasHeader) {
-      const headerRowY = top + BAND_PAD_TOP;
-      const contentW = Math.max(x - (THEME_GAP - GAP) - CONTENT_X, NW);
-      const totalW = headerNodes.length * NW + (headerNodes.length - 1) * GAP;
-      let hx = CONTENT_X + Math.max(0, (contentW - totalW) / 2);
-      for (const n of headerNodes) {
-        const ov = overrides.get(n.id);
-        const placed: Pos =
-          ov ??
-          (n.x != null && n.y != null
-            ? { x: n.x, y: n.y }
-            : { x: hx, y: headerRowY });
-        laid.set(n.id, { node: n, x: placed.x, y: placed.y });
-        hx += NW + GAP;
-      }
-    }
-
-    const height =
-      BAND_PAD_TOP + (hasHeader ? NH + ROW_GAP : 0) + NH + BAND_PAD_BOT;
-    bands.push({ perspective: p, colorIndex, top, height, themes });
-    maxX = Math.max(maxX, x);
-    top += height + BAND_VGAP;
+    const content = layoutPerspective(ns);
+    regionList.push({
+      persp: p,
+      colorIndex,
+      slot: slotFor(p.label),
+      content,
+      boxW: content.contentW + REGION_PAD * 2,
+      boxH: REGION_TITLE_H + content.contentH + REGION_PAD * 2,
+      nodes: ns,
+    });
   });
 
-  // Manually-positioned nodes may sit outside the auto flow — grow the canvas.
-  for (const l of laid.values()) {
-    maxX = Math.max(maxX, l.x + NW + 20);
-    top = Math.max(top, l.y + NH + 20);
+  const bySlot = (s: Slot) => regionList.find((r) => r.slot === s);
+  const tl = bySlot("tl");
+  const tr = bySlot("tr");
+  const mid = bySlot("mid");
+  const bottom = bySlot("bottom");
+  const extras = regionList.filter((r) => r.slot === "extra");
+
+  const topRowW =
+    (tl ? tl.boxW : 0) + (tl && tr ? REGION_GAP : 0) + (tr ? tr.boxW : 0);
+  const canvasW = Math.max(
+    MIN_W,
+    topRowW,
+    mid ? mid.content.contentW + REGION_PAD * 2 : 0,
+    bottom ? bottom.content.contentW + REGION_PAD * 2 : 0,
+    ...extras.map((e) => e.content.contentW + REGION_PAD * 2),
+  );
+
+  const boxes = new Map<string, { x: number; y: number; w: number; h: number }>();
+  let topRowH = 0;
+  if (tl) {
+    boxes.set(tl.persp.id, { x: 0, y: 0, w: tl.boxW, h: tl.boxH });
+    topRowH = Math.max(topRowH, tl.boxH);
+  }
+  if (tr) {
+    boxes.set(tr.persp.id, { x: canvasW - tr.boxW, y: 0, w: tr.boxW, h: tr.boxH });
+    topRowH = Math.max(topRowH, tr.boxH);
+  }
+  let cursorY = topRowH > 0 ? topRowH + REGION_GAP : 0;
+  const fullRow = (r: Region) => {
+    boxes.set(r.persp.id, { x: 0, y: cursorY, w: canvasW, h: r.boxH });
+    cursorY += r.boxH + REGION_GAP;
+  };
+  if (mid) fullRow(mid);
+  if (bottom) fullRow(bottom);
+  for (const e of extras) fullRow(e);
+  let canvasH = Math.max(cursorY - REGION_GAP, topRowH);
+
+  const laid = new Map<string, LaidNode>();
+  const regions: RegionBox[] = [];
+  for (const r of regionList) {
+    const box = boxes.get(r.persp.id);
+    if (!box) continue;
+    // Sized boxes pad from the left; full-width boxes center their content.
+    const originX = box.x + Math.max(REGION_PAD, (box.w - r.content.contentW) / 2);
+    const originY = box.y + REGION_TITLE_H + REGION_PAD;
+    for (const n of r.nodes) {
+      const local = r.content.placements.get(n.id);
+      if (!local) continue;
+      const base: Pos = { x: originX + local.x, y: originY + local.y };
+      const ov = overrides.get(n.id);
+      const pos = ov ?? (n.x != null && n.y != null ? { x: n.x, y: n.y } : base);
+      laid.set(n.id, { node: n, x: pos.x, y: pos.y });
+    }
+    regions.push({
+      perspective: r.persp,
+      colorIndex: r.colorIndex,
+      x: box.x,
+      y: box.y,
+      w: box.w,
+      h: box.h,
+      themes: r.content.themeCaps.map((t) => ({
+        label: t.label,
+        x: originX + t.x,
+        y: originY + t.y,
+        w: t.w,
+      })),
+    });
   }
 
-  return { laid, bands, width: maxX + 20, height: top + 8, perspectiveColor };
+  // Dragged nodes may sit outside the auto flow — grow the canvas.
+  let width = canvasW;
+  for (const l of laid.values()) {
+    width = Math.max(width, l.x + NW + 20);
+    canvasH = Math.max(canvasH, l.y + NH + 20);
+  }
+
+  return { laid, regions, width: width + 20, height: canvasH + 8, perspectiveColor };
 };
 
 const center = (l: LaidNode) => ({ x: l.x + NW / 2, y: l.y + NH / 2 });
@@ -396,37 +527,31 @@ export default function BscStrategyMap({
             onPointerMove={onPointerMove}
             onPointerUp={onPointerUp}
           >
-            {/* Bands */}
-            {layout.bands.map((b) => {
+            {/* Perspective boxes (quadrant frame) */}
+            {layout.regions.map((b) => {
               const color = BAND_COLORS[b.colorIndex];
               return (
                 <div key={b.perspective.id}>
                   <div
-                    className={`absolute left-0 ${color.band}`}
-                    style={{ top: b.top, width: layout.width, height: b.height }}
+                    className={`absolute rounded-lg border ${color.band}`}
+                    style={{ left: b.x, top: b.y, width: b.w, height: b.h }}
                   />
                   <div
-                    className={`absolute ${color.bar}`}
-                    style={{ top: b.top, left: 0, width: 4, height: b.height }}
-                  />
-                  <div
-                    className="absolute text-xs font-medium text-foreground"
-                    style={{ top: b.top + 8, left: 12, width: LABEL_W - 16 }}
+                    className="absolute text-sm font-semibold text-foreground"
+                    style={{ top: b.y + 6, left: b.x + 12 }}
                   >
                     {b.perspective.label}
                   </div>
-                  {b.themes.map((t, i) =>
-                    t.label ? (
-                      <div
-                        key={`${b.perspective.id}-theme-${i}`}
-                        className="absolute truncate text-[10px] uppercase tracking-wide text-muted-foreground"
-                        style={{ top: t.y, left: t.x, width: t.w }}
-                        title={t.label}
-                      >
-                        {t.label}
-                      </div>
-                    ) : null,
-                  )}
+                  {b.themes.map((t, i) => (
+                    <div
+                      key={`${b.perspective.id}-theme-${i}`}
+                      className="absolute truncate text-center text-[10px] font-medium uppercase tracking-wide text-muted-foreground"
+                      style={{ top: t.y, left: t.x, width: t.w }}
+                      title={t.label}
+                    >
+                      {t.label}
+                    </div>
+                  ))}
                 </div>
               );
             })}
