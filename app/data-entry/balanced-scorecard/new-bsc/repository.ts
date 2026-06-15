@@ -1,4 +1,4 @@
-import { and, asc, eq, or } from "drizzle-orm";
+import { and, asc, eq, or, sql } from "drizzle-orm";
 
 import { db } from "@/db/connection";
 import {
@@ -362,6 +362,18 @@ export const replacePerspectiveOverlay = async (
   payload: SavePerspectiveOverlayPayload,
 ): Promise<void> => {
   await db.transaction(async (tx) => {
+    // Serialize concurrent saves of the SAME perspective. The autosave debounce
+    // (new-bsc-builder.tsx) doesn't wait for an in-flight save, so a follow-up
+    // edit can fire a second delete-then-reinsert while the first is still
+    // running. Without this lock the two transactions interleave and either
+    // duplicate the whole subtree or collide on the (utility_id,
+    // template_node_id) unique index (migration 0029). The xact lock makes each
+    // save's delete+reinsert atomic relative to other saves of this perspective;
+    // it auto-releases at commit/rollback.
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(${utilityId}, hashtext(${payload.perspectiveTemplateNodeId}))`,
+    );
+
     // Remove the existing overlay subtree for this perspective. Cascading FKs
     // (parent_node_id, lever -> objective -> initiative -> kpi link) clean up
     // all descendants and lower-zone rows.
