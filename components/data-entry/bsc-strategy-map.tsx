@@ -28,6 +28,8 @@ const CONTENT_X = LABEL_W + 10;
 const BAND_PAD_TOP = 24;
 const BAND_PAD_BOT = 14;
 const BAND_VGAP = 16;
+// Vertical gap between a band's overall-objective header row and its body row.
+const ROW_GAP = 30;
 const MIN_W = 900;
 const DRAG_THRESHOLD = 5;
 
@@ -85,12 +87,21 @@ const computeLayout = (
     perspectiveColor.set(p.id, colorIndex);
     const ns = nodesByPersp.get(p.id) ?? [];
 
-    // Group by theme (key focus area), ordered by themeOrd; untyped theme last.
+    // Overall-objective map nodes render as a centered header row above the
+    // band's body nodes (e.g. Financial's "Improve Shareholder Value" sits
+    // above its key focus areas). Everything else flows in the body row.
+    const headerNodes = ns
+      .filter((n) => n.level === "overall_objective")
+      .sort((a, b) => a.ord - b.ord);
+    const bodyNodes = ns.filter((n) => n.level !== "overall_objective");
+    const hasHeader = headerNodes.length > 0;
+
+    // Group body nodes by theme (key focus area), ordered by themeOrd; untyped last.
     const groupsMap = new Map<
       string,
       { label: string | null; ord: number; nodes: StrategyMapNode[] }
     >();
-    for (const n of ns) {
+    for (const n of bodyNodes) {
       const key = n.themeId ?? "__none__";
       const g = groupsMap.get(key) ?? {
         label: n.themeLabel,
@@ -102,7 +113,7 @@ const computeLayout = (
     }
     const groups = [...groupsMap.values()].sort((a, b) => a.ord - b.ord);
 
-    const rowY = top + BAND_PAD_TOP;
+    const bodyRowY = top + BAND_PAD_TOP + (hasHeader ? NH + ROW_GAP : 0);
     let x = CONTENT_X;
     const themes: ThemeBox[] = [];
 
@@ -113,7 +124,7 @@ const computeLayout = (
         const ov = overrides.get(n.id);
         const placed: Pos =
           ov ??
-          (n.x != null && n.y != null ? { x: n.x, y: n.y } : { x, y: rowY });
+          (n.x != null && n.y != null ? { x: n.x, y: n.y } : { x, y: bodyRowY });
         laid.set(n.id, { node: n, x: placed.x, y: placed.y });
         x += NW + GAP;
       }
@@ -126,13 +137,32 @@ const computeLayout = (
       themes.push({
         label: redundant ? null : g.label,
         x: startX,
-        y: top + 5,
+        y: bodyRowY - 19,
         w: Math.max(x - GAP - startX, NW),
       });
       x += THEME_GAP - GAP;
     }
 
-    const height = BAND_PAD_TOP + NH + BAND_PAD_BOT;
+    // Place header node(s) centered across the body's content width.
+    if (hasHeader) {
+      const headerRowY = top + BAND_PAD_TOP;
+      const contentW = Math.max(x - (THEME_GAP - GAP) - CONTENT_X, NW);
+      const totalW = headerNodes.length * NW + (headerNodes.length - 1) * GAP;
+      let hx = CONTENT_X + Math.max(0, (contentW - totalW) / 2);
+      for (const n of headerNodes) {
+        const ov = overrides.get(n.id);
+        const placed: Pos =
+          ov ??
+          (n.x != null && n.y != null
+            ? { x: n.x, y: n.y }
+            : { x: hx, y: headerRowY });
+        laid.set(n.id, { node: n, x: placed.x, y: placed.y });
+        hx += NW + GAP;
+      }
+    }
+
+    const height =
+      BAND_PAD_TOP + (hasHeader ? NH + ROW_GAP : 0) + NH + BAND_PAD_BOT;
     bands.push({ perspective: p, colorIndex, top, height, themes });
     maxX = Math.max(maxX, x);
     top += height + BAND_VGAP;
@@ -478,14 +508,16 @@ export default function BscStrategyMap({
               return (
                 <div
                   key={l.node.id}
-                  className={`absolute flex items-center rounded-md border bg-background px-2 text-xs shadow-sm ${color.chip} ${
+                  className={`absolute flex items-center justify-center rounded-md border bg-background px-2 text-xs shadow-sm ${color.chip} ${
                     isSource ? "ring-2 ring-offset-1 ring-foreground" : ""
                   } ${canBuild ? "cursor-grab active:cursor-grabbing" : ""}`}
                   style={{ left: l.x, top: l.y, width: NW, height: NH }}
                   title={l.node.fullLabel}
                   onPointerDown={(e) => onPointerDown(e, l)}
                 >
-                  <span className="line-clamp-2 leading-tight">{l.node.label}</span>
+                  <span className="line-clamp-2 text-center leading-tight">
+                    {l.node.label}
+                  </span>
                 </div>
               );
             })}
