@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Power BI Licensing — PRISM</title>
+<style>
+  body { font-family: system-ui, sans-serif; max-width: 640px; margin: 40px auto; padding: 0 20px; color: #1e293b; line-height: 1.6; }
+  h1 { font-size: 1.5rem; margin-bottom: 4px; }
+  .sub { color: #64748b; font-size: 0.9rem; margin-bottom: 24px; }
+  table { width: 100%; border-collapse: collapse; margin: 20px 0; }
+  th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid #e2e8f0; }
+  th { background: #f8fafc; font-weight: 600; font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.05em; color: #64748b; }
+  td.code { font-family: monospace; font-size: 0.9rem; }
+  .note { background: #fef3c7; border-left: 3px solid #f59e0b; padding: 12px 16px; margin: 20px 0; font-size: 0.9rem; }
+  .done { color: #16a34a; font-weight: 600; }
+  .pending { color: #dc2626; font-weight: 600; }
+  .cost { color: #64748b; font-size: 0.85rem; }
+</style>
+</head>
+<body>
+
+<h1>Power BI Licensing</h1>
+<p class="sub">What you need to buy to make PRISM work end-to-end</p>
+
+<table>
+  <thead>
+    <tr><th>License</th><th>Purpose</th><th>Users</th><th>SKU</th><th>Cost</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td class="code">Power BI Pro</td>
+      <td>Access shared workspaces (PRISM Production)</td>
+      <td>Every user who needs to view/edit reports</td>
+      <td>per user</td>
+      <td>~$10/user/month</td>
+    </tr>
+    <tr>
+      <td class="code">Power BI Premium Per User (PPU)</td>
+      <td>Alternative to Pro — includes AI, paginated reports, larger models</td>
+      <td>Every user (replaces Pro)</td>
+      <td>per user</td>
+      <td>~$20/user/month</td>
+    </tr>
+    <tr>
+      <td class="code">Fabric F2 capacity</td>
+      <td>Unblocks service principal API access (DAX queries, schema discovery, visual export)</td>
+      <td>Workspace-level (not per-user)</td>
+      <td>capacity</td>
+      <td>~$130/month (pausable)</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="note">
+  <strong>Minimum to get started:</strong> 1 × Power BI Pro license + 1 × Fabric F2 capacity
+</div>
+
+<h2>What each license unlocks</h2>
+
+<table>
+  <thead>
+    <tr><th>Feature</th><th>Free</th><th>Pro</th><th>Pro + F2</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Personal "My Workspace"</td><td class="done">Yes</td><td class="done">Yes</td><td class="done">Yes</td></tr>
+    <tr><td>Shared workspaces (PRISM Production)</td><td class="pending">No</td><td class="done">Yes</td><td class="done">Yes</td></tr>
+    <tr><td>Dashboard embedding in PRISM</td><td class="pending">No</td><td class="done">Yes</td><td class="done">Yes</td></tr>
+    <tr><td>AI: list datasets, reports, pages, visuals</td><td class="pending">No</td><td class="done">Yes</td><td class="done">Yes</td></tr>
+    <tr><td>AI: DAX queries</td><td class="pending">No</td><td class="pending">No</td><td class="done">Yes</td></tr>
+    <tr><td>AI: schema discovery (tables/columns)</td><td class="pending">No</td><td class="pending">No</td><td class="done">Yes</td></tr>
+    <tr><td>AI: visual data export</td><td class="pending">No</td><td class="pending">No</td><td class="done">Yes</td></tr>
+    <tr><td>Report sharing with colleagues</td><td class="pending">No</td><td class="done">Yes</td><td class="done">Yes</td></tr>
+  </tbody>
+</table>
+
+<h2>Where to buy</h2>
+
+<table>
+  <thead>
+    <tr><th>Item</th><th>Portal</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>Power BI Pro / PPU</td><td><a href="https://admin.microsoft.com">admin.microsoft.com</a> → Billing → Purchase services</td></tr>
+    <tr><td>Fabric F2 capacity</td><td><a href="https://portal.azure.com">portal.azure.com</a> → Create resource → Fabric capacity</td></tr>
+  </tbody>
+</table>
+
+</body>
+</html>

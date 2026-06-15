@@ -71,8 +71,6 @@ const TOOL_ACTION_MAP: Record<AiToolName, string> = {
   discover_datasets: "Discovering datasets",
   discover_schema: "Discovering schema",
   discover_report: "Exploring report",
-  discover_visuals: "Discovering visuals",
-  query_visual: "Querying visual",
 };
 
 export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelProps) {

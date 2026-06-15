@@ -61,17 +61,18 @@ const isThinkingModel = (modelName: string): boolean =>
 
 const getModelConfig = (fallback: boolean) => {
   const modelName = fallback ? AI_MODELS.fallback : AI_MODELS.primary;
+  const thinking = isThinkingModel(modelName);
 
   const baseConfig = {
     model: anthropic(modelName),
     modelName,
-    maxOutputTokens: isThinkingModel(modelName) ? 8000 : 2500,
-    temperature: fallback ? 0.3 : 0.4,
+    maxOutputTokens: thinking ? 8000 : 2500,
+    ...(thinking ? {} : { temperature: fallback ? 0.3 : 0.4 }),
   };
 
   return {
     ...baseConfig,
-    providerOptions: isThinkingModel(modelName)
+    providerOptions: thinking
       ? { anthropic: { thinking: { type: "enabled" as const, budgetTokens: 12000 } } }
       : undefined,
   };
@@ -132,7 +133,7 @@ export const runAiStream = async (
       tools,
       maxOutputTokens: config.maxOutputTokens,
       stopWhen: stepCountIs(10),
-      temperature: config.temperature,
+      ...(config.temperature != null ? { temperature: config.temperature } : {}),
       ...(config.providerOptions ? { providerOptions: config.providerOptions } : {}),
       onFinish: buildOnFinish(config.modelName, false),
     });
@@ -218,7 +219,7 @@ export const runAiGenerate = async (
       tools,
       maxOutputTokens: config.maxOutputTokens,
       stopWhen: stepCountIs(10),
-      temperature: config.temperature,
+      ...(config.temperature != null ? { temperature: config.temperature } : {}),
       ...(config.providerOptions ? { providerOptions: config.providerOptions } : {}),
     });
 

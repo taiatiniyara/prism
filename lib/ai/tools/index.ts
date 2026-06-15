@@ -1,7 +1,9 @@
 import { z } from "zod";
 import { tool } from "ai";
 import type { CurrentUser } from "@/lib/user.service";
+import { isConfigured as isPowerBiConfigured } from "@/lib/powerbi.service";
 import { validateToolAccess } from "../guardrails";
+import type { AiToolResult } from "../types";
 import { recordToolFailure } from "../data-service/utils";
 import {
   getKpiStatus,
@@ -41,8 +43,11 @@ import {
   discoverDatasets,
   discoverSchema,
   discoverReport,
-  discoverVisuals,
-  queryVisual,
+  type PowerBiData,
+  type DiagnosticData,
+  type DiscoveryData,
+  type SchemaData,
+  type ReportData,
 } from "../data-service";
 
 const TOOL_TIMEOUT_MS = 15000;
@@ -58,6 +63,7 @@ const withTimeout = <T>(promise: Promise<T>, toolName: string): Promise<T> => {
 };
 
 export const createAiTools = (user: CurrentUser) => {
+  const pbiConfigured = isPowerBiConfigured();
   return {
     get_kpi_status: tool({
       description:
@@ -498,73 +504,65 @@ export const createAiTools = (user: CurrentUser) => {
 
     query_power_bi: tool({
       description:
-        "Query a Power BI dataset using DAX. First use discover_datasets to find available datasets, then discover_schema to see tables/columns/measures in a dataset, then run custom DAX queries. Supports custom_dax with optional dataset_id.",
+        "Query a Power BI dataset using DAX. First use discover_datasets to find available datasets, then discover_schema to see tables/columns/measures in a dataset, then run custom DAX queries. Requires admin access and Power BI to be configured.",
       inputSchema: z.object({
         custom_dax: z.string().optional().describe("Custom DAX query. Use EVALUATE table_name or EVALUATE SUMMARIZECOLUMNS(...)."),
         dataset_id: z.string().optional().describe("Specific dataset ID to query. Use the ID from discover_datasets."),
       }),
       execute: async ({ custom_dax, dataset_id }) => {
+        const access = validateToolAccess("query_power_bi", user);
+        if (!access.passed || !pbiConfigured) return { data: { rows: [], columns: [], row_count: 0, query_summary: "" }, error: access.passed ? "Power BI is not configured." : access.reason } as unknown as AiToolResult<PowerBiData>;
         return withTimeout(queryPowerBi({ custom_dax, dataset_id }), "query_power_bi");
       },
     }),
 
     diagnose_power_bi: tool({
       description:
-        "Diagnose the Power BI connection. Tests whether the service principal can access datasets and lists available datasets with IDs. Use this when Power BI queries fail or to check connectivity.",
+        "Diagnose the Power BI connection. Tests whether the service principal can access datasets and lists available datasets with IDs. Requires admin access and Power BI to be configured.",
       inputSchema: z.object({}),
       execute: async () => {
+        const access = validateToolAccess("diagnose_power_bi", user);
+        if (!access.passed || !pbiConfigured) return { data: { ok: false, datasets_accessible: false, message: access.passed ? "Power BI is not configured." : access.reason } } as unknown as AiToolResult<DiagnosticData>;
         return withTimeout(diagnosePowerBi(), "diagnose_power_bi");
       },
     }),
 
     discover_datasets: tool({
       description:
-        "List all Power BI datasets available. Returns dataset names, IDs, and metadata. Use this FIRST when asked about Power BI data — it shows what's available to query.",
+        "List all Power BI datasets available. Returns dataset names, IDs, and metadata. Requires admin access and Power BI to be configured.",
       inputSchema: z.object({}),
-      execute: async () => withTimeout(discoverDatasets(), "discover_datasets"),
+      execute: async () => {
+        const access = validateToolAccess("discover_datasets", user);
+        if (!access.passed || !pbiConfigured) return { data: { datasets: [], total_datasets: 0 }, error: access.passed ? "Power BI is not configured." : access.reason } as unknown as AiToolResult<DiscoveryData>;
+        return withTimeout(discoverDatasets(), "discover_datasets");
+      },
     }),
 
     discover_schema: tool({
       description:
-        "Get the schema of a specific Power BI dataset. Returns all tables with their columns (name, dataType) and measures (name, DAX expression). Use this after discover_datasets to understand what data is in a dataset before writing DAX queries.",
+        "Get the full schema of a Power BI dataset. Returns all table names (auto-discovered), measures, and column structure for the first 10 tables. Pass table_names to get columns for specific tables. Requires admin access and Power BI to be configured.",
       inputSchema: z.object({
         dataset_id: z.string().optional().describe("Dataset ID from discover_datasets. Uses default if omitted."),
+        table_names: z.array(z.string()).optional().describe("Specific tables to get column details for. If omitted, columns are discovered for the first 10 tables."),
       }),
-      execute: async ({ dataset_id }) =>
-        withTimeout(discoverSchema({ dataset_id }), "discover_schema"),
+      execute: async ({ dataset_id, table_names }) => {
+        const access = validateToolAccess("discover_schema", user);
+        if (!access.passed || !pbiConfigured) return { data: { dataset_id: dataset_id || "default", tables: [], total_tables: 0 }, error: access.passed ? "Power BI is not configured." : access.reason } as unknown as AiToolResult<SchemaData>;
+        return withTimeout(discoverSchema({ dataset_id, table_names }), "discover_schema");
+      },
     }),
 
     discover_report: tool({
       description:
-        "Discover the pages in a Power BI report. Lists all pages with names and order. Use this to explore the structure of a Power BI report before drilling into specific visuals.",
+        "Discover the pages in a Power BI report. Lists all pages with names and order. Requires admin access and Power BI to be configured.",
       inputSchema: z.object({
         report_id: z.string().optional().describe("Report ID. Uses the default POWERBI_REPORT_ID if omitted."),
       }),
-      execute: async ({ report_id }) =>
-        withTimeout(discoverReport({ report_id }), "discover_report"),
-    }),
-
-    discover_visuals: tool({
-      description:
-        "Discover the visuals on a specific Power BI report page. Lists all visuals with names, titles, and types. Use this after discover_report to understand what charts, tables, and visuals are on a page.",
-      inputSchema: z.object({
-        page_name: z.string().describe("Page name from discover_report."),
-        report_id: z.string().optional().describe("Report ID. Uses default if omitted."),
-      }),
-      execute: async ({ page_name, report_id }) =>
-        withTimeout(discoverVisuals({ page_name, report_id }), "discover_visuals"),
-    }),
-
-    query_visual: tool({
-      description:
-        "Export and query the underlying data from a specific Power BI visual. Returns the data behind a chart, table, or visual as structured JSON. Use this to get the actual numbers driving a Power BI dashboard visual.",
-      inputSchema: z.object({
-        page_name: z.string().describe("Page name from discover_report."),
-        visual_name: z.string().describe("Visual name from discover_visuals."),
-        report_id: z.string().optional().describe("Report ID. Uses default if omitted."),
-      }),
-      execute: async ({ page_name, visual_name, report_id }) =>
-        withTimeout(queryVisual({ page_name, visual_name, report_id }), "query_visual"),
+      execute: async ({ report_id }) => {
+        const access = validateToolAccess("discover_report", user);
+        if (!access.passed || !pbiConfigured) return { data: { pages: [], report_id: report_id || "default" }, error: access.passed ? "Power BI is not configured." : access.reason } as unknown as AiToolResult<ReportData>;
+        return withTimeout(discoverReport({ report_id }), "discover_report");
+      },
     }),
   };
 };

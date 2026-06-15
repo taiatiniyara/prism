@@ -110,9 +110,7 @@ export type AiToolName =
   | "diagnose_power_bi"
   | "discover_datasets"
   | "discover_schema"
-  | "discover_report"
-  | "discover_visuals"
-  | "query_visual";
+  | "discover_report";
 
 export interface AiToolMetadata {
   data_freshness?: Date | null;

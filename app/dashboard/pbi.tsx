@@ -22,7 +22,6 @@ export default function PowerBiDashboard(props: {
       filterPaneEnabled: false,
       navContentPaneEnabled: false,
     },
-    pageName: "Dashboard",
     tokenType: 1, // models.TokenType.Embed — inlined to avoid SSR evaluation of powerbi-client
   };
   return (

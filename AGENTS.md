@@ -53,7 +53,8 @@ npm run dev                    # webpack dev server on http://localhost:3554
 - `PRISM_TRAINING_API_BASE_URL` — legacy `/api/fact*`/`/api/dim*` proxy
 - `PRISM_TRAINING_MIGRATION_URL` — production migration sync (falls back `/api/mig/*`)
 - `ANTHROPIC_API_KEY` — AI/chatbot uses Claude (Sonnet 4.6 primary, Haiku 4.5 fallback)
-- Power BI: `POWERBI_CLIENT_ID`, `POWERBI_CLIENT_SECRET`, `POWERBI_TENANT_ID`, `POWERBI_WORKSPACE_ID`, `POWERBI_REPORT_ID`, `POWERBI_EMBED_URL`, `POWERBI_DATASET_ID`
+- Power BI: `POWERBI_CLIENT_ID`, `POWERBI_CLIENT_SECRET`, `POWERBI_TENANT_ID`, `POWERBI_WORKSPACE_ID` (or `POWERBI_WORKSPACE_NAME`), `POWERBI_REPORT_ID` (or `POWERBI_REPORT_NAME`), `POWERBI_EMBED_URL`, `POWERBI_DATASET_ID` (or `POWERBI_DATASET_NAME`)
+- Power BI (optional): `POWERBI_EFFECTIVE_IDENTITY_UPN`, `POWERBI_EFFECTIVE_IDENTITY_ROLES` — for RLS-enabled datasets; passed as `impersonatedUserName` on DAX queries
 - SMTP for magic-link emails: `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`
 
 ## Notable quirks

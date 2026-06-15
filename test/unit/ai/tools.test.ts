@@ -47,7 +47,7 @@ describe("createAiTools", () => {
   it("creates all tools", () => {
     const tools = createAiTools(mockUser);
     const count = Object.keys(tools).length;
-    expect(count).toBeGreaterThanOrEqual(41);
+    expect(count).toBeGreaterThanOrEqual(39);
   });
 
   it("includes core KPI tools", () => {
@@ -77,15 +77,13 @@ describe("createAiTools", () => {
     expect(tools).toHaveProperty("compare_kpis_across_utilities");
   });
 
-  it("includes all 7 Power BI tools", () => {
+  it("includes all 5 Power BI tools", () => {
     const tools = createAiTools(mockUser);
     expect(tools).toHaveProperty("query_power_bi");
     expect(tools).toHaveProperty("diagnose_power_bi");
     expect(tools).toHaveProperty("discover_datasets");
     expect(tools).toHaveProperty("discover_schema");
     expect(tools).toHaveProperty("discover_report");
-    expect(tools).toHaveProperty("discover_visuals");
-    expect(tools).toHaveProperty("query_visual");
   });
 
   it("includes utility tools", () => {

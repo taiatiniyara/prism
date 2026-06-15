@@ -1,5 +1,6 @@
-import { executeDaxOnDataset, listDatasets, getDatasetSchema, getReportPages, getReportVisuals, exportReportVisual, type DatasetInfo, type TableInfo, type PowerBiQueryResult, type ReportPage, type ReportVisual } from "@/lib/powerbi.service";
+import { executeDaxOnDataset, listDatasets, getDatasetSchema, getReportPages, type DatasetInfo, type TableInfo, type PowerBiQueryResult, type ReportPage } from "@/lib/powerbi.service";
 import { createToolMetadata } from "./common";
+import { withCache } from "../cache";
 import type { AiToolResult } from "../types";
 
 export interface DiagnosticData {
@@ -38,7 +39,7 @@ export interface DiscoveryData {
 
 export const discoverDatasets = async (): Promise<AiToolResult<DiscoveryData>> => {
   try {
-    const datasets = await listDatasets();
+    const datasets = await withCache("pbi:datasets", () => listDatasets(), 60000);
     return {
       data: { datasets, total_datasets: datasets.length },
       metadata: createToolMetadata({ source: "powerbi", freshness: new Date() }),
@@ -55,20 +56,22 @@ export const discoverDatasets = async (): Promise<AiToolResult<DiscoveryData>> =
 export interface SchemaData {
   dataset_id: string;
   tables: TableInfo[];
+  total_tables: number;
 }
 
 export const discoverSchema = async (
-  options: { dataset_id?: string } = {},
+  options: { dataset_id?: string; table_names?: string[] } = {},
 ): Promise<AiToolResult<SchemaData>> => {
   try {
-    const tables = await getDatasetSchema(options.dataset_id);
+    const cacheKey = `pbi:schema:${options.dataset_id || "default"}:${(options.table_names || []).sort().join(",")}`;
+    const tables = await withCache(cacheKey, () => getDatasetSchema(options.dataset_id, options.table_names), 120000);
     return {
-      data: { dataset_id: options.dataset_id || "default", tables },
+      data: { dataset_id: options.dataset_id || "default", tables, total_tables: tables.length },
       metadata: createToolMetadata({ source: "powerbi", freshness: new Date() }),
     };
   } catch (err) {
     return {
-      data: { dataset_id: options.dataset_id || "default", tables: [] },
+      data: { dataset_id: options.dataset_id || "default", tables: [], total_tables: 0 },
       metadata: createToolMetadata({ source: "powerbi" }),
       error: err instanceof Error ? err.message : "Failed to get schema",
     };
@@ -94,7 +97,7 @@ export const queryPowerBi = async (
       return {
         data: { rows: [], columns: [], row_count: 0, query_summary: "" },
         metadata: createToolMetadata({ source: "powerbi" }),
-        error: "Use discover_datasets to find available datasets, discover_schema to see tables/columns/measures, then query with a custom DAX query like EVALUATE table_name or EVALUATE SUMMARIZECOLUMNS(...)",
+        error: "Use discover_datasets to find available datasets, then write a custom DAX query like EVALUATE table_name or EVALUATE SUMMARIZECOLUMNS(...). Use discover_schema with table_names to explore table structure first.",
       };
     }
 
@@ -132,7 +135,8 @@ export const discoverReport = async (
   options: { report_id?: string } = {},
 ): Promise<AiToolResult<ReportData>> => {
   try {
-    const pages = await getReportPages(options.report_id);
+    const cacheKey = `pbi:report:${options.report_id || "default"}`;
+    const pages = await withCache(cacheKey, () => getReportPages(options.report_id), 120000);
     return {
       data: { pages, report_id: options.report_id || "default" },
       metadata: createToolMetadata({ source: "powerbi", freshness: new Date() }),
@@ -142,53 +146,6 @@ export const discoverReport = async (
       data: { pages: [], report_id: options.report_id || "default" },
       metadata: createToolMetadata({ source: "powerbi" }),
       error: err instanceof Error ? err.message : "Failed to get report pages",
-    };
-  }
-};
-
-export interface VisualData {
-  visuals: ReportVisual[];
-  page_name: string;
-}
-
-export const discoverVisuals = async (
-  options: { page_name: string; report_id?: string },
-): Promise<AiToolResult<VisualData>> => {
-  try {
-    const visuals = await getReportVisuals(options.page_name, options.report_id);
-    return {
-      data: { visuals, page_name: options.page_name },
-      metadata: createToolMetadata({ source: "powerbi", freshness: new Date() }),
-    };
-  } catch (err) {
-    return {
-      data: { visuals: [], page_name: options.page_name },
-      metadata: createToolMetadata({ source: "powerbi" }),
-      error: err instanceof Error ? err.message : "Failed to get visuals",
-    };
-  }
-};
-
-export interface ExportData {
-  data_json: string;
-  visual_name: string;
-  page_name: string;
-}
-
-export const queryVisual = async (
-  options: { page_name: string; visual_name: string; report_id?: string },
-): Promise<AiToolResult<ExportData>> => {
-  try {
-    const data = await exportReportVisual(options.page_name, options.visual_name, options.report_id);
-    return {
-      data: { data_json: data.slice(0, 50000), visual_name: options.visual_name, page_name: options.page_name },
-      metadata: createToolMetadata({ source: "powerbi", freshness: new Date() }),
-    };
-  } catch (err) {
-    return {
-      data: { data_json: "", visual_name: options.visual_name, page_name: options.page_name },
-      metadata: createToolMetadata({ source: "powerbi" }),
-      error: err instanceof Error ? err.message : "Failed to export visual data",
     };
   }
 };
