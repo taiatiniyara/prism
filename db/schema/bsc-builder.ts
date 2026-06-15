@@ -13,6 +13,8 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
+import { sql } from "drizzle-orm";
+
 import { user } from "./auth-schema";
 import { kpiDefinitions } from "./kpi";
 import { customKpiRequests } from "./custom-kpi-requests";
@@ -125,6 +127,12 @@ export const bscUtilityNodes = pgTable(
       table.utility_id,
       table.level,
     ),
+    // A utility selects any given template node at most once. Partial (custom
+    // nodes have a null template_node_id and may repeat). Guards against the
+    // autosave race that duplicated whole perspective subtrees (migration 0029).
+    uniqueIndex("bsc_utility_node_utility_template_uidx")
+      .on(table.utility_id, table.template_node_id)
+      .where(sql`${table.template_node_id} is not null`),
   ],
 );
 
