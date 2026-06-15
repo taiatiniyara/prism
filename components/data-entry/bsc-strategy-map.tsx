@@ -23,6 +23,8 @@ const NW = 158;
 const NH = 50;
 const GAP = 16; // horizontal gap between sibling nodes
 const ROW_V = 30; // vertical gap between levels within a perspective
+const MAX_PER_ROW = 3; // objectives wrap into a grid at most this wide per cluster
+const GRID_ROW_GAP = 12; // vertical gap between wrapped objective rows
 const THEME_GAP = 34; // horizontal gap between theme clusters
 const THEME_CAP_H = 16; // height reserved for a theme caption
 const REGION_PAD = 14; // inner padding inside a perspective box
@@ -153,14 +155,25 @@ const layoutPerspective = (nodes: StrategyMapNode[]): RegionContent => {
   const themeCaps: ThemeBox[] = [];
   let x = 0;
   for (const c of columns) {
-    const objsW =
-      c.objs.length > 0 ? c.objs.length * NW + (c.objs.length - 1) * GAP : NW;
-    const colW = Math.max(NW, objsW);
-    if (c.objs.length > 0) {
-      let ox = x + (colW - objsW) / 2;
-      for (const o of c.objs) {
-        placements.set(o.id, { x: ox, y: objY });
-        ox += NW + GAP;
+    const n = c.objs.length;
+    // Small clusters stay in one row; larger ones wrap into a near-square grid,
+    // capped at MAX_PER_ROW, so wide perspectives (Processes, L&G) stay compact.
+    const perRow =
+      n <= 3 ? Math.max(n, 1) : Math.min(MAX_PER_ROW, Math.ceil(Math.sqrt(n)));
+    const colW = Math.max(NW, perRow * NW + (perRow - 1) * GAP);
+    if (n > 0) {
+      const rowCount = Math.ceil(n / perRow);
+      for (let i = 0; i < n; i++) {
+        const row = Math.floor(i / perRow);
+        const col = i % perRow;
+        const itemsInRow =
+          row === rowCount - 1 ? n - row * perRow : perRow;
+        const rowW = itemsInRow * NW + (itemsInRow - 1) * GAP;
+        const rowStart = x + (colW - rowW) / 2; // center each (possibly partial) row
+        placements.set(c.objs[i].id, {
+          x: rowStart + col * (NW + GAP),
+          y: objY + row * (NH + GRID_ROW_GAP),
+        });
       }
     }
     if (c.header) {
