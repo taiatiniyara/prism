@@ -253,7 +253,10 @@ const computeLayout = (
     topRowH = Math.max(topRowH, tl.boxH);
   }
   if (tr) {
-    boxes.set(tr.persp.id, { x: canvasW - tr.boxW, y: 0, w: tr.boxW, h: tr.boxH });
+    // Sit Financial directly to the right of Customer so it stays on-screen even
+    // when the full-width lower bands make the canvas much wider than the top row.
+    const trX = tl ? tl.boxW + REGION_GAP : 0;
+    boxes.set(tr.persp.id, { x: trX, y: 0, w: tr.boxW, h: tr.boxH });
     topRowH = Math.max(topRowH, tr.boxH);
   }
   let cursorY = topRowH > 0 ? topRowH + REGION_GAP : 0;
