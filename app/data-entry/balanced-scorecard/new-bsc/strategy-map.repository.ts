@@ -7,6 +7,7 @@ import {
   bscUtilityNodes,
 } from "@/db/schema/bsc-builder";
 
+import { ensureMandatoryMaterialized } from "./repository";
 import type {
   CreateObjectiveLinkInput,
   CreateObjectiveLinkResult,
@@ -82,6 +83,11 @@ const effectiveFullLabel = (row: OverlayRow): string =>
 export const getStrategyMap = async (
   utilityId: number,
 ): Promise<StrategyMapResponse> => {
+  // Self-heal: mandatory nodes are always part of a scorecard, so make sure they
+  // exist as real overlay rows before reading the map (keeps it in sync with
+  // Build/Preview and makes mandatory nodes linkable).
+  await ensureMandatoryMaterialized(utilityId);
+
   const [rows, linkRows, templatePerspectives] = await Promise.all([
     fetchOverlayRows(utilityId),
     db

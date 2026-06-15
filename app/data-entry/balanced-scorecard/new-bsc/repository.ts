@@ -201,9 +201,66 @@ export const listBuilderKpiOptions = async (
 // Per-utility scorecard (assembled overlay)
 // ---------------------------------------------------------------------------
 
+// Levels of the upper zone, top-down. Mandatory nodes form a contiguous subtree
+// (a mandatory node's parent is always mandatory), so inserting in this order
+// guarantees each child's parent row already exists.
+const MANDATORY_LEVELS = [
+  "perspective",
+  "overall_objective",
+  "key_focus_area",
+  "strategic_objective",
+  "strategic_lever",
+] as const;
+
+// Materialize the mandatory template nodes into a utility's overlay so the saved
+// scorecard always matches what Build/Preview show (mandatory nodes are always
+// part of a scorecard) and so those nodes are real, linkable rows on the
+// Strategy Map. Idempotent and concurrency-safe: only missing nodes are
+// inserted, top-down so each child's parent exists, with the (utility_id,
+// template_node_id) unique index as a backstop. A no-op once fully materialized.
+export const ensureMandatoryMaterialized = async (
+  utilityId: number,
+): Promise<void> => {
+  await db.transaction(async (tx) => {
+    // Perspectives have no parent.
+    await tx.execute(sql`
+      insert into bsc_utility_node (utility_id, template_node_id, parent_node_id, level, ord)
+      select ${utilityId}, t.id, null, t.level, t.ord
+      from bsc_template_node t
+      where t.is_mandatory and t.is_active and t.level = 'perspective'
+        and not exists (
+          select 1 from bsc_utility_node x
+          where x.utility_id = ${utilityId} and x.template_node_id = t.id
+        )
+      on conflict (utility_id, template_node_id) where template_node_id is not null do nothing
+    `);
+    // Lower levels attach to the already-materialized parent for this utility.
+    for (const level of MANDATORY_LEVELS.slice(1)) {
+      await tx.execute(sql`
+        insert into bsc_utility_node (utility_id, template_node_id, parent_node_id, level, ord)
+        select ${utilityId}, t.id, pu.id, t.level, t.ord
+        from bsc_template_node t
+        join bsc_template_node tp on tp.id = t.parent_id
+        join bsc_utility_node pu
+          on pu.utility_id = ${utilityId} and pu.template_node_id = tp.id
+        where t.is_mandatory and t.is_active and t.level = ${level}
+          and not exists (
+            select 1 from bsc_utility_node x
+            where x.utility_id = ${utilityId} and x.template_node_id = t.id
+          )
+        on conflict (utility_id, template_node_id) where template_node_id is not null do nothing
+      `);
+    }
+  });
+};
+
 export const getUtilityScorecard = async (
   utilityId: number,
 ): Promise<ScorecardResponse> => {
+  // Self-heal: ensure mandatory nodes exist before reading so Build, Preview and
+  // the Strategy Map all reflect the same scorecard.
+  await ensureMandatoryMaterialized(utilityId);
+
   const [nodes, objectives, initiatives, links, trajectories, templateRows] =
     await Promise.all([
       db
