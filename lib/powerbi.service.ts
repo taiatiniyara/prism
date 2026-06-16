@@ -1,4 +1,3 @@
-import { getCurrentUser } from "./user.service";
 import { logger } from "@/lib/logger";
 
 // ---- Rate limiter: max 60 Power BI REST API calls per rolling 60s window ----
@@ -314,21 +313,17 @@ function getEffectiveIdentity(): { upn: string; roles: string[] } | null {
 }
 
 // ---- Embed token generation ----
-export async function powerBiDetails() {
+export async function powerBiDetails(): Promise<{ reportId: string; embedUrl: string; token: string }> {
   let config = await getEnv();
-  if (!config || !config.embedURL) {
+  if (!config?.embedURL || !config?.reportID) {
     clearEnvCache();
     config = await getEnv();
-    if (!config || !config.embedURL) throw new Error("Power BI embed is not configured (missing EMBED_URL)");
   }
-  if (!config.reportID) {
-    clearEnvCache();
-    config = await getEnv();
-    if (!config.reportID) throw new Error("Power BI embed is not configured (missing report ID)");
-  }
+  if (!config) throw new Error("Power BI is not configured");
+  if (!config.embedURL) throw new Error("Power BI embed is not configured (missing EMBED_URL)");
+  if (!config.reportID) throw new Error("Power BI embed is not configured (missing report ID)");
 
   const azureResponse = await getAzureToken();
-  const user = await getCurrentUser();
   const pbiUrl = "https://api.powerbi.com/v1.0/myorg/GenerateToken";
 
   const identity = getEffectiveIdentity();
@@ -367,7 +362,7 @@ export async function powerBiDetails() {
   const data = (await response.json()) as { token: string };
   return {
     reportId: config.reportID,
-    embedUrl: config.embedURL,
+    embedUrl: config.embedURL!,
     token: data.token,
   };
 }

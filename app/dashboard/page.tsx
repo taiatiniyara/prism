@@ -2,7 +2,7 @@ import { powerBiDetails } from "@/lib/powerbi.service";
 import PowerBiDashboard from "./pbi";
 import { headers } from "next/headers";
 
-async function getCredentials(): Promise<{ token: string; embedUrl: string; reportId: string } | { error: string }> {
+async function getCredentials(): Promise<Awaited<ReturnType<typeof powerBiDetails>> | { error: string }> {
   try {
     return await powerBiDetails();
   } catch (err) {
@@ -24,13 +24,6 @@ export default async function DashboardPage() {
         </h2>
         <p className="text-muted-foreground mt-2 max-w-md text-sm">
           Unable to load the Power BI dashboard. Please try again later or contact support if the issue persists.
-        </p>
-        <p className="text-muted-foreground mt-4 max-w-md text-xs font-mono bg-slate-100 dark:bg-slate-800 p-2 rounded">
-          Error: {credentials.error}
-        </p>
-        <p className="text-muted-foreground mt-2 max-w-md text-xs font-mono bg-slate-100 dark:bg-slate-800 p-2 rounded">
-          EMBED_URL env: &quot;{process.env.POWERBI_EMBED_URL?.substring(0, 80)}...&quot;
-          (len={process.env.POWERBI_EMBED_URL?.length ?? 0})
         </p>
       </div>
     );
