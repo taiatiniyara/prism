@@ -4,7 +4,7 @@ import { useMemo, useState, useCallback, memo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Components } from "react-markdown";
-import { ThumbsUp, ThumbsDown, Copy, Check, RefreshCw } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Copy, Check, RefreshCw, ChevronDown } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { VisualizationRenderer } from "./visualizations/visualization-renderer";
 import type { AiVisualization } from "@/lib/ai/types";
@@ -14,11 +14,13 @@ interface ChatMessage {
   role: "user" | "assistant";
   content: string;
   isError?: boolean;
+  reasoningContent?: string;
 }
 
 interface MessageBubbleProps {
   message: ChatMessage;
   isStreaming?: boolean;
+  reasoningContent?: string;
   onFeedback?: (sentiment: "positive" | "negative", correction?: string) => void;
   onCopy?: (content: string) => void;
   onRegenerate?: () => void;
@@ -92,11 +94,12 @@ const markdownComponents: Components = {
   },
 };
 
-function MessageBubbleInner({ message, isStreaming, onFeedback, onCopy, onRegenerate, copied }: MessageBubbleProps) {
+function MessageBubbleInner({ message, isStreaming, reasoningContent, onFeedback, onCopy, onRegenerate, copied }: MessageBubbleProps) {
   const isUser = message.role === "user";
   const [feedbackGiven, setFeedbackGiven] = useState<"positive" | "negative" | null>(null);
   const [showCorrection, setShowCorrection] = useState(false);
   const [correctionText, setCorrectionText] = useState("");
+  const [thinkingOpen, setThinkingOpen] = useState(true);
 
   const visualizations = useMemo(
     () => extractVisualizations(message.content),
@@ -144,6 +147,24 @@ function MessageBubbleInner({ message, isStreaming, onFeedback, onCopy, onRegene
                 : "px-1 py-0.5 text-slate-700 dark:text-slate-300"
           }`}
         >
+          {!isUser && (reasoningContent || message.reasoningContent) && (
+            <div className="mb-3 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+              <button
+                onClick={() => setThinkingOpen(!thinkingOpen)}
+                className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800/50"
+              >
+                <ChevronDown className={`size-3 transition-transform ${thinkingOpen ? "" : "-rotate-90"}`} />
+                {isStreaming ? "Thinking…" : "Thought for a moment"}
+              </button>
+              {thinkingOpen && (
+                <div className="border-t border-slate-100 px-3 py-2 text-xs leading-relaxed text-slate-400 dark:border-slate-800 dark:text-slate-500">
+                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                    {reasoningContent || message.reasoningContent || ""}
+                  </ReactMarkdown>
+                </div>
+              )}
+            </div>
+          )}
           <div className={`chat-prose ${isStreaming ? "streaming-cursor" : ""}`}>
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}

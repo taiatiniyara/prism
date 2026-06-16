@@ -23,6 +23,7 @@ interface ChatMessage {
   content: string;
   turnId?: number;
   isError?: boolean;
+  reasoningContent?: string;
 }
 
 interface ChatPanelProps {
@@ -83,6 +84,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
   const [isLoading, setIsLoading] = useState(false);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [streamingContent, setStreamingContent] = useState("");
+  const [streamingReasoning, setStreamingReasoning] = useState("");
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -93,6 +95,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
   const animFrameRef = useRef<number | null>(null);
   const messagesRef = useRef(messages);
   const pendingContentRef = useRef("");
+  const reasoningContentRef = useRef("");
 
   messagesRef.current = messages;
 
@@ -144,6 +147,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
     setActiveSessionId(null);
     setMessages([]);
     setStreamingContent("");
+    setStreamingReasoning("");
     setSidebarOpen(false);
   };
 
@@ -154,6 +158,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
     setActiveSessionId(sessionId);
     setMessages([]);
     setStreamingContent("");
+    setStreamingReasoning("");
     setIsLoadingHistory(true);
     setSidebarOpen(false);
 
@@ -252,7 +257,9 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
     setMessages(updatedMessages);
     setIsLoading(true);
     setStreamingContent("");
+    setStreamingReasoning("");
     pendingContentRef.current = "";
+    reasoningContentRef.current = "";
     isStreamingRef.current = true;
 
     abortControllerRef.current = new AbortController();
@@ -351,6 +358,16 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
                 animFrameRef.current = requestAnimationFrame(revealNext);
               }
             }
+          } else if (line.startsWith("1:")) {
+            try {
+              const reasoningEvent = JSON.parse(line.slice(2));
+              if (reasoningEvent.type === "reasoning-delta" && typeof reasoningEvent.text === "string") {
+                reasoningContentRef.current += reasoningEvent.text;
+                setStreamingReasoning(reasoningContentRef.current);
+              }
+            } catch {
+              // ignore malformed reasoning events
+            }
           } else if (line.startsWith("2:")) {
             try {
               const toolEvent = JSON.parse(line.slice(2));
@@ -379,17 +396,21 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
         animFrameRef.current = null;
       }
       const fullContent = pendingContentRef.current;
+      const fullReasoning = reasoningContentRef.current;
       setStreamingContent(fullContent);
+      setStreamingReasoning("");
 
       const assistantMessage: ChatMessage = {
         id: `assistant-${Date.now()}`,
         role: "assistant",
         content: fullContent,
+        reasoningContent: fullReasoning || undefined,
         turnId,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
       setStreamingContent("");
+      setStreamingReasoning("");
       setActiveToolName(null);
       await refreshSessions();
 
@@ -501,6 +522,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
           id: "streaming",
           role: "assistant" as const,
           content: streamingContent,
+          reasoningContent: streamingReasoning || undefined,
         },
       ]
     : messages;
@@ -649,6 +671,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
                     <MessageBubble
                       message={msg}
                       isStreaming={msg.id === "streaming"}
+                      reasoningContent={msg.reasoningContent}
                       onFeedback={(sentiment: "positive" | "negative", correction?: string) =>
                         handleFeedback(msg.turnId ?? 0, sentiment, correction)
                       }

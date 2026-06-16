@@ -413,6 +413,12 @@ export async function POST(request: Request) {
                     toolName: event.toolName,
                   });
                   controller.enqueue(encoder.encode(`2:${payload}\n`));
+                } else if (event.type === "reasoning-start") {
+                  controller.enqueue(encoder.encode(`1:${JSON.stringify({ type: "reasoning-start", id: event.id })}\n`));
+                } else if (event.type === "reasoning-delta" && typeof event.text === "string") {
+                  controller.enqueue(encoder.encode(`1:${JSON.stringify({ type: "reasoning-delta", text: event.text })}\n`));
+                } else if (event.type === "reasoning-end") {
+                  controller.enqueue(encoder.encode(`1:${JSON.stringify({ type: "reasoning-end", id: event.id })}\n`));
                 }
               }
             }
