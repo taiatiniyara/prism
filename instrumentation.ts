@@ -10,8 +10,8 @@ export async function register() {
 
   const [{ default: cron }, { checkAndSendDueSchedules }, { db }] = await Promise.all([
     import(/* webpackIgnore: true */ "node-cron"),
-    import(/* webpackIgnore: true */ "@/app/settings/email-schedules/service"),
-    import(/* webpackIgnore: true */ "@/db/connection"),
+    import("@/app/settings/email-schedules/service"),
+    import("@/db/connection"),
   ]);
 
   const { sql } = await import("drizzle-orm");
