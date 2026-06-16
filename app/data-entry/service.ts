@@ -28,6 +28,7 @@ import {
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 export interface ReportPeriodDTO {
   Id: number;
+  Utility_id: number;
   Period: string;
   Utility: string;
   Report_Type: string;
@@ -387,6 +388,7 @@ export async function GetReportPeriods(
 
     return {
       Id: rpId,
+      Utility_id: utilityId,
       Period: formatReportPeriodDisplay(
         item.report_periods.report_date,
         reportTypeNameById.get(item.report_periods.report_type_id ?? -1),

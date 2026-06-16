@@ -13,20 +13,6 @@ import { logger } from "@/lib/logger";
 
 export const maxDuration = 120;
 
-class RateLimitError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "RateLimitError";
-  }
-}
-
-class GuardrailError extends Error {
-  constructor(message: string) {
-    super(message);
-    this.name = "GuardrailError";
-  }
-}
-
 const ADMIN_ROLES = new Set(["BMO", "DEV"]);
 const isAdminRole = (role: string | null | undefined): boolean =>
   role != null && ADMIN_ROLES.has(role.toUpperCase());
@@ -41,7 +27,6 @@ const isValidOrigin = (request: Request): boolean => {
     if (origin && allowed.some((a) => origin.startsWith(a))) return true;
     if (referer && allowed.some((a) => referer.startsWith(a))) return true;
   }
-  if (origin) return true;
   return false;
 };
 
@@ -231,36 +216,55 @@ export async function POST(request: Request) {
       turnNumber = (maxTurn?.max_turn ?? 0) + 1;
     } else {
       const title = deriveSessionTitle(lastUserMessage.content);
-      const [createdSession] = await db
-        .insert(aiChatSession)
-        .values({
-          user_id: user.id,
-          title,
-        })
-        .returning({ id: aiChatSession.id });
+      const userMessageContent = lastUserMessage.content as string;
+      const results = await db.transaction(async (tx) => {
+        const [createdSession] = await tx
+          .insert(aiChatSession)
+          .values({
+            user_id: user.id,
+            title,
+          })
+          .returning({ id: aiChatSession.id });
 
-      sessionId = createdSession.id;
-      turnNumber = 1;
+        turnNumber = 1;
+
+        const [createdTurn] = await tx
+          .insert(aiChatTurn)
+          .values({
+            session_id: createdSession.id,
+            turn_number: turnNumber,
+            user_message: userMessageContent,
+            prompt_version: getPromptVersion(),
+          })
+          .returning({ id: aiChatTurn.id });
+
+        return { sessionId: createdSession.id, turnId: createdTurn.id };
+      });
+
+      sessionId = results.sessionId;
+      turnId = results.turnId;
     }
 
-    const [createdTurn] = await db
-      .insert(aiChatTurn)
-      .values({
-        session_id: sessionId,
-        turn_number: turnNumber,
-        user_message: lastUserMessage.content,
-        prompt_version: getPromptVersion(),
-      })
-      .returning({ id: aiChatTurn.id });
+    if (!turnId) {
+      const [createdTurn] = await db
+        .insert(aiChatTurn)
+        .values({
+          session_id: sessionId,
+          turn_number: turnNumber,
+          user_message: lastUserMessage.content,
+          prompt_version: getPromptVersion(),
+        })
+        .returning({ id: aiChatTurn.id });
 
-    turnId = createdTurn.id;
+      turnId = createdTurn.id;
+    }
 
     await db
       .update(aiChatSession)
       .set({ last_turn_at: new Date() })
       .where(eq(aiChatSession.id, sessionId));
 
-    const conversationTurns = cleanMessages.length;
+    const conversationTurns = cleanMessages.filter((m) => m.role === "user").length;
     const shouldSummarize = conversationTurns > 8;
 
     const utilityCheck = checkUserUtility(user);
@@ -295,14 +299,13 @@ export async function POST(request: Request) {
         ? `\n\nIMPORTANT: ${utilityCheck.message}`
         : "") +
       (shouldSummarize
-        ? `\n\nNOTE: This conversation has ${conversationTurns} messages. Before answering, briefly summarise the key context from earlier messages in 1-2 sentences, then answer the latest question concisely.`
+        ? `\n\nNOTE: This conversation has ${conversationTurns} turns. Before answering, briefly summarise the key context from earlier turns in 1-2 sentences, then answer the latest question concisely.`
         : "");
 
     const { stream, fullStream, model, wasFallback, promptVersion } = await runAiStream({
       messages: cleanMessages,
       user,
       systemPromptOverride: systemPrompt,
-      abortSignal: request.signal,
       onFinish: async ({ text, usage, toolCalls: toolCallsFromStream, model: usedModel, wasFallback: fallbackFlag }) => {
         const turnLatencyMs = Date.now() - startedAt;
         recordLatency("chat", turnLatencyMs);
@@ -311,15 +314,6 @@ export async function POST(request: Request) {
           const { filtered } = filterOutput(text);
           const finalText = filtered.trim() || "I received your question but was unable to generate a response. This may be due to model output limits. Could you try rephrasing or asking a more specific question?";
 
-          const updateData: Record<string, unknown> = {
-            assistant_response: finalText,
-            model_used: usedModel,
-            model_was_fallback: fallbackFlag,
-            token_count_input: usage.inputTokens,
-            token_count_output: usage.outputTokens,
-            latency_ms: turnLatencyMs,
-          };
-
           const [existingTurn] = await db
             .select({ assistant_response: aiChatTurn.assistant_response })
             .from(aiChatTurn)
@@ -327,12 +321,19 @@ export async function POST(request: Request) {
             .limit(1);
 
           if (existingTurn?.assistant_response) {
-            updateData.assistant_response = existingTurn.assistant_response + finalText;
+            return;
           }
 
           await db
             .update(aiChatTurn)
-            .set(updateData)
+            .set({
+              assistant_response: finalText,
+              model_used: usedModel,
+              model_was_fallback: fallbackFlag,
+              token_count_input: usage.inputTokens,
+              token_count_output: usage.outputTokens,
+              latency_ms: turnLatencyMs,
+            })
             .where(eq(aiChatTurn.id, turnId));
 
           if (toolCallsFromStream && toolCallsFromStream.length > 0) {
@@ -372,7 +373,7 @@ export async function POST(request: Request) {
 
     const combined = new ReadableStream({
       async start(controller) {
-        const textReader = stream.pipeThrough(new TransformStream()).getReader();
+        const textReader = stream.getReader();
 
         let textDone = false;
         let toolDone = !fullStreamReader;
@@ -389,7 +390,7 @@ export async function POST(request: Request) {
               }
             }
           } catch {
-            // stream error
+            controller.enqueue(encoder.encode(`3:${JSON.stringify({ error: "text_stream_error" })}\n`));
           }
           textDone = true;
           if (toolDone) {
@@ -416,7 +417,7 @@ export async function POST(request: Request) {
               }
             }
           } catch {
-            // stream ended or errored
+            controller.enqueue(encoder.encode(`3:${JSON.stringify({ error: "tool_stream_error" })}\n`));
           }
           toolDone = true;
           if (textDone) {
@@ -431,9 +432,10 @@ export async function POST(request: Request) {
 
     return new Response(combined, {
       headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-        "Cache-Control": "no-cache",
+        "Content-Type": "text/event-stream; charset=utf-8",
+        "Cache-Control": "no-cache, no-transform",
         Connection: "keep-alive",
+        "X-Accel-Buffering": "no",
         "X-Session-Id": String(sessionId),
         "X-Turn-Id": String(turnId),
         "X-Model": model,
@@ -465,17 +467,6 @@ export async function POST(request: Request) {
       await recordError(user.id);
     } catch {
       // Non-critical
-    }
-
-    if (error instanceof RateLimitError) {
-      return Response.json(
-        { message: errMsg },
-        { status: 429, headers: { "Retry-After": "60" } },
-      );
-    }
-
-    if (error instanceof GuardrailError) {
-      return Response.json({ message: errMsg }, { status: 400 });
     }
 
     if (errMsg.startsWith("GUARDRAIL:")) {

@@ -130,7 +130,7 @@ export const getPeerGroupAnalysis = async (
       .limit(100);
 
     const orgIds = new Set(countryOrgs.map((o) => o.id));
-    filteredPeriods = periods.filter((p) => orgIds.has(p.Id));
+    filteredPeriods = periods.filter((p) => orgIds.has(p.Utility_id));
   } else if (options.group_by === "region" && options.group_value) {
     const regionOrgs = await db
       .select({ id: organisations.id })
@@ -141,7 +141,7 @@ export const getPeerGroupAnalysis = async (
       .limit(100);
 
     const orgIds = new Set(regionOrgs.map((o) => o.id));
-    filteredPeriods = periods.filter((p) => orgIds.has(p.Id));
+    filteredPeriods = periods.filter((p) => orgIds.has(p.Utility_id));
   }
 
   const peers: PeerGroupItem[] = filteredPeriods.map((p) => {

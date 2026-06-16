@@ -1,12 +1,13 @@
 import { db } from "@/db/connection";
-import { aiChatTurn } from "@/db/schema/ai";
+import { aiChatTurn, aiChatSession } from "@/db/schema/ai";
 import { getCurrentUser } from "@/lib/user.service";
 import { filterOutput } from "@/lib/ai/guardrails";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 export async function POST(request: Request) {
+  let user;
   try {
-    await getCurrentUser();
+    user = await getCurrentUser();
   } catch {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
   }
@@ -22,18 +23,29 @@ export async function POST(request: Request) {
     return Response.json({ message: "turnId and content are required." }, { status: 400 });
   }
 
+  const [turn] = await db
+    .select({ id: aiChatTurn.id, session_id: aiChatTurn.session_id })
+    .from(aiChatTurn)
+    .innerJoin(aiChatSession, eq(aiChatTurn.session_id, aiChatSession.id))
+    .where(
+      and(
+        eq(aiChatTurn.id, body.turnId),
+        eq(aiChatSession.user_id, user.id),
+      ),
+    )
+    .limit(1);
+
+  if (!turn) {
+    return Response.json({ message: "Turn not found." }, { status: 404 });
+  }
+
   const { filtered } = filterOutput(body.content);
 
   try {
-    const [updated] = await db
+    await db
       .update(aiChatTurn)
       .set({ assistant_response: filtered })
-      .where(eq(aiChatTurn.id, body.turnId))
-      .returning({ id: aiChatTurn.id, session_id: aiChatTurn.session_id });
-
-    if (!updated) {
-      return Response.json({ message: "Turn not found." }, { status: 404 });
-    }
+      .where(eq(aiChatTurn.id, body.turnId));
 
     return Response.json({ success: true, saved: filtered.length });
   } catch (err) {

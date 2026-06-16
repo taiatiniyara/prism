@@ -47,6 +47,11 @@ export function ChatInput({
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       handleSubmit();
+    } else if (e.key === "ArrowUp" && !input.trim() && !isLoading) {
+      // Edit last message — bubble up to parent
+      e.preventDefault();
+      const event = new CustomEvent("prism-edit-last", { bubbles: true });
+      e.currentTarget.dispatchEvent(event);
     }
   };
 
@@ -65,7 +70,7 @@ export function ChatInput({
             placeholder={placeholder}
             disabled={disabled}
             maxLength={maxLength ? maxLength + 100 : undefined}
-            className="min-h-[24px] max-h-[160px] resize-none border-0 bg-transparent p-0 text-sm leading-relaxed shadow-none placeholder:text-slate-400 focus-visible:ring-0 dark:placeholder:text-slate-500"
+            className="min-h-[24px] max-h-[160px] resize-none border-0 bg-transparent p-0 text-sm leading-relaxed shadow-none placeholder:text-slate-400 transition-[height] duration-150 focus-visible:ring-0 dark:placeholder:text-slate-500"
             rows={1}
             aria-label="Message input"
           />
@@ -81,7 +86,7 @@ export function ChatInput({
             <button
               onClick={handleSubmit}
               disabled={!input.trim() || disabled}
-              className="flex size-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white transition-all hover:bg-slate-700 disabled:cursor-not-allowed disabled:opacity-30 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
+              className="flex size-8 shrink-0 items-center justify-center rounded-full bg-slate-900 text-white transition-all duration-200 hover:bg-slate-700 hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-40 dark:bg-slate-100 dark:text-slate-900 dark:hover:bg-white"
               aria-label="Send message"
             >
               <ArrowUp className="size-4" />

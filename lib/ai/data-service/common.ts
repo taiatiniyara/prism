@@ -88,7 +88,7 @@ export const resolvePeriodId = async (
   const [period] = await db
     .select({ id: reportPeriods.id })
     .from(reportPeriods)
-    .where(predicates.length > 0 ? and(...predicates) : undefined)
+    .where(predicates.length > 0 ? and(...predicates) : sql`TRUE`)
     .orderBy(desc(reportPeriods.report_date))
     .limit(1);
 
@@ -143,7 +143,7 @@ export const resolvePeriod = async (
     })
     .from(reportPeriods)
     .innerJoin(organisations, eq(reportPeriods.utility_id, organisations.id))
-    .where(predicates.length > 0 ? and(...predicates) : undefined)
+    .where(predicates.length > 0 ? and(...predicates) : sql`TRUE`)
     .orderBy(desc(reportPeriods.report_date))
     .limit(1);
 

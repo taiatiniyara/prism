@@ -1,10 +1,10 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, useCallback, memo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Components } from "react-markdown";
-import { ThumbsUp, ThumbsDown, Copy, Check } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Copy, Check, RefreshCw } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { VisualizationRenderer } from "./visualizations/visualization-renderer";
 import type { AiVisualization } from "@/lib/ai/types";
@@ -18,9 +18,41 @@ interface ChatMessage {
 
 interface MessageBubbleProps {
   message: ChatMessage;
+  isStreaming?: boolean;
   onFeedback?: (sentiment: "positive" | "negative", correction?: string) => void;
   onCopy?: (content: string) => void;
+  onRegenerate?: () => void;
   copied?: boolean;
+}
+
+function CodeBlock({ lang, code, children, ...props }: { lang: string; code: string; children: React.ReactNode } & React.HTMLAttributes<HTMLElement>) {
+  const [blockCopied, setBlockCopied] = useState(false);
+  const handleCopyBlock = useCallback(() => {
+    navigator.clipboard.writeText(code).then(() => {
+      setBlockCopied(true);
+      setTimeout(() => setBlockCopied(false), 2000);
+    }).catch(() => {});
+  }, [code]);
+
+  return (
+    <div className="my-3 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+      <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-3 py-1 dark:border-slate-700 dark:bg-slate-900">
+        <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500">{lang}</span>
+        <button
+          onClick={handleCopyBlock}
+          className="rounded p-0.5 text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+          aria-label="Copy code"
+        >
+          {blockCopied ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3" />}
+        </button>
+      </div>
+      <pre className="overflow-x-auto bg-slate-50 p-4 text-[13px] leading-relaxed dark:bg-slate-900">
+        <code className={props.className} {...props}>
+          {children}
+        </code>
+      </pre>
+    </div>
+  );
 }
 
 const markdownComponents: Components = {
@@ -28,20 +60,8 @@ const markdownComponents: Components = {
     const isBlock = className?.startsWith("language-");
     if (isBlock && className) {
       const lang = className.replace("language-", "");
-      return (
-        <div className="my-3 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
-          {lang && (
-            <div className="border-b border-slate-200 bg-slate-50 px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-slate-400 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-500">
-              {lang}
-            </div>
-          )}
-          <pre className="overflow-x-auto bg-slate-50 p-4 text-[13px] leading-relaxed dark:bg-slate-900">
-            <code className={className} {...props}>
-              {children}
-            </code>
-          </pre>
-        </div>
-      );
+      const codeString = String(children).replace(/\n$/, "");
+      return <CodeBlock lang={lang} code={codeString} {...props}>{children}</CodeBlock>;
     }
     return (
       <code className="rounded bg-slate-100 px-1.5 py-0.5 text-[13px] font-medium text-slate-800 dark:bg-slate-800 dark:text-slate-200" {...props}>
@@ -72,7 +92,7 @@ const markdownComponents: Components = {
   },
 };
 
-export function MessageBubble({ message, onFeedback, onCopy, copied }: MessageBubbleProps) {
+function MessageBubbleInner({ message, isStreaming, onFeedback, onCopy, onRegenerate, copied }: MessageBubbleProps) {
   const isUser = message.role === "user";
   const [feedbackGiven, setFeedbackGiven] = useState<"positive" | "negative" | null>(null);
   const [showCorrection, setShowCorrection] = useState(false);
@@ -124,7 +144,7 @@ export function MessageBubble({ message, onFeedback, onCopy, copied }: MessageBu
                 : "px-1 py-0.5 text-slate-700 dark:text-slate-300"
           }`}
         >
-          <div className="chat-prose">
+          <div className={`chat-prose ${isStreaming ? "streaming-cursor" : ""}`}>
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={markdownComponents}
@@ -142,6 +162,15 @@ export function MessageBubble({ message, onFeedback, onCopy, copied }: MessageBu
 
         {!isUser && message.id && message.id !== "streaming" && (
           <div className="mt-1 flex items-center gap-0.5">
+            {onRegenerate && (
+              <button
+                onClick={onRegenerate}
+                className="rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+                aria-label="Regenerate response"
+              >
+                <RefreshCw className="size-3" />
+              </button>
+            )}
             {onCopy && (
               <button
                 onClick={() => onCopy(message.content)}
@@ -227,3 +256,5 @@ function extractVisualizations(content: string): AiVisualization[] {
 
   return visualizations;
 }
+
+export const MessageBubble = memo(MessageBubbleInner);

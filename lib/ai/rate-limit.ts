@@ -138,29 +138,47 @@ export const recordError = async (userId: string): Promise<void> => {
   await upsertMetricIncrement(userId, "error_count");
 };
 
-const latencyBuckets = new Map<string, { p50: number; p95: number; p99: number; count: number; sum: number }>();
+const latencyBuckets = new Map<string, { samples: number[]; count: number }>();
 const LATENCY_WINDOW_MS = 300_000;
 const LATENCY_SAMPLE_SIZE = 100;
+
+const percentile = (sorted: number[], p: number): number => {
+  if (sorted.length === 0) return 0;
+  const idx = (p / 100) * (sorted.length - 1);
+  const lo = Math.floor(idx);
+  const hi = Math.ceil(idx);
+  if (lo === hi) return sorted[lo];
+  return sorted[lo] * (hi - idx) + sorted[hi] * (idx - lo);
+};
+
+const computeLatencyStats = (samples: number[]): { p50: number; p95: number; p99: number } => {
+  const sorted = [...samples].sort((a, b) => a - b);
+  return {
+    p50: percentile(sorted, 50),
+    p95: percentile(sorted, 95),
+    p99: percentile(sorted, 99),
+  };
+};
 
 export const recordLatency = (endpoint: string, latencyMs: number): void => {
   const key = `${endpoint}:${Math.floor(Date.now() / LATENCY_WINDOW_MS)}`;
   let bucket = latencyBuckets.get(key);
   if (!bucket) {
-    bucket = { p50: 0, p95: 0, p99: 0, count: 0, sum: 0 };
+    bucket = { samples: [], count: 0 };
   }
   bucket.count++;
-  bucket.sum += latencyMs;
+  bucket.samples.push(latencyMs);
 
   if (bucket.count % LATENCY_SAMPLE_SIZE === 0 || bucket.count === 1) {
-    bucket.p50 = bucket.sum / bucket.count;
-    bucket.p95 = bucket.p50 * 1.8;
-    bucket.p99 = bucket.p50 * 2.5;
+    const stats = computeLatencyStats(bucket.samples);
     logger.info("[ai-latency]", {
       endpoint,
-      p50: Math.round(bucket.p50),
-      p95: Math.round(bucket.p95),
+      p50: Math.round(stats.p50),
+      p95: Math.round(stats.p95),
+      p99: Math.round(stats.p99),
       count: bucket.count,
     });
+    bucket.samples = [];
   }
 
   latencyBuckets.set(key, bucket);

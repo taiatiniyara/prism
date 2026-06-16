@@ -83,11 +83,6 @@ export const validateInput = (message: string): AiGuardrailResult => {
 const ADMIN_ONLY_TOOLS: AiToolName[] = [
   "get_governance_audit",
   "get_configuration_options",
-  "query_power_bi",
-  "diagnose_power_bi",
-  "discover_datasets",
-  "discover_schema",
-  "discover_report",
 ];
 
 export const validateToolAccess = (

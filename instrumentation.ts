@@ -1,3 +1,5 @@
+import "server-only";
+
 export const runtime = "nodejs";
 
 const CRON_LOCK_ID = 8734621;
@@ -8,10 +10,8 @@ export async function register() {
 
   const [{ default: cron }, { checkAndSendDueSchedules }, { db }] = await Promise.all([
     import(/* webpackIgnore: true */ "node-cron"),
-    import(
-      "@/app/settings/email-schedules/service"
-    ),
-    import("@/db/connection"),
+    import(/* webpackIgnore: true */ "@/app/settings/email-schedules/service"),
+    import(/* webpackIgnore: true */ "@/db/connection"),
   ]);
 
   const { sql } = await import("drizzle-orm");

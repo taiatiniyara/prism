@@ -535,17 +535,12 @@ export const createAiTools = (user: CurrentUser, _abortSignal?: AbortSignal) => 
 
     query_power_bi: tool({
       description:
-        "Query a Power BI dataset using DAX. First use discover_datasets to find available datasets, then discover_schema to see tables/columns/measures in a dataset, then run custom DAX queries. Requires admin access and Power BI to be configured.",
+        "Query a Power BI dataset using DAX. First use discover_datasets to find available datasets, then discover_schema to see tables/columns/measures in a dataset, then run custom DAX queries. Requires Power BI to be configured.",
       inputSchema: z.object({
         custom_dax: z.string().optional().describe("Custom DAX query. Use EVALUATE table_name or EVALUATE SUMMARIZECOLUMNS(...)."),
         dataset_id: z.string().optional().describe("Specific dataset ID to query. Use the ID from discover_datasets."),
       }),
       execute: async ({ custom_dax, dataset_id }) => {
-        const access = validateToolAccess("query_power_bi", user);
-        if (!access.passed) {
-          logger.warn("[powerbi] Access denied to query_power_bi", { userId: user.id, role: user.role });
-          return { data: { rows: [], columns: [], row_count: 0, query_summary: "" }, error: access.reason } satisfies AiToolResult<PowerBiData>;
-        }
         if (!isConfiguredForDax()) {
           logger.warn("[powerbi] Power BI not configured for DAX (query_power_bi)", { userId: user.id });
           return { data: { rows: [], columns: [], row_count: 0, query_summary: "" }, error: "Power BI is not configured." } satisfies AiToolResult<PowerBiData>;
@@ -556,14 +551,9 @@ export const createAiTools = (user: CurrentUser, _abortSignal?: AbortSignal) => 
 
     diagnose_power_bi: tool({
       description:
-        "Diagnose the Power BI connection. Tests whether the service principal can access datasets and lists available datasets with IDs. Requires admin access and Power BI to be configured.",
+        "Diagnose the Power BI connection. Tests whether the service principal can access datasets and lists available datasets with IDs. Requires Power BI to be configured.",
       inputSchema: z.object({}),
       execute: async () => {
-        const access = validateToolAccess("diagnose_power_bi", user);
-        if (!access.passed) {
-          logger.warn("[powerbi] Access denied to diagnose_power_bi", { userId: user.id, role: user.role });
-          return { data: { ok: false, datasets_accessible: false, message: access.reason ?? "Access denied" } } satisfies AiToolResult<DiagnosticData>;
-        }
         if (!isConfiguredForDax()) {
           logger.warn("[powerbi] Power BI not configured for DAX (diagnose_power_bi)", { userId: user.id });
           return { data: { ok: false, datasets_accessible: false, message: "Power BI is not configured." } } satisfies AiToolResult<DiagnosticData>;
@@ -574,14 +564,9 @@ export const createAiTools = (user: CurrentUser, _abortSignal?: AbortSignal) => 
 
     discover_datasets: tool({
       description:
-        "List all Power BI datasets available. Returns dataset names, IDs, and metadata. Requires admin access and Power BI to be configured.",
+        "List all Power BI datasets available. Returns dataset names, IDs, and metadata. Requires Power BI to be configured.",
       inputSchema: z.object({}),
       execute: async () => {
-        const access = validateToolAccess("discover_datasets", user);
-        if (!access.passed) {
-          logger.warn("[powerbi] Access denied to discover_datasets", { userId: user.id, role: user.role });
-          return { data: { datasets: [], total_datasets: 0 }, error: access.reason } satisfies AiToolResult<DiscoveryData>;
-        }
         if (!isConfiguredForDax()) {
           logger.warn("[powerbi] Power BI not configured for DAX (discover_datasets)", { userId: user.id });
           return { data: { datasets: [], total_datasets: 0 }, error: "Power BI is not configured." } satisfies AiToolResult<DiscoveryData>;
@@ -592,17 +577,12 @@ export const createAiTools = (user: CurrentUser, _abortSignal?: AbortSignal) => 
 
     discover_schema: tool({
       description:
-        "Get the full schema of a Power BI dataset. Returns all table names (auto-discovered), measures, and column structure for the first 10 tables. Pass table_names to get columns for specific tables. Requires admin access and Power BI to be configured.",
+        "Get the full schema of a Power BI dataset. Returns all table names (auto-discovered), measures, and column structure for the first 10 tables. Pass table_names to get columns for specific tables. Requires Power BI to be configured.",
       inputSchema: z.object({
         dataset_id: z.string().optional().describe("Dataset ID from discover_datasets. Uses default if omitted."),
         table_names: z.array(z.string()).optional().describe("Specific tables to get column details for. If omitted, columns are discovered for the first 10 tables."),
       }),
       execute: async ({ dataset_id, table_names }) => {
-        const access = validateToolAccess("discover_schema", user);
-        if (!access.passed) {
-          logger.warn("[powerbi] Access denied to discover_schema", { userId: user.id, role: user.role });
-          return { data: { dataset_id: dataset_id || "default", tables: [], total_tables: 0 }, error: access.reason } satisfies AiToolResult<SchemaData>;
-        }
         if (!isConfiguredForDax()) {
           logger.warn("[powerbi] Power BI not configured for DAX (discover_schema)", { userId: user.id });
           return { data: { dataset_id: dataset_id || "default", tables: [], total_tables: 0 }, error: "Power BI is not configured." } satisfies AiToolResult<SchemaData>;
@@ -613,16 +593,11 @@ export const createAiTools = (user: CurrentUser, _abortSignal?: AbortSignal) => 
 
     discover_report: tool({
       description:
-        "Discover the pages in a Power BI report. Lists all pages with names and order. Requires admin access and Power BI to be configured.",
+        "Discover the pages in a Power BI report. Lists all pages with names and order. Requires Power BI to be configured.",
       inputSchema: z.object({
         report_id: z.string().optional().describe("Report ID. Uses the default POWERBI_REPORT_ID if omitted."),
       }),
       execute: async ({ report_id }) => {
-        const access = validateToolAccess("discover_report", user);
-        if (!access.passed) {
-          logger.warn("[powerbi] Access denied to discover_report", { userId: user.id, role: user.role });
-          return { data: { pages: [], report_id: report_id || "default" }, error: access.reason } satisfies AiToolResult<ReportData>;
-        }
         if (!isConfiguredForDax()) {
           logger.warn("[powerbi] Power BI not configured for DAX (discover_report)", { userId: user.id });
           return { data: { pages: [], report_id: report_id || "default" }, error: "Power BI is not configured." } satisfies AiToolResult<ReportData>;

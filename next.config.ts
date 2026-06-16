@@ -75,6 +75,13 @@ const nextConfig: NextConfig = {
         tls: false,
         dns: false,
         zlib: false,
+        os: false,
+        url: false,
+        string_decoder: false,
+        path: false,
+        events: false,
+        util: false,
+        child_process: false,
       };
     }
     return config;

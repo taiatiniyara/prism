@@ -14,7 +14,6 @@ const isValidOrigin = (request: Request): boolean => {
     if (origin && allowed.some((a) => origin.startsWith(a))) return true;
     if (referer && allowed.some((a) => referer.startsWith(a))) return true;
   }
-  if (origin) return true;
   return false;
 };
 

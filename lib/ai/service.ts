@@ -33,6 +33,19 @@ interface AiStreamResult {
   promptVersion: string;
 }
 
+interface AiGenerateResult {
+  reply: string;
+  model: string;
+  wasFallback: boolean;
+  promptVersion: string;
+  tokenUsage: {
+    input: number;
+    output: number;
+  };
+}
+
+type SdkMessage = { role: "user" | "assistant" | "system"; content: string };
+
 const APPROX_CHARS_PER_TOKEN = 3;
 const MAX_INPUT_TOKENS = 18000;
 const TOOL_DEFINITIONS_TOKENS_RESERVE = 4000;
@@ -57,12 +70,12 @@ const getRoleBasedMaxTurns = (role: string | null | undefined): number => {
 const prepareMessages = (
   messages: AiChatMessage[],
   maxHistoryTurns: number,
-): AiChatMessage[] => {
+): SdkMessage[] => {
   const maxMessages = maxHistoryTurns * 2;
   const recentMessages = messages.slice(-maxMessages);
 
   let totalTokens = 0;
-  const trimmed: AiChatMessage[] = [];
+  const trimmed: SdkMessage[] = [];
   for (const msg of recentMessages) {
     const content = typeof msg.content === "string" ? msg.content : "";
     const cleaned = content.trim();
@@ -98,11 +111,34 @@ const getModelConfig = (fallback: boolean) => {
   };
 };
 
-export const runAiStream = async (
-  options: AiServiceOptions,
-): Promise<AiStreamResult> => {
-  const { messages, user, maxHistoryTurns, systemPromptOverride, onFinish, abortSignal } =
-    options;
+interface PreparedRequest {
+  sdkMessages: SdkMessage[];
+  tools: ReturnType<typeof createAiTools>;
+  systemPrompt: string;
+  promptVersion: string;
+  config: ReturnType<typeof getModelConfig>;
+  availableOutput: number;
+}
+
+interface ModelCallbacks {
+  onRecording: (params: {
+    tokenCount: number;
+    inputTokens: number;
+    outputTokens: number;
+    modelName: string;
+  }) => Promise<void>;
+  onCompletion?: (info: {
+    text: string;
+    usage: { inputTokens: number; outputTokens: number };
+    toolCalls: Array<{ toolName: string; input: unknown }>;
+    model: string;
+    wasFallback: boolean;
+    promptVersion: string;
+  }) => Promise<void>;
+}
+
+const prepareRequest = (options: AiServiceOptions): PreparedRequest => {
+  const { messages, user, maxHistoryTurns, systemPromptOverride } = options;
 
   const effectiveMaxTurns = maxHistoryTurns ?? getRoleBasedMaxTurns(user.role);
 
@@ -116,17 +152,16 @@ export const runAiStream = async (
     throw new Error(`GUARDRAIL:${inputValidation.reason}`);
   }
 
-  const preparedMessages = prepareMessages(messages, effectiveMaxTurns);
-  const tools = createAiTools(user, abortSignal);
+  const sdkMessages = prepareMessages(messages, effectiveMaxTurns);
+
+  const tools = createAiTools(user, options.abortSignal);
   const systemPrompt = systemPromptOverride ?? getSystemPrompt();
   const promptVersion = getPromptVersion();
-
   const config = getModelConfig(false);
 
   const contextLimit = getModelContextLimit(config.modelName);
   const systemPromptTokens = estimateTokens(systemPrompt);
-  const messageTokens = preparedMessages.reduce((sum, m) =>
-    sum + estimateTokens(typeof m.content === "string" ? m.content : ""), 0);
+  const messageTokens = sdkMessages.reduce((sum, m) => sum + estimateTokens(m.content), 0);
   const estimatedTotalInput = systemPromptTokens + messageTokens + TOOL_DEFINITIONS_TOKENS_RESERVE;
   const availableOutput = contextLimit - estimatedTotalInput;
 
@@ -146,89 +181,158 @@ export const runAiStream = async (
     throw new Error("Conversation is too long. Please start a new chat to continue.");
   }
 
-  const buildOnFinish = (modelName: string, isFallback: boolean) =>
-    async (finish: { text: string; usage?: { inputTokens?: number; outputTokens?: number }; toolCalls: Array<{ toolName: string; input: unknown }> }) => {
-      try {
-        await recordRequest(user.id, {
-          tokenCount: (finish.usage?.inputTokens ?? 0) + (finish.usage?.outputTokens ?? 0),
-          inputTokens: finish.usage?.inputTokens ?? 0,
-          outputTokens: finish.usage?.outputTokens ?? 0,
-          modelName,
-        });
-      } catch {
-        // best-effort
-      }
-      if (onFinish) {
-        try {
-          await onFinish({
-            text: finish.text,
-            usage: { inputTokens: finish.usage?.inputTokens ?? 0, outputTokens: finish.usage?.outputTokens ?? 0 },
-            toolCalls: finish.toolCalls.map((tc) => ({ toolName: tc.toolName, input: tc.input })),
-            model: modelName,
-            wasFallback: isFallback,
-            promptVersion,
-          });
-        } catch (err) {
-          logger.error("[ai-service] onFinish callback failed", { error: err instanceof Error ? err.message : String(err) });
-        }
-      }
-    };
+  return { sdkMessages, tools, systemPrompt, promptVersion, config, availableOutput };
+};
 
-  const doStream = async () => {
-    return streamText({
-      model: config.model,
-      system: systemPrompt,
-      messages: preparedMessages as any, // eslint-disable-line @typescript-eslint/no-explicit-any
-      tools,
-      maxOutputTokens: config.maxOutputTokens,
-      stopWhen: stepCountIs(10),
-      ...(config.temperature != null ? { temperature: config.temperature } : {}),
-      ...(config.providerOptions ? { providerOptions: config.providerOptions } : {}),
-      ...(abortSignal ? { abortSignal } : {}),
-      onFinish: buildOnFinish(config.modelName, false),
-    });
+const createCallbacks = (
+  user: CurrentUser,
+  onFinish: AiServiceOptions["onFinish"],
+): ModelCallbacks => {
+  const onRecording = async (params: {
+    tokenCount: number;
+    inputTokens: number;
+    outputTokens: number;
+    modelName: string;
+  }) => {
+    try {
+      await recordRequest(user.id, params);
+    } catch {
+      // best-effort
+    }
   };
 
+  const onCompletion = onFinish
+    ? async (info: {
+        text: string;
+        usage: { inputTokens: number; outputTokens: number };
+        toolCalls: Array<{ toolName: string; input: unknown }>;
+        model: string;
+        wasFallback: boolean;
+        promptVersion: string;
+      }) => {
+        try {
+          await onFinish(info);
+        } catch (err) {
+          logger.error("[ai-service] onFinish callback failed", {
+            error: err instanceof Error ? err.message : String(err),
+          });
+        }
+      }
+    : undefined;
+
+  return { onRecording, onCompletion };
+};
+
+const buildOnFinishHandler = (
+  callbacks: ModelCallbacks,
+  modelName: string,
+  isFallback: boolean,
+  promptVersion: string,
+) => {
+  return async (finish: {
+    text: string;
+    usage?: { inputTokens?: number; outputTokens?: number };
+    toolCalls: Array<{ toolName: string; input: unknown }>;
+  }) => {
+    await callbacks.onRecording({
+      tokenCount: (finish.usage?.inputTokens ?? 0) + (finish.usage?.outputTokens ?? 0),
+      inputTokens: finish.usage?.inputTokens ?? 0,
+      outputTokens: finish.usage?.outputTokens ?? 0,
+      modelName,
+    });
+
+    if (callbacks.onCompletion) {
+      await callbacks.onCompletion({
+        text: finish.text,
+        usage: {
+          inputTokens: finish.usage?.inputTokens ?? 0,
+          outputTokens: finish.usage?.outputTokens ?? 0,
+        },
+        toolCalls: finish.toolCalls.map((tc) => ({ toolName: tc.toolName, input: tc.input })),
+        model: modelName,
+        wasFallback: isFallback,
+        promptVersion,
+      });
+    }
+  };
+};
+
+const streamWithConfig = (
+  req: PreparedRequest,
+  config: ReturnType<typeof getModelConfig>,
+  isFallback: boolean,
+  callbacks: ModelCallbacks,
+  abortSignal?: AbortSignal,
+) => {
+  return streamText({
+    model: config.model,
+    system: req.systemPrompt,
+    messages: req.sdkMessages,
+    tools: req.tools,
+    maxOutputTokens: config.maxOutputTokens,
+    stopWhen: stepCountIs(10),
+    ...(config.temperature != null ? { temperature: config.temperature } : {}),
+    ...(config.providerOptions ? { providerOptions: config.providerOptions } : {}),
+    ...(abortSignal ? { abortSignal } : {}),
+    onFinish: buildOnFinishHandler(callbacks, config.modelName, isFallback, req.promptVersion),
+  });
+};
+
+const generateWithConfig = (
+  req: PreparedRequest,
+  config: ReturnType<typeof getModelConfig>,
+  abortSignal?: AbortSignal,
+) => {
+  return generateText({
+    model: config.model,
+    system: req.systemPrompt,
+    messages: req.sdkMessages,
+    tools: req.tools,
+    maxOutputTokens: config.maxOutputTokens,
+    stopWhen: stepCountIs(10),
+    ...(config.temperature != null ? { temperature: config.temperature } : {}),
+    ...(config.providerOptions ? { providerOptions: config.providerOptions } : {}),
+    ...(abortSignal ? { abortSignal } : {}),
+  });
+};
+
+export const runAiStream = async (
+  options: AiServiceOptions,
+): Promise<AiStreamResult> => {
+  const req = prepareRequest(options);
+  const callbacks = createCallbacks(options.user, options.onFinish);
+
+  const primaryConfig = req.config;
+
   try {
-    const result = await doStream();
+    const result = await streamWithConfig(req, primaryConfig, false, callbacks, options.abortSignal);
     return {
       stream: result.textStream,
       fullStream: result.fullStream,
-      model: config.modelName,
+      model: primaryConfig.modelName,
       wasFallback: false,
-      promptVersion,
+      promptVersion: req.promptVersion,
     };
   } catch (primaryError) {
     logger.warn("[ai-service] Primary model failed, trying fallback", {
-      primaryModel: config.modelName,
+      primaryModel: primaryConfig.modelName,
       error: primaryError instanceof Error ? primaryError.message : String(primaryError),
     });
 
     try {
       const fallbackConfig = getModelConfig(true);
-      const result = streamText({
-        model: fallbackConfig.model,
-        system: systemPrompt,
-        messages: preparedMessages as any, // eslint-disable-line @typescript-eslint/no-explicit-any
-        tools,
-        maxOutputTokens: fallbackConfig.maxOutputTokens,
-        stopWhen: stepCountIs(10),
-        temperature: fallbackConfig.temperature,
-        ...(fallbackConfig.providerOptions ? { providerOptions: fallbackConfig.providerOptions } : {}),
-        onFinish: buildOnFinish(fallbackConfig.modelName, true),
-      });
-
+      const result = await streamWithConfig(req, fallbackConfig, true, callbacks);
       return {
         stream: result.textStream,
         fullStream: result.fullStream,
         model: fallbackConfig.modelName,
         wasFallback: true,
-        promptVersion,
+        promptVersion: req.promptVersion,
       };
     } catch (fallbackError) {
-      await recordError(user.id);
+      await recordError(options.user.id);
       logger.error("[ai-service] Both primary and fallback models failed", {
-        primaryModel: config.modelName,
+        primaryModel: primaryConfig.modelName,
         fallbackModel: getModelConfig(true).modelName,
         primaryError: primaryError instanceof Error ? primaryError.message : String(primaryError),
         fallbackError: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
@@ -238,71 +342,15 @@ export const runAiStream = async (
   }
 };
 
-interface AiGenerateResult {
-  reply: string;
-  model: string;
-  wasFallback: boolean;
-  promptVersion: string;
-  tokenUsage: {
-    input: number;
-    output: number;
-  };
-}
-
 export const runAiGenerate = async (
   options: AiServiceOptions,
 ): Promise<AiGenerateResult> => {
-  const { messages, user, maxHistoryTurns, systemPromptOverride, abortSignal } =
-    options;
+  const req = prepareRequest(options);
 
-  const effectiveMaxTurns = maxHistoryTurns ?? getRoleBasedMaxTurns(user.role);
-
-  const lastUserMessage = messages.filter((m) => m.role === "user").pop();
-  if (!lastUserMessage || typeof lastUserMessage.content !== "string") {
-    throw new Error("No user message found");
-  }
-
-  const inputValidation = validateInput(lastUserMessage.content);
-  if (!inputValidation.passed) {
-    throw new Error(`GUARDRAIL:${inputValidation.reason}`);
-  }
-
-  const preparedMessages = prepareMessages(messages, effectiveMaxTurns);
-  const tools = createAiTools(user, abortSignal);
-  const systemPrompt = systemPromptOverride ?? getSystemPrompt();
-  const promptVersion = getPromptVersion();
-
-  const config = getModelConfig(false);
-
-  const contextLimit = getModelContextLimit(config.modelName);
-  const systemPromptTokens = estimateTokens(systemPrompt);
-  const messageTokens = preparedMessages.reduce((sum, m) =>
-    sum + estimateTokens(typeof m.content === "string" ? m.content : ""), 0);
-  const estimatedTotalInput = systemPromptTokens + messageTokens + TOOL_DEFINITIONS_TOKENS_RESERVE;
-  const availableOutput = contextLimit - estimatedTotalInput;
-
-  if (availableOutput < config.maxOutputTokens) {
-    logger.warn("[ai-service] Context window may overflow in generate", {
-      model: config.modelName,
-      contextLimit,
-      estimatedTotalInput,
-      maxOutputTokens: config.maxOutputTokens,
-      availableOutput,
-    });
-  }
+  const primaryConfig = req.config;
 
   try {
-    const result = await generateText({
-      model: config.model,
-      system: systemPrompt,
-      messages: preparedMessages as any, // eslint-disable-line @typescript-eslint/no-explicit-any
-      tools,
-      maxOutputTokens: config.maxOutputTokens,
-      stopWhen: stepCountIs(10),
-      ...(config.temperature != null ? { temperature: config.temperature } : {}),
-      ...(config.providerOptions ? { providerOptions: config.providerOptions } : {}),
-      ...(abortSignal ? { abortSignal } : {}),
-    });
+    const result = await generateWithConfig(req, primaryConfig, options.abortSignal);
 
     const { filtered } = filterOutput(result.text);
 
@@ -311,39 +359,30 @@ export const runAiGenerate = async (
       output: result.usage?.outputTokens ?? 0,
     };
 
-    await recordRequest(user.id, {
+    await recordRequest(options.user.id, {
       tokenCount: tokenUsage.input + tokenUsage.output,
       inputTokens: tokenUsage.input,
       outputTokens: tokenUsage.output,
-      modelName: config.modelName,
+      modelName: primaryConfig.modelName,
     });
 
     return {
       reply: filtered,
-      model: config.modelName,
+      model: primaryConfig.modelName,
       wasFallback: false,
-      promptVersion,
+      promptVersion: req.promptVersion,
       tokenUsage,
     };
   } catch (primaryError) {
     logger.warn("[ai-service] Primary generate model failed, trying fallback", {
-      primaryModel: config.modelName,
+      primaryModel: primaryConfig.modelName,
       error: primaryError instanceof Error ? primaryError.message : String(primaryError),
     });
 
     try {
       const fallbackConfig = getModelConfig(true);
 
-      const result = await generateText({
-        model: fallbackConfig.model,
-        system: systemPrompt,
-        messages: preparedMessages as any, // eslint-disable-line @typescript-eslint/no-explicit-any
-        tools,
-        maxOutputTokens: fallbackConfig.maxOutputTokens,
-        stopWhen: stepCountIs(10),
-        temperature: fallbackConfig.temperature,
-        ...(fallbackConfig.providerOptions ? { providerOptions: fallbackConfig.providerOptions } : {}),
-      });
+      const result = await generateWithConfig(req, fallbackConfig);
 
       const { filtered } = filterOutput(result.text);
 
@@ -352,7 +391,7 @@ export const runAiGenerate = async (
         output: result.usage?.outputTokens ?? 0,
       };
 
-      await recordRequest(user.id, {
+      await recordRequest(options.user.id, {
         tokenCount: tokenUsage.input + tokenUsage.output,
         inputTokens: tokenUsage.input,
         outputTokens: tokenUsage.output,
@@ -363,11 +402,11 @@ export const runAiGenerate = async (
         reply: filtered,
         model: fallbackConfig.modelName,
         wasFallback: true,
-        promptVersion,
+        promptVersion: req.promptVersion,
         tokenUsage,
       };
     } catch (fallbackError) {
-      await recordError(user.id);
+      await recordError(options.user.id);
       logger.error("[ai-service] Both primary and fallback generate models failed", {
         fallbackError: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
       });

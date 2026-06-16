@@ -609,16 +609,45 @@ export async function testPowerBiConnection(): Promise<{
   message: string;
 }> {
   try {
-    const azureResponse = await getAzureToken();
-    const bearerToken = `${azureResponse.token_type} ${azureResponse.access_token}`;
-
-    const config = await getEnv();
-    if (!config || !config.workspaceID) {
-      return { ok: false, datasets_accessible: false, message: "Power BI is not configured." };
+    // Step 1: Check credentials
+    const auth = getAuthConfig();
+    if (!auth) {
+      return {
+        ok: false, datasets_accessible: false,
+        message: "POWERBI_CLIENT_ID, POWERBI_CLIENT_SECRET, or POWERBI_TENANT_ID is missing from environment variables.",
+      };
     }
 
-    checkPbiRateLimit();
+    // Step 2: Get Azure token
+    let tokenResult: AzureTokenResponse;
+    try {
+      tokenResult = await getAzureTokenRaw(auth);
+    } catch (tokenErr) {
+      const msg = tokenErr instanceof Error ? tokenErr.message : String(tokenErr);
+      if (msg.includes("401")) {
+        return {
+          ok: false, datasets_accessible: false,
+          message: `Azure AD rejected credentials (HTTP 401). Verify: (1) POWERBI_CLIENT_ID is the Application (client) ID from the Azure app registration, (2) POWERBI_CLIENT_SECRET is a valid, non-expired client secret, (3) POWERBI_TENANT_ID matches your Azure AD tenant ID (find it in Azure Portal > Tenants). Details: ${msg}`,
+        };
+      }
+      return {
+        ok: false, datasets_accessible: false,
+        message: `Failed to get Azure token: ${msg}`,
+      };
+    }
+    const bearerToken = `${tokenResult.token_type} ${tokenResult.access_token}`;
 
+    // Step 3: Resolve workspace
+    const config = await getEnv();
+    if (!config || !config.workspaceID) {
+      return {
+        ok: false, datasets_accessible: false,
+        message: "Azure token obtained successfully, but cannot resolve Power BI workspace. Check POWERBI_WORKSPACE_ID or POWERBI_WORKSPACE_NAME.",
+      };
+    }
+
+    // Step 4: Test dataset access
+    checkPbiRateLimit();
     const resp = await fetchWithRetry(
       `https://api.powerbi.com/v1.0/myorg/groups/${config.workspaceID}/datasets`,
       { headers: { Authorization: bearerToken } },
@@ -630,22 +659,27 @@ export async function testPowerBiConnection(): Promise<{
       return {
         ok: true,
         datasets_accessible: true,
-        message: `Connected. Found ${count} datasets. Dataset IDs: ${data.value?.map((d: { id: string; name: string }) => `${d.name}(${d.id})`).join(", ") || "none"}`,
+        message: `All checks passed. Azure token OK, workspace resolved (${config.workspaceID}), ${count} dataset(s) accessible. Dataset IDs: ${data.value?.map((d: { id: string; name: string }) => `${d.name}(${d.id})`).join(", ") || "none"}`,
       };
     }
 
     if (resp.status === 403) {
       return {
-        ok: false,
-        datasets_accessible: false,
-        message: "403 Forbidden. The service principal cannot access Power BI datasets. Enable 'Allow service principals to use Power BI APIs' in the Power BI Admin Portal, and add the service principal to the workspace.",
+        ok: false, datasets_accessible: false,
+        message: `Azure token OK, workspace found (${config.workspaceID}), but Power BI returned 403 Forbidden on dataset access. Fix: (1) In Power BI Admin Portal > Tenant settings > Developer settings, enable "Allow service principals to use Power BI APIs" — ensure it's set to "Enabled for the entire organization" or the security group containing this service principal, (2) In the Power BI workspace (${config.workspaceID}) > Manage access, add the service principal (client ID: ${auth.clientID}) as a Member or Contributor — NOT just Viewer. Changes may take a few minutes to propagate.`,
+      };
+    }
+
+    if (resp.status === 401) {
+      return {
+        ok: false, datasets_accessible: false,
+        message: `Azure token obtained but Power BI rejected it (HTTP 401). This usually means the Azure AD app registration is missing API permissions. In Azure Portal > App registrations > ${auth.clientID} > API permissions, add "Power BI Service" with "Dataset.Read.All" permission and click "Grant admin consent".`,
       };
     }
 
     return {
-      ok: false,
-      datasets_accessible: false,
-      message: `Unexpected response: HTTP ${resp.status}`,
+      ok: false, datasets_accessible: false,
+      message: `Azure token OK, workspace found (${config.workspaceID}), but dataset access returned HTTP ${resp.status}.`,
     };
   } catch (err) {
     logger.error("[powerbi] Connection test failed", { error: err instanceof Error ? err.message : String(err) });

@@ -4,7 +4,7 @@ import { reportPeriods } from "@/db/schema/reportPeriods";
 import { eq } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
 import { hasGlobalUtilityAccess } from "@/lib/user.service";
-import { createToolMetadata, resolvePeriodId, getSeverityScore } from "./common";
+import { createToolMetadata, resolvePeriodId } from "./common";
 import type { AiToolResult } from "../types";
 
 export interface ScorecardPerspective {
@@ -133,9 +133,10 @@ export const getScorecardSummary = async (
         };
       })
       .sort((a, b) => {
-        const severityA = getSeverityScore(a.status);
-        const severityB = getSeverityScore(b.status);
-        if (severityB !== severityA) return severityB - severityA;
+        if (a.status !== b.status) {
+          const order: Record<string, number> = { off_track: 0, at_risk: 1, on_track: 2 };
+          return (order[a.status ?? ""] ?? 3) - (order[b.status ?? ""] ?? 3);
+        }
         return a.gap_ratio - b.gap_ratio;
       })
       .slice(0, 5);

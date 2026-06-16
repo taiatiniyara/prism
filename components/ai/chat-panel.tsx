@@ -299,6 +299,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
+      let trailingBuffer = "";
 
       if (!reader) {
         throw new Error("No response body");
@@ -327,11 +328,16 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
         const { done, value } = await reader.read();
         if (done) break;
 
-        const raw = decoder.decode(value, { stream: true });
+        const raw = trailingBuffer + decoder.decode(value, { stream: true });
+        trailingBuffer = "";
 
-        // Protocol: Lines starting with "0:" are text, "2:" are tool events
-        const lines = raw.split("\n");
-        for (const line of lines) {
+        const segments = raw.split("\n");
+        for (let i = 0; i < segments.length; i++) {
+          const line = segments[i];
+          if (i === segments.length - 1 && !raw.endsWith("\n")) {
+            trailingBuffer = line;
+            break;
+          }
           if (line.startsWith("0:")) {
             try {
               const textContent = JSON.parse(line.slice(2));
@@ -340,7 +346,6 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
                 animFrameRef.current = requestAnimationFrame(revealNext);
               }
             } catch {
-              // Fallback: treat raw text as content (backward compat)
               pendingContentRef.current += line;
               if (!animFrameRef.current) {
                 animFrameRef.current = requestAnimationFrame(revealNext);
@@ -357,8 +362,9 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
             } catch {
               // ignore malformed tool events
             }
-          } else if (line.length > 0 && !line.startsWith("0:") && !line.startsWith("2:")) {
-            // Backward compatibility: unmarked lines are text
+          } else if (line.startsWith("3:")) {
+            // stream error event - silently acknowledge
+          } else if (line.length > 0 && !line.startsWith("0:") && !line.startsWith("2:") && !line.startsWith("3:")) {
             const content = line + "\n";
             pendingContentRef.current += content;
             if (!animFrameRef.current) {
@@ -386,6 +392,14 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
       setStreamingContent("");
       setActiveToolName(null);
       await refreshSessions();
+
+      if (fullContent && turnId) {
+        fetch("/api/ai/chat/response", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ turnId, content: fullContent }),
+        }).catch(() => {});
+      }
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
         if (pendingContentRef.current) {
@@ -406,7 +420,6 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
         isError: true,
       };
       setMessages((prev) => [...prev, errorMessage]);
-      toast.error(msg.length > 120 ? "An error occurred" : msg);
     } finally {
       if (animFrameRef.current !== null) {
         cancelAnimationFrame(animFrameRef.current);
@@ -535,7 +548,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
             aria-live="polite"
             aria-label="Chat messages"
           >
-            <div className="mx-auto max-w-3xl space-y-10 p-6">
+            <div className="mx-auto max-w-3xl space-y-6 p-6">
               {isLoadingHistory ? (
                 <div className="flex items-center justify-center py-12">
                   <Loader2 className="text-muted-foreground size-5 animate-spin" />
@@ -548,7 +561,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
                     KPI status, or how to use the PRISM platform.
                   </p>
                   <div className="grid w-full max-w-2xl grid-cols-1 gap-4 md:grid-cols-2">
-                    <div className="border-border rounded-lg border p-4 text-left dark:border-border">
+                    <div className="border-border rounded-lg border p-4 text-left transition-all duration-200 hover:border-slate-300 hover:shadow-md dark:border-border dark:hover:border-slate-600">
                       <h3 className="mb-2 text-sm font-medium">Performance &amp; Scorecard</h3>
                       <div className="space-y-1">
                         {[
@@ -566,7 +579,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
                         ))}
                       </div>
                     </div>
-                    <div className="border-border rounded-lg border p-4 text-left dark:border-border">
+                    <div className="border-border rounded-lg border p-4 text-left transition-all duration-200 hover:border-slate-300 hover:shadow-md dark:border-border dark:hover:border-slate-600">
                       <h3 className="mb-2 text-sm font-medium">Benchmarking &amp; Targets</h3>
                       <div className="space-y-1">
                         {[
@@ -584,7 +597,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
                         ))}
                       </div>
                     </div>
-                    <div className="border-border rounded-lg border p-4 text-left dark:border-border">
+                    <div className="border-border rounded-lg border p-4 text-left transition-all duration-200 hover:border-slate-300 hover:shadow-md dark:border-border dark:hover:border-slate-600">
                       <h3 className="mb-2 text-sm font-medium">Diagnostics &amp; Action</h3>
                       <div className="space-y-1">
                         {[
@@ -602,7 +615,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
                         ))}
                       </div>
                     </div>
-                    <div className="border-border rounded-lg border p-4 text-left dark:border-border">
+                    <div className="border-border rounded-lg border p-4 text-left transition-all duration-200 hover:border-slate-300 hover:shadow-md dark:border-border dark:hover:border-slate-600">
                       <h3 className="mb-2 text-sm font-medium">Risk &amp; Compliance</h3>
                       <div className="space-y-1">
                         {[
@@ -636,6 +649,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
                   <div key={msg.id}>
                     <MessageBubble
                       message={msg}
+                      isStreaming={msg.id === "streaming"}
                       onFeedback={(sentiment: "positive" | "negative", correction?: string) =>
                         handleFeedback(msg.turnId ?? 0, sentiment, correction)
                       }
@@ -661,27 +675,25 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
                   <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700">
                     <span className="text-[11px] font-semibold">AI</span>
                   </div>
-                  <div className="flex items-center gap-1">
-                    <span className="inline-block size-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:0s]" />
-                    <span className="inline-block size-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:0.15s]" />
-                    <span className="inline-block size-1.5 rounded-full bg-slate-400 animate-bounce [animation-delay:0.3s]" />
+                  <div className="prism-thinking-shell">
+                    <div className="flex items-center gap-2">
+                      <div className="prism-thinking-orb" />
+                      <span className="prism-thinking-label text-slate-600 dark:text-slate-300">Thinking</span>
+                    </div>
+                    <div className="prism-thinking-rail mt-1.5">
+                      <div className="prism-thinking-rail-fill" />
+                    </div>
                   </div>
                 </div>
               )}
               {streamingContent && (
-                <div className="mt-6 flex items-center gap-3">
-                  <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700">
-                    <span className="text-[11px] font-semibold">AI</span>
-                  </div>
-                  <div className="flex items-center gap-1.5">
-                    <span className="inline-block size-2 rounded-full bg-slate-300 animate-[pulse_1.4s_ease-in-out_infinite] [animation-delay:0s]" />
-                    <span className="inline-block size-2 rounded-full bg-slate-300 animate-[pulse_1.4s_ease-in-out_infinite] [animation-delay:0.2s]" />
-                    <span className="inline-block size-2 rounded-full bg-slate-300 animate-[pulse_1.4s_ease-in-out_infinite] [animation-delay:0.4s]" />
-                  </div>
+                <div className="mt-2 flex items-center gap-2 px-1 text-xs text-slate-400">
+                  <span className="inline-block size-1.5 rounded-full bg-slate-300 animate-pulse" />
+                  <span>Typing</span>
                 </div>
               )}
               {isLoading && activeToolName && (
-                <div className="mt-3 flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50 px-3 py-1.5 text-xs text-slate-500 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
+                <div className="mt-3 flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50 px-3 py-1.5 text-xs text-slate-500 animate-in fade-in slide-in-from-top-1 duration-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
                   <Loader2 className="size-3 animate-spin" />
                   <span>{TOOL_ACTION_MAP[activeToolName] ?? `Running ${activeToolName}`}...</span>
                 </div>
