@@ -15,6 +15,9 @@ import type {
   UpdateTemplateNodePayload,
 } from "@/app/data-entry/balanced-scorecard/new-bsc/types";
 
+// Master template node labels are capped (matches the editor's input maxLength).
+const TEMPLATE_LABEL_MAX = 32;
+
 const LEVELS: BscTemplateLevel[] = [
   "perspective",
   "overall_objective",
@@ -305,6 +308,11 @@ export const parseCreateTemplateNodePayload = (
   if (label.length === 0) {
     throw new Error("VALIDATION:label is required.");
   }
+  if (label.length > TEMPLATE_LABEL_MAX) {
+    throw new Error(
+      `VALIDATION:label must be ${TEMPLATE_LABEL_MAX} characters or fewer.`,
+    );
+  }
   return {
     parentId: asUuidOrNull(body.parentId),
     level: asLevel(body.level, "level"),
@@ -334,6 +342,11 @@ export const parseUpdateTemplateNodePayload = (
     const label = asTrimmed(body.label);
     if (label.length === 0) {
       throw new Error("VALIDATION:label cannot be empty.");
+    }
+    if (label.length > TEMPLATE_LABEL_MAX) {
+      throw new Error(
+        `VALIDATION:label must be ${TEMPLATE_LABEL_MAX} characters or fewer.`,
+      );
     }
     payload.label = label;
   }
