@@ -7,6 +7,7 @@ import {
   bscKpiLinks,
   bscKpiTargetPlan,
   bscSpecificObjectives,
+  bscTemplateLinks,
   bscTemplateNodes,
   bscTheme,
   bscUtilityNodes,
@@ -65,11 +66,27 @@ export const saveThemeStyles = async (
 // ---------------------------------------------------------------------------
 
 export const listTemplateTree = async (): Promise<TemplateNode[]> => {
-  const rows = await db
-    .select()
-    .from(bscTemplateNodes)
-    .where(eq(bscTemplateNodes.is_active, true))
-    .orderBy(asc(bscTemplateNodes.ord));
+  const [rows, links] = await Promise.all([
+    db
+      .select()
+      .from(bscTemplateNodes)
+      .where(eq(bscTemplateNodes.is_active, true))
+      .orderBy(asc(bscTemplateNodes.ord)),
+    db
+      .select({
+        source: bscTemplateLinks.source_node_id,
+        target: bscTemplateLinks.target_node_id,
+      })
+      .from(bscTemplateLinks)
+      .orderBy(asc(bscTemplateLinks.ord)),
+  ]);
+
+  const targetsBySource = new Map<string, string[]>();
+  for (const l of links) {
+    const list = targetsBySource.get(l.source) ?? [];
+    list.push(l.target);
+    targetsBySource.set(l.source, list);
+  }
 
   const byId = new Map<string, TemplateNode>();
   for (const row of rows) {
@@ -80,6 +97,7 @@ export const listTemplateTree = async (): Promise<TemplateNode[]> => {
       label: row.label,
       isMandatory: row.is_mandatory,
       isMapNode: row.is_map_node,
+      linkTargets: targetsBySource.get(row.id) ?? [],
       ord: row.ord,
       children: [],
     });
@@ -141,6 +159,29 @@ export const updateTemplateNode = async (
 
 export const deleteTemplateNode = async (id: string): Promise<void> => {
   await db.delete(bscTemplateNodes).where(eq(bscTemplateNodes.id, id));
+};
+
+// Replace the full set of master links FROM `sourceId`. Self-links are dropped;
+// duplicates collapse via the unique (source,target) index. Idempotent.
+export const setTemplateNodeLinks = async (
+  sourceId: string,
+  targetIds: string[],
+): Promise<void> => {
+  const targets = [...new Set(targetIds)].filter((t) => t && t !== sourceId);
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(bscTemplateLinks)
+      .where(eq(bscTemplateLinks.source_node_id, sourceId));
+    if (targets.length > 0) {
+      await tx.insert(bscTemplateLinks).values(
+        targets.map((target, idx) => ({
+          source_node_id: sourceId,
+          target_node_id: target,
+          ord: idx,
+        })),
+      );
+    }
+  });
 };
 
 // ---------------------------------------------------------------------------

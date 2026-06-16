@@ -3,6 +3,7 @@ import { resolveUtilityScopeId } from "@/lib/user.service";
 
 import {
   assertNewBscBuildAccess,
+  assertNewBscMasterLinkAccess,
   assertNewBscReadAccess,
   assertNewBscTemplateAdminAccess,
   assertNewBscThemeAdminAccess,
@@ -23,6 +24,7 @@ import {
   saveKpiTargetPlan,
   saveThemeStyles,
   setKpiTrajectory,
+  setTemplateNodeLinks,
   updateTemplateNode,
 } from "./repository";
 import { sanitizeThemeStyles } from "./theme";
@@ -82,6 +84,16 @@ export const editTemplateNode = async (
 export const removeTemplateNode = async (user: CurrentUser, id: string) => {
   assertNewBscTemplateAdminAccess(user);
   await deleteTemplateNode(id);
+};
+
+// Replace the master cause-effect links FROM one template node (BMO only).
+export const editTemplateNodeLinks = async (
+  user: CurrentUser,
+  sourceId: string,
+  targetIds: string[],
+) => {
+  assertNewBscMasterLinkAccess(user);
+  await setTemplateNodeLinks(sourceId, targetIds);
 };
 
 // --- Theme (read for all with access; write for DEV) ------------------------

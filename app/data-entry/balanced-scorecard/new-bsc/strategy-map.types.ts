@@ -43,6 +43,9 @@ export type StrategyMapEdge = {
   relation: BscLinkRelation;
   note: string | null;
   ord: number;
+  // Mandatory master link (from bsc_template_link), cascaded to this utility and
+  // not removable by the BLO. Utility-authored links are not locked.
+  locked: boolean;
 };
 
 export type StrategyMapResponse = {

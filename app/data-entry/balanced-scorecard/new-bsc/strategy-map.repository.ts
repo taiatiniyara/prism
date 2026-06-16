@@ -3,6 +3,7 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/connection";
 import {
   bscObjectiveLinks,
+  bscTemplateLinks,
   bscTemplateNodes,
   bscUtilityNodes,
 } from "@/db/schema/bsc-builder";
@@ -88,29 +89,39 @@ export const getStrategyMap = async (
   // Build/Preview and makes mandatory nodes linkable).
   await ensureMandatoryMaterialized(utilityId);
 
-  const [rows, linkRows, templatePerspectives] = await Promise.all([
-    fetchOverlayRows(utilityId),
-    db
-      .select()
-      .from(bscObjectiveLinks)
-      .where(eq(bscObjectiveLinks.utility_id, utilityId))
-      .orderBy(asc(bscObjectiveLinks.ord)),
-    db
-      .select({
-        id: bscTemplateNodes.id,
-        label: bscTemplateNodes.label,
-        mapLabel: bscTemplateNodes.map_label,
-        ord: bscTemplateNodes.ord,
-      })
-      .from(bscTemplateNodes)
-      .where(
-        and(
-          eq(bscTemplateNodes.level, "perspective"),
-          eq(bscTemplateNodes.is_active, true),
-        ),
-      )
-      .orderBy(asc(bscTemplateNodes.ord)),
-  ]);
+  const [rows, linkRows, templatePerspectives, templateLinkRows] =
+    await Promise.all([
+      fetchOverlayRows(utilityId),
+      db
+        .select()
+        .from(bscObjectiveLinks)
+        .where(eq(bscObjectiveLinks.utility_id, utilityId))
+        .orderBy(asc(bscObjectiveLinks.ord)),
+      db
+        .select({
+          id: bscTemplateNodes.id,
+          label: bscTemplateNodes.label,
+          mapLabel: bscTemplateNodes.map_label,
+          ord: bscTemplateNodes.ord,
+        })
+        .from(bscTemplateNodes)
+        .where(
+          and(
+            eq(bscTemplateNodes.level, "perspective"),
+            eq(bscTemplateNodes.is_active, true),
+          ),
+        )
+        .orderBy(asc(bscTemplateNodes.ord)),
+      db
+        .select({
+          source: bscTemplateLinks.source_node_id,
+          target: bscTemplateLinks.target_node_id,
+          relation: bscTemplateLinks.relation,
+          ord: bscTemplateLinks.ord,
+        })
+        .from(bscTemplateLinks)
+        .orderBy(asc(bscTemplateLinks.ord)),
+    ]);
 
   const byId = new Map(rows.map((r) => [r.id, r]));
 
@@ -180,16 +191,46 @@ export const getStrategyMap = async (
 
   // Only show edges whose endpoints are both currently visible map nodes.
   const visible = new Set(nodes.map((n) => n.id));
-  const edges: StrategyMapEdge[] = linkRows
-    .filter((l) => visible.has(l.source_node_id) && visible.has(l.target_node_id))
-    .map((l) => ({
+
+  // Master links (BMO-authored, on template nodes) cascade to this utility:
+  // resolve each to the utility's matching node and emit it as a locked edge.
+  const utilityNodeByTemplate = new Map<string, string>();
+  for (const r of rows) {
+    if (r.templateNodeId) utilityNodeByTemplate.set(r.templateNodeId, r.id);
+  }
+  const edges: StrategyMapEdge[] = [];
+  const seenPairs = new Set<string>();
+  for (const tl of templateLinkRows) {
+    const sourceId = utilityNodeByTemplate.get(tl.source);
+    const targetId = utilityNodeByTemplate.get(tl.target);
+    if (!sourceId || !targetId) continue;
+    if (!visible.has(sourceId) || !visible.has(targetId)) continue;
+    seenPairs.add(`${sourceId}->${targetId}`);
+    edges.push({
+      id: `tpl:${tl.source}->${tl.target}`,
+      sourceId,
+      targetId,
+      relation: tl.relation,
+      note: null,
+      ord: tl.ord,
+      locked: true,
+    });
+  }
+
+  // Then the utility's own links — skip any that duplicate a cascaded master link.
+  for (const l of linkRows) {
+    if (!visible.has(l.source_node_id) || !visible.has(l.target_node_id)) continue;
+    if (seenPairs.has(`${l.source_node_id}->${l.target_node_id}`)) continue;
+    edges.push({
       id: l.id,
       sourceId: l.source_node_id,
       targetId: l.target_node_id,
       relation: l.relation,
       note: l.note,
       ord: l.ord,
-    }));
+      locked: false,
+    });
+  }
 
   return { perspectives, nodes, edges };
 };

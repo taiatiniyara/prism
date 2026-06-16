@@ -351,3 +351,21 @@ export const parseUpdateTemplateNodePayload = (
   }
   return payload;
 };
+
+export const parseSetTemplateNodeLinksPayload = (
+  body: unknown,
+): { targetIds: string[] } => {
+  if (!isPlainObject(body)) {
+    throw new Error("VALIDATION:Request body must be an object.");
+  }
+  if (!Array.isArray(body.targetIds)) {
+    throw new Error("VALIDATION:targetIds must be an array.");
+  }
+  const targetIds = body.targetIds.map((t) => {
+    if (typeof t !== "string" || t.trim().length === 0) {
+      throw new Error("VALIDATION:Each target id must be a non-empty string.");
+    }
+    return t;
+  });
+  return { targetIds };
+};

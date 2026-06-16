@@ -10,6 +10,10 @@ const BUILD_ROLES = new Set(["CEO", "EXE", "MGR", "BLO"]);
 // Maintaining the shared master template.
 const TEMPLATE_ADMIN_ROLES = new Set(["DEV", "BMO"]);
 
+// Authoring master cause-effect links (BMO only — the PPA central office owns
+// the prescribed relationships that cascade to all utilities).
+const MASTER_LINK_ROLES = new Set(["BMO"]);
+
 // Editing the product-wide BSC styling theme (developers only).
 const THEME_ADMIN_ROLES = new Set(["DEV"]);
 
@@ -39,5 +43,16 @@ export const assertNewBscTemplateAdminAccess = (user: CurrentUser): void => {
 export const assertNewBscThemeAdminAccess = (user: CurrentUser): void => {
   if (!canEditBscTheme(user)) {
     throw new Error("FORBIDDEN:Only developers can edit the BSC theme.");
+  }
+};
+
+export const canEditBscMasterLinks = (user: CurrentUser): boolean =>
+  !!user?.id && MASTER_LINK_ROLES.has(user.role);
+
+export const assertNewBscMasterLinkAccess = (user: CurrentUser): void => {
+  if (!canEditBscMasterLinks(user)) {
+    throw new Error(
+      "FORBIDDEN:Only the PPA central office (BMO) can edit master strategy-map links.",
+    );
   }
 };

@@ -117,6 +117,18 @@ export const deleteTemplateNode = async (id: string): Promise<void> => {
   await asJson<{ message: string }>(response, "Unable to delete template node.");
 };
 
+export const setTemplateNodeLinks = async (
+  id: string,
+  targetIds: string[],
+): Promise<void> => {
+  const response = await fetch(`${BASE}/template/${id}/links`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ targetIds }),
+  });
+  await asJson<{ message: string }>(response, "Unable to update master links.");
+};
+
 export const fetchTargetPlans = async (): Promise<
   Record<number, TargetPlanSummary>
 > => {

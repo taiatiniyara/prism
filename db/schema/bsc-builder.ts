@@ -295,6 +295,48 @@ export type BscObjectiveLink = typeof bscObjectiveLinks.$inferSelect;
 export type NewBscObjectiveLink = typeof bscObjectiveLinks.$inferInsert;
 
 // ---------------------------------------------------------------------------
+// Master cause-effect links between TEMPLATE nodes (BMO-authored). These
+// cascade to every utility's strategy map as mandatory, locked edges (resolved
+// to the utility's matching nodes at read time). Per-utility BLO links live in
+// bsc_objective_link above.
+// ---------------------------------------------------------------------------
+
+export const bscTemplateLinks = pgTable(
+  "bsc_template_link",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    source_node_id: uuid("source_node_id")
+      .notNull()
+      .references((): AnyPgColumn => bscTemplateNodes.id, {
+        onDelete: "cascade",
+      }),
+    target_node_id: uuid("target_node_id")
+      .notNull()
+      .references((): AnyPgColumn => bscTemplateNodes.id, {
+        onDelete: "cascade",
+      }),
+    relation: varchar("relation", { length: 16 })
+      .$type<BscLinkRelation>()
+      .notNull()
+      .default("drives"),
+    ord: integer("ord").notNull().default(0),
+    created_at: timestamp("created_at").notNull().defaultNow(),
+    updated_at: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("bsc_template_link_source_idx").on(table.source_node_id),
+    index("bsc_template_link_target_idx").on(table.target_node_id),
+    uniqueIndex("bsc_template_link_pair_idx").on(
+      table.source_node_id,
+      table.target_node_id,
+    ),
+  ],
+);
+
+export type BscTemplateLink = typeof bscTemplateLinks.$inferSelect;
+export type NewBscTemplateLink = typeof bscTemplateLinks.$inferInsert;
+
+// ---------------------------------------------------------------------------
 // BSC theme — DEV-editable, product-wide styling overrides for BSC elements.
 // A single "global" row holds a map of element-type -> curated style props.
 // ---------------------------------------------------------------------------

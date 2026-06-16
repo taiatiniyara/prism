@@ -32,6 +32,9 @@ export type TemplateNode = {
   // Visible on the Strategy Map (a.k.a. is_visible_stratmap). Master default set
   // by DEV/BMO; utilities inherit it.
   isMapNode: boolean;
+  // Master cause-effect links: template node ids this node "drives" (FROM ->
+  // TO). Authored by BMO; cascades to every utility's map as locked edges.
+  linkTargets: string[];
   ord: number;
   children: TemplateNode[];
 };
@@ -203,4 +206,9 @@ export type UpdateTemplateNodePayload = {
   isMapNode?: boolean;
   ord?: number;
   isActive?: boolean;
+};
+
+// Replace the full set of master links FROM one template node (BMO only).
+export type SetTemplateNodeLinksPayload = {
+  targetIds: string[];
 };

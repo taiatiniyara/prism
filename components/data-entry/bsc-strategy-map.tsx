@@ -545,7 +545,7 @@ export default function BscStrategyMap({
       <div className="flex items-center justify-between gap-2">
         <p className="text-[11px] text-muted-foreground">
           {canBuild
-            ? "Drag nodes to arrange. Click one node then another to link cause → effect; click a link to remove it."
+            ? "Drag nodes to arrange. Click one node then another to link cause → effect; click a link to remove it. Solid indigo arrows are mandatory PPA links (locked); your links are dashed."
             : "Read-only view of the strategy map."}
         </p>
         <div className="flex items-center gap-2">
@@ -635,29 +635,54 @@ export default function BscStrategyMap({
                 >
                   <path d="M1 1 L11 6 L1 11 z" className="fill-slate-500" />
                 </marker>
+                <marker
+                  id="bsc-arrow-locked"
+                  viewBox="0 0 12 12"
+                  refX="10"
+                  refY="6"
+                  markerWidth="12"
+                  markerHeight="12"
+                  markerUnits="userSpaceOnUse"
+                  orient="auto"
+                >
+                  <path d="M1 1 L11 6 L1 11 z" className="fill-indigo-500" />
+                </marker>
               </defs>
               {data.edges.map((edge) => {
                 const s = layout.laid.get(edge.sourceId);
                 const t = layout.laid.get(edge.targetId);
                 if (!s || !t) return null;
                 const d = edgePath(s, t);
+                // Master (locked) links read distinctly and can't be deleted by
+                // the BLO; only utility-authored links are click-to-remove.
+                const deletable = canBuild && !edge.locked;
                 return (
-                  <g key={edge.id} className="text-slate-400">
+                  <g
+                    key={edge.id}
+                    className={edge.locked ? "text-indigo-500" : "text-slate-400"}
+                  >
                     {/* wide invisible hit area for click-to-delete */}
                     <path
                       d={d}
                       fill="none"
                       stroke="transparent"
                       strokeWidth={14}
-                      className={canBuild ? "pointer-events-auto cursor-pointer" : ""}
-                      onClick={() => void onEdgeClick(edge.id)}
+                      className={deletable ? "pointer-events-auto cursor-pointer" : ""}
+                      onClick={
+                        deletable ? () => void onEdgeClick(edge.id) : undefined
+                      }
                     />
                     <path
                       d={d}
                       fill="none"
                       stroke="currentColor"
                       strokeWidth={2}
-                      markerEnd="url(#bsc-arrow)"
+                      strokeDasharray={edge.locked ? undefined : "5 4"}
+                      markerEnd={
+                        edge.locked
+                          ? "url(#bsc-arrow-locked)"
+                          : "url(#bsc-arrow)"
+                      }
                     />
                   </g>
                 );

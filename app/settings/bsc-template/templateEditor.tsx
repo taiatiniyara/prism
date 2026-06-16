@@ -1,18 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ArrowDown,
   ArrowUp,
   ChevronDown,
   ChevronRight,
+  Link2,
   Plus,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   AlertDialog,
@@ -28,6 +38,7 @@ import {
   createTemplateNode,
   deleteTemplateNode,
   fetchTemplate,
+  setTemplateNodeLinks,
   updateTemplateNode,
 } from "@/app/data-entry/balanced-scorecard/new-bsc/client";
 import type {
@@ -51,15 +62,38 @@ const LEVEL_LABEL: Record<BscTemplateLevel, string> = {
   strategic_lever: "Strategic Lever",
 };
 
+type FlatNode = { id: string; label: string; level: BscTemplateLevel };
+
 export default function BscTemplateEditor({
   initialNodes,
+  canEditLinks = false,
 }: {
   initialNodes: TemplateNode[];
+  // Master cause-effect links are BMO-only; everyone else sees them read-only.
+  canEditLinks?: boolean;
 }) {
   const [nodes, setNodes] = useState<TemplateNode[]>(initialNodes);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [pendingDelete, setPendingDelete] = useState<TemplateNode | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // Candidate link targets = every node visible on the strategy map. Labels for
+  // rendering the chosen targets.
+  const { linkCandidates, labelById } = useMemo(() => {
+    const candidates: FlatNode[] = [];
+    const labels = new Map<string, string>();
+    const walk = (list: TemplateNode[]) => {
+      for (const n of list) {
+        labels.set(n.id, n.label);
+        if (n.isMapNode) {
+          candidates.push({ id: n.id, label: n.label, level: n.level });
+        }
+        walk(n.children);
+      }
+    };
+    walk(nodes);
+    return { linkCandidates: candidates, labelById: labels };
+  }, [nodes]);
 
   const refresh = async () => {
     try {
@@ -127,6 +161,15 @@ export default function BscTemplateEditor({
     void withBusy(async () => {
       await updateTemplateNode(node.id, { isMapNode });
     });
+
+  const toggleLink = (node: TemplateNode, targetId: string) => {
+    const next = node.linkTargets.includes(targetId)
+      ? node.linkTargets.filter((t) => t !== targetId)
+      : [...node.linkTargets, targetId];
+    void withBusy(async () => {
+      await setTemplateNodeLinks(node.id, next);
+    });
+  };
 
   // Reorder a node among its siblings by normalising sibling `ord` to the new
   // positions (only changed rows are persisted).
@@ -223,6 +266,71 @@ export default function BscTemplateEditor({
             />
             On strategy map
           </label>
+
+          {node.isMapNode ? (
+            <div className="flex items-center gap-1">
+              {canEditLinks ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-[11px]"
+                      disabled={busy}
+                    >
+                      <Link2 className="mr-1 size-3" />
+                      Drives
+                      {node.linkTargets.length
+                        ? ` (${node.linkTargets.length})`
+                        : ""}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="start"
+                    className="max-h-72 w-64 overflow-auto"
+                  >
+                    <DropdownMenuLabel>
+                      Drives → (cause → effect)
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {linkCandidates.filter((c) => c.id !== node.id).length ===
+                    0 ? (
+                      <div className="px-2 py-1 text-[11px] text-muted-foreground">
+                        No other map nodes yet.
+                      </div>
+                    ) : (
+                      linkCandidates
+                        .filter((c) => c.id !== node.id)
+                        .map((c) => (
+                          <DropdownMenuCheckboxItem
+                            key={c.id}
+                            checked={node.linkTargets.includes(c.id)}
+                            disabled={busy}
+                            onCheckedChange={() => toggleLink(node, c.id)}
+                            onSelect={(event) => event.preventDefault()}
+                          >
+                            {c.label}
+                            <span className="ml-1 text-[9px] uppercase text-muted-foreground">
+                              {LEVEL_LABEL[c.level]}
+                            </span>
+                          </DropdownMenuCheckboxItem>
+                        ))
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : node.linkTargets.length ? (
+                <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                  <Link2 className="size-3" />
+                </span>
+              ) : null}
+              {node.linkTargets.map((t) => (
+                <Badge key={t} variant="outline" className="text-[10px]">
+                  {labelById.get(t) ?? "?"}
+                </Badge>
+              ))}
+            </div>
+          ) : null}
 
           {childLevel ? (
             <Button
