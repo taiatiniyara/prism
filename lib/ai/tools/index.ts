@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { tool } from "ai";
 import type { CurrentUser } from "@/lib/user.service";
-import { isConfiguredForDax } from "@/lib/powerbi.service";
+import { isConfiguredForDax, isConfigured } from "@/lib/powerbi.service";
 import { validateToolAccess } from "../guardrails";
 import type { AiToolResult } from "../types";
 import { recordToolFailure } from "../data-service/utils";
@@ -45,6 +45,9 @@ import {
   discoverDatasets,
   discoverSchema,
   discoverReport,
+  getPbiSchema,
+  runPbiQuery,
+  getQueryCatalogData,
   type PowerBiData,
   type DiagnosticData,
   type DiscoveryData,
@@ -598,11 +601,49 @@ export const createAiTools = (user: CurrentUser, _abortSignal?: AbortSignal) => 
         report_id: z.string().optional().describe("Report ID. Uses the default POWERBI_REPORT_ID if omitted."),
       }),
       execute: async ({ report_id }) => {
-        if (!isConfiguredForDax()) {
-          logger.warn("[powerbi] Power BI not configured for DAX (discover_report)", { userId: user.id });
+        if (!isConfigured()) {
+          logger.warn("[powerbi] Power BI not configured (discover_report)", { userId: user.id });
           return { data: { pages: [], report_id: report_id || "default" }, error: "Power BI is not configured." } satisfies AiToolResult<ReportData>;
         }
         return withTimeout(discoverReport({ report_id }), "discover_report");
+      },
+    }),
+
+    // ── Power BI Schema & Query Tools (instant, no discovery needed) ──
+
+    pbi_schema: tool({
+      description:
+        "Get the full Power BI dataset schema instantly — no API discovery needed. Returns all table names, columns, and descriptions. Use this to understand what data is available before writing DAX. Pass table_name to get details for a specific table. Pass search to find tables/columns matching a keyword.",
+      inputSchema: z.object({
+        table_name: z.string().optional().describe("Specific table to get details for (e.g., 'Fact GeneratorsData'). Omit to see all."),
+        search: z.string().optional().describe("Search keyword to find relevant tables and columns (e.g., 'capacity', 'SAIDI', 'revenue')."),
+      }),
+      execute: async ({ table_name, search }) => {
+        return getPbiSchema({ table_name, search });
+      },
+    }),
+
+    pbi_query_catalog: tool({
+      description:
+        "List all available pre-built Power BI query templates. Use this to see what questions can be answered with a single call instead of writing custom DAX.",
+      inputSchema: z.object({}),
+      execute: async () => {
+        return getQueryCatalogData();
+      },
+    }),
+
+    pbi_query: tool({
+      description:
+        "Run a pre-built, tested Power BI query. Much faster and more reliable than writing custom DAX. Use pbi_query_catalog to see available queries, pbi_schema to understand tables. Available queries: saidi_by_utility, saifi_by_utility, reliability_summary, installed_capacity, installed_capacity_by_utility, generation_output, generation_by_source, peak_demand, system_losses, distribution_overview, financial_summary, cost_recovery, customer_overview, metering_summary, workforce_summary, safety_summary, utility_profile, peer_comparison.",
+      inputSchema: z.object({
+        query: z.string().describe("Query template name (e.g., 'saidi_by_utility', 'financial_summary'). Use pbi_query_catalog for full list."),
+        params: z.record(z.string()).optional().describe("Query parameters (e.g., { fy: 'FY2023', utility: 'EPC' }). Use pbi_query_catalog to see what each query needs."),
+      }),
+      execute: async ({ query, params }) => {
+        if (!isConfiguredForDax()) {
+          return { error: "Power BI is not configured for DAX queries." };
+        }
+        return runPbiQuery({ query, params });
       },
     }),
 

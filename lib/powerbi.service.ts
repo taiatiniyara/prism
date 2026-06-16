@@ -209,9 +209,15 @@ async function resolveDatasetByName(
 let configPromise: Promise<PowerBiConfig | null> | undefined;
 
 export async function getEnv(): Promise<PowerBiConfig | null> {
-  if (configPromise) return configPromise;
+  if (configPromise) {
+    const result = await configPromise;
+    if (result !== null) return result;
+    configPromise = undefined;
+  }
   configPromise = resolveConfig();
-  return configPromise;
+  const result = await configPromise;
+  if (result === null) configPromise = undefined;
+  return result;
 }
 
 export function clearEnvCache(): void {

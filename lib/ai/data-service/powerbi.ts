@@ -2,6 +2,8 @@ import { executeDaxOnDataset, listDatasets, getDatasetSchema, getReportPages, te
 import { createToolMetadata } from "./common";
 import { withCache } from "../cache";
 import type { AiToolResult } from "../types";
+import { PBI_SCHEMA, resolveTable, searchSchema, getSchemaSummary, type PbiTable } from "./pbi-schema-registry";
+import { PBI_QUERIES, getQueryCatalog, type PbiQueryTemplate } from "./pbi-queries";
 
 export interface DiagnosticData {
   ok: boolean;
@@ -151,6 +153,139 @@ export const discoverReport = async (
       data: { pages: [], report_id: options.report_id || "default" },
       metadata: createToolMetadata({ source: "powerbi" }),
       error: err instanceof Error ? err.message : "Failed to get report pages",
+    };
+  }
+};
+
+// ── Schema Registry Tools (instant, no API call) ──
+
+export interface PbiSchemaData {
+  summary: string;
+  table_count: number;
+  tables: Array<{ name: string; columns: PbiTable["columns"]; measures: PbiTable["measures"]; description: string }>;
+}
+
+export const getPbiSchema = async (
+  options: { table_name?: string; search?: string } = {},
+): Promise<AiToolResult<PbiSchemaData>> => {
+  const dataset = PBI_SCHEMA.datasets["prism-dashboards-prod"];
+  if (!dataset) {
+    return {
+      data: { summary: "", table_count: 0, tables: [] },
+      metadata: createToolMetadata({ source: "powerbi_schema" }),
+      error: "No Power BI schema available",
+    };
+  }
+
+  if (options.search) {
+    const results = searchSchema(options.search);
+    const tables = results
+      .map((r) => dataset.tables[r.table])
+      .filter(Boolean)
+      .map((t) => ({ name: t.name, columns: t.columns, measures: t.measures, description: t.description }));
+    return {
+      data: { summary: `Search results for "${options.search}": ${results.length} tables matched.`, table_count: tables.length, tables },
+      metadata: createToolMetadata({ source: "powerbi_schema" }),
+    };
+  }
+
+  if (options.table_name) {
+    const table = resolveTable(options.table_name);
+    if (!table) {
+      return {
+        data: { summary: `Table "${options.table_name}" not found. Try pbi_schema without table_name to see all tables.`, table_count: 0, tables: [] },
+        metadata: createToolMetadata({ source: "powerbi_schema" }),
+      };
+    }
+    return {
+      data: { summary: table.description, table_count: 1, tables: [{ name: table.name, columns: table.columns, measures: table.measures, description: table.description }] },
+      metadata: createToolMetadata({ source: "powerbi_schema" }),
+    };
+  }
+
+  const allTables = Object.values(dataset.tables).map((t) => ({
+    name: t.name,
+    columns: t.columns,
+    measures: t.measures,
+    description: t.description,
+  }));
+
+  return {
+    data: { summary: getSchemaSummary(), table_count: allTables.length, tables: allTables },
+    metadata: createToolMetadata({ source: "powerbi_schema" }),
+  };
+};
+
+// ── Pre-built Query Tool ──
+
+export interface PbiQueryData {
+  rows: Record<string, unknown>[];
+  columns: string[];
+  row_count: number;
+  query_name: string;
+  dax_executed: string;
+}
+
+export const getQueryCatalogData = async (): Promise<AiToolResult<{ catalog: string; count: number }>> => {
+  const catalog = getQueryCatalog();
+  const count = Object.keys(PBI_QUERIES).length;
+  return {
+    data: { catalog, count },
+    metadata: createToolMetadata({ source: "powerbi_queries" }),
+  };
+};
+
+export const runPbiQuery = async (
+  options: { query: string; params?: Record<string, string> },
+): Promise<AiToolResult<PbiQueryData>> => {
+  const template: PbiQueryTemplate | undefined = PBI_QUERIES[options.query];
+  if (!template) {
+    return {
+      data: { rows: [], columns: [], row_count: 0, query_name: options.query, dax_executed: "" },
+      metadata: createToolMetadata({ source: "powerbi_queries" }),
+      error: `Unknown query "${options.query}". Available: ${Object.keys(PBI_QUERIES).join(", ")}. Use pbi_query_catalog to see descriptions.`,
+    };
+  }
+
+  // Validate required params
+  const missingParams = Object.entries(template.params)
+    .filter(([, v]) => v.required)
+    .filter(([k]) => !options.params?.[k])
+    .map(([k]) => k);
+
+  if (missingParams.length > 0) {
+    return {
+      data: { rows: [], columns: [], row_count: 0, query_name: options.query, dax_executed: "" },
+      metadata: createToolMetadata({ source: "powerbi_queries" }),
+      error: `Missing required parameters: ${missingParams.join(", ")}. ${template.description}`,
+    };
+  }
+
+  const params = options.params || {};
+  const dax = template.dax(params);
+
+  try {
+    const result: PowerBiQueryResult = await withCache(
+      `pbi:query:${options.query}:${JSON.stringify(params)}`,
+      () => executeDaxOnDataset(dax),
+      15000,
+    );
+
+    return {
+      data: {
+        rows: result.rows,
+        columns: result.columns,
+        row_count: result.rows.length,
+        query_name: options.query,
+        dax_executed: dax,
+      },
+      metadata: createToolMetadata({ freshness: new Date(), source: "powerbi_queries" }),
+    };
+  } catch (err) {
+    return {
+      data: { rows: [], columns: [], row_count: 0, query_name: options.query, dax_executed: dax },
+      metadata: createToolMetadata({ source: "powerbi_queries" }),
+      error: err instanceof Error ? err.message : "Power BI query failed",
     };
   }
 };

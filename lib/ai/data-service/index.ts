@@ -19,3 +19,5 @@ export * from "./advanced";
 export * from "./benchmarks";
 export * from "./utils";
 export * from "./powerbi";
+export * from "./pbi-schema-registry";
+export * from "./pbi-queries";
