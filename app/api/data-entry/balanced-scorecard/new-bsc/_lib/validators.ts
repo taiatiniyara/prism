@@ -340,6 +340,9 @@ export const parseUpdateTemplateNodePayload = (
   if (body.isMandatory !== undefined) {
     payload.isMandatory = body.isMandatory === true;
   }
+  if (body.isMapNode !== undefined) {
+    payload.isMapNode = body.isMapNode === true;
+  }
   if (body.ord !== undefined) {
     payload.ord = asOrd(body.ord);
   }

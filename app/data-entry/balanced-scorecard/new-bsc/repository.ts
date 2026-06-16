@@ -79,6 +79,7 @@ export const listTemplateTree = async (): Promise<TemplateNode[]> => {
       level: row.level,
       label: row.label,
       isMandatory: row.is_mandatory,
+      isMapNode: row.is_map_node,
       ord: row.ord,
       children: [],
     });
@@ -127,6 +128,9 @@ export const updateTemplateNode = async (
       ...(payload.label !== undefined ? { label: payload.label } : {}),
       ...(payload.isMandatory !== undefined
         ? { is_mandatory: payload.isMandatory }
+        : {}),
+      ...(payload.isMapNode !== undefined
+        ? { is_map_node: payload.isMapNode }
         : {}),
       ...(payload.ord !== undefined ? { ord: payload.ord } : {}),
       ...(payload.isActive !== undefined ? { is_active: payload.isActive } : {}),

@@ -29,6 +29,9 @@ export type TemplateNode = {
   level: BscTemplateLevel;
   label: string;
   isMandatory: boolean;
+  // Visible on the Strategy Map (a.k.a. is_visible_stratmap). Master default set
+  // by DEV/BMO; utilities inherit it.
+  isMapNode: boolean;
   ord: number;
   children: TemplateNode[];
 };
@@ -197,6 +200,7 @@ export type CreateTemplateNodePayload = {
 export type UpdateTemplateNodePayload = {
   label?: string;
   isMandatory?: boolean;
+  isMapNode?: boolean;
   ord?: number;
   isActive?: boolean;
 };

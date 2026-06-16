@@ -123,6 +123,11 @@ export default function BscTemplateEditor({
       await updateTemplateNode(node.id, { isMandatory });
     });
 
+  const setMapNode = (node: TemplateNode, isMapNode: boolean) =>
+    void withBusy(async () => {
+      await updateTemplateNode(node.id, { isMapNode });
+    });
+
   // Reorder a node among its siblings by normalising sibling `ord` to the new
   // positions (only changed rows are persisted).
   const moveNode = (
@@ -208,6 +213,15 @@ export default function BscTemplateEditor({
               }
             />
             Mandatory
+          </label>
+
+          <label className="flex items-center gap-1 text-[11px] text-muted-foreground">
+            <Checkbox
+              checked={node.isMapNode}
+              disabled={busy}
+              onCheckedChange={(checked) => setMapNode(node, checked === true)}
+            />
+            On strategy map
           </label>
 
           {childLevel ? (
