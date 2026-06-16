@@ -326,6 +326,50 @@ const computeLayout = (
 
 const center = (l: LaidNode) => ({ x: l.x + NW / 2, y: l.y + NH / 2 });
 
+// Point on the border of a node box (centered at c, size NW x NH) in the
+// direction of (tx, ty) — so connectors start/end on the box edge, not its
+// center (otherwise the arrowhead hides under the opaque node).
+const borderToward = (
+  c: { x: number; y: number },
+  tx: number,
+  ty: number,
+): { x: number; y: number } => {
+  const dx = tx - c.x;
+  const dy = ty - c.y;
+  if (dx === 0 && dy === 0) return { x: c.x, y: c.y };
+  const sx = dx !== 0 ? NW / 2 / Math.abs(dx) : Infinity;
+  const sy = dy !== 0 ? NH / 2 / Math.abs(dy) : Infinity;
+  const s = Math.min(sx, sy);
+  return { x: c.x + dx * s, y: c.y + dy * s };
+};
+
+// Curved (cubic Bézier) connector from the source box edge to the target box
+// edge, leaving a small gap before the target so the arrowhead reads clearly.
+const edgePath = (s: LaidNode, t: LaidNode): string => {
+  const sc = center(s);
+  const tc = center(t);
+  const p1 = borderToward(sc, tc.x, tc.y);
+  const p2raw = borderToward(tc, sc.x, sc.y);
+  const bx = sc.x - tc.x;
+  const by = sc.y - tc.y;
+  const bl = Math.hypot(bx, by) || 1;
+  // pull the end back ~6px toward the source so the arrowhead clears the box
+  const p2 = { x: p2raw.x + (bx / bl) * 6, y: p2raw.y + (by / bl) * 6 };
+
+  const dx = p2.x - p1.x;
+  const dy = p2.y - p1.y;
+  const k = 0.5;
+  const c1 =
+    Math.abs(dx) >= Math.abs(dy)
+      ? { x: p1.x + dx * k, y: p1.y }
+      : { x: p1.x, y: p1.y + dy * k };
+  const c2 =
+    Math.abs(dx) >= Math.abs(dy)
+      ? { x: p2.x - dx * k, y: p2.y }
+      : { x: p2.x, y: p2.y - dy * k };
+  return `M ${p1.x} ${p1.y} C ${c1.x} ${c1.y}, ${c2.x} ${c2.y}, ${p2.x} ${p2.y}`;
+};
+
 export default function BscStrategyMap({
   canBuild = true,
 }: {
@@ -581,59 +625,38 @@ export default function BscStrategyMap({
               <defs>
                 <marker
                   id="bsc-arrow"
-                  viewBox="0 0 10 10"
-                  refX="8"
-                  refY="5"
-                  markerWidth="6"
-                  markerHeight="6"
-                  orient="auto-start-reverse"
+                  viewBox="0 0 12 12"
+                  refX="10"
+                  refY="6"
+                  markerWidth="12"
+                  markerHeight="12"
+                  markerUnits="userSpaceOnUse"
+                  orient="auto"
                 >
-                  <path
-                    d="M2 1L8 5L2 9"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.5"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
+                  <path d="M1 1 L11 6 L1 11 z" className="fill-slate-500" />
                 </marker>
               </defs>
               {data.edges.map((edge) => {
                 const s = layout.laid.get(edge.sourceId);
                 const t = layout.laid.get(edge.targetId);
                 if (!s || !t) return null;
-                const sc = center(s);
-                const tc = center(t);
-                const dx = tc.x - sc.x;
-                const dy = tc.y - sc.y;
-                const len = Math.hypot(dx, dy) || 1;
-                const ux = dx / len;
-                const uy = dy / len;
-                // stop short of both boxes so the arrow lands on the edge
-                const x1 = sc.x + ux * (NH / 2 + 2);
-                const y1 = sc.y + uy * (NH / 2 + 2);
-                const x2 = tc.x - ux * (NH / 2 + 6);
-                const y2 = tc.y - uy * (NH / 2 + 6);
+                const d = edgePath(s, t);
                 return (
                   <g key={edge.id} className="text-slate-400">
                     {/* wide invisible hit area for click-to-delete */}
-                    <line
-                      x1={x1}
-                      y1={y1}
-                      x2={x2}
-                      y2={y2}
+                    <path
+                      d={d}
+                      fill="none"
                       stroke="transparent"
-                      strokeWidth={12}
+                      strokeWidth={14}
                       className={canBuild ? "pointer-events-auto cursor-pointer" : ""}
                       onClick={() => void onEdgeClick(edge.id)}
                     />
-                    <line
-                      x1={x1}
-                      y1={y1}
-                      x2={x2}
-                      y2={y2}
+                    <path
+                      d={d}
+                      fill="none"
                       stroke="currentColor"
-                      strokeWidth={1.5}
+                      strokeWidth={2}
                       markerEnd="url(#bsc-arrow)"
                     />
                   </g>
