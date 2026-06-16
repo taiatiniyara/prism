@@ -557,17 +557,16 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
                 <div className="flex flex-col items-center justify-center py-8 text-center">
                   <h2 className="mb-2 text-xl font-semibold">PRISM AI</h2>
                   <p className="text-muted-foreground mb-8 max-w-md">
-                    Ask me about your utility&apos;s performance, benchmarking data,
-                    KPI status, or how to use the PRISM platform.
+                    Your utility&apos;s performance data, peer benchmarks, and insights — all in one place. Just ask.
                   </p>
                   <div className="grid w-full max-w-2xl grid-cols-1 gap-4 md:grid-cols-2">
                     <div className="border-border rounded-lg border p-4 text-left transition-all duration-200 hover:border-slate-300 hover:shadow-md dark:border-border dark:hover:border-slate-600">
-                      <h3 className="mb-2 text-sm font-medium">Performance &amp; Scorecard</h3>
+                      <h3 className="mb-2 text-sm font-medium">Performance &amp; Operations</h3>
                       <div className="space-y-1">
                         {[
-                          "How was my utility's performance in 2023?",
-                          "What is our balanced scorecard looking like?",
-                          "Which KPIs are our weakest?",
+                          "How did my utility perform in the latest reporting period?",
+                          "What does our balanced scorecard look like right now?",
+                          "Show me our SAIDI and SAIFI reliability numbers",
                         ].map((q) => (
                           <button
                             key={q}
@@ -580,12 +579,12 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
                       </div>
                     </div>
                     <div className="border-border rounded-lg border p-4 text-left transition-all duration-200 hover:border-slate-300 hover:shadow-md dark:border-border dark:hover:border-slate-600">
-                      <h3 className="mb-2 text-sm font-medium">Benchmarking &amp; Targets</h3>
+                      <h3 className="mb-2 text-sm font-medium">Benchmarking &amp; Peer Comparison</h3>
                       <div className="space-y-1">
                         {[
-                          "How do we compare to other utilities?",
-                          "What targets should we set for next year?",
-                          "Compare SAIDI across all utilities.",
+                          "How do we compare to other Pacific utilities?",
+                          "Who's leading on system losses and where do we rank?",
+                          "What targets should we aim for next reporting period?",
                         ].map((q) => (
                           <button
                             key={q}
@@ -598,12 +597,12 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
                       </div>
                     </div>
                     <div className="border-border rounded-lg border p-4 text-left transition-all duration-200 hover:border-slate-300 hover:shadow-md dark:border-border dark:hover:border-slate-600">
-                      <h3 className="mb-2 text-sm font-medium">Diagnostics &amp; Action</h3>
+                      <h3 className="mb-2 text-sm font-medium">Diagnostics &amp; Data Health</h3>
                       <div className="space-y-1">
                         {[
-                          "What's in my review queue?",
-                          "Which KPIs are missing inputs?",
-                          "What changed since last period?",
+                          "Which KPIs have missing data or errors I should fix?",
+                          "What changed since the last reporting period?",
+                          "What's waiting in my review queue?",
                         ].map((q) => (
                           <button
                             key={q}
@@ -616,12 +615,12 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
                       </div>
                     </div>
                     <div className="border-border rounded-lg border p-4 text-left transition-all duration-200 hover:border-slate-300 hover:shadow-md dark:border-border dark:hover:border-slate-600">
-                      <h3 className="mb-2 text-sm font-medium">Risk &amp; Compliance</h3>
+                      <h3 className="mb-2 text-sm font-medium">Trends &amp; Risk</h3>
                       <div className="space-y-1">
                         {[
-                          "Which utilities are at highest risk?",
-                          "Are any KPIs out of regulatory compliance?",
-                          "What's the data quality looking like?",
+                          "Are we trending in the right direction on reliability?",
+                          "Which areas of our utility are at highest risk?",
+                          "How have our key KPIs trended over the past 3 years?",
                         ].map((q) => (
                           <button
                             key={q}
