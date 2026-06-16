@@ -110,7 +110,8 @@ export type AiToolName =
   | "diagnose_power_bi"
   | "discover_datasets"
   | "discover_schema"
-  | "discover_report";
+  | "discover_report"
+  | "get_ai_usage";
 
 export interface AiToolMetadata {
   data_freshness?: Date | null;
@@ -124,10 +125,14 @@ export interface AiToolResult<T = unknown> {
   error?: string;
 }
 
+export type AiChatContentPart =
+  | { type: "text"; text: string }
+  | { type: "image"; image: string; mimeType?: string };
+
 export interface AiChatMessage {
   id?: string;
   role: "user" | "assistant" | "system";
-  content: string;
+  content: string | AiChatContentPart[];
   toolCalls?: AiToolCallInfo[];
   toolResults?: AiToolResultInfo[];
 }

@@ -1,4 +1,4 @@
-import { executeDaxOnDataset, listDatasets, getDatasetSchema, getReportPages, type DatasetInfo, type TableInfo, type PowerBiQueryResult, type ReportPage } from "@/lib/powerbi.service";
+import { executeDaxOnDataset, listDatasets, getDatasetSchema, getReportPages, testPowerBiConnection, type DatasetInfo, type TableInfo, type PowerBiQueryResult, type ReportPage } from "@/lib/powerbi.service";
 import { createToolMetadata } from "./common";
 import { withCache } from "../cache";
 import type { AiToolResult } from "../types";
@@ -11,12 +11,12 @@ export interface DiagnosticData {
 
 export const diagnosePowerBi = async (): Promise<AiToolResult<DiagnosticData>> => {
   try {
-    const datasets = await listDatasets();
+    const result = await testPowerBiConnection();
     return {
       data: {
-        ok: true,
-        datasets_accessible: true,
-        message: `Connected. ${datasets.length} dataset(s) found: ${datasets.map((d) => `${d.name} (${d.id})`).join(", ")}`,
+        ok: result.ok,
+        datasets_accessible: result.datasets_accessible,
+        message: result.message,
       },
       metadata: createToolMetadata({ source: "powerbi_diagnostics" }),
     };
@@ -101,19 +101,24 @@ export const queryPowerBi = async (
       };
     }
 
-    const result: PowerBiQueryResult = await executeDaxOnDataset(
-      options.custom_dax,
-      options.dataset_id,
+    const cacheKey = `pbi:query:${options.dataset_id || "default"}:${Buffer.from(options.custom_dax).toString("base64").slice(0, 200)}`;
+
+    const result: PowerBiQueryResult = await withCache(
+      cacheKey,
+      () => executeDaxOnDataset(options.custom_dax!, options.dataset_id),
+      15000,
     );
+
+    const actualRowCount = result.rows.length;
 
     return {
       data: {
-        rows: result.rows.slice(0, 500),
+        rows: result.rows,
         columns: result.columns,
-        row_count: result.rows.length,
+        row_count: actualRowCount,
         query_summary: options.dataset_id
-          ? `DAX query on dataset ${options.dataset_id}`
-          : "DAX query on default dataset",
+          ? `DAX query on dataset ${options.dataset_id}. Returned ${actualRowCount} rows.`
+          : `DAX query on default dataset. Returned ${actualRowCount} rows.`,
       },
       metadata: createToolMetadata({ freshness: new Date(), source: "powerbi" }),
     };

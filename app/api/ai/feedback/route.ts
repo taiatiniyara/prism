@@ -2,6 +2,21 @@ import { db } from "@/db/connection";
 import { aiChatSession, aiChatTurn, aiFeedback, aiReviewQueue } from "@/db/schema/ai";
 import { getCurrentUser } from "@/lib/user.service";
 import { eq, and } from "drizzle-orm";
+import { logger } from "@/lib/logger";
+
+const isValidOrigin = (request: Request): boolean => {
+  const origin = request.headers.get("origin");
+  const referer = request.headers.get("referer");
+  if (!origin && !referer) return false;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.BETTER_AUTH_URL;
+  if (appUrl) {
+    const allowed = [appUrl];
+    if (origin && allowed.some((a) => origin.startsWith(a))) return true;
+    if (referer && allowed.some((a) => referer.startsWith(a))) return true;
+  }
+  if (origin) return true;
+  return false;
+};
 
 export async function POST(request: Request) {
   let user;
@@ -9,6 +24,11 @@ export async function POST(request: Request) {
     user = await getCurrentUser();
   } catch {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!isValidOrigin(request)) {
+    logger.warn("[ai-feedback] Request rejected: invalid origin", { userId: user.id });
+    return Response.json({ message: "Invalid request origin." }, { status: 403 });
   }
 
   let body: {

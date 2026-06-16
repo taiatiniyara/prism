@@ -38,3 +38,39 @@ export const withCache = <T>(
 export const clearRequestCache = (): void => {
   requestCache.clear();
 };
+
+export const invalidateCache = (keyPattern: string): void => {
+  if (keyPattern === "*") {
+    requestCache.clear();
+    return;
+  }
+  for (const key of requestCache.keys()) {
+    if (key.includes(keyPattern)) {
+      requestCache.delete(key);
+    }
+  }
+};
+
+export const invalidateCacheByPrefix = (prefix: string): void => {
+  for (const key of requestCache.keys()) {
+    if (key.startsWith(prefix)) {
+      requestCache.delete(key);
+    }
+  }
+};
+
+const CACHE_PREFIXES = {
+  scorecard: "scorecard",
+  benchmarking: "benchmarking",
+  kpi: "kpi",
+  diagnostics: "diagnostics",
+  schema: "schema",
+  report: "report",
+  datasets: "datasets",
+  trends: "trends",
+  dataQuality: "data_quality",
+  compliance: "compliance",
+  performance: "performance",
+} as const;
+
+export const CACHE_INVALIDATION = CACHE_PREFIXES;

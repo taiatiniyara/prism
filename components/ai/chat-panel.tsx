@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { MessageBubble } from "./message-bubble";
 import { ChatInput } from "./chat-input";
 import { ChatSidebar } from "./chat-sidebar";
+import { ChatErrorBoundary } from "./chat-error-boundary";
 
 import type { AiToolName } from "@/lib/ai/types";
 
@@ -30,6 +31,7 @@ interface ChatPanelProps {
 }
 
 const MAX_CHARS = 4000;
+const RAF_MAX_BUFFER_CHARS = 12000;
 
 const TOOL_ACTION_MAP: Record<AiToolName, string> = {
   get_kpi_status: "Checking KPI status",
@@ -71,6 +73,7 @@ const TOOL_ACTION_MAP: Record<AiToolName, string> = {
   discover_datasets: "Discovering datasets",
   discover_schema: "Discovering schema",
   discover_report: "Exploring report",
+  get_ai_usage: "Checking AI usage",
 };
 
 export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelProps) {
@@ -305,6 +308,12 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
 
       const revealNext = () => {
         const target = pendingContentRef.current;
+        if (target.length > RAF_MAX_BUFFER_CHARS) {
+          displayedLen = target.length;
+          setStreamingContent(target);
+          animFrameRef.current = null;
+          return;
+        }
         if (displayedLen < target.length) {
           displayedLen = Math.min(displayedLen + 3, target.length);
           setStreamingContent(target.slice(0, displayedLen));
@@ -348,9 +357,10 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
             } catch {
               // ignore malformed tool events
             }
-          } else if (line.length > 0) {
+          } else if (line.length > 0 && !line.startsWith("0:") && !line.startsWith("2:")) {
             // Backward compatibility: unmarked lines are text
-            pendingContentRef.current += line + "\n";
+            const content = line + "\n";
+            pendingContentRef.current += content;
             if (!animFrameRef.current) {
               animFrameRef.current = requestAnimationFrame(revealNext);
             }
@@ -483,6 +493,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
     : messages;
 
   return (
+    <ChatErrorBoundary>
     <div className="flex h-full overflow-hidden">
       {showSidebar && (
         <>
@@ -699,5 +710,6 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
           />
         </div>
       </div>
+    </ChatErrorBoundary>
   );
 }

@@ -26,7 +26,12 @@ export function FloatingChatbot() {
     } else {
       document.body.style.overflow = "";
     }
-    return () => { document.body.style.overflow = ""; };
+    const handleBeforeUnload = () => { document.body.style.overflow = ""; };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      document.body.style.overflow = "";
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
   }, [isOpen]);
 
   if (pathname?.startsWith("/prism-ai")) {

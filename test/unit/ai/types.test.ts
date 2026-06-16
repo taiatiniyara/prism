@@ -101,12 +101,11 @@ describe("AiToolName union type", () => {
     "discover_datasets",
     "discover_schema",
     "discover_report",
-    "discover_visuals",
-    "query_visual",
+    "get_ai_usage",
   ] as const;
 
-  it("has exactly 41 tool names", () => {
-    expect(allToolNames).toHaveLength(41);
+  it("has exactly 40 tool names", () => {
+    expect(allToolNames).toHaveLength(40);
   });
 
   it("all tool names are unique", () => {

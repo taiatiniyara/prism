@@ -164,6 +164,9 @@ export const aiUsageMetrics = pgTable(
     date: timestamp("date").notNull(),
     request_count: integer("request_count").notNull().default(0),
     token_count: integer("token_count").notNull().default(0),
+    token_count_input: integer("token_count_input").default(0),
+    token_count_output: integer("token_count_output").default(0),
+    estimated_cost_cents: integer("estimated_cost_cents").default(0),
     tool_call_count: integer("tool_call_count").notNull().default(0),
     error_count: integer("error_count").notNull().default(0),
     created_at: timestamp("created_at").defaultNow().notNull(),
@@ -174,6 +177,7 @@ export const aiUsageMetrics = pgTable(
   },
   (table) => [
     index("ai_usage_metrics_user_date_idx").on(table.user_id, table.date),
+    index("ai_usage_metrics_cost_idx").on(table.user_id, table.estimated_cost_cents),
     unique("ai_usage_metrics_user_date_unique").on(table.user_id, table.date),
   ],
 );

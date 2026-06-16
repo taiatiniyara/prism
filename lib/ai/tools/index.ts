@@ -1,10 +1,12 @@
 import { z } from "zod";
 import { tool } from "ai";
 import type { CurrentUser } from "@/lib/user.service";
-import { isConfigured as isPowerBiConfigured } from "@/lib/powerbi.service";
+import { isConfiguredForDax } from "@/lib/powerbi.service";
 import { validateToolAccess } from "../guardrails";
 import type { AiToolResult } from "../types";
 import { recordToolFailure } from "../data-service/utils";
+import { getUsageStats } from "../rate-limit";
+import { logger } from "@/lib/logger";
 import {
   getKpiStatus,
   getBenchmarkingData,
@@ -51,10 +53,24 @@ import {
 } from "../data-service";
 
 const TOOL_TIMEOUT_MS = 15000;
+const PBI_TOOL_TIMEOUT_MS = 30000;
+const MAX_TOOL_RESULT_CHARS = 8000;
 
-const withTimeout = <T>(promise: Promise<T>, toolName: string): Promise<T> => {
+const truncateResult = (result: unknown): unknown => {
+  const str = typeof result === "string" ? result : JSON.stringify(result);
+  if (str.length <= MAX_TOOL_RESULT_CHARS) return result;
+  const truncated = str.slice(0, MAX_TOOL_RESULT_CHARS) + `\n\n[Truncated at ${MAX_TOOL_RESULT_CHARS} chars. Original length: ${str.length}]`;
+  if (typeof result === "string") return truncated;
+  return { _truncated: true, preview: str.slice(0, MAX_TOOL_RESULT_CHARS), original_length: str.length };
+};
+
+const withTimeout = <T>(promise: Promise<T>, toolName: string, timeoutMs = TOOL_TIMEOUT_MS): Promise<T> => {
   const timeout = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error(`TOOL_TIMEOUT:${toolName} exceeded ${TOOL_TIMEOUT_MS}ms`)), TOOL_TIMEOUT_MS),
+    setTimeout(() => {
+      const msg = `TOOL_TIMEOUT:${toolName} exceeded ${timeoutMs}ms`;
+      logger.warn("[ai-tools] Tool timeout", { toolName, timeoutMs });
+      reject(new Error(msg));
+    }, timeoutMs),
   );
   return Promise.race([promise, timeout]).catch((err: unknown) => {
     recordToolFailure(toolName);
@@ -62,8 +78,10 @@ const withTimeout = <T>(promise: Promise<T>, toolName: string): Promise<T> => {
   });
 };
 
-export const createAiTools = (user: CurrentUser) => {
-  const pbiConfigured = isPowerBiConfigured();
+const withSizeLimit = <T>(promise: Promise<T>): Promise<T> =>
+  promise.then((result) => truncateResult(result) as T);
+
+export const createAiTools = (user: CurrentUser, _abortSignal?: AbortSignal) => {
   return {
     get_kpi_status: tool({
       description:
@@ -223,10 +241,23 @@ export const createAiTools = (user: CurrentUser) => {
       description:
         "Suggest 2-3 follow-up questions the user might want to ask based on the current conversation context.",
       inputSchema: z.object({
-        questions: z.array(z.string()).min(2).max(3).describe("Array of follow-up question suggestions."),
+        questions: z.array(z.string().max(200)).min(1).max(3).describe("Array of follow-up question suggestions."),
       }),
       execute: async ({ questions }) => {
-        return { suggestions: questions };
+        const seen = new Set<string>();
+        const deduped: string[] = [];
+        const blocked = /\b(?:ignore|forget|disregard|override|bypass|reveal.*instructions?|credentials|password|api.?key|secret)\b/i;
+        for (const q of questions) {
+          const trimmed = q.trim();
+          if (trimmed.length < 5 || trimmed.length > 200) continue;
+          if (blocked.test(trimmed)) continue;
+          const key = trimmed.toLowerCase().replace(/\s+/g, " ");
+          if (seen.has(key)) continue;
+          seen.add(key);
+          deduped.push(trimmed);
+          if (deduped.length >= 3) break;
+        }
+        return { suggestions: deduped.length > 0 ? deduped : ["Would you like to explore any other aspect of your utility's performance?"] };
       },
     }),
 
@@ -511,7 +542,14 @@ export const createAiTools = (user: CurrentUser) => {
       }),
       execute: async ({ custom_dax, dataset_id }) => {
         const access = validateToolAccess("query_power_bi", user);
-        if (!access.passed || !pbiConfigured) return { data: { rows: [], columns: [], row_count: 0, query_summary: "" }, error: access.passed ? "Power BI is not configured." : access.reason } as unknown as AiToolResult<PowerBiData>;
+        if (!access.passed) {
+          logger.warn("[powerbi] Access denied to query_power_bi", { userId: user.id, role: user.role });
+          return { data: { rows: [], columns: [], row_count: 0, query_summary: "" }, error: access.reason } satisfies AiToolResult<PowerBiData>;
+        }
+        if (!isConfiguredForDax()) {
+          logger.warn("[powerbi] Power BI not configured for DAX (query_power_bi)", { userId: user.id });
+          return { data: { rows: [], columns: [], row_count: 0, query_summary: "" }, error: "Power BI is not configured." } satisfies AiToolResult<PowerBiData>;
+        }
         return withTimeout(queryPowerBi({ custom_dax, dataset_id }), "query_power_bi");
       },
     }),
@@ -522,7 +560,14 @@ export const createAiTools = (user: CurrentUser) => {
       inputSchema: z.object({}),
       execute: async () => {
         const access = validateToolAccess("diagnose_power_bi", user);
-        if (!access.passed || !pbiConfigured) return { data: { ok: false, datasets_accessible: false, message: access.passed ? "Power BI is not configured." : access.reason } } as unknown as AiToolResult<DiagnosticData>;
+        if (!access.passed) {
+          logger.warn("[powerbi] Access denied to diagnose_power_bi", { userId: user.id, role: user.role });
+          return { data: { ok: false, datasets_accessible: false, message: access.reason ?? "Access denied" } } satisfies AiToolResult<DiagnosticData>;
+        }
+        if (!isConfiguredForDax()) {
+          logger.warn("[powerbi] Power BI not configured for DAX (diagnose_power_bi)", { userId: user.id });
+          return { data: { ok: false, datasets_accessible: false, message: "Power BI is not configured." } } satisfies AiToolResult<DiagnosticData>;
+        }
         return withTimeout(diagnosePowerBi(), "diagnose_power_bi");
       },
     }),
@@ -533,7 +578,14 @@ export const createAiTools = (user: CurrentUser) => {
       inputSchema: z.object({}),
       execute: async () => {
         const access = validateToolAccess("discover_datasets", user);
-        if (!access.passed || !pbiConfigured) return { data: { datasets: [], total_datasets: 0 }, error: access.passed ? "Power BI is not configured." : access.reason } as unknown as AiToolResult<DiscoveryData>;
+        if (!access.passed) {
+          logger.warn("[powerbi] Access denied to discover_datasets", { userId: user.id, role: user.role });
+          return { data: { datasets: [], total_datasets: 0 }, error: access.reason } satisfies AiToolResult<DiscoveryData>;
+        }
+        if (!isConfiguredForDax()) {
+          logger.warn("[powerbi] Power BI not configured for DAX (discover_datasets)", { userId: user.id });
+          return { data: { datasets: [], total_datasets: 0 }, error: "Power BI is not configured." } satisfies AiToolResult<DiscoveryData>;
+        }
         return withTimeout(discoverDatasets(), "discover_datasets");
       },
     }),
@@ -547,8 +599,15 @@ export const createAiTools = (user: CurrentUser) => {
       }),
       execute: async ({ dataset_id, table_names }) => {
         const access = validateToolAccess("discover_schema", user);
-        if (!access.passed || !pbiConfigured) return { data: { dataset_id: dataset_id || "default", tables: [], total_tables: 0 }, error: access.passed ? "Power BI is not configured." : access.reason } as unknown as AiToolResult<SchemaData>;
-        return withTimeout(discoverSchema({ dataset_id, table_names }), "discover_schema");
+        if (!access.passed) {
+          logger.warn("[powerbi] Access denied to discover_schema", { userId: user.id, role: user.role });
+          return { data: { dataset_id: dataset_id || "default", tables: [], total_tables: 0 }, error: access.reason } satisfies AiToolResult<SchemaData>;
+        }
+        if (!isConfiguredForDax()) {
+          logger.warn("[powerbi] Power BI not configured for DAX (discover_schema)", { userId: user.id });
+          return { data: { dataset_id: dataset_id || "default", tables: [], total_tables: 0 }, error: "Power BI is not configured." } satisfies AiToolResult<SchemaData>;
+        }
+        return withTimeout(discoverSchema({ dataset_id, table_names }), "discover_schema", PBI_TOOL_TIMEOUT_MS);
       },
     }),
 
@@ -560,8 +619,41 @@ export const createAiTools = (user: CurrentUser) => {
       }),
       execute: async ({ report_id }) => {
         const access = validateToolAccess("discover_report", user);
-        if (!access.passed || !pbiConfigured) return { data: { pages: [], report_id: report_id || "default" }, error: access.passed ? "Power BI is not configured." : access.reason } as unknown as AiToolResult<ReportData>;
+        if (!access.passed) {
+          logger.warn("[powerbi] Access denied to discover_report", { userId: user.id, role: user.role });
+          return { data: { pages: [], report_id: report_id || "default" }, error: access.reason } satisfies AiToolResult<ReportData>;
+        }
+        if (!isConfiguredForDax()) {
+          logger.warn("[powerbi] Power BI not configured for DAX (discover_report)", { userId: user.id });
+          return { data: { pages: [], report_id: report_id || "default" }, error: "Power BI is not configured." } satisfies AiToolResult<ReportData>;
+        }
         return withTimeout(discoverReport({ report_id }), "discover_report");
+      },
+    }),
+
+    get_ai_usage: tool({
+      description:
+        "Get the current user's AI usage statistics including request counts, token consumption, estimated cost, tool calls, and error counts for recent days.",
+      inputSchema: z.object({
+        days: z.number().min(1).max(90).optional().describe("Number of days of history to return. Defaults to 7."),
+      }),
+      execute: async ({ days }) => {
+        try {
+          const stats = await getUsageStats(user.id, days ?? 7);
+          return withSizeLimit(Promise.resolve({
+            summary: {
+              total_requests: stats.totalRequests,
+              total_tokens: stats.totalTokens,
+              estimated_cost_usd: (stats.totalCostCents / 100).toFixed(2),
+              total_tool_calls: stats.totalToolCalls,
+              total_errors: stats.totalErrors,
+              period_days: days ?? 7,
+            },
+            daily: stats.daily,
+          }));
+        } catch {
+          return { error: "Failed to retrieve usage statistics." };
+        }
       },
     }),
   };

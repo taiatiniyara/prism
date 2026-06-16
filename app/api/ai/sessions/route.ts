@@ -14,6 +14,8 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const adminAll = searchParams.get("admin_all") === "true";
   const isAdmin = user.role === "DEV" || user.role === "BMO";
+  const offset = Math.max(0, parseInt(searchParams.get("offset") ?? "0", 10) || 0);
+  const limit = Math.min(100, Math.max(1, parseInt(searchParams.get("limit") ?? "50", 10) || 50));
 
   const sessions = adminAll && isAdmin
     ? await db
@@ -21,7 +23,8 @@ export async function GET(request: Request) {
         .from(aiChatSession)
         .where(sql`${aiChatSession.deleted_at} IS NULL`)
         .orderBy(desc(aiChatSession.last_turn_at))
-        .limit(50)
+        .limit(limit)
+        .offset(offset)
     : await db
         .select()
         .from(aiChatSession)
@@ -32,9 +35,10 @@ export async function GET(request: Request) {
           ),
         )
         .orderBy(desc(aiChatSession.last_turn_at))
-        .limit(50);
+        .limit(limit)
+        .offset(offset);
 
-  return Response.json({ sessions });
+  return Response.json({ sessions, offset, limit });
 }
 
 export async function POST(request: Request) {

@@ -2,13 +2,14 @@ import { db } from "@/db/connection";
 import { aiChatSession, aiChatTurn, aiToolCall } from "@/db/schema/ai";
 import { getPromptVersion } from "@/lib/ai";
 import { validateInput, filterOutput } from "@/lib/ai/guardrails";
-import { recordError, recordToolCall } from "@/lib/ai/rate-limit";
+import { recordError, recordToolCall, checkRateLimit, recordLatency } from "@/lib/ai/rate-limit";
 import type { AiChatMessage } from "@/lib/ai/types";
 import { getCurrentUser } from "@/lib/user.service";
 import { eq, sql, and } from "drizzle-orm";
 import { getSystemPrompt } from "@/lib/ai/prompt";
 import { checkUserUtility } from "@/lib/ai/data-service/utils";
 import { runAiStream, runAiGenerate } from "@/lib/ai/service";
+import { logger } from "@/lib/logger";
 
 export const maxDuration = 120;
 
@@ -29,6 +30,20 @@ class GuardrailError extends Error {
 const ADMIN_ROLES = new Set(["BMO", "DEV"]);
 const isAdminRole = (role: string | null | undefined): boolean =>
   role != null && ADMIN_ROLES.has(role.toUpperCase());
+
+const isValidOrigin = (request: Request): boolean => {
+  const origin = request.headers.get("origin");
+  const referer = request.headers.get("referer");
+  if (!origin && !referer) return false;
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.BETTER_AUTH_URL;
+  if (appUrl) {
+    const allowed = [appUrl];
+    if (origin && allowed.some((a) => origin.startsWith(a))) return true;
+    if (referer && allowed.some((a) => referer.startsWith(a))) return true;
+  }
+  if (origin) return true;
+  return false;
+};
 
 const deriveSessionTitle = (message: string): string => {
   const normalized = message.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
@@ -87,7 +102,7 @@ ${conversationText}`,
         .where(eq(aiChatSession.id, sessionId));
     }
   } catch (err) {
-    console.error("[ai-chat] Summarization failed:", err instanceof Error ? err.message : String(err));
+    logger.error("[ai-chat] Summarization failed", { error: err instanceof Error ? err.message : String(err), sessionId });
     recordError(userId).catch(() => {});
   }
 };
@@ -126,6 +141,21 @@ export async function POST(request: Request) {
     user = await getCurrentUser();
   } catch {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!isValidOrigin(request)) {
+    logger.warn("[ai-chat] Request rejected: invalid origin", { userId: user.id });
+    return Response.json({ message: "Invalid request origin." }, { status: 403 });
+  }
+
+  const rateLimitCheck = checkRateLimit(user.id);
+  if (!rateLimitCheck.allowed) {
+    const retryAfter = Math.ceil((rateLimitCheck.retryAfterMs ?? 60000) / 1000);
+    logger.warn("[ai-chat] Rate limit hit", { userId: user.id, retryAfter });
+    return Response.json(
+      { message: `Rate limit reached. Please wait ${retryAfter} seconds before trying again.` },
+      { status: 429, headers: { "Retry-After": String(retryAfter) } },
+    );
   }
 
   let body: { messages: AiChatMessage[]; sessionId?: number };
@@ -272,8 +302,10 @@ export async function POST(request: Request) {
       messages: cleanMessages,
       user,
       systemPromptOverride: systemPrompt,
+      abortSignal: request.signal,
       onFinish: async ({ text, usage, toolCalls: toolCallsFromStream, model: usedModel, wasFallback: fallbackFlag }) => {
         const turnLatencyMs = Date.now() - startedAt;
+        recordLatency("chat", turnLatencyMs);
 
         try {
           const { filtered } = filterOutput(text);
@@ -324,7 +356,7 @@ export async function POST(request: Request) {
             summarizeConversation(sessionId, user.id).catch(() => {});
           }
         } catch (err) {
-          console.error("[ai-chat] Failed to persist turn response:", err instanceof Error ? err.message : String(err));
+          logger.error("[ai-chat] Failed to persist turn response", { error: err instanceof Error ? err.message : String(err), turnId, sessionId });
         }
       },
     });
@@ -412,7 +444,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);
-    console.error("AI chat error:", errMsg);
+    logger.error("[ai-chat] AI chat error", { error: errMsg, userId: user.id, sessionId, turnId });
     const turnLatencyMs = Date.now() - startedAt;
 
     try {

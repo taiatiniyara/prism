@@ -46,7 +46,7 @@ const INPUT_GUARDRAIL_RULES: GuardrailRule[] = [
     rule: "REF-PROMPT-INJECTION",
     reason: "I cannot process requests that attempt to modify my instructions.",
     pattern:
-      /\b(?:ignore\s+(?:all\s+)?(?:previous|prior)\s+(?:instructions?|rules?|prompts?)|disregard\s+(?:all\s+)?(?:previous|prior)|forget\s+(?:all\s+)?(?:previous|prior))\b/i,
+      /\b(?:ignore\s+(?:all\s+)?(?:previous|prior)\s+(?:instructions?|rules?|prompts?|directives?|guidelines?)|disregard\s+(?:all\s+)?(?:previous|prior)|forget\s+(?:all\s+)?(?:previous|prior)|override\s+(?:your|the)\s+(?:instructions?|rules?|system\s+prompt)|bypass\s+(?:your|the)\s+(?:instructions?|restrictions?|limits?|filters?)|you\s+are\s+now\s+(?:DAN|jailbroken|unfiltered|unrestricted)|pretend\s+you\s+(?:are|were)|role[\s-]*play\s+as|act\s+as\s+(?:if\s+)?you\s+(?:are|were)|switch\s+to\s+(?:developer|debug|admin)\s+mode|translate\s+the\s+following\s+(?:instructions?|system\s+prompt)|reveal\s+(?:your|the)\s+(?:instructions?|system\s+prompt|prompt|rules?))\b/i,
   },
 ];
 

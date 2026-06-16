@@ -7,6 +7,7 @@ import { desc } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
 import { createToolMetadata } from "./common";
 import type { AiToolResult } from "../types";
+import { logger } from "@/lib/logger";
 
 // ---- CIRCUIT BREAKER ----
 
@@ -18,7 +19,10 @@ export const recordToolFailure = (toolName: string): boolean => {
   const now = Date.now();
   const entry = toolFailures.get(toolName) ?? { count: 0, lastFail: 0, cooldownUntil: 0 };
 
-  if (now < entry.cooldownUntil) return false;
+  if (now < entry.cooldownUntil) {
+    logger.warn("[ai-circuit-breaker] Tool in cooldown", { toolName, cooldownUntil: new Date(entry.cooldownUntil).toISOString() });
+    return false;
+  }
 
   entry.count++;
   entry.lastFail = now;
@@ -26,15 +30,27 @@ export const recordToolFailure = (toolName: string): boolean => {
   if (entry.count >= MAX_FAILURES) {
     entry.cooldownUntil = now + COOLDOWN_MS;
     entry.count = 0;
+    logger.error("[ai-circuit-breaker] Tool circuit opened", { toolName, failures: MAX_FAILURES, cooldownMs: COOLDOWN_MS });
     return false;
   }
 
   toolFailures.set(toolName, entry);
+  logger.warn("[ai-circuit-breaker] Tool failure recorded", { toolName, failureCount: entry.count, maxFailures: MAX_FAILURES });
   return true;
 };
 
 export const resetToolCircuit = (toolName: string): void => {
   toolFailures.delete(toolName);
+  logger.info("[ai-circuit-breaker] Tool circuit reset", { toolName });
+};
+
+export const getCircuitStatus = (): Array<{ toolName: string; failures: number; cooldownUntil: number | null }> => {
+  const now = Date.now();
+  return [...toolFailures.entries()].map(([toolName, entry]) => ({
+    toolName,
+    failures: entry.count,
+    cooldownUntil: entry.cooldownUntil > now ? entry.cooldownUntil : null,
+  }));
 };
 
 // ---- REVIEW QUEUE VIEWING ----
