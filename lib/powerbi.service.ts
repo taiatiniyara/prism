@@ -315,9 +315,17 @@ function getEffectiveIdentity(): { upn: string; roles: string[] } | null {
 
 // ---- Embed token generation ----
 export async function powerBiDetails() {
-  const config = await getEnv();
-  if (!config || !config.embedURL) throw new Error("Power BI embed is not configured (missing EMBED_URL)");
-  if (!config.reportID) throw new Error("Power BI embed is not configured (missing report ID)");
+  let config = await getEnv();
+  if (!config || !config.embedURL) {
+    clearEnvCache();
+    config = await getEnv();
+    if (!config || !config.embedURL) throw new Error("Power BI embed is not configured (missing EMBED_URL)");
+  }
+  if (!config.reportID) {
+    clearEnvCache();
+    config = await getEnv();
+    if (!config.reportID) throw new Error("Power BI embed is not configured (missing report ID)");
+  }
 
   const azureResponse = await getAzureToken();
   const user = await getCurrentUser();
@@ -325,22 +333,19 @@ export async function powerBiDetails() {
 
   const identity = getEffectiveIdentity();
 
-  const body = {
+  const body: Record<string, unknown> = {
     reports: [{ id: config.reportID }],
     datasets: [{ id: config.datasetId }],
     targetWorkspaces: [{ id: config.workspaceID }],
-    identities: identity
-      ? [{
-          username: identity.upn,
-          roles: identity.roles,
-          datasets: [config.datasetId],
-        }]
-      : [{
-          username: user.email,
-          roles: [user.role, "ALL"],
-          datasets: [config.datasetId],
-        }],
   };
+
+  if (identity) {
+    body.identities = [{
+      username: identity.upn,
+      roles: identity.roles,
+      datasets: [config.datasetId],
+    }];
+  }
 
   const bearerToken = `${azureResponse.token_type} ${azureResponse.access_token}`;
 
