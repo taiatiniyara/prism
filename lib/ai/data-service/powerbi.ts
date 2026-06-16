@@ -4,6 +4,13 @@ import { withCache } from "../cache";
 import type { AiToolResult } from "../types";
 import { PBI_SCHEMA, resolveTable, searchSchema, getSchemaSummary, type PbiTable } from "./pbi-schema-registry";
 import { PBI_QUERIES, getQueryCatalog, type PbiQueryTemplate } from "./pbi-queries";
+import {
+  setPbiContext, getPbiContext, clearPbiContext,
+  getFreshnessStatus, detectAnomalies,
+  resolveNlQuery, generateDeepLink, exportQueryResults,
+  logQueryUsage, getQueryUsageStats, recommendChart,
+  type FreshnessData, type AnomalyResult, type NlQueryResult, type ExportData,
+} from "./pbi-enrichment";
 
 export interface DiagnosticData {
   ok: boolean;
@@ -289,3 +296,12 @@ export const runPbiQuery = async (
     };
   }
 };
+
+// ── Enrichment Wrappers ──
+
+export { setPbiContext, getPbiContext, clearPbiContext };
+export { getFreshnessStatus };
+export { resolveNlQuery, generateDeepLink, exportQueryResults };
+export { logQueryUsage, getQueryUsageStats, recommendChart };
+export { detectAnomalies };
+export type { FreshnessData, AnomalyResult, NlQueryResult, ExportData };

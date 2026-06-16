@@ -21,3 +21,4 @@ export * from "./utils";
 export * from "./powerbi";
 export * from "./pbi-schema-registry";
 export * from "./pbi-queries";
+export * from "./pbi-enrichment";

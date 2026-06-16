@@ -48,6 +48,13 @@ import {
   getPbiSchema,
   runPbiQuery,
   getQueryCatalogData,
+  setPbiContext,
+  getFreshnessStatus,
+  resolveNlQuery,
+  generateDeepLink,
+  exportQueryResults,
+  detectAnomalies,
+  recommendChart,
   type PowerBiData,
   type DiagnosticData,
   type DiscoveryData,
@@ -634,10 +641,105 @@ export const createAiTools = (user: CurrentUser, _abortSignal?: AbortSignal) => 
 
     pbi_query: tool({
       description:
-        "Run a pre-built, tested Power BI query. Much faster and more reliable than writing custom DAX. Use pbi_query_catalog to see available queries, pbi_schema to understand tables. Available queries: saidi_by_utility, saifi_by_utility, reliability_summary, installed_capacity, installed_capacity_by_utility, generation_output, generation_by_source, peak_demand, system_losses, distribution_overview, financial_summary, cost_recovery, customer_overview, metering_summary, workforce_summary, safety_summary, utility_profile, peer_comparison.",
+        "Run a pre-built, tested Power BI query. Much faster than writing custom DAX. Use pbi_query_catalog for full list. Use pbi_match to find the right query from natural language. Key queries: saidi_by_utility, saifi_by_utility, reliability_summary, installed_capacity, installed_capacity_by_utility, generation_output, generation_by_source, peak_demand, system_losses, distribution_overview, financial_summary, cost_recovery, customer_overview, metering_summary, workforce_summary, safety_summary, utility_profile, peer_comparison, composite_score, whatif_sensitivity, saidi_trend, generation_trend, losses_trend, recovery_trend, electrification_trend.",
       inputSchema: z.object({
-        query: z.string().describe("Query template name (e.g., 'saidi_by_utility', 'financial_summary'). Use pbi_query_catalog for full list."),
-        params: z.record(z.string()).optional().describe("Query parameters (e.g., { fy: 'FY2023', utility: 'EPC' }). Use pbi_query_catalog to see what each query needs."),
+        query: z.string().describe("Query template name. Use pbi_query_catalog for full list or pbi_match for NL matching."),
+        params: z.record(z.string()).optional().describe("Query parameters. Context defaults (utility, fy) from pbi_context are auto-applied if set."),
+      }),
+      execute: async ({ query, params }) => {
+        if (!isConfiguredForDax()) {
+          return { error: "Power BI is not configured for DAX queries." };
+        }
+        return runPbiQuery({ query, params });
+      },
+    }),
+
+    pbi_match: tool({
+      description: "Match a natural language question to the best Power BI query template. Use this when you're not sure which query to use.",
+      inputSchema: z.object({
+        question: z.string().describe("The user's question in their own words."),
+      }),
+      execute: async ({ question }) => {
+        return resolveNlQuery(question);
+      },
+    }),
+
+    pbi_context: tool({
+      description: "Set or view smart context defaults for Power BI queries. When utility and fy are set, pbi_query auto-fills those parameters so the user doesn't need to repeat them.",
+      inputSchema: z.object({
+        utility: z.string().optional().describe("Utility acronym (e.g., EPC, TPL)"),
+        fy: z.string().optional().describe("Fiscal year (e.g., FY2023)"),
+        clear: z.boolean().optional().describe("Set true to clear all context."),
+      }),
+      execute: async ({ utility, fy, clear }) => {
+        if (clear) {
+          return { context: setPbiContext({}), message: "Context cleared." };
+        }
+        const ctx = setPbiContext({ utility, fy });
+        return { context: ctx, message: Object.keys(ctx).length > 0 ? "Context updated." : "No context set." };
+      },
+    }),
+
+    pbi_freshness: tool({
+      description: "Check when the Power BI dataset was last refreshed. Use this before reporting data so users know if they're looking at stale information.",
+      inputSchema: z.object({}),
+      execute: async () => {
+        return getFreshnessStatus();
+      },
+    }),
+
+    pbi_chart: tool({
+      description: "Get a chart recommendation for Power BI query results. Returns the best chart type, title, and reasoning.",
+      inputSchema: z.object({
+        query_name: z.string().describe("The query template name that produced the results."),
+        row_count: z.number().optional().describe("Number of rows returned (helps refine the chart choice)."),
+      }),
+      execute: async ({ query_name, row_count }) => {
+        return recommendChart(query_name, row_count ?? 10);
+      },
+    }),
+
+    pbi_anomalies: tool({
+      description: "Detect statistical anomalies in Power BI query results. Identifies values that deviate significantly from the group average (z-score method). Use after running any utility-comparison query.",
+      inputSchema: z.object({
+        rows: z.array(z.record(z.unknown())).describe("The rows from a pbi_query result."),
+        threshold: z.number().min(1).max(5).optional().describe("Z-score threshold for anomaly detection. Default 2.0. Lower = more sensitive."),
+      }),
+      execute: async ({ rows, threshold }) => {
+        const anomalies = detectAnomalies(rows, { threshold });
+        return { anomalies, total_checked: rows.length, threshold: threshold ?? 2.0 };
+      },
+    }),
+
+    pbi_deeplink: tool({
+      description: "Generate a direct link to open the Power BI dashboard to a specific page with filters pre-applied. Use when the user wants to see the data in the dashboard.",
+      inputSchema: z.object({
+        page_name: z.string().optional().describe("Dashboard page name to navigate to."),
+        filter_utility: z.string().optional().describe("Pre-filter to this utility."),
+        filter_fy: z.string().optional().describe("Pre-filter to this fiscal year."),
+      }),
+      execute: async ({ page_name, filter_utility, filter_fy }) => {
+        return generateDeepLink({ page_name, filter_utility, filter_fy });
+      },
+    }),
+
+    pbi_export: tool({
+      description: "Export Power BI query results as CSV or JSON for download. Use when the user asks to save, download, or export data.",
+      inputSchema: z.object({
+        query_name: z.string().describe("Query template name (for the filename)."),
+        rows: z.array(z.record(z.unknown())).describe("The rows from a pbi_query result."),
+        format: z.enum(["csv", "json"]).optional().describe("Export format. Defaults to csv."),
+      }),
+      execute: async ({ query_name, rows, format }) => {
+        return exportQueryResults(rows, query_name, format ?? "csv");
+      },
+    }),
+
+    pbi_trend: tool({
+      description: "Alias for running trend-focused queries. Returns multi-year data for charting. Available: saidi_trend, generation_trend, losses_trend, recovery_trend, electrification_trend.",
+      inputSchema: z.object({
+        query: z.enum(["saidi_trend", "generation_trend", "losses_trend", "recovery_trend", "electrification_trend"]),
+        params: z.record(z.string()).optional().describe("Optional parameters like { utility: 'EPC' }."),
       }),
       execute: async ({ query, params }) => {
         if (!isConfiguredForDax()) {

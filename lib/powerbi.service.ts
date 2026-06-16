@@ -42,7 +42,7 @@ async function fetchWithRetry(
 }
 
 // ---- Types ----
-interface PowerBiConfig {
+export interface PowerBiConfig {
   clientID: string;
   clientSecret: string;
   tenantID: string;
