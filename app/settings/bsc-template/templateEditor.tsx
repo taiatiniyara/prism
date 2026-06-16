@@ -237,7 +237,7 @@ export default function BscTemplateEditor({
           )}
 
           <Input
-            className="h-7 max-w-md text-xs"
+            className="h-7 w-[50ch] text-xs"
             defaultValue={node.label}
             disabled={busy}
             onBlur={(event) => renameNode(node, event.target.value)}
