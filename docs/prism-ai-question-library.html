@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRISM AI — Complete Question Library</title>
+<style>
+  :root {
+    --bg: #ffffff; --card: #f8fafc; --border: #e2e8f0;
+    --text: #1e293b; --muted: #64748b; --accent: #2563eb;
+    --green: #15803d; --amber: #b45309;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; padding: 2rem; }
+  .container { max-width: 1000px; margin: 0 auto; }
+  h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem; }
+  h2 { font-size: 1.35rem; font-weight: 600; margin: 2.5rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--accent); color: var(--accent); }
+  h3 { font-size: 1.05rem; font-weight: 600; margin: 1.25rem 0 0.5rem; color: var(--text); }
+  .subtitle { color: var(--muted); font-size: 0.95rem; margin-bottom: 2rem; }
+  .section-desc { color: var(--muted); font-size: 0.88rem; margin-bottom: 0.75rem; }
+  .questions { display: grid; grid-template-columns: repeat(auto-fit, minmax(440px, 1fr)); gap: 0.5rem 1.5rem; margin: 0.5rem 0 1.5rem; }
+  .q { font-size: 0.88rem; padding: 0.4rem 0; border-bottom: 1px solid var(--border); color: var(--text); }
+  .q::before { content: "▸ "; color: var(--accent); }
+  .q small { color: var(--muted); display: block; font-size: 0.75rem; margin-top: 0.1rem; }
+  .nav { display: flex; flex-wrap: wrap; gap: 0.4rem; margin: 1rem 0; }
+  .nav a { font-size: 0.8rem; color: var(--accent); text-decoration: none; padding: 0.25rem 0.6rem; border: 1px solid var(--border); border-radius: 0.25rem; }
+  .nav a:hover { background: var(--accent); color: #fff; }
+  .toc { background: var(--card); border: 1px solid var(--border); border-radius: 0.75rem; padding: 1.25rem 1.5rem; margin: 1.5rem 0; }
+  .toc ol { columns: 3; font-size: 0.85rem; padding-left: 1.5rem; }
+  .toc li { margin: 0.15rem 0; }
+  .footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border); color: var(--muted); font-size: 0.78rem; text-align: center; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>PRISM AI — Complete Question Library</h1>
+<p class="subtitle">Every question users can ask, organized by domain. Just type or click — no special syntax needed.</p>
+
+<div class="toc">
+  <strong style="font-size:0.9rem">Jump to:</strong>
+  <ol>
+    <li><a href="#reliability">Reliability & Outages</a></li>
+    <li><a href="#generation">Generation & Capacity</a></li>
+    <li><a href="#distribution">Distribution & Losses</a></li>
+    <li><a href="#financial">Financials & Tariffs</a></li>
+    <li><a href="#customers">Customers & Electrification</a></li>
+    <li><a href="#workforce">Workforce & HR</a></li>
+    <li><a href="#safety">Safety</a></li>
+    <li><a href="#diesel">Diesel & Fuel Dependence</a></li>
+    <li><a href="#climate">Climate & Resilience</a></li>
+    <li><a href="#island">Island & Peer Context</a></li>
+    <li><a href="#renewable">Renewable Transition</a></li>
+    <li><a href="#governance">Governance & Leadership</a></li>
+    <li><a href="#transmission">Transmission</a></li>
+    <li><a href="#compound">Cross-Domain & Compound</a></li>
+    <li><a href="#forecasting">Forecasting & Trends</a></li>
+    <li><a href="#analysis">Advanced Analytics</a></li>
+    <li><a href="#reporting">Reporting & Donor</a></li>
+    <li><a href="#planning">Investment & Planning</a></li>
+    <li><a href="#quick">Quick Start Prompts</a></li>
+  </ol>
+</div>
+
+<!-- 1. Reliability -->
+<h2 id="reliability">1. Reliability & Outages</h2>
+<p class="section-desc">SAIDI, SAIFI, outage trends, and reliability comparisons across utilities.</p>
+<div class="questions">
+  <div class="q">Show me SAIDI for all utilities in FY2023<small>Ranked from best to worst outage duration</small></div>
+  <div class="q">What's our SAIFI compared to other Pacific utilities?<small>Outage frequency ranking</small></div>
+  <div class="q">Give me a full reliability overview — SAIDI and SAIFI together<small>Side-by-side comparison table</small></div>
+  <div class="q">How has our SAIDI changed over the last few years?<small>Trend analysis across all available fiscal years</small></div>
+  <div class="q">Are we getting more or less reliable over time?<small>Improvement or deterioration pattern</small></div>
+  <div class="q">Who has the best reliability in the Pacific?<small>Top-ranked utilities</small></div>
+  <div class="q">Which utility has the worst outage record?<small>Bottom-ranked with context</small></div>
+  <div class="q">How does our outage frequency compare to the Pacific average?<small>Benchmark comparison</small></div>
+  <div class="q">Is any utility's reliability getting worse year over year?<small>Deterioration detection</small></div>
+</div>
+
+<!-- 2. Generation -->
+<h2 id="generation">2. Generation & Capacity</h2>
+<p class="section-desc">Installed capacity, generation output, energy sources, and plant efficiency.</p>
+<div class="questions">
+  <div class="q">What's the installed capacity by utility and energy source?<small>MW breakdown by fuel type</small></div>
+  <div class="q">How much capacity does each utility have in total?<small>Ranked by total MW</small></div>
+  <div class="q">How much electricity is each utility generating?<small>Total MWh per utility</small></div>
+  <div class="q">What's the generation mix — how much comes from diesel vs renewable?<small>Energy source breakdown</small></div>
+  <div class="q">What are the peak and average demand numbers?<small>Load profile comparison</small></div>
+  <div class="q">How has our generation output changed over time?<small>Multi-year trend</small></div>
+  <div class="q">What's our capacity factor — how much of our installed capacity are we actually using?<small>Efficiency metric: MWh / (MW x 8760 hours)</small></div>
+  <div class="q">Who uses their generation capacity most efficiently?<small>Capacity factor ranking</small></div>
+  <div class="q">How much generation comes from renewable sources?<small>Clean energy share</small></div>
+  <div class="q">Which utility generates the most power per MW of installed capacity?<small>Generation efficiency comparison</small></div>
+</div>
+
+<!-- 3. Distribution -->
+<h2 id="distribution">3. Distribution & Losses</h2>
+<p class="section-desc">System losses, network size, and distribution infrastructure.</p>
+<div class="questions">
+  <div class="q">Who has the lowest system losses?<small>Ranked from best to worst</small></div>
+  <div class="q">What's the full distribution picture — lines, transformers, and losses?<small>Network overview</small></div>
+  <div class="q">Are our losses improving or getting worse?<small>Multi-year loss trend</small></div>
+  <div class="q">What's the split between technical and non-technical losses?<small>Grid physics vs commercial/theft losses</small></div>
+  <div class="q">Which utilities have losses above 15%?<small>Threshold alert — needs investigation</small></div>
+  <div class="q">How long are the distribution lines for each utility?<small>Network size comparison</small></div>
+  <div class="q">What's our transformer capacity compared to peers?<small>Infrastructure comparison</small></div>
+</div>
+
+<!-- 4. Financials -->
+<h2 id="financial">4. Financials & Tariffs</h2>
+<p class="section-desc">Revenue, costs, tariff recovery, and financial sustainability.</p>
+<div class="questions">
+  <div class="q">Show me the financial summary — revenue, costs, and recovery rates<small>Financial overview per utility</small></div>
+  <div class="q">Are utilities covering their costs through tariffs?<small>Cost recovery ranking</small></div>
+  <div class="q">How has cost recovery changed over time?<small>Financial sustainability trend</small></div>
+  <div class="q">What's the gap between tariffs and operating costs?<small>Structural deficit identification</small></div>
+  <div class="q">How much does residential electricity cost in each country?<small>Tariff rate comparison</small></div>
+  <div class="q">What's the fixed charge and connection fee for each utility?<small>Complete tariff picture</small></div>
+  <div class="q">How affordable is electricity compared to GDP per capita?<small>Affordability index</small></div>
+  <div class="q">What happens if we change our tariff rates?<small>Revenue and affordability impact simulation</small></div>
+</div>
+
+<!-- 5. Customers -->
+<h2 id="customers">5. Customers & Electrification</h2>
+<p class="section-desc">Connections, electrification rates, metering coverage, and household data.</p>
+<div class="questions">
+  <div class="q">What's the electrification rate by utility?<small>Access comparison</small></div>
+  <div class="q">How many new connections were made this period?<small>Connection growth</small></div>
+  <div class="q">What's metering coverage — how many customers are metered vs unmetered?<small>Metering penetration</small></div>
+  <div class="q">How many prepayment meters and smart meters are deployed?<small>Technology adoption</small></div>
+  <div class="q">How has electrification progressed over the years?<small>Access trend</small></div>
+  <div class="q">What's the household-level electrification picture — urban vs rural?<small>Household granularity</small></div>
+  <div class="q">Which utilities still have significant electrification gaps?<small>Below 90% access</small></div>
+</div>
+
+<!-- 6. Workforce -->
+<h2 id="workforce">6. Workforce & HR</h2>
+<p class="section-desc">Staffing, gender diversity, training, turnover, and workforce composition.</p>
+<div class="questions">
+  <div class="q">How many employees does each utility have?<small>Headcount comparison</small></div>
+  <div class="q">What's the ratio of customers per employee?<small>Staffing efficiency</small></div>
+  <div class="q">How many technical vs non-technical staff?<small>Skill mix</small></div>
+  <div class="q">What's female workforce participation across utilities?<small>Gender diversity</small></div>
+  <div class="q">How many women are in management and technical roles?<small>Gender by level — glass ceiling visibility</small></div>
+  <div class="q">What's staff turnover — hiring vs departures?<small>Retention and brain drain</small></div>
+  <div class="q">How much is spent on training per employee?<small>Training investment</small></div>
+  <div class="q">What's the split between permanent, contract, and apprentice staff?<small>Workforce stability</small></div>
+  <div class="q">How many expatriate vs local staff?<small>Localization progress</small></div>
+  <div class="q">How many apprentices and trainees are in the pipeline?<small>Future workforce development</small></div>
+  <div class="q">What training does our utility need based on our performance gaps?<small>Capacity building recommendations</small></div>
+</div>
+
+<!-- 7. Safety -->
+<h2 id="safety">7. Safety</h2>
+<p class="section-desc">Workplace safety performance, leading and lagging indicators.</p>
+<div class="questions">
+  <div class="q">What's the safety record across utilities?<small>LTI, fatalities, LTIFR comparison</small></div>
+  <div class="q">Are we getting safer over time?<small>Safety trend analysis</small></div>
+  <div class="q">How many near misses are being reported?<small>Leading indicator — predicts future incidents</small></div>
+  <div class="q">What's safety training coverage like?<small>% of staff completing safety training</small></div>
+  <div class="q">How many toolbox talks and safety observations are conducted?<small>Safety culture indicators</small></div>
+  <div class="q">Which utilities have LTIFR above the benchmark?<small>Above 5 — needs review</small></div>
+</div>
+
+<!-- 8. Diesel -->
+<h2 id="diesel">8. Diesel & Fuel Dependence</h2>
+<p class="section-desc">Diesel vulnerability, fuel efficiency, and energy diversification.</p>
+<div class="questions">
+  <div class="q">How diesel-dependent is each utility?<small>Diesel MW as share of total capacity</small></div>
+  <div class="q">Which utilities are most vulnerable to fuel price shocks?<small>Diesel dependence ranking</small></div>
+  <div class="q">How efficient is each utility's generation fleet?<small>MWh per MW — fuel efficiency proxy</small></div>
+  <div class="q">What's our renewable energy share vs diesel share?<small>Energy mix comparison</small></div>
+  <div class="q">If oil prices rise 20%, which utilities are most exposed?<small>Fuel cost vulnerability scoring</small></div>
+</div>
+
+<!-- 9. Climate -->
+<h2 id="climate">9. Climate & Resilience</h2>
+<p class="section-desc">Climate vulnerability, disaster risk, and emissions.</p>
+<div class="questions">
+  <div class="q">Which utilities are most vulnerable to climate impacts?<small>Multi-factor risk profile: SAIDI + diesel + island geography</small></div>
+  <div class="q">What's the estimated carbon footprint of each utility?<small>CO2 emissions estimate from diesel generation</small></div>
+  <div class="q">How does island geography affect utility risk?<small>Island count and isolation as vulnerability factors</small></div>
+  <div class="q">Which utilities score highest on the vulnerability dashboard?<small>Weighted composite score across all risk dimensions</small></div>
+</div>
+
+<!-- 10. Island -->
+<h2 id="island">10. Island & Peer Context</h2>
+<p class="section-desc">Fair benchmarking that accounts for island geography and utility size.</p>
+<div class="questions">
+  <div class="q">Group utilities by how many islands they serve<small>Island peer groups</small></div>
+  <div class="q">How do small island utilities compare to each other?<small>Under 10,000 customers benchmark</small></div>
+  <div class="q">Which utilities are most similar to mine?<small>Cosine similarity matching across 9 features</small></div>
+  <div class="q">What peer group does my utility belong to?<small>Auto-grouped by customer size</small></div>
+  <div class="q">Compare me against utilities of similar size and geography<small>Fair, contextualized benchmarking</small></div>
+  <div class="q">How remote is each utility — how many flights per week?<small>Air connectivity as a logistics/isolation indicator</small></div>
+</div>
+
+<!-- 11. Renewable -->
+<h2 id="renewable">11. Renewable Transition</h2>
+<p class="section-desc">Renewable energy gap analysis, solar potential, and transition planning.</p>
+<div class="questions">
+  <div class="q">How much renewable capacity does each utility need to hit their target?<small>Gap analysis against target percentage</small></div>
+  <div class="q">How much solar capacity is installed across utilities?<small>Solar PV baseline</small></div>
+  <div class="q">If we add 5MW of solar with battery storage, what's the impact?<small>Diesel displacement projection</small></div>
+  <div class="q">How is the renewable share trending over time?<small>NDC and renewable target progress tracking</small></div>
+</div>
+
+<!-- 12. Governance -->
+<h2 id="governance">12. Governance & Leadership</h2>
+<p class="section-desc">Board governance, regulatory compliance, and institutional capacity.</p>
+<div class="questions">
+  <div class="q">How well-governed is each utility?<small>Governance score, board meetings, audit findings</small></div>
+  <div class="q">What's the board gender diversity across utilities?<small>Female board members percentage</small></div>
+  <div class="q">How long have CEOs been in place?<small>CEO tenure and succession risk</small></div>
+  <div class="q">Which utilities have succession plans?<small>Institutional resilience indicator</small></div>
+  <div class="q">How does the regulatory framework affect utility performance?<small>Compare outcomes under different regulators</small></div>
+  <div class="q">Does public vs private ownership affect utility outcomes?<small>Ownership type analysis</small></div>
+</div>
+
+<!-- 13. Transmission -->
+<h2 id="transmission">13. Transmission</h2>
+<p class="section-desc">High-voltage network infrastructure and grid capacity.</p>
+<div class="questions">
+  <div class="q">How long are transmission lines for each utility?<small>Line length by voltage level</small></div>
+  <div class="q">What's the substation capacity across the Pacific?<small>Grid infrastructure comparison</small></div>
+  <div class="q">Who has the smallest and largest transmission networks?<small>Network size ranking</small></div>
+</div>
+
+<!-- 14. Cross-Domain -->
+<h2 id="compound">14. Cross-Domain & Compound Analysis</h2>
+<p class="section-desc">Multi-metric profiles, peer comparisons, and composite scoring.</p>
+<div class="questions">
+  <div class="q">Give me a complete profile of my utility — everything you have across all domains<small>Consolidated single-utility snapshot</small></div>
+  <div class="q">Rank all utilities on a composite performance score<small>Weighted cross-domain ranking</small></div>
+  <div class="q">Which utility is the best overall and why?<small>Composite score leader</small></div>
+  <div class="q">How does my utility compare to peers on capacity, generation, demand, losses, and financials?<small>Side-by-side peer comparison</small></div>
+  <div class="q">Show me the vulnerability dashboard — who needs the most help?<small>Multi-dimensional vulnerability scoring</small></div>
+  <div class="q">What does the overall Pacific utility landscape look like?<small>Country comparison: GDP, population, inflation vs performance</small></div>
+</div>
+
+<!-- 15. Forecasting -->
+<h2 id="forecasting">15. Forecasting & Trends</h2>
+<p class="section-desc">Linear projections, historical extremes, and trend direction.</p>
+<div class="questions">
+  <div class="q">Forecast our SAIDI for the next 2 years<small>Linear regression projection with R-squared confidence</small></div>
+  <div class="q">Is our reliability improving or deteriorating?<small>Trend direction classification</small></div>
+  <div class="q">What was our best year for system losses?<small>Historical best period</small></div>
+  <div class="q">When were our losses at their worst?<small>Historical worst period</small></div>
+  <div class="q">At this rate, when will we reach 95% electrification?<small>Target projection</small></div>
+  <div class="q">Is our generation output trending up or down?<small>Production trend</small></div>
+</div>
+
+<!-- 16. Advanced Analytics -->
+<h2 id="analysis">16. Advanced Analytics</h2>
+<p class="section-desc">Correlation discovery, risk scoring, and pattern detection.</p>
+<div class="questions">
+  <div class="q">Which KPIs are most strongly correlated with each other?<small>Pearson correlation matrix</small></div>
+  <div class="q">Do utilities with better cost recovery also have better reliability?<small>Cross-domain correlation testing</small></div>
+  <div class="q">Are there any statistical outliers in this data?<small>Z-score anomaly detection</small></div>
+  <div class="q">Score all utilities on risk — which are critical?<small>5-factor risk model</small></div>
+  <div class="q">Are any utilities violating regulatory benchmarks?<small>SAIDI>500, Losses>15%, Recovery<100%, LTIFR>5, Electrification<90%</small></div>
+  <div class="q">Grade utilities on KPI data completeness<small>A-F scoring per utility</small></div>
+  <div class="q">What's the most commonly missing KPI data?<small>Data gap identification</small></div>
+</div>
+
+<!-- 17. Reporting -->
+<h2 id="reporting">17. Reporting & Donor</h2>
+<p class="section-desc">Automated reports, executive briefings, and donor application auto-fill.</p>
+<div class="questions">
+  <div class="q">Generate a board-ready executive briefing for my utility<small>5 key numbers, red flags, recommendations, one-liner</small></div>
+  <div class="q">Give me a one-page summary for the regulator<small>Regulatory audience format</small></div>
+  <div class="q">I need a donor-ready briefing for a funding application<small>Donor audience format</small></div>
+  <div class="q">What does PPA require for quarterly reporting?<small>PPA template: required KPIs and suggested queries</small></div>
+  <div class="q">What does the World Bank need for a funding proposal?<small>WB template: governance, efficiency, financial viability, sustainability</small></div>
+  <div class="q">What KPIs does ADB look at for energy sector loans?<small>ADB template: financial sustainability, tariff affordability, gender</small></div>
+  <div class="q">Auto-fill a GCF grant application for my utility using our actual data<small>Diesel %, renewable share, SAIDI, island factors → narrative</small></div>
+  <div class="q">Auto-fill an NZ MFAT funding proposal<small>Pacific context, community impact, gender, climate resilience</small></div>
+  <div class="q">Generate a complete performance report for our board<small>Multi-section: reliability, losses, financials, customers, recommendations</small></div>
+  <div class="q">Export this data as a spreadsheet<small>CSV/Excel download</small></div>
+</div>
+
+<!-- 18. Planning -->
+<h2 id="planning">18. Investment & Planning</h2>
+<p class="section-desc">Prioritization, what-if modeling, and impact projections.</p>
+<div class="questions">
+  <div class="q">If we had $5M for reliability improvements, where should we invest?<small>Investment prioritization — reliability focus</small></div>
+  <div class="q">Which utilities would benefit most from renewable energy funding?<small>Investment prioritization — renewable focus</small></div>
+  <div class="q">Where would electrification funding have the biggest impact?<small>Investment prioritization — access focus</small></div>
+  <div class="q">What happens if we reduce system losses by 10%?<small>What-if sensitivity: losses reduction</small></div>
+  <div class="q">What if we improve cost recovery by 5%?<small>What-if sensitivity: financial improvement</small></div>
+  <div class="q">Project the 5-year impact of installing feeder upgrades<small>SAIDI reduction projection</small></div>
+  <div class="q">What would smart metering do for our losses over 5 years?<small>Loss reduction projection</small></div>
+  <div class="q">Model the impact of tariff reform over 3 years<small>Cost recovery improvement projection</small></div>
+  <div class="q">Project the diesel displacement from adding 3MW of solar<small>Renewable scenario modeling</small></div>
+  <div class="q">How much would SAIDI improve with network hardening?<small>Feeder upgrade impact projection</small></div>
+</div>
+
+<!-- 19. Quick Start -->
+<h2 id="quick">19. Quick Start Prompts</h2>
+<p class="section-desc">The best first questions to ask — great for new users exploring PRISM AI.</p>
+<div class="questions">
+  <div class="q">How did my utility perform in the latest reporting period?<small>Your utility's full performance snapshot — the best first question</small></div>
+  <div class="q">How do we compare to other Pacific utilities?<small>Peer comparison — where you stand</small></div>
+  <div class="q">What should I be worried about right now?<small>Red flags, threshold violations, and risk alerts for your utility</small></div>
+  <div class="q">Show me our reliability numbers — SAIDI and SAIFI<small>Quick reliability check</small></div>
+  <div class="q">Are we covering our costs through tariffs?<small>Financial sustainability check</small></div>
+  <div class="q">What's our diesel dependence and how vulnerable are we?<small>Fuel risk assessment</small></div>
+  <div class="q">How much renewable capacity do we need to hit our target?<small>Renewable transition planning</small></div>
+  <div class="q">Give me a board-ready one-pager<small>Executive briefing</small></div>
+  <div class="q">What does my workforce look like — staffing and diversity?<small>Workforce analytics</small></div>
+  <div class="q">How safe is our workplace compared to others?<small>Safety benchmarking</small></div>
+</div>
+
+<div class="footer">
+  <p>PRISM AI — Pacific Power Association · June 2026</p>
+  <p>All questions work with natural language — just ask. No special syntax, no query language, no technical knowledge required.</p>
+</div>
+
+</div>
+</body>
+</html>
