@@ -18,6 +18,7 @@ export interface FilterOptionsFixture {
   inputCategories: FilterOptionFixture[];
   inputSubcategories: FilterOptionFixture[];
   serviceAreas: FilterOptionFixture[];
+  dataEntryStatuses: FilterOptionFixture[];
 }
 
 export const buildFilterContextFixture = (
@@ -40,5 +41,6 @@ export const buildFilterOptionsFixture = (
   inputCategories: [{ id: 515, name: "Operational" }],
   inputSubcategories: [{ id: 600, name: "Generation" }],
   serviceAreas: [{ id: 10, name: "North Zone" }],
+  dataEntryStatuses: [{ id: 1, name: "Pending" }],
   ...overrides,
 });

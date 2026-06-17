@@ -1449,6 +1449,7 @@ export const bootstrapDataEntryFilterContext = async (
     reportPeriods: options.reportPeriods,
     inputSubcategories: options.inputSubcategories,
     serviceAreas: options.serviceAreas,
+    dataEntryStatuses: options.dataEntryStatuses,
   });
 
   const operationalCategoryId = getOperationalCategoryId(
@@ -1466,11 +1467,6 @@ export const bootstrapDataEntryFilterContext = async (
 
   const statusAwareContext = {
     ...(tariffContext ? dependentContext : operationalContext),
-    dataEntryStatusId: options.dataEntryStatuses.some(
-      (status) => status.id === dependentContext.dataEntryStatusId,
-    )
-      ? dependentContext.dataEntryStatusId
-      : null,
   };
 
   return {

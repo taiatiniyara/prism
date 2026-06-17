@@ -48,12 +48,12 @@ const serializeComments = (
 
 const hasOption = (
   value: number | null,
-  options: DataEntryFilterOption[],
-): boolean => value != null && options.some((option) => option.id === value);
+  options: DataEntryFilterOption[] | undefined,
+): boolean => value != null && (options?.some((option) => option.id === value) ?? false);
 
 const ensureValidOrNull = (
   value: number | null,
-  options: DataEntryFilterOption[],
+  options: DataEntryFilterOption[] | undefined,
 ): number | null => {
   if (value == null) {
     return null;

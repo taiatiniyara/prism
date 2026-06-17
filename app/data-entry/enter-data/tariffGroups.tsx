@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 import { DataEntryTariffPaymentModeGroupView } from "@/app/data-entry/types";
 
@@ -45,47 +45,61 @@ const writeSessionCustomerType = (
   writeSessionNumber(`${STORAGE_KEY_CUSTOMER_TYPE_PREFIX}${paymentModeId}`, customerTypeId);
 };
 
+const selectStoredPaymentModeId = (
+  groups: DataEntryTariffPaymentModeGroupView[],
+  defaultValue: number,
+): number => {
+  const stored = readSessionNumber(STORAGE_KEY_PAYMENT_MODE);
+  if (stored != null && groups.some((g) => g.paymentModeId === stored)) {
+    return stored;
+  }
+  return defaultValue;
+};
+
+const selectStoredCustomerTypes = (
+  groups: DataEntryTariffPaymentModeGroupView[],
+): Record<number, number> => {
+  const result: Record<number, number> = {};
+  for (const group of groups) {
+    const stored = readSessionCustomerType(group.paymentModeId);
+    if (
+      stored != null &&
+      group.customerTypeGroups.some((ct) => ct.customerTypeId === stored)
+    ) {
+      result[group.paymentModeId] = stored;
+    }
+  }
+  return result;
+};
+
 interface TariffGroupsProps {
   groups: DataEntryTariffPaymentModeGroupView[];
 }
 
 export default function TariffGroups({ groups }: TariffGroupsProps) {
-  const hasHydratedRef = useRef(false);
+  const fallbackPaymentModeId = groups[0]?.paymentModeId ?? 0;
 
-  const resolveInitialPaymentModeId = useCallback(() => {
-    const stored = readSessionNumber(STORAGE_KEY_PAYMENT_MODE);
-    if (stored != null && groups.some((g) => g.paymentModeId === stored)) {
-      return stored;
-    }
-    return groups[0]?.paymentModeId ?? 0;
-  }, [groups]);
-
-  const resolveInitialCustomerTypes = useCallback(() => {
-    const result: Record<number, number> = {};
-    for (const group of groups) {
-      const stored = readSessionCustomerType(group.paymentModeId);
-      if (
-        stored != null &&
-        group.customerTypeGroups.some(
-          (ct) => ct.customerTypeId === stored,
-        )
-      ) {
-        result[group.paymentModeId] = stored;
-      }
-    }
-    return result;
-  }, [groups]);
-
-  const [openPaymentModeId, setOpenPaymentModeId] = useState<number>(
-    resolveInitialPaymentModeId,
-  );
+  const [openPaymentModeId, setOpenPaymentModeId] =
+    useState<number>(fallbackPaymentModeId);
   const [activeCustomerTypeByPaymentMode, setActiveCustomerTypeByPaymentMode] =
-    useState<Record<number, number>>(resolveInitialCustomerTypes);
+    useState<Record<number, number>>({});
   const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
-    hasHydratedRef.current = true;
-  }, []);
+    const storedPaymentId = selectStoredPaymentModeId(
+      groups,
+      fallbackPaymentModeId,
+    );
+    if (storedPaymentId !== openPaymentModeId) {
+      setOpenPaymentModeId(storedPaymentId);
+    }
+
+    const storedCustomerTypes = selectStoredCustomerTypes(groups);
+    if (Object.keys(storedCustomerTypes).length > 0) {
+      setActiveCustomerTypeByPaymentMode(storedCustomerTypes);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [groups]);
 
   if (groups.length === 0) {
     return (

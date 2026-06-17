@@ -309,6 +309,96 @@ export const PBI_SCHEMA: PbiSchema = {
             "EVALUATE SUMMARIZECOLUMNS('Fact CountryContextData'[Country], 'Fact CountryContextData'[FY], \"GDP/Capita\", AVERAGE('Fact CountryContextData'[GDP per Capita]))",
           ],
         },
+
+        "Fact Governance": {
+          name: "Fact Governance",
+          description:
+            "Governance indicators: regulatory compliance, board effectiveness, transparency score, audit performance per utility.",
+          columns: [
+            { name: "Utility", type: "string", description: "Utility acronym" },
+            { name: "FY", type: "string", description: "Fiscal year" },
+            { name: "Governance Score", type: "number", description: "Overall governance compliance score" },
+            { name: "Board Meetings Held", type: "number", description: "Number of board meetings in period" },
+            { name: "Audit Findings", type: "number", description: "Number of audit findings" },
+            { name: "Audit Findings Resolved", type: "number", description: "Resolved audit findings" },
+            { name: "Regulatory Compliance (%)", type: "number", description: "Compliance with regulatory requirements" },
+            { name: "Policies in Place", type: "number", description: "Number of governance policies adopted" },
+          ],
+          measures: [
+            { name: "Average Governance Score", description: "AVERAGE of Governance Score" },
+            { name: "Audit Resolution Rate", description: "Audit Findings Resolved / Audit Findings" },
+          ],
+          examples: [
+            "EVALUATE SUMMARIZECOLUMNS('Fact Governance'[Utility], 'Fact Governance'[FY], \"Score\", AVERAGE('Fact Governance'[Governance Score])) ORDER BY 'Fact Governance'[Governance Score] DESC",
+          ],
+        },
+
+        "Fact Leadership": {
+          name: "Fact Leadership",
+          description:
+            "Leadership and institutional capacity: succession planning, board diversity, executive tenure, strategic planning completion.",
+          columns: [
+            { name: "Utility", type: "string", description: "Utility acronym" },
+            { name: "FY", type: "string", description: "Fiscal year" },
+            { name: "CEO Tenure (Years)", type: "number", description: "Years current CEO has served" },
+            { name: "Board Female Members", type: "number", description: "Female board members" },
+            { name: "Board Total Members", type: "number", description: "Total board members" },
+            { name: "Succession Plan Status", type: "string", description: "In place, In development, None" },
+            { name: "Strategic Plan Current", type: "string", description: "Yes/No — current strategic plan exists" },
+            { name: "Senior Management Vacancies", type: "number", description: "Unfilled senior positions" },
+          ],
+          measures: [
+            { name: "Board Gender Diversity %", description: "Board Female Members / Board Total Members" },
+            { name: "Average CEO Tenure", description: "AVERAGE of CEO Tenure (Years)" },
+          ],
+          examples: [
+            "EVALUATE SUMMARIZECOLUMNS('Fact Leadership'[Utility], 'Fact Leadership'[FY], \"CEO Years\", AVERAGE('Fact Leadership'[CEO Tenure (Years)]), \"Board Female %\", DIVIDE(SUM('Fact Leadership'[Board Female Members]), SUM('Fact Leadership'[Board Total Members])))",
+          ],
+        },
+
+        "Fact AirConnectivity": {
+          name: "Fact AirConnectivity",
+          description:
+            "Air transport connectivity: airports, international routes, weekly flights — critical for island utility logistics and staff mobility.",
+          columns: [
+            { name: "Utility", type: "string", description: "Utility acronym" },
+            { name: "Country", type: "string", description: "Country" },
+            { name: "FY", type: "string", description: "Fiscal year" },
+            { name: "Airports with Paved Runways", type: "number", description: "Number of airports with paved runways" },
+            { name: "Total Airports", type: "number", description: "Total airports in service territory" },
+            { name: "International Routes", type: "number", description: "Direct international flight routes" },
+            { name: "Weekly International Flights", type: "number", description: "Weekly international departures" },
+            { name: "Nearest International Hub (km)", type: "number", description: "Distance to nearest international hub" },
+          ],
+          measures: [
+            { name: "Avg Flights per Island", description: "Weekly International Flights / Islands Served ratio" },
+          ],
+          examples: [
+            "EVALUATE SUMMARIZECOLUMNS('Fact AirConnectivity'[Utility], 'Fact AirConnectivity'[Country], \"Intl Flights/Week\", SUM('Fact AirConnectivity'[Weekly International Flights])) ORDER BY 'Fact AirConnectivity'[Weekly International Flights] ASC",
+          ],
+        },
+
+        "Fact Households": {
+          name: "Fact Households",
+          description:
+            "Household-level data: total households, urban/rural split, household size, electrified households — finer granularity than population-level metrics.",
+          columns: [
+            { name: "Utility", type: "string", description: "Utility acronym" },
+            { name: "Country", type: "string", description: "Country" },
+            { name: "FY", type: "string", description: "Fiscal year" },
+            { name: "Total Households", type: "number", description: "Total households in service territory" },
+            { name: "Urban Households", type: "number", description: "Urban households" },
+            { name: "Rural Households", type: "number", description: "Rural households" },
+            { name: "Electrified Households", type: "number", description: "Households with electricity" },
+            { name: "Average Household Size", type: "number", description: "Average persons per household" },
+          ],
+          measures: [
+            { name: "Urbanization Rate", description: "Urban Households / Total Households" },
+          ],
+          examples: [
+            "EVALUATE SUMMARIZECOLUMNS('Fact Households'[Utility], 'Fact Households'[FY], \"Households\", SUM('Fact Households'[Total Households]), \"Urban %\", DIVIDE(SUM('Fact Households'[Urban Households]), SUM('Fact Households'[Total Households])))",
+          ],
+        },
       },
     },
   },

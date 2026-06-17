@@ -74,6 +74,11 @@ export default async function EnterDataPage() {
           <InputRows
             key="flat-rows"
             rows={model.inputs.rows}
+            hasFilterSelection={
+              model.context.reportPeriodId != null &&
+              model.context.inputCategoryId != null
+            }
+            hasDefinitions={model.options.inputSubcategories.length > 0}
           />
         )}
       </FilterStatePanel>

@@ -1,11 +1,10 @@
 "use client";
 
 import { useTransition } from "react";
-import { useRouter } from "next/navigation";
-import { SaveAll, Loader2 } from "lucide-react";
+import { Ban, Loader2 } from "lucide-react";
 
 import { DataEntryInputRowView } from "@/app/data-entry/types";
-import { updateDataEntryValueAction } from "@/app/data-entry/enter-data/service";
+import { updateDataEntryAvailabilityAction } from "@/app/data-entry/enter-data/service";
 
 import InputCell from "@/app/data-entry/enter-data/inputCell";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -23,11 +22,10 @@ export default function InputRows({
   hasFilterSelection = true,
   hasDefinitions = true,
 }: InputRowsProps) {
-  const router = useRouter();
-  const [isSavingAll, startSaveAllTransition] = useTransition();
+  const [isMarkingAll, startMarkAllTransition] = useTransition();
 
-  const handleSaveAll = () => {
-    startSaveAllTransition(() => {
+  const handleMarkAllNotAvailable = () => {
+    startMarkAllTransition(() => {
       void (async () => {
         const pendingRows = rows.filter((row) => {
           const hasValue = String(row.value ?? "").trim().length > 0;
@@ -39,33 +37,32 @@ export default function InputRows({
           return;
         }
 
-        let saved = 0;
-        let failed = 0;
+        let successCount = 0;
+        let failCount = 0;
 
         for (const row of pendingRows) {
-          if (!row.value || row.value.trim().length === 0) continue;
           try {
-            await updateDataEntryValueAction({
+            await updateDataEntryAvailabilityAction({
               inputDefId: row.inputDefId,
               energyResourceId: row.energyResourceId ?? null,
               customerTypeId: row.customerTypeId ?? null,
               paymentModeId: row.paymentModeId ?? null,
-              value: row.value,
+              isDataNotAvailable: true,
             });
-            saved += 1;
+            successCount += 1;
           } catch {
-            failed += 1;
+            failCount += 1;
           }
         }
 
-        if (saved > 0) {
-          router.refresh();
-        }
-
-        if (failed === 0) {
-          toast.success(`Saved ${saved} input(s).`);
+        if (failCount === 0) {
+          toast.success(
+            `Marked ${successCount} input(s) as not available.`,
+          );
         } else {
-          toast.warning(`Saved ${saved}, ${failed} failed.`);
+          toast.warning(
+            `Marked ${successCount} as not available, ${failCount} failed.`,
+          );
         }
       })();
     });
@@ -103,15 +100,16 @@ export default function InputRows({
           type="button"
           variant="outline"
           size="sm"
-          onClick={handleSaveAll}
-          disabled={isSavingAll}
+          onClick={handleMarkAllNotAvailable}
+          disabled={isMarkingAll}
+          aria-label="Mark all pending inputs as not available"
         >
-          {isSavingAll ? (
+          {isMarkingAll ? (
             <Loader2 className="size-3.5 animate-spin mr-1" />
           ) : (
-            <SaveAll className="size-3.5 mr-1" />
+            <Ban className="size-3.5 mr-1" />
           )}
-          Save All
+          Mark All as Not Available
         </Button>
       </div>
       <div className="grid lg:grid-cols-3 gap-6 sm:grid-cols-1 md:grid-cols-2">

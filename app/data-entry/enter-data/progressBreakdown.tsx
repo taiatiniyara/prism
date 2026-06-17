@@ -1,6 +1,5 @@
 "use client";
 
-import { useRouter } from "next/navigation";
 import { DataEntryProgressSummary } from "@/app/data-entry/types";
 import {
   Dialog,
@@ -18,7 +17,6 @@ interface ProgressBreakdownProps {
 export default function ProgressBreakdown({
   progress,
 }: ProgressBreakdownProps) {
-  const router = useRouter();
   const progressPercentage =
     progress.totalInputs > 0
       ? Math.round((progress.completedInputs / progress.totalInputs) * 100)
@@ -55,7 +53,7 @@ export default function ProgressBreakdown({
           <DialogTitle>Progress Breakdown</DialogTitle>
           <DialogDescription>
             Completion by category and subcategory for the selected report
-            period. Click a row to navigate to that subcategory.
+            period.
           </DialogDescription>
         </DialogHeader>
 
@@ -73,18 +71,7 @@ export default function ProgressBreakdown({
               {progress.breakdown.map((item) => (
                 <tr
                   key={`${item.categoryName}-${item.subcategoryName}`}
-                  className="border-t cursor-pointer hover:bg-muted/50 transition-colors"
-                  role="button"
-                  tabIndex={0}
-                  aria-label={`Navigate to ${item.subcategoryName}`}
-                  onKeyDown={(e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      router.push("/data-entry/enter-data");
-                    }
-                  }}
-                  onClick={() => {
-                    router.push("/data-entry/enter-data");
-                  }}
+                  className="border-t"
                 >
                   <td className="px-3 py-2">{item.categoryName}</td>
                   <td className="px-3 py-2">{item.subcategoryName}</td>

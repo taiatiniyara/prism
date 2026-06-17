@@ -37,6 +37,7 @@ describe("context persistence sanitization", () => {
       reportPeriods: [{ id: 101, name: "2026-01" }],
       inputSubcategories: [{ id: 600, name: "Generation" }],
       serviceAreas: [{ id: 10, name: "North Zone" }],
+      dataEntryStatuses: [{ id: 1, name: "Pending" }],
     });
 
     expect(result.reportPeriodId).toBe(101);

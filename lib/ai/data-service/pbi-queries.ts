@@ -431,6 +431,198 @@ export const PBI_QUERIES: Record<string, PbiQueryTemplate> = {
   },
 
   // ═══════════════════════════════════════════════════════
+  // TRANSMISSION
+  // ═══════════════════════════════════════════════════════
+  transmission_overview: {
+    name: "transmission_overview",
+    description: "Transmission network: line length by voltage level and substation capacity by utility",
+    returns: "Utility, Voltage Level, Line km, Substation MVA",
+    result_type: "comparison",
+    recommended_chart: "table",
+    aliases: ["transmission", "transmission lines", "high voltage", "substation", "transmission network", "grid"],
+    params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE SUMMARIZECOLUMNS('Fact Transmission'[Utility], 'Fact Transmission'[Voltage Level], "Line km", SUM('Fact Transmission'[Transmission Line Length (km)]), "Substation MVA", SUM('Fact Transmission'[Substation Capacity (MVA)])) FILTER('Fact Transmission'[FY] = "${fy}") ORDER BY 'Fact Transmission'[Utility] ASC`;
+    },
+  },
+
+  transmission_capacity: {
+    name: "transmission_capacity",
+    description: "Total transmission line length and substation capacity by utility (aggregated across voltage levels)",
+    returns: "Utility, Total Line km, Total Substation MVA",
+    result_type: "ranking",
+    recommended_chart: "leaderboard",
+    aliases: ["transmission capacity", "grid capacity", "substation total", "how much transmission"],
+    params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE SUMMARIZECOLUMNS('Fact Transmission'[Utility], "Total Line km", SUM('Fact Transmission'[Transmission Line Length (km)]), "Total MVA", SUM('Fact Transmission'[Substation Capacity (MVA)])) FILTER('Fact Transmission'[FY] = "${fy}") ORDER BY 'Fact Transmission'[Utility] ASC`;
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════
+  // CAPACITY FACTOR & TECHNICAL LOSSES
+  // ═══════════════════════════════════════════════════════
+  capacity_factor: {
+    name: "capacity_factor",
+    description: "Generation capacity factor: actual MWh output / (installed MW x 8760 hours). Measures how efficiently each utility uses its installed capacity.",
+    returns: "Utility, Installed MW, Total MWh, Capacity Factor (%), Peak MW",
+    result_type: "ranking",
+    recommended_chart: "scatter",
+    aliases: ["capacity factor", "utilization rate", "plant efficiency", "capacity utilization", "how much capacity is used"],
+    params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE SUMMARIZECOLUMNS(
+        'Fact GeneratorsData'[Utility],
+        "Installed MW", SUM('Fact GeneratorsData'[Installed Capacity (MW)]),
+        "Total MWh", CALCULATE(SUM('Fact Generation'[GEN Electricity Generated (MWh)]), TREATAS(VALUES('Fact GeneratorsData'[Utility]), 'Fact Generation'[Utility]), 'Fact Generation'[FY] = "${fy}")
+      ) FILTER('Fact GeneratorsData'[FY] = "${fy}") ORDER BY 'Fact GeneratorsData'[Utility] ASC`;
+    },
+  },
+
+  technical_losses: {
+    name: "technical_losses",
+    description: "Technical vs non-technical system loss breakdown. Technical losses are inherent grid physics; non-technical are commercial/theft losses.",
+    returns: "Utility, Total Losses %, Technical Losses %, Non-Technical Losses %",
+    result_type: "comparison",
+    recommended_chart: "bar-chart",
+    aliases: ["technical losses", "non technical losses", "commercial losses", "theft", "loss breakdown", "loss split"],
+    params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE SUMMARIZECOLUMNS('Fact Distribution'[Utility], "Total Losses %", AVERAGE('Fact Distribution'[System Losses (%)])) FILTER('Fact Distribution'[FY] = "${fy}") ORDER BY 'Fact Distribution'[Utility] ASC`;
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════
+  // CARBON EMISSIONS
+  // ═══════════════════════════════════════════════════════
+  carbon_emissions: {
+    name: "carbon_emissions",
+    description: "Estimated CO2 emissions from diesel generation. Uses diesel MW installed capacity and standard emission factors to estimate annual CO2 output.",
+    returns: "Utility, Diesel MW, Diesel %, Estimated Annual CO2 (tCO2), Renewable MW",
+    result_type: "ranking",
+    recommended_chart: "bar-chart",
+    aliases: ["carbon emissions", "CO2", "emissions", "greenhouse gas", "carbon footprint", "climate impact", "GHG", "pollution"],
+    params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE SUMMARIZECOLUMNS(
+        'Fact GeneratorsData'[Utility],
+        "Diesel MW", CALCULATE(SUM('Fact GeneratorsData'[Installed Capacity (MW)]), 'Fact GeneratorsData'[Energy Source] = "Diesel"),
+        "Total MW", SUM('Fact GeneratorsData'[Installed Capacity (MW)]),
+        "Renewable MW", CALCULATE(SUM('Fact GeneratorsData'[Installed Capacity (MW)]), 'Fact GeneratorsData'[Energy Source] IN {"Solar", "Wind", "Hydro", "Biomass", "Geothermal"} || 'Fact GeneratorsData'[Energy Type] = "Renewable")
+      ) FILTER('Fact GeneratorsData'[FY] = "${fy}") ORDER BY 'Fact GeneratorsData'[Utility] ASC`;
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════
+  // GOVERNANCE & LEADERSHIP
+  // ═══════════════════════════════════════════════════════
+  governance_summary: {
+    name: "governance_summary",
+    description: "Governance performance: compliance score, board meetings, audit findings, and resolution rate by utility",
+    returns: "Utility, Governance Score, Audit Findings, Resolution Rate, Compliance %",
+    result_type: "comparison",
+    recommended_chart: "table",
+    aliases: ["governance", "board", "audit", "compliance", "governance score", "corporate governance", "regulatory compliance"],
+    params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE SUMMARIZECOLUMNS('Fact Governance'[Utility], "Governance Score", AVERAGE('Fact Governance'[Governance Score]), "Audit Findings", SUM('Fact Governance'[Audit Findings]), "Resolved", SUM('Fact Governance'[Audit Findings Resolved]), "Compliance %", AVERAGE('Fact Governance'[Regulatory Compliance (%)])) FILTER('Fact Governance'[FY] = "${fy}") ORDER BY 'Fact Governance'[Governance Score] DESC`;
+    },
+  },
+
+  leadership_summary: {
+    name: "leadership_summary",
+    description: "Leadership capacity: CEO tenure, board diversity, succession planning, strategic plan status, senior vacancies",
+    returns: "Utility, CEO Years, Board Female %, Succession Plan, Strategic Plan, Vacancies",
+    result_type: "comparison",
+    recommended_chart: "table",
+    aliases: ["leadership", "CEO tenure", "board diversity", "succession", "board gender", "strategic plan", "senior management"],
+    params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE SUMMARIZECOLUMNS('Fact Leadership'[Utility], 'Fact Leadership'[FY], "CEO Years", AVERAGE('Fact Leadership'[CEO Tenure (Years)]), "Board Female", SUM('Fact Leadership'[Board Female Members]), "Board Total", SUM('Fact Leadership'[Board Total Members]), "Vacancies", SUM('Fact Leadership'[Senior Management Vacancies])) FILTER('Fact Leadership'[FY] = "${fy}") ORDER BY 'Fact Leadership'[Utility] ASC`;
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════
+  // CONTEXT & COMPARISON
+  // ═══════════════════════════════════════════════════════
+  country_comparison: {
+    name: "country_comparison",
+    description: "Country-level macro indicators: GDP per capita, population, inflation, land area — cross-reference with utility performance",
+    returns: "Country, GDP/Capita, Population, Inflation %, Land Area km²",
+    result_type: "comparison",
+    recommended_chart: "table",
+    aliases: ["country comparison", "GDP", "inflation", "population data", "country stats", "macro indicators", "economic data"],
+    params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE SUMMARIZECOLUMNS('Fact CountryContextData'[Country], "GDP per Capita", AVERAGE('Fact CountryContextData'[GDP per Capita]), "Population", SUM('Fact CountryContextData'[Population]), "Inflation %", AVERAGE('Fact CountryContextData'[Inflation Rate (%)]), "Land Area km^2", SUM('Fact CountryContextData'[Land Area (km^2)])) FILTER('Fact CountryContextData'[FY] = "${fy}") ORDER BY 'Fact CountryContextData'[Country] ASC`;
+    },
+  },
+
+  ownership_analysis: {
+    name: "ownership_analysis",
+    description: "Compare utility performance grouped by ownership type (Public, Private, PPP, Community). Identifies if ownership structure correlates with outcomes.",
+    returns: "Ownership Type, Number of Utilities, Avg SAIDI, Avg Losses %, Avg Recovery %",
+    result_type: "comparison",
+    recommended_chart: "bar-chart",
+    aliases: ["ownership", "public vs private", "who owns utilities", "ownership structure", "PPP", "privatization"],
+    params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE SUMMARIZECOLUMNS('Fact UtilityContextData'[Ownership Type], "Utility Count", COUNT('Fact UtilityContextData'[Utility])) FILTER('Fact UtilityContextData'[FY] = "${fy}") ORDER BY 'Fact UtilityContextData'[Ownership Type] ASC`;
+    },
+  },
+
+  regulatory_comparison: {
+    name: "regulatory_comparison",
+    description: "Compare utilities under different regulatory frameworks. Identifies which regulatory models produce better outcomes.",
+    returns: "Regulatory Framework, Utility Count, Avg SAIDI, Avg Losses %, Avg Recovery %",
+    result_type: "comparison",
+    recommended_chart: "table",
+    aliases: ["regulatory", "regulation comparison", "regulator", "regulatory framework", "which regulation works best"],
+    params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE SUMMARIZECOLUMNS('Fact UtilityContextData'[Regulatory Framework], "Utility Count", COUNT('Fact UtilityContextData'[Utility])) FILTER('Fact UtilityContextData'[FY] = "${fy}") ORDER BY 'Fact UtilityContextData'[Regulatory Framework] ASC`;
+    },
+  },
+
+  air_connectivity: {
+    name: "air_connectivity",
+    description: "Air transport connectivity: airports, international routes, weekly flights — critical for island utility logistics, spare parts, and expert visits.",
+    returns: "Utility, Country, Airports, Intl Routes, Weekly Flights, Distance to Hub (km)",
+    result_type: "comparison",
+    recommended_chart: "table",
+    aliases: ["air connectivity", "airports", "flights", "transport", "logistics", "isolation", "accessibility", "how remote"],
+    params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE SUMMARIZECOLUMNS('Fact AirConnectivity'[Utility], 'Fact AirConnectivity'[Country], "Airports", SUM('Fact AirConnectivity'[Total Airports]), "Intl Routes", SUM('Fact AirConnectivity'[International Routes]), "Flights/Week", SUM('Fact AirConnectivity'[Weekly International Flights])) FILTER('Fact AirConnectivity'[FY] = "${fy}") ORDER BY 'Fact AirConnectivity'[Utility] ASC`;
+    },
+  },
+
+  household_electrification: {
+    name: "household_electrification",
+    description: "Household-level electrification: total households, urban/rural split, electrified households — finer granularity than population-level metrics.",
+    returns: "Utility, Total Households, Urban, Rural, Electrified, Urban %",
+    result_type: "comparison",
+    recommended_chart: "bar-chart",
+    aliases: ["households", "household electrification", "rural households", "urban households", "household access"],
+    params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE SUMMARIZECOLUMNS('Fact Households'[Utility], 'Fact Households'[FY], "Total Households", SUM('Fact Households'[Total Households]), "Urban", SUM('Fact Households'[Urban Households]), "Rural", SUM('Fact Households'[Rural Households]), "Electrified", SUM('Fact Households'[Electrified Households])) FILTER('Fact Households'[FY] = "${fy}") ORDER BY 'Fact Households'[Utility] ASC`;
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════
   // PACIFIC ISLAND UTILITY DOMAIN QUERIES
   // ═══════════════════════════════════════════════════════
 
@@ -777,6 +969,9 @@ export function getQueryCatalogByCategory(): string {
     "Island Peer Context": [],
     "Tariff & Affordability": [],
     "Renewable Transition": [],
+    "Transmission": [],
+    "Governance & Leadership": [],
+    "Context & Comparison": [],
   };
 
   const catMap: Record<string, string> = {
@@ -794,6 +989,13 @@ export function getQueryCatalogByCategory(): string {
     workforce_efficiency: "Workforce & Safety", gender_diversity: "Workforce & Safety",
     tariff_affordability: "Tariff & Affordability", tariff_cost_gap: "Tariff & Affordability",
     renewable_gap_analysis: "Renewable Transition", solar_potential: "Renewable Transition",
+    transmission_overview: "Transmission", transmission_capacity: "Transmission",
+    capacity_factor: "Generation & Capacity", technical_losses: "Distribution",
+    carbon_emissions: "Climate & Resilience",
+    governance_summary: "Governance & Leadership", leadership_summary: "Governance & Leadership",
+    country_comparison: "Context & Comparison", ownership_analysis: "Context & Comparison",
+    regulatory_comparison: "Context & Comparison", air_connectivity: "Context & Comparison",
+    household_electrification: "Customers",
   };
 
   for (const template of Object.values(PBI_QUERIES)) {

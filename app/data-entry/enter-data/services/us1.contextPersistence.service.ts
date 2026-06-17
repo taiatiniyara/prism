@@ -6,16 +6,16 @@ import {
 
 const hasOption = (
   value: number | null,
-  options: DataEntryFilterOption[],
-): boolean => value != null && options.some((option) => option.id === value);
+  options: DataEntryFilterOption[] | undefined,
+): boolean => value != null && (options?.some((option) => option.id === value) ?? false);
 
 const getDefaultOptionValue = (
-  options: DataEntryFilterOption[],
-): number | null => options[0]?.id ?? null;
+  options: DataEntryFilterOption[] | undefined,
+): number | null => options?.[0]?.id ?? null;
 
 const ensureValidOrDefault = (
   value: number | null,
-  options: DataEntryFilterOption[],
+  options: DataEntryFilterOption[] | undefined,
 ): number | null => {
   if (hasOption(value, options)) {
     return value;
@@ -40,7 +40,7 @@ export const sanitizeDependentFilterContext = (
   context: DataEntryFilterContext,
   options: Pick<
     DataEntryFilterOptions,
-    "reportPeriods" | "inputSubcategories" | "serviceAreas"
+    "reportPeriods" | "inputSubcategories" | "serviceAreas" | "dataEntryStatuses"
   >,
 ): DataEntryFilterContext => ({
   ...context,
@@ -55,6 +55,10 @@ export const sanitizeDependentFilterContext = (
   serviceAreaId: ensureValidOrDefault(
     context.serviceAreaId,
     options.serviceAreas,
+  ),
+  dataEntryStatusId: ensureValidOrDefault(
+    context.dataEntryStatusId,
+    options.dataEntryStatuses,
   ),
 });
 

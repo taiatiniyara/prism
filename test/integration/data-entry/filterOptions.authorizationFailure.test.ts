@@ -33,6 +33,7 @@ describe("stale unauthorized filter sanitization", () => {
       reportPeriods: [],
       inputSubcategories: [],
       serviceAreas: [],
+      dataEntryStatuses: [],
     });
 
     expect(sanitized.reportPeriodId).toBeNull();
