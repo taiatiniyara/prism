@@ -61,6 +61,18 @@ import {
   generatePeerGroups,
   getDonorTemplates,
   generateRenewableScenario,
+  forecastTrend,
+  findHistoricalExtremes,
+  findSimilarUtilities,
+  computeKpiCorrelations,
+  prioritizeInvestments,
+  generateExecutiveBriefing,
+  scoreDataCompleteness,
+  trackRegulatoryThresholds,
+  recommendCapacityBuilding,
+  simulateTariffChange,
+  autoFillDonorApplication,
+  projectImpact,
   type PowerBiData,
   type DiagnosticData,
   type DiscoveryData,
@@ -830,6 +842,172 @@ export const createAiTools = (user: CurrentUser, _abortSignal?: AbortSignal) => 
       }),
       execute: async ({ rows, additional_solar_mw, additional_battery_mwh }) => {
         return generateRenewableScenario(rows, { additional_solar_mw, additional_battery_mwh });
+      },
+    }),
+
+    // ── Advanced Analytics Tools ──
+
+    pbi_forecast: tool({
+      description: "Project future performance using linear trend analysis. Takes historical data from trend queries and forecasts 2 periods ahead. Shows whether metrics are improving, deteriorating, or stable, with R-squared confidence.",
+      inputSchema: z.object({
+        rows: z.array(z.record(z.unknown())).describe("Historical trend data (from saidi_trend, losses_trend, etc.)"),
+        metric: z.string().describe("Which column to forecast (e.g., 'SAIDI', 'Losses %', 'Total MWh', 'Recovery %')."),
+        periods_ahead: z.number().min(1).max(5).optional().describe("How many periods to forecast. Default 2."),
+        utility: z.string().optional().describe("Specific utility. Omit for all."),
+      }),
+      execute: async ({ rows, metric, periods_ahead, utility }) => {
+        return forecastTrend(rows, { metric, periods_ahead, utility });
+      },
+    }),
+
+    pbi_best_worst: tool({
+      description: "Find a utility's best and worst historical period for any metric. Answers: 'What was our best year for SAIDI?' or 'When were system losses worst?'",
+      inputSchema: z.object({
+        rows: z.array(z.record(z.unknown())).describe("Historical data rows that include period (FY) and the metric."),
+        utility: z.string().describe("Utility acronym."),
+        metric: z.string().describe("Metric to analyze (e.g., 'SAIDI', 'Losses %', 'Recovery %')."),
+      }),
+      execute: async ({ rows, utility, metric }) => {
+        return findHistoricalExtremes(rows, { utility, metric });
+      },
+    }),
+
+    pbi_similar_utilities: tool({
+      description: "Find which utilities are most similar to yours using multi-dimensional cosine similarity across 9 features (capacity, SAIDI, losses, recovery, diesel dependence, customers, islands, electrification, renewable share).",
+      inputSchema: z.object({
+        rows: z.array(z.record(z.unknown())).describe("Rows from vulnerability_dashboard or climate_risk_profile query."),
+        target_utility: z.string().describe("Your utility acronym to find peers for."),
+      }),
+      execute: async ({ rows, target_utility }) => {
+        return findSimilarUtilities(rows, { target_utility });
+      },
+    }),
+
+    pbi_correlations: tool({
+      description: "Discover hidden relationships between KPIs using Pearson correlation. Surfaces insights like 'utilities with higher cost recovery tend to have lower SAIDI.' Finds the strongest positive and negative correlations across all numeric columns.",
+      inputSchema: z.object({
+        rows: z.array(z.record(z.unknown())).describe("Rows from any multi-metric query (vulnerability_dashboard, composite_score, etc.)"),
+      }),
+      execute: async ({ rows }) => {
+        return computeKpiCorrelations(rows);
+      },
+    }),
+
+    pbi_prioritize: tool({
+      description: "Rank utilities by where investment would have the biggest impact. Focus areas: reliability, renewable, electrification, financial, or all. Returns ranked list with recommended actions and estimated impact for each utility.",
+      inputSchema: z.object({
+        rows: z.array(z.record(z.unknown())).describe("Rows from vulnerability_dashboard query."),
+        budget_focus: z.enum(["reliability", "renewable", "electrification", "financial", "all"]).optional().describe("What type of investment to prioritize."),
+      }),
+      execute: async ({ rows, budget_focus }) => {
+        return prioritizeInvestments(rows, { budget_focus });
+      },
+    }),
+
+    pbi_briefing: tool({
+      description: "Generate a 60-second executive briefing for board members, donors, or regulators. Includes 5 key numbers, top trends, red flags, recommendations, and a one-line summary. Audience options: board, donor, regulator.",
+      inputSchema: z.object({
+        utility: z.string().describe("Utility acronym."),
+        fy: z.string().describe("Fiscal year."),
+        saidi_data: z.array(z.record(z.unknown())).optional(),
+        losses_data: z.array(z.record(z.unknown())).optional(),
+        financial_data: z.array(z.record(z.unknown())).optional(),
+        customer_data: z.array(z.record(z.unknown())).optional(),
+        diesel_data: z.array(z.record(z.unknown())).optional(),
+        audience: z.enum(["board", "donor", "regulator"]).optional().describe("Who is this briefing for?"),
+      }),
+      execute: async ({ utility, fy, saidi_data, losses_data, financial_data, customer_data, diesel_data, audience }) => {
+        const data: Record<string, Record<string, unknown>[]> = {};
+        if (saidi_data) data.saidi_by_utility = saidi_data;
+        if (losses_data) data.system_losses = losses_data;
+        if (financial_data) data.financial_summary = financial_data;
+        if (customer_data) data.customer_overview = customer_data;
+        if (diesel_data) data.diesel_dependence = diesel_data;
+        return generateExecutiveBriefing(utility, fy, data, { audience });
+      },
+    }),
+
+    pbi_completeness: tool({
+      description: "Grade utilities A-F on how many KPIs they've submitted. Identifies which specific KPIs are missing per utility and recommends action. Critical for data quality assurance and donor reporting readiness.",
+      inputSchema: z.object({
+        rows: z.array(z.record(z.unknown())).describe("Rows from any multi-metric query (vulnerability_dashboard or similar)."),
+      }),
+      execute: async ({ rows }) => {
+        return scoreDataCompleteness(rows);
+      },
+    }),
+
+    pbi_regulatory: tool({
+      description: "Check utilities against regulatory benchmarks. Limits: SAIDI < 500, Losses < 15%, Recovery > 100%, LTIFR < 5, Electrification > 90%. Flags critical (>50% over limit) and warning-level violations.",
+      inputSchema: z.object({
+        rows: z.array(z.record(z.unknown())).describe("Rows from any multi-metric query."),
+      }),
+      execute: async ({ rows }) => {
+        return trackRegulatoryThresholds(rows);
+      },
+    }),
+
+    pbi_training: tool({
+      description: "Recommend training and capacity building programs based on workforce profile and performance gaps. Combines staff ratios, training rates, gender diversity, and KPI performance to identify urgent vs recommended training needs.",
+      inputSchema: z.object({
+        workforce_rows: z.array(z.record(z.unknown())).describe("Rows from workforce_summary query."),
+        performance_rows: z.array(z.record(z.unknown())).describe("Rows from vulnerability_dashboard or utility_profile query."),
+        utility: z.string().describe("Utility to assess."),
+      }),
+      execute: async ({ workforce_rows, performance_rows, utility }) => {
+        return recommendCapacityBuilding(workforce_rows, performance_rows, { utility });
+      },
+    }),
+
+    pbi_tariff_sim: tool({
+      description: "Simulate the impact of changing tariff rates. Models revenue impact and affordability effects on customers. Use with tariff_affordability query results.",
+      inputSchema: z.object({
+        tariff_rows: z.array(z.record(z.unknown())).describe("Rows from tariff_affordability query."),
+        customer_rows: z.array(z.record(z.unknown())).describe("Rows from customer_overview query."),
+        change_pct: z.number().min(-50).max(100).describe("Percentage change (positive = increase, negative = decrease)."),
+        utility: z.string().optional().describe("Specific utility. Omit for all."),
+      }),
+      execute: async ({ tariff_rows, customer_rows, change_pct, utility }) => {
+        return simulateTariffChange(tariff_rows, customer_rows, { change_pct, utility });
+      },
+    }),
+
+    pbi_donor_fill: tool({
+      description: "Auto-fill a donor grant application using your utility's actual performance data. Replaces placeholders in donor templates with real KPI values. Supported donors: ppa, adb, worldbank, gcf, nz_mfat.",
+      inputSchema: z.object({
+        utility: z.string().describe("Your utility acronym."),
+        fy: z.string().describe("Fiscal year."),
+        donor: z.string().describe("Donor code: ppa, adb, worldbank, gcf, nz_mfat"),
+        saidi_data: z.array(z.record(z.unknown())).optional(),
+        losses_data: z.array(z.record(z.unknown())).optional(),
+        financial_data: z.array(z.record(z.unknown())).optional(),
+        customer_data: z.array(z.record(z.unknown())).optional(),
+        diesel_data: z.array(z.record(z.unknown())).optional(),
+        workforce_data: z.array(z.record(z.unknown())).optional(),
+      }),
+      execute: async ({ utility, fy, donor, saidi_data, losses_data, financial_data, customer_data, diesel_data, workforce_data }) => {
+        const data: Record<string, Record<string, unknown>[]> = {};
+        if (saidi_data) data.saidi_by_utility = saidi_data;
+        if (losses_data) data.system_losses = losses_data;
+        if (financial_data) data.cost_recovery = financial_data;
+        if (customer_data) data.customer_overview = customer_data;
+        if (diesel_data) data.diesel_dependence = diesel_data;
+        if (workforce_data) data.workforce_summary = workforce_data;
+        return autoFillDonorApplication(utility, fy, donor, data);
+      },
+    }),
+
+    pbi_project_impact: tool({
+      description: "Project the multi-year impact of an infrastructure investment. Models solar PV, battery storage, feeder upgrades, smart metering, and tariff reform. Shows year-by-year projections with cumulative impact.",
+      inputSchema: z.object({
+        rows: z.array(z.record(z.unknown())).describe("Baseline data rows from vulnerability_dashboard query."),
+        utility: z.string().describe("Utility acronym."),
+        project_type: z.enum(["solar", "battery", "feeder_upgrade", "metering", "tariff_reform"]),
+        project_scale_mw: z.number().min(1).max(50).optional().describe("Project capacity in MW (for solar/battery)."),
+        years: z.number().min(1).max(20).optional().describe("Projection horizon in years. Default 5."),
+      }),
+      execute: async ({ rows, utility, project_type, project_scale_mw, years }) => {
+        return projectImpact(rows, { utility, project_type, project_scale_mw, years });
       },
     }),
 

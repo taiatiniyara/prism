@@ -17,6 +17,13 @@ import {
   type UtilityRiskScore, type AutomatedReport, type ProactiveAlert,
   type IslandPeerGroup, type DonorReportTemplate, type RenewableScenario,
 } from "./pbi-insights";
+import {
+  forecastTrend, findHistoricalExtremes, findSimilarUtilities,
+  computeKpiCorrelations, prioritizeInvestments, generateExecutiveBriefing,
+  assembleFullReport, scoreDataCompleteness, trackRegulatoryThresholds,
+  recommendCapacityBuilding, simulateTariffChange, autoFillDonorApplication,
+  projectImpact,
+} from "./pbi-advanced";
 
 export interface DiagnosticData {
   ok: boolean;
@@ -316,3 +323,11 @@ export type { FreshnessData, AnomalyResult, NlQueryResult, ExportData };
 
 export { computeRiskScores, generatePerformanceReport, generateProactiveAlerts, generatePeerGroups, getDonorTemplates, generateRenewableScenario };
 export type { UtilityRiskScore, AutomatedReport, ProactiveAlert, IslandPeerGroup, DonorReportTemplate, RenewableScenario };
+
+// ── Advanced Analytics Wrappers ──
+
+export { forecastTrend, findHistoricalExtremes, findSimilarUtilities };
+export { computeKpiCorrelations, prioritizeInvestments, generateExecutiveBriefing };
+export { assembleFullReport, scoreDataCompleteness, trackRegulatoryThresholds };
+export { recommendCapacityBuilding, simulateTariffChange, autoFillDonorApplication };
+export { projectImpact };
