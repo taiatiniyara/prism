@@ -623,6 +623,121 @@ export const PBI_QUERIES: Record<string, PbiQueryTemplate> = {
   },
 
   // ═══════════════════════════════════════════════════════
+  // HR, GENDER & SAFETY — DETAILED
+  // ═══════════════════════════════════════════════════════
+  gender_by_level: {
+    name: "gender_by_level",
+    description: "Gender composition broken down by job level: total female %, female managers %, female technical staff %. Critical for tracking women's advancement beyond entry-level.",
+    returns: "Utility, Total Staff, Female Total, Female %, Female Managers, Female Mgmt %, Female Technical, Female Tech %",
+    result_type: "comparison",
+    recommended_chart: "bar-chart",
+    aliases: ["gender by level", "women in management", "female managers", "female engineers", "gender breakdown", "women leadership", "glass ceiling"],
+    params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE SUMMARIZECOLUMNS('Fact Employee'[Utility], "Total Staff", SUM('Fact Employee'[Total Employees]), "Female Total", SUM('Fact Employee'[Female Employees]), "Female Managers", SUM('Fact Employee'[Female Managers]), "Female Technical", SUM('Fact Employee'[Female Technical Staff])) FILTER('Fact Employee'[FY] = "${fy}") ORDER BY 'Fact Employee'[Utility] ASC`;
+    },
+  },
+
+  staff_turnover: {
+    name: "staff_turnover",
+    description: "Staff turnover and retention: hiring vs departures, turnover rate. High turnover signals organizational instability, brain drain, or competitive labor market pressure.",
+    returns: "Utility, Total Staff, Staff Hired, Staff Departed, Turnover Rate (%), Net Change",
+    result_type: "ranking",
+    recommended_chart: "scatter",
+    aliases: ["staff turnover", "retention", "hiring", "departures", "brain drain", "staff leaving", "attrition", "employee retention"],
+    params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE SUMMARIZECOLUMNS('Fact Employee'[Utility], "Total Staff", SUM('Fact Employee'[Total Employees]), "Hired", SUM('Fact Employee'[Staff Hired]), "Departed", SUM('Fact Employee'[Staff Departed])) FILTER('Fact Employee'[FY] = "${fy}") ORDER BY 'Fact Employee'[Utility] ASC`;
+    },
+  },
+
+  training_investment: {
+    name: "training_investment",
+    description: "Training investment: budget, hours delivered, completion rate, spend per employee. Measures human capital development — critical for Pacific utilities facing skills gaps.",
+    returns: "Utility, Training Budget, Training Hours, Staff Trained, Trained %, Spend per Employee",
+    result_type: "comparison",
+    recommended_chart: "table",
+    aliases: ["training investment", "training budget", "training spend", "skills development", "human capital", "training hours", "staff development", "capacity building spend"],
+    params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE SUMMARIZECOLUMNS('Fact Employee'[Utility], "Training Budget", SUM('Fact Employee'[Training Budget (USD)]), "Training Hours", SUM('Fact Employee'[Training Hours Delivered]), "Staff Trained", SUM('Fact Employee'[Staff Trained]), "Total Staff", SUM('Fact Employee'[Total Employees])) FILTER('Fact Employee'[FY] = "${fy}") ORDER BY 'Fact Employee'[Utility] ASC`;
+    },
+  },
+
+  contract_mix: {
+    name: "contract_mix",
+    description: "Contract vs permanent staff split, plus apprentices/trainees. High contract ratios indicate workforce precarity; high apprentice counts indicate pipeline development.",
+    returns: "Utility, Total Staff, Permanent, Contract, Contract %, Apprentices, Apprentice %",
+    result_type: "comparison",
+    recommended_chart: "bar-chart",
+    aliases: ["contract staff", "permanent staff", "precarious work", "apprentices", "trainees", "workforce stability", "temporary staff"],
+    params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE SUMMARIZECOLUMNS('Fact Employee'[Utility], "Total Staff", SUM('Fact Employee'[Total Employees]), "Permanent", SUM('Fact Employee'[Permanent Staff]), "Contract", SUM('Fact Employee'[Contract Staff]), "Apprentices", SUM('Fact Employee'[Apprentices/Trainees])) FILTER('Fact Employee'[FY] = "${fy}") ORDER BY 'Fact Employee'[Utility] ASC`;
+    },
+  },
+
+  expat_local_split: {
+    name: "expat_local_split",
+    description: "Expatriate vs local staff ratio. Pacific utilities often rely on expat expertise; tracking localization is critical for sustainability and donor requirements.",
+    returns: "Utility, Total Staff, Local Staff, Local %, Expat Staff, Expat %",
+    result_type: "ranking",
+    recommended_chart: "bar-chart",
+    aliases: ["expat", "local staff", "localization", "expatriate", "foreign staff", "local capacity", "localization rate"],
+    params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE SUMMARIZECOLUMNS('Fact Employee'[Utility], "Total Staff", SUM('Fact Employee'[Total Employees]), "Local", SUM('Fact Employee'[Local Staff]), "Expat", SUM('Fact Employee'[Expatriate Staff])) FILTER('Fact Employee'[FY] = "${fy}") ORDER BY 'Fact Employee'[Utility] ASC`;
+    },
+  },
+
+  safety_leading: {
+    name: "safety_leading",
+    description: "Safety leading indicators: near misses reported, safety observations, toolbox talks, safety training completion. These predict future incidents before they happen.",
+    returns: "Utility, LTIFR, Near Misses, Safety Observations, Toolbox Talks, Safety Training %, Audit Compliance",
+    result_type: "comparison",
+    recommended_chart: "table",
+    aliases: ["safety leading", "near misses", "safety observations", "toolbox talks", "safety culture", "proactive safety", "safety prevention"],
+    params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE SUMMARIZECOLUMNS('Fact Safety'[Utility], "LTIFR", AVERAGE('Fact Safety'[LTIFR]), "Near Misses", SUM('Fact Safety'[Near Misses Reported]), "Observations", SUM('Fact Safety'[Safety Observations]), "Toolbox Talks", SUM('Fact Safety'[Toolbox Talks Delivered]), "Safety Training", SUM('Fact Safety'[Safety Training Completed])) FILTER('Fact Safety'[FY] = "${fy}") ORDER BY 'Fact Safety'[Utility] ASC`;
+    },
+  },
+
+  safety_trend: {
+    name: "safety_trend",
+    description: "Safety performance over time: LTIFR, fatalities, and near-miss reporting trends across all available fiscal years.",
+    returns: "Utility, FY, LTIFR, Lost Time Injuries, Fatalities, Near Misses",
+    result_type: "trend",
+    recommended_chart: "line-chart",
+    aliases: ["safety over time", "safety history", "LTIFR trend", "improving safety", "getting safer", "safety performance trend"],
+    params: { utility: { type: "string", description: "Utility acronym. Omit for all.", required: false } },
+    dax: (p) => {
+      const filter = p.utility ? `FILTER('Fact Safety'[Utility] = "${escapeDax(p.utility)}")` : "";
+      return `EVALUATE SUMMARIZECOLUMNS('Fact Safety'[Utility], 'Fact Safety'[FY], "LTIFR", AVERAGE('Fact Safety'[LTIFR]), "LTIs", SUM('Fact Safety'[Lost Time Injuries]), "Fatalities", SUM('Fact Safety'[Fatalities]), "Near Misses", SUM('Fact Safety'[Near Misses Reported])) ${filter} ORDER BY 'Fact Safety'[FY] ASC`;
+    },
+  },
+
+  hr_cost: {
+    name: "hr_cost",
+    description: "HR investment metrics: training spend per employee, staff cost efficiency, training budget as share of operating costs. Measures how much utilities invest in their people.",
+    returns: "Utility, Total Staff, Training Budget, Training per Employee, Apprentice Count, Localization %",
+    result_type: "comparison",
+    recommended_chart: "scatter",
+    aliases: ["HR cost", "cost per employee", "training per person", "staff investment", "HR budget", "people investment"],
+    params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE SUMMARIZECOLUMNS('Fact Employee'[Utility], "Total Staff", SUM('Fact Employee'[Total Employees]), "Training Budget", SUM('Fact Employee'[Training Budget (USD)]), "Local Staff", SUM('Fact Employee'[Local Staff]), "Expat Staff", SUM('Fact Employee'[Expatriate Staff]), "Apprentices", SUM('Fact Employee'[Apprentices/Trainees])) FILTER('Fact Employee'[FY] = "${fy}") ORDER BY 'Fact Employee'[Utility] ASC`;
+    },
+  },
+
+  // ═══════════════════════════════════════════════════════
   // PACIFIC ISLAND UTILITY DOMAIN QUERIES
   // ═══════════════════════════════════════════════════════
 
@@ -987,6 +1102,10 @@ export function getQueryCatalogByCategory(): string {
     climate_risk_profile: "Climate & Resilience",
     island_peer_group: "Island Peer Context", small_utility_benchmark: "Island Peer Context",
     workforce_efficiency: "Workforce & Safety", gender_diversity: "Workforce & Safety",
+    gender_by_level: "Workforce & Safety", staff_turnover: "Workforce & Safety",
+    training_investment: "Workforce & Safety", contract_mix: "Workforce & Safety",
+    expat_local_split: "Workforce & Safety", hr_cost: "Workforce & Safety",
+    safety_leading: "Workforce & Safety", safety_trend: "Workforce & Safety",
     tariff_affordability: "Tariff & Affordability", tariff_cost_gap: "Tariff & Affordability",
     renewable_gap_analysis: "Renewable Transition", solar_potential: "Renewable Transition",
     transmission_overview: "Transmission", transmission_capacity: "Transmission",
