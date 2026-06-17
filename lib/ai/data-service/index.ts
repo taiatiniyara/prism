@@ -2,7 +2,6 @@ export * from "./common";
 export * from "./kpi";
 export * from "./benchmarking";
 export * from "./completeness";
-export * from "./scorecard";
 export * from "./trends";
 export * from "./anomalies";
 export * from "./governance";

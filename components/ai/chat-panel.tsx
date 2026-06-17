@@ -530,7 +530,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
                       <div className="space-y-1">
                         {[
                           "How did my utility perform in the latest reporting period?",
-                          "What does our balanced scorecard look like right now?",
+                          "Show me our SAIDI and SAIFI reliability numbers",
                           "Show me our SAIDI and SAIFI reliability numbers",
                         ].map((q) => (
                           <button

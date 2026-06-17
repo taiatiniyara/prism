@@ -89,7 +89,6 @@ export interface PeerGroupItem {
   utility_name: string;
   completion_pct: number;
   pending: number;
-  scorecard_score: number | null;
   trend_direction: "improved" | "declined" | "stable";
 }
 
@@ -151,7 +150,6 @@ export const getPeerGroupAnalysis = async (
       utility_name: p.Utility || "N/A",
       completion_pct: completion,
       pending: p.Pending,
-      scorecard_score: null,
       trend_direction: "stable" as const,
     };
   });

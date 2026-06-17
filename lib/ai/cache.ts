@@ -60,7 +60,6 @@ export const invalidateCacheByPrefix = (prefix: string): void => {
 };
 
 const CACHE_PREFIXES = {
-  scorecard: "scorecard",
   benchmarking: "benchmarking",
   kpi: "kpi",
   diagnostics: "diagnostics",

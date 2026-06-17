@@ -298,7 +298,6 @@ export const getExecutiveDigest = async (
       overview: "Use the tools listed in top_actions and risks to populate this digest with actual data.",
       key_metrics: [],
       top_actions: [
-        "Call get_scorecard_summary for the latest balanced scorecard overview",
         "Call get_kpi_diagnostics for stale, error, and missing-input KPIs",
         "Call get_risk_assessment to identify high-risk utilities",
         "Call get_compliance_status for regulatory compliance issues",

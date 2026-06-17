@@ -11,12 +11,10 @@ import {
   getKpiStatus,
   getBenchmarkingData,
   getCompletenessBreakdown,
-  getScorecardSummary,
   getTrendAnalysis,
   getAnomalyInsights,
   getGovernanceAudit,
   getConfigurationOptions,
-  getPerformanceSnapshot,
   getKpiDiagnostics,
   calculateKpis,
   getReviewQueue,
@@ -162,18 +160,6 @@ export const createAiTools = (user: CurrentUser, _abortSignal?: AbortSignal) => 
       },
     }),
 
-    get_scorecard_summary: tool({
-      description:
-        "Get balanced scorecard summary including overall score, perspective scores, weakest KPIs, and exclusion reasons.",
-      inputSchema: z.object({
-        report_period_id: z.number().optional().describe("Report period ID for the scorecard. If omitted, uses the latest period."),
-        year: z.number().optional().describe("Year to query (e.g. 2023). Resolves to the matching report period."),
-      }),
-      execute: async ({ report_period_id, year }) => {
-        return withTimeout(getScorecardSummary(user, { report_period_id, year }), "get_scorecard_summary");
-      },
-    }),
-
     get_trend_analysis: tool({
       description:
         "Get trend analysis showing completion rate changes over time. Returns trends per utility with direction (improved/declined/stable) and delta in percentage points.",
@@ -221,18 +207,6 @@ export const createAiTools = (user: CurrentUser, _abortSignal?: AbortSignal) => 
           return { error: accessCheck.reason };
         }
         return withTimeout(getConfigurationOptions(user), "get_configuration_options");
-      },
-    }),
-
-    get_performance_snapshot: tool({
-      description:
-        "Get performance snapshot including review status counts, weakest KPIs, scorecard scores, and weakest perspectives.",
-      inputSchema: z.object({
-        report_period_id: z.number().optional().describe("Report period ID. If omitted, uses the latest period."),
-        year: z.number().optional().describe("Year to query (e.g. 2023). Resolves to the matching report period."),
-      }),
-      execute: async ({ report_period_id, year }) => {
-        return withTimeout(getPerformanceSnapshot(user, { report_period_id, year }), "get_performance_snapshot");
       },
     }),
 
