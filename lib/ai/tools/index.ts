@@ -55,6 +55,12 @@ import {
   exportQueryResults,
   detectAnomalies,
   recommendChart,
+  computeRiskScores,
+  generatePerformanceReport,
+  generateProactiveAlerts,
+  generatePeerGroups,
+  getDonorTemplates,
+  generateRenewableScenario,
   type PowerBiData,
   type DiagnosticData,
   type DiscoveryData,
@@ -746,6 +752,84 @@ export const createAiTools = (user: CurrentUser, _abortSignal?: AbortSignal) => 
           return { error: "Power BI is not configured for DAX queries." };
         }
         return runPbiQuery({ query, params });
+      },
+    }),
+
+    // ── Pacific Island Utility Domain Tools ──
+
+    pbi_risk_score: tool({
+      description: "Compute multi-dimensional risk scores for all utilities. Factors: diesel dependence, reliability (SAIDI), financial sustainability, electrification gap, and climate exposure (island geography). Returns risk levels (critical/high/moderate/low) and top concerns per utility. Use after running vulnerability_dashboard or climate_risk_profile.",
+      inputSchema: z.object({
+        rows: z.array(z.record(z.unknown())).describe("Rows from vulnerability_dashboard or climate_risk_profile query."),
+      }),
+      execute: async ({ rows }) => {
+        return computeRiskScores(rows);
+      },
+    }),
+
+    pbi_report: tool({
+      description: "Generate an automated performance report for a utility. Includes sections on reliability, losses, financials, customers, and recommendations. Use for donor reporting, board presentations, or quarterly reviews. Combine with pbi_query results.",
+      inputSchema: z.object({
+        utility: z.string().describe("Utility acronym (e.g., EPC)."),
+        fy: z.string().describe("Fiscal year (e.g., FY2023)."),
+        saidi_data: z.array(z.record(z.unknown())).optional().describe("SAIDI query results."),
+        losses_data: z.array(z.record(z.unknown())).optional().describe("System losses query results."),
+        financial_data: z.array(z.record(z.unknown())).optional().describe("Cost recovery query results."),
+        customer_data: z.array(z.record(z.unknown())).optional().describe("Customer overview query results."),
+        profile_data: z.array(z.record(z.unknown())).optional().describe("Utility profile query results."),
+      }),
+      execute: async ({ utility, fy, saidi_data, losses_data, financial_data, customer_data, profile_data }) => {
+        const data: Record<string, Record<string, unknown>[]> = {};
+        if (saidi_data) data.saidi_by_utility = saidi_data;
+        if (losses_data) data.system_losses = losses_data;
+        if (financial_data) data.cost_recovery = financial_data;
+        if (customer_data) data.customer_overview = customer_data;
+        if (profile_data) data.utility_profile = profile_data;
+        return generatePerformanceReport(utility, fy, data);
+      },
+    }),
+
+    pbi_alerts: tool({
+      description: "Generate proactive alerts from query results. Checks against thresholds: SAIDI > 500, losses > 15%, recovery < 80%, diesel > 70%, electrification < 80%, LTIFR > 5. Use after running any comparison query.",
+      inputSchema: z.object({
+        rows: z.array(z.record(z.unknown())).describe("Query result rows."),
+        query_name: z.string().describe("Which query produced these rows (e.g., 'system_losses', 'saidi_by_utility')."),
+      }),
+      execute: async ({ rows, query_name }) => {
+        return generateProactiveAlerts(rows, query_name);
+      },
+    }),
+
+    pbi_peer_groups: tool({
+      description: "Group utilities into fair peer groups by customer size (small/medium/large). Essential for meaningful benchmarking — a 5-island utility shouldn't be compared to a mainland utility with 500,000 customers.",
+      inputSchema: z.object({
+        rows: z.array(z.record(z.unknown())).describe("Query result rows that include customer counts."),
+        your_utility: z.string().optional().describe("Your utility acronym to identify which peer group you belong to."),
+      }),
+      execute: async ({ rows, your_utility }) => {
+        return generatePeerGroups(rows, { your_utility });
+      },
+    }),
+
+    pbi_donor_reports: tool({
+      description: "Get donor-specific reporting templates and recommended KPIs. Includes PPA, ADB, World Bank, Green Climate Fund, and NZ MFAT. Shows what each donor requires and which Power BI query to run.",
+      inputSchema: z.object({
+        donor: z.string().optional().describe("Specific donor: ppa, adb, worldbank, gcf, nz_mfat. Omit to list all."),
+      }),
+      execute: async ({ donor }) => {
+        return getDonorTemplates(donor);
+      },
+    }),
+
+    pbi_renewable_scenario: tool({
+      description: "Model the impact of adding solar + battery storage. Projects diesel displacement percentage and estimated savings for every utility. Use for renewable energy planning and grant applications.",
+      inputSchema: z.object({
+        rows: z.array(z.record(z.unknown())).describe("Rows from diesel_dependence or renewable_penetration query."),
+        additional_solar_mw: z.number().min(0.1).max(100).optional().describe("Additional solar PV capacity to model (MW). Default 5MW."),
+        additional_battery_mwh: z.number().min(0).max(500).optional().describe("Battery storage to model (MWh). Default 10MWh."),
+      }),
+      execute: async ({ rows, additional_solar_mw, additional_battery_mwh }) => {
+        return generateRenewableScenario(rows, { additional_solar_mw, additional_battery_mwh });
       },
     }),
 

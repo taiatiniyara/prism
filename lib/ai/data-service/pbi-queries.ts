@@ -429,6 +429,282 @@ export const PBI_QUERIES: Record<string, PbiQueryTemplate> = {
       }
     },
   },
+
+  // ═══════════════════════════════════════════════════════
+  // PACIFIC ISLAND UTILITY DOMAIN QUERIES
+  // ═══════════════════════════════════════════════════════
+
+  // ── Diesel & Fuel Dependence ──
+  diesel_dependence: {
+    name: "diesel_dependence",
+    description: "Diesel generation as share of total capacity — identifies utilities most vulnerable to fuel price shocks",
+    returns: "Utility, Diesel MW, Total MW, Diesel %, Renewable %",
+    result_type: "ranking",
+    recommended_chart: "bar-chart",
+    aliases: ["diesel dependence", "fuel dependence", "oil dependence", "fossil fuel share", "how much diesel", "diesel percentage", "renewable share", "fuel vulnerability"],
+    params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE SUMMARIZECOLUMNS(
+        'Fact GeneratorsData'[Utility],
+        "Diesel MW", CALCULATE(SUM('Fact GeneratorsData'[Installed Capacity (MW)]), 'Fact GeneratorsData'[Energy Source] = "Diesel"),
+        "Total MW", SUM('Fact GeneratorsData'[Installed Capacity (MW)]),
+        "Renewable MW", CALCULATE(SUM('Fact GeneratorsData'[Installed Capacity (MW)]), 'Fact GeneratorsData'[Energy Source] IN {"Solar", "Wind", "Hydro", "Biomass", "Geothermal"} || 'Fact GeneratorsData'[Energy Type] = "Renewable")
+      ) FILTER('Fact GeneratorsData'[FY] = "${fy}") ORDER BY 'Fact GeneratorsData'[Utility] ASC`;
+    },
+  },
+
+  renewable_penetration: {
+    name: "renewable_penetration",
+    description: "Renewable energy share by utility — tracks progress toward NDC and renewable targets",
+    returns: "Utility, Renewable MW, Total MW, Renewable %, Generation from Renewables (MWh), Total Generation (MWh)",
+    result_type: "comparison",
+    recommended_chart: "bar-chart",
+    aliases: ["renewable penetration", "renewable share", "green energy", "clean energy percent", "NDC progress", "renewable target", "energy transition"],
+    params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE SUMMARIZECOLUMNS(
+        'Fact GeneratorsData'[Utility],
+        "Renewable MW", CALCULATE(SUM('Fact GeneratorsData'[Installed Capacity (MW)]), 'Fact GeneratorsData'[Energy Source] IN {"Solar", "Wind", "Hydro", "Biomass", "Geothermal"} || 'Fact GeneratorsData'[Energy Type] = "Renewable"),
+        "Total MW", SUM('Fact GeneratorsData'[Installed Capacity (MW)])
+      ) FILTER('Fact GeneratorsData'[FY] = "${fy}") ORDER BY 'Fact GeneratorsData'[Utility] ASC`;
+    },
+  },
+
+  fuel_efficiency: {
+    name: "fuel_efficiency",
+    description: "Generation output per unit of installed capacity — proxy for fuel efficiency and plant utilization",
+    returns: "Utility, Total MWh, Total MW, MWh per MW (capacity factor proxy), Peak MW",
+    result_type: "ranking",
+    recommended_chart: "scatter",
+    aliases: ["fuel efficiency", "plant efficiency", "generation efficiency", "capacity utilization", "MWh per MW", "how efficient"],
+    params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE SUMMARIZECOLUMNS(
+        'Fact GeneratorsData'[Utility],
+        "Total MW", SUM('Fact GeneratorsData'[Installed Capacity (MW)]),
+        "Total MWh", CALCULATE(SUM('Fact Generation'[GEN Electricity Generated (MWh)]), TREATAS(VALUES('Fact GeneratorsData'[Utility]), 'Fact Generation'[Utility]), 'Fact Generation'[FY] = "${fy}"),
+        "Peak MW", CALCULATE(MAX('Fact Generation'[Electricity Demand Peak Load]), TREATAS(VALUES('Fact GeneratorsData'[Utility]), 'Fact Generation'[Utility]), 'Fact Generation'[FY] = "${fy}")
+      ) FILTER('Fact GeneratorsData'[FY] = "${fy}") ORDER BY 'Fact GeneratorsData'[Utility] ASC`;
+    },
+  },
+
+  // ── Climate & Disaster Resilience ──
+  climate_risk_profile: {
+    name: "climate_risk_profile",
+    description: "Multi-factor risk profile combining reliability (SAIDI), diesel dependence, and island geography as climate vulnerability indicators",
+    returns: "Utility, SAIDI, Diesel %, Island Count (if available), Risk Score",
+    result_type: "ranking",
+    recommended_chart: "heatmap",
+    aliases: ["climate risk", "disaster risk", "vulnerability", "resilience", "cyclone risk", "climate vulnerability", "which utility is most vulnerable"],
+    params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE SUMMARIZECOLUMNS(
+        'Fact SAIDI and SAIFI'[Utility],
+        "SAIDI", SUM('Fact SAIDI and SAIFI'[SAIDI Value]),
+        "Diesel MW", CALCULATE(SUM('Fact GeneratorsData'[Installed Capacity (MW)]), 'Fact GeneratorsData'[Energy Source] = "Diesel", 'Fact GeneratorsData'[FY] = "${fy}"),
+        "Total MW", CALCULATE(SUM('Fact GeneratorsData'[Installed Capacity (MW)]), 'Fact GeneratorsData'[FY] = "${fy}"),
+        "Islands", CALCULATE(MAX('Fact UtilityContextData'[Number of Islands Served]), TREATAS(VALUES('Fact SAIDI and SAIFI'[Utility]), 'Fact UtilityContextData'[Utility]), 'Fact UtilityContextData'[FY] = "${fy}")
+      ) FILTER('Fact SAIDI and SAIFI'[FY] = "${fy}") ORDER BY 'Fact SAIDI and SAIFI'[SAIDI Value] DESC`;
+    },
+  },
+
+  outage_trend_by_source: {
+    name: "outage_trend_by_source",
+    description: "SAIDI trend over all available years — identifies if reliability is improving or deteriorating, critical for climate adaptation planning",
+    returns: "Utility, FY, SAIDI — chronological, useful for spotting deterioration patterns",
+    result_type: "trend",
+    recommended_chart: "line-chart",
+    aliases: ["outage history", "SAIDI history", "reliability deterioration", "getting worse outages", "outage pattern", "which utilities improving"],
+    params: {},
+    dax: () =>
+      `EVALUATE SUMMARIZECOLUMNS('Fact SAIDI and SAIFI'[Utility], 'Fact SAIDI and SAIFI'[FY], "SAIDI", SUM('Fact SAIDI and SAIFI'[SAIDI Value])) ORDER BY 'Fact SAIDI and SAIFI'[FY] ASC, 'Fact SAIDI and SAIFI'[SAIDI Value] DESC`,
+  },
+
+  // ── Island Peer Context ──
+  island_peer_group: {
+    name: "island_peer_group",
+    description: "Compare utilities with similar island/geography profiles — groups by island count and service territory type for fair benchmarking",
+    returns: "Utility, Island Count, Service Type, Country, Region",
+    result_type: "comparison",
+    recommended_chart: "table",
+    aliases: ["island peers", "similar utilities", "fair comparison", "peer group", "comparable utilities", "similar size", "island context"],
+    params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE SUMMARIZECOLUMNS(
+        'Fact UtilityContextData'[Utility],
+        'Fact UtilityContextData'[Number of Islands Served],
+        'Fact UtilityContextData'[Service Area Type],
+        'Fact UtilityContextData'[Country],
+        'Fact UtilityContextData'[Region],
+        'Fact UtilityContextData'[Ownership Type]
+      ) FILTER('Fact UtilityContextData'[FY] = "${fy}") ORDER BY 'Fact UtilityContextData'[Number of Islands Served] ASC`;
+    },
+  },
+
+  small_utility_benchmark: {
+    name: "small_utility_benchmark",
+    description: "Filter performance data for small/medium utilities only (< 50,000 customers) — the most relevant peer group for Pacific island utilities",
+    returns: "Utility, SAIDI, Losses %, Recovery %, Customers, Electrification % — only utilities under 50k customers",
+    result_type: "comparison",
+    recommended_chart: "table",
+    aliases: ["small utility", "small island utility", "SIDS comparison", "similar to us", "comparable", "island benchmark", "regional benchmark"],
+    params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE FILTER(
+        SUMMARIZECOLUMNS(
+          'Fact Customer'[Utility],
+          "Customers", SUM('Fact Customer'[Total Connections]),
+          "Electrification %", AVERAGE('Fact Customer'[Electrification Rate (%)]),
+          "SAIDI", CALCULATE(SUM('Fact SAIDI and SAIFI'[SAIDI Value]), TREATAS(VALUES('Fact Customer'[Utility]), 'Fact SAIDI and SAIFI'[Utility]), 'Fact SAIDI and SAIFI'[FY] = "${fy}"),
+          "Losses %", CALCULATE(AVERAGE('Fact Distribution'[System Losses (%)]), TREATAS(VALUES('Fact Customer'[Utility]), 'Fact Distribution'[Utility]), 'Fact Distribution'[FY] = "${fy}"),
+          "Recovery %", CALCULATE(AVERAGE('Fact FinancialAccounts'[Tariff Recovery Rate (%)]), TREATAS(VALUES('Fact Customer'[Utility]), 'Fact FinancialAccounts'[Utility]), 'Fact FinancialAccounts'[FY] = "${fy}")
+        ) FILTER('Fact Customer'[FY] = "${fy}"),
+        [Customers] < 50000
+      ) ORDER BY 'Fact Customer'[Utility] ASC`;
+    },
+  },
+
+  // ── Workforce Planning ──
+  workforce_efficiency: {
+    name: "workforce_efficiency",
+    description: "Customers per employee and technical staff ratio — identifies over/understaffed utilities",
+    returns: "Utility, Total Staff, Technical Staff, Customers, Customers per Staff, Customers per Technical Staff",
+    result_type: "ranking",
+    recommended_chart: "scatter",
+    aliases: ["staff efficiency", "workforce productivity", "employees per customer", "overstaffed", "understaffed", "staff ratio", "how many staff"],
+    params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE SUMMARIZECOLUMNS(
+        'Fact Employee'[Utility],
+        "Total Staff", SUM('Fact Employee'[Total Employees]),
+        "Technical Staff", SUM('Fact Employee'[Technical Staff]),
+        "Female Staff", SUM('Fact Employee'[Female Employees]),
+        "Customers", CALCULATE(SUM('Fact Customer'[Total Connections]), TREATAS(VALUES('Fact Employee'[Utility]), 'Fact Customer'[Utility]), 'Fact Customer'[FY] = "${fy}")
+      ) FILTER('Fact Employee'[FY] = "${fy}") ORDER BY 'Fact Employee'[Utility] ASC`;
+    },
+  },
+
+  gender_diversity: {
+    name: "gender_diversity",
+    description: "Female workforce participation across utilities — tracks gender inclusion progress",
+    returns: "Utility, Total Staff, Female Staff, Female %, Staff Trained",
+    result_type: "comparison",
+    recommended_chart: "bar-chart",
+    aliases: ["gender diversity", "female staff", "women in energy", "gender balance", "diversity", "inclusion", "female participation"],
+    params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE SUMMARIZECOLUMNS('Fact Employee'[Utility], "Total Staff", SUM('Fact Employee'[Total Employees]), "Female Staff", SUM('Fact Employee'[Female Employees]), "Trained", SUM('Fact Employee'[Staff Trained])) FILTER('Fact Employee'[FY] = "${fy}") ORDER BY 'Fact Employee'[Utility] ASC`;
+    },
+  },
+
+  // ── Tariff & Affordability ──
+  tariff_affordability: {
+    name: "tariff_affordability",
+    description: "Tariff rates vs GDP per capita — measures energy affordability for residential customers",
+    returns: "Utility, Country, Avg Tariff Rate, GDP per Capita, Affordability Index (tariff/GDP ratio)",
+    result_type: "ranking",
+    recommended_chart: "scatter",
+    aliases: ["tariff affordability", "energy cost", "how expensive is electricity", "cost of power", "affordability", "tariff burden", "electricity price"],
+    params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE SUMMARIZECOLUMNS(
+        'Fact TariffStructure'[Utility],
+        'Fact TariffStructure'[Customer Category],
+        "Avg Tariff Rate", AVERAGE('Fact TariffStructure'[Tariff Rate (per kWh)]),
+        "Fixed Charge", AVERAGE('Fact TariffStructure'[Fixed Charge])
+      ) FILTER('Fact TariffStructure'[FY] = "${fy}") ORDER BY 'Fact TariffStructure'[Utility] ASC, 'Fact TariffStructure'[Customer Category] ASC`;
+    },
+  },
+
+  tariff_cost_gap: {
+    name: "tariff_cost_gap",
+    description: "Gap between what utilities charge (tariff recovery) and what they spend (operating costs) — identifies utilities operating at a structural deficit",
+    returns: "Utility, Revenue, Operating Costs, Recovery %, Revenue Gap",
+    result_type: "ranking",
+    recommended_chart: "bar-chart",
+    aliases: ["tariff gap", "cost gap", "operating deficit", "not covering costs", "revenue shortfall", "financial gap", "subsidy needed"],
+    params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE SUMMARIZECOLUMNS(
+        'Fact FinancialAccounts'[Utility],
+        "Revenue", SUM('Fact FinancialAccounts'[Total Revenue]),
+        "Operating Costs", SUM('Fact FinancialAccounts'[Operating Costs]),
+        "Recovery %", AVERAGE('Fact FinancialAccounts'[Tariff Recovery Rate (%)])
+      ) FILTER('Fact FinancialAccounts'[FY] = "${fy}") ORDER BY 'Fact FinancialAccounts'[Tariff Recovery Rate (%)] ASC`;
+    },
+  },
+
+  // ── Renewable Transition ──
+  renewable_gap_analysis: {
+    name: "renewable_gap_analysis",
+    description: "Gap between current renewable share and targets — identifies how much new renewable capacity each utility needs",
+    returns: "Utility, Current Renewable MW, Total MW, Current Renewable %, Target 50%, Gap MW",
+    result_type: "ranking",
+    recommended_chart: "bar-chart",
+    aliases: ["renewable gap", "how much renewable needed", "renewable target gap", "transition gap", "how far from target", "renewable deficit"],
+    params: {
+      fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true },
+      target_pct: { type: "string", description: "Target renewable percentage (e.g., 50)", required: false },
+    },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE SUMMARIZECOLUMNS(
+        'Fact GeneratorsData'[Utility],
+        "Renewable MW", CALCULATE(SUM('Fact GeneratorsData'[Installed Capacity (MW)]), 'Fact GeneratorsData'[Energy Source] IN {"Solar", "Wind", "Hydro", "Biomass", "Geothermal"} || 'Fact GeneratorsData'[Energy Type] = "Renewable"),
+        "Total MW", SUM('Fact GeneratorsData'[Installed Capacity (MW)])
+      ) FILTER('Fact GeneratorsData'[FY] = "${fy}") ORDER BY 'Fact GeneratorsData'[Utility] ASC`;
+    },
+  },
+
+  solar_potential: {
+    name: "solar_potential",
+    description: "Current solar capacity vs total capacity — baseline for solar expansion planning",
+    returns: "Utility, Solar MW, Total MW, Solar %",
+    result_type: "ranking",
+    recommended_chart: "bar-chart",
+    aliases: ["solar capacity", "solar power", "solar energy", "photovoltaic", "solar potential", "solar share", "how much solar"],
+    params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE SUMMARIZECOLUMNS(
+        'Fact GeneratorsData'[Utility],
+        "Solar MW", CALCULATE(SUM('Fact GeneratorsData'[Installed Capacity (MW)]), 'Fact GeneratorsData'[Energy Source] = "Solar"),
+        "Total MW", SUM('Fact GeneratorsData'[Installed Capacity (MW)])
+      ) FILTER('Fact GeneratorsData'[FY] = "${fy}") ORDER BY 'Fact GeneratorsData'[Utility] ASC`;
+    },
+  },
+
+  // ── Compound Domain Reports ──
+  vulnerability_dashboard: {
+    name: "vulnerability_dashboard",
+    description: "Multi-dimensional vulnerability score: diesel dependence + SAIDI + tariff recovery gap + electrification gap — higher score = more vulnerable",
+    returns: "Utility, Diesel %, SAIDI, Recovery %, Electrification %, Vulnerability Score",
+    result_type: "ranking",
+    recommended_chart: "leaderboard",
+    aliases: ["vulnerability dashboard", "who needs help", "most vulnerable", "risk score", "utility risk", "priority ranking"],
+    params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
+    dax: (p) => {
+      const fy = escapeDax(p.fy);
+      return `EVALUATE SUMMARIZECOLUMNS(
+        'Fact SAIDI and SAIFI'[Utility],
+        "SAIDI", SUM('Fact SAIDI and SAIFI'[SAIDI Value]),
+        "Diesel MW", CALCULATE(SUM('Fact GeneratorsData'[Installed Capacity (MW)]), 'Fact GeneratorsData'[Energy Source] = "Diesel", 'Fact GeneratorsData'[FY] = "${fy}"),
+        "Total MW", CALCULATE(SUM('Fact GeneratorsData'[Installed Capacity (MW)]), 'Fact GeneratorsData'[FY] = "${fy}"),
+        "Recovery %", CALCULATE(AVERAGE('Fact FinancialAccounts'[Tariff Recovery Rate (%)]), TREATAS(VALUES('Fact SAIDI and SAIFI'[Utility]), 'Fact FinancialAccounts'[Utility]), 'Fact FinancialAccounts'[FY] = "${fy}"),
+        "Electrification %", CALCULATE(AVERAGE('Fact Customer'[Electrification Rate (%)]), TREATAS(VALUES('Fact SAIDI and SAIFI'[Utility]), 'Fact Customer'[Utility]), 'Fact Customer'[FY] = "${fy}")
+      ) FILTER('Fact SAIDI and SAIFI'[FY] = "${fy}") ORDER BY 'Fact SAIDI and SAIFI'[Utility] ASC`;
+    },
+  },
 };
 
 /**
@@ -496,17 +772,28 @@ export function getQueryCatalogByCategory(): string {
     "Workforce & Safety": [],
     "Compound / Cross-Domain": [],
     "What-If Analysis": [],
+    "Diesel & Fuel": [],
+    "Climate & Resilience": [],
+    "Island Peer Context": [],
+    "Tariff & Affordability": [],
+    "Renewable Transition": [],
   };
 
   const catMap: Record<string, string> = {
-    saidi_by_utility: "Reliability", saifi_by_utility: "Reliability", reliability_summary: "Reliability", saidi_trend: "Reliability",
+    saidi_by_utility: "Reliability", saifi_by_utility: "Reliability", reliability_summary: "Reliability", saidi_trend: "Reliability", outage_trend_by_source: "Reliability",
     installed_capacity: "Generation & Capacity", installed_capacity_by_utility: "Generation & Capacity", generation_output: "Generation & Capacity", generation_by_source: "Generation & Capacity", peak_demand: "Generation & Capacity", generation_trend: "Generation & Capacity",
     system_losses: "Distribution", distribution_overview: "Distribution", losses_trend: "Distribution",
     financial_summary: "Financials", cost_recovery: "Financials", recovery_trend: "Financials",
     customer_overview: "Customers", metering_summary: "Customers", electrification_trend: "Customers",
     workforce_summary: "Workforce & Safety", safety_summary: "Workforce & Safety",
-    utility_profile: "Compound / Cross-Domain", peer_comparison: "Compound / Cross-Domain", composite_score: "Compound / Cross-Domain",
+    utility_profile: "Compound / Cross-Domain", peer_comparison: "Compound / Cross-Domain", composite_score: "Compound / Cross-Domain", vulnerability_dashboard: "Compound / Cross-Domain",
     whatif_sensitivity: "What-If Analysis",
+    diesel_dependence: "Diesel & Fuel", fuel_efficiency: "Diesel & Fuel", renewable_penetration: "Diesel & Fuel",
+    climate_risk_profile: "Climate & Resilience",
+    island_peer_group: "Island Peer Context", small_utility_benchmark: "Island Peer Context",
+    workforce_efficiency: "Workforce & Safety", gender_diversity: "Workforce & Safety",
+    tariff_affordability: "Tariff & Affordability", tariff_cost_gap: "Tariff & Affordability",
+    renewable_gap_analysis: "Renewable Transition", solar_potential: "Renewable Transition",
   };
 
   for (const template of Object.values(PBI_QUERIES)) {

@@ -11,6 +11,12 @@ import {
   logQueryUsage, getQueryUsageStats, recommendChart,
   type FreshnessData, type AnomalyResult, type NlQueryResult, type ExportData,
 } from "./pbi-enrichment";
+import {
+  computeRiskScores, generatePerformanceReport, generateProactiveAlerts,
+  generatePeerGroups, getDonorTemplates, generateRenewableScenario,
+  type UtilityRiskScore, type AutomatedReport, type ProactiveAlert,
+  type IslandPeerGroup, type DonorReportTemplate, type RenewableScenario,
+} from "./pbi-insights";
 
 export interface DiagnosticData {
   ok: boolean;
@@ -305,3 +311,8 @@ export { resolveNlQuery, generateDeepLink, exportQueryResults };
 export { logQueryUsage, getQueryUsageStats, recommendChart };
 export { detectAnomalies };
 export type { FreshnessData, AnomalyResult, NlQueryResult, ExportData };
+
+// ── Insights Wrappers ──
+
+export { computeRiskScores, generatePerformanceReport, generateProactiveAlerts, generatePeerGroups, getDonorTemplates, generateRenewableScenario };
+export type { UtilityRiskScore, AutomatedReport, ProactiveAlert, IslandPeerGroup, DonorReportTemplate, RenewableScenario };
