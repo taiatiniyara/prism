@@ -531,7 +531,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
                         {[
                           "How did my utility perform in the latest reporting period?",
                           "Show me our SAIDI and SAIFI reliability numbers",
-                          "Show me our SAIDI and SAIFI reliability numbers",
+                          "Which KPIs need attention in the latest period?",
                         ].map((q) => (
                           <button
                             key={q}
