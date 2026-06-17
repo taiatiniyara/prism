@@ -413,6 +413,11 @@ export async function POST(request: Request) {
                     toolName: event.toolName,
                   });
                   controller.enqueue(encoder.encode(`2:${payload}\n`));
+                  // Also stream as a reasoning process entry
+                  const label = event.type === "tool-call"
+                    ? `\n🔍 ${event.toolName}...`
+                    : `\n✅ ${event.toolName} done\n`;
+                  controller.enqueue(encoder.encode(`1:${JSON.stringify({ type: "reasoning-delta", text: label })}\n`));
                 } else if (event.type === "reasoning-start") {
                   controller.enqueue(encoder.encode(`1:${JSON.stringify({ type: "reasoning-start", id: event.id })}\n`));
                 } else if (event.type === "reasoning-delta" && typeof event.text === "string") {

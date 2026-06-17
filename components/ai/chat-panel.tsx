@@ -9,8 +9,6 @@ import { ChatInput } from "./chat-input";
 import { ChatSidebar } from "./chat-sidebar";
 import { ChatErrorBoundary } from "./chat-error-boundary";
 
-import type { AiToolName } from "@/lib/ai/types";
-
 interface ChatSession {
   id: number;
   title: string;
@@ -45,7 +43,6 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [_activeToolName, _setActiveToolName] = useState<AiToolName | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const isStreamingRef = useRef(false);
@@ -326,16 +323,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
               // ignore malformed reasoning events
             }
           } else if (line.startsWith("2:")) {
-            try {
-              const toolEvent = JSON.parse(line.slice(2));
-              if (toolEvent.type === "tool-call" && toolEvent.toolName) {
-                _setActiveToolName(toolEvent.toolName);
-              } else if (toolEvent.type === "tool-result" && toolEvent.toolName) {
-                _setActiveToolName(null);
-              }
-            } catch {
-              // ignore malformed tool events
-            }
+            // Tool events now streamed as reasoning entries — skip
           } else if (line.startsWith("3:")) {
             // stream error event - silently acknowledge
           } else if (line.length > 0 && !line.startsWith("0:") && !line.startsWith("2:") && !line.startsWith("3:")) {
@@ -368,7 +356,6 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
       setMessages((prev) => [...prev, assistantMessage]);
       setStreamingContent("");
       setStreamingReasoning("");
-      _setActiveToolName(null);
       await refreshSessions();
 
       if (fullContent && turnId) {
@@ -405,7 +392,6 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
       }
       setIsLoading(false);
       setStreamingContent("");
-      _setActiveToolName(null);
       pendingContentRef.current = "";
       abortControllerRef.current = null;
       isStreamingRef.current = false;
