@@ -34,49 +34,6 @@ interface ChatPanelProps {
 const MAX_CHARS = 4000;
 const RAF_MAX_BUFFER_CHARS = 12000;
 
-const TOOL_ACTION_MAP: Record<AiToolName, string> = {
-  get_kpi_status: "Checking KPI status",
-  get_benchmarking_data: "Fetching benchmarking data",
-  get_completeness_breakdown: "Analyzing completeness",
-  get_scorecard_summary: "Loading scorecard",
-  get_trend_analysis: "Analyzing trends",
-  get_anomaly_insights: "Detecting anomalies",
-  get_governance_audit: "Running governance audit",
-  get_configuration_options: "Loading configuration",
-  get_performance_snapshot: "Loading performance snapshot",
-  get_kpi_diagnostics: "Running diagnostics",
-  render_visualization: "Rendering visualization",
-  suggest_follow_ups: "Generating suggestions",
-  calculate_kpi: "Calculating KPI values",
-  dashboard_link: "Creating dashboard link",
-  get_review_queue: "Checking review queue",
-  get_input_status: "Checking input status",
-  explain_kpi: "Looking up KPI definition",
-  get_custom_kpi_status: "Checking custom KPI status",
-  get_service_area_breakdown: "Analyzing service areas",
-  get_peer_group_analysis: "Comparing peer groups",
-  get_risk_assessment: "Assessing risk",
-  get_data_quality_report: "Checking data quality",
-  compare_periods: "Comparing periods",
-  get_what_changed: "Detecting changes",
-  get_compliance_status: "Checking compliance",
-  get_kpi_targets: "Computing targets",
-  get_kpi_correlation: "Analyzing correlations",
-  compare_kpis_across_utilities: "Comparing utilities",
-  generate_export: "Generating export",
-  get_country_hierarchy: "Loading country data",
-  get_industry_benchmarks: "Loading benchmarks",
-  get_executive_digest: "Generating executive digest",
-  get_review_queue_entries: "Checking review queue",
-  get_guided_entry: "Loading data entry guide",
-  query_power_bi: "Querying Power BI",
-  diagnose_power_bi: "Diagnosing Power BI",
-  discover_datasets: "Discovering datasets",
-  discover_schema: "Discovering schema",
-  discover_report: "Exploring report",
-  get_ai_usage: "Checking AI usage",
-};
-
 export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelProps) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
@@ -88,7 +45,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [activeToolName, setActiveToolName] = useState<AiToolName | null>(null);
+  const [_activeToolName, _setActiveToolName] = useState<AiToolName | null>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const isStreamingRef = useRef(false);
@@ -372,9 +329,9 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
             try {
               const toolEvent = JSON.parse(line.slice(2));
               if (toolEvent.type === "tool-call" && toolEvent.toolName) {
-                setActiveToolName(toolEvent.toolName);
+                _setActiveToolName(toolEvent.toolName);
               } else if (toolEvent.type === "tool-result" && toolEvent.toolName) {
-                setActiveToolName(null);
+                _setActiveToolName(null);
               }
             } catch {
               // ignore malformed tool events
@@ -411,7 +368,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
       setMessages((prev) => [...prev, assistantMessage]);
       setStreamingContent("");
       setStreamingReasoning("");
-      setActiveToolName(null);
+      _setActiveToolName(null);
       await refreshSessions();
 
       if (fullContent && turnId) {
@@ -448,7 +405,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
       }
       setIsLoading(false);
       setStreamingContent("");
-      setActiveToolName(null);
+      _setActiveToolName(null);
       pendingContentRef.current = "";
       abortControllerRef.current = null;
       isStreamingRef.current = false;
@@ -712,12 +669,6 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
                 <div className="mt-2 flex items-center gap-2 px-1 text-xs text-slate-400">
                   <span className="inline-block size-1.5 rounded-full bg-slate-300 animate-pulse" />
                   <span>Typing</span>
-                </div>
-              )}
-              {isLoading && activeToolName && (
-                <div className="mt-3 flex items-center gap-2 rounded-lg border border-slate-100 bg-slate-50 px-3 py-1.5 text-xs text-slate-500 animate-in fade-in slide-in-from-top-1 duration-200 dark:border-slate-800 dark:bg-slate-900 dark:text-slate-400">
-                  <Loader2 className="size-3 animate-spin" />
-                  <span>{TOOL_ACTION_MAP[activeToolName] ?? `Running ${activeToolName}`}...</span>
                 </div>
               )}
             </div>
