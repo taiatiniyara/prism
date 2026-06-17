@@ -1,0 +1,364 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>How PRISM AI Works — A Visual Guide</title>
+<style>
+  :root {
+    --bg: #f8fafc; --card: #ffffff; --border: #e2e8f0;
+    --text: #1e293b; --muted: #64748b; --accent: #2563eb;
+    --green: #15803d; --amber: #b45309; --red: #b91c1c;
+    --surface: #f1f5f9; --purple: #7c3aed;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, sans-serif; line-height: 1.7; padding: 2rem; }
+  .container { max-width: 900px; margin: 0 auto; }
+  h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem; }
+  h2 { font-size: 1.3rem; font-weight: 600; margin: 2.5rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 2px solid var(--accent); color: var(--accent); }
+  h3 { font-size: 1.05rem; font-weight: 600; margin: 1.5rem 0 0.5rem; }
+  .subtitle { color: var(--muted); font-size: 0.95rem; margin-bottom: 2rem; }
+  .section-desc { color: var(--muted); font-size: 0.88rem; margin-bottom: 1rem; }
+  .highlight { background: linear-gradient(180deg, rgba(37,99,235,0.06) 0%, rgba(37,99,235,0.06) 100%); padding: 1.25rem 1.75rem; border-left: 4px solid var(--accent); margin: 1.25rem 0; border-radius: 0 0.5rem 0.5rem 0; font-size: 0.92rem; }
+
+  /* Diagram Styles */
+  .diagram { margin: 1.5rem 0; }
+  .flow { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; margin: 1rem 0; }
+  .box { border: 2px solid var(--border); border-radius: 0.75rem; padding: 0.75rem 1rem; text-align: center; font-size: 0.82rem; font-weight: 500; min-width: 100px; }
+  .box-user { border-color: var(--accent); background: rgba(37,99,235,0.04); }
+  .box-pbi { border-color: var(--green); background: rgba(21,128,61,0.04); }
+  .box-prism { border-color: var(--amber); background: rgba(180,83,9,0.04); }
+  .box-ai { border-color: var(--purple); background: rgba(124,58,237,0.04); }
+  .box-step { border-color: var(--muted); background: var(--surface); font-size: 0.78rem; }
+  .box-small { min-width: 60px; padding: 0.4rem 0.6rem; font-size: 0.72rem; }
+  .arrow { font-size: 1.2rem; color: var(--muted); margin: 0 0.25rem; }
+  .arrow-down { text-align: center; color: var(--muted); font-size: 1.2rem; margin: 0.25rem 0; }
+  .flow-wrap { display: flex; flex-wrap: wrap; gap: 0.4rem; align-items: flex-start; }
+  .col { display: flex; flex-direction: column; gap: 0.4rem; align-items: center; }
+  .row { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
+
+  /* Timeline */
+  .timeline { position: relative; padding-left: 2rem; margin: 1rem 0; }
+  .timeline::before { content: ''; position: absolute; left: 0.5rem; top: 0; bottom: 0; width: 2px; background: var(--border); }
+  .step { position: relative; margin-bottom: 1.25rem; }
+  .step::before { content: ''; position: absolute; left: -1.7rem; top: 0.55rem; width: 0.65rem; height: 0.65rem; border-radius: 50%; background: var(--accent); border: 2px solid var(--bg); }
+  .step .title { font-weight: 600; font-size: 0.92rem; }
+  .step .desc { color: var(--muted); font-size: 0.82rem; margin-top: 0.15rem; }
+
+  /* Decision tree */
+  .decision { margin: 1rem 0; padding: 1rem 1.25rem; background: var(--surface); border-radius: 0.75rem; font-size: 0.85rem; }
+  .decision .branch { display: flex; gap: 0.75rem; align-items: center; margin: 0.5rem 0; }
+  .decision .yes { color: var(--green); font-weight: 600; }
+  .decision .no { color: var(--red); font-weight: 600; }
+
+  /* Tool grid */
+  .tool-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 0.75rem; margin: 1rem 0; }
+  .tool-card { background: var(--card); border: 1px solid var(--border); border-radius: 0.5rem; padding: 0.75rem 1rem; font-size: 0.82rem; }
+  .tool-card .name { font-weight: 600; }
+  .tool-card .desc { color: var(--muted); font-size: 0.75rem; margin-top: 0.15rem; }
+
+  .footer { margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--border); color: var(--muted); font-size: 0.78rem; text-align: center; }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>How PRISM AI Works</h1>
+<p class="subtitle">A visual guide to what happens when you ask a question — from typing to answer</p>
+
+<div class="highlight">
+  <p><strong>In one sentence:</strong> PRISM AI is a smart assistant that listens to your question, checks multiple data sources, runs the right analytics, and returns a clear answer — all in seconds. Here's exactly how that happens.</p>
+</div>
+
+<!-- 1. The Big Picture -->
+<h2>1. The Big Picture — End to End</h2>
+
+<div class="diagram">
+  <div class="flow">
+    <div class="box box-user">👤 You ask<br>a question</div>
+    <div class="arrow">→</div>
+    <div class="box box-step">🔒 Auth &<br>Security Check</div>
+    <div class="arrow">→</div>
+    <div class="box box-ai">🧠 AI Processes<br>Your Question</div>
+    <div class="arrow">→</div>
+    <div class="box box-pbi">📊 Power BI<br>Data Source</div>
+    <div class="arrow">→</div>
+    <div class="box box-ai">📝 AI Returns<br>the Answer</div>
+  </div>
+</div>
+
+<div class="section-desc" style="text-align:center;margin-top:0.5rem;">
+  If Power BI isn't available, the AI automatically tries the PRISM database instead. You never need to know which source was used — you just get the answer.
+</div>
+
+<!-- 2. Step by Step -->
+<h2>2. What Happens Step by Step?</h2>
+
+<div class="timeline">
+  <div class="step">
+    <div class="title">Step 1 — You type a question</div>
+    <div class="desc">"How does my utility compare to other Pacific utilities on SAIDI?" — just like talking to a colleague. No special syntax, no query language.</div>
+  </div>
+  <div class="step">
+    <div class="title">Step 2 — Security check</div>
+    <div class="desc">The system verifies your identity, checks your access level, and validates that the request is legitimate. Takes milliseconds. You don't see this — it's fully automatic.</div>
+  </div>
+  <div class="step">
+    <div class="title">Step 3 — The AI understands your intent</div>
+    <div class="desc">It recognizes you're asking about <strong>reliability benchmarking</strong> and matches your question to the best pre-built query. In this case: <code>saidi_by_utility</code>.</div>
+  </div>
+  <div class="step">
+    <div class="title">Step 4 — Data is fetched</div>
+    <div class="desc">The AI sends a query to Power BI (or the PRISM database as backup) to pull actual SAIDI values for all utilities in your chosen fiscal year. This is the same data that feeds the PRISM dashboards.</div>
+  </div>
+  <div class="step">
+    <div class="title">Step 5 — Analysis runs</div>
+    <div class="desc">The AI ranks the results, identifies your utility's position, checks for outliers, and prepares context — like how you compare to PPA benchmarks and Pacific averages.</div>
+  </div>
+  <div class="step">
+    <div class="title">Step 6 — The answer streams back</div>
+    <div class="desc">You see the answer appear character by character — like someone typing. A "Thinking" dropdown (collapsed by default) shows what the AI checked behind the scenes if you're curious.</div>
+  </div>
+</div>
+
+<!-- 3. How It Chooses Tools -->
+<h2>3. How the AI Decides What to Do</h2>
+
+<p class="section-desc">PRISM AI has 67 specialized tools — each one handles a specific type of question. Here's how it picks the right one:</p>
+
+<div class="diagram">
+  <div class="flow-wrap" style="justify-content:center">
+    <div class="box box-user" style="text-align:center">Your Question<br><small>"How's our SAIDI?"</small></div>
+    <div class="arrow">→</div>
+    <div class="col">
+      <div class="box box-ai" style="text-align:center">AI matches<br>to best tool</div>
+      <div class="row">
+        <div class="box box-small box-pbi">saidi_by_utility</div>
+        <div class="box box-small box-pbi">saidi_trend</div>
+        <div class="box box-small box-pbi">reliability_summary</div>
+        <div class="box box-small" style="opacity:0.4">…52 more</div>
+      </div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="box box-pbi" style="text-align:center">Runs the<br>best match</div>
+    <div class="arrow">→</div>
+    <div class="box box-step" style="text-align:center">Returns<br>answer</div>
+  </div>
+</div>
+
+<div class="decision">
+  <strong>How does it match?</strong> PRISM AI uses natural language matching. Your question is compared against 55 query templates, each with multiple aliases. For example:
+  <div class="branch"><span>"How's our SAIDI?" matches: </span><span class="box box-small box-pbi">SAIDI</span><span class="box box-small box-pbi">outage duration</span><span class="box box-small box-pbi">reliability</span></div>
+  <div class="branch"><span>"How efficient is our generation?" matches: </span><span class="box box-small box-pbi">MWh per MW</span><span class="box box-small box-pbi">capacity factor</span><span class="box box-small box-pbi">plant efficiency</span></div>
+  <div class="branch"><span>"What training do we need?" matches: </span><span class="box box-small" style="background:rgba(21,128,61,0.07);color:var(--green)">pbi_training</span><span class="box box-small" style="background:rgba(21,128,61,0.07);color:var(--green)">capacity building</span></div>
+</div>
+
+<!-- 4. Primary vs Fallback -->
+<h2>4. Power BI First, PRISM as Backup</h2>
+
+<p class="section-desc">The AI automatically tries the best data source first and falls back if needed. You don't need to know which source was used.</p>
+
+<div class="diagram">
+  <div style="text-align:center;font-weight:600;margin-bottom:0.5rem;">Data Source Decision Flow</div>
+
+  <div class="flow" style="justify-content:center">
+    <div class="box box-step">Question<br>Received</div>
+    <div class="arrow-down">↓</div>
+  </div>
+  <div class="flow" style="justify-content:center">
+    <div class="box box-pbi" style="text-align:center">Try Power BI<br><small>Primary source —<br>live dashboard data</small></div>
+  </div>
+  <div class="decision" style="text-align:center;margin-top:0.25rem;">
+    <div class="branch" style="justify-content:center"><span>Did it work?</span></div>
+    <div class="branch" style="justify-content:center;gap:2rem;">
+      <span class="yes">✅ YES → Use Power BI data</span>
+      <span class="no">❌ NO → Try PRISM database</span>
+    </div>
+    <div class="branch" style="justify-content:center;gap:2rem;margin-top:0.25rem;">
+      <span style="color:var(--muted)">↳</span>
+      <span><span class="no">❌ Still NO</span> → Tell you honestly<br>what's missing and suggest next steps</span>
+    </div>
+  </div>
+</div>
+
+<div class="highlight" style="margin-top:1rem;">
+  <p><strong>Why this order?</strong> Power BI contains the curated, authoritative dataset that feeds PRISM dashboards — it's the single source of truth. The PRISM database is the backup. The AI never tries more than one source per question — it's fast, efficient, and honest about gaps.</p>
+</div>
+
+<!-- 5. Two Types of Tools -->
+<h2>5. Two Categories of AI Tools</h2>
+
+<p class="section-desc">PRISM AI has two kinds of tools — ones that <strong>fetch data</strong> and ones that <strong>analyze it</strong>.</p>
+
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin:1rem 0;">
+  <div>
+    <h3 style="color:var(--accent);margin-top:0;">📊 Data Queries (55)</h3>
+    <p style="font-size:0.82rem;color:var(--muted)">Pre-built, tested queries that pull data from Power BI. Each one is a battle-tested DAX query that returns exactly the right data for a specific question.</p>
+    <div class="tool-grid" style="grid-template-columns:1fr;">
+      <div class="tool-card"><div class="name">saidi_by_utility</div><div class="desc">SAIDI values ranked best→worst</div></div>
+      <div class="tool-card"><div class="name">diesel_dependence</div><div class="desc">Diesel MW as % of total capacity</div></div>
+      <div class="tool-card"><div class="name">financial_summary</div><div class="desc">Revenue, costs, recovery rates</div></div>
+      <div class="tool-card"><div class="name">utility_profile</div><div class="desc">Complete KPI snapshot for one utility</div></div>
+    </div>
+  </div>
+  <div>
+    <h3 style="color:var(--green);margin-top:0;">🔬 Analytics Tools (12)</h3>
+    <p style="font-size:0.82rem;color:var(--muted)">Take query results and run analysis on them — forecasting, risk scoring, anomaly detection, report generation.</p>
+    <div class="tool-grid" style="grid-template-columns:1fr;">
+      <div class="tool-card"><div class="name">pbi_forecast</div><div class="desc">Project trends 2 years ahead</div></div>
+      <div class="tool-card"><div class="name">pbi_risk_score</div><div class="desc">5-factor vulnerability scoring</div></div>
+      <div class="tool-card"><div class="name">pbi_briefing</div><div class="desc">Board-ready executive summary</div></div>
+      <div class="tool-card"><div class="name">pbi_project_impact</div><div class="desc">5-year investment projections</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- 6. Streaming -->
+<h2>6. How the Answer Appears</h2>
+
+<div class="diagram">
+  <div class="flow" style="justify-content:center">
+    <div class="col">
+      <div class="box box-ai">AI generates<br>answer text</div>
+      <div class="arrow-down">↓</div>
+      <div class="box box-step">Streams character<br>by character</div>
+      <div class="arrow-down">↓</div>
+      <div class="box box-user">You see text<br>appearing live</div>
+    </div>
+    <div style="width:2px;height:180px;background:var(--border);margin:0 1.5rem;"></div>
+    <div class="col">
+      <div class="box" style="font-size:0.78rem;text-align:left;padding:0.75rem;">
+        <strong>Meanwhile, behind the scenes:</strong><br>
+        <span style="color:var(--muted)">• Tool calls are tracked</span><br>
+        <span style="color:var(--muted)">• Response saved to database</span><br>
+        <span style="color:var(--muted)">• Usage metrics recorded</span><br>
+        <span style="color:var(--muted)">• Conversation summarized</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- 7. Safety -->
+<h2>7. Safety & Guardrails — Built In, Not Added On</h2>
+
+<div class="diagram">
+  <div class="flow" style="justify-content:center">
+    <div class="box box-step" style="text-align:center">🔒 Identity<br>Verified</div>
+    <div class="arrow">→</div>
+    <div class="box box-step" style="text-align:center">🌐 Origin<br>Validated</div>
+    <div class="arrow">→</div>
+    <div class="box box-step" style="text-align:center">⏱ Rate Limit<br>Checked</div>
+    <div class="arrow">→</div>
+    <div class="box box-step" style="text-align:center">🛡 Sensitive Data<br>Filtered</div>
+    <div class="arrow">→</div>
+    <div class="box box-step" style="text-align:center">✅ Safe<br>Response</div>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:0.75rem;margin-top:1rem;">
+  <div style="font-size:0.82rem;color:var(--muted)"><strong>Identity:</strong> Every request requires authentication — only authorized PRISM users can access the AI.</div>
+  <div style="font-size:0.82rem;color:var(--muted)"><strong>Origin Check:</strong> Requests must come from the PRISM app — not from external websites or automated scripts.</div>
+  <div style="font-size:0.82rem;color:var(--muted)"><strong>Rate Limiting:</strong> Max 20 questions per minute, 100 per 15 minutes — prevents abuse and ensures fair access for all users.</div>
+  <div style="font-size:0.82rem;color:var(--muted)"><strong>PII Filtering:</strong> Email addresses, phone numbers, and credentials are automatically stripped from both your questions and the AI's answers.</div>
+  <div style="font-size:0.82rem;color:var(--muted)"><strong>Anti-Hallucination:</strong> The AI is explicitly instructed never to fabricate data. If data is missing, it tells you honestly — no guessing.</div>
+  <div style="font-size:0.82rem;color:var(--muted)"><strong>DAX Validation:</strong> All Power BI queries are validated to be read-only — destructive commands are blocked before they reach the database.</div>
+</div>
+
+<!-- 8. The Thinking Box -->
+<h2>8. What's in the "Thinking" Box?</h2>
+
+<p class="section-desc">When the AI is working, a "Thinking" dropdown appears. It's collapsed by default — you only see the clean answer. But if you're curious, you can expand it to see what the AI did behind the scenes.</p>
+
+<div style="background:var(--surface);border:1px solid var(--border);border-radius:0.75rem;padding:1rem 1.25rem;margin:1rem 0;font-size:0.82rem;">
+  <div style="font-weight:600;margin-bottom:0.5rem;">▼ Thinking <span style="color:var(--muted);font-weight:400;">(click to see what the AI did)</span></div>
+  <div style="color:var(--muted);line-height:1.8;">
+    Let me analyze the diesel dependence data across Pacific utilities...<br><br>
+    <span style="color:var(--accent);">🔍</span> pbi_query (diesel_dependence)...<br>
+    <span style="color:var(--green);">✅</span> pbi_query (diesel_dependence) done<br><br>
+    <span style="color:var(--accent);">🔍</span> get_industry_benchmarks...<br>
+    <span style="color:var(--green);">✅</span> get_industry_benchmarks done<br><br>
+    Now I have the diesel share for all utilities and the PPA benchmark target. Let me present this clearly...
+  </div>
+</div>
+
+<div class="section-desc">
+  The Thinking box shows the AI's <strong>chain of thought</strong> plus which <strong>tools</strong> it called and whether they succeeded. It's useful for understanding why an answer looks the way it does — or for debugging when data is missing.
+</div>
+
+<!-- 9. Conversation Memory -->
+<h2>9. How the AI Remembers Context</h2>
+
+<div class="diagram">
+  <div class="flow" style="justify-content:center">
+    <div class="col">
+      <div class="box box-user">You: "I'm from EPC,<br>looking at FY2023"</div>
+      <div class="arrow-down">↓</div>
+      <div class="box box-ai" style="text-align:center">AI stores:<br><strong>utility = EPC</strong><br><strong>year = FY2023</strong></div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="col">
+      <div class="box box-user">You: "How's<br>our SAIDI?"</div>
+      <div class="arrow-down">↓</div>
+      <div class="box box-pbi" style="text-align:center">AI auto-fills:<br>utility = EPC<br>year = FY2023</div>
+    </div>
+    <div class="arrow">→</div>
+    <div class="col">
+      <div class="box box-user">You: "Now show<br>me losses"</div>
+      <div class="arrow-down">↓</div>
+      <div class="box box-pbi" style="text-align:center">Still using:<br>utility = EPC<br>year = FY2023</div>
+    </div>
+  </div>
+</div>
+
+<div class="highlight">
+  <p><strong>Smart context:</strong> Tell the AI your utility and fiscal year once. It remembers for the entire conversation. Every subsequent question automatically scopes to your utility. Want to compare? Just ask "compare to other utilities" and it switches to benchmark mode. The context auto-expires after 5 minutes of inactivity.</p>
+</div>
+
+<!-- 10. What Happens When Things Go Wrong -->
+<h2>10. What Happens When Something Doesn't Work</h2>
+
+<div class="decision">
+  <strong>Scenario 1: Power BI dataset refresh failed</strong>
+  <div class="branch"><span>AI tries query → Power BI returns error → </span><span class="no">AI switches to PRISM database immediately</span></div>
+  <div class="branch"><span style="color:var(--muted)">Note: The AI only tries ONE Power BI query before switching. It doesn't keep retrying — that would waste time.</span></div>
+</div>
+
+<div class="decision">
+  <strong>Scenario 2: Data hasn't been submitted yet</strong>
+  <div class="branch"><span>AI tries both sources → both return empty → </span><span style="color:var(--text);font-weight:600">AI tells you honestly: "This data isn't available yet."</span></div>
+  <div class="branch"><span style="color:var(--muted)">It suggests what to check and offers alternative data that IS available.</span></div>
+</div>
+
+<div class="decision">
+  <strong>Scenario 3: Question doesn't match any tool</strong>
+  <div class="branch"><span>AI can't find a query match → </span><span style="color:var(--text);font-weight:600">AI asks you to clarify or suggests related topics</span></div>
+  <div class="branch"><span style="color:var(--muted)">For example: "I don't have data on that specific topic. Would you like to see your overall performance instead?"</span></div>
+</div>
+
+<!-- 11. One-Call Summary -->
+<h2>11. Performance — How Fast Is It?</h2>
+
+<div class="flow" style="justify-content:center;margin:1.5rem 0;">
+  <div class="box box-step" style="text-align:center">You type<br>question</div>
+  <div class="arrow">→</div>
+  <div class="box box-step" style="text-align:center">AI processes<br><small>~0.5s</small></div>
+  <div class="arrow">→</div>
+  <div class="box box-pbi" style="text-align:center">Data fetched<br><small>~1-2s</small></div>
+  <div class="arrow">→</div>
+  <div class="box box-ai" style="text-align:center">Answer streams<br><small>~1-2s</small></div>
+  <div class="arrow">→</div>
+  <div class="box box-user" style="text-align:center">Done!<br><small>2-5s total</small></div>
+</div>
+
+<div class="section-desc" style="text-align:center;">
+  Most questions answered in <strong>2-5 seconds</strong> from typing to seeing the answer appear. Complex multi-tool analysis (like full reports or risk scoring) may take 5-10 seconds. The character-by-character streaming makes it feel responsive — you see the answer being built in real time.
+</div>
+
+<div class="footer">
+  <p>PRISM AI — Pacific Power Association · June 2026</p>
+  <p>Questions? Ask PRISM AI itself: "How do you work?"</p>
+</div>
+
+</div>
+</body>
+</html>
