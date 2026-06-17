@@ -2,6 +2,7 @@ import { db } from "@/db/connection";
 import { aiChatTurn, aiChatSession } from "@/db/schema/ai";
 import { getCurrentUser } from "@/lib/user.service";
 import { filterOutput } from "@/lib/ai/guardrails";
+import { isValidOrigin } from "@/lib/ai/origin";
 import { eq, and } from "drizzle-orm";
 
 export async function POST(request: Request) {
@@ -10,6 +11,10 @@ export async function POST(request: Request) {
     user = await getCurrentUser();
   } catch {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!isValidOrigin(request)) {
+    return Response.json({ message: "Invalid request origin." }, { status: 403 });
   }
 
   let body: { turnId: number; content: string };

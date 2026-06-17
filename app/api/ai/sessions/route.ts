@@ -1,6 +1,7 @@
 import { db } from "@/db/connection";
 import { aiChatSession } from "@/db/schema/ai";
 import { getCurrentUser } from "@/lib/user.service";
+import { isValidOrigin } from "@/lib/ai/origin";
 import { desc, sql, eq, and } from "drizzle-orm";
 
 export async function GET(request: Request) {
@@ -9,6 +10,10 @@ export async function GET(request: Request) {
     user = await getCurrentUser();
   } catch {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!isValidOrigin(request)) {
+    return Response.json({ message: "Invalid request origin." }, { status: 403 });
   }
 
   const { searchParams } = new URL(request.url);
@@ -47,6 +52,10 @@ export async function POST(request: Request) {
     user = await getCurrentUser();
   } catch {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!isValidOrigin(request)) {
+    return Response.json({ message: "Invalid request origin." }, { status: 403 });
   }
 
   let body: { title?: string };

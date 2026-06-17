@@ -9,6 +9,7 @@ import { eq, sql, and } from "drizzle-orm";
 import { getSystemPrompt } from "@/lib/ai/prompt";
 import { checkUserUtility } from "@/lib/ai/data-service/utils";
 import { runAiStream, runAiGenerate } from "@/lib/ai/service";
+import { isValidOrigin } from "@/lib/ai/origin";
 import { logger } from "@/lib/logger";
 
 export const maxDuration = 120;
@@ -16,19 +17,6 @@ export const maxDuration = 120;
 const ADMIN_ROLES = new Set(["BMO", "DEV"]);
 const isAdminRole = (role: string | null | undefined): boolean =>
   role != null && ADMIN_ROLES.has(role.toUpperCase());
-
-const isValidOrigin = (request: Request): boolean => {
-  const origin = request.headers.get("origin");
-  const referer = request.headers.get("referer");
-  if (!origin && !referer) return false;
-  const appUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.BETTER_AUTH_URL;
-  if (appUrl) {
-    const allowed = [appUrl];
-    if (origin && allowed.some((a) => origin.startsWith(a))) return true;
-    if (referer && allowed.some((a) => referer.startsWith(a))) return true;
-  }
-  return false;
-};
 
 const deriveSessionTitle = (message: string): string => {
   const normalized = message.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();

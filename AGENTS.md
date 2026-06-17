@@ -33,10 +33,11 @@ npm run dev                    # webpack dev server on http://localhost:3554
 - **`proxy.ts`** — middleware protecting `/dashboard/*`, `/data-entry/*`, `/settings/*`, `/profile/*`, `/docs/*`
 - **Path alias**: `@/*` → project root (in tsconfig and vitest config)
 - **DB connection** (`db/connection.ts`) uses a global `__prismPool` to survive hot-reloads; PG pool timeouts all set to 30s
-- **AI/chatbot**: Anthropic Claude (Sonnet 4.6 primary, Haiku 4.5 fallback), 34 tools, AI SDK v6.0.168
-- **AI streaming**: Character-by-character `requestAnimationFrame` reveal, animated thinking/typing indicators, tool status display
-- **Rate limiting**: Removed from AI chat route; usage tracking retained for analytics only
-- **Scorecard**: Shows all KPI data regardless of approval state (`includeUnapproved: true`)
+- **AI/chatbot**: Anthropic Claude (Sonnet 4.6 primary, Haiku 4.5 fallback), 67 tools (38 PRISM-native + 29 Power BI domain), AI SDK v6.0.168
+- **AI streaming**: Character-by-character `requestAnimationFrame` reveal, collapsible thinking/reasoning dropdown with tool process tracking, animated thinking indicator
+- **Rate limiting**: In-memory rate limiter (20 requests/min, 100 requests/15min) enforcement on AI chat route; usage tracking persisted to DB for analytics
+- **Scorecard**: Removed from AI — scorecard integration has been fully extracted from the AI feature. AI uses Power BI + PRISM-native benchmarking/KPI diagnostics instead.
+- **Power BI AI**: 19 schema tables, 55 pre-built DAX query templates, 36 AI tools. Domain coverage: reliability, generation, distribution, financials, customers, workforce, safety, diesel/fuel, climate, island context, tariffs, renewables, governance, leadership, transmission, air connectivity. Features: trend forecasting, KPI correlations, risk scoring, executive briefings, donor report auto-fill, investment prioritization, regulatory tracking, what-if modeling, anomaly detection.
 
 ## Testing
 

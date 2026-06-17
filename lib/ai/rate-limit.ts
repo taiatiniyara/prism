@@ -9,8 +9,8 @@ const getTodayStart = (): Date => {
 };
 
 const PER_MINUTE_WINDOW_MS = 60_000;
-const PER_MINUTE_MAX_REQUESTS = 20;
-const PER_15MIN_MAX_REQUESTS = 100;
+const PER_MINUTE_MAX_REQUESTS = parseInt(process.env.AI_RATE_LIMIT_PER_MINUTE || "20", 10) || 20;
+const PER_15MIN_MAX_REQUESTS = parseInt(process.env.AI_RATE_LIMIT_PER_15MIN || "100", 10) || 100;
 
 const requestTimestamps = new Map<string, number[]>();
 

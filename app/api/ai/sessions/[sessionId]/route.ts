@@ -1,6 +1,7 @@
 import { db } from "@/db/connection";
 import { aiChatSession, aiChatTurn, aiToolCall } from "@/db/schema/ai";
 import { getCurrentUser } from "@/lib/user.service";
+import { isValidOrigin } from "@/lib/ai/origin";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 
 export async function GET(
@@ -12,6 +13,10 @@ export async function GET(
     user = await getCurrentUser();
   } catch {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!isValidOrigin(request)) {
+    return Response.json({ message: "Invalid request origin." }, { status: 403 });
   }
 
   const { sessionId } = await params;
