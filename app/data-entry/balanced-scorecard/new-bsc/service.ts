@@ -3,6 +3,7 @@ import { resolveUtilityScopeId } from "@/lib/user.service";
 
 import {
   assertNewBscBuildAccess,
+  assertNewBscMasterLinkAccess,
   assertNewBscReadAccess,
   assertNewBscTemplateAdminAccess,
   assertNewBscThemeAdminAccess,
@@ -15,11 +16,15 @@ import {
   getUtilityScorecard,
   listBuilderKpiOptions,
   listKpiTargets,
+  listReportTypeOptions,
   listTemplateTree,
+  listTargetPlans,
   replacePerspectiveOverlay,
   saveKpiTargets,
+  saveKpiTargetPlan,
   saveThemeStyles,
   setKpiTrajectory,
+  setTemplateNodeLinks,
   updateTemplateNode,
 } from "./repository";
 import { sanitizeThemeStyles } from "./theme";
@@ -28,7 +33,9 @@ import type {
   CreateTemplateNodePayload,
   KpiOption,
   KpiTargetRow,
+  ReportTypeOption,
   SaveKpiTargetsPayload,
+  TargetPlanSummary,
   ScorecardResponse,
   SavePerspectiveOverlayPayload,
   SetTrajectoryPayload,
@@ -79,6 +86,16 @@ export const removeTemplateNode = async (user: CurrentUser, id: string) => {
   await deleteTemplateNode(id);
 };
 
+// Replace the master cause-effect links FROM one template node (BMO only).
+export const editTemplateNodeLinks = async (
+  user: CurrentUser,
+  sourceId: string,
+  targetIds: string[],
+) => {
+  assertNewBscMasterLinkAccess(user);
+  await setTemplateNodeLinks(sourceId, targetIds);
+};
+
 // --- Theme (read for all with access; write for DEV) ------------------------
 
 export const getTheme = async (user: CurrentUser): Promise<ThemeResponse> => {
@@ -111,6 +128,13 @@ export const getKpiOptions = async (
   assertNewBscReadAccess(user);
   const utilityId = requireUtilityId(user);
   return listBuilderKpiOptions(utilityId);
+};
+
+export const getReportTypeOptions = async (
+  user: CurrentUser,
+): Promise<ReportTypeOption[]> => {
+  assertNewBscReadAccess(user);
+  return listReportTypeOptions();
 };
 
 export const savePerspective = async (
@@ -151,5 +175,23 @@ export const saveKpiTargetsForBsc = async (
 ) => {
   assertNewBscBuildAccess(user);
   const utilityId = requireUtilityId(user);
+  // Filled values write through to the shared KPI target store (scoring);
+  // the full plan (incl. blanks) is kept for status reporting.
   await saveKpiTargets(utilityId, payload.kpiDefinitionId, payload.targets);
+  if (payload.plan) {
+    await saveKpiTargetPlan(
+      utilityId,
+      user.id,
+      payload.kpiDefinitionId,
+      payload.plan,
+    );
+  }
+};
+
+export const getTargetPlans = async (
+  user: CurrentUser,
+): Promise<TargetPlanSummary[]> => {
+  assertNewBscReadAccess(user);
+  const utilityId = requireUtilityId(user);
+  return listTargetPlans(utilityId);
 };

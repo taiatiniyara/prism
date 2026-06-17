@@ -13,6 +13,8 @@ import {
   varchar,
 } from "drizzle-orm/pg-core";
 
+import { sql } from "drizzle-orm";
+
 import { user } from "./auth-schema";
 import { kpiDefinitions } from "./kpi";
 import { customKpiRequests } from "./custom-kpi-requests";
@@ -56,6 +58,13 @@ export const bscTemplateNodes = pgTable(
     // Mandatory nodes are pre-ticked and locked on every utility scorecard.
     is_mandatory: boolean("is_mandatory").notNull().default(false),
     ord: integer("ord").notNull().default(0),
+    // Strategy-map defaults (see docs/bsc-builder-spec.md §13). map_label is the
+    // short caption shown on the map (the full `label` is usually a sentence);
+    // is_map_node declares this node a map node by default (decouples "on map"
+    // from level — e.g. Financial promotes its key_focus_area, not the verbose
+    // strategic_objective). Utilities can override both in their overlay.
+    map_label: text("map_label"),
+    is_map_node: boolean("is_map_node").notNull().default(false),
     // Soft-delete / retire instead of hard-deleting template nodes.
     is_active: boolean("is_active").notNull().default(true),
     created_at: timestamp("created_at").notNull().defaultNow(),
@@ -97,6 +106,16 @@ export const bscUtilityNodes = pgTable(
     // source of truth, but we may store a copy for convenience.
     label: text("label"),
     ord: integer("ord").notNull().default(0),
+    // Strategy-map overrides (see docs/bsc-builder-spec.md §13). All nullable =
+    // "inherit". Effective map label  = coalesce(map_label, template.map_label, label).
+    // Effective on-map flag = coalesce(is_map_node, template.is_map_node, false);
+    // for custom nodes (no template) only the utility value applies.
+    map_label: text("map_label"),
+    is_map_node: boolean("is_map_node"),
+    // Manual drag-to-position override; null = auto-layout (band by perspective
+    // ancestor, theme column by key_focus_area ancestor, ordered by `ord`).
+    map_x: integer("map_x"),
+    map_y: integer("map_y"),
     created_at: timestamp("created_at").notNull().defaultNow(),
     updated_at: timestamp("updated_at").notNull().defaultNow(),
   },
@@ -108,6 +127,12 @@ export const bscUtilityNodes = pgTable(
       table.utility_id,
       table.level,
     ),
+    // A utility selects any given template node at most once. Partial (custom
+    // nodes have a null template_node_id and may repeat). Guards against the
+    // autosave race that duplicated whole perspective subtrees (migration 0029).
+    uniqueIndex("bsc_utility_node_utility_template_uidx")
+      .on(table.utility_id, table.template_node_id)
+      .where(sql`${table.template_node_id} is not null`),
   ],
 );
 
@@ -218,6 +243,100 @@ export type BscKpiLink = typeof bscKpiLinks.$inferSelect;
 export type NewBscKpiLink = typeof bscKpiLinks.$inferInsert;
 
 // ---------------------------------------------------------------------------
+// Strategy Map — per-Utility cause-effect edges between map nodes
+// ---------------------------------------------------------------------------
+
+// A directed cause-effect edge: source_node "drives" target_node. Both endpoints
+// are bsc_utility_nodes flagged as map nodes (usually strategic_objective level),
+// and the edge is per-Utility — each utility authors its own causal arrows. The
+// edge cascades away when either endpoint node is removed. source != target and
+// "both endpoints belong to this utility" are enforced in the service layer; a
+// cycle is warned-but-allowed (a strategy map is usually a DAG, but feedback
+// loops are not forbidden). See docs/bsc-builder-spec.md §13.
+export type BscLinkRelation = "drives" | "enables" | "constrains";
+
+export const bscObjectiveLinks = pgTable(
+  "bsc_objective_link",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    utility_id: integer("utility_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    source_node_id: uuid("source_node_id")
+      .notNull()
+      .references((): AnyPgColumn => bscUtilityNodes.id, { onDelete: "cascade" }),
+    target_node_id: uuid("target_node_id")
+      .notNull()
+      .references((): AnyPgColumn => bscUtilityNodes.id, { onDelete: "cascade" }),
+    relation: varchar("relation", { length: 16 })
+      .$type<BscLinkRelation>()
+      .notNull()
+      .default("drives"),
+    // Optional rationale for the link ("capability -> faster restoration").
+    note: text("note"),
+    ord: integer("ord").notNull().default(0),
+    created_at: timestamp("created_at").notNull().defaultNow(),
+    updated_at: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("bsc_objective_link_utility_idx").on(table.utility_id),
+    index("bsc_objective_link_source_idx").on(table.source_node_id),
+    index("bsc_objective_link_target_idx").on(table.target_node_id),
+    // One edge per ordered pair within a utility (kills duplicate arrows).
+    uniqueIndex("bsc_objective_link_pair_idx").on(
+      table.utility_id,
+      table.source_node_id,
+      table.target_node_id,
+    ),
+  ],
+);
+
+export type BscObjectiveLink = typeof bscObjectiveLinks.$inferSelect;
+export type NewBscObjectiveLink = typeof bscObjectiveLinks.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// Master cause-effect links between TEMPLATE nodes (BMO-authored). These
+// cascade to every utility's strategy map as mandatory, locked edges (resolved
+// to the utility's matching nodes at read time). Per-utility BLO links live in
+// bsc_objective_link above.
+// ---------------------------------------------------------------------------
+
+export const bscTemplateLinks = pgTable(
+  "bsc_template_link",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    source_node_id: uuid("source_node_id")
+      .notNull()
+      .references((): AnyPgColumn => bscTemplateNodes.id, {
+        onDelete: "cascade",
+      }),
+    target_node_id: uuid("target_node_id")
+      .notNull()
+      .references((): AnyPgColumn => bscTemplateNodes.id, {
+        onDelete: "cascade",
+      }),
+    relation: varchar("relation", { length: 16 })
+      .$type<BscLinkRelation>()
+      .notNull()
+      .default("drives"),
+    ord: integer("ord").notNull().default(0),
+    created_at: timestamp("created_at").notNull().defaultNow(),
+    updated_at: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    index("bsc_template_link_source_idx").on(table.source_node_id),
+    index("bsc_template_link_target_idx").on(table.target_node_id),
+    uniqueIndex("bsc_template_link_pair_idx").on(
+      table.source_node_id,
+      table.target_node_id,
+    ),
+  ],
+);
+
+export type BscTemplateLink = typeof bscTemplateLinks.$inferSelect;
+export type NewBscTemplateLink = typeof bscTemplateLinks.$inferInsert;
+
+// ---------------------------------------------------------------------------
 // BSC theme — DEV-editable, product-wide styling overrides for BSC elements.
 // A single "global" row holds a map of element-type -> curated style props.
 // ---------------------------------------------------------------------------
@@ -248,3 +367,43 @@ export const bscTheme = pgTable(
 
 export type BscTheme = typeof bscTheme.$inferSelect;
 export type NewBscTheme = typeof bscTheme.$inferInsert;
+
+// ---------------------------------------------------------------------------
+// BSC KPI target plan — the generated period set for a (utility, KPI), so we
+// can tell how many periods were expected vs filled (Targets status). Filled
+// values are still written through to kpiDefinitions.targets for scoring.
+// ---------------------------------------------------------------------------
+
+export type BscTargetPlanPeriod = {
+  label: string;
+  year: number;
+  month: number | null;
+  value: string;
+};
+
+export const bscKpiTargetPlan = pgTable(
+  "bsc_kpi_target_plan",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    utility_id: integer("utility_id")
+      .notNull()
+      .references(() => organisations.id, { onDelete: "cascade" }),
+    kpi_def_id: integer("kpi_def_id")
+      .notNull()
+      .references(() => kpiDefinitions.id, { onDelete: "cascade" }),
+    frequency: text("frequency"),
+    start_date: date("start_date"),
+    periods: json("periods").$type<BscTargetPlanPeriod[]>().notNull().default([]),
+    updated_by_id: text("updated_by_id").references(() => user.id),
+    updated_at: timestamp("updated_at").notNull().defaultNow(),
+  },
+  (table) => [
+    uniqueIndex("bsc_kpi_target_plan_utility_kpi_idx").on(
+      table.utility_id,
+      table.kpi_def_id,
+    ),
+  ],
+);
+
+export type BscKpiTargetPlan = typeof bscKpiTargetPlan.$inferSelect;
+export type NewBscKpiTargetPlan = typeof bscKpiTargetPlan.$inferInsert;

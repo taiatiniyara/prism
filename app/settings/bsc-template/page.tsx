@@ -32,7 +32,10 @@ export default async function BscTemplatePage() {
             offered for selection. Changes here propagate to all utilities.
           </p>
         </div>
-        <BscTemplateEditor initialNodes={template.nodes} />
+        <BscTemplateEditor
+          initialNodes={template.nodes}
+          canEditLinks={currentUser.role === "BMO"}
+        />
       </SectionContainer>
     </div>
   );

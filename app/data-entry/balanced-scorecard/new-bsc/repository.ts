@@ -1,21 +1,27 @@
-import { and, asc, eq, or } from "drizzle-orm";
+import { and, asc, eq, or, sql } from "drizzle-orm";
 
 import { db } from "@/db/connection";
 import {
   type BscThemeStyles,
   bscInitiatives,
   bscKpiLinks,
+  bscKpiTargetPlan,
   bscSpecificObjectives,
+  bscTemplateLinks,
   bscTemplateNodes,
   bscTheme,
   bscUtilityNodes,
 } from "@/db/schema/bsc-builder";
 import { kpiDefinitions, kpiTargetTrajectory } from "@/db/schema/kpi";
+import { managedListItems, managedLists } from "@/db/schema/managedLists";
 
 import type {
   CreateTemplateNodePayload,
   KpiOption,
   KpiTargetRow,
+  ReportTypeOption,
+  TargetPlanInput,
+  TargetPlanSummary,
   KpiTrajectory,
   OverlayNodeInput,
   ScorecardInitiative,
@@ -60,11 +66,27 @@ export const saveThemeStyles = async (
 // ---------------------------------------------------------------------------
 
 export const listTemplateTree = async (): Promise<TemplateNode[]> => {
-  const rows = await db
-    .select()
-    .from(bscTemplateNodes)
-    .where(eq(bscTemplateNodes.is_active, true))
-    .orderBy(asc(bscTemplateNodes.ord));
+  const [rows, links] = await Promise.all([
+    db
+      .select()
+      .from(bscTemplateNodes)
+      .where(eq(bscTemplateNodes.is_active, true))
+      .orderBy(asc(bscTemplateNodes.ord)),
+    db
+      .select({
+        source: bscTemplateLinks.source_node_id,
+        target: bscTemplateLinks.target_node_id,
+      })
+      .from(bscTemplateLinks)
+      .orderBy(asc(bscTemplateLinks.ord)),
+  ]);
+
+  const targetsBySource = new Map<string, string[]>();
+  for (const l of links) {
+    const list = targetsBySource.get(l.source) ?? [];
+    list.push(l.target);
+    targetsBySource.set(l.source, list);
+  }
 
   const byId = new Map<string, TemplateNode>();
   for (const row of rows) {
@@ -74,6 +96,8 @@ export const listTemplateTree = async (): Promise<TemplateNode[]> => {
       level: row.level,
       label: row.label,
       isMandatory: row.is_mandatory,
+      isMapNode: row.is_map_node,
+      linkTargets: targetsBySource.get(row.id) ?? [],
       ord: row.ord,
       children: [],
     });
@@ -123,6 +147,9 @@ export const updateTemplateNode = async (
       ...(payload.isMandatory !== undefined
         ? { is_mandatory: payload.isMandatory }
         : {}),
+      ...(payload.isMapNode !== undefined
+        ? { is_map_node: payload.isMapNode }
+        : {}),
       ...(payload.ord !== undefined ? { ord: payload.ord } : {}),
       ...(payload.isActive !== undefined ? { is_active: payload.isActive } : {}),
       updated_at: new Date(),
@@ -132,6 +159,55 @@ export const updateTemplateNode = async (
 
 export const deleteTemplateNode = async (id: string): Promise<void> => {
   await db.delete(bscTemplateNodes).where(eq(bscTemplateNodes.id, id));
+};
+
+// Replace the full set of master links FROM `sourceId`. Self-links are dropped;
+// duplicates collapse via the unique (source,target) index. Idempotent.
+export const setTemplateNodeLinks = async (
+  sourceId: string,
+  targetIds: string[],
+): Promise<void> => {
+  const targets = [...new Set(targetIds)].filter((t) => t && t !== sourceId);
+  await db.transaction(async (tx) => {
+    await tx
+      .delete(bscTemplateLinks)
+      .where(eq(bscTemplateLinks.source_node_id, sourceId));
+    if (targets.length > 0) {
+      await tx.insert(bscTemplateLinks).values(
+        targets.map((target, idx) => ({
+          source_node_id: sourceId,
+          target_node_id: target,
+          ord: idx,
+        })),
+      );
+    }
+  });
+};
+
+// ---------------------------------------------------------------------------
+// Tracking-frequency options (the "Report Type" managed list)
+// ---------------------------------------------------------------------------
+
+export const listReportTypeOptions = async (): Promise<ReportTypeOption[]> => {
+  const [list] = await db
+    .select({ id: managedLists.id })
+    .from(managedLists)
+    .where(eq(managedLists.name, "Report Type"))
+    .limit(1);
+  if (!list) return [];
+
+  const rows = await db
+    .select({ id: managedListItems.id, name: managedListItems.name })
+    .from(managedListItems)
+    .where(
+      and(
+        eq(managedListItems.list_id, list.id),
+        eq(managedListItems.is_active, true),
+      ),
+    )
+    .orderBy(asc(managedListItems.id));
+
+  return rows;
 };
 
 // ---------------------------------------------------------------------------
@@ -145,8 +221,13 @@ export const listBuilderKpiOptions = async (
     .select({
       kpiDefinitionId: kpiDefinitions.id,
       name: kpiDefinitions.name,
+      unit: managedListItems.name,
     })
     .from(kpiDefinitions)
+    .leftJoin(
+      managedListItems,
+      eq(kpiDefinitions.unit_id, managedListItems.id),
+    )
     .where(
       and(
         eq(kpiDefinitions.is_active, true),
@@ -165,9 +246,66 @@ export const listBuilderKpiOptions = async (
 // Per-utility scorecard (assembled overlay)
 // ---------------------------------------------------------------------------
 
+// Levels of the upper zone, top-down. Mandatory nodes form a contiguous subtree
+// (a mandatory node's parent is always mandatory), so inserting in this order
+// guarantees each child's parent row already exists.
+const MANDATORY_LEVELS = [
+  "perspective",
+  "overall_objective",
+  "key_focus_area",
+  "strategic_objective",
+  "strategic_lever",
+] as const;
+
+// Materialize the mandatory template nodes into a utility's overlay so the saved
+// scorecard always matches what Build/Preview show (mandatory nodes are always
+// part of a scorecard) and so those nodes are real, linkable rows on the
+// Strategy Map. Idempotent and concurrency-safe: only missing nodes are
+// inserted, top-down so each child's parent exists, with the (utility_id,
+// template_node_id) unique index as a backstop. A no-op once fully materialized.
+export const ensureMandatoryMaterialized = async (
+  utilityId: number,
+): Promise<void> => {
+  await db.transaction(async (tx) => {
+    // Perspectives have no parent.
+    await tx.execute(sql`
+      insert into bsc_utility_node (utility_id, template_node_id, parent_node_id, level, ord)
+      select ${utilityId}, t.id, null, t.level, t.ord
+      from bsc_template_node t
+      where t.is_mandatory and t.is_active and t.level = 'perspective'
+        and not exists (
+          select 1 from bsc_utility_node x
+          where x.utility_id = ${utilityId} and x.template_node_id = t.id
+        )
+      on conflict (utility_id, template_node_id) where template_node_id is not null do nothing
+    `);
+    // Lower levels attach to the already-materialized parent for this utility.
+    for (const level of MANDATORY_LEVELS.slice(1)) {
+      await tx.execute(sql`
+        insert into bsc_utility_node (utility_id, template_node_id, parent_node_id, level, ord)
+        select ${utilityId}, t.id, pu.id, t.level, t.ord
+        from bsc_template_node t
+        join bsc_template_node tp on tp.id = t.parent_id
+        join bsc_utility_node pu
+          on pu.utility_id = ${utilityId} and pu.template_node_id = tp.id
+        where t.is_mandatory and t.is_active and t.level = ${level}
+          and not exists (
+            select 1 from bsc_utility_node x
+            where x.utility_id = ${utilityId} and x.template_node_id = t.id
+          )
+        on conflict (utility_id, template_node_id) where template_node_id is not null do nothing
+      `);
+    }
+  });
+};
+
 export const getUtilityScorecard = async (
   utilityId: number,
 ): Promise<ScorecardResponse> => {
+  // Self-heal: ensure mandatory nodes exist before reading so Build, Preview and
+  // the Strategy Map all reflect the same scorecard.
+  await ensureMandatoryMaterialized(utilityId);
+
   const [nodes, objectives, initiatives, links, trajectories, templateRows] =
     await Promise.all([
       db
@@ -194,11 +332,16 @@ export const getUtilityScorecard = async (
             bscKpiLinks.pending_custom_kpi_request_id,
           ord: bscKpiLinks.ord,
           kpi_name: kpiDefinitions.name,
+          unit: managedListItems.name,
         })
         .from(bscKpiLinks)
         .leftJoin(
           kpiDefinitions,
           eq(bscKpiLinks.kpi_def_id, kpiDefinitions.id),
+        )
+        .leftJoin(
+          managedListItems,
+          eq(kpiDefinitions.unit_id, managedListItems.id),
         )
         .where(eq(bscKpiLinks.utility_id, utilityId))
         .orderBy(asc(bscKpiLinks.ord)),
@@ -232,6 +375,7 @@ export const getUtilityScorecard = async (
       id: link.id,
       kpiDefinitionId: link.kpi_def_id,
       kpiName: link.kpi_name,
+      unit: link.unit,
       pendingCustomKpiRequestId: link.pending_custom_kpi_request_id,
       trajectory:
         link.kpi_def_id != null
@@ -320,6 +464,18 @@ export const replacePerspectiveOverlay = async (
   payload: SavePerspectiveOverlayPayload,
 ): Promise<void> => {
   await db.transaction(async (tx) => {
+    // Serialize concurrent saves of the SAME perspective. The autosave debounce
+    // (new-bsc-builder.tsx) doesn't wait for an in-flight save, so a follow-up
+    // edit can fire a second delete-then-reinsert while the first is still
+    // running. Without this lock the two transactions interleave and either
+    // duplicate the whole subtree or collide on the (utility_id,
+    // template_node_id) unique index (migration 0029). The xact lock makes each
+    // save's delete+reinsert atomic relative to other saves of this perspective;
+    // it auto-releases at commit/rollback.
+    await tx.execute(
+      sql`select pg_advisory_xact_lock(${utilityId}, hashtext(${payload.perspectiveTemplateNodeId}))`,
+    );
+
     // Remove the existing overlay subtree for this perspective. Cascading FKs
     // (parent_node_id, lever -> objective -> initiative -> kpi link) clean up
     // all descendants and lower-zone rows.
@@ -475,6 +631,66 @@ export const saveKpiTargets = async (
     .update(kpiDefinitions)
     .set({ targets: [...others, ...byKey.values()] })
     .where(eq(kpiDefinitions.id, kpiDefId));
+};
+
+// ---------------------------------------------------------------------------
+// Target plan (generated period set per utility/KPI — for status pills)
+// ---------------------------------------------------------------------------
+
+export const saveKpiTargetPlan = async (
+  utilityId: number,
+  userId: string,
+  kpiDefId: number,
+  plan: TargetPlanInput,
+): Promise<void> => {
+  await db
+    .insert(bscKpiTargetPlan)
+    .values({
+      utility_id: utilityId,
+      kpi_def_id: kpiDefId,
+      frequency: plan.frequency,
+      start_date: plan.startDate || null,
+      periods: plan.periods,
+      updated_by_id: userId,
+    })
+    .onConflictDoUpdate({
+      target: [bscKpiTargetPlan.utility_id, bscKpiTargetPlan.kpi_def_id],
+      set: {
+        frequency: plan.frequency,
+        start_date: plan.startDate || null,
+        periods: plan.periods,
+        updated_by_id: userId,
+        updated_at: new Date(),
+      },
+    });
+};
+
+export const listTargetPlans = async (
+  utilityId: number,
+): Promise<TargetPlanSummary[]> => {
+  const rows = await db
+    .select({
+      kpi_def_id: bscKpiTargetPlan.kpi_def_id,
+      periods: bscKpiTargetPlan.periods,
+    })
+    .from(bscKpiTargetPlan)
+    .where(eq(bscKpiTargetPlan.utility_id, utilityId));
+
+  return rows.map((row) => {
+    const periods = row.periods ?? [];
+    const values = periods.map((p) => {
+      const trimmed = String(p.value ?? "").trim();
+      if (trimmed.length === 0) return null;
+      const n = Number(trimmed);
+      return Number.isFinite(n) ? n : null;
+    });
+    return {
+      kpiDefinitionId: row.kpi_def_id,
+      total: periods.length,
+      filled: values.filter((v) => v != null).length,
+      values,
+    };
+  });
 };
 
 // ---------------------------------------------------------------------------

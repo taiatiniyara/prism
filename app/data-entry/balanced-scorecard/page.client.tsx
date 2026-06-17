@@ -262,12 +262,14 @@ export default function ScorecardPageClient({
   kpiOptions,
   customKpiReferenceOptions,
   mode = "default",
+  scopedUtilityId = null,
 }: {
   initialContext: ScorecardFilterContext;
   filterOptions: ReviewKpiFilterOptions;
   kpiOptions: ScorecardKpiOption[];
   customKpiReferenceOptions: CustomKpiReferenceOptions;
   mode?: "default" | "builder";
+  scopedUtilityId?: number | null;
 }) {
   const [context, setContext] =
     useState<ScorecardFilterContext>(initialContext);
@@ -1818,7 +1820,7 @@ export default function ScorecardPageClient({
       ) : null}
 
       {mode !== "builder" && activeMainTab === "new-bsc" ? (
-        <NewBscBuilder />
+        <NewBscBuilder key={scopedUtilityId ?? "global"} />
       ) : null}
 
       {mode !== "builder" && activeMainTab === "strategic-map" ? (

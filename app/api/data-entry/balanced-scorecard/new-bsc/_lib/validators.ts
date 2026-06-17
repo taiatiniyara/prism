@@ -15,6 +15,9 @@ import type {
   UpdateTemplateNodePayload,
 } from "@/app/data-entry/balanced-scorecard/new-bsc/types";
 
+// Master template node labels are capped (matches the editor's input maxLength).
+const TEMPLATE_LABEL_MAX = 32;
+
 const LEVELS: BscTemplateLevel[] = [
   "perspective",
   "overall_objective",
@@ -258,7 +261,41 @@ export const parseSaveKpiTargetsPayload = (
     }
     return { year, month, targetValue };
   });
-  return { kpiDefinitionId, targets };
+
+  let plan: SaveKpiTargetsPayload["plan"] = null;
+  if (isPlainObject(body.plan)) {
+    const planBody = body.plan;
+    const periodsRaw = Array.isArray(planBody.periods) ? planBody.periods : [];
+    plan = {
+      frequency: asTrimmed(planBody.frequency),
+      startDate: asDateOrNull(planBody.startDate, "plan.startDate") ?? "",
+      periods: periodsRaw.map((raw, index) => {
+        if (!isPlainObject(raw)) {
+          throw new Error(`VALIDATION:plan.periods[${index}] must be an object.`);
+        }
+        const year = Number(raw.year);
+        if (!Number.isInteger(year)) {
+          throw new Error(`VALIDATION:plan.periods[${index}].year invalid.`);
+        }
+        const month =
+          raw.month == null || raw.month === "" ? null : Number(raw.month);
+        if (
+          month != null &&
+          (!Number.isInteger(month) || month < 1 || month > 12)
+        ) {
+          throw new Error(`VALIDATION:plan.periods[${index}].month invalid.`);
+        }
+        return {
+          label: asTrimmed(raw.label),
+          year,
+          month,
+          value: asTrimmed(raw.value),
+        };
+      }),
+    };
+  }
+
+  return { kpiDefinitionId, targets, plan };
 };
 
 export const parseCreateTemplateNodePayload = (
@@ -270,6 +307,11 @@ export const parseCreateTemplateNodePayload = (
   const label = asTrimmed(body.label);
   if (label.length === 0) {
     throw new Error("VALIDATION:label is required.");
+  }
+  if (label.length > TEMPLATE_LABEL_MAX) {
+    throw new Error(
+      `VALIDATION:label must be ${TEMPLATE_LABEL_MAX} characters or fewer.`,
+    );
   }
   return {
     parentId: asUuidOrNull(body.parentId),
@@ -301,10 +343,18 @@ export const parseUpdateTemplateNodePayload = (
     if (label.length === 0) {
       throw new Error("VALIDATION:label cannot be empty.");
     }
+    if (label.length > TEMPLATE_LABEL_MAX) {
+      throw new Error(
+        `VALIDATION:label must be ${TEMPLATE_LABEL_MAX} characters or fewer.`,
+      );
+    }
     payload.label = label;
   }
   if (body.isMandatory !== undefined) {
     payload.isMandatory = body.isMandatory === true;
+  }
+  if (body.isMapNode !== undefined) {
+    payload.isMapNode = body.isMapNode === true;
   }
   if (body.ord !== undefined) {
     payload.ord = asOrd(body.ord);
@@ -313,4 +363,22 @@ export const parseUpdateTemplateNodePayload = (
     payload.isActive = body.isActive === true;
   }
   return payload;
+};
+
+export const parseSetTemplateNodeLinksPayload = (
+  body: unknown,
+): { targetIds: string[] } => {
+  if (!isPlainObject(body)) {
+    throw new Error("VALIDATION:Request body must be an object.");
+  }
+  if (!Array.isArray(body.targetIds)) {
+    throw new Error("VALIDATION:targetIds must be an array.");
+  }
+  const targetIds = body.targetIds.map((t) => {
+    if (typeof t !== "string" || t.trim().length === 0) {
+      throw new Error("VALIDATION:Each target id must be a non-empty string.");
+    }
+    return t;
+  });
+  return { targetIds };
 };

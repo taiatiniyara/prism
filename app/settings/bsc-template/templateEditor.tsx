@@ -1,16 +1,28 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import {
+  ArrowDown,
+  ArrowUp,
   ChevronDown,
   ChevronRight,
+  Link2,
   Plus,
   Trash2,
 } from "lucide-react";
 import { toast } from "sonner";
 
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
+import {
+  DropdownMenu,
+  DropdownMenuCheckboxItem,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { Input } from "@/components/ui/input";
 import {
   AlertDialog,
@@ -26,6 +38,7 @@ import {
   createTemplateNode,
   deleteTemplateNode,
   fetchTemplate,
+  setTemplateNodeLinks,
   updateTemplateNode,
 } from "@/app/data-entry/balanced-scorecard/new-bsc/client";
 import type {
@@ -49,15 +62,38 @@ const LEVEL_LABEL: Record<BscTemplateLevel, string> = {
   strategic_lever: "Strategic Lever",
 };
 
+type FlatNode = { id: string; label: string; level: BscTemplateLevel };
+
 export default function BscTemplateEditor({
   initialNodes,
+  canEditLinks = false,
 }: {
   initialNodes: TemplateNode[];
+  // Master cause-effect links are BMO-only; everyone else sees them read-only.
+  canEditLinks?: boolean;
 }) {
   const [nodes, setNodes] = useState<TemplateNode[]>(initialNodes);
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [pendingDelete, setPendingDelete] = useState<TemplateNode | null>(null);
   const [busy, setBusy] = useState(false);
+
+  // Candidate link targets = every node visible on the strategy map. Labels for
+  // rendering the chosen targets.
+  const { linkCandidates, labelById } = useMemo(() => {
+    const candidates: FlatNode[] = [];
+    const labels = new Map<string, string>();
+    const walk = (list: TemplateNode[]) => {
+      for (const n of list) {
+        labels.set(n.id, n.label);
+        if (n.isMapNode) {
+          candidates.push({ id: n.id, label: n.label, level: n.level });
+        }
+        walk(n.children);
+      }
+    };
+    walk(nodes);
+    return { linkCandidates: candidates, labelById: labels };
+  }, [nodes]);
 
   const refresh = async () => {
     try {
@@ -121,6 +157,46 @@ export default function BscTemplateEditor({
       await updateTemplateNode(node.id, { isMandatory });
     });
 
+  const setMapNode = (node: TemplateNode, isMapNode: boolean) =>
+    void withBusy(async () => {
+      await updateTemplateNode(node.id, { isMapNode });
+    });
+
+  const toggleLink = (node: TemplateNode, targetId: string) => {
+    const next = node.linkTargets.includes(targetId)
+      ? node.linkTargets.filter((t) => t !== targetId)
+      : [...node.linkTargets, targetId];
+    void withBusy(async () => {
+      await setTemplateNodeLinks(node.id, next);
+    });
+  };
+
+  // Reorder a node among its siblings by normalising sibling `ord` to the new
+  // positions (only changed rows are persisted).
+  const moveNode = (
+    node: TemplateNode,
+    siblings: TemplateNode[],
+    direction: "up" | "down",
+  ) => {
+    const index = siblings.findIndex((s) => s.id === node.id);
+    const target = direction === "up" ? index - 1 : index + 1;
+    if (target < 0 || target >= siblings.length) return;
+    const reordered = [...siblings];
+    [reordered[index], reordered[target]] = [
+      reordered[target],
+      reordered[index],
+    ];
+    void withBusy(async () => {
+      await Promise.all(
+        reordered.map((sibling, idx) =>
+          sibling.ord === idx
+            ? Promise.resolve()
+            : updateTemplateNode(sibling.id, { ord: idx }),
+        ),
+      );
+    });
+  };
+
   const confirmDelete = () => {
     if (!pendingDelete) return;
     const node = pendingDelete;
@@ -131,9 +207,16 @@ export default function BscTemplateEditor({
     });
   };
 
-  const renderNode = (node: TemplateNode, depth: number) => {
+  const renderNode = (
+    node: TemplateNode,
+    depth: number,
+    siblings: TemplateNode[],
+  ) => {
     const childLevel = CHILD_LEVEL[node.level];
     const isCollapsed = collapsed.has(node.id);
+    const index = siblings.findIndex((s) => s.id === node.id);
+    const canUp = index > 0;
+    const canDown = index < siblings.length - 1;
     return (
       <div key={node.id} style={{ paddingLeft: depth * 16 }} className="py-0.5">
         <div className="flex items-center gap-2">
@@ -154,8 +237,9 @@ export default function BscTemplateEditor({
           )}
 
           <Input
-            className="h-7 max-w-md text-xs"
+            className="h-7 w-[32ch] text-xs"
             defaultValue={node.label}
+            maxLength={32}
             disabled={busy}
             onBlur={(event) => renameNode(node, event.target.value)}
           />
@@ -175,6 +259,80 @@ export default function BscTemplateEditor({
             Mandatory
           </label>
 
+          <label className="flex items-center gap-1 text-[11px] text-muted-foreground">
+            <Checkbox
+              checked={node.isMapNode}
+              disabled={busy}
+              onCheckedChange={(checked) => setMapNode(node, checked === true)}
+            />
+            On strategy map
+          </label>
+
+          {node.isMapNode ? (
+            <div className="flex items-center gap-1">
+              {canEditLinks ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-[11px]"
+                      disabled={busy}
+                    >
+                      <Link2 className="mr-1 size-3" />
+                      Drives
+                      {node.linkTargets.length
+                        ? ` (${node.linkTargets.length})`
+                        : ""}
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent
+                    align="start"
+                    className="max-h-72 w-64 overflow-auto"
+                  >
+                    <DropdownMenuLabel>
+                      Drives → (cause → effect)
+                    </DropdownMenuLabel>
+                    <DropdownMenuSeparator />
+                    {linkCandidates.filter((c) => c.id !== node.id).length ===
+                    0 ? (
+                      <div className="px-2 py-1 text-[11px] text-muted-foreground">
+                        No other map nodes yet.
+                      </div>
+                    ) : (
+                      linkCandidates
+                        .filter((c) => c.id !== node.id)
+                        .map((c) => (
+                          <DropdownMenuCheckboxItem
+                            key={c.id}
+                            checked={node.linkTargets.includes(c.id)}
+                            disabled={busy}
+                            onCheckedChange={() => toggleLink(node, c.id)}
+                            onSelect={(event) => event.preventDefault()}
+                          >
+                            {c.label}
+                            <span className="ml-1 text-[9px] uppercase text-muted-foreground">
+                              {LEVEL_LABEL[c.level]}
+                            </span>
+                          </DropdownMenuCheckboxItem>
+                        ))
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : node.linkTargets.length ? (
+                <span className="flex items-center gap-1 text-[11px] text-muted-foreground">
+                  <Link2 className="size-3" />
+                </span>
+              ) : null}
+              {node.linkTargets.map((t) => (
+                <Badge key={t} variant="outline" className="text-[10px]">
+                  {labelById.get(t) ?? "?"}
+                </Badge>
+              ))}
+            </div>
+          ) : null}
+
           {childLevel ? (
             <Button
               type="button"
@@ -192,6 +350,27 @@ export default function BscTemplateEditor({
             type="button"
             variant="ghost"
             size="icon"
+            disabled={busy || !canUp}
+            aria-label="Move up"
+            onClick={() => moveNode(node, siblings, "up")}
+          >
+            <ArrowUp className="size-3.5" />
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            disabled={busy || !canDown}
+            aria-label="Move down"
+            onClick={() => moveNode(node, siblings, "down")}
+          >
+            <ArrowDown className="size-3.5" />
+          </Button>
+
+          <Button
+            type="button"
+            variant="ghost"
+            size="icon"
             disabled={busy}
             onClick={() => setPendingDelete(node)}
           >
@@ -200,7 +379,9 @@ export default function BscTemplateEditor({
         </div>
 
         {!isCollapsed
-          ? node.children.map((child) => renderNode(child, depth + 1))
+          ? node.children.map((child) =>
+              renderNode(child, depth + 1, node.children),
+            )
           : null}
       </div>
     );
@@ -210,8 +391,9 @@ export default function BscTemplateEditor({
     <div className="space-y-2 rounded-md border bg-background p-3">
       <div className="flex items-center justify-between">
         <p className="text-[11px] text-muted-foreground">
-          Edit labels inline (saved on blur). Toggle mandatory, add child nodes,
-          or delete (deletes the node and all descendants).
+          Edit labels inline (saved on blur). Toggle mandatory, reorder with the
+          up/down arrows, add child nodes, or delete (deletes the node and all
+          descendants).
         </p>
         <Button
           type="button"
@@ -231,7 +413,7 @@ export default function BscTemplateEditor({
           <code>npm run db-seed-bsc</code> or add a perspective above.
         </p>
       ) : (
-        nodes.map((node) => renderNode(node, 0))
+        nodes.map((node) => renderNode(node, 0, nodes))
       )}
 
       <AlertDialog

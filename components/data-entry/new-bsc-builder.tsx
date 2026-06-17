@@ -2,12 +2,15 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
+  ArrowRight,
   ChevronDown,
   ChevronRight,
   Lock,
   Palette,
   Plus,
   Trash2,
+  TrendingDown,
+  TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -34,10 +37,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import BscStrategyMap from "@/components/data-entry/bsc-strategy-map";
 
 import {
   fetchKpiOptions,
   fetchScorecard,
+  fetchTargetPlans,
   fetchTemplate,
   fetchTheme,
   savePerspectiveOverlay,
@@ -58,6 +63,7 @@ import type {
   KpiTrajectory,
   OverlayNodeInput,
   ScorecardNode,
+  TargetPlanSummary,
   TemplateNode,
 } from "@/app/data-entry/balanced-scorecard/new-bsc/types";
 import type { BscElementStyle } from "@/db/schema/bsc-builder";
@@ -70,6 +76,7 @@ type WorkingKpi = {
   key: string;
   kpiDefinitionId: number | null;
   kpiName: string | null;
+  unit: string | null;
   pendingCustomKpiRequestId: string | null;
   trajectory: KpiTrajectory | null;
 };
@@ -126,11 +133,37 @@ const LEVEL_LABEL: Record<BscTemplateLevel, string> = {
   strategic_lever: "Strategic Lever",
 };
 
-const TRAJECTORY_LABEL: Record<KpiTrajectory, string> = {
-  increase: "Increase ↑",
-  decrease: "Decrease ↓",
-  same: "Maintain →",
+// Per-level styleable pill id (so each level's pill can be styled separately).
+const LEVEL_PILL_EL: Record<BscTemplateLevel, string> = {
+  perspective: "pillPerspective",
+  overall_objective: "pillOverallObjective",
+  key_focus_area: "pillKeyFocusArea",
+  strategic_objective: "pillStrategicObjective",
+  strategic_lever: "pillStrategicLever",
 };
+
+const TRAJECTORY_LABEL: Record<KpiTrajectory, string> = {
+  increase: "Increase",
+  decrease: "Decrease",
+  same: "Maintain",
+};
+
+const TRAJECTORY_ICON: Record<KpiTrajectory, typeof TrendingUp> = {
+  increase: TrendingUp,
+  decrease: TrendingDown,
+  same: ArrowRight,
+};
+
+function TrajectoryIcon({
+  kind,
+  className = "size-3.5",
+}: {
+  kind: KpiTrajectory;
+  className?: string;
+}) {
+  const Icon = TRAJECTORY_ICON[kind];
+  return <Icon className={className} aria-label={TRAJECTORY_LABEL[kind]} />;
+}
 
 const genKey = () =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
@@ -157,6 +190,7 @@ const mapObjectives = (
         key: genKey(),
         kpiDefinitionId: kpi.kpiDefinitionId,
         kpiName: kpi.kpiName,
+        unit: kpi.unit,
         pendingCustomKpiRequestId: kpi.pendingCustomKpiRequestId,
         trajectory: kpi.trajectory,
       })),
@@ -219,11 +253,18 @@ const serializeNode = (node: WorkingNode, ord: number): OverlayNodeInput => ({
     .map((child, index) => serializeNode(child, index)),
   specificObjectives:
     node.level === "strategic_lever"
-      ? node.specificObjectives.map((objective, oi) => ({
-          description: objective.description,
+      ? node.specificObjectives
+          // Skip in-progress objectives with no description yet — they would
+          // fail server validation and shouldn't be persisted until named.
+          .filter((objective) => objective.description.trim().length > 0)
+          .map((objective, oi) => ({
+          description: objective.description.trim(),
           ord: oi,
-          initiatives: objective.initiatives.map((initiative, ii) => ({
-            title: initiative.title,
+          initiatives: objective.initiatives
+            // Likewise skip unnamed initiatives/projects.
+            .filter((initiative) => initiative.title.trim().length > 0)
+            .map((initiative, ii) => ({
+            title: initiative.title.trim(),
             description: initiative.description,
             kind: initiative.kind,
             startDate: initiative.startDate,
@@ -305,7 +346,10 @@ export default function NewBscBuilder({
   const [kpiOptions, setKpiOptions] = useState<KpiOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [view, setView] = useState<"build" | "preview">("build");
+  const [view, setView] = useState<"build" | "preview" | "map">("build");
+  const [targetPlans, setTargetPlans] = useState<
+    Record<number, TargetPlanSummary>
+  >({});
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
   const [targetsOpen, setTargetsOpen] = useState<Set<string>>(new Set());
   const [pendingDeselect, setPendingDeselect] =
@@ -362,6 +406,20 @@ export default function NewBscBuilder({
   }, []);
 
   const themeCss = useMemo(() => generateThemeCss(themeStyles), [themeStyles]);
+
+  // Refresh per-KPI target completion whenever Preview is opened.
+  useEffect(() => {
+    if (view !== "preview") return;
+    let active = true;
+    fetchTargetPlans()
+      .then((map) => {
+        if (active) setTargetPlans(map);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, [view]);
 
   const scheduleThemeSave = useCallback(() => {
     if (themeSaveTimer.current) clearTimeout(themeSaveTimer.current);
@@ -710,7 +768,11 @@ export default function NewBscBuilder({
                       initiative.kind === "project" ? "default" : "secondary"
                     }
                     className="text-[10px]"
-                    data-bsc-el="badge"
+                    data-bsc-el={
+                      initiative.kind === "project"
+                        ? "projectPill"
+                        : "initiativePill"
+                    }
                   >
                     {initiative.kind === "project" ? "Project" : "Initiative"}
                   </Badge>
@@ -833,6 +895,11 @@ export default function NewBscBuilder({
                           {kpi.kpiName ??
                             kpi.pendingCustomKpiRequestId ??
                             `KPI #${kpi.kpiDefinitionId ?? "?"}`}
+                          {kpi.unit ? (
+                            <span className="ml-1 text-muted-foreground">
+                              ({kpi.unit})
+                            </span>
+                          ) : null}
                         </span>
                         <Select
                           value={kpi.trajectory ?? "none"}
@@ -852,9 +919,21 @@ export default function NewBscBuilder({
                           </SelectTrigger>
                           <SelectContent>
                             <SelectItem value="none">No trajectory</SelectItem>
-                            <SelectItem value="increase">Increase ↑</SelectItem>
-                            <SelectItem value="decrease">Decrease ↓</SelectItem>
-                            <SelectItem value="same">Maintain →</SelectItem>
+                            <SelectItem value="increase">
+                              <span className="flex items-center gap-1.5">
+                                <TrendingUp className="size-3.5" /> Increase
+                              </span>
+                            </SelectItem>
+                            <SelectItem value="decrease">
+                              <span className="flex items-center gap-1.5">
+                                <TrendingDown className="size-3.5" /> Decrease
+                              </span>
+                            </SelectItem>
+                            <SelectItem value="same">
+                              <span className="flex items-center gap-1.5">
+                                <ArrowRight className="size-3.5" /> Maintain
+                              </span>
+                            </SelectItem>
                           </SelectContent>
                         </Select>
                         {kpi.kpiDefinitionId != null ? (
@@ -944,6 +1023,7 @@ export default function NewBscBuilder({
                                                 kpiDefinitionId:
                                                   option.kpiDefinitionId,
                                                 kpiName: option.name,
+                                                unit: option.unit,
                                                 pendingCustomKpiRequestId: null,
                                                 trajectory: null,
                                               },
@@ -1131,69 +1211,228 @@ export default function NewBscBuilder({
 
   // --- Render: preview mode (mandatory + selected/populated only) -----------
 
+  // Uniform indentation step for every preview level.
+  const PREVIEW_STEP = 16;
+
+  const previewChevron = (key: string, hasChildren: boolean) =>
+    hasChildren ? (
+      <button
+        type="button"
+        onClick={() => toggleCollapsed(key)}
+        className="shrink-0 text-muted-foreground"
+      >
+        {collapsed.has(key) ? (
+          <ChevronRight className="size-3.5" />
+        ) : (
+          <ChevronDown className="size-3.5" />
+        )}
+      </button>
+    ) : (
+      <span className="inline-block w-3.5 shrink-0" />
+    );
+
+  const PILL_BASE =
+    "shrink-0 rounded-full border px-2 py-0.5 text-[10px] font-medium";
+
+  const targetStatusFor = (
+    kpiDefinitionId: number | null,
+    trajectory: KpiTrajectory | null,
+  ): {
+    status: { label: string; cls: string; el: string };
+    trajectory: { label: string; cls: string; el: string } | null;
+  } => {
+    const notSet = `${PILL_BASE} border-red-200 bg-red-50 text-red-700`;
+    const partial = `${PILL_BASE} border-amber-200 bg-amber-50 text-amber-700`;
+    const full = `${PILL_BASE} border-emerald-200 bg-emerald-50 text-emerald-700`;
+
+    const plan =
+      kpiDefinitionId == null ? undefined : targetPlans[kpiDefinitionId];
+    if (!plan || plan.total === 0 || plan.filled === 0) {
+      return {
+        status: {
+          label: "Targets Not Set",
+          cls: notSet,
+          el: "targetStatusNotSet",
+        },
+        trajectory: null,
+      };
+    }
+    if (plan.filled < plan.total) {
+      return {
+        status: {
+          label: "Targets Partially Set",
+          cls: partial,
+          el: "targetStatusPartial",
+        },
+        trajectory: null,
+      };
+    }
+
+    let trajPill: { label: string; cls: string; el: string } | null = null;
+    const nums = plan.values.filter((v): v is number => v != null);
+    if (trajectory && nums.length >= 2) {
+      const first = nums[0];
+      const last = nums[nums.length - 1];
+      const matched =
+        trajectory === "increase"
+          ? last > first
+          : trajectory === "decrease"
+            ? last < first
+            : last === first;
+      trajPill = matched
+        ? {
+            label: "Matched Trajectory Status",
+            cls: full,
+            el: "trajectoryMatched",
+          }
+        : {
+            label: "Mismatched Trajectory Status",
+            cls: notSet,
+            el: "trajectoryMismatched",
+          };
+    }
+    return {
+      status: {
+        label: "Targets Fully Set",
+        cls: full,
+        el: "targetStatusFull",
+      },
+      trajectory: trajPill,
+    };
+  };
+
+  const renderPreviewInitiative = (
+    initiative: WorkingInitiative,
+    depth: number,
+  ) => (
+    <div key={initiative.key}>
+      <div
+        style={{ paddingLeft: depth * PREVIEW_STEP }}
+        className="flex flex-wrap items-center gap-2 py-0.5 text-xs"
+      >
+        <ChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
+        <span
+          data-bsc-el={
+            initiative.kind === "project" ? "projectPill" : "initiativePill"
+          }
+          className={
+            initiative.kind === "project"
+              ? `${PILL_BASE} min-w-[72px] text-center border-violet-200 bg-violet-50 text-violet-700`
+              : `${PILL_BASE} min-w-[72px] text-center border-emerald-200 bg-emerald-50 text-emerald-700`
+          }
+        >
+          {initiative.kind === "project" ? "Project" : "Initiative"}
+        </span>
+        <span>
+          {initiative.title ||
+            (initiative.kind === "project"
+              ? "(unnamed project)"
+              : "(unnamed initiative)")}
+        </span>
+        {initiative.kind === "project" &&
+        (initiative.status || initiative.targetCompletionDate) ? (
+          <span className="text-[10px] text-muted-foreground">
+            (
+            {[
+              initiative.status ? PROJECT_STATUS_LABEL[initiative.status] : null,
+              initiative.targetCompletionDate
+                ? `due ${initiative.targetCompletionDate}`
+                : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+            )
+          </span>
+        ) : null}
+      </div>
+      {initiative.kpis.map((kpi) => {
+        const st = targetStatusFor(kpi.kpiDefinitionId, kpi.trajectory);
+        return (
+          <div
+            key={kpi.key}
+            style={{ paddingLeft: (depth + 1) * PREVIEW_STEP }}
+            className="flex flex-wrap items-center gap-2 py-0.5 text-xs"
+          >
+            <span className="inline-block w-3.5 shrink-0" />
+            <span className="inline-flex items-center gap-1 text-blue-600">
+              <span>
+                {kpi.kpiName ?? "KPI"}
+                {kpi.unit ? ` (${kpi.unit})` : ""}
+              </span>
+              {kpi.trajectory ? <TrajectoryIcon kind={kpi.trajectory} /> : null}
+            </span>
+            <span data-bsc-el={st.status.el} className={st.status.cls}>
+              {st.status.label}
+            </span>
+            {st.trajectory ? (
+              <span data-bsc-el={st.trajectory.el} className={st.trajectory.cls}>
+                {st.trajectory.label}
+              </span>
+            ) : null}
+          </div>
+        );
+      })}
+    </div>
+  );
+
+  const renderPreviewObjective = (
+    objective: WorkingObjective,
+    depth: number,
+  ) => (
+    <div key={objective.key}>
+      <div
+        style={{ paddingLeft: depth * PREVIEW_STEP }}
+        className="flex items-center gap-2 py-0.5 text-xs"
+      >
+        {previewChevron(objective.key, objective.initiatives.length > 0)}
+        <span>{objective.description || "(unnamed objective)"}</span>
+        <span
+          data-bsc-el="pillSpecificObjective"
+          className={`${PILL_BASE} bg-muted text-muted-foreground`}
+        >
+          Specific Objective
+        </span>
+      </div>
+      {!collapsed.has(objective.key)
+        ? objective.initiatives.map((initiative) =>
+            renderPreviewInitiative(initiative, depth + 1),
+          )
+        : null}
+    </div>
+  );
+
   const renderPreviewNode = (node: WorkingNode, depth: number) => {
     if (!node.selected) return null;
+    const isCollapsed = collapsed.has(node.key);
+    const hasChildren =
+      node.children.some((child) => child.selected) ||
+      (node.level === "strategic_lever" &&
+        node.specificObjectives.length > 0);
     return (
-      <div key={node.key} style={{ paddingLeft: depth * 14 }} className="py-0.5">
-        <div className="text-xs">
+      <div key={node.key}>
+        <div
+          style={{ paddingLeft: depth * PREVIEW_STEP }}
+          className="flex items-center gap-2 py-0.5 text-xs"
+        >
+          {previewChevron(node.key, hasChildren)}
           <span className="font-medium">{node.label}</span>
-          <span className="ml-2 text-[10px] text-muted-foreground">
+          <span
+            data-bsc-el={LEVEL_PILL_EL[node.level]}
+            className={`${PILL_BASE} bg-muted text-muted-foreground`}
+          >
             {LEVEL_LABEL[node.level]}
           </span>
         </div>
-        {node.children.map((child) => renderPreviewNode(child, depth + 1))}
-        {node.level === "strategic_lever"
-          ? node.specificObjectives.map((objective) => (
-              <div
-                key={objective.key}
-                style={{ paddingLeft: (depth + 1) * 14 }}
-                className="text-xs text-muted-foreground"
-              >
-                ◦ {objective.description || "(unnamed objective)"}
-                {objective.initiatives.map((initiative) => (
-                  <div
-                    key={initiative.key}
-                    style={{ paddingLeft: 14 }}
-                    className="text-[11px]"
-                  >
-                    {initiative.kind === "project" ? "▣" : "–"}{" "}
-                    {initiative.title ||
-                      (initiative.kind === "project"
-                        ? "(unnamed project)"
-                        : "(unnamed initiative)")}
-                    {initiative.kind === "project" ? (
-                      <span className="ml-1 text-muted-foreground">
-                        (Project
-                        {initiative.status
-                          ? ` · ${PROJECT_STATUS_LABEL[initiative.status]}`
-                          : ""}
-                        {initiative.targetCompletionDate
-                          ? ` · due ${initiative.targetCompletionDate}`
-                          : ""}
-                        )
-                      </span>
-                    ) : null}
-                    {initiative.kpis.length > 0 ? (
-                      <span className="ml-1">
-                        [
-                        {initiative.kpis
-                          .map(
-                            (kpi) =>
-                              `${kpi.kpiName ?? "KPI"}${
-                                kpi.trajectory
-                                  ? ` ${TRAJECTORY_LABEL[kpi.trajectory]}`
-                                  : ""
-                              }`,
-                          )
-                          .join(", ")}
-                        ]
-                      </span>
-                    ) : null}
-                  </div>
-                ))}
-              </div>
-            ))
-          : null}
+        {!isCollapsed ? (
+          <>
+            {node.children.map((child) => renderPreviewNode(child, depth + 1))}
+            {node.level === "strategic_lever"
+              ? node.specificObjectives.map((objective) =>
+                  renderPreviewObjective(objective, depth + 1),
+                )
+              : null}
+          </>
+        ) : null}
       </div>
     );
   };
@@ -1362,7 +1601,16 @@ export default function NewBscBuilder({
                 view === "preview" ? "bg-lime-500 text-white" : "bg-white"
               }`}
             >
-              BSC Preview
+              Preview
+            </button>
+            <button
+              type="button"
+              onClick={() => setView("map")}
+              className={`px-3 py-1 text-xs ${
+                view === "map" ? "bg-lime-500 text-white" : "bg-white"
+              }`}
+            >
+              Strategy map
             </button>
           </div>
         </div>
@@ -1378,29 +1626,33 @@ export default function NewBscBuilder({
         </div>
       ) : null}
 
-      <div className="space-y-3">
-        {perspectives.map((perspective) => (
-          <div
-            key={perspective.key}
-            className="rounded-md border p-2"
-            data-bsc-el="perspectiveCard"
-          >
+      {view === "map" ? (
+        <BscStrategyMap canBuild={canBuild} />
+      ) : (
+        <div className="space-y-3">
+          {perspectives.map((perspective) => (
             <div
-              className="mb-1 text-sm font-semibold"
-              data-bsc-el="perspectiveTitle"
+              key={perspective.key}
+              className="rounded-md border p-2"
+              data-bsc-el="perspectiveCard"
             >
-              {perspective.label}
+              <div
+                className="mb-1 text-sm font-semibold"
+                data-bsc-el="perspectiveTitle"
+              >
+                {perspective.label}
+              </div>
+              {view === "build"
+                ? perspective.children.map((child) =>
+                    renderNode(perspective.key, child, 1),
+                  )
+                : perspective.children.map((child) =>
+                    renderPreviewNode(child, 1),
+                  )}
             </div>
-            {view === "build"
-              ? perspective.children.map((child) =>
-                  renderNode(perspective.key, child, 1),
-                )
-              : perspective.children.map((child) =>
-                  renderPreviewNode(child, 1),
-                )}
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       <AlertDialog
         open={pendingDeselect != null}

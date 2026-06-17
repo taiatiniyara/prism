@@ -29,6 +29,12 @@ export type TemplateNode = {
   level: BscTemplateLevel;
   label: string;
   isMandatory: boolean;
+  // Visible on the Strategy Map (a.k.a. is_visible_stratmap). Master default set
+  // by DEV/BMO; utilities inherit it.
+  isMapNode: boolean;
+  // Master cause-effect links: template node ids this node "drives" (FROM ->
+  // TO). Authored by BMO; cascades to every utility's map as locked edges.
+  linkTargets: string[];
   ord: number;
   children: TemplateNode[];
 };
@@ -41,6 +47,13 @@ export type TemplateTreeResponse = {
 export type KpiOption = {
   kpiDefinitionId: number;
   name: string;
+  unit: string | null;
+};
+
+// Tracking-frequency option, sourced from the "Report Type" managed list.
+export type ReportTypeOption = {
+  id: number;
+  name: string;
 };
 
 // ---------------------------------------------------------------------------
@@ -51,6 +64,7 @@ export type ScorecardKpiLink = {
   id: string;
   kpiDefinitionId: number | null;
   kpiName: string | null;
+  unit: string | null;
   pendingCustomKpiRequestId: string | null;
   trajectory: KpiTrajectory | null;
   ord: number;
@@ -145,9 +159,33 @@ export type KpiTargetRow = {
   targetValue: string;
 };
 
+export type TargetPlanPeriod = {
+  label: string;
+  year: number;
+  month: number | null;
+  value: string;
+};
+
+export type TargetPlanInput = {
+  frequency: string;
+  startDate: string;
+  periods: TargetPlanPeriod[];
+};
+
 export type SaveKpiTargetsPayload = {
   kpiDefinitionId: number;
   targets: KpiTargetRow[];
+  // Full generated plan (incl. blank periods) so status can be computed.
+  plan: TargetPlanInput | null;
+};
+
+// Per-KPI target-completion summary used by Preview status pills.
+export type TargetPlanSummary = {
+  kpiDefinitionId: number;
+  total: number;
+  filled: number;
+  // Ordered period values (numeric or null when blank/non-numeric).
+  values: (number | null)[];
 };
 
 // ---------------------------------------------------------------------------
@@ -165,6 +203,12 @@ export type CreateTemplateNodePayload = {
 export type UpdateTemplateNodePayload = {
   label?: string;
   isMandatory?: boolean;
+  isMapNode?: boolean;
   ord?: number;
   isActive?: boolean;
+};
+
+// Replace the full set of master links FROM one template node (BMO only).
+export type SetTemplateNodeLinksPayload = {
+  targetIds: string[];
 };
