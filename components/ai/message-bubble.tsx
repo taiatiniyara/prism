@@ -99,7 +99,7 @@ function MessageBubbleInner({ message, isStreaming, reasoningContent, onFeedback
   const [feedbackGiven, setFeedbackGiven] = useState<"positive" | "negative" | null>(null);
   const [showCorrection, setShowCorrection] = useState(false);
   const [correctionText, setCorrectionText] = useState("");
-  const [thinkingOpen, setThinkingOpen] = useState(false);
+  const [thinkingOpen, setThinkingOpen] = useState(isStreaming ?? false);
 
   const visualizations = useMemo(
     () => extractVisualizations(message.content),
