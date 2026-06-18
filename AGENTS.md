@@ -33,7 +33,8 @@ npm run dev                    # webpack dev server on http://localhost:3554
 - **`proxy.ts`** — middleware protecting `/dashboard/*`, `/data-entry/*`, `/settings/*`, `/profile/*`, `/docs/*`
 - **Path alias**: `@/*` → project root (in tsconfig and vitest config)
 - **DB connection** (`db/connection.ts`) uses a global `__prismPool` to survive hot-reloads; PG pool timeouts all set to 30s
-- **AI/chatbot**: Anthropic Claude (Sonnet 4.6 primary, Haiku 4.5 fallback), 67 tools (38 PRISM-native + 29 Power BI domain), AI SDK v6.0.168
+- **AI/chatbot**: Anthropic Claude (Sonnet 4.6 primary, Haiku 4.5 fallback), adaptive thinking, 67 tools (38 PRISM-native + 29 Power BI domain), AI SDK v6.0.168. Prompt version: `2026-06-18`.
+- **Energy Expert persona**: Expert reasoning chain (Diagnose → Connect → Position → Recommend → Caveat), opinion-safety protocol (grounded in retrieved data, fact-vs-interpretation labeling, confidence calibration), 7 audience registers (CEO/Board, Manager/Ops, Staff/Analyst, Government/Regulator, Consultant, Donor/DFI, Education/Researcher) mapped from 10 platform roles.
 - **AI streaming**: Character-by-character `requestAnimationFrame` reveal, collapsible thinking/reasoning dropdown with tool process tracking, animated thinking indicator
 - **Rate limiting**: In-memory rate limiter (20 requests/min, 100 requests/15min) enforcement on AI chat route; usage tracking persisted to DB for analytics
 - **Scorecard**: Removed from AI — scorecard integration has been fully extracted from the AI feature. AI uses Power BI + PRISM-native benchmarking/KPI diagnostics instead.

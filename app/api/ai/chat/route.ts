@@ -18,6 +18,28 @@ const ADMIN_ROLES = new Set(["BMO", "DEV"]);
 const isAdminRole = (role: string | null | undefined): boolean =>
   role != null && ADMIN_ROLES.has(role.toUpperCase());
 
+const getAudienceRegister = (role: string | null | undefined): string => {
+  const upper = (role ?? "").toUpperCase();
+  switch (upper) {
+    case "CEO":
+    case "EXE":
+      return "CEO / Executive / Board";
+    case "BMO":
+    case "MGR":
+      return "Manager / Operations";
+    case "DEV":
+    case "BLO":
+    case "DAOF":
+    case "DAOH":
+    case "DAOO":
+      return "Staff / Analyst";
+    case "EXT":
+      return "Consultant";
+    default:
+      return "Manager / Operations";
+  }
+};
+
 const deriveSessionTitle = (message: string): string => {
   const normalized = message.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
   const capped = normalized.length > 40 ? normalized.slice(0, 37) + "..." : normalized;
@@ -267,16 +289,12 @@ export async function POST(request: Request) {
     }
 
     const roleContext = user.role
-      ? `\n\nCurrent user role: ${user.role}. ${
+      ? `\n\nCurrent audience register: ${getAudienceRegister(user.role)}.${
           isAdminRole(user.role)
-            ? "This user is a platform administrator. They can access all utilities, approve custom KPIs, and manage configuration. Be thorough and technical."
-            : user.role === "BLO"
-              ? "This user is a blended learning officer. They need actionable insights for their utility with clear next steps and educational context."
-              : user.role === "CEO"
-                ? "This user is a CEO/executive. Prioritise strategic insights, trends, and high-level summaries. Avoid operational minutiae."
-                : user.role === "EXT"
-                  ? "This user is an external stakeholder. They have limited data access. Focus on what's available and provide context about PRISM's structure."
-                  : "This user manages data entry and review. Focus on actionable tasks, data quality, and what needs attention."
+            ? " This user is a platform administrator — they can access all utilities, approve custom KPIs, and manage configuration."
+            : user.role === "EXT"
+              ? " This user is an external stakeholder with limited data access."
+              : ""
         }`
       : "";
 
