@@ -18,8 +18,24 @@ const ADMIN_ROLES = new Set(["BMO", "DEV"]);
 const isAdminRole = (role: string | null | undefined): boolean =>
   role != null && ADMIN_ROLES.has(role.toUpperCase());
 
-const getAudienceRegister = (role: string | null | undefined): string => {
+const getAudienceRegister = (role: string | null | undefined, override?: string | null): string => {
   const upper = (role ?? "").toUpperCase();
+
+  // External stakeholders (EXT) can self-identify via stakeholder_type override
+  if (upper === "EXT" && override) {
+    const map: Record<string, string> = {
+      government: "Government / Regulator",
+      regulator: "Government / Regulator",
+      consultant: "Consultant",
+      donor: "Donor / DFI",
+      dfi: "Donor / DFI",
+      researcher: "Education / Researcher",
+      education: "Education / Researcher",
+    };
+    const mapped = map[override.toLowerCase()];
+    if (mapped) return mapped;
+  }
+
   switch (upper) {
     case "CEO":
     case "EXE":
@@ -153,7 +169,7 @@ export async function POST(request: Request) {
     );
   }
 
-  let body: { messages: AiChatMessage[]; sessionId?: number };
+  let body: { messages: AiChatMessage[]; sessionId?: number; stakeholder_type?: string };
   try {
     body = await request.json();
   } catch {
@@ -289,7 +305,7 @@ export async function POST(request: Request) {
     }
 
     const roleContext = user.role
-      ? `\n\nCurrent audience register: ${getAudienceRegister(user.role)}.${
+      ? `\n\nCurrent audience register: ${getAudienceRegister(user.role, body.stakeholder_type)}.${
           isAdminRole(user.role)
             ? " This user is a platform administrator — they can access all utilities, approve custom KPIs, and manage configuration."
             : user.role === "EXT"
