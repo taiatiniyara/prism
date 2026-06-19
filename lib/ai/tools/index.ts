@@ -71,6 +71,8 @@ import {
   simulateTariffChange,
   autoFillDonorApplication,
   projectImpact,
+  getWorldBankCountryContext,
+  resolveUserIsoCode,
   type PowerBiData,
   type DiagnosticData,
   type DiscoveryData,
@@ -503,6 +505,23 @@ export const createAiTools = (user: CurrentUser, _abortSignal?: AbortSignal) => 
       inputSchema: z.object({}),
       execute: async () => {
         return withTimeout(getIndustryBenchmarks(), "get_industry_benchmarks");
+      },
+    }),
+
+    get_worldbank_context: tool({
+      description:
+        "Get live World Bank country context for a Pacific island nation. Returns income classification (LIC/LMIC/UMIC/HIC), lending category (IDA/IBRD/Blend), key development indicators (GDP per capita, population, electricity access %, renewable energy %, CO2 emissions), and active World Bank-funded projects. Use this to anchor recommendations in the country's economic reality — donor eligibility, concessional financing access, and development stage all depend on these classifications. If no country_code is provided, defaults to the user's own country.",
+      inputSchema: z.object({
+        country_code: z.string().optional().describe("ISO alpha-2 country code (e.g. FJ, WS, PG, SB, VU, KI, TO, CK, NR, TV, FM, MH, PW). Omit to use the user's own country."),
+      }),
+      execute: async ({ country_code }) => {
+        const code = country_code ?? (await resolveUserIsoCode(user));
+        if (!code) {
+          return {
+            error: "Could not determine country. Provide a country_code (ISO alpha-2, e.g. 'FJ' for Fiji) or ensure your account is linked to an organisation with a country.",
+          };
+        }
+        return withTimeout(getWorldBankCountryContext(code), "get_worldbank_context");
       },
     }),
 

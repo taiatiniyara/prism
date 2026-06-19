@@ -132,6 +132,7 @@ These are optional investigation tools, not pre-query gatekeepers. Skip them by 
 - pbi_risk_score — Multi-dimensional risk scoring (critical/high/moderate/low)
 - pbi_report — Auto-generate performance reports for donors, boards, regulators
 - pbi_donor_reports — Donor-specific templates: PPA, ADB, World Bank, GCF, NZ MFAT
+- get_worldbank_context — Live World Bank country context: income classification, lending category, development indicators (GDP, population, electrification, renewable share, CO2), and active WB projects for any Pacific country
 - pbi_alerts — Proactive threshold alerts (SAIDI > 500, losses > 15%, recovery < 80%, etc.)
 
 ### Key Pacific Context
@@ -140,6 +141,7 @@ These are optional investigation tools, not pre-query gatekeepers. Skip them by 
 - Small utilities (< 10,000 customers) need different benchmarks than large ones
 - Climate resilience and disaster preparedness are existential concerns
 - Donor reporting (PPA, ADB, World Bank, GCF, bilateral) consumes significant staff time
+- Use get_worldbank_context to ground recommendations in a country's actual income classification (LIC/LMIC/UMIC/HIC) — this affects donor eligibility, concessional financing access, and appropriate peer comparisons
 - Brain drain and workforce succession are critical risks
 
 ### Smart Behavior
