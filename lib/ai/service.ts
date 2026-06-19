@@ -106,7 +106,7 @@ const getModelConfig = (fallback: boolean) => {
   return {
     ...baseConfig,
     providerOptions: thinking
-      ? { anthropic: { thinking: { type: "adaptive" as const } } }
+      ? { anthropic: { thinking: { type: "adaptive" as const, display: "summarized" as const }, effort: "medium" as const } }
       : undefined,
   };
 };
