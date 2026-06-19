@@ -48,6 +48,6 @@ describe("getSystemPrompt", () => {
 describe("getPromptVersion", () => {
   it("returns a date-based version string", () => {
     const version = getPromptVersion();
-    expect(version).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    expect(version).toMatch(/^\d{4}-\d{2}-\d{2}(-v\d+)?$/);
   });
 });
