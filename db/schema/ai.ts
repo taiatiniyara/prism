@@ -205,6 +205,43 @@ export const aiBenchmark = pgTable(
   ],
 );
 
+export const aiCostBudget = pgTable(
+  "ai_cost_budget",
+  {
+    id: serial("id").primaryKey(),
+    user_id: text("user_id")
+      .notNull()
+      .unique()
+      .references(() => user.id, { onDelete: "cascade" }),
+    daily_limit_cents: integer("daily_limit_cents").notNull().default(500),
+    notifications_enabled: boolean("notifications_enabled").notNull().default(true),
+    created_at: timestamp("created_at").defaultNow().notNull(),
+    updated_at: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()).notNull(),
+  },
+  (table) => [
+    index("ai_cost_budget_user_id_idx").on(table.user_id),
+  ],
+);
+
+export const aiRateLimitWindow = pgTable(
+  "ai_rate_limit_window",
+  {
+    id: serial("id").primaryKey(),
+    user_id: text("user_id").notNull(),
+    window_type: text("window_type").notNull().$type<"minute" | "15min">(),
+    window_start: timestamp("window_start").notNull(),
+    request_count: integer("request_count").notNull().default(0),
+    updated_at: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()).notNull(),
+  },
+  (table) => [
+    index("ai_rate_limit_window_user_type_start_idx").on(
+      table.user_id,
+      table.window_type,
+      table.window_start,
+    ),
+  ],
+);
+
 export const aiChatSessionRelations = relations(aiChatSession, ({ many }) => ({
   turns: many(aiChatTurn),
 }));

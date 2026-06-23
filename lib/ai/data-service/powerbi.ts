@@ -2,6 +2,7 @@ import { executeDaxOnDataset, listDatasets, getDatasetSchema, getReportPages, te
 import { createToolMetadata } from "./common";
 import { withCache } from "../cache";
 import type { AiToolResult } from "../types";
+import { sanitizeDax } from "./dax-sanitizer";
 import { PBI_SCHEMA, resolveTable, searchSchema, getSchemaSummary, type PbiTable } from "./pbi-schema-registry";
 import { PBI_QUERIES, getQueryCatalog, type PbiQueryTemplate } from "./pbi-queries";
 import {
@@ -120,6 +121,15 @@ export const queryPowerBi = async (
         data: { rows: [], columns: [], row_count: 0, query_summary: "" },
         metadata: createToolMetadata({ source: "powerbi" }),
         error: "Use discover_datasets to find available datasets, then write a custom DAX query like EVALUATE table_name or EVALUATE SUMMARIZECOLUMNS(...). Use discover_schema with table_names to explore table structure first.",
+      };
+    }
+
+    const daxValidation = sanitizeDax(options.custom_dax);
+    if (!daxValidation.valid) {
+      return {
+        data: { rows: [], columns: [], row_count: 0, query_summary: "" },
+        metadata: createToolMetadata({ source: "powerbi" }),
+        error: daxValidation.reason ?? "DAX query rejected by validator.",
       };
     }
 
@@ -283,6 +293,15 @@ export const runPbiQuery = async (
 
   const params = options.params || {};
   const dax = template.dax(params);
+
+  const daxValidation = sanitizeDax(dax);
+  if (!daxValidation.valid) {
+    return {
+      data: { rows: [], columns: [], row_count: 0, query_name: options.query, dax_executed: dax },
+      metadata: createToolMetadata({ source: "powerbi_queries" }),
+      error: `DAX query rejected by validator: ${daxValidation.reason}`,
+    };
+  }
 
   try {
     const result: PowerBiQueryResult = await withCache(

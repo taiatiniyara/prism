@@ -21,6 +21,7 @@ interface MessageBubbleProps {
   message: ChatMessage;
   isStreaming?: boolean;
   reasoningContent?: string;
+  toolProgress?: Array<{ name: string; status: "running" | "done" | "error" }>;
   onFeedback?: (sentiment: "positive" | "negative", correction?: string) => void;
   onCopy?: (content: string) => void;
   onRegenerate?: () => void;
@@ -94,7 +95,53 @@ const markdownComponents: Components = {
   },
 };
 
-function MessageBubbleInner({ message, isStreaming, reasoningContent, onFeedback, onCopy, onRegenerate, copied }: MessageBubbleProps) {
+interface ReasoningStep {
+  label: string;
+  icon: string;
+  content: string;
+}
+
+const REASONING_STEP_PATTERNS: { pattern: RegExp; label: string; icon: string }[] = [
+  { pattern: /\b\d+\.\s*\*?\*?Diagnose\b/i, label: "Diagnose", icon: "🔍" },
+  { pattern: /\b\d+\.\s*\*?\*?Connect\b/i, label: "Connect", icon: "🔗" },
+  { pattern: /\b\d+\.\s*\*?\*?Position\b/i, label: "Position", icon: "📊" },
+  { pattern: /\b\d+\.\s*\*?\*?Recommend\b/i, label: "Recommend", icon: "💡" },
+  { pattern: /\b\d+\.\s*\*?\*?Caveat\b/i, label: "Caveat", icon: "⚠️" },
+];
+
+function parseReasoningSteps(text: string): ReasoningStep[] {
+  if (!text) return [];
+
+  const indices: { index: number; stepIndex: number }[] = [];
+  for (let i = 0; i < REASONING_STEP_PATTERNS.length; i++) {
+    const match = text.match(REASONING_STEP_PATTERNS[i].pattern);
+    if (match && match.index !== undefined) {
+      indices.push({ index: match.index, stepIndex: i });
+    }
+  }
+
+  indices.sort((a, b) => a.index - b.index);
+
+  if (indices.length < 2) return [];
+
+  const steps: ReasoningStep[] = [];
+  for (let i = 0; i < indices.length; i++) {
+    const { index, stepIndex } = indices[i];
+    const nextIndex = i + 1 < indices.length ? indices[i + 1].index : text.length;
+    const content = text.slice(index, nextIndex).replace(REASONING_STEP_PATTERNS[stepIndex].pattern, "").trim();
+    if (content) {
+      steps.push({
+        label: REASONING_STEP_PATTERNS[stepIndex].label,
+        icon: REASONING_STEP_PATTERNS[stepIndex].icon,
+        content,
+      });
+    }
+  }
+
+  return steps;
+}
+
+function MessageBubbleInner({ message, isStreaming, reasoningContent, toolProgress, onFeedback, onCopy, onRegenerate, copied }: MessageBubbleProps) {
   const isUser = message.role === "user";
   const [feedbackGiven, setFeedbackGiven] = useState<"positive" | "negative" | null>(null);
   const [showCorrection, setShowCorrection] = useState(false);
@@ -147,7 +194,11 @@ function MessageBubbleInner({ message, isStreaming, reasoningContent, onFeedback
                 : "px-1 py-0.5 text-slate-700 dark:text-slate-300"
           }`}
         >
-          {!isUser && (reasoningContent || message.reasoningContent) && (
+          {!isUser && (reasoningContent || message.reasoningContent) && (() => {
+            const reasoningText = reasoningContent || message.reasoningContent || "";
+            const steps = parseReasoningSteps(reasoningText);
+
+            return (
             <div className="mb-3 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
               <button
                 onClick={() => setThinkingOpen(!thinkingOpen)}
@@ -157,14 +208,53 @@ function MessageBubbleInner({ message, isStreaming, reasoningContent, onFeedback
                 {isStreaming ? "Thinking…" : "Thought for a moment"}
               </button>
               {thinkingOpen && (
-                <div className="border-t border-slate-100 px-3 py-2 text-xs leading-relaxed text-slate-400 dark:border-slate-800 dark:text-slate-500">
-                  <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                    {reasoningContent || message.reasoningContent || ""}
-                  </ReactMarkdown>
+                <div className="border-t border-slate-100 dark:border-slate-800">
+                  {toolProgress && toolProgress.length > 0 && (
+                    <div className="border-b border-slate-100 px-3 py-1.5 dark:border-slate-800">
+                      {toolProgress.map((tool, i) => (
+                        <div key={i} className="flex items-center gap-2 py-0.5 text-xs">
+                          {tool.status === "running" ? (
+                            <span className="inline-block size-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
+                          ) : tool.status === "error" ? (
+                            <span className="inline-block size-1.5 rounded-full bg-red-400 shrink-0" />
+                          ) : (
+                            <span className="inline-block size-1.5 rounded-full bg-emerald-400 shrink-0" />
+                          )}
+                          <span className="text-slate-500 dark:text-slate-400">{tool.name}</span>
+                          {tool.status === "running" && (
+                            <span className="text-slate-400 dark:text-slate-500 animate-pulse">running...</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {steps.length > 0 ? (
+                    steps.map((step, i) => (
+                      <details key={i} className="group border-b border-slate-100 last:border-b-0 dark:border-slate-800">
+                        <summary className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-xs text-slate-500 transition-colors hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800/50 [&::-webkit-details-marker]:hidden">
+                          <ChevronDown className="size-2.5 transition-transform group-open:rotate-0 -rotate-90 shrink-0" />
+                          <span>{step.icon}</span>
+                          <span className="font-medium">{step.label}</span>
+                        </summary>
+                        <div className="px-3 pb-2 pt-0 pl-9 text-xs leading-relaxed text-slate-400 dark:text-slate-500">
+                          <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                            {step.content}
+                          </ReactMarkdown>
+                        </div>
+                      </details>
+                    ))
+                  ) : (
+                    <div className="px-3 py-2 text-xs leading-relaxed text-slate-400 dark:text-slate-500">
+                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                        {reasoningText}
+                      </ReactMarkdown>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-          )}
+            );
+          })()}
           <div className={`chat-prose ${isStreaming ? "streaming-cursor" : ""}`}>
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
@@ -253,25 +343,76 @@ function MessageBubbleInner({ message, isStreaming, reasoningContent, onFeedback
 
 function extractVisualizations(content: string): AiVisualization[] {
   const visualizations: AiVisualization[] = [];
-  const jsonBlockRegex = /```json\s*([\s\S]*?)```/g;
-
   const MAX_VIZ_COUNT = 5;
   const MAX_JSON_SIZE = 50_000;
 
-  let match;
-  while ((match = jsonBlockRegex.exec(content)) !== null) {
-    if (visualizations.length >= MAX_VIZ_COUNT) break;
+  const blocks: string[] = [];
+  let depth = 0;
+  let currentBlock = "";
+  let inBlock = false;
 
-    const jsonStr = match[1];
-    if (jsonStr.length > MAX_JSON_SIZE) continue;
+  for (let i = 0; i < content.length; i++) {
+    if (content.slice(i, i + 3) === "```" && !inBlock) {
+      if (depth === 0) {
+        inBlock = true;
+        currentBlock = "";
+        let j = i + 3;
+        while (j < content.length && content[j] !== "\n" && content[j] !== "\r") {
+          j++;
+        }
+        i = j;
+        continue;
+      }
+      depth++;
+    }
+
+    if (content.slice(i, i + 3) === "```" && inBlock) {
+      if (depth === 0) {
+        blocks.push(currentBlock);
+        inBlock = false;
+        i += 2;
+        continue;
+      }
+      depth--;
+    }
+
+    if (inBlock) {
+      currentBlock += content[i];
+    }
+  }
+
+  for (const block of blocks) {
+    if (visualizations.length >= MAX_VIZ_COUNT) break;
+    if (block.length > MAX_JSON_SIZE) continue;
+
+    const trimmed = block.trim();
+    if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) continue;
 
     try {
-      const parsed = JSON.parse(jsonStr);
+      const parsed = JSON.parse(trimmed);
       if (parsed && typeof parsed.type === "string") {
         visualizations.push(parsed as AiVisualization);
       }
     } catch {
-      // Invalid JSON, skip
+      // Not valid JSON, skip
+    }
+  }
+
+  if (visualizations.length === 0) {
+    const vizTypes = "(bar-chart|line-chart|table|leaderboard|scatter|radar|sankey|heatmap)";
+    const jsonObjectRegex = new RegExp(`\\{[\\s\\S]*?"type"\\s*:\\s*"${vizTypes}"[\\s\\S]*?\\}`, "g");
+    let match;
+    while ((match = jsonObjectRegex.exec(content)) !== null) {
+      if (visualizations.length >= MAX_VIZ_COUNT) break;
+      if (match[0].length > MAX_JSON_SIZE) continue;
+      try {
+        const parsed = JSON.parse(match[0]);
+        if (parsed && typeof parsed.type === "string") {
+          visualizations.push(parsed as AiVisualization);
+        }
+      } catch {
+        // skip
+      }
     }
   }
 

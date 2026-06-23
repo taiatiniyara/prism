@@ -2,13 +2,13 @@ import { db } from "@/db/connection";
 import { aiChatSession, aiChatTurn, aiToolCall } from "@/db/schema/ai";
 import { getPromptVersion } from "@/lib/ai";
 import { validateInput, filterOutput } from "@/lib/ai/guardrails";
-import { recordError, recordToolCall, checkRateLimit, recordLatency } from "@/lib/ai/rate-limit";
+import { recordError, recordToolCall, checkRateLimit, checkCostBudget, recordLatency } from "@/lib/ai/rate-limit";
 import type { AiChatMessage } from "@/lib/ai/types";
 import { getCurrentUser } from "@/lib/user.service";
 import { eq, sql, and } from "drizzle-orm";
 import { getSystemPrompt } from "@/lib/ai/prompt";
 import { checkUserUtility } from "@/lib/ai/data-service/utils";
-import { runAiStream, runAiGenerate } from "@/lib/ai/service";
+import { runAiStream, runAiGenerate, getCircuitState } from "@/lib/ai/service";
 import { isValidOrigin } from "@/lib/ai/origin";
 import { logger } from "@/lib/logger";
 
@@ -159,13 +159,22 @@ export async function POST(request: Request) {
     return Response.json({ message: "Invalid request origin." }, { status: 403 });
   }
 
-  const rateLimitCheck = checkRateLimit(user.id);
+  const rateLimitCheck = await checkRateLimit(user.id);
   if (!rateLimitCheck.allowed) {
     const retryAfter = Math.ceil((rateLimitCheck.retryAfterMs ?? 60000) / 1000);
     logger.warn("[ai-chat] Rate limit hit", { userId: user.id, retryAfter });
     return Response.json(
       { message: `Rate limit reached. Please wait ${retryAfter} seconds before trying again.` },
       { status: 429, headers: { "Retry-After": String(retryAfter) } },
+    );
+  }
+
+  const costBudgetCheck = await checkCostBudget(user.id);
+  if (!costBudgetCheck.allowed) {
+    logger.warn("[ai-chat] Cost budget exceeded", { userId: user.id, spentCents: costBudgetCheck.spentCents, limitCents: costBudgetCheck.limitCents });
+    return Response.json(
+      { message: `Daily AI budget reached ($${(costBudgetCheck.spentCents / 100).toFixed(2)} of $${(costBudgetCheck.limitCents / 100).toFixed(2)}). Your limit resets at midnight UTC.` },
+      { status: 429 },
     );
   }
 
@@ -429,17 +438,32 @@ export async function POST(request: Request) {
 
               if (value && typeof value === "object") {
                 const event = value as Record<string, unknown>;
-                if ((event.type === "tool-call" || event.type === "tool-result") && event.toolName) {
-                  const payload = JSON.stringify({
-                    type: event.type,
+                if (event.type === "tool-call" && event.toolName) {
+                  const startTime = Date.now();
+                  controller.enqueue(encoder.encode(`2:${JSON.stringify({
+                    type: "tool-start",
                     toolName: event.toolName,
-                  });
-                  controller.enqueue(encoder.encode(`2:${payload}\n`));
-                  // Also stream as a reasoning process entry
-                  const label = event.type === "tool-call"
-                    ? `\n🔍 ${event.toolName}...`
-                    : `\n✅ ${event.toolName} done\n`;
-                  controller.enqueue(encoder.encode(`1:${JSON.stringify({ type: "reasoning-delta", text: label })}\n`));
+                    timestamp: startTime,
+                  })}\n`));
+                  controller.enqueue(encoder.encode(`1:${JSON.stringify({
+                    type: "reasoning-delta",
+                    text: `\n🔍 ${event.toolName}...`,
+                  })}\n`));
+                } else if (event.type === "tool-result" && event.toolName) {
+                  const endTime = Date.now();
+                  const resultSummary = typeof event.result === "string"
+                    ? event.result.slice(0, 200)
+                    : JSON.stringify(event.result).slice(0, 200);
+                  controller.enqueue(encoder.encode(`2:${JSON.stringify({
+                    type: "tool-end",
+                    toolName: event.toolName,
+                    timestamp: endTime,
+                    resultSummary,
+                  })}\n`));
+                  controller.enqueue(encoder.encode(`1:${JSON.stringify({
+                    type: "reasoning-delta",
+                    text: `\n✅ ${event.toolName} done\n`,
+                  })}\n`));
                 } else if (event.type === "reasoning-start") {
                   controller.enqueue(encoder.encode(`1:${JSON.stringify({ type: "reasoning-start", id: event.id })}\n`));
                 } else if (event.type === "reasoning-delta" && typeof event.text === "string") {
@@ -463,20 +487,24 @@ export async function POST(request: Request) {
       },
     });
 
-    return new Response(combined, {
-      headers: {
-        "Content-Type": "text/event-stream; charset=utf-8",
-        "Cache-Control": "no-cache, no-transform",
-        Connection: "keep-alive",
-        "X-Accel-Buffering": "no",
-        "X-Session-Id": String(sessionId),
-        "X-Turn-Id": String(turnId),
-        "X-Model": model,
-        "X-Was-Fallback": String(wasFallback),
-        "X-Prompt-Version": promptVersion,
-        "X-Protocol-Version": "2",
-      },
-    });
+    const circuitState = getCircuitState(model);
+    const headers: Record<string, string> = {
+      "Content-Type": "text/event-stream; charset=utf-8",
+      "Cache-Control": "no-cache, no-transform",
+      Connection: "keep-alive",
+      "X-Accel-Buffering": "no",
+      "X-Session-Id": String(sessionId),
+      "X-Turn-Id": String(turnId),
+      "X-Model": model,
+      "X-Was-Fallback": String(wasFallback),
+      "X-Prompt-Version": promptVersion,
+    };
+    if (circuitState.open) {
+      headers["X-Circuit-Breaker"] = `open:${circuitState.remaining}s`;
+    }
+
+    return new Response(combined, { headers });
+
   } catch (error) {
     const errMsg = error instanceof Error ? error.message : String(error);
     logger.error("[ai-chat] AI chat error", { error: errMsg, userId: user.id, sessionId, turnId });

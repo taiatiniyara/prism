@@ -67,3 +67,13 @@ npm run dev                    # webpack dev server on http://localhost:3554
 - `npm run deploy-dev` rebuilds locally, pushes to `main`, then drops/recreates DB on server — **development-only**
 - `npm run git-push` auto-generates PRISM AI prompt, builds, stages all, commits, and pushes — run instead of manual push
 - `.github/copilot-instructions.md` exists with generic guidance — `AGENTS.md` supersedes it for OpenCode
+
+## graphify
+
+This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
+
+Rules:
+- ALWAYS read graphify-out/GRAPH_REPORT.md before reading any source files, running grep/glob searches, or answering codebase questions. The graph is your primary map of the codebase.
+- IF graphify-out/wiki/index.md EXISTS, navigate it instead of reading raw files
+- For cross-module "how does X relate to Y" questions, prefer `graphify query "<question>"`, `graphify path "<A>" "<B>"`, or `graphify explain "<concept>"` over grep — these traverse the graph's EXTRACTED + INFERRED edges instead of scanning files
+- After modifying code, run `graphify update .` to keep the graph current (AST-only, no API cost).

@@ -67,6 +67,78 @@ const getRoleBasedMaxTurns = (role: string | null | undefined): number => {
   return AI_DEFAULTS.max_history_turns;
 };
 
+const isTransientError = (error: unknown): boolean => {
+  const msg = error instanceof Error ? error.message : String(error);
+  if (/429|rate.?limit|too many requests/i.test(msg)) return true;
+  if (/502|503|504|bad gateway|service unavailable|gateway timeout/i.test(msg)) return true;
+  if (/overloaded|server error|internal error/i.test(msg)) return true;
+  if (error instanceof Error && error.name === "TimeoutError") return true;
+  return false;
+};
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
+
+const RETRY_BACKOFF_MS = [1000, 2000, 4000];
+const MAX_RETRIES = 3;
+
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  label: string,
+): Promise<{ result: T; retries: number }> {
+  let lastError: unknown;
+  for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+    try {
+      const result = await fn();
+      return { result, retries: attempt };
+    } catch (error) {
+      lastError = error;
+      if (attempt === MAX_RETRIES || !isTransientError(error)) {
+        throw error;
+      }
+      const delay = RETRY_BACKOFF_MS[attempt] ?? RETRY_BACKOFF_MS[RETRY_BACKOFF_MS.length - 1];
+      logger.warn(`[ai-service] Retry ${attempt + 1}/${MAX_RETRIES} for ${label}`, {
+        delayMs: delay,
+        error: error instanceof Error ? error.message : String(error),
+      });
+      await sleep(delay);
+    }
+  }
+  throw lastError;
+}
+
+const modelCircuits = new Map<string, { failures: number; cooldownUntil: number }>();
+const CIRCUIT_THRESHOLD = 5;
+const CIRCUIT_COOLDOWN_MS = 30_000;
+
+function checkCircuit(modelName: string): void {
+  const circuit = getCircuitState(modelName);
+  if (circuit.open) {
+    throw new Error(`Circuit breaker open for ${modelName}. Try again in ${circuit.remaining}s.`);
+  }
+}
+
+export function getCircuitState(modelName: string): { open: boolean; remaining: number } {
+  const circuit = modelCircuits.get(modelName);
+  if (circuit && Date.now() < circuit.cooldownUntil) {
+    return { open: true, remaining: Math.ceil((circuit.cooldownUntil - Date.now()) / 1000) };
+  }
+  return { open: false, remaining: 0 };
+}
+
+function recordCircuitSuccess(modelName: string): void {
+  modelCircuits.delete(modelName);
+}
+
+function recordCircuitFailure(modelName: string): void {
+  const circuit = modelCircuits.get(modelName) ?? { failures: 0, cooldownUntil: 0 };
+  circuit.failures++;
+  if (circuit.failures >= CIRCUIT_THRESHOLD) {
+    circuit.cooldownUntil = Date.now() + CIRCUIT_COOLDOWN_MS;
+    logger.error("[ai-service] Circuit breaker opened", { model: modelName, cooldownMs: CIRCUIT_COOLDOWN_MS });
+  }
+  modelCircuits.set(modelName, circuit);
+}
+
 const prepareMessages = (
   messages: AiChatMessage[],
   maxHistoryTurns: number,
@@ -154,7 +226,7 @@ const prepareRequest = (options: AiServiceOptions): PreparedRequest => {
 
   const sdkMessages = prepareMessages(messages, effectiveMaxTurns);
 
-  const tools = createAiTools(user, options.abortSignal);
+  const tools = createAiTools(user, options.abortSignal, options.sessionId);
   const systemPrompt = systemPromptOverride ?? getSystemPrompt();
   const promptVersion = getPromptVersion();
   const config = getModelConfig(false);
@@ -303,37 +375,73 @@ export const runAiStream = async (
   const callbacks = createCallbacks(options.user, options.onFinish);
 
   const primaryConfig = req.config;
+  let retries = 0;
 
   try {
-    const result = await streamWithConfig(req, primaryConfig, false, callbacks, options.abortSignal);
-    return {
-      stream: result.textStream,
-      fullStream: result.fullStream,
-      model: primaryConfig.modelName,
-      wasFallback: false,
-      promptVersion: req.promptVersion,
-    };
+    checkCircuit(primaryConfig.modelName);
+
+    let lastError: unknown;
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const result = streamWithConfig(req, primaryConfig, false, callbacks, options.abortSignal);
+        if (attempt > 0) retries = attempt;
+        recordCircuitSuccess(primaryConfig.modelName);
+        return {
+          stream: result.textStream,
+          fullStream: result.fullStream,
+          model: primaryConfig.modelName,
+          wasFallback: false,
+          promptVersion: req.promptVersion,
+        };
+      } catch (error) {
+        lastError = error;
+        if (attempt === MAX_RETRIES || !isTransientError(error)) throw error;
+        const delay = RETRY_BACKOFF_MS[attempt] ?? RETRY_BACKOFF_MS[RETRY_BACKOFF_MS.length - 1];
+        logger.warn(`[ai-service] Retry ${attempt + 1}/${MAX_RETRIES} for stream:${primaryConfig.modelName}`, { delayMs: delay });
+        await sleep(delay);
+      }
+    }
+    throw lastError;
   } catch (primaryError) {
+    recordCircuitFailure(primaryConfig.modelName);
     logger.warn("[ai-service] Primary model failed, trying fallback", {
       primaryModel: primaryConfig.modelName,
+      retries,
       error: primaryError instanceof Error ? primaryError.message : String(primaryError),
     });
 
     try {
       const fallbackConfig = getModelConfig(true);
-      const result = await streamWithConfig(req, fallbackConfig, true, callbacks);
-      return {
-        stream: result.textStream,
-        fullStream: result.fullStream,
-        model: fallbackConfig.modelName,
-        wasFallback: true,
-        promptVersion: req.promptVersion,
-      };
+      checkCircuit(fallbackConfig.modelName);
+
+      let fallbackLastError: unknown;
+      for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+        try {
+          const result = streamWithConfig(req, fallbackConfig, true, callbacks);
+          recordCircuitSuccess(fallbackConfig.modelName);
+          return {
+            stream: result.textStream,
+            fullStream: result.fullStream,
+            model: fallbackConfig.modelName,
+            wasFallback: true,
+            promptVersion: req.promptVersion,
+          };
+        } catch (error) {
+          fallbackLastError = error;
+          if (attempt === MAX_RETRIES || !isTransientError(error)) throw error;
+          const delay = RETRY_BACKOFF_MS[attempt] ?? RETRY_BACKOFF_MS[RETRY_BACKOFF_MS.length - 1];
+          logger.warn(`[ai-service] Retry ${attempt + 1}/${MAX_RETRIES} for stream:${fallbackConfig.modelName}`, { delayMs: delay });
+          await sleep(delay);
+        }
+      }
+      throw fallbackLastError;
     } catch (fallbackError) {
+      recordCircuitFailure(getModelConfig(true).modelName);
       await recordError(options.user.id);
       logger.error("[ai-service] Both primary and fallback models failed", {
         primaryModel: primaryConfig.modelName,
         fallbackModel: getModelConfig(true).modelName,
+        retries,
         primaryError: primaryError instanceof Error ? primaryError.message : String(primaryError),
         fallbackError: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
       });
@@ -348,9 +456,16 @@ export const runAiGenerate = async (
   const req = prepareRequest(options);
 
   const primaryConfig = req.config;
+  let retries = 0;
 
   try {
-    const result = await generateWithConfig(req, primaryConfig, options.abortSignal);
+    checkCircuit(primaryConfig.modelName);
+    const { result, retries: r } = await withRetry(
+      () => generateWithConfig(req, primaryConfig, options.abortSignal),
+      `generate:${primaryConfig.modelName}`,
+    );
+    retries = r;
+    recordCircuitSuccess(primaryConfig.modelName);
 
     const { filtered } = filterOutput(result.text);
 
@@ -374,15 +489,21 @@ export const runAiGenerate = async (
       tokenUsage,
     };
   } catch (primaryError) {
+    recordCircuitFailure(primaryConfig.modelName);
     logger.warn("[ai-service] Primary generate model failed, trying fallback", {
       primaryModel: primaryConfig.modelName,
+      retries,
       error: primaryError instanceof Error ? primaryError.message : String(primaryError),
     });
 
     try {
       const fallbackConfig = getModelConfig(true);
-
-      const result = await generateWithConfig(req, fallbackConfig);
+      checkCircuit(fallbackConfig.modelName);
+      const { result } = await withRetry(
+        () => generateWithConfig(req, fallbackConfig),
+        `generate:${fallbackConfig.modelName}`,
+      );
+      recordCircuitSuccess(fallbackConfig.modelName);
 
       const { filtered } = filterOutput(result.text);
 
@@ -406,8 +527,10 @@ export const runAiGenerate = async (
         tokenUsage,
       };
     } catch (fallbackError) {
+      recordCircuitFailure(getModelConfig(true).modelName);
       await recordError(options.user.id);
       logger.error("[ai-service] Both primary and fallback generate models failed", {
+        retries,
         fallbackError: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
       });
       throw fallbackError;

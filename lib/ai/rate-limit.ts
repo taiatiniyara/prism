@@ -1,16 +1,19 @@
 import { db } from "@/db/connection";
-import { aiUsageMetrics } from "@/db/schema/ai";
-import { sql } from "drizzle-orm";
+import { aiUsageMetrics, aiCostBudget, aiRateLimitWindow } from "@/db/schema/ai";
+import { eq, and, sql } from "drizzle-orm";
 import { logger } from "@/lib/logger";
+
+const DEFAULT_DAILY_COST_LIMIT_CENTS = parseInt(process.env.AI_DEFAULT_DAILY_COST_LIMIT_CENTS || "500", 10) || 500;
 
 const getTodayStart = (): Date => {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 };
 
-const PER_MINUTE_WINDOW_MS = 60_000;
 const PER_MINUTE_MAX_REQUESTS = parseInt(process.env.AI_RATE_LIMIT_PER_MINUTE || "20", 10) || 20;
 const PER_15MIN_MAX_REQUESTS = parseInt(process.env.AI_RATE_LIMIT_PER_15MIN || "100", 10) || 100;
+
+const ADVISORY_LOCK_ID = 4746;
 
 const requestTimestamps = new Map<string, number[]>();
 
@@ -19,7 +22,83 @@ const pruneTimestamps = (timestamps: number[], windowMs: number): number[] => {
   return timestamps.filter((t) => t > cutoff);
 };
 
-export const checkRateLimit = (userId: string): { allowed: boolean; retryAfterMs?: number } => {
+const upsertRateLimitWindow = async (
+  userId: string,
+  windowType: "minute" | "15min",
+): Promise<{ count: number }> => {
+  try {
+    const now = new Date();
+    const windowStart = windowType === "minute"
+      ? new Date(Math.floor(now.getTime() / 60_000) * 60_000)
+      : new Date(Math.floor(now.getTime() / (15 * 60_000)) * (15 * 60_000));
+
+    await db.execute(sql`SELECT pg_try_advisory_lock(${ADVISORY_LOCK_ID})`);
+
+    const [existing] = await db
+      .select()
+      .from(aiRateLimitWindow)
+      .where(
+        and(
+          eq(aiRateLimitWindow.user_id, userId),
+          eq(aiRateLimitWindow.window_type, windowType),
+          eq(aiRateLimitWindow.window_start, windowStart),
+        ),
+      )
+      .limit(1);
+
+    let count: number;
+    if (existing) {
+      count = existing.request_count + 1;
+      await db
+        .update(aiRateLimitWindow)
+        .set({ request_count: count, updated_at: new Date() })
+        .where(eq(aiRateLimitWindow.id, existing.id));
+    } else {
+      count = 1;
+      await db.insert(aiRateLimitWindow).values({
+        user_id: userId,
+        window_type: windowType,
+        window_start: windowStart,
+        request_count: 1,
+      });
+    }
+
+    return { count };
+  } catch (err) {
+    logger.warn("[rate-limit] DB-based rate limit check failed, using in-memory fallback", {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    throw err;
+  } finally {
+    try {
+      await db.execute(sql`SELECT pg_advisory_unlock(${ADVISORY_LOCK_ID})`);
+    } catch {
+      // lock cleanup best-effort
+    }
+  }
+};
+
+const checkDbRateLimit = async (userId: string): Promise<{ allowed: boolean; retryAfterMs?: number }> => {
+  try {
+    const [minResult, fifteenResult] = await Promise.all([
+      upsertRateLimitWindow(userId, "minute"),
+      upsertRateLimitWindow(userId, "15min"),
+    ]);
+
+    if (minResult.count > PER_MINUTE_MAX_REQUESTS) {
+      return { allowed: false, retryAfterMs: 60_000 };
+    }
+    if (fifteenResult.count > PER_15MIN_MAX_REQUESTS) {
+      return { allowed: false, retryAfterMs: 15 * 60_000 };
+    }
+    return { allowed: true };
+  } catch {
+    return checkMemoryRateLimit(userId);
+  }
+};
+
+const checkMemoryRateLimit = (userId: string): { allowed: boolean; retryAfterMs?: number } => {
+  const PER_MINUTE_WINDOW_MS = 60_000;
   const now = Date.now();
   let stamps = requestTimestamps.get(userId) ?? [];
 
@@ -49,6 +128,44 @@ export const checkRateLimit = (userId: string): { allowed: boolean; retryAfterMs
   }
 
   return { allowed: true };
+};
+
+export const checkRateLimit = async (userId: string): Promise<{ allowed: boolean; retryAfterMs?: number }> => {
+  return checkDbRateLimit(userId);
+};
+
+export const checkCostBudget = async (userId: string): Promise<{ allowed: boolean; spentCents: number; limitCents: number }> => {
+  try {
+    const [budget] = await db
+      .select()
+      .from(aiCostBudget)
+      .where(eq(aiCostBudget.user_id, userId))
+      .limit(1);
+
+    const limitCents = budget?.daily_limit_cents ?? DEFAULT_DAILY_COST_LIMIT_CENTS;
+
+    const todayStart = getTodayStart();
+    const [todayMetrics] = await db
+      .select()
+      .from(aiUsageMetrics)
+      .where(
+        and(
+          eq(aiUsageMetrics.user_id, userId),
+          eq(aiUsageMetrics.date, todayStart),
+        ),
+      )
+      .limit(1);
+
+    const spentCents = todayMetrics?.estimated_cost_cents ?? 0;
+    const allowed = spentCents < limitCents;
+
+    return { allowed, spentCents, limitCents };
+  } catch (err) {
+    logger.warn("[rate-limit] Cost budget check failed, allowing request", {
+      error: err instanceof Error ? err.message : String(err),
+    });
+    return { allowed: true, spentCents: 0, limitCents: DEFAULT_DAILY_COST_LIMIT_CENTS };
+  }
 };
 
 const MODEL_PRICING: Record<string, { inputPerM: number; outputPerM: number }> = {

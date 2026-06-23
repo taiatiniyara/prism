@@ -21,34 +21,45 @@ export interface PbiContext {
   lastUsed?: number;
 }
 
-let conversationContext: PbiContext = {};
+const sessionContexts = new Map<number, PbiContext>();
 
-export function setPbiContext(ctx: Partial<PbiContext>): PbiContext {
-  conversationContext = { ...conversationContext, ...ctx, lastUsed: Date.now() };
-  return conversationContext;
+export function setPbiContext(sessionId: number, ctx: Partial<PbiContext>): PbiContext {
+  const current = sessionContexts.get(sessionId) ?? {};
+  const updated = { ...current, ...ctx, lastUsed: Date.now() };
+  sessionContexts.set(sessionId, updated);
+  return updated;
 }
 
-export function getPbiContext(): PbiContext {
+export function getPbiContext(sessionId: number): PbiContext {
+  const context = sessionContexts.get(sessionId);
+  if (!context) return {};
+
   const now = Date.now();
-  if (conversationContext.lastUsed && now - conversationContext.lastUsed > 300_000) {
-    conversationContext = {};
+  if (context.lastUsed && now - context.lastUsed > 300_000) {
+    sessionContexts.delete(sessionId);
+    return {};
   }
-  return { ...conversationContext };
+  return { ...context };
 }
 
-export function clearPbiContext(): void {
-  conversationContext = {};
+export function clearPbiContext(sessionId?: number): void {
+  if (sessionId !== undefined) {
+    sessionContexts.delete(sessionId);
+  } else {
+    sessionContexts.clear();
+  }
 }
 
 /** Merge context defaults into query params, filling in missing required params. */
 export function applyContextDefaults(
   templateName: string,
-  providedParams?: Record<string, string>,
+  providedParams: Record<string, string> | undefined,
+  sessionId: number,
 ): { params: Record<string, string>; filled: string[] } {
   const template = PBI_QUERIES[templateName];
   const params = { ...providedParams };
   const filled: string[] = [];
-  const ctx = getPbiContext();
+  const ctx = getPbiContext(sessionId);
 
   if (template) {
     for (const [key, def] of Object.entries(template.params)) {
@@ -242,11 +253,11 @@ export interface NlQueryResult {
   alternatives?: string[];
 }
 
-export function resolveNlQuery(question: string): NlQueryResult {
+export function resolveNlQuery(question: string, sessionId?: number): NlQueryResult {
   const match = resolveQueryFromNL(question);
 
   if (match && match.score > 0.4) {
-    const ctx = getPbiContext();
+    const ctx = sessionId !== undefined ? getPbiContext(sessionId) : {};
     const suggestedParams: Record<string, string> = {};
     if (ctx.fy) suggestedParams.fy = ctx.fy;
     if (ctx.utility) suggestedParams.utility = ctx.utility;

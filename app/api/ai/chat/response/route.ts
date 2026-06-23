@@ -29,7 +29,7 @@ export async function POST(request: Request) {
   }
 
   const [turn] = await db
-    .select({ id: aiChatTurn.id, session_id: aiChatTurn.session_id })
+    .select({ id: aiChatTurn.id, session_id: aiChatTurn.session_id, assistant_response: aiChatTurn.assistant_response })
     .from(aiChatTurn)
     .innerJoin(aiChatSession, eq(aiChatTurn.session_id, aiChatSession.id))
     .where(
@@ -42,6 +42,10 @@ export async function POST(request: Request) {
 
   if (!turn) {
     return Response.json({ message: "Turn not found." }, { status: 404 });
+  }
+
+  if (turn.assistant_response) {
+    return Response.json({ success: true, saved: 0, already_persisted: true });
   }
 
   const { filtered } = filterOutput(body.content);

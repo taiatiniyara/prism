@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
-import { Loader2, ArrowDown, RefreshCw, Share2 } from "lucide-react";
+import { Loader2, ArrowDown, RefreshCw, Share2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { MessageBubble } from "./message-bubble";
@@ -43,6 +43,8 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [stakeholderType, setStakeholderType] = useState<string>("");
+  const [toolProgress, setToolProgress] = useState<Array<{ name: string; status: "running" | "done" | "error"; startTime?: number }>>([]);
   const abortControllerRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const isStreamingRef = useRef(false);
@@ -215,6 +217,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
     pendingContentRef.current = "";
     reasoningContentRef.current = "";
     isStreamingRef.current = true;
+    setToolProgress([]);
 
     abortControllerRef.current = new AbortController();
 
@@ -228,6 +231,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
             content: m.content,
           })),
           sessionId: activeSessionId,
+          ...(stakeholderType ? { stakeholder_type: stakeholderType } : {}),
         }),
         signal: abortControllerRef.current.signal,
       });
@@ -323,7 +327,21 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
               // ignore malformed reasoning events
             }
           } else if (line.startsWith("2:")) {
-            // Tool events now streamed as reasoning entries — skip
+            try {
+              const toolEvent = JSON.parse(line.slice(2));
+              if (toolEvent.type === "tool-start") {
+                setToolProgress((prev) => [
+                  ...prev,
+                  { name: toolEvent.toolName, status: "running", startTime: toolEvent.timestamp || Date.now() },
+                ]);
+              } else if (toolEvent.type === "tool-end") {
+                setToolProgress((prev) =>
+                  prev.map((t) => (t.name === toolEvent.toolName ? { ...t, status: "done" as const } : t)),
+                );
+              }
+            } catch {
+              // ignore malformed tool events
+            }
           } else if (line.startsWith("3:")) {
             // stream error event - silently acknowledge
           } else if (line.length > 0 && !line.startsWith("0:") && !line.startsWith("2:") && !line.startsWith("3:")) {
@@ -615,6 +633,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
                       message={msg}
                       isStreaming={msg.id === "streaming"}
                       reasoningContent={msg.reasoningContent}
+                      toolProgress={toolProgress}
                       onFeedback={(sentiment: "positive" | "negative", correction?: string) =>
                         handleFeedback(msg.turnId ?? 0, sentiment, correction)
                       }
@@ -673,6 +692,22 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
           )}
         </div>
 
+        <div className="border-border border-t px-4 py-1.5">
+          <div className="flex items-center gap-2">
+            <Users className="text-muted-foreground size-3.5" />
+            <span className="text-muted-foreground text-xs">Speaking as:</span>
+            <select
+              value={stakeholderType}
+              onChange={(e) => setStakeholderType(e.target.value)}
+              className="text-muted-foreground hover:text-foreground focus:text-foreground rounded border-none bg-transparent text-xs outline-none transition-colors"
+            >
+              <option value="">Consultant (default)</option>
+              <option value="government">Government / Regulator</option>
+              <option value="donor">Donor / DFI</option>
+              <option value="researcher">Education / Researcher</option>
+            </select>
+          </div>
+        </div>
         <ChatInput
             onSend={handleSendMessage}
             onStop={handleStop}
