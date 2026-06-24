@@ -1,8 +1,9 @@
+import { headers } from "next/headers";
 import { sql } from "drizzle-orm";
 import { db } from "@/db/connection";
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 
-export async function GET(req: NextRequest) {
+export async function GET() {
   try {
     const migrationKey = process.env.PRISM_TRAINING_MIGRATION_KEY ?? "";
 
@@ -13,12 +14,12 @@ export async function GET(req: NextRequest) {
       );
     }
 
-    const providedKey = req.headers.get("x-migration-key") ?? "";
+    const hdrs = await headers();
+    const providedKey = hdrs.get("x-migration-key") ?? "";
 
     if (providedKey !== migrationKey) {
       return NextResponse.json({ error: "Forbidden" }, { status: 403 });
     }
-
     const result = await db.execute(sql`
       SELECT
         m.id,
@@ -53,7 +54,6 @@ export async function GET(req: NextRequest) {
 
     return NextResponse.json(result.rows);
   } catch (error) {
-    console.error("[prism1ToPrism2InputMapping] failed", error);
     return NextResponse.json(
       { error: "Failed to fetch input mapping data." },
       { status: 500 },

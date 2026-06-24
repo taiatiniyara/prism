@@ -132,7 +132,6 @@ async function checkWorldBank(): Promise<WbCheck> {
   } catch (error) {
     const ms = Date.now() - start;
     const message = error instanceof Error ? error.message : "World Bank API unreachable";
-    logger.warn("[health] World Bank check failed", { error: message });
     return { ok: false, ms, message };
   }
 }

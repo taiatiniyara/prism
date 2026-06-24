@@ -1,5 +1,5 @@
 import {
-  assertMigrationKey,
+  assertMigrationKeyAsync,
   fetchTable,
   parseLimit,
   parseOffset,
@@ -13,7 +13,7 @@ type Context = {
 
 export async function GET(request: Request, context: Context) {
   try {
-    assertMigrationKey(request);
+    await assertMigrationKeyAsync();
 
     const { table } = await context.params;
     if (!SUPPORTED_TABLES.includes(table as SupportedTable)) {

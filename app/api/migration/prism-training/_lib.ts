@@ -1,3 +1,4 @@
+import { headers } from "next/headers";
 import { db } from "@/db/connection";
 import { roles, user } from "@/db/schema/auth-schema";
 import { countries, subRegions } from "@/db/schema/country";
@@ -60,6 +61,18 @@ export const assertMigrationKey = (request: Request) => {
     throw new Error("MIGRATION_API_KEY is not configured on this server.");
   }
   const provided = request.headers.get("x-migration-key") ?? "";
+  if (provided !== required) {
+    throw new Error("Unauthorized");
+  }
+};
+
+export const assertMigrationKeyAsync = async () => {
+  const required = process.env.PRISM_TRAINING_MIGRATION_KEY ?? process.env.MIGRATION_API_KEY;
+  if (!required) {
+    throw new Error("MIGRATION_API_KEY is not configured on this server.");
+  }
+  const hdrs = await headers();
+  const provided = hdrs.get("x-migration-key") ?? "";
   if (provided !== required) {
     throw new Error("Unauthorized");
   }

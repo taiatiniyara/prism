@@ -1,5 +1,5 @@
 import {
-  assertMigrationKey,
+  assertMigrationKeyAsync,
   fetchTable,
   normalizeTables,
   parseLimit,
@@ -9,7 +9,7 @@ import {
 
 export async function GET(request: Request) {
   try {
-    assertMigrationKey(request);
+    await assertMigrationKeyAsync();
 
     const { searchParams } = new URL(request.url);
     const includeRows = searchParams.get("includeRows") !== "false";

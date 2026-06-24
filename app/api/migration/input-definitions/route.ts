@@ -1,11 +1,22 @@
+import { headers } from "next/headers";
 import { sql } from "drizzle-orm";
 import { db } from "@/db/connection";
 import { NextResponse } from "next/server";
-import { assertMigrationKey } from "../prism-training/_lib";
 
-export async function GET(request: Request) {
+export async function GET() {
   try {
-    assertMigrationKey(request);
+    const required = process.env.PRISM_TRAINING_MIGRATION_KEY ?? process.env.MIGRATION_API_KEY;
+    if (!required) {
+      return NextResponse.json(
+        { error: "MIGRATION_API_KEY is not configured on this server." },
+        { status: 500 },
+      );
+    }
+    const hdrs = await headers();
+    const provided = hdrs.get("x-migration-key") ?? "";
+    if (provided !== required) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
 
     const result = await db.execute(sql`
       SELECT i.*, cat.name AS category_name, sub.name AS subcategory_name
@@ -25,7 +36,6 @@ export async function GET(request: Request) {
 
     return NextResponse.json(data);
   } catch (error) {
-    console.error("[input-definitions] failed", error);
     return NextResponse.json(
       { error: "Failed to export input definitions." },
       { status: 500 },
