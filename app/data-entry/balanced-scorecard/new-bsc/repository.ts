@@ -66,20 +66,23 @@ export const saveThemeStyles = async (
 // ---------------------------------------------------------------------------
 
 export const listTemplateTree = async (): Promise<TemplateNode[]> => {
-  const [rows, links] = await Promise.all([
-    db
-      .select()
-      .from(bscTemplateNodes)
-      .where(eq(bscTemplateNodes.is_active, true))
-      .orderBy(asc(bscTemplateNodes.ord)),
-    db
+  const rows = await db
+    .select()
+    .from(bscTemplateNodes)
+    .where(eq(bscTemplateNodes.is_active, true))
+    .orderBy(asc(bscTemplateNodes.ord));
+
+  let links: { source: string; target: string }[] = [];
+  try {
+    links = await db
       .select({
         source: bscTemplateLinks.source_node_id,
         target: bscTemplateLinks.target_node_id,
       })
       .from(bscTemplateLinks)
-      .orderBy(asc(bscTemplateLinks.ord)),
-  ]);
+      .orderBy(asc(bscTemplateLinks.ord));
+  } catch {
+  }
 
   const targetsBySource = new Map<string, string[]>();
   for (const l of links) {
