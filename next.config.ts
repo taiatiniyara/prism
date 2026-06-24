@@ -6,7 +6,7 @@ const projectRoot = path.dirname(fileURLToPath(import.meta.url));
 
 const nextConfig: NextConfig = {
   poweredByHeader: false,
-  cacheComponents: true,
+  cacheComponents: false,
   serverExternalPackages: [
     "pg",
     "pg-connection-string",

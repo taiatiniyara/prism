@@ -1,6 +1,4 @@
-"use cache";
-
-export default async function Footer() {
+export default function Footer() {
   const year = new Date().getFullYear();
   return (
     <div className="p-3 text-xs font-medium border-t text-slate-600">
