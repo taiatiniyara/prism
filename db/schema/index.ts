@@ -1,5 +1,6 @@
 export * from "./ai";
 export * from "./auth-schema";
+export * from "./benchmarking-request";
 export * from "./bsc-builder";
 export * from "./country";
 export * from "./custom-kpi-requests";

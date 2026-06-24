@@ -18,6 +18,7 @@ export const errorLogs = pgTable("error_logs", {
   userEmail: text("user_email"),
   userRole: text("user_role"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
+  resolvedAt: timestamp("resolved_at"),
 });
 
 export type ErrorLog = typeof errorLogs.$inferSelect;

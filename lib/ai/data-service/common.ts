@@ -95,6 +95,25 @@ export const resolvePeriodId = async (
   return period?.id ?? null;
 };
 
+export const resolveRecentPeriodIds = async (
+  user: CurrentUser,
+  limit: number = 5,
+): Promise<number[]> => {
+  const predicates = [];
+  if (!hasGlobalUtilityAccess(user) && user.org_id != null) {
+    predicates.push(eq(reportPeriods.utility_id, user.org_id));
+  }
+
+  const periods = await db
+    .select({ id: reportPeriods.id })
+    .from(reportPeriods)
+    .where(predicates.length > 0 ? and(...predicates) : sql`TRUE`)
+    .orderBy(desc(reportPeriods.report_date))
+    .limit(limit);
+
+  return periods.map((p) => p.id);
+};
+
 export const resolvePeriod = async (
   user: CurrentUser,
   options: ResolvePeriodOptions = {},

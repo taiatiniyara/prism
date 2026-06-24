@@ -6,360 +6,1017 @@
 <title>PRISM AI — Comprehensive Report</title>
 <style>
   :root {
-    --bg: #0f172a; --card: #1e293b; --border: #334155;
-    --text: #e2e8f0; --muted: #94a3b8; --accent: #3b82f6;
-    --green: #22c55e; --amber: #f59e0b; --red: #ef4444;
-    --surface: #1e293b;
+    --bg: #0b1120; --bg2: #111827; --bg3: #1e293b; --bg4: #334155;
+    --fg: #e2e8f0; --fg2: #94a3b8; --fg3: #64748b;
+    --accent: #38bdf8; --accent2: #0ea5e9; --green: #34d399; --amber: #fbbf24; --red: #f87171;
+    --purple: #a78bfa; --pink: #f472b6; --orange: #fb923c;
+    --border: #1e293b;
   }
-  * { margin: 0; padding: 0; box-sizing: border-box; }
-  body { background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; padding: 2rem; }
-  .container { max-width: 1100px; margin: 0 auto; }
-  h1 { font-size: 2rem; font-weight: 700; margin-bottom: 0.5rem; }
-  h2 { font-size: 1.4rem; font-weight: 600; margin: 2.5rem 0 1rem; padding-bottom: 0.5rem; border-bottom: 1px solid var(--border); }
-  h3 { font-size: 1.1rem; font-weight: 600; margin: 1.5rem 0 0.75rem; }
-  .subtitle { color: var(--muted); font-size: 0.95rem; margin-bottom: 2rem; }
-  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1rem; margin: 1.5rem 0; }
-  .stat { background: var(--card); border: 1px solid var(--border); border-radius: 0.75rem; padding: 1.25rem; text-align: center; }
-  .stat .number { font-size: 2rem; font-weight: 700; color: var(--accent); }
-  .stat .label { font-size: 0.8rem; color: var(--muted); margin-top: 0.25rem; }
-  table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.88rem; }
-  th { background: var(--card); padding: 0.6rem 0.75rem; text-align: left; font-weight: 600; border-bottom: 2px solid var(--border); }
-  td { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--border); }
-  tr:hover td { background: var(--surface); }
-  .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 0.25rem; font-size: 0.75rem; font-weight: 600; }
-  .badge-green { background: rgba(34,197,94,0.15); color: var(--green); }
-  .badge-amber { background: rgba(245,158,11,0.15); color: var(--amber); }
-  .badge-red { background: rgba(239,68,68,0.15); color: var(--red); }
-  .badge-blue { background: rgba(59,130,246,0.15); color: var(--accent); }
-  .grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 1.5rem; margin: 1rem 0; }
-  .card { background: var(--card); border: 1px solid var(--border); border-radius: 0.75rem; padding: 1.25rem; }
-  .card h3 { margin-top: 0; }
-  .tag { display: inline-block; background: rgba(59,130,246,0.1); color: var(--accent); border-radius: 0.25rem; padding: 0.1rem 0.4rem; font-size: 0.75rem; margin: 0.15rem; }
-  .section-desc { color: var(--muted); font-size: 0.88rem; margin-bottom: 1rem; }
-  code { background: var(--border); padding: 0.1rem 0.35rem; border-radius: 0.2rem; font-size: 0.82rem; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--fg); font-family: system-ui, -apple-system, sans-serif; line-height: 1.6; }
+  .container { max-width: 1200px; margin: 0 auto; padding: 2rem 1.5rem; }
+
+  header { text-align: center; padding: 3rem 0 2rem; border-bottom: 1px solid var(--border); margin-bottom: 2rem; }
+  header h1 { font-size: 2.5rem; font-weight: 800; color: var(--accent); margin-bottom: 0.5rem; }
+  header p { color: var(--fg2); font-size: 1.1rem; }
+  .meta { display: flex; gap: 2rem; justify-content: center; margin-top: 1rem; flex-wrap: wrap; }
+  .meta span { background: var(--bg3); padding: 0.25rem 0.75rem; border-radius: 999px; font-size: 0.85rem; color: var(--fg2); }
+
+  nav.toc { background: var(--bg2); border: 1px solid var(--border); border-radius: 12px; padding: 1.5rem 2rem; margin-bottom: 3rem; }
+  nav.toc h2 { font-size: 1.25rem; color: var(--accent); margin-bottom: 1rem; }
+  nav.toc ol { columns: 2; column-gap: 2rem; list-style-position: inside; }
+  nav.toc li { margin-bottom: 0.4rem; }
+  nav.toc a { color: var(--fg2); text-decoration: none; }
+  nav.toc a:hover { color: var(--accent); }
+
+  section { margin-bottom: 3rem; }
+  h2 { font-size: 1.75rem; color: var(--accent); border-bottom: 2px solid var(--accent2); padding-bottom: 0.5rem; margin-bottom: 1.5rem; }
+  h3 { font-size: 1.25rem; color: var(--fg); margin: 1.5rem 0 0.75rem; }
+  h4 { font-size: 1.05rem; color: var(--purple); margin: 1rem 0 0.5rem; }
+
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(340px, 1fr)); gap: 1.25rem; }
+  .card { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem; }
+  .card h3 { margin-top: 0; font-size: 1rem; }
+  .card p { color: var(--fg2); font-size: 0.9rem; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+  th { background: var(--bg3); color: var(--accent); text-align: left; padding: 0.6rem 0.8rem; font-weight: 600; }
+  td { padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--border); color: var(--fg2); }
+  tr:hover td { background: rgba(56,189,248,0.04); }
+  td:first-child, th:first-child { border-radius: 6px 0 0 6px; }
+  td:last-child, th:last-child { border-radius: 0 6px 6px 0; }
+
+  .badge { display: inline-block; padding: 0.15rem 0.5rem; border-radius: 999px; font-size: 0.75rem; font-weight: 600; }
+  .badge-green { background: rgba(52,211,153,0.15); color: var(--green); }
+  .badge-amber { background: rgba(251,191,36,0.15); color: var(--amber); }
+  .badge-red { background: rgba(248,113,113,0.15); color: var(--red); }
+  .badge-blue { background: rgba(56,189,248,0.15); color: var(--accent); }
+  .badge-purple{ background: rgba(167,139,250,0.15); color: var(--purple); }
+
+  .stat-row { display: flex; gap: 1.5rem; flex-wrap: wrap; margin-bottom: 1.5rem; }
+  .stat { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 1rem 1.5rem; text-align: center; min-width: 140px; flex: 1; }
+  .stat .num { font-size: 2rem; font-weight: 800; color: var(--accent); }
+  .stat .label { font-size: 0.8rem; color: var(--fg3); text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .file-ref { font-family: 'Consolas', 'Courier New', monospace; font-size: 0.85rem; color: var(--amber); }
+  code { background: var(--bg3); padding: 0.15rem 0.4rem; border-radius: 4px; font-size: 0.85em; }
+  pre { background: var(--bg3); padding: 1rem; border-radius: 8px; overflow-x: auto; font-size: 0.85rem; margin: 0.75rem 0; }
+
+  .diagram { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 1.5rem; margin: 1rem 0; font-family: 'Consolas', monospace; font-size: 0.85rem; line-height: 1.8; white-space: pre; overflow-x: auto; }
+  .diagram .dim { color: var(--fg3); }
+  .diagram .hl { color: var(--accent); }
+  .diagram .hl2 { color: var(--purple); }
+  .diagram .hl3 { color: var(--green); }
+
+  .tool-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 0.75rem; }
+  .tool-card { background: var(--bg3); border-radius: 8px; padding: 0.75rem 1rem; font-size: 0.85rem; border-left: 3px solid var(--accent); }
+  .tool-card.pbi { border-left-color: var(--green); }
+  .tool-card .name { font-weight: 700; color: var(--fg); margin-bottom: 0.25rem; }
+  .tool-card .desc { color: var(--fg2); font-size: 0.8rem; }
+  .tool-card .params { color: var(--fg3); font-size: 0.75rem; margin-top: 0.25rem; }
+
+  .reasoning { background: var(--bg3); border-left: 3px solid var(--purple); padding: 1rem 1.25rem; border-radius: 0 8px 8px 0; margin: 0.75rem 0; }
+  .reasoning ol { padding-left: 1.25rem; }
+  .reasoning li { margin-bottom: 0.3rem; }
+  .reasoning li strong { color: var(--purple); }
+
+  hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+
+  @media (max-width: 768px) {
+    nav.toc ol { columns: 1; }
+    .grid { grid-template-columns: 1fr; }
+    .tool-grid { grid-template-columns: 1fr; }
+  }
 </style>
 </head>
 <body>
 <div class="container">
 
-<h1>PRISM AI — Comprehensive Report</h1>
-<p class="subtitle">Pacific Power Association · Electricity Utilities Benchmarking Platform · Generated June 2026</p>
+<header>
+  <h1>PRISM AI — Comprehensive Report</h1>
+  <p>Anthropic Claude-powered conversational AI for Pacific electricity utility benchmarking</p>
+  <div class="meta">
+    <span>Prompt v2026-06-19-v3</span>
+    <span>Claude Sonnet 4.6 / Haiku 4.5</span>
+    <span>67 Tools</span>
+    <span>19 PBI Schema Tables</span>
+    <span>55 DAX Templates</span>
+  </div>
+</header>
 
-<!-- Stats -->
-<div class="stats">
-  <div class="stat"><div class="number">67</div><div class="label">AI Tools</div></div>
-  <div class="stat"><div class="number">55</div><div class="label">Pre-built DAX Query Templates</div></div>
-  <div class="stat"><div class="number">19</div><div class="label">PBI Schema Tables</div></div>
-  <div class="stat"><div class="number">14</div><div class="label">Data Service Files</div></div>
-  <div class="stat"><div class="number">~3,800</div><div class="label">Lines of Code</div></div>
-  <div class="stat"><div class="number">101</div><div class="label">Passing Tests</div></div>
+<nav class="toc">
+  <h2>Contents</h2>
+  <ol>
+    <li><a href="#overview">Architecture Overview</a></li>
+    <li><a href="#models">AI Models &amp; Configuration</a></li>
+    <li><a href="#prompt">System Prompt &amp; Persona</a></li>
+    <li><a href="#reasoning">Expert Reasoning Chain</a></li>
+    <li><a href="#tools">Tools (67 total)</a></li>
+    <li><a href="#data-services">Data Services</a></li>
+    <li><a href="#streaming">Streaming Protocol</a></li>
+    <li><a href="#guardrails">Guardrails &amp; Security</a></li>
+    <li><a href="#rate-limit">Rate Limiting &amp; Cost Control</a></li>
+    <li><a href="#frontend">Frontend Components</a></li>
+    <li><a href="#api-routes">API Routes</a></li>
+    <li><a href="#pbi">Power BI Integration</a></li>
+    <li><a href="#db">Database Schema (AI tables)</a></li>
+    <li><a href="#period-fallback">Period Fallback (June 2026)</a></li>
+    <li><a href="#files">Key File Index</a></li>
+  </ol>
+</nav>
+
+<!-- ───────────────────────────────────────────── -->
+<section id="overview">
+<h2>1. Architecture Overview</h2>
+
+<div class="stat-row">
+  <div class="stat"><div class="num">67</div><div class="label">Total Tools</div></div>
+  <div class="stat"><div class="num">38</div><div class="label">PRISM-Native</div></div>
+  <div class="stat"><div class="num">29</div><div class="label">Power BI Domain</div></div>
+  <div class="stat"><div class="num">22</div><div class="label">Data Services</div></div>
+  <div class="stat"><div class="num">~200K</div><div class="label">Context Window</div></div>
 </div>
 
-<!-- Architecture -->
-<h2>1. Architecture</h2>
-<div class="grid-2">
+<div class="diagram">
+<span class="dim">┌─────────────────────────────────────────────────────────────────┐</span>
+<span class="dim">│</span>                     <span class="hl">PRISM AI Architecture</span>                         <span class="dim">│</span>
+<span class="dim">├─────────────────────────────────────────────────────────────────┤</span>
+<span class="dim">│</span>                                                                 <span class="dim">│</span>
+<span class="dim">│</span>  <span class="hl2">User</span> ──► <span class="hl3">React Frontend</span> ──► <span class="hl">POST /api/ai/chat</span> ──► <span class="hl3">proxy.ts</span>         <span class="dim">│</span>
+<span class="dim">│</span>           (ChatPanel)         (SSE Stream)       (auth + roles)  <span class="dim">│</span>
+<span class="dim">│</span>                                    │                            <span class="dim">│</span>
+<span class="dim">│</span>                    ┌───────────────┴───────────────┐            <span class="dim">│</span>
+<span class="dim">│</span>                    ▼                               ▼            <span class="dim">│</span>
+<span class="dim">│</span>           <span class="hl3">Guardrails</span>                    <span class="hl3">Rate Limiter</span>              <span class="dim">│</span>
+<span class="dim">│</span>         (PII, injection,            (20/min, 100/15min,          <span class="dim">│</span>
+<span class="dim">│</span>          bulk export)                $5/day cost budget)          <span class="dim">│</span>
+<span class="dim">│</span>                    │                               │            <span class="dim">│</span>
+<span class="dim">│</span>                    └───────────────┬───────────────┘            <span class="dim">│</span>
+<span class="dim">│</span>                                    ▼                            <span class="dim">│</span>
+<span class="dim">│</span>                   <span class="hl">lib/ai/service.ts</span>                              <span class="dim">│</span>
+<span class="dim">│</span>              (runAiStream / runAiGenerate)                       <span class="dim">│</span>
+<span class="dim">│</span>                    │              │                             <span class="dim">│</span>
+<span class="dim">│</span>                    ▼              ▼                             <span class="dim">│</span>
+<span class="dim">│</span>          <span class="hl2">Claude Sonnet 4.6</span>    <span class="hl2">Claude Haiku 4.5</span>  (fallback)       <span class="dim">│</span>
+<span class="dim">│</span>          (primary model)        + circuit breaker                <span class="dim">│</span>
+<span class="dim">│</span>                    │                                             <span class="dim">│</span>
+<span class="dim">│</span>     ┌──────────────┼──────────────┐                             <span class="dim">│</span>
+<span class="dim">│</span>     ▼              ▼              ▼                             <span class="dim">│</span>
+<span class="dim">│</span>  <span class="hl3">67 Tools</span>    <span class="hl3">22 Data Services</span>   <span class="hl3">Stream Merger</span>                  <span class="dim">│</span>
+<span class="dim">│</span>  (tool calls   (DB queries,        (text + reasoning             <span class="dim">│</span>
+<span class="dim">│</span>   via AI SDK)   PBI REST, WB API)   + tool events)               <span class="dim">│</span>
+<span class="dim">│</span>     │                                             │              <span class="dim">│</span>
+<span class="dim">│</span>     ▼                                             ▼              <span class="dim">│</span>
+<span class="dim">│</span>  <span class="hl3">PostgreSQL</span>     <span class="hl3">Power BI REST</span>    <span class="hl2">SSE Stream</span> ──► Frontend       <span class="dim">│</span>
+<span class="dim">│</span>  (Drizzle ORM)   (DAX queries)     (0:text, 1:reasoning,        <span class="dim">│</span>
+<span class="dim">│</span>                                   2:tools, 3:errors)            <span class="dim">│</span>
+<span class="dim">│</span>                                                                 <span class="dim">│</span>
+<span class="dim">└─────────────────────────────────────────────────────────────────┘</span>
+</div>
+
+<div class="grid">
   <div class="card">
-    <h3>Model & SDK</h3>
-    <table>
-      <tr><td>Primary Model</td><td><code>claude-sonnet-4-6</code> with extended thinking (12k token budget)</td></tr>
-      <tr><td>Fallback</td><td><code>claude-haiku-4-5-20251001</code></td></tr>
-      <tr><td>SDK</td><td>Vercel AI SDK v6.0.168</td></tr>
-      <tr><td>Context Limit</td><td>200K tokens (both models)</td></tr>
-      <tr><td>Max Output</td><td>8,000 (Sonnet) / 2,500 (Haiku)</td></tr>
-      <tr><td>Max Tool Steps</td><td>10 per turn</td></tr>
-    </table>
+    <h3>Stack</h3>
+    <p>Next.js 16 (App Router), TypeScript 5, React 19, Tailwind CSS 4, shadcn/ui (radix-vega), Drizzle ORM + PostgreSQL, Better Auth</p>
   </div>
   <div class="card">
-    <h3>Infrastructure</h3>
-    <table>
-      <tr><td>Framework</td><td>Next.js 16 App Router</td></tr>
-      <tr><td>Database</td><td>PostgreSQL + Drizzle ORM</td></tr>
-      <tr><td>Auth</td><td>Better Auth (email/password + magic link)</td></tr>
-      <tr><td>Rate Limiting</td><td>In-memory: 20 req/min, 100 req/15min</td></tr>
-      <tr><td>Streaming</td><td>SSE protocol (0: text, 1: reasoning, 2: tools, 3: errors)</td></tr>
-      <tr><td>Deployment</td><td>Node.js + PM2 on Linux</td></tr>
-    </table>
+    <h3>AI Provider</h3>
+    <p>Anthropic Claude via <code>@ai-sdk/anthropic</code> (Vercel AI SDK v6). Sonnet 4.6 primary, Haiku 4.5 fallback. Adaptive thinking mode. Token budgets: 18K input, 8K/2.5K output max.</p>
+  </div>
+  <div class="card">
+    <h3>Data Priority</h3>
+    <p><strong>Power BI first</strong> → PRISM-native fallback → honest gap report. Period fallback: latest period → previous → previous (up to 3-4) before reporting empty.</p>
+  </div>
+  <div class="card">
+    <h3>Protection</h3>
+    <p><code>proxy.ts</code> session auth + role gating. Input guardrails (PII, credentials, injection). Output PII redaction. Rate limiting (20/min, 100/15min). $5/day cost budget. DAX sanitization.</p>
+  </div>
+</div>
+</section>
+
+<!-- ───────────────────────────────────────────── -->
+<section id="models">
+<h2>2. AI Models &amp; Configuration</h2>
+
+<p class="file-ref">lib/ai/types.ts:202-213 &nbsp;|&nbsp; lib/ai/service.ts:167-184</p>
+
+<table>
+  <tr><th>Property</th><th>Primary</th><th>Fallback</th></tr>
+  <tr><td>Model ID</td><td><code>claude-sonnet-4-6</code></td><td><code>claude-haiku-4-5-20251001</code></td></tr>
+  <tr><td>Context Window</td><td colspan="2">200,000 tokens</td></tr>
+  <tr><td>Max Output (thinking)</td><td>8,000 tokens</td><td>—</td></tr>
+  <tr><td>Max Output (non-thinking)</td><td>2,500 tokens</td><td>2,500 tokens</td></tr>
+  <tr><td>Input Token Budget</td><td colspan="2">18,000 tokens (after message trimming)</td></tr>
+  <tr><td>Thinking Mode</td><td>Adaptive, summarized</td><td>—</td></tr>
+  <tr><td>Temperature</td><td>0.4</td><td>0.3</td></tr>
+  <tr><td>Max Retries</td><td colspan="2">3 (exponential backoff: 1s, 2s, 4s)</td></tr>
+  <tr><td>Circuit Breaker</td><td colspan="2">5 consecutive failures → 30s cooldown</td></tr>
+  <tr><td>Stop Condition</td><td colspan="2"><code>stepCountIs(10)</code></td></tr>
+  <tr><td>Pricing (input)</td><td>$3.00 / 1M tokens</td><td>$0.80 / 1M tokens</td></tr>
+  <tr><td>Pricing (output)</td><td>$15.00 / 1M tokens</td><td>$4.00 / 1M tokens</td></tr>
+</table>
+
+<h3>Service Layer</h3>
+<p class="file-ref">lib/ai/service.ts</p>
+<table>
+  <tr><th>Function</th><th>Line</th><th>Purpose</th></tr>
+  <tr><td><code>runAiStream(options)</code></td><td>371</td><td>Main streaming entry point. Primary → fallback with retries. Returns <code>AiStreamResult</code> (stream, fullStream, model, wasFallback).</td></tr>
+  <tr><td><code>runAiGenerate(options)</code></td><td>453</td><td>Non-streaming generation (used for conversation summarization). Primary → fallback with retries.</td></tr>
+  <tr><td><code>getModelConfig(fallback)</code></td><td>167</td><td>Builds SDK model config with thinking mode, temperature, max tokens.</td></tr>
+  <tr><td><code>checkCircuit(modelName)</code></td><td>113</td><td>Throws if circuit breaker is open for model.</td></tr>
+  <tr><td><code>prepareMessages(messages)</code></td><td>142</td><td>Trims to 4-turn history, estimates tokens, truncates at 18K input budget.</td></tr>
+  <tr><td><code>prepareRequest(options)</code></td><td>212</td><td>Full request prep: guardrails, message trim, tool creation, system prompt assembly.</td></tr>
+</table>
+</section>
+
+<!-- ───────────────────────────────────────────── -->
+<section id="prompt">
+<h2>3. System Prompt &amp; Persona</h2>
+
+<p class="file-ref">lib/ai/prompt.ts (151 lines) &nbsp;|&nbsp; Version: 2026-06-19-v3</p>
+
+<div class="grid">
+  <div class="card">
+    <h3>Personality</h3>
+    <p>Warm, collegial, knowledgeable colleague. Uses "you"/"your utility". Contractions, varied sentence length, natural openers. <strong>Never narrates process</strong> — tool calls happen silently. No "Let me check Power BI" or "I'll pull that up."</p>
+  </div>
+  <div class="card">
+    <h3>Data Source Priority</h3>
+    <p><strong>1.</strong> Power BI (pbi_match → pbi_query) <strong>2.</strong> Previous FY fallback once <strong>3.</strong> PRISM-native tools <strong>4.</strong> Honest gap report. One-failure rule modified: try previous FY before switching source.</p>
+  </div>
+  <div class="card">
+    <h3>7 Audience Registers</h3>
+    <p>CEO/Board (strategic, money/risk), Manager/Ops (actionable), Staff/Analyst (method), Government/Regulator (policy), Consultant (depth), Donor/DFI (impact/VfM), Education/Researcher (method/caveats). Default: Manager/Ops.</p>
+  </div>
+  <div class="card">
+    <h3>8 Core Rules</h3>
+    <p>Never fabricate. Empty = try previous period first (up to 3-4). Just query — don't pre-check. Give data context. Respect scope. Protect sensitive data. Be upfront about gaps. Benchmark when helpful.</p>
   </div>
 </div>
 
-<!-- Data Flow -->
-<h2>2. Data Flow</h2>
-<div class="card">
-<pre style="font-size:0.82rem;line-height:1.8;">
-User → ChatPanel (React) → POST /api/ai/chat
-  → Auth (getCurrentUser) → Origin validation → Rate limit check
-  → Input guardrails (PII, injection, length)
-  → Session/Turn creation (DB transaction)
-  → System prompt assembly (base + role + context)
-  → runAiStream() with 67 tools
-    → Primary: claude-sonnet-4-6 (with extended thinking)
-    → Fallback: claude-haiku-4-5-20251001 (on error)
-  → Combined SSE stream (text + reasoning + tool events)
-  → Client: requestAnimationFrame character-by-character reveal
-  → onFinish: persist response to DB, record usage, summarize
+<h3>Key Prompt Sections</h3>
+<table>
+  <tr><th>Section</th><th>Lines</th><th>Content</th></tr>
+  <tr><td>Personality</td><td>5–26</td><td>Warm colleague persona, conversational style, anti-narration rules</td></tr>
+  <tr><td>Data Source Priority</td><td>28–36</td><td>Power BI → fallback → gap report. Period-aware one-failure rule</td></tr>
+  <tr><td>Understanding Performance</td><td>39–44</td><td>Performance ≠ submission stats. Never use get_trend_analysis for KPI values</td></tr>
+  <tr><td>Expert Reasoning Chain</td><td>46–54</td><td>5-step: Diagnose → Connect → Position → Recommend → Caveat</td></tr>
+  <tr><td>Opinion-Safety Protocol</td><td>56–62</td><td>Ground in retrieved data, label fact vs. interpretation, calibrate confidence</td></tr>
+  <tr><td>Audience Registers</td><td>64–73</td><td>7 registers mapped from platform roles</td></tr>
+  <tr><td>Core Rules</td><td>75–93</td><td>8 rules: anti-fabrication, period fallback, context, scope, security, gaps, benchmarks</td></tr>
+  <tr><td>Period Fallback</td><td>85–92</td><td>Latest → previous → previous for both Power BI (FY2026→FY2025→FY2024) and PRISM native</td></tr>
+  <tr><td>Power BI (Primary Source)</td><td>94–105</td><td>pbi_context → pbi_match → pbi_query. Domain coverage. Pacific context</td></tr>
+  <tr><td>Country Context</td><td>107–122</td><td>World Bank integration: when to call, when to skip</td></tr>
+  <tr><td>PRISM Native (Fallback)</td><td>124–131</td><td>Backup tool listing with critical warnings about submission vs. performance data</td></tr>
+  <tr><td>Visualizations</td><td>133–134</td><td>8 chart types via render_visualization</td></tr>
+  <tr><td>Security</td><td>139–140</td><td>Anti-prompt-injection: "I can only assist with PRISM platform questions."</td></tr>
+</table>
+</section>
+
+<!-- ───────────────────────────────────────────── -->
+<section id="reasoning">
+<h2>4. Expert Reasoning Chain</h2>
+
+<p class="file-ref">lib/ai/prompt.ts:46-54</p>
+
+<div class="reasoning">
+<ol>
+  <li><strong>Diagnose</strong> — What does this number mean for THIS utility, at THIS scale, in THIS context? A 12% loss rate means something different for a 5,000-customer atoll utility vs. a 200,000-customer national grid.</li>
+  <li><strong>Connect</strong> — Relate to other metrics. Energy systems are causal chains: high losses → revenue gap → deferred maintenance → reliability decline.</li>
+  <li><strong>Position</strong> — Benchmark against PPA target, Pacific regional average, and peer group. Is this good, concerning, or critical?</li>
+  <li><strong>Recommend</strong> — Single highest-leverage next step with reasoning. Lead with it.</li>
+  <li><strong>Caveat</strong> — Name assumptions and what would change the read (data gaps, one-off events, missing context).</li>
+</ol>
+</div>
+
+<p>The reasoning chain appears as collapsible, numbered sections in the chat UI. Each step is marked with its label and rendered as an expandable <code>&lt;details&gt;</code> element. The frontend parses reasoning outputs matching the pattern <strong>"1. Diagnose ..."</strong> through <strong>"5. Caveat ..."</strong>.</p>
+
+<h3>Opinion-Safety Protocol</h3>
+<ul>
+  <li><strong>Ground every opinion</strong> in numbers actually retrieved — no retrieved figure → no quantitative claim</li>
+  <li><strong>Label the layer</strong> — state the fact, then the read: "Your SAIDI is 320 min (PPA target 360) — solid. But it's risen 40%..."</li>
+  <li><strong>Calibrate confidence</strong> — "this strongly suggests...", "one likely driver...", "I can't tell from this data alone..."</li>
+  <li><strong>Stay in lane</strong> — energy/utility performance, economics, strategy only. Flag legal/procurement/safety-critical for qualified professionals</li>
+  <li><strong>Recommendations are starting points</strong> — "Worth investigating", "I'd prioritise" — never "you must"</li>
+</ul>
+</section>
+
+<!-- ───────────────────────────────────────────── -->
+<section id="tools">
+<h2>5. Tools (67 total)</h2>
+
+<p class="file-ref">lib/ai/tools/prism-native.ts (38 tools) &nbsp;|&nbsp; lib/ai/tools/power-bi.ts (29 tools) &nbsp;|&nbsp; lib/ai/tools/index.ts (merger)</p>
+
+<p>All 67 tools are created via <code>createAiTools(user, abortSignal, sessionId)</code> which merges <code>createPrismNativeTools()</code> + <code>createPowerBiTools()</code>. Tool timeout: 15s default, 30s for Power BI tools. Max result size: 8,000 characters.</p>
+
+<h3>5A. PRISM-Native Tools (38)</h3>
+
+<div class="tool-grid">
+  <div class="tool-card">
+    <div class="name">get_kpi_status</div>
+    <div class="desc">KPI status & submission progress. Completion rates, status counts.</div>
+    <div class="params">utility_id?, report_period_id?, all_utilities?</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">get_benchmarking_data</div>
+    <div class="desc">Utility rankings, peer averages, top/bottom performers by completion rates.</div>
+    <div class="params">report_period_id?, limit?, all_utilities?</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">get_completeness_breakdown</div>
+    <div class="desc">Completeness by dimension (category, subcategory, service_area, energy_source, etc.).</div>
+    <div class="params">dimension (required enum), report_period_id?</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">get_trend_analysis</div>
+    <div class="desc">Completion rate trends over time. Direction (improved/declined/stable).</div>
+    <div class="params">all_utilities?</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">get_anomaly_insights</div>
+    <div class="desc">Anomaly detection: completion drops, pending increases, not-available increases.</div>
+    <div class="params">all_utilities?</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">get_governance_audit</div>
+    <div class="desc">Pending ownership distribution, recent updates. <span class="badge badge-red">Admin only</span></div>
+    <div class="params">all_utilities?</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">get_configuration_options</div>
+    <div class="desc">Report types, report periods, KPI categories, subcategories, service areas. <span class="badge badge-red">Admin only</span></div>
+    <div class="params">—</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">get_kpi_diagnostics</div>
+    <div class="desc">Missing-input KPIs, error KPIs, stale KPIs, unresolved comments.</div>
+    <div class="params">report_period_id?, year?</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">render_visualization</div>
+    <div class="desc">Render chart/table in chat. 8 types: table, bar-chart, line-chart, leaderboard, scatter, radar, sankey, heatmap.</div>
+    <div class="params">visualization (object)</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">suggest_follow_ups</div>
+    <div class="desc">Suggest 2-3 follow-up questions. Dedup, length check, blocked-pattern filtering.</div>
+    <div class="params">questions[] (1-3)</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">calculate_kpi</div>
+    <div class="desc">On-the-fly KPI formula evaluation. What-if and sensitivity analysis.</div>
+    <div class="params">kpi_names?/kpi_def_ids?, report_period_id?, year?, hypothetical_values?, sensitivity_variable?</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">dashboard_link</div>
+    <div class="desc">Deep link to dashboard pages with pre-applied filters.</div>
+    <div class="params">route, filters?, label?</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">get_review_queue</div>
+    <div class="desc">Review/approval queue: stuck KPIs, who needs to act, counts by status/owner.</div>
+    <div class="params">report_period_id?, year?</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">get_input_status</div>
+    <div class="desc">Per-KPI input status: filled/missing fields, formula variables.</div>
+    <div class="params">kpi_name, report_period_id?, year?</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">explain_kpi</div>
+    <div class="desc">KPI definition: what it is, formula, category, benchmarking limits.</div>
+    <div class="params">kpi_name, kpi_def_id?</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">get_custom_kpi_status</div>
+    <div class="desc">Custom KPI request pipeline: pending/approved/rejected proposals.</div>
+    <div class="params">—</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">get_service_area_breakdown</div>
+    <div class="desc">Performance by service area: KPI counts, completeness, approval status.</div>
+    <div class="params">report_period_id?, year?</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">get_peer_group_analysis</div>
+    <div class="desc">Benchmark vs. peer group by country/size/region.</div>
+    <div class="params">report_period_id?, year?, group_by?, group_value?</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">get_risk_assessment</div>
+    <div class="desc">Risk scores (0-100) per utility with flags.</div>
+    <div class="params">all_utilities?</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">get_data_quality_report</div>
+    <div class="desc">Scan KPI values: negative, out-of-range, anomalous jumps.</div>
+    <div class="params">report_period_id?, year?</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">compare_periods</div>
+    <div class="desc">Side-by-side comparison of two periods across 6 metrics.</div>
+    <div class="params">period_a_id?/b_id? or year_a?/b?</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">get_what_changed</div>
+    <div class="desc">Biggest KPI value changes between latest two periods, ranked by magnitude.</div>
+    <div class="params">report_period_id?, year?</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">get_compliance_status</div>
+    <div class="desc">Check KPI values against regulatory limits. Critical issues & warnings.</div>
+    <div class="params">report_period_id?, year?, all_utilities?</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">get_kpi_targets</div>
+    <div class="desc">Peer-benchmark targets: median, quartiles, improvement suggestions with difficulty ratings.</div>
+    <div class="params">report_period_id?, year?, month?, all_utilities?</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">get_kpi_correlation</div>
+    <div class="desc">Pearson correlations between KPIs across utilities.</div>
+    <div class="params">report_period_id?, year?, month?</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">compare_kpis_across_utilities</div>
+    <div class="desc">Actual KPI values across utilities with rankings.</div>
+    <div class="params">kpi_names[], report_period_id?, year?, month?</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">generate_export</div>
+    <div class="desc">Downloadable CSV/Excel report from analysis results.</div>
+    <div class="params">title, columns[], rows[], format</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">get_country_hierarchy</div>
+    <div class="desc">Pacific region country/sub-region hierarchy with ISO codes, UN/ADB classifications.</div>
+    <div class="params">—</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">get_industry_benchmarks</div>
+    <div class="desc">14 Pacific utility benchmarks: developing/developed nation, Pacific regional, PPA targets.</div>
+    <div class="params">—</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">get_worldbank_context</div>
+    <div class="desc">Live World Bank data: income class, lending category, GDP, population, electricity, CO2, active projects.</div>
+    <div class="params">country_code? (ISO alpha-2)</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">get_executive_digest</div>
+    <div class="desc">Executive briefing scaffold: tells LLM which tools to call for comprehensive summary.</div>
+    <div class="params">—</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">get_review_queue_entries</div>
+    <div class="desc">AI review queue: flagged conversations. <span class="badge badge-red">Admin only</span></div>
+    <div class="params">—</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">get_guided_entry</div>
+    <div class="desc">Step-by-step data entry guidance for a specific KPI.</div>
+    <div class="params">kpi_name</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">query_power_bi</div>
+    <div class="desc">Execute custom DAX query on Power BI dataset.</div>
+    <div class="params">custom_dax?, dataset_id?</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">diagnose_power_bi</div>
+    <div class="desc">Test Power BI connection: service principal access check.</div>
+    <div class="params">—</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">discover_datasets</div>
+    <div class="desc">List all Power BI datasets with names, IDs, metadata.</div>
+    <div class="params">—</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">discover_schema</div>
+    <div class="desc">Full schema of a Power BI dataset: tables, columns, measures.</div>
+    <div class="params">dataset_id?, table_names[]?</div>
+  </div>
+  <div class="tool-card">
+    <div class="name">discover_report</div>
+    <div class="desc">Discover report pages in Power BI with names and order.</div>
+    <div class="params">report_id?</div>
+  </div>
+</div>
+
+<h3>5B. Power BI Tools (29)</h3>
+
+<div class="tool-grid">
+  <div class="tool-card pbi">
+    <div class="name">pbi_schema</div>
+    <div class="desc">Get static PBI dataset schema: table names, columns, descriptions. Searchable.</div>
+    <div class="params">table_name?, search?</div>
+  </div>
+  <div class="tool-card pbi">
+    <div class="name">pbi_query_catalog</div>
+    <div class="desc">List all 55 pre-built query templates grouped by category.</div>
+    <div class="params">—</div>
+  </div>
+  <div class="tool-card pbi">
+    <div class="name">pbi_query</div>
+    <div class="desc">Run a pre-built DAX query template. Checks PBI configuration.</div>
+    <div class="params">query (required), params?</div>
+  </div>
+  <div class="tool-card pbi">
+    <div class="name">pbi_match</div>
+    <div class="desc">Match NL question to best query template via alias+name similarity.</div>
+    <div class="params">question (required)</div>
+  </div>
+  <div class="tool-card pbi">
+    <div class="name">pbi_context</div>
+    <div class="desc">Set/view session defaults (utility, fy). Auto-fills missing params.</div>
+    <div class="params">utility?, fy?, clear?</div>
+  </div>
+  <div class="tool-card pbi">
+    <div class="name">pbi_freshness</div>
+    <div class="desc">Check when PBI dataset was last refreshed.</div>
+    <div class="params">—</div>
+  </div>
+  <div class="tool-card pbi">
+    <div class="name">pbi_chart</div>
+    <div class="desc">Chart recommendation for PBI query results.</div>
+    <div class="params">query_name, row_count?</div>
+  </div>
+  <div class="tool-card pbi">
+    <div class="name">pbi_anomalies</div>
+    <div class="desc">Statistical anomaly detection via z-score (threshold 2.0 default).</div>
+    <div class="params">rows[], threshold?</div>
+  </div>
+  <div class="tool-card pbi">
+    <div class="name">pbi_deeplink</div>
+    <div class="desc">Generate direct link to PBI dashboard with pre-applied filters.</div>
+    <div class="params">page_name?, filter_utility?, filter_fy?</div>
+  </div>
+  <div class="tool-card pbi">
+    <div class="name">pbi_export</div>
+    <div class="desc">Export PBI query results as CSV or JSON.</div>
+    <div class="params">query_name, rows[], format</div>
+  </div>
+  <div class="tool-card pbi">
+    <div class="name">pbi_trend</div>
+    <div class="desc">Alias for trend queries (saidi_trend, generation_trend, losses_trend, etc.).</div>
+    <div class="params">query (enum), params?</div>
+  </div>
+  <div class="tool-card pbi">
+    <div class="name">pbi_risk_score</div>
+    <div class="desc">Multi-dimensional risk scores (diesel, reliability, financial, electrification, climate).</div>
+    <div class="params">rows[]</div>
+  </div>
+  <div class="tool-card pbi">
+    <div class="name">pbi_report</div>
+    <div class="desc">Automated performance report: reliability, losses, financials, customers, recommendations.</div>
+    <div class="params">utility, fy, plus optional data arrays</div>
+  </div>
+  <div class="tool-card pbi">
+    <div class="name">pbi_alerts</div>
+    <div class="desc">Proactive threshold alerts: SAIDI>500, losses>15%, recovery&lt;80%, diesel>70%, etc.</div>
+    <div class="params">rows[], query_name</div>
+  </div>
+  <div class="tool-card pbi">
+    <div class="name">pbi_peer_groups</div>
+    <div class="desc">Group utilities by customer size (small/medium/large).</div>
+    <div class="params">rows[], your_utility?</div>
+  </div>
+  <div class="tool-card pbi">
+    <div class="name">pbi_donor_reports</div>
+    <div class="desc">Donor-specific templates (PPA, ADB, World Bank, GCF, NZ MFAT).</div>
+    <div class="params">donor?</div>
+  </div>
+  <div class="tool-card pbi">
+    <div class="name">pbi_renewable_scenario</div>
+    <div class="desc">Model solar + battery storage: diesel displacement %, estimated savings.</div>
+    <div class="params">rows[], additional_solar_mw?, additional_battery_mwh?</div>
+  </div>
+  <div class="tool-card pbi">
+    <div class="name">pbi_forecast</div>
+    <div class="desc">Linear trend forecasting: projects 2 periods ahead with R² confidence.</div>
+    <div class="params">rows[], metric, periods_ahead?, utility?</div>
+  </div>
+  <div class="tool-card pbi">
+    <div class="name">pbi_best_worst</div>
+    <div class="desc">Find best/worst historical period for any metric.</div>
+    <div class="params">rows[], utility, metric</div>
+  </div>
+  <div class="tool-card pbi">
+    <div class="name">pbi_similar_utilities</div>
+    <div class="desc">Cosine similarity across 9 features to find similar utilities.</div>
+    <div class="params">rows[], target_utility</div>
+  </div>
+  <div class="tool-card pbi">
+    <div class="name">pbi_correlations</div>
+    <div class="desc">Pearson correlation across all numeric columns.</div>
+    <div class="params">rows[]</div>
+  </div>
+  <div class="tool-card pbi">
+    <div class="name">pbi_prioritize</div>
+    <div class="desc">Rank utilities by investment impact (reliability, renewable, electrification, financial, all).</div>
+    <div class="params">rows[], budget_focus?</div>
+  </div>
+  <div class="tool-card pbi">
+    <div class="name">pbi_briefing</div>
+    <div class="desc">60-second executive briefing: 5 key numbers, trends, red flags, recommendations.</div>
+    <div class="params">utility, fy, plus optional data, audience?</div>
+  </div>
+  <div class="tool-card pbi">
+    <div class="name">pbi_completeness</div>
+    <div class="desc">A-F grading for KPI submission completeness.</div>
+    <div class="params">rows[]</div>
+  </div>
+  <div class="tool-card pbi">
+    <div class="name">pbi_regulatory</div>
+    <div class="desc">Check utilities against regulatory benchmarks (6 thresholds).</div>
+    <div class="params">rows[]</div>
+  </div>
+  <div class="tool-card pbi">
+    <div class="name">pbi_training</div>
+    <div class="desc">Training/capacity building recommendations from workforce + performance data.</div>
+    <div class="params">workforce_rows, performance_rows, utility</div>
+  </div>
+  <div class="tool-card pbi">
+    <div class="name">pbi_tariff_sim</div>
+    <div class="desc">Simulate tariff rate change impact on revenue and affordability.</div>
+    <div class="params">tariff_rows, customer_rows, change_pct, utility?</div>
+  </div>
+  <div class="tool-card pbi">
+    <div class="name">pbi_donor_fill</div>
+    <div class="desc">Auto-fill donor grant application with actual performance data.</div>
+    <div class="params">utility, fy, donor, plus optional data</div>
+  </div>
+  <div class="tool-card pbi">
+    <div class="name">pbi_project_impact</div>
+    <div class="desc">Multi-year impact projection of infrastructure investment.</div>
+    <div class="params">rows[], utility, project_type, project_scale_mw?, years?</div>
+  </div>
+</div>
+</section>
+
+<!-- ───────────────────────────────────────────── -->
+<section id="data-services">
+<h2>6. Data Services</h2>
+
+<p class="file-ref">lib/ai/data-service/ (22 modules)</p>
+
+<table>
+  <tr><th>Module</th><th>Key Exports</th><th>Purpose</th></tr>
+  <tr><td><code>common.ts</code></td><td>resolvePeriodId, resolvePeriod, resolveRecentPeriodIds, resolveUserUtility, createToolMetadata</td><td>Shared utilities: period resolution, user/utility lookup, metadata creation</td></tr>
+  <tr><td><code>kpi.ts</code></td><td>getKpiStatus</td><td>KPI submission status per utility/period</td></tr>
+  <tr><td><code>benchmarking.ts</code></td><td>getBenchmarkingData</td><td>Ranked completion rates, peer positioning</td></tr>
+  <tr><td><code>completeness.ts</code></td><td>getCompletenessBreakdown</td><td>Completeness by any dimension via managed list cross-ref</td></tr>
+  <tr><td><code>trends.ts</code></td><td>getTrendAnalysis</td><td>Period-over-period completion deltas</td></tr>
+  <tr><td><code>anomalies.ts</code></td><td>getAnomalyInsights</td><td>Completion/pending/not-available anomaly detection</td></tr>
+  <tr><td><code>governance.ts</code></td><td>getGovernanceAudit</td><td>Pending ownership distribution audit</td></tr>
+  <tr><td><code>configuration.ts</code></td><td>getConfigurationOptions</td><td>Available report types, periods, categories, etc.</td></tr>
+  <tr><td><code>diagnostics.ts</code></td><td>getKpiDiagnostics</td><td>Missing-input, error, stale KPI detection</td></tr>
+  <tr><td><code>calculator.ts</code></td><td>calculateKpis</td><td>KPI formula evaluation with what-if & sensitivity analysis</td></tr>
+  <tr><td><code>review.ts</code></td><td>getReviewQueue, getInputStatus</td><td>Review/approval queue + per-KPI input field status</td></tr>
+  <tr><td><code>explain.ts</code></td><td>explainKpi, getCustomKpiStatus</td><td>KPI definitions + custom KPI pipeline</td></tr>
+  <tr><td><code>analysis.ts</code></td><td>getServiceAreaBreakdown, getPeerGroupAnalysis, comparePeriods</td><td>Service area, peer group, and period comparison analysis</td></tr>
+  <tr><td><code>insights.ts</code></td><td>getRiskAssessment, getDataQualityReport, getWhatChanged</td><td>Risk scoring, data quality scanning, period-over-period change detection</td></tr>
+  <tr><td><code>compliance.ts</code></td><td>getComplianceStatus</td><td>Regulatory limit checking against KPI definitions</td></tr>
+  <tr><td><code>advanced.ts</code></td><td>getKpiTargets, getKpiCorrelation, compareKpisAcrossUtilities, generateExport, getCountryHierarchy</td><td>Target benchmarks, correlations, cross-utility comparison, exports, country data</td></tr>
+  <tr><td><code>benchmarks.ts</code></td><td>getIndustryBenchmarks, getExecutiveDigest</td><td>14 seeded Pacific benchmarks + executive summary scaffold</td></tr>
+  <tr><td><code>performance.ts</code></td><td>getPerformanceSnapshot</td><td>Review status counts + weakest KPIs</td></tr>
+  <tr><td><code>powerbi.ts</code></td><td>diagnosePowerBi, discoverDatasets, discoverSchema, queryPowerBi, runPbiQuery, getPbiSchema, etc.</td><td>Power BI data layer: DAX execution, schema, caching, enrichment wrappers</td></tr>
+  <tr><td><code>pbi-schema-registry.ts</code></td><td>PBI_SCHEMA, resolveTable, searchSchema</td><td>Static registry of 19 PBI tables with columns, measures, types</td></tr>
+  <tr><td><code>pbi-queries.ts</code></td><td>PBI_QUERIES, resolveQueryFromNL, getQueryCatalog</td><td>55 DAX templates with NL resolution</td></tr>
+  <tr><td><code>pbi-enrichment.ts</code></td><td>setPbiContext, getPbiContext, detectAnomalies, generateDeepLink, etc.</td><td>Session context, caching, anomaly detection, exports, chart recommendations</td></tr>
+  <tr><td><code>pbi-insights.ts</code></td><td>computeRiskScores, generatePerformanceReport, generateProactiveAlerts, etc.</td><td>Risk scoring, automated reports, alerts, peer groups, donor templates</td></tr>
+  <tr><td><code>pbi-advanced.ts</code></td><td>forecastTrend, findSimilarUtilities, prioritizeInvestments, etc.</td><td>Forecasting, similarity, investment prioritization, briefing, tariff simulation</td></tr>
+  <tr><td><code>dax-sanitizer.ts</code></td><td>sanitizeDax</td><td>DAX security: blocks DDL/DML, dangerous patterns, requires EVALUATE</td></tr>
+  <tr><td><code>worldbank.ts</code></td><td>getWorldBankCountryContext, resolveUserIsoCode</td><td>Live World Bank API: classifications, indicators, active projects</td></tr>
+  <tr><td><code>utils.ts</code></td><td>recordToolFailure, getReviewQueueEntries, getGuidedEntry, etc.</td><td>Circuit breaker, admin review queue, guided data entry</td></tr>
+</table>
+</section>
+
+<!-- ───────────────────────────────────────────── -->
+<section id="streaming">
+<h2>7. Streaming Protocol</h2>
+
+<p class="file-ref">app/api/ai/chat/route.ts:396-505 &nbsp;|&nbsp; components/ai/chat-panel.tsx</p>
+
+<h3>Wire Format (SSE via ReadableStream)</h3>
+<pre>
+0:{"delta":"text fragment..."}        ← text delta (character-by-character)
+1:{"type":"reasoning-delta",...}     ← reasoning/thinking content
+2:{"type":"tool-start","toolName":...} ← tool call started
+2:{"type":"tool-end","toolName":...,"resultSummary":...} ← tool call completed
+3:{"error":"message"}                 ← stream error
 </pre>
-</div>
 
-<!-- Tool Categories -->
-<h2>3. Tool Inventory — 67 Tools</h2>
-<div class="section-desc">38 PRISM-native tools + 29 Power BI domain tools</div>
-
-<h3>3.1 PRISM-Native Tools (38)</h3>
-<div class="grid-2">
-  <div class="card">
-    <h3>Data & Performance</h3>
-    <span class="tag">get_kpi_status</span> <span class="tag">get_benchmarking_data</span> <span class="tag">get_completeness_breakdown</span> <span class="tag">get_trend_analysis</span> <span class="tag">get_anomaly_insights</span> <span class="tag">get_governance_audit</span> <span class="tag">get_configuration_options</span> <span class="tag">get_kpi_diagnostics</span> <span class="tag">get_risk_assessment</span> <span class="tag">get_data_quality_report</span> <span class="tag">get_compliance_status</span> <span class="tag">get_what_changed</span> <span class="tag">get_service_area_breakdown</span> <span class="tag">get_peer_group_analysis</span> <span class="tag">compare_periods</span>
-  </div>
-  <div class="card">
-    <h3>Calculations & Export</h3>
-    <span class="tag">calculate_kpi</span> <span class="tag">get_kpi_targets</span> <span class="tag">get_kpi_correlation</span> <span class="tag">compare_kpis_across_utilities</span> <span class="tag">generate_export</span> <span class="tag">get_country_hierarchy</span> <span class="tag">get_industry_benchmarks</span> <span class="tag">get_executive_digest</span> <span class="tag">get_review_queue</span> <span class="tag">get_review_queue_entries</span> <span class="tag">get_input_status</span> <span class="tag">explain_kpi</span> <span class="tag">get_custom_kpi_status</span> <span class="tag">get_guided_entry</span> <span class="tag">get_ai_usage</span>
-  </div>
-  <div class="card">
-    <h3>UI & Interaction</h3>
-    <span class="tag">render_visualization</span> <span class="tag">suggest_follow_ups</span> <span class="tag">dashboard_link</span>
-  </div>
-  <div class="card">
-    <h3>Power BI Discovery (Legacy)</h3>
-    <span class="tag">query_power_bi</span> <span class="tag">diagnose_power_bi</span> <span class="tag">discover_datasets</span> <span class="tag">discover_schema</span> <span class="tag">discover_report</span>
-  </div>
-</div>
-
-<h3>3.2 Power BI Domain Tools (29)</h3>
-<div class="grid-2">
-  <div class="card">
-    <h3>Query & Discovery</h3>
-    <span class="tag">pbi_schema</span> <span class="tag">pbi_query</span> <span class="tag">pbi_query_catalog</span> <span class="tag">pbi_match</span> <span class="tag">pbi_context</span> <span class="tag">pbi_trend</span>
-  </div>
-  <div class="card">
-    <h3>Analytics & Intelligence</h3>
-    <span class="tag">pbi_risk_score</span> <span class="tag">pbi_report</span> <span class="tag">pbi_alerts</span> <span class="tag">pbi_peer_groups</span> <span class="tag">pbi_forecast</span> <span class="tag">pbi_best_worst</span> <span class="tag">pbi_similar_utilities</span> <span class="tag">pbi_correlations</span> <span class="tag">pbi_prioritize</span> <span class="tag">pbi_briefing</span>
-  </div>
-  <div class="card">
-    <h3>Donor & Planning</h3>
-    <span class="tag">pbi_donor_reports</span> <span class="tag">pbi_donor_fill</span> <span class="tag">pbi_renewable_scenario</span> <span class="tag">pbi_project_impact</span> <span class="tag">pbi_tariff_sim</span> <span class="tag">pbi_training</span>
-  </div>
-  <div class="card">
-    <h3>Export & UI</h3>
-    <span class="tag">pbi_chart</span> <span class="tag">pbi_anomalies</span> <span class="tag">pbi_freshness</span> <span class="tag">pbi_completeness</span> <span class="tag">pbi_regulatory</span> <span class="tag">pbi_deeplink</span> <span class="tag">pbi_export</span>
-  </div>
-</div>
-
-<!-- DAX Query Templates -->
-<h2>4. Pre-Built DAX Query Templates — 55</h2>
-<div class="section-desc">Categorized by domain with automatic visualization recommendations</div>
+<h3>Response Headers</h3>
 <table>
-  <thead>
-    <tr><th>Category</th><th>Templates</th><th>Examples</th></tr>
-  </thead>
-  <tbody>
-    <tr><td>Reliability</td><td>5</td><td>saidi_by_utility, saifi_by_utility, reliability_summary, saidi_trend, outage_trend_by_source</td></tr>
-    <tr><td>Generation & Capacity</td><td>7</td><td>installed_capacity, generation_output, generation_by_source, peak_demand, generation_trend, capacity_factor</td></tr>
-    <tr><td>Distribution</td><td>4</td><td>system_losses, distribution_overview, losses_trend, technical_losses</td></tr>
-    <tr><td>Financials</td><td>3</td><td>financial_summary, cost_recovery, recovery_trend</td></tr>
-    <tr><td>Customers</td><td>4</td><td>customer_overview, metering_summary, electrification_trend, household_electrification</td></tr>
-    <tr><td>Workforce & Safety</td><td>11</td><td>workforce_summary, safety_summary, gender_diversity, staff_turnover, training_investment, contract_mix, expat_local_split, safety_leading, safety_trend, hr_cost, workforce_efficiency, gender_by_level</td></tr>
-    <tr><td>Diesel & Fuel</td><td>3</td><td>diesel_dependence, fuel_efficiency, renewable_penetration</td></tr>
-    <tr><td>Climate & Resilience</td><td>2</td><td>climate_risk_profile, carbon_emissions</td></tr>
-    <tr><td>Island Context</td><td>2</td><td>island_peer_group, small_utility_benchmark</td></tr>
-    <tr><td>Tariff & Affordability</td><td>2</td><td>tariff_affordability, tariff_cost_gap</td></tr>
-    <tr><td>Renewable Transition</td><td>4</td><td>renewable_gap_analysis, solar_potential, generation_by_source</td></tr>
-    <tr><td>Transmission</td><td>2</td><td>transmission_overview, transmission_capacity</td></tr>
-    <tr><td>Governance & Leadership</td><td>2</td><td>governance_summary, leadership_summary</td></tr>
-    <tr><td>Context & Comparison</td><td>4</td><td>country_comparison, ownership_analysis, regulatory_comparison, air_connectivity</td></tr>
-    <tr><td>Compound / Cross-Domain</td><td>5</td><td>utility_profile, peer_comparison, composite_score, vulnerability_dashboard</td></tr>
-    <tr><td>What-If Analysis</td><td>1</td><td>whatif_sensitivity</td></tr>
-  </tbody>
+  <tr><th>Header</th><th>Value</th></tr>
+  <tr><td><code>Content-Type</code></td><td><code>text/event-stream</code></td></tr>
+  <tr><td><code>X-Session-Id</code></td><td>Session ID for this conversation</td></tr>
+  <tr><td><code>X-Turn-Id</code></td><td>Turn ID within the session</td></tr>
+  <tr><td><code>X-Model</code></td><td>Model actually used (primary or fallback)</td></tr>
+  <tr><td><code>X-Was-Fallback</code></td><td><code>"true"</code> or <code>"false"</code></td></tr>
+  <tr><td><code>X-Prompt-Version</code></td><td>Current prompt version (e.g. <code>2026-06-19-v3</code>)</td></tr>
+  <tr><td><code>X-Circuit-Breaker</code></td><td><code>"open:Nseconds"</code> if circuit breaker is active</td></tr>
 </table>
 
-<!-- Power BI Schema -->
-<h2>5. Power BI Schema Registry — 19 Tables</h2>
+<h3>Client-Side Character Reveal</h3>
+<ul>
+  <li>Text deltas accumulated in <code>pendingContentRef</code></li>
+  <li>Revealed character-by-character via <code>requestAnimationFrame</code> (3 chars per frame)</li>
+  <li>Buffer cap: 12,000 chars — beyond that, instant display</li>
+  <li>Message input capped at 4,000 chars (<code>MAX_CHARS</code>)</li>
+  <li>Streaming cursor CSS class (<code>streaming-cursor</code>) for blinking caret effect</li>
+  <li>Abort via <code>AbortController</code> — stop button in chat input</li>
+</ul>
+
+<h3>Post-Stream Sync</h3>
+<p>On stream completion, the client calls <code>POST /api/ai/chat/response</code> to sync the final content to the server. Tool calls, token counts, and model info are persisted to <code>aiChatTurn</code> and <code>aiToolCall</code> tables during <code>onFinish</code>.</p>
+</section>
+
+<!-- ───────────────────────────────────────────── -->
+<section id="guardrails">
+<h2>8. Guardrails &amp; Security</h2>
+
+<p class="file-ref">lib/ai/guardrails.ts (131 lines) &nbsp;|&nbsp; lib/ai/origin.ts (16 lines)</p>
+
+<h3>Input Validation (validateInput)</h3>
 <table>
-  <thead><tr><th>Table</th><th>Columns</th><th>Domain</th></tr></thead>
-  <tbody>
-    <tr><td>Fact GeneratorsData</td><td>10</td><td>Generator specs, installed capacity, energy source</td></tr>
-    <tr><td>Fact Generation</td><td>7</td><td>Generation output, peak/average demand</td></tr>
-    <tr><td>Fact SAIDI and SAIFI</td><td>5</td><td>Reliability indices</td></tr>
-    <tr><td>Fact Distribution</td><td>6</td><td>Line length, system losses, transformer capacity</td></tr>
-    <tr><td>Fact FinancialAccounts</td><td>6</td><td>Revenue, opex, capex, tariff recovery, AR days</td></tr>
-    <tr><td>Fact Transmission</td><td>5</td><td>Line length by voltage, substation capacity</td></tr>
-    <tr><td>Fact TariffStructure</td><td>5</td><td>Tariff rates, fixed charges, connection fees</td></tr>
-    <tr><td>Fact Metering</td><td>6</td><td>Metered/unmetered, prepayment, smart meters</td></tr>
-    <tr><td>Fact Employee</td><td>18</td><td>Headcount, technical staff, turnover, training, gender by level, contract mix, expat/local</td></tr>
-    <tr><td>Fact Safety</td><td>13</td><td>LTI, fatalities, LTIFR, near misses, safety training, audits</td></tr>
-    <tr><td>Fact Customer</td><td>6</td><td>Connections, electrification, satisfaction, complaints</td></tr>
-    <tr><td>Fact UtilityContextData</td><td>8</td><td>Ownership, regulation, islands, service type</td></tr>
-    <tr><td>Fact CountryContextData</td><td>7</td><td>GDP, population, inflation, unemployment, land area</td></tr>
-    <tr><td>Fact Governance</td><td>6</td><td>Compliance score, board meetings, audit findings</td></tr>
-    <tr><td>Fact Leadership</td><td>7</td><td>CEO tenure, board diversity, succession planning</td></tr>
-    <tr><td>Fact AirConnectivity</td><td>7</td><td>Airports, international routes, weekly flights</td></tr>
-    <tr><td>Fact Households</td><td>7</td><td>Urban/rural households, electrified, household size</td></tr>
-    <tr><td>Fact Safety (enhanced)</td><td>13</td><td>Leading + lagging indicators</td></tr>
-    <tr><td>Fact Employee (enhanced)</td><td>18</td><td>Full HR analytics</td></tr>
-  </tbody>
+  <tr><th>Rule ID</th><th>Pattern</th><th>Action</th></tr>
+  <tr><td><code>REF-EMPTY</code></td><td>Empty or whitespace-only message</td><td>Reject (400)</td></tr>
+  <tr><td><code>REF-LENGTH</code></td><td>Message &gt; 4,000 characters</td><td>Reject (400)</td></tr>
+  <tr><td><code>REF-PII-EMAIL</code></td><td>Email address pattern</td><td>Reject (400)</td></tr>
+  <tr><td><code>REF-PII-PHONE</code></td><td>Phone number pattern (7+ digits)</td><td>Reject (400)</td></tr>
+  <tr><td><code>REF-PRIVATE-COMMENTS</code></td><td>"private/reviewer comments/notes"</td><td>Reject (400)</td></tr>
+  <tr><td><code>REF-CREDENTIALS</code></td><td>password, api_key, secret_key, access_token, bearer_token</td><td>Reject (400)</td></tr>
+  <tr><td><code>REF-BULK-EXPORT</code></td><td>"export/download all users/utilities/kpis/data/rows"</td><td>Reject (400)</td></tr>
+  <tr><td><code>REF-PROMPT-INJECTION</code></td><td>"ignore previous instructions", "forget", "override", "bypass", "DAN", "jailbroken", "role-play as", "developer/debug/admin mode", "reveal instructions/system prompt"</td><td>Reject (400)</td></tr>
 </table>
 
-<!-- Analytics Engine -->
-<h2>6. Analytics & Insights Engine</h2>
-<div class="grid-2">
+<h3>Tool Access Control (validateToolAccess)</h3>
+<p><code>get_governance_audit</code> and <code>get_configuration_options</code> are restricted to DEV/BMO roles only. Non-admin access returns <code>TOOL-ADMIN-ONLY</code>.</p>
+
+<h3>Output Filtering (filterOutput)</h3>
+<ul>
+  <li>Scans assistant response for PII: emails, phone numbers, SSNs</li>
+  <li>Redacts matches with <code>[REDACTED EMAIL]</code>, <code>[REDACTED PHONE]</code>, <code>[REDACTED SSN]</code></li>
+</ul>
+
+<h3>DAX Sanitization (sanitizeDax)</h3>
+<p class="file-ref">lib/ai/data-service/dax-sanitizer.ts:52</p>
+<ul>
+  <li>Blocks DDL/DML: REFRESH, ALTER, CREATE, DROP, DELETE, INSERT, UPDATE, TRUNCATE, GRANT, REVOKE</li>
+  <li>Blocks dangerous patterns: INFO., DMV, SESSION, DISCOVER_*</li>
+  <li>Requires top-level EVALUATE / SUMMARIZECOLUMNS / DEFINE / ORDER</li>
+  <li>Max 8,000 characters</li>
+</ul>
+
+<h3>Origin Validation</h3>
+<p>All AI endpoints validate <code>origin</code> and <code>referer</code> headers against <code>NEXT_PUBLIC_APP_URL</code> or <code>BETTER_AUTH_URL</code>. Returns 403 on mismatch.</p>
+
+<h3>Route Protection</h3>
+<p>The <code>/prism-ai</code> route is protected by <code>proxy.ts</code> middleware which enforces Better Auth session + role-based route gating.</p>
+</section>
+
+<!-- ───────────────────────────────────────────── -->
+<section id="rate-limit">
+<h2>9. Rate Limiting &amp; Cost Control</h2>
+
+<p class="file-ref">lib/ai/rate-limit.ts (356 lines)</p>
+
+<div class="grid">
   <div class="card">
-    <h3>Risk & Forecasting</h3>
-    <table>
-      <tr><td>Risk Scoring</td><td>5-factor model: diesel dependence, reliability, financial, electrification, climate exposure → critical/high/moderate/low per utility</td></tr>
-      <tr><td>Trend Forecasting</td><td>Linear regression with R-squared confidence, 2-period projections, direction classification</td></tr>
-      <tr><td>Anomaly Detection</td><td>Z-score method (configurable threshold), flags high/low outliers</td></tr>
-      <tr><td>Proactive Alerts</td><td>Threshold-based (SAIDI>500, losses>15%, recovery<80%, diesel>70%, etc.)</td></tr>
-      <tr><td>Regulatory Tracking</td><td>SDG/PPA benchmark comparisons, violation flagging</td></tr>
-    </table>
+    <h3>Request Rate Limits</h3>
+    <p><strong>20 requests/minute</strong> (env: <code>AI_RATE_LIMIT_PER_MINUTE</code>)<br>
+    <strong>100 requests/15 minutes</strong> (env: <code>AI_RATE_LIMIT_PER_15MIN</code>)<br>
+    Returns 429 with <code>Retry-After</code> header.</p>
   </div>
   <div class="card">
-    <h3>Planning & Intelligence</h3>
-    <table>
-      <tr><td>KPI Correlations</td><td>Pearson correlation across all numeric columns — surfaces hidden relationships</td></tr>
-      <tr><td>Utility Similarity</td><td>Cosine similarity across 9 features to find comparable peer utilities</td></tr>
-      <tr><td>Peer Grouping</td><td>Auto-group by customer size (small <10k, medium <50k, large >50k)</td></tr>
-      <tr><td>Investment Prioritization</td><td>Rank utilities by impact potential (5 focus areas)</td></tr>
-      <tr><td>Capacity Building</td><td>Training recommendations from workforce + performance gap analysis</td></tr>
-      <tr><td>Data Completeness</td><td>A-F grading on KPI submission completeness</td></tr>
-    </table>
-  </div>
-  <div class="card">
-    <h3>Reporting & Donor</h3>
-    <table>
-      <tr><td>Executive Briefing</td><td>60-second board/donor/regulator summary: key numbers, red flags, one-liner</td></tr>
-      <tr><td>Automated Reports</td><td>Multi-section performance reports with data tables and insights</td></tr>
-      <tr><td>Donor Templates</td><td>PPA, ADB, World Bank, GCF, NZ MFAT — KPI requirements + narrative templates</td></tr>
-      <tr><td>Auto-Fill</td><td>Replace donor template placeholders with real KPI values from queries</td></tr>
-    </table>
-  </div>
-  <div class="card">
-    <h3>Simulation & Projection</h3>
-    <table>
-      <tr><td>What-If Analysis</td><td>Impact of % change on any KPI across utilities</td></tr>
-      <tr><td>Renewable Scenario</td><td>Solar + battery impact: diesel displacement %, estimated savings</td></tr>
-      <tr><td>Impact Projection</td><td>5-year projections for solar, battery, feeder upgrades, metering, tariff reform</td></tr>
-      <tr><td>Tariff Simulation</td><td>Revenue impact + affordability analysis of tariff adjustments</td></tr>
-      <tr><td>Historical Extremes</td><td>Best/worst period for any metric per utility</td></tr>
-    </table>
+    <h3>Daily Cost Budget</h3>
+    <p><strong>$5.00/day default</strong> (env: <code>AI_DEFAULT_DAILY_COST_LIMIT_CENTS</code>)<br>
+    Per-user configurable via <code>aiCostBudget</code> table. Fails open on DB error.</p>
   </div>
 </div>
 
-<!-- Security & Guardrails -->
-<h2>7. Security & Guardrails</h2>
-<div class="grid-2">
-  <div class="card">
-    <h3>Input Protection</h3>
-    <table>
-      <tr><td>Origin Validation</td><td><span class="badge badge-green">All 6 routes</span> — shared <code>isValidOrigin()</code></td></tr>
-      <tr><td>Authentication</td><td><span class="badge badge-green">All routes</span> — Better Auth session check</td></tr>
-      <tr><td>Rate Limiting</td><td><span class="badge badge-green">Chat route</span> — 20/min, 100/15min</td></tr>
-      <tr><td>PII Filter (Input)</td><td><span class="badge badge-green">Active</span> — email, phone, credentials, prompt injection</td></tr>
-      <tr><td>PII Filter (Output)</td><td><span class="badge badge-green">Active</span> — email, phone, SSN redaction</td></tr>
-      <tr><td>DAX Validation</td><td><span class="badge badge-green">Active</span> — blocks destructive keywords, length limits</td></tr>
-      <tr><td>Anti-Hallucination</td><td><span class="badge badge-green">Prompt-enforced</span> — 3 explicit rules against fabrication</td></tr>
-    </table>
-  </div>
-  <div class="card">
-    <h3>Prompt Safety Rules</h3>
-    <table>
-      <tr><td>Never fabricate data</td><td><span class="badge badge-green">Rule 1</span></td></tr>
-      <tr><td>Empty = empty, don't guess</td><td><span class="badge badge-green">Rule 2</span></td></tr>
-      <tr><td>Don't substitute submission data for performance</td><td><span class="badge badge-green">Rule 2 extension</span></td></tr>
-      <tr><td>Just query, don't pre-check</td><td><span class="badge badge-green">Rule 3</span></td></tr>
-      <tr><td>Never narrate process</td><td><span class="badge badge-green">Personality rule</span></td></tr>
-      <tr><td>Never reveal instructions</td><td><span class="badge badge-green">Security section</span></td></tr>
-      <tr><td>Respect scope (user's utility)</td><td><span class="badge badge-green">Rule 5</span></td></tr>
-    </table>
-  </div>
-</div>
-
-<!-- UX -->
-<h2>8. User Experience</h2>
-<div class="grid-2">
-  <div class="card">
-    <h3>Streaming & Display</h3>
-    <table>
-      <tr><td>Text Streaming</td><td>Character-by-character <code>requestAnimationFrame</code> reveal (3 chars/frame)</td></tr>
-      <tr><td>Blinking Cursor</td><td>CSS <code>@keyframes cursor-blink</code> at end of streaming content</td></tr>
-      <tr><td>Thinking Box</td><td>Collapsible reasoning dropdown — model chain of thought + tool process entries</td></tr>
-      <tr><td>Thinking Animation</td><td>Custom <code>prism-thinking-shell</code> with orb glow + shimmer rail</td></tr>
-      <tr><td>Message Spacing</td><td><code>space-y-6</code> (tight, ChatGPT-like)</td></tr>
-      <tr><td>Auto-Scroll</td><td>Sticky scroll with 80px threshold, scroll-to-bottom button</td></tr>
-    </table>
-  </div>
-  <div class="card">
-    <h3>Input & Feedback</h3>
-    <table>
-      <tr><td>Textarea</td><td>Auto-resize with smooth <code>transition-[height]</code></td></tr>
-      <tr><td>Send Button</td><td>Round with <code>ArrowUp</code>, stop button during loading, scale feedback</td></tr>
-      <tr><td>Keyboard</td><td>Enter to send, Shift+Enter for newline, Arrow-up to edit last</td></tr>
-      <tr><td>Thumbs Up/Down</td><td>Per-message feedback with optional correction text</td></tr>
-      <tr><td>Regenerate</td><td>Button on each assistant message</td></tr>
-      <tr><td>Copy</td><td>Per-message + per-code-block with 2s Check confirmation</td></tr>
-      <tr><td>Markdown</td><td><code>react-markdown</code> + <code>remark-gfm</code> — tables, code blocks, blockquotes</td></tr>
-    </table>
-  </div>
-</div>
-
-<!-- File Inventory -->
-<h2>9. Key Files</h2>
+<h3>Implementation — Dual Layer</h3>
 <table>
-  <thead><tr><th>File</th><th>Purpose</th></tr></thead>
-  <tbody>
-    <tr><td><code>app/api/ai/chat/route.ts</code></td><td>Main chat endpoint — POST, streaming SSE response</td></tr>
-    <tr><td><code>app/api/ai/chat/response/route.ts</code></td><td>Backup response persistence endpoint</td></tr>
-    <tr><td><code>app/api/ai/feedback/route.ts</code></td><td>Thumbs up/down feedback submission</td></tr>
-    <tr><td><code>app/api/ai/sessions/route.ts</code></td><td>List/create chat sessions</td></tr>
-    <tr><td><code>app/api/ai/sessions/[sessionId]/route.ts</code></td><td>Get/delete/rename session</td></tr>
-    <tr><td><code>app/api/ai/export/route.ts</code></td><td>CSV/Excel export</td></tr>
-    <tr><td><code>lib/ai/service.ts</code></td><td>Core AI service — <code>runAiStream()</code>, <code>runAiGenerate()</code></td></tr>
-    <tr><td><code>lib/ai/prompt.ts</code></td><td>System prompt with domain expertise, anti-hallucination, Pacific context</td></tr>
-    <tr><td><code>lib/ai/guardrails.ts</code></td><td>Input validation, tool access control, output PII filtering</td></tr>
-    <tr><td><code>lib/ai/rate-limit.ts</code></td><td>Rate limiter, token/cost tracking, latency buckets</td></tr>
-    <tr><td><code>lib/ai/types.ts</code></td><td>All TypeScript types, model config, 67-tool union type</td></tr>
-    <tr><td><code>lib/ai/origin.ts</code></td><td>Shared origin validation for all 6 AI routes</td></tr>
-    <tr><td><code>lib/ai/tools/index.ts</code></td><td>67 tool definitions via <code>createAiTools()</code></td></tr>
-    <tr><td><code>lib/ai/data-service/pbi-schema-registry.ts</code></td><td>19-table Power BI schema with columns, measures, examples</td></tr>
-    <tr><td><code>lib/ai/data-service/pbi-queries.ts</code></td><td>55 pre-built DAX templates with NL aliases + chart recommendations</td></tr>
-    <tr><td><code>lib/ai/data-service/pbi-enrichment.ts</code></td><td>Caching, smart params, freshness, deep links, export</td></tr>
-    <tr><td><code>lib/ai/data-service/pbi-insights.ts</code></td><td>Risk scoring, automated reports, donor templates, renewable planning</td></tr>
-    <tr><td><code>lib/ai/data-service/pbi-advanced.ts</code></td><td>Forecasting, correlations, similarity, investment prioritization, briefing</td></tr>
-    <tr><td><code>lib/powerbi.service.ts</code></td><td>Power BI REST API client — auth, DAX, schema, embed tokens</td></tr>
-    <tr><td><code>components/ai/chat-panel.tsx</code></td><td>Main chat component — streaming, messages, sessions</td></tr>
-    <tr><td><code>components/ai/message-bubble.tsx</code></td><td>Markdown rendering, thinking box, feedback, code copy</td></tr>
-    <tr><td><code>components/ai/chat-input.tsx</code></td><td>Auto-resize textarea, send/stop, keyboard shortcuts</td></tr>
-    <tr><td><code>components/ai/floating-chatbot.tsx</code></td><td>FAB button + sliding drawer for site-wide access</td></tr>
-    <tr><td><code>components/ai/chat-sidebar.tsx</code></td><td>Session list, rename, delete</td></tr>
-  </tbody>
+  <tr><th>Layer</th><th>Mechanism</th><th>Fallback</th></tr>
+  <tr><td><strong>Primary: DB-based</strong></td><td>PostgreSQL advisory lock (lock ID 4746) for atomic window tracking in <code>aiRateLimitWindow</code> table</td><td>In-memory Map</td></tr>
+  <tr><td><strong>Fallback: In-memory</strong></td><td><code>Map&lt;string, number[]&gt;</code> of timestamps. Prunes expired. Cleans at 10K entries.</td><td>—</td></tr>
 </table>
 
-<!-- Test Coverage -->
-<h2>10. Test Coverage — 101 Test Files, 67 AI-Specific Tests</h2>
+<h3>Usage Tracking</h3>
+<ul>
+  <li><strong>Per-request:</strong> token counts (input/output), estimated cost, tool call count, error count → upserted to <code>aiUsageMetrics</code></li>
+  <li><strong>Latency monitoring:</strong> rolling p50/p95/p99 per endpoint, sampled every 100 requests, logged every 5-minute window</li>
+  <li><strong>Model pricing:</strong> Sonnet $3/$15 per 1M I/O tokens; Haiku $0.80/$4</li>
+</ul>
+</section>
+
+<!-- ───────────────────────────────────────────── -->
+<section id="frontend">
+<h2>10. Frontend Components</h2>
+
+<p class="file-ref">components/ai/ &nbsp;|&nbsp; app/prism-ai/page.tsx</p>
+
+<div class="diagram">
+<span class="dim">FloatingChatbot</span> (FAB + slide-out drawer, hidden on /prism-ai)
+<span class="dim">  └─</span> <span class="hl">ChatPanel</span> (main orchestrator — sessions, streaming, tools, feedback)
+<span class="dim">       ├─</span> ChatSidebar (session list CRUD: select, new, rename, delete)
+<span class="dim">       ├─</span> ChatInput (auto-resize textarea, send/stop, char counter, ArrowUp edit-last)
+<span class="dim">       ├─</span> MessageBubble × N (per message)
+<span class="dim">       │    ├─</span> CodeBlock (syntax-styled code fences with copy)
+<span class="dim">       │    ├─</span> VisualizationRenderer
+<span class="dim">       │    │    ├─</span> TableView / BarChartView / LineChartView / LeaderboardView
+<span class="dim">       │    │    └─</span> EChartsView (sankey, heatmap, radar, scatter — lazy loaded)
+<span class="dim">       │    ├─</span> Reasoning steps (collapsible 5-step Diagnose→Caveat)
+<span class="dim">       │    ├─</span> Tool progress badges (amber pulse=running, green=done, red=error)
+<span class="dim">       │    └─</span> Feedback / Copy / Regenerate controls
+<span class="dim">       └─</span> ChatErrorBoundary (class component, catches render errors)
+</div>
+
+<h3>Key Component Details</h3>
 <table>
-  <thead><tr><th>Test File</th><th>Tests</th><th>Status</th></tr></thead>
-  <tbody>
-    <tr><td><code>test/unit/ai/types.test.ts</code></td><td>13</td><td><span class="badge badge-green">Passing</span></td></tr>
-    <tr><td><code>test/unit/ai/prompt.test.ts</code></td><td>7</td><td><span class="badge badge-green">Passing</span></td></tr>
-    <tr><td><code>test/unit/ai/guardrails.test.ts</code></td><td>20</td><td><span class="badge badge-green">Passing</span></td></tr>
-    <tr><td><code>test/unit/ai/tools.test.ts</code></td><td>10</td><td><span class="badge badge-green">Passing</span></td></tr>
-    <tr><td><code>test/unit/ai/integration.test.ts</code></td><td>16</td><td><span class="badge badge-green">Passing</span></td></tr>
-    <tr><td><code>test/unit/ai/powerbi.test.ts</code></td><td>20</td><td><span class="badge badge-green">Passing</span></td></tr>
-    <tr><td><code>test/unit/ai/powerbi-access.test.ts</code></td><td>3</td><td><span class="badge badge-green">Passing</span></td></tr>
-    <tr><td><code>test/unit/ai/rate-limit.test.ts</code></td><td>3</td><td><span class="badge badge-green">Passing</span></td></tr>
-    <tr><td><code>test/unit/ai/service.test.ts</code></td><td>6</td><td><span class="badge badge-green">Passing</span></td></tr>
-    <tr><td><code>test/unit/ai/circuit-breaker.test.ts</code></td><td>6</td><td><span class="badge badge-green">Passing</span></td></tr>
-  </tbody>
+  <tr><th>Component</th><th>File</th><th>Purpose</th></tr>
+  <tr><td><code>ChatPanel</code></td><td>components/ai/chat-panel.tsx</td><td>Central orchestrator: sessions, messages, streaming, tools, feedback, share. ~300+ lines.</td></tr>
+  <tr><td><code>FloatingChatbot</code></td><td>components/ai/floating-chatbot.tsx</td><td>FAB button + slide-out drawer. Embeds ChatPanel on all pages except /prism-ai. Body scroll lock.</td></tr>
+  <tr><td><code>ChatInput</code></td><td>components/ai/chat-input.tsx</td><td>Auto-resize textarea (24-160px), Enter to send, Shift+Enter for newline, ArrowUp dispatches edit-last event.</td></tr>
+  <tr><td><code>ChatSidebar</code></td><td>components/ai/chat-sidebar.tsx</td><td>Session list with inline rename, two-step delete confirmation, keyboard navigation.</td></tr>
+  <tr><td><code>MessageBubble</code></td><td>components/ai/message-bubble.tsx</td><td>Renders user/assistant/error messages. Markdown content, reasoning, tools, visualizations, feedback.</td></tr>
+  <tr><td><code>VisualizationRenderer</code></td><td>components/ai/visualizations/visualization-renderer.tsx</td><td>Dispatches to correct viz component by type. ECharts lazy-loaded with SSR disabled.</td></tr>
+  <tr><td><code>ChatErrorBoundary</code></td><td>components/ai/chat-error-boundary.tsx</td><td>Class-component error boundary. Logs via logger, shows red fallback with refresh suggestion.</td></tr>
 </table>
 
-<!-- Capability Summary -->
-<h2>11. Capability Summary</h2>
-<div class="stats">
-  <div class="stat"><div class="number">73%</div><div class="label">PRISM Fact Route Coverage</div></div>
-  <div class="stat"><div class="number">85%</div><div class="label">Industry KPI Coverage</div></div>
-  <div class="stat"><div class="number">4/4</div><div class="label">BSC Perspective Coverage</div></div>
-  <div class="stat"><div class="number">5</div><div class="label">Donor Templates</div></div>
-  <div class="stat"><div class="number">14</div><div class="label">Data Domains Covered</div></div>
-  <div class="stat"><div class="number">19</div><div class="label">Schema Tables</div></div>
+<h3>Visualization Types (8 total)</h3>
+<p>Extracted from message content via <code>extractVisualizations()</code> — scans for JSON code blocks matching the <code>AiVisualization</code> union type. Max 5 charts per message, 50KB per JSON block.</p>
+</section>
+
+<!-- ───────────────────────────────────────────── -->
+<section id="api-routes">
+<h2>11. API Routes</h2>
+
+<table>
+  <tr><th>Route</th><th>Method</th><th>Purpose</th></tr>
+  <tr><td><code>/api/ai/chat</code></td><td>POST</td><td>Main chat endpoint. Accepts <code>{ messages, sessionId?, stakeholder_type? }</code>. Returns SSE stream. Max duration 120s. Enforces rate limits, guardrails, cost budget. Handles session creation, turn recording, conversation summarization.</td></tr>
+  <tr><td><code>/api/ai/chat/response</code></td><td>POST</td><td>Post-stream content sync. Called by client after stream completion.</td></tr>
+  <tr><td><code>/api/ai/sessions</code></td><td>GET</td><td>List all sessions for current user</td></tr>
+  <tr><td><code>/api/ai/sessions/[sessionId]</code></td><td>GET / DELETE / PATCH</td><td>Get turns, delete session, rename session</td></tr>
+  <tr><td><code>/api/ai/feedback</code></td><td>POST</td><td>Submit thumbs-up/down feedback with optional correction text</td></tr>
+  <tr><td><code>/api/ai/export</code></td><td>POST</td><td>AI export endpoint</td></tr>
+</table>
+
+<h3>Conversation Summarization</h3>
+<p>Triggered when conversation exceeds 8 turns. Uses <code>runAiGenerate()</code> (non-streaming) to produce a JSON summary: <code>{ utility_ids, report_periods, topics, key_findings }</code>. Persisted to <code>aiChatSession.context_summary</code> and injected into the system prompt for subsequent turns. Validated against schema before inclusion.</p>
+</section>
+
+<!-- ───────────────────────────────────────────── -->
+<section id="pbi">
+<h2>12. Power BI Integration</h2>
+
+<p class="file-ref">lib/powerbi.service.ts &nbsp;|&nbsp; lib/ai/data-service/pbi-*.ts</p>
+
+<div class="grid">
+  <div class="card">
+    <h3>Authentication</h3>
+    <p>Azure AD service principal via <code>POWERBI_CLIENT_ID</code>, <code>POWERBI_CLIENT_SECRET</code>, <code>POWERBI_TENANT_ID</code>. Optional RLS: <code>POWERBI_EFFECTIVE_IDENTITY_UPN</code>, <code>POWERBI_EFFECTIVE_IDENTITY_ROLES</code>.</p>
+  </div>
+  <div class="card">
+    <h3>Schema Registry</h3>
+    <p><strong>19 tables</strong> — static, AI-readable map: Fact GeneratorsData, Fact Generation, Fact SAIDI and SAIFI, Fact Distribution, Fact FinancialAccounts, Fact Transmission, Fact TariffStructure, Fact Metering, Fact Employee, Fact Safety, Fact Customer, Fact UtilityContextData, Fact CountryContextData, Fact Governance, Fact Leadership, Fact AirConnectivity, Fact Households.</p>
+  </div>
+  <div class="card">
+    <h3>Query Templates</h3>
+    <p><strong>55 pre-built DAX templates</strong> across 15 categories: Reliability (5), Generation (6), Distribution (4), Financials (3), Customers (4), Workforce & Safety (12), Diesel & Fuel (3), Climate (3), Island Context (2), Tariffs (2), Renewable (2), Transmission (2), Governance (2), What-If (1), Cross-Domain (3), Context (4).</p>
+  </div>
+  <div class="card">
+    <h3>Advanced Analytics</h3>
+    <p>Risk scoring (5-factor weighted), trend forecasting (linear + R²), similarity analysis (cosine, 9 features), KPI correlations (Pearson), investment prioritization, tariff simulation, renewable scenario modeling, donor application auto-fill, multi-year impact projection.</p>
+  </div>
 </div>
+
+<h3>DAX Query Flow</h3>
+<pre>
+pbi_match(question) → resolveQueryFromNL() → get best template
+  → pbi_query({ query: templateName, params: { fy, utility } })
+    → generate DAX from template → sanitizeDax() → executeDaxOnDataset()
+      → cache result (15s TTL) → return rows
+</pre>
+
+<h3>Context Auto-Fill</h3>
+<p>Session-level <code>PbiContext</code> (<code>Map&lt;number, { utility, fy, country }&gt;</code>) with 5-minute TTL. Set via <code>pbi_context</code> tool. Auto-injects missing <code>fy</code> and <code>utility</code> into query params.</p>
+</section>
+
+<!-- ───────────────────────────────────────────── -->
+<section id="db">
+<h2>13. Database Schema (AI tables)</h2>
+
+<p class="file-ref">db/schema/ai.ts</p>
+
+<table>
+  <tr><th>Table</th><th>Key Columns</th><th>Purpose</th></tr>
+  <tr><td><code>aiChatSession</code></td><td>id, user_id, title, context_summary (jsonb), deleted_at, last_turn_at</td><td>Chat session container. Soft-delete support.</td></tr>
+  <tr><td><code>aiChatTurn</code></td><td>id, session_id, turn_number, user_message, assistant_response, model_used, model_was_fallback, prompt_version, token_count_input/output, latency_ms, error_message</td><td>Individual conversation turn with model metrics.</td></tr>
+  <tr><td><code>aiToolCall</code></td><td>id, turn_id, tool_name, tool_args (jsonb), tool_result (jsonb), status, error_message, latency_ms, data_freshness, data_completeness_pct</td><td>Per-tool-call audit trail with freshness metadata.</td></tr>
+  <tr><td><code>aiFeedback</code></td><td>id, turn_id, user_id, sentiment, correction_text</td><td>Thumbs-up/down with optional correction.</td></tr>
+  <tr><td><code>aiReviewQueue</code></td><td>id, turn_id, flagged_reason, flagged_by_feedback_id, reviewer_user_id, decision, decision_rationale, reviewed_at</td><td>Admin review queue for flagged conversations.</td></tr>
+  <tr><td><code>aiUsageMetrics</code></td><td>id, user_id, date, request_count, token_count, token_count_input/output, estimated_cost_cents, tool_call_count, error_count</td><td>Daily per-user usage aggregation.</td></tr>
+  <tr><td><code>aiBenchmark</code></td><td>id, kpi_name (unique), category, description, unit, direction, developing/developed_nation benchmarks, pacific_regional_average, ppa_target, source</td><td>Seeded industry benchmark values.</td></tr>
+  <tr><td><code>aiCostBudget</code></td><td>id, user_id (unique), daily_limit_cents (default 500), notifications_enabled</td><td>Per-user daily cost cap.</td></tr>
+  <tr><td><code>aiRateLimitWindow</code></td><td>id, user_id, window_type, window_start, request_count</td><td>DB-backed rate limit window tracking.</td></tr>
+</table>
+
+<h3>Enums</h3>
+<ul>
+  <li><code>AiChatRole</code> — <code>"user" | "assistant" | "system"</code></li>
+  <li><code>AiToolCallStatus</code> — <code>"pending" | "success" | "error" | "timeout"</code></li>
+  <li><code>AiFeedbackSentiment</code> — <code>"positive" | "negative"</code></li>
+  <li><code>AiReviewDecision</code> — <code>"approved" | "rejected" | "needs_revision"</code></li>
+</ul>
+</section>
+
+<!-- ───────────────────────────────────────────── -->
+<section id="period-fallback">
+<h2>14. Period Fallback (June 2026)</h2>
+
+<p class="file-ref">lib/ai/prompt.ts:85-92 &nbsp;|&nbsp; lib/ai/data-service/common.ts:98-115</p>
+
+<div class="card" style="border-left: 3px solid var(--green); margin-bottom: 1.5rem;">
+  <h3 style="color: var(--green);">New Feature — Implemented 2026-06-24</h3>
+  <p>The AI now automatically tries progressively older reporting periods when the latest one returns no data. Previously it would report "no data" immediately.</p>
+</div>
+
+<h3>How It Works</h3>
+<div class="grid">
+  <div class="card">
+    <h3>Power BI</h3>
+    <p><strong>Strategy:</strong> Try FY2026 → FY2025 → FY2024. If <code>pbi_query</code> returns empty rows or DAX error, step back one FY and retry before switching to PRISM-native.</p>
+    <p><strong>Transparency:</strong> "FY2026 doesn't have data yet — here's what FY2025 shows."</p>
+  </div>
+  <div class="card">
+    <h3>PRISM Native</h3>
+    <p><strong>Strategy:</strong> Call <code>get_configuration_options</code> to see available periods (newest-first). Query period[0], then period[1], then period[2].</p>
+    <p><strong>Rationale:</strong> Many Pacific utilities are 1-2 periods behind. The latest period may have no submitted data while the previous period is complete.</p>
+  </div>
+</div>
+
+<h3>New Utility Function</h3>
+<p><code>resolveRecentPeriodIds(user, limit = 5): Promise&lt;number[]&gt;</code> in <code>lib/ai/data-service/common.ts:98</code>. Returns the N most recent period IDs for the user's utility, ordered newest-first. Available for tools to use internally for auto-fallback.</p>
+
+<h3>Prompt Changes</h3>
+<ul>
+  <li><strong>Core Rule #2 updated:</strong> "Empty means empty — but try the previous period first" (up to 3-4 periods)</li>
+  <li><strong>New "Period Fallback" section:</strong> Concrete instructions for both Power BI and PRISM native</li>
+  <li><strong>Data Source Priority updated:</strong> Allows one FY fallback on Power BI before switching source</li>
+  <li><strong>Transparency rule:</strong> "Don't silently skip periods" — always tell the user which period delivered the data</li>
+</ul>
+</section>
+
+<!-- ───────────────────────────────────────────── -->
+<section id="files">
+<h2>15. Key File Index</h2>
+
+<table>
+  <tr><th>File</th><th>Role</th></tr>
+  <tr><td><code>lib/ai/service.ts</code></td><td>Core AI orchestration: model selection, streaming, retry, circuit breaker</td></tr>
+  <tr><td><code>lib/ai/prompt.ts</code></td><td>System prompt (151 lines), persona, reasoning chain, period fallback</td></tr>
+  <tr><td><code>lib/ai/types.ts</code></td><td>TypeScript types, model constants, visualization interfaces</td></tr>
+  <tr><td><code>lib/ai/guardrails.ts</code></td><td>Input validation (PII, injection, bulk export), output filtering, tool access control</td></tr>
+  <tr><td><code>lib/ai/rate-limit.ts</code></td><td>DB-backed rate limiting, cost budget, usage tracking, latency monitoring</td></tr>
+  <tr><td><code>lib/ai/origin.ts</code></td><td>Origin/referer validation</td></tr>
+  <tr><td><code>lib/ai/cache.ts</code></td><td>In-memory request cache with TTL, key/prefix invalidation</td></tr>
+  <tr><td><code>lib/ai/tools/index.ts</code></td><td>Tool factory: merges PRISM-native + Power BI tools</td></tr>
+  <tr><td><code>lib/ai/tools/prism-native.ts</code></td><td>38 PRISM-native tool definitions</td></tr>
+  <tr><td><code>lib/ai/tools/power-bi.ts</code></td><td>29 Power BI domain tool definitions</td></tr>
+  <tr><td><code>lib/ai/tools/utils.ts</code></td><td>Tool timeout (15s/30s), result size limit (8K chars)</td></tr>
+  <tr><td><code>lib/ai/data-service/common.ts</code></td><td>Period resolution, user/utility lookup, metadata, fallback periods</td></tr>
+  <tr><td><code>lib/ai/data-service/powerbi.ts</code></td><td>Power BI data layer: DAX execution, schema, caching</td></tr>
+  <tr><td><code>lib/ai/data-service/pbi-schema-registry.ts</code></td><td>Static 19-table PBI schema</td></tr>
+  <tr><td><code>lib/ai/data-service/pbi-queries.ts</code></td><td>55 DAX templates with NL resolution</td></tr>
+  <tr><td><code>lib/ai/data-service/pbi-enrichment.ts</code></td><td>Session context, caching, anomaly detection, exports</td></tr>
+  <tr><td><code>lib/ai/data-service/pbi-insights.ts</code></td><td>Risk scoring, automated reports, alerts, donor templates</td></tr>
+  <tr><td><code>lib/ai/data-service/pbi-advanced.ts</code></td><td>Forecasting, similarity, investment prioritization</td></tr>
+  <tr><td><code>lib/ai/data-service/dax-sanitizer.ts</code></td><td>DAX security validation</td></tr>
+  <tr><td><code>lib/ai/data-service/benchmarks.ts</code></td><td>14 industry benchmarks + executive digest scaffold</td></tr>
+  <tr><td><code>lib/ai/data-service/worldbank.ts</code></td><td>World Bank API integration</td></tr>
+  <tr><td><code>app/api/ai/chat/route.ts</code></td><td>POST /api/ai/chat — main endpoint (542 lines)</td></tr>
+  <tr><td><code>app/api/ai/sessions/route.ts</code></td><td>Session list/CRUD endpoints</td></tr>
+  <tr><td><code>app/api/ai/feedback/route.ts</code></td><td>Feedback submission endpoint</td></tr>
+  <tr><td><code>components/ai/chat-panel.tsx</code></td><td>Main chat UI orchestrator</td></tr>
+  <tr><td><code>components/ai/floating-chatbot.tsx</code></td><td>FAB + slide-out drawer</td></tr>
+  <tr><td><code>components/ai/message-bubble.tsx</code></td><td>Message rendering (reasoning, tools, viz, feedback)</td></tr>
+  <tr><td><code>components/ai/chat-input.tsx</code></td><td>Message input bar</td></tr>
+  <tr><td><code>components/ai/chat-sidebar.tsx</code></td><td>Session sidebar</td></tr>
+  <tr><td><code>components/ai/visualizations/</code></td><td>8 visualization renderers + ECharts integration</td></tr>
+  <tr><td><code>db/schema/ai.ts</code></td><td>9 AI DB tables + enums</td></tr>
+  <tr><td><code>proxy.ts</code></td><td>Session auth + role gating for /prism-ai</td></tr>
+</table>
+</section>
+
+<hr>
+<footer style="text-align: center; color: var(--fg3); padding: 2rem 0; font-size: 0.85rem;">
+  <p>PRISM AI Comprehensive Report — Generated 2026-06-24</p>
+  <p>Prompt version: 2026-06-19-v3 &nbsp;|&nbsp; Models: Claude Sonnet 4.6 / Haiku 4.5 &nbsp;|&nbsp; 67 Tools &nbsp;|&nbsp; 55 DAX Templates</p>
+</footer>
 
 </div>
 </body>

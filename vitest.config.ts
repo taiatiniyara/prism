@@ -18,6 +18,10 @@ export default defineConfig({
       POWERBI_REPORT_ID: "test-powerbi-report-id",
       POWERBI_EMBED_URL: "https://test-powerbi.example.com",
       POWERBI_DATASET_ID: "test-powerbi-dataset-id",
+      SMTP_HOST: "smtp.test.local",
+      SMTP_PORT: "587",
+      SMTP_USER: "test-user",
+      SMTP_PASS: "test-pass",
     },
     coverage: {
       provider: "v8",

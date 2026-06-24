@@ -56,7 +56,8 @@ export default function Sidebar(props: {
           <span className="text-xs flex font-black gap-2 text-slate-400 px-4 py-2 border-b mb-2 mt-0.5">
             <FaList size={15} /> MENU
           </span>
-          {filteredList.map((item) => (
+          <nav className="flex-1 overflow-y-auto overflow-x-hidden flex flex-col gap-1">
+            {filteredList.map((item) => (
             <Link
               href={item.page}
               key={item.name}
@@ -69,6 +70,7 @@ export default function Sidebar(props: {
               {item.name}
             </Link>
           ))}
+          </nav>
         </>
       )}
     </div>

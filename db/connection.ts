@@ -9,7 +9,7 @@ const createPool = () =>
   new Pool({
     connectionString: process.env.DATABASE_URL!,
     max: Number(process.env.PG_POOL_MAX ?? "10"),
-    connectionTimeoutMillis: 1000,
+    connectionTimeoutMillis: 10000,
     idleTimeoutMillis: 30000,
     lock_timeout: 30000,
     idle_in_transaction_session_timeout: 30000,

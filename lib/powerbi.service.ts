@@ -1,3 +1,7 @@
+import { db } from "@/db/connection";
+import { benchmarkingRequests } from "@/db/schema/benchmarking-request";
+import { organisations } from "@/db/schema/utility";
+import { and, eq, or, isNull, gte } from "drizzle-orm";
 import { logger } from "@/lib/logger";
 
 // ---- Rate limiter: max 60 Power BI REST API calls per rolling 60s window ----
@@ -308,18 +312,31 @@ export function isConfiguredForDax(): boolean {
 }
 
 // ---- Effective identity ----
-function getEffectiveIdentity(): { upn: string; roles: string[] } | null {
-  const upn = process.env.POWERBI_EFFECTIVE_IDENTITY_UPN?.trim();
-  if (!upn) return null;
-  const roles = (process.env.POWERBI_EFFECTIVE_IDENTITY_ROLES?.trim() || "BLO,ALL")
-    .split(",")
-    .map((r) => r.trim())
-    .filter(Boolean);
-  return { upn, roles };
+async function getApprovedBenchmarkingList(orgId: number): Promise<string> {
+  const rows = await db
+    .select({ acronym: organisations.acronym })
+    .from(benchmarkingRequests)
+    .innerJoin(
+      organisations,
+      eq(benchmarkingRequests.benchmark_utility_id, organisations.id),
+    )
+    .where(
+      and(
+        eq(benchmarkingRequests.requesting_utility_id, orgId),
+        or(
+          isNull(benchmarkingRequests.request_expiry),
+          gte(benchmarkingRequests.request_expiry, new Date()),
+        ),
+      ),
+    );
+
+  return rows.map((r) => r.acronym).join(",");
 }
 
 // ---- Embed token generation ----
-export async function powerBiDetails(): Promise<{ reportId: string; embedUrl: string; token: string }> {
+export async function powerBiDetails(
+  user?: { email: string; role: string; org_id: number | null } | null,
+): Promise<{ reportId: string; embedUrl: string; token: string }> {
   let config = await getEnv();
   if (!config?.embedURL || !config?.reportID) {
     clearEnvCache();
@@ -332,20 +349,25 @@ export async function powerBiDetails(): Promise<{ reportId: string; embedUrl: st
   const azureResponse = await getAzureToken();
   const pbiUrl = "https://api.powerbi.com/v1.0/myorg/GenerateToken";
 
-  const identity = getEffectiveIdentity();
-
   const body: Record<string, unknown> = {
     reports: [{ id: config.reportID }],
     datasets: [{ id: config.datasetId }],
     targetWorkspaces: [{ id: config.workspaceID }],
   };
 
-  if (identity) {
-    body.identities = [{
-      username: identity.upn,
-      roles: identity.roles,
-      datasets: [config.datasetId],
-    }];
+  if (user?.email && user?.role) {
+    const approvedBenchmarkingList = user.org_id
+      ? await getApprovedBenchmarkingList(user.org_id)
+      : "";
+
+    body.identities = [
+      {
+        username: user.email,
+        roles: ["ALL", user.role],
+        datasets: [config.datasetId],
+        customData: approvedBenchmarkingList,
+      },
+    ];
   }
 
   const bearerToken = `${azureResponse.token_type} ${azureResponse.access_token}`;
@@ -524,6 +546,17 @@ export async function getDatasetSchema(
   }
 
   return tables;
+}
+
+// ---- Effective identity (env-based, used by DAX queries) ----
+function getEffectiveIdentity(): { upn: string; roles: string[] } | null {
+  const upn = process.env.POWERBI_EFFECTIVE_IDENTITY_UPN?.trim();
+  if (!upn) return null;
+  const roles = (process.env.POWERBI_EFFECTIVE_IDENTITY_ROLES?.trim() || "BLO,ALL")
+    .split(",")
+    .map((r) => r.trim())
+    .filter(Boolean);
+  return { upn, roles };
 }
 
 // ---- DAX validation ----
