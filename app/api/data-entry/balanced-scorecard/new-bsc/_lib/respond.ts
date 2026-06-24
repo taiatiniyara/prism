@@ -28,5 +28,6 @@ export const errorResponse = (error: unknown, fallback: string): Response => {
       { status: 403 },
     );
   }
+  console.error(message, error instanceof Error ? error : undefined);
   return Response.json({ message: fallback }, { status: 500 });
 };
