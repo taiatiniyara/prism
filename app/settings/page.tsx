@@ -1,5 +1,7 @@
 import Link from "next/link";
 
+import { getCurrentUser } from "@/lib/user.service";
+
 const sections = [
   {
     label: "General",
@@ -31,7 +33,19 @@ const sections = [
   },
 ];
 
-export default function SettingsHomePage() {
+// The BSC Master Template editor is restricted to DEV/BMO, so only surface its
+// card to those roles (the page itself also enforces this).
+const BSC_TEMPLATE_ADMIN_ROLES = new Set(["DEV", "BMO"]);
+
+export default async function SettingsHomePage() {
+  const user = await getCurrentUser();
+  const visibleSections = [...sections];
+  if (user?.role && BSC_TEMPLATE_ADMIN_ROLES.has(user.role)) {
+    visibleSections.push({
+      label: "BSC Master Template",
+      href: "/settings/bsc-template",
+    });
+  }
   return (
     <div className="mx-auto max-w-2xl px-4 py-12">
       <h1 className="mb-2 text-2xl font-semibold">Settings</h1>
@@ -39,7 +53,7 @@ export default function SettingsHomePage() {
         Manage platform configuration, users, organisations, and reference data.
       </p>
       <div className="grid gap-3 sm:grid-cols-2">
-        {sections.map((section) => (
+        {visibleSections.map((section) => (
           <Link
             key={section.href}
             href={section.href}
