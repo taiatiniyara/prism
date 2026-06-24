@@ -493,7 +493,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
     <div className="flex h-full overflow-hidden">
       {showSidebar && (
         <>
-          <div className={`border-border flex h-full w-64 flex-col border-r max-md:hidden ${sidebarOpen ? "max-md:flex max-md:absolute max-md:inset-y-0 max-md:left-0 max-md:z-40 max-md:bg-background" : ""}`}>
+          <div className={`border-border z-40 h-full w-64 flex-col border-r bg-background transition-all duration-200 ${sidebarOpen ? "flex absolute inset-y-0 left-0 md:relative" : "hidden"}`}>
             <ChatSidebar
               sessions={sessionList}
               activeSessionId={activeSessionId}
@@ -505,15 +505,15 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
             />
           </div>
           {sidebarOpen && (
-            <div className="fixed inset-0 z-30 bg-black/20 md:hidden" onClick={() => setSidebarOpen(false)} />
+            <div className="fixed inset-0 z-30 bg-black/20" onClick={() => setSidebarOpen(false)} />
           )}
         </>
       )}
 
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         {showSidebar && (
-          <div className="border-border flex items-center gap-2 border-b px-4 py-2 md:hidden">
-            <Button variant="ghost" size="icon-sm" onClick={() => setSidebarOpen(true)} aria-label="Open chat history">
+          <div className="border-border flex items-center gap-2 border-b px-4 py-2">
+            <Button variant="ghost" size="icon-sm" onClick={() => setSidebarOpen((prev) => !prev)} aria-label={sidebarOpen ? "Close chat history" : "Open chat history"}>
               <svg className="size-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
               </svg>

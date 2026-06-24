@@ -52,6 +52,26 @@ function formatEntry(entry: LogEntry): void {
   }
 }
 
+const BUFFER_SIZE = Number(process.env.LOG_BUFFER_SIZE ?? "10000");
+
+const ringBuffer: LogEntry[] = [];
+let bufferWriteIndex = 0;
+
+function pushToBuffer(entry: LogEntry): void {
+  if (ringBuffer.length < BUFFER_SIZE) {
+    ringBuffer.push(entry);
+  } else {
+    ringBuffer[bufferWriteIndex % BUFFER_SIZE] = entry;
+    bufferWriteIndex++;
+  }
+}
+
+export function getLogBuffer(): LogEntry[] {
+  if (ringBuffer.length < BUFFER_SIZE) return [...ringBuffer];
+  const start = bufferWriteIndex % BUFFER_SIZE;
+  return [...ringBuffer.slice(start), ...ringBuffer.slice(0, start)];
+}
+
 function log(level: LogLevel, message: string, meta?: LogMeta): void {
   if (!shouldLog(level)) return;
 
@@ -62,6 +82,7 @@ function log(level: LogLevel, message: string, meta?: LogMeta): void {
     timestamp: new Date().toISOString(),
   };
 
+  pushToBuffer(entry);
   formatEntry(entry);
 }
 

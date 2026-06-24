@@ -1,6 +1,6 @@
 # Session
 
-feature: ai-improvements
+feature: dev-observability
 status: complete
-last_action: All 12 issues implemented + spec gaps addressed. Standards pass (0 violations). Ready for final review.
-last_compaction: 2026-06-23
+last_action: All 14 issues implemented. 402/403 tests pass (1 pre-existing failure). Lint clean.
+last_compaction: 2026-06-24

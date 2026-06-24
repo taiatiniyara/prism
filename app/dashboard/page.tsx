@@ -1,10 +1,12 @@
 import { powerBiDetails } from "@/lib/powerbi.service";
 import PowerBiDashboard from "./pbi";
 import { headers } from "next/headers";
+import { getCurrentUser } from "@/lib/user.service";
 
 async function getCredentials(): Promise<Awaited<ReturnType<typeof powerBiDetails>> | { error: string }> {
   try {
-    return await powerBiDetails();
+    const user = await getCurrentUser().catch(() => null);
+    return await powerBiDetails(user ? { email: user.email, role: user.role, org_id: user.org_id } : null);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     console.error("[dashboard] powerBiDetails failed:", message);
