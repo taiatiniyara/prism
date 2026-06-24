@@ -20,8 +20,6 @@ const notoSans = Noto_Sans({
   variable: "--font-sans",
 });
 
-export const dynamic = "force-dynamic";
-
 export const metadata: Metadata = {
   title: "PRISM - PPA Benchmarking Platform",
   description:
