@@ -21,14 +21,14 @@ export const ROLE_ROUTE_PREFIXES: Record<string, string[]> = {
     "/data-entry/downloads",
     "/prism-ai",
   ],
-  BLO: ["/dashboard", "/data-entry", "/settings", "/profile", "/prism-ai"],
-  CEO: ["/dashboard", "/data-entry", "/profile", "/prism-ai"],
-  DAOF: ["/dashboard", "/data-entry", "/profile", "/prism-ai"],
-  DAOH: ["/dashboard", "/data-entry", "/profile", "/prism-ai"],
-  DAOO: ["/dashboard", "/data-entry", "/profile", "/prism-ai"],
-  EXE: ["/dashboard", "/data-entry", "/profile", "/prism-ai"],
-  EXT: ["/dashboard", "/profile", "/prism-ai"],
-  MGR: ["/dashboard", "/data-entry", "/profile", "/prism-ai"],
+  BLO: ["/dashboard", "/data-entry", "/settings", "/profile", "/docs", "/prism-ai"],
+  CEO: ["/dashboard", "/data-entry", "/profile", "/docs", "/prism-ai"],
+  DAOF: ["/dashboard", "/data-entry", "/profile", "/docs", "/prism-ai"],
+  DAOH: ["/dashboard", "/data-entry", "/profile", "/docs", "/prism-ai"],
+  DAOO: ["/dashboard", "/data-entry", "/profile", "/docs", "/prism-ai"],
+  EXE: ["/dashboard", "/data-entry", "/profile", "/docs", "/prism-ai"],
+  EXT: ["/dashboard", "/profile", "/docs", "/prism-ai"],
+  MGR: ["/dashboard", "/data-entry", "/profile", "/docs", "/prism-ai"],
 };
 
 export const ROLE_DEFAULT_PAGES: Record<string, string> = {
