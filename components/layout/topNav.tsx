@@ -58,10 +58,12 @@ export default function TopNav(props: {
               style={{ width: "auto", height: "auto" }}
             />
           </Link>
-          <NavList
-            navList={navList}
-            className="flex-row gap-8 items-center"
-          />
+          <div className="hidden md:flex">
+            <NavList
+              navList={navList}
+              className="flex-row gap-8 items-center"
+            />
+          </div>
         </div>
 
         <div className="flex items-center gap-4">
