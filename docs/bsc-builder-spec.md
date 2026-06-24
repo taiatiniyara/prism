@@ -1,6 +1,6 @@
 # BSC Builder — Specification
 
-> Status: **Approved (design)** · Owner: product + engineering · Last updated: 2026-06-10
+> Status: **Implemented** · Owner: product + engineering · Last updated: 2026-06-24
 > Supersedes: the existing **BSC Strategy Builder** (4-level free-text model). Ships alongside it first; old builder retired in a follow-up.
 
 ## 1. Purpose
@@ -98,15 +98,15 @@ Template change propagation: new **mandatory** nodes auto-appear on all scorecar
 
 Lives under **Settings** (`/settings/bsc-template`), visible to **DEV/BMO only** — add/edit/reorder nodes and flip mandatory flags. Seeded initially from the PDF; full in-app editing supported (not code-only).
 
-## 11. Build sequence
+## 11. Build sequence (all steps done)
 
-1. Schema + migration (normalized tables + trajectory on target store).
-2. Seed master template from PDF (`scripts/seed-bsc-template.ts`).
-3. Services + API (template read, overlay CRUD, reuse KPI options, inline target/trajectory write-through, new authz).
-4. BSC Builder UI (indented tree builder, cascade, custom nodes, lower-zone authoring, autosave).
-5. BSC Preview toggle (read-only filtered view).
-6. Admin template editor (`/settings/bsc-template`).
-7. Tests + wiring alongside existing Strategy Builder.
+1. ✅ Schema + migration (normalized tables + trajectory on target store).
+2. ✅ Seed master template from PDF (`scripts/seed-bsc-template.ts`).
+3. ✅ Services + API (template read, overlay CRUD, reuse KPI options, inline target/trajectory write-through, new authz).
+4. ✅ BSC Builder UI (indented tree builder, cascade, custom nodes, lower-zone authoring, autosave).
+5. ✅ BSC Preview toggle (read-only filtered view).
+6. ✅ Admin template editor (`/settings/bsc-template`).
+7. ✅ Tests + wiring alongside existing Strategy Builder — unit + route-contract tests under `test/**/new-bsc/` (authz, validators, §13.4 strategy-map link rules + cycle detection); landed 2026-06-24.
 
 ## 12. Deferred / out of scope (v1)
 
@@ -156,11 +156,13 @@ Auto-layout by (perspective band, theme column, `ord`). When `map_x`/`map_y` are
 
 Authoring edges + `map_label`/position overrides: **CEO, EXE, MGR, BLO** (same as overlay editing). Template `map_label`/`is_map_node` defaults: **DEV/BMO** via `/settings/bsc-template`. PPA seeds defaults in `seed-bsc-template.ts`; edges are never seeded (per-Utility).
 
-### 13.6 Implementation (backend — done)
+### 13.6 Implementation (done)
 
 Read model + link CRUD live in dedicated modules (kept separate from the builder's files):
 - `new-bsc/strategy-map.types.ts` · `strategy-map.repository.ts` (read model + link CRUD + node display overrides) · `strategy-map.service.ts` (authz wrappers) · `strategy-map.client.ts`.
 - API: `GET /strategy-map`; `POST /strategy-map/links`; `PUT|DELETE /strategy-map/links/[id]`; `PUT /strategy-map/nodes/[id]` (label/on-off/drag position). Validators in `_lib/strategy-map.validators.ts`.
 - The read model resolves effective `map_label`/`is_map_node` (`coalesce(utility, template, …)`), walks ancestors for band (perspective) + theme (key focus area), filters edges to currently-visible endpoints, and exposes `x`/`y` for layout.
 
-Backfill: `scripts/backfill-bsc-map-defaults.ts` applies the §13 map defaults onto an already-seeded template (the seed is idempotent and skips existing rows). It matches by `(level, label)` against the canonical seed labels; admin-edited templates that have diverged need their flags reconciled directly. **Pending: the Strategy Map UI** (auto-layout renderer, drag-to-position, edge drawing).
+Backfill: `scripts/backfill-bsc-map-defaults.ts` applies the §13 map defaults onto an already-seeded template (the seed is idempotent and skips existing rows). It matches by `(level, label)` against the canonical seed labels; admin-edited templates that have diverged need their flags reconciled directly.
+
+**Strategy Map UI — done** (`components/data-entry/bsc-strategy-map.tsx`, wired as the `map` view in `new-bsc-builder.tsx`): Kaplan-&-Norton quadrant auto-layout (bands + theme columns), drag-to-position persisting `map_x`/`map_y`, click-node→node to draw an edge, click-edge to delete; master (template) links render locked. Layout confirmed 2026-06-15.
