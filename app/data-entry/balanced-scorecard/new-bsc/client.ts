@@ -2,6 +2,7 @@ import type {
   BscThemeStyles,
   CreateTemplateNodePayload,
   KpiOption,
+  InputOption,
   KpiTargetRow,
   ReportTypeOption,
   SaveKpiTargetsPayload,
@@ -43,6 +44,15 @@ export const fetchKpiOptions = async (): Promise<KpiOption[]> => {
   const data = await asJson<{ options: KpiOption[] }>(
     response,
     "Unable to load KPI options.",
+  );
+  return data.options;
+};
+
+export const fetchInputOptions = async (): Promise<InputOption[]> => {
+  const response = await fetch(`${BASE}/input-options`, { cache: "no-store" });
+  const data = await asJson<{ options: InputOption[] }>(
+    response,
+    "Unable to load input options.",
   );
   return data.options;
 };

@@ -84,14 +84,20 @@ const parseKpiLink = (raw: unknown, path: string): KpiLinkInput => {
     throw new Error(`VALIDATION:${path} must be an object.`);
   }
   const kpiDefinitionId = asPositiveIntOrNull(raw.kpiDefinitionId);
+  const inputDefinitionId = asPositiveIntOrNull(raw.inputDefinitionId);
   const pendingCustomKpiRequestId = asUuidOrNull(raw.pendingCustomKpiRequestId);
-  if (kpiDefinitionId == null && pendingCustomKpiRequestId == null) {
+  if (
+    kpiDefinitionId == null &&
+    inputDefinitionId == null &&
+    pendingCustomKpiRequestId == null
+  ) {
     throw new Error(
-      `VALIDATION:${path} requires kpiDefinitionId or pendingCustomKpiRequestId.`,
+      `VALIDATION:${path} requires kpiDefinitionId, inputDefinitionId or pendingCustomKpiRequestId.`,
     );
   }
   return {
     kpiDefinitionId,
+    inputDefinitionId,
     pendingCustomKpiRequestId,
     ord: asOrd(raw.ord),
   };

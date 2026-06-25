@@ -76,7 +76,7 @@ describe("specific objective + KPI rules (spec §3)", () => {
     );
   });
 
-  it("requires a KPI link to carry a definition id or a pending custom id", () => {
+  it("requires a KPI link to carry a definition id, input id, or a pending custom id", () => {
     const payload = overlay([
       {
         description: "Improve reliability",
@@ -84,7 +84,7 @@ describe("specific objective + KPI rules (spec §3)", () => {
       },
     ]);
     expect(() => parseSavePerspectiveOverlayPayload(payload)).toThrow(
-      /requires kpiDefinitionId or pendingCustomKpiRequestId/,
+      /requires kpiDefinitionId, inputDefinitionId or pendingCustomKpiRequestId/,
     );
   });
 });

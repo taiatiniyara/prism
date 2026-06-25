@@ -26,7 +26,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SearchableSelect } from "@/components/ui/searchable-select";
+import BscKpiPickerModal from "@/components/data-entry/bsc-kpi-picker-modal";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,6 +41,7 @@ import BscStrategyMap from "@/components/data-entry/bsc-strategy-map";
 
 import {
   fetchKpiOptions,
+  fetchInputOptions,
   fetchScorecard,
   fetchTargetPlans,
   fetchTemplate,
@@ -60,6 +61,7 @@ import type {
   BscTemplateLevel,
   BscThemeStyles,
   KpiOption,
+  InputOption,
   KpiTrajectory,
   OverlayNodeInput,
   ScorecardNode,
@@ -75,6 +77,7 @@ import type { BscElementStyle } from "@/db/schema/bsc-builder";
 type WorkingKpi = {
   key: string;
   kpiDefinitionId: number | null;
+  inputDefinitionId: number | null;
   kpiName: string | null;
   unit: string | null;
   pendingCustomKpiRequestId: string | null;
@@ -189,6 +192,7 @@ const mapObjectives = (
       kpis: initiative.kpis.map((kpi) => ({
         key: genKey(),
         kpiDefinitionId: kpi.kpiDefinitionId,
+        inputDefinitionId: kpi.inputDefinitionId,
         kpiName: kpi.kpiName,
         unit: kpi.unit,
         pendingCustomKpiRequestId: kpi.pendingCustomKpiRequestId,
@@ -275,10 +279,12 @@ const serializeNode = (node: WorkingNode, ord: number): OverlayNodeInput => ({
               .filter(
                 (kpi) =>
                   kpi.kpiDefinitionId != null ||
+                  kpi.inputDefinitionId != null ||
                   kpi.pendingCustomKpiRequestId != null,
               )
               .map((kpi, ki) => ({
                 kpiDefinitionId: kpi.kpiDefinitionId,
+                inputDefinitionId: kpi.inputDefinitionId,
                 pendingCustomKpiRequestId: kpi.pendingCustomKpiRequestId,
                 ord: ki,
               })),
@@ -344,6 +350,7 @@ export default function NewBscBuilder({
 }) {
   const [perspectives, setPerspectives] = useState<WorkingNode[] | null>(null);
   const [kpiOptions, setKpiOptions] = useState<KpiOption[]>([]);
+  const [inputOptions, setInputOptions] = useState<InputOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<"build" | "preview" | "map">("build");
@@ -354,6 +361,13 @@ export default function NewBscBuilder({
   const [targetsOpen, setTargetsOpen] = useState<Set<string>>(new Set());
   const [pendingDeselect, setPendingDeselect] =
     useState<PendingDeselect | null>(null);
+  // The initiative currently targeted by the "+ Add KPI" picker modal.
+  const [addTarget, setAddTarget] = useState<{
+    perspectiveKey: string;
+    leverKey: string;
+    objectiveKey: string;
+    initiativeKey: string;
+  } | null>(null);
 
   // DEV-only styling theme.
   const [themeStyles, setThemeStyles] = useState<BscThemeStyles>({});
@@ -382,15 +396,18 @@ export default function NewBscBuilder({
     let active = true;
     (async () => {
       try {
-        const [template, scorecard, options, theme] = await Promise.all([
-          fetchTemplate(),
-          fetchScorecard(),
-          fetchKpiOptions().catch(() => [] as KpiOption[]),
-          fetchTheme().catch(() => ({ styles: {}, canEdit: false })),
-        ]);
+        const [template, scorecard, options, inputs, theme] =
+          await Promise.all([
+            fetchTemplate(),
+            fetchScorecard(),
+            fetchKpiOptions().catch(() => [] as KpiOption[]),
+            fetchInputOptions().catch(() => [] as InputOption[]),
+            fetchTheme().catch(() => ({ styles: {}, canEdit: false })),
+          ]);
         if (!active) return;
         setPerspectives(mergeChildren(template.nodes, scorecard.perspectives));
         setKpiOptions(options);
+        setInputOptions(inputs);
         setThemeStyles(theme.styles);
         setCanEditTheme(theme.canEdit);
       } catch (err) {
@@ -461,14 +478,6 @@ export default function NewBscBuilder({
     [scheduleThemeSave],
   );
 
-  const kpiSelectOptions = useMemo(
-    () =>
-      kpiOptions.map((option) => ({
-        value: String(option.kpiDefinitionId),
-        label: option.name,
-      })),
-    [kpiOptions],
-  );
 
   const scheduleSave = useCallback((perspectiveKey: string) => {
     const timers = saveTimers.current;
@@ -993,50 +1002,22 @@ export default function NewBscBuilder({
 
                   {/* KPI picker */}
                   {canBuild ? (
-                    <SearchableSelect
-                      options={kpiSelectOptions}
-                      placeholder="+ Add KPI"
-                      searchPlaceholder="Search KPIs…"
-                      emptyLabel="No KPIs found"
-                      triggerClassName="h-7 text-xs bg-white"
-                      onValueChange={(value) => {
-                        const option = kpiOptions.find(
-                          (o) => String(o.kpiDefinitionId) === value,
-                        );
-                        if (!option) return;
-                        updateLever(
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 bg-white text-xs"
+                      onClick={() =>
+                        setAddTarget({
                           perspectiveKey,
-                          lever.key,
-                          (objectives) =>
-                            objectives.map((item) =>
-                              item.key === objective.key
-                                ? {
-                                    ...item,
-                                    initiatives: item.initiatives.map((ini) =>
-                                      ini.key === initiative.key
-                                        ? {
-                                            ...ini,
-                                            kpis: [
-                                              ...ini.kpis,
-                                              {
-                                                key: genKey(),
-                                                kpiDefinitionId:
-                                                  option.kpiDefinitionId,
-                                                kpiName: option.name,
-                                                unit: option.unit,
-                                                pendingCustomKpiRequestId: null,
-                                                trajectory: null,
-                                              },
-                                            ],
-                                          }
-                                        : ini,
-                                    ),
-                                  }
-                                : item,
-                            ),
-                        );
-                      }}
-                    />
+                          leverKey: lever.key,
+                          objectiveKey: objective.key,
+                          initiativeKey: initiative.key,
+                        })
+                      }
+                    >
+                      + Add KPI
+                    </Button>
                   ) : null}
                 </div>
               </div>
@@ -1676,6 +1657,48 @@ export default function NewBscBuilder({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <BscKpiPickerModal
+        open={addTarget != null}
+        onOpenChange={(o) => {
+          if (!o) setAddTarget(null);
+        }}
+        kpiOptions={kpiOptions}
+        inputOptions={inputOptions}
+        onSelect={(picked) => {
+          const target = addTarget;
+          if (!target) return;
+          updateLever(target.perspectiveKey, target.leverKey, (objectives) =>
+            objectives.map((item) =>
+              item.key === target.objectiveKey
+                ? {
+                    ...item,
+                    initiatives: item.initiatives.map((ini) =>
+                      ini.key === target.initiativeKey
+                        ? {
+                            ...ini,
+                            kpis: [
+                              ...ini.kpis,
+                              {
+                                key: genKey(),
+                                kpiDefinitionId: picked.kpiDefinitionId,
+                                inputDefinitionId: picked.inputDefinitionId,
+                                kpiName: picked.name,
+                                unit: picked.unit,
+                                pendingCustomKpiRequestId: null,
+                                trajectory: null,
+                              },
+                            ],
+                          }
+                        : ini,
+                    ),
+                  }
+                : item,
+            ),
+          );
+          setAddTarget(null);
+        }}
+      />
     </div>
   );
 }
