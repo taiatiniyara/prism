@@ -241,7 +241,8 @@ export const getStrategyMap = async (
 
 // Does adding source -> target close a cycle? It does iff target already
 // reaches source over the existing edges. BFS over the current adjacency.
-const closesCycle = (
+// Exported for unit testing (spec §13.4 cycle-warn rule).
+export const closesCycle = (
   existing: { source_node_id: string; target_node_id: string }[],
   sourceId: string,
   targetId: string,
