@@ -9,6 +9,33 @@ const pbiCallTimestamps: number[] = [];
 const PBI_MAX_CALLS_PER_MINUTE = 60;
 const PBI_WINDOW_MS = 60_000;
 
+// ---- Circuit breaker for auth failures ----
+let pbiAuthFailedAt: number | null = null;
+const PBI_AUTH_COOLDOWN_MS = 300_000; // 5 min cooldown after a 401
+
+function isPbiCircuitOpen(): boolean {
+  if (pbiAuthFailedAt === null) return false;
+  if (Date.now() - pbiAuthFailedAt > PBI_AUTH_COOLDOWN_MS) {
+    pbiAuthFailedAt = null; // cooldown expired, reset
+    return false;
+  }
+  return true;
+}
+
+function openPbiCircuit(): void {
+  pbiAuthFailedAt = Date.now();
+  logger.error("[powerbi] Circuit breaker opened — Power BI auth failed. All DAX queries blocked for 5 min.");
+}
+
+export function isPbiHealthy(): boolean {
+  return !isPbiCircuitOpen();
+}
+
+export function resetPbiCircuit(): void {
+  pbiAuthFailedAt = null;
+  logger.info("[powerbi] Circuit breaker manually reset.");
+}
+
 function checkPbiRateLimit(): void {
   const now = Date.now();
   while (pbiCallTimestamps.length > 0 && now - pbiCallTimestamps[0] > PBI_WINDOW_MS) {
@@ -414,6 +441,8 @@ export async function listDatasets(): Promise<DatasetInfo[]> {
   const config = await getEnv();
   if (!config || !config.workspaceID) throw new Error("Power BI is not configured");
 
+  if (isPbiCircuitOpen()) throw new Error("Power BI is temporarily unavailable (authentication issue).");
+
   const azureResponse = await getAzureToken();
   const bearerToken = `${azureResponse.token_type} ${azureResponse.access_token}`;
 
@@ -427,6 +456,7 @@ export async function listDatasets(): Promise<DatasetInfo[]> {
   if (!resp.ok) {
     const body = await resp.text().catch(() => "");
     logger.error("[powerbi] Failed to list datasets", { status: resp.status, body: body.slice(0, 200) });
+    if (resp.status === 401) openPbiCircuit();
     throw new Error(`Failed to list datasets (HTTP ${resp.status})`);
   }
 
@@ -453,6 +483,8 @@ export async function getDatasetSchema(
 ): Promise<TableInfo[]> {
   const config = await getEnv();
   if (!config || !config.workspaceID) throw new Error("Power BI is not configured");
+
+  if (isPbiCircuitOpen()) throw new Error("Power BI is temporarily unavailable (authentication issue).");
 
   const id = datasetId || config.datasetId;
   if (!id) throw new Error("No dataset ID configured");
@@ -602,6 +634,10 @@ export async function executeDaxOnDataset(
   const config = await getEnv();
   if (!config || !config.workspaceID) throw new Error("Power BI is not configured");
 
+  if (isPbiCircuitOpen()) {
+    throw new Error("Power BI is temporarily unavailable (authentication issue). It will be retried automatically after a 5-minute cooldown.");
+  }
+
   const id = datasetId || config.datasetId;
   if (!id) throw new Error("No dataset ID configured");
 
@@ -629,6 +665,9 @@ export async function executeDaxOnDataset(
   if (!response.ok) {
     const err = await response.text();
     logger.error("[powerbi] DAX query failed", { status: response.status, error: err.slice(0, 300), daxLength: dax.length });
+    if (response.status === 401) {
+      openPbiCircuit();
+    }
     throw new Error(`DAX query failed (HTTP ${response.status}): ${err.slice(0, 200)}`);
   }
 
@@ -740,6 +779,8 @@ export interface ReportPage {
 export async function getReportPages(reportId?: string): Promise<ReportPage[]> {
   const config = await getEnv();
   if (!config || !config.workspaceID) throw new Error("Power BI is not configured");
+
+  if (isPbiCircuitOpen()) throw new Error("Power BI is temporarily unavailable (authentication issue).");
 
   const id = reportId || config.reportID;
   if (!id) throw new Error("No report ID configured");

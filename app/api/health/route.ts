@@ -1,6 +1,6 @@
 import { db } from "@/db/connection";
 import { sql } from "drizzle-orm";
-import { testPowerBiConnection } from "@/lib/powerbi.service";
+import { testPowerBiConnection, isPbiHealthy } from "@/lib/powerbi.service";
 import { getCircuitState } from "@/lib/ai/service";
 import { AI_MODELS } from "@/lib/ai/types";
 import { logger } from "@/lib/logger";
@@ -16,6 +16,7 @@ interface DbCheck extends CheckResult {
 
 interface PowerBiCheck extends CheckResult {
   datasets_accessible: boolean;
+  circuit_open: boolean;
 }
 
 interface ModelCheck extends CheckResult {
@@ -138,12 +139,34 @@ async function checkWorldBank(): Promise<WbCheck> {
 }
 
 export async function GET(_request: Request): Promise<Response> {
-  const [dbCheck, powerBiCheck, smtpCheck, wbCheck] = await Promise.allSettled([
+  const [dbResult, smtpResult, wbResult] = await Promise.allSettled([
     checkDb(),
-    testPowerBiConnection(),
     checkSmtp(),
     checkWorldBank(),
   ]);
+
+  const circuitOpen = !isPbiHealthy();
+  let powerbi: PowerBiCheck;
+  if (circuitOpen) {
+    powerbi = {
+      ok: false,
+      datasets_accessible: false,
+      circuit_open: true,
+      message: "Power BI circuit breaker is open — auth failures detected. Cooldown in effect.",
+    };
+  } else {
+    try {
+      const result = await testPowerBiConnection();
+      powerbi = { ...result, circuit_open: false };
+    } catch (err) {
+      powerbi = {
+        ok: false,
+        datasets_accessible: false,
+        circuit_open: false,
+        message: err instanceof Error ? err.message : "Power BI connection test failed",
+      };
+    }
+  }
 
   const sonnetCheck = checkCircuit(AI_MODELS.primary);
   const haikuCheck = checkCircuit(AI_MODELS.fallback);
@@ -153,28 +176,22 @@ export async function GET(_request: Request): Promise<Response> {
     return fallback;
   };
 
-  const db = resolveCheck(dbCheck, {
+  const db = resolveCheck(dbResult, {
     ok: false,
     ms: 0,
-    message: dbCheck.status === "rejected" ? String(dbCheck.reason) : "Unknown error",
+    message: dbResult.status === "rejected" ? String(dbResult.reason) : "Unknown error",
   });
 
-  const powerbi = resolveCheck(powerBiCheck, {
-    ok: false,
-    datasets_accessible: false,
-    message: powerBiCheck.status === "rejected" ? String(powerBiCheck.reason) : "Unknown error",
-  } as PowerBiCheck);
-
-  const smtp = resolveCheck(smtpCheck, {
+  const smtp = resolveCheck(smtpResult, {
     ok: false,
     configured: false,
-    message: smtpCheck.status === "rejected" ? String(smtpCheck.reason) : "Unknown error",
+    message: smtpResult.status === "rejected" ? String(smtpResult.reason) : "Unknown error",
   } as SmtpCheck);
 
-  const worldbank = resolveCheck(wbCheck, {
+  const worldbank = resolveCheck(wbResult, {
     ok: false,
     ms: 0,
-    message: wbCheck.status === "rejected" ? String(wbCheck.reason) : "Unknown error",
+    message: wbResult.status === "rejected" ? String(wbResult.reason) : "Unknown error",
   } as WbCheck);
 
   let status: HealthResponse["status"];
