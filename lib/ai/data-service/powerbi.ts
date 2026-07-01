@@ -1,4 +1,4 @@
-import { executeDaxOnDataset, listDatasets, getDatasetSchema, getReportPages, testPowerBiConnection, type DatasetInfo, type TableInfo, type PowerBiQueryResult, type ReportPage } from "@/lib/powerbi.service";
+import { executeDaxOnDataset, listDatasets, getDatasetSchema, getReportPages, testPowerBiConnection, getApprovedBenchmarkingList, type DatasetInfo, type TableInfo, type PowerBiQueryResult, type ReportPage, type PowerBiEffectiveIdentity } from "@/lib/powerbi.service";
 import { createToolMetadata } from "./common";
 import { withCache } from "../cache";
 import type { AiToolResult } from "../types";
@@ -114,6 +114,7 @@ export const queryPowerBi = async (
     custom_dax?: string;
     dataset_id?: string;
   } = {},
+  user?: { email: string; role: string; org_id: number | null } | null,
 ): Promise<AiToolResult<PowerBiData>> => {
   try {
     if (!options.custom_dax) {
@@ -135,9 +136,21 @@ export const queryPowerBi = async (
 
     const cacheKey = `pbi:query:${options.dataset_id || "default"}:${Buffer.from(options.custom_dax).toString("base64").slice(0, 200)}`;
 
+    let identity: PowerBiEffectiveIdentity | undefined;
+    if (user?.email && user?.role) {
+      const customData = user.org_id
+        ? await getApprovedBenchmarkingList(user.org_id)
+        : "";
+      identity = {
+        username: user.email,
+        roles: ["ALL", user.role],
+        customData,
+      };
+    }
+
     const result: PowerBiQueryResult = await withCache(
       cacheKey,
-      () => executeDaxOnDataset(options.custom_dax!, options.dataset_id),
+      () => executeDaxOnDataset(options.custom_dax!, options.dataset_id, identity),
       15000,
     );
 
@@ -267,6 +280,7 @@ export const getQueryCatalogData = async (): Promise<AiToolResult<{ catalog: str
 
 export const runPbiQuery = async (
   options: { query: string; params?: Record<string, string> },
+  user?: { email: string; role: string; org_id: number | null } | null,
 ): Promise<AiToolResult<PbiQueryData>> => {
   const template: PbiQueryTemplate | undefined = PBI_QUERIES[options.query];
   if (!template) {
@@ -304,9 +318,21 @@ export const runPbiQuery = async (
   }
 
   try {
+    let identity: PowerBiEffectiveIdentity | undefined;
+    if (user?.email && user?.role) {
+      const customData = user.org_id
+        ? await getApprovedBenchmarkingList(user.org_id)
+        : "";
+      identity = {
+        username: user.email,
+        roles: ["ALL", user.role],
+        customData,
+      };
+    }
+
     const result: PowerBiQueryResult = await withCache(
       `pbi:query:${options.query}:${JSON.stringify(params)}`,
-      () => executeDaxOnDataset(dax),
+      () => executeDaxOnDataset(dax, undefined, identity),
       15000,
     );
 

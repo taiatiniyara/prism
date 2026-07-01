@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { tool } from "ai";
 import type { CurrentUser } from "@/lib/user.service";
-import { isConfiguredForDax } from "@/lib/powerbi.service";
+import { isConfiguredForDax, isPbiHealthy } from "@/lib/powerbi.service";
 import { getUsageStats } from "../rate-limit";
 import {
   getPbiSchema, runPbiQuery, getQueryCatalogData,
@@ -17,7 +17,14 @@ import {
 
 import { withSizeLimit } from "./utils";
 
+function pbiUnavailableResponse() {
+  return {
+    error: "Power BI is currently unavailable (dataset requires user authentication not supported for service principals). Instead, use PRISM-native tools: get_kpi_status, get_benchmarking_data, get_trend_analysis, get_completeness_breakdown, get_peer_group_analysis, get_risk_assessment, get_executive_digest, get_anomaly_insights, get_compliance_status, get_data_quality_report, get_kpi_correlation, compare_kpis_across_utilities, compare_periods, get_industry_benchmarks, calculate_kpi, explain_kpi, get_kpi_targets, get_service_area_breakdown.",
+  };
+}
+
 export function createPowerBiTools(user: CurrentUser, _abortSignal?: AbortSignal, sessionId?: number) {
+  const pbiDown = !isPbiHealthy() || !isConfiguredForDax();
   return {
     pbi_schema: tool({
       description:
@@ -48,10 +55,8 @@ export function createPowerBiTools(user: CurrentUser, _abortSignal?: AbortSignal
         params: z.record(z.string()).optional().describe("Query parameters. Context defaults (utility, fy) from pbi_context are auto-applied if set."),
       }),
       execute: async ({ query, params }) => {
-        if (!isConfiguredForDax()) {
-          return { error: "Power BI is not configured for DAX queries." };
-        }
-        return runPbiQuery({ query, params });
+        if (pbiDown) return pbiUnavailableResponse();
+        return runPbiQuery({ query, params }, user);
       },
     }),
 
@@ -147,10 +152,8 @@ export function createPowerBiTools(user: CurrentUser, _abortSignal?: AbortSignal
         params: z.record(z.string()).optional().describe("Optional parameters like { utility: 'EPC' }."),
       }),
       execute: async ({ query, params }) => {
-        if (!isConfiguredForDax()) {
-          return { error: "Power BI is not configured for DAX queries." };
-        }
-        return runPbiQuery({ query, params });
+        if (pbiDown) return pbiUnavailableResponse();
+        return runPbiQuery({ query, params }, user);
       },
     }),
 

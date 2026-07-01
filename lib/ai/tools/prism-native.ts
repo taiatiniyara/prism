@@ -2,7 +2,7 @@ import { z } from "zod";
 import { tool } from "ai";
 import type { CurrentUser } from "@/lib/user.service";
 import type { AiToolResult } from "../types";
-import { isConfiguredForDax, isConfigured } from "@/lib/powerbi.service";
+import { isConfiguredForDax, isConfigured, isPbiHealthy } from "@/lib/powerbi.service";
 import { validateToolAccess } from "../guardrails";
 import { logger } from "@/lib/logger";
 import {
@@ -15,12 +15,15 @@ import {
   getCountryHierarchy, getIndustryBenchmarks, getExecutiveDigest, getReviewQueueEntries,
   getGuidedEntry, queryPowerBi, diagnosePowerBi, discoverDatasets, discoverSchema,
   discoverReport, getWorldBankCountryContext, resolveUserIsoCode,
-  type PowerBiData, type DiagnosticData, type DiscoveryData, type SchemaData, type ReportData,
+  type ReportData,
 } from "../data-service";
 
 import { PBI_TOOL_TIMEOUT_MS, withTimeout } from "./utils";
 
+const PBI_UNAVAILABLE_MSG = "Power BI is currently unavailable. Use PRISM-native tools instead: get_kpi_status, get_benchmarking_data, get_trend_analysis, get_completeness_breakdown, get_peer_group_analysis, get_risk_assessment, get_executive_digest, get_anomaly_insights, get_compliance_status, get_data_quality_report, get_kpi_correlation, compare_kpis_across_utilities, compare_periods, get_industry_benchmarks, calculate_kpi, explain_kpi, get_kpi_targets, get_service_area_breakdown.";
+
 export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSignal, _sessionId?: number) {
+  const pbiDown = !isPbiHealthy() || !isConfiguredForDax();
   return {
     get_kpi_status: tool({
       description:
@@ -473,11 +476,8 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
         dataset_id: z.string().optional().describe("Specific dataset ID to query. Use the ID from discover_datasets."),
       }),
       execute: async ({ custom_dax, dataset_id }) => {
-        if (!isConfiguredForDax()) {
-          logger.warn("[powerbi] Power BI not configured for DAX (query_power_bi)", { userId: user.id });
-          return { data: { rows: [], columns: [], row_count: 0, query_summary: "" }, error: "Power BI is not configured." } satisfies AiToolResult<PowerBiData>;
-        }
-        return withTimeout(queryPowerBi({ custom_dax, dataset_id }), "query_power_bi");
+        if (pbiDown) return { error: PBI_UNAVAILABLE_MSG };
+        return withTimeout(queryPowerBi({ custom_dax, dataset_id }, user), "query_power_bi");
       },
     }),
 
@@ -486,10 +486,7 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
         "Diagnose the Power BI connection. Tests whether the service principal can access datasets and lists available datasets with IDs. Requires Power BI to be configured.",
       inputSchema: z.object({}),
       execute: async () => {
-        if (!isConfiguredForDax()) {
-          logger.warn("[powerbi] Power BI not configured for DAX (diagnose_power_bi)", { userId: user.id });
-          return { data: { ok: false, datasets_accessible: false, message: "Power BI is not configured." } } satisfies AiToolResult<DiagnosticData>;
-        }
+        if (pbiDown) return { error: PBI_UNAVAILABLE_MSG };
         return withTimeout(diagnosePowerBi(), "diagnose_power_bi");
       },
     }),
@@ -499,10 +496,7 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
         "List all Power BI datasets available. Returns dataset names, IDs, and metadata. Requires Power BI to be configured.",
       inputSchema: z.object({}),
       execute: async () => {
-        if (!isConfiguredForDax()) {
-          logger.warn("[powerbi] Power BI not configured for DAX (discover_datasets)", { userId: user.id });
-          return { data: { datasets: [], total_datasets: 0 }, error: "Power BI is not configured." } satisfies AiToolResult<DiscoveryData>;
-        }
+        if (pbiDown) return { error: PBI_UNAVAILABLE_MSG };
         return withTimeout(discoverDatasets(), "discover_datasets");
       },
     }),
@@ -515,10 +509,7 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
         table_names: z.array(z.string()).optional().describe("Specific tables to get column details for. If omitted, columns are discovered for the first 10 tables."),
       }),
       execute: async ({ dataset_id, table_names }) => {
-        if (!isConfiguredForDax()) {
-          logger.warn("[powerbi] Power BI not configured for DAX (discover_schema)", { userId: user.id });
-          return { data: { dataset_id: dataset_id || "default", tables: [], total_tables: 0 }, error: "Power BI is not configured." } satisfies AiToolResult<SchemaData>;
-        }
+        if (pbiDown) return { error: PBI_UNAVAILABLE_MSG };
         return withTimeout(discoverSchema({ dataset_id, table_names }), "discover_schema", PBI_TOOL_TIMEOUT_MS);
       },
     }),

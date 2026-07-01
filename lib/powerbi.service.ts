@@ -81,12 +81,15 @@ export interface PowerBiConfig {
   reportID: string;
   embedURL: string | null;
   datasetId: string;
+  daxDatasetId?: string;
 }
 
 interface PowerBiAuthConfig {
   clientID: string;
   clientSecret: string;
   tenantID: string;
+  username?: string;
+  password?: string;
 }
 
 function getAuthConfig(): PowerBiAuthConfig | null {
@@ -94,7 +97,9 @@ function getAuthConfig(): PowerBiAuthConfig | null {
   const clientSecret = process.env.POWERBI_CLIENT_SECRET?.trim();
   const tenantID = process.env.POWERBI_TENANT_ID?.trim();
   if (!clientID || !clientSecret || !tenantID) return null;
-  return { clientID, clientSecret, tenantID };
+  const username = process.env.POWERBI_USERNAME?.trim() || undefined;
+  const password = process.env.POWERBI_PASSWORD?.trim() || undefined;
+  return { clientID, clientSecret, tenantID, username, password };
 }
 
 // ---- Token management with expiry tracking ----
@@ -115,11 +120,21 @@ let tokenCache: TokenCacheEntry | null = null;
 async function getAzureTokenRaw(auth: PowerBiAuthConfig): Promise<AzureTokenResponse> {
   const loginURL = `https://login.microsoftonline.com/${auth.tenantID}/oauth2/v2.0/token`;
 
+  const usePassword = auth.username && auth.password;
   const requestParams = new URLSearchParams({
     client_id: auth.clientID,
-    client_secret: auth.clientSecret,
-    grant_type: "client_credentials",
     scope: "https://analysis.windows.net/powerbi/api/.default",
+    ...(usePassword
+      ? {
+          grant_type: "password",
+          username: auth.username!,
+          password: auth.password!,
+          ...(auth.clientSecret ? { client_secret: auth.clientSecret } : {}),
+        }
+      : {
+          grant_type: "client_credentials",
+          client_secret: auth.clientSecret,
+        }),
   });
 
   checkPbiRateLimit();
@@ -305,6 +320,14 @@ async function resolveConfig(): Promise<PowerBiConfig | null> {
     logger.warn("[powerbi] Config incomplete: no dataset ID resolved (needed for DAX queries)");
   }
 
+  let daxDatasetId = process.env.POWERBI_DAX_DATASET_ID?.trim() || undefined;
+  if (!daxDatasetId) {
+    const daxDatasetName = process.env.POWERBI_DAX_DATASET_NAME?.trim();
+    if (daxDatasetName) {
+      daxDatasetId = await resolveDatasetByName(daxDatasetName, workspaceID, bearerToken);
+    }
+  }
+
   const embedURL = process.env.POWERBI_EMBED_URL?.trim() || null;
 
   return {
@@ -315,6 +338,7 @@ async function resolveConfig(): Promise<PowerBiConfig | null> {
     reportID: reportID || "",
     embedURL,
     datasetId: datasetId || "",
+    daxDatasetId,
   };
 }
 
@@ -334,12 +358,19 @@ export function isConfiguredForDax(): boolean {
   const auth = getAuthConfig();
   if (!auth) return false;
   const hasWorkspace = !!(process.env.POWERBI_WORKSPACE_ID?.trim() || process.env.POWERBI_WORKSPACE_NAME?.trim());
-  const hasDataset = !!(process.env.POWERBI_DATASET_ID?.trim() || process.env.POWERBI_DATASET_NAME?.trim());
+  const hasDataset = !!(process.env.POWERBI_DATASET_ID?.trim() || process.env.POWERBI_DATASET_NAME?.trim()
+    || process.env.POWERBI_DAX_DATASET_ID?.trim() || process.env.POWERBI_DAX_DATASET_NAME?.trim());
   return hasWorkspace && hasDataset;
 }
 
 // ---- Effective identity ----
-async function getApprovedBenchmarkingList(orgId: number): Promise<string> {
+export interface PowerBiEffectiveIdentity {
+  username: string;
+  roles: string[];
+  customData?: string;
+}
+
+export async function getApprovedBenchmarkingList(orgId: number): Promise<string> {
   const rows = await db
     .select({ acronym: organisations.acronym })
     .from(benchmarkingRequests)
@@ -625,6 +656,7 @@ function validateDax(dax: string): { valid: boolean; reason?: string } {
 export async function executeDaxOnDataset(
   dax: string,
   datasetId?: string,
+  identity?: PowerBiEffectiveIdentity | null,
 ): Promise<PowerBiQueryResult> {
   const validation = validateDax(dax);
   if (!validation.valid) {
@@ -638,7 +670,7 @@ export async function executeDaxOnDataset(
     throw new Error("Power BI is temporarily unavailable (authentication issue). It will be retried automatically after a 5-minute cooldown.");
   }
 
-  const id = datasetId || config.datasetId;
+  const id = datasetId || config.daxDatasetId || config.datasetId;
   if (!id) throw new Error("No dataset ID configured");
 
   const azureResponse = await getAzureToken();
@@ -646,13 +678,25 @@ export async function executeDaxOnDataset(
 
   const url = `https://api.powerbi.com/v1.0/myorg/groups/${config.workspaceID}/datasets/${id}/executeQueries`;
 
-  const identity = getEffectiveIdentity();
   const body: Record<string, unknown> = {
     queries: [{ query: dax }],
     serializerSettings: { includeNulls: true },
   };
-  if (identity) {
-    body.impersonatedUserName = identity.upn;
+
+  if (identity?.username) {
+    body.identities = [
+      {
+        username: identity.username,
+        roles: identity.roles.length > 0 ? identity.roles : ["ALL"],
+        datasets: [id],
+        ...(identity.customData ? { customData: identity.customData } : {}),
+      },
+    ];
+  } else {
+    const legacyIdentity = getEffectiveIdentity();
+    if (legacyIdentity) {
+      body.impersonatedUserName = legacyIdentity.upn;
+    }
   }
 
   checkPbiRateLimit();
