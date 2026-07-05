@@ -621,12 +621,180 @@ function generateOpenApiYaml(routes: RouteInfo[], projectName: string): string {
   return lines.join("\n") + "\n";
 }
 
+// ─── HTML page generator (self-contained, no CDN) ────────────────────────────
+
+function htmlesc(s: string): string {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
+function methodBadge(method: string): string {
+  const colors: Record<string, string> = {
+    GET: "#22c55e", POST: "#3b82f6", PUT: "#f59e0b", PATCH: "#8b5cf6", DELETE: "#ef4444",
+  };
+  const c = colors[method] || "#6b7280";
+  return `<span class="method" style="background:${c}">${method}</span>`;
+}
+
+function generateHtml(routes: RouteInfo[], projectName: string): string {
+  const allEndpoints = routes.flatMap((r) => r.methods);
+
+  // Group by tag
+  const byTag = new Map<string, { tag: string; endpoints: { method: string; path: string; desc: string; auth: string; params: string[]; body: string | null; statuses: number[] }[] }>();
+  for (const route of routes) {
+    for (const ep of route.methods) {
+      let group = byTag.get(ep.tag);
+      if (!group) {
+        group = { tag: ep.tag, endpoints: [] };
+        byTag.set(ep.tag, group);
+      }
+      const paramLines: string[] = [];
+      for (const pp of ep.pathParams) paramLines.push(`<code>{${pp}}</code> (path, required)`);
+      for (const qp of ep.queryParams) paramLines.push(`<code>${htmlesc(qp.name)}</code> (query${qp.required ? ", required" : ""})`);
+
+      let authDesc = "";
+      switch (ep.authType) {
+        case "session": authDesc = "Session (Better Auth)"; break;
+        case "apiKey": authDesc = "API Key (Authorization header)"; break;
+        case "migrationKey": authDesc = "Migration Key (x-migration-key)"; break;
+        case "cronKey": authDesc = "Cron Secret (Authorization header)"; break;
+        case "none": authDesc = "None (public)"; break;
+        default: authDesc = ep.authType;
+      }
+
+      group.endpoints.push({
+        method: ep.method,
+        path: route.path,
+        desc: ep.description,
+        auth: authDesc,
+        params: paramLines,
+        body: ep.requestBodyDescription,
+        statuses: ep.responseStatuses,
+      });
+    }
+  }
+
+  // Sort tags
+  const sortedTags = [...byTag.entries()].sort((a, b) => a[0].localeCompare(b[0]));
+
+  const methodCounts: Record<string, number> = {};
+  for (const ep of allEndpoints) methodCounts[ep.method] = (methodCounts[ep.method] || 0) + 1;
+
+  return `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>${htmlesc(projectName)} API Reference</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: system-ui, sans-serif; margin: 0; padding: 0; line-height: 1.5; }
+  .container { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+  h1 { font-size: 28px; margin: 0 0 4px; }
+  .subtitle { color: #6b7280; font-size: 14px; margin: 0 0 24px; }
+  .stats { display: flex; gap: 12px; flex-wrap: wrap; margin-bottom: 24px; }
+  .stat { background: #f3f4f6; border-radius: 6px; padding: 4px 10px; font-size: 13px; }
+  @media (prefers-color-scheme: dark) { .stat { background: #1f2937; } }
+  .filter { margin-bottom: 20px; }
+  .filter input { width: 100%; padding: 8px 12px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+  @media (prefers-color-scheme: dark) { .filter input { background: #111827; border-color: #374151; color: #e5e7eb; } }
+  .tag-group { margin-bottom: 32px; }
+  .tag-title { font-size: 18px; font-weight: 600; margin: 0 0 12px; padding-bottom: 6px; border-bottom: 2px solid #e5e7eb; }
+  @media (prefers-color-scheme: dark) { .tag-title { border-color: #374151; } }
+  .endpoint { border: 1px solid #e5e7eb; border-radius: 8px; margin-bottom: 12px; overflow: hidden; }
+  @media (prefers-color-scheme: dark) { .endpoint { border-color: #374151; } }
+  .ep-header { display: flex; align-items: baseline; gap: 10px; padding: 10px 14px; cursor: pointer; user-select: none; }
+  .ep-header:hover { background: #f9fafb; }
+  @media (prefers-color-scheme: dark) { .ep-header:hover { background: #1f2937; } }
+  .ep-path { font-family: monospace; font-size: 14px; word-break: break-all; }
+  .ep-arrow { font-size: 10px; color: #9ca3af; transition: transform .2s; margin-left: auto; flex-shrink: 0; }
+  .ep-header.open .ep-arrow { transform: rotate(90deg); }
+  .method { display: inline-block; font-size: 11px; font-weight: 700; color: #fff; padding: 2px 8px; border-radius: 4px; text-transform: uppercase; white-space: nowrap; flex-shrink: 0; min-width: 48px; text-align: center; }
+  .ep-body { display: none; padding: 0 14px 14px; }
+  .ep-header.open + .ep-body { display: block; }
+  .ep-meta { display: flex; gap: 24px; flex-wrap: wrap; font-size: 13px; margin-bottom: 8px; }
+  .ep-meta strong { color: #6b7280; font-weight: 500; }
+  .ep-params { margin: 8px 0; }
+  .ep-params li { font-size: 13px; margin: 2px 0; }
+  .ep-params code { background: #f3f4f6; padding: 1px 5px; border-radius: 3px; font-size: 12px; }
+  @media (prefers-color-scheme: dark) { .ep-params code { background: #1f2937; } }
+  .status-list { display: flex; gap: 8px; flex-wrap: wrap; }
+  .status-code { font-size: 12px; padding: 1px 8px; border-radius: 4px; font-weight: 500; }
+  .status-2xx { background: #dcfce7; color: #166534; }
+  .status-4xx { background: #fef3c7; color: #92400e; }
+  .status-5xx { background: #fee2e2; color: #991b1b; }
+  @media (prefers-color-scheme: dark) {
+    .status-2xx { background: #14532d; color: #bbf7d0; }
+    .status-4xx { background: #78350f; color: #fde68a; }
+    .status-5xx { background: #7f1d1d; color: #fecaca; }
+  }
+  .no-matches { text-align: center; color: #9ca3af; padding: 48px 0; font-size: 15px; }
+  .regenerate { font-size: 12px; color: #9ca3af; margin-top: 32px; text-align: center; }
+</style>
+</head>
+<body>
+<div class="container">
+<h1>${htmlesc(projectName)} API Reference</h1>
+<p class="subtitle">Auto-generated from ${routes.length} route files &middot; ${allEndpoints.length} endpoints &middot; ${sortedTags.length} tag groups</p>
+<div class="stats">
+${Object.entries(methodCounts).sort().map(([m, c]) => `<span class="stat"><strong>${m}</strong> ${c}</span>`).join("\n")}
+</div>
+<div class="filter"><input type="text" id="filter" placeholder="Filter endpoints..." oninput="filterEndpoints(this.value)"></div>
+${sortedTags.map(([tag, group]) => `
+<div class="tag-group" data-tag="${htmlesc(tag)}">
+<h2 class="tag-title">${htmlesc(tag)}</h2>
+${group.endpoints.map((ep) => `
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
+    ${methodBadge(ep.method)}
+    <span class="ep-path">${htmlesc(ep.path)}</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">${htmlesc(ep.desc)}</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> ${htmlesc(ep.auth)}</span>
+    </div>
+    ${ep.params.length > 0 ? `<div class="ep-params"><strong>Parameters:</strong><ul>${ep.params.map((p) => `<li>${p}</li>`).join("")}</ul></div>` : ""}
+    ${ep.body ? `<div class="ep-meta"><span><strong>Body:</strong> ${htmlesc(ep.body)}</span></div>` : ""}
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        ${ep.statuses.map((s) => {
+          const sc = s < 300 ? "status-2xx" : s < 500 ? "status-4xx" : "status-5xx";
+          const labels: Record<number, string> = {200:"OK",201:"Created",400:"Bad Request",401:"Unauthorized",403:"Forbidden",404:"Not Found",409:"Conflict",429:"Rate Limited",500:"Error",503:"Unavailable"};
+          return `<span class="status-code ${sc}">${s} ${labels[s] || ""}</span>`;
+        }).join("\n")}
+      </div>
+    </div>
+  </div>
+</div>`).join("\n")}
+</div>`).join("\n")}
+<p class="regenerate">Generated by <code>npm run generate-api-docs</code></p>
+</div>
+<script>
+function filterEndpoints(q) {
+  const lower = q.toLowerCase();
+  document.querySelectorAll('.endpoint').forEach(el => {
+    const text = el.textContent?.toLowerCase() || "";
+    el.style.display = text.includes(lower) ? "" : "none";
+  });
+  document.querySelectorAll('.tag-group').forEach(el => {
+    const visible = el.querySelectorAll('.endpoint[style*="display:"]').length;
+    const total = el.querySelectorAll('.endpoint').length;
+    el.style.display = visible === total ? "none" : "";
+  });
+}
+</script>
+</body>
+</html>`;
+}
+
 // ─── main ────────────────────────────────────────────────────────────────────
 
 function main() {
   const projectRoot = process.argv[2] || process.cwd();
   const apiDir = path.join(projectRoot, "app", "api");
-  const outputDir = path.join(projectRoot, "docs", "api");
+  const outputDir = path.join(projectRoot, "public", "docs", "api");
   const projectName = path.basename(projectRoot);
 
   if (!fs.existsSync(apiDir)) {
@@ -657,9 +825,13 @@ function main() {
 
   fs.mkdirSync(outputDir, { recursive: true });
   const yaml = generateOpenApiYaml(routes, projectName);
-  const outFile = path.join(outputDir, "openapi.yaml");
-  fs.writeFileSync(outFile, yaml, "utf-8");
-  console.log(`Written: ${outFile}`);
+  fs.writeFileSync(path.join(outputDir, "openapi.yaml"), yaml, "utf-8");
+
+  const html = generateHtml(routes, projectName);
+  fs.writeFileSync(path.join(outputDir, "index.html"), html, "utf-8");
+
+  console.log(`Written: ${path.join(outputDir, "openapi.yaml")}`);
+  console.log(`Written: ${path.join(outputDir, "index.html")}`);
 
   // Stats
   const methodCounts: Record<string, number> = {};

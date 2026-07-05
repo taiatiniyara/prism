@@ -80,7 +80,6 @@ export const config = {
     "/data-entry/:path*",
     "/settings/:path*",
     "/profile/:path*",
-    "/docs/:path*",
     "/migration/:path*",
     "/prism-ai/:path*",
   ],

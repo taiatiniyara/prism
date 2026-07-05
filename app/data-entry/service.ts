@@ -7,8 +7,6 @@ import {
   DataEntryStatusId,
   inputDefinitions,
   inputRelevance,
-  tariffRelevance,
-  transmissionRelevance,
 } from "@/db/schema/dataEntry";
 import { managedListItems } from "@/db/schema/managedLists";
 import { reportPeriods } from "@/db/schema/reportPeriods";
@@ -110,9 +108,6 @@ export async function GetReportPeriods(
   const genDefIds = definitionRows
     .filter((row) => row.subcategoryId === SUBCAT_GENERATION)
     .map((row) => row.inputDefId);
-  const nonGenDefIds = definitionRows
-    .filter((row) => row.subcategoryId !== SUBCAT_GENERATION)
-    .map((row) => row.inputDefId);
 
   const saConditions = [eq(serviceAreas.is_active, true), eq(serviceAreas.is_virtual, false)];
   if (scopedUtilityId != null) saConditions.push(eq(serviceAreas.utility_id, scopedUtilityId));
@@ -190,10 +185,6 @@ export async function GetReportPeriods(
     const irrelInput = new Set<string>();
     irrelevantInputRel.forEach((r) => irrelInput.add(`${r.inputDefId}:${r.dimensionId}`));
 
-    // Tariff and transmission relevance: mark (inputDef, dimension) combos where is_relevant=false
-    const tariffIrrel = new Set<string>();
-    const txIrrel = new Set<string>();
-
     // Requested formula:
     // 1. Most inputs: × 1
     // 2. Tariff + Operational (non-Generation): × non-virtual SA count
@@ -219,7 +210,7 @@ export async function GetReportPeriods(
         }
       } else if (isTariff || isOp) {
         // Tariff and Operational inputs (excluding Generation): × non-virtual SA count
-        for (const saId of saIds) {
+        for (const _saId of saIds) {
           requested++;
         }
       } else {

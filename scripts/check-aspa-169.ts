@@ -1,7 +1,6 @@
 import { db } from "@/db/connection";
 import { dataEntries, inputDefinitions } from "@/db/schema/dataEntry";
-import { energyResources } from "@/db/schema/utility";
-import { sql, eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 
 async function main() {
   const rpId = 169; // ASPA 2022
@@ -76,7 +75,8 @@ async function main() {
 
   // Status breakdown
   const byStatus = nonGenEntries.reduce((acc, e) => {
-    acc[e.statusId] = (acc[e.statusId] ?? 0) + 1;
+    const sid = e.statusId ?? 0;
+    acc[sid] = (acc[sid] ?? 0) + 1;
     return acc;
   }, {} as Record<number, number>);
   console.log(`\nStatus breakdown for RP ${rpId} (all relevant entries):`);

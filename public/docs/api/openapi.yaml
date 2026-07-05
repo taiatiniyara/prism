@@ -1914,6 +1914,53 @@ paths:
           description: Forbidden
         '500':
           description: Internal Server Error
+  /api/migration/dataEntry:
+    get:
+      tags:
+        - Migration
+      summary: GET migration dataEntry
+      parameters:
+        - name: reportPeriodId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: inputDefId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: statusId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: cursor
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: includeDeleted
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: value
+          in: query
+          required: false
+          schema:
+            type: string
+      security:
+        - migrationKeyAuth: []
+      x-auth: Requires x-migration-key header
+      responses:
+        '200':
+          description: Success
   /api/migration/dataEntryStatus:
     get:
       tags:
@@ -2020,6 +2067,100 @@ paths:
           description: Forbidden
         '500':
           description: Internal Server Error
+  /api/migration/tariffRelevance:
+    get:
+      tags:
+        - Migration
+      summary: GET migration tariffRelevance
+      parameters:
+        - name: reportPeriodId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: serviceAreaId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: inputDefId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: cursor
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: includeDeleted
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: value
+          in: query
+          required: false
+          schema:
+            type: string
+      security:
+        - migrationKeyAuth: []
+      x-auth: Requires x-migration-key header
+      responses:
+        '200':
+          description: Success
+  /api/migration/transmissionRelevance:
+    get:
+      tags:
+        - Migration
+      summary: GET migration transmissionRelevance
+      parameters:
+        - name: reportPeriodId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: serviceAreaId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: inputDefId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: cursor
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: includeDeleted
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: value
+          in: query
+          required: false
+          schema:
+            type: string
+      security:
+        - migrationKeyAuth: []
+      x-auth: Requires x-migration-key header
+      responses:
+        '200':
+          description: Success
   /api/migration/users:
     post:
       tags:

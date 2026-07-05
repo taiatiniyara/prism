@@ -3,7 +3,7 @@ import { benchmarkingRequests } from "@/db/schema/benchmarking-request";
 import { organisations } from "@/db/schema/utility";
 import { and, eq, or, isNull, gte } from "drizzle-orm";
 import { logger } from "@/lib/logging/logger";
-import { getAzureToken, fetchWithRetry, getAuthConfig, type PowerBiConfig } from "./auth";
+import { getAzureToken, fetchWithRetry, getAuthConfig } from "./auth";
 import { getEnv, clearEnvCache } from "./config";
 import { checkPbiRateLimit, isPbiCircuitOpen, openPbiCircuit } from "./circuit-breaker";
 
