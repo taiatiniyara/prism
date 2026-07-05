@@ -1,0 +1,2264 @@
+openapi: 3.1.0
+info:
+  title: prism API
+  version: "1.0.0"
+  description: |
+    Auto-generated API reference for prism.
+    Regenerate with: npm run generate-api-docs
+servers:
+  - url: http://localhost:3554
+    description: Local development
+  - url: https://prism.example.com
+    description: Production
+components:
+  securitySchemes:
+    sessionAuth:
+      type: apiKey
+      in: cookie
+      name: session_token
+      description: Better Auth session cookie
+    apiKeyAuth:
+      type: apiKey
+      in: header
+      name: Authorization
+      description: API key for protected endpoints
+    migrationKeyAuth:
+      type: apiKey
+      in: header
+      name: x-migration-key
+      description: Migration endpoint access key
+  tags:
+    - name: AI / Chatbot
+    - name: Context
+    - name: Data Entry
+    - name: Development
+    - name: Dimensions
+    - name: Facts
+    - name: KPIs
+    - name: Logging
+    - name: Migration
+    - name: Monitoring
+    - name: Power BI
+    - name: Settings
+    - name: System
+    - name: UI
+    - name: Users
+    - name: Webhooks
+
+paths:
+  /api/ai/chat/response:
+    post:
+      tags:
+        - AI / Chatbot
+      summary: "AI chat response — generates AI response for a single message (non-streaming), with tool execution support"
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      requestBody:
+        description: JSON body
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '400':
+          description: Bad Request / Validation Error
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+        '500':
+          description: Internal Server Error
+  /api/ai/chat:
+    post:
+      tags:
+        - AI / Chatbot
+      summary: "AI chat — sends messages to Anthropic Claude with streaming SSE response, rate limiting, guardrails, and tool execution"
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      requestBody:
+        description: JSON body
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '400':
+          description: Bad Request / Validation Error
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+        '429':
+          description: Too Many Requests
+        '500':
+          description: Internal Server Error
+  /api/ai/export:
+    post:
+      tags:
+        - AI / Chatbot
+      summary: "Export AI chat session data (conversations, tool calls, metrics)"
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      requestBody:
+        description: JSON body
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '400':
+          description: Bad Request / Validation Error
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /api/ai/feedback:
+    post:
+      tags:
+        - AI / Chatbot
+      summary: "Submit feedback for an AI chat turn (helpful/unhelpful, rating, comments)"
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      requestBody:
+        description: JSON body
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '400':
+          description: Bad Request / Validation Error
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+  /api/ai/sessions:
+    get:
+      tags:
+        - AI / Chatbot
+      summary: List AI chat sessions for the current user
+      parameters:
+        - name: admin_all
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: offset
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: string
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+    post:
+      tags:
+        - AI / Chatbot
+      summary: Create a new AI chat session
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      requestBody:
+        description: JSON body
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /api/ai/sessions/{sessionId}:
+    get:
+      tags:
+        - AI / Chatbot
+      summary: "Get {sessionId}"
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '400':
+          description: Bad Request / Validation Error
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+    delete:
+      tags:
+        - AI / Chatbot
+      summary: "Delete {sessionId}"
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '400':
+          description: Bad Request / Validation Error
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+    patch:
+      tags:
+        - AI / Chatbot
+      summary: "Update {sessionId}"
+      parameters:
+        - name: sessionId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      requestBody:
+        description: JSON body
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '400':
+          description: Bad Request / Validation Error
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+  /api/ai/usage:
+    get:
+      tags:
+        - AI / Chatbot
+      summary: "Get AI usage statistics for the current user (token counts, cost, rate limit status)"
+      parameters:
+        - name: days
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: type
+          in: query
+          required: true
+          schema:
+            type: string
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal Server Error
+  /api/alerts:
+    get:
+      tags:
+        - Monitoring
+      summary: Get system alerts and notifications
+      parameters:
+        - name: path
+          in: query
+          required: true
+          schema:
+            type: string
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal Server Error
+    post:
+      tags:
+        - Monitoring
+      summary: Create alerts
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      requestBody:
+        description: JSON body
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal Server Error
+  /api/backup/status:
+    get:
+      tags:
+        - Monitoring
+      summary: Get database backup status and history
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal Server Error
+  /api/context/organisation:
+    post:
+      tags:
+        - Context
+      summary: Create organisation
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      requestBody:
+        description: JSON body
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '400':
+          description: Bad Request / Validation Error
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+  /api/costs/overview:
+    get:
+      tags:
+        - Monitoring
+      summary: "Get AI cost overview (daily/monthly spend, budget usage, per-user breakdown)"
+      parameters:
+        - name: days
+          in: query
+          required: true
+          schema:
+            type: string
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal Server Error
+  /api/cron/email-schedules:
+    get:
+      tags:
+        - System
+      summary: Get email schedules
+      x-auth: No authentication required
+      responses:
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal Server Error
+      security: []
+  /api/data-entry/aggregated-runs:
+    get:
+      tags:
+        - Data Entry
+      summary: List aggregated data entry processing runs
+      parameters:
+        - name: reportPeriodId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: serviceAreaId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: energyResourceId
+          in: query
+          required: true
+          schema:
+            type: string
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '200':
+          description: Success
+  /api/data-entry/aggregated-runs/{runId}:
+    get:
+      tags:
+        - Data Entry
+      summary: Get aggregated run details by ID
+      parameters:
+        - name: runId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '404':
+          description: Not Found
+  /api/data-entry/balanced-scorecard/new-bsc/kpi-options:
+    get:
+      tags:
+        - Data Entry
+      summary: Get available KPI options for BSC scorecard assignment
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '200':
+          description: Success
+  /api/data-entry/balanced-scorecard/new-bsc/report-types:
+    get:
+      tags:
+        - Data Entry
+      summary: Get available report types for BSC configuration
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '200':
+          description: Success
+  /api/data-entry/balanced-scorecard/new-bsc/scorecard:
+    get:
+      tags:
+        - Data Entry
+      summary: "Get balanced scorecard data with perspectives, objectives, KPIs, and initiatives"
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '200':
+          description: Success
+    put:
+      tags:
+        - Data Entry
+      summary: Save/update scorecard perspective overlay configuration
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      requestBody:
+        description: JSON body — validated by parseSavePerspectiveOverlayPayload()
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Success
+  /api/data-entry/balanced-scorecard/new-bsc/strategy-map/links:
+    post:
+      tags:
+        - Data Entry
+      summary: Create strategy map link
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      requestBody:
+        description: JSON body — validated by parseCreateObjectiveLinkPayload()
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Created
+  /api/data-entry/balanced-scorecard/new-bsc/strategy-map/links/{id}:
+    put:
+      tags:
+        - Data Entry
+      summary: Delete strategy map link
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      requestBody:
+        description: JSON body — validated by parseUpdateObjectiveLinkPayload()
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Success
+    delete:
+      tags:
+        - Data Entry
+      summary: Delete strategy map link
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '200':
+          description: Success
+  /api/data-entry/balanced-scorecard/new-bsc/strategy-map/nodes/{id}:
+    put:
+      tags:
+        - Data Entry
+      summary: Update strategy map node position
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      requestBody:
+        description: JSON body — validated by parseSetNodeMapDisplayPayload()
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Success
+  /api/data-entry/balanced-scorecard/new-bsc/strategy-map:
+    get:
+      tags:
+        - Data Entry
+      summary: Get BSC strategy map structure (nodes and edges)
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '200':
+          description: Success
+  /api/data-entry/balanced-scorecard/new-bsc/target-plans:
+    get:
+      tags:
+        - Data Entry
+      summary: Get BSC target plan trajectories
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '200':
+          description: Success
+  /api/data-entry/balanced-scorecard/new-bsc/targets:
+    get:
+      tags:
+        - Data Entry
+      summary: Get KPI target values for BSC
+      parameters:
+        - name: kpiDefinitionId
+          in: query
+          required: true
+          schema:
+            type: string
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '200':
+          description: Success
+    put:
+      tags:
+        - Data Entry
+      summary: Save/update BSC KPI target values
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      requestBody:
+        description: JSON body — validated by parseSaveKpiTargetsPayload()
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Success
+  /api/data-entry/balanced-scorecard/new-bsc/template:
+    get:
+      tags:
+        - Data Entry
+      summary: List all BSC template nodes
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '200':
+          description: Success
+    post:
+      tags:
+        - Data Entry
+      summary: Create a new BSC template node
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      requestBody:
+        description: JSON body — validated by parseCreateTemplateNodePayload()
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Success
+  /api/data-entry/balanced-scorecard/new-bsc/template/{id}/links:
+    put:
+      tags:
+        - Data Entry
+      summary: Update template node links
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      requestBody:
+        description: JSON body — validated by parseSetTemplateNodeLinksPayload()
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Success
+  /api/data-entry/balanced-scorecard/new-bsc/template/{id}:
+    put:
+      tags:
+        - Data Entry
+      summary: Update template node
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      requestBody:
+        description: JSON body — validated by parseUpdateTemplateNodePayload()
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Success
+    delete:
+      tags:
+        - Data Entry
+      summary: Delete template node
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '200':
+          description: Success
+  /api/data-entry/balanced-scorecard/new-bsc/theme:
+    get:
+      tags:
+        - Data Entry
+      summary: Get BSC theme styling configuration
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '200':
+          description: Success
+    put:
+      tags:
+        - Data Entry
+      summary: Save/update BSC theme styling
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      requestBody:
+        description: JSON body — validated by parseSaveThemePayload()
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Success
+  /api/data-entry/balanced-scorecard/new-bsc/trajectory:
+    put:
+      tags:
+        - Data Entry
+      summary: Set BSC KPI trajectory
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      requestBody:
+        description: JSON body — validated by parseSetTrajectoryPayload()
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Success
+  /api/data-entry/custom-kpi/email-retries:
+    post:
+      tags:
+        - Data Entry
+      summary: Retry failed custom KPI email notifications
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad Request / Validation Error
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal Server Error
+  /api/data-entry/custom-kpi/requests:
+    post:
+      tags:
+        - Data Entry
+      summary: Create a custom KPI request
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      requestBody:
+        description: JSON body
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Created
+        '400':
+          description: Bad Request / Validation Error
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal Server Error
+    get:
+      tags:
+        - Data Entry
+      summary: List custom KPI requests
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '201':
+          description: Created
+        '400':
+          description: Bad Request / Validation Error
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal Server Error
+  /api/data-entry/custom-kpi/requests/{requestId}/decision:
+    post:
+      tags:
+        - Data Entry
+      summary: Submit approval/rejection decision for a custom KPI request
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      requestBody:
+        description: JSON body — validated by parseReviewDecisionPayload()
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad Request / Validation Error
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '409':
+          description: Conflict
+        '500':
+          description: Internal Server Error
+  /api/data-entry/custom-kpi/requests/{requestId}/promotion:
+    post:
+      tags:
+        - Data Entry
+      summary: Promote custom KPI request to a standard KPI definition
+      parameters:
+        - name: requestId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: Bad Request / Validation Error
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '409':
+          description: Conflict
+        '500':
+          description: Internal Server Error
+  /api/data-entry/governance:
+    get:
+      tags:
+        - Data Entry
+      summary: Get governance data and validation rules
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+    post:
+      tags:
+        - Data Entry
+      summary: Save governance data
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /api/data-entry/kpi-worker/status:
+    get:
+      tags:
+        - Data Entry
+      summary: Get KPI calculation worker queue status and statistics
+      parameters:
+        - name: reportPeriodId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: serviceAreaId
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: energyResourceId
+          in: query
+          required: true
+          schema:
+            type: string
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '400':
+          description: Bad Request / Validation Error
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal Server Error
+  /api/data-entry/logs:
+    get:
+      tags:
+        - Data Entry
+      summary: Get data entry processing logs and run history
+      parameters:
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: string
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '401':
+          description: Unauthorized
+  /api/data-entry/review-kpi/events:
+    get:
+      tags:
+        - Data Entry
+      summary: Get KPI review events (SSE stream of real-time updates)
+      description: >-
+        Get KPI review events (SSE stream of real-time updates)
+        Response is a Server-Sent Events (SSE) stream.
+      parameters:
+        - name: sinceEventId
+          in: query
+          required: true
+          schema:
+            type: string
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '400':
+          description: Bad Request / Validation Error
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal Server Error
+  /api/data-entry/review-kpi/inputs/{dataEntryId}/comments:
+    post:
+      tags:
+        - Data Entry
+      summary: Add comment to a review KPI input
+      parameters:
+        - name: dataEntryId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      requestBody:
+        description: JSON body — validated by parseAddCommentPayload()
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Created
+        '400':
+          description: Bad Request / Validation Error
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal Server Error
+  /api/data-entry/review-kpi/inputs/{dataEntryId}:
+    patch:
+      tags:
+        - Data Entry
+      summary: Update review KPI input value
+      parameters:
+        - name: dataEntryId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      requestBody:
+        description: JSON body — validated by parseUpdateInputPayload()
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '400':
+          description: Bad Request / Validation Error
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '409':
+          description: Conflict
+        '500':
+          description: Internal Server Error
+  /api/data-entry/review-kpi:
+    get:
+      tags:
+        - Data Entry
+      summary: GET data-entry review-kpi
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '400':
+          description: Bad Request / Validation Error
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal Server Error
+  /api/data-entry/utility-context:
+    get:
+      tags:
+        - Data Entry
+      summary: "Get data entry utility context (scope, report periods, filters)"
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '401':
+          description: Unauthorized
+    post:
+      tags:
+        - Data Entry
+      summary: Save data entry utility context
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '401':
+          description: Unauthorized
+  /api/data-pipeline/stats:
+    get:
+      tags:
+        - Monitoring
+      summary: "Get data pipeline statistics (queue depth, processing rates, error counts)"
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal Server Error
+  /api/deployment/info:
+    get:
+      tags:
+        - Monitoring
+      summary: "Get deployment information (version, build timestamp, environment)"
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal Server Error
+  /api/dev/config:
+    get:
+      tags:
+        - Development
+      summary: Get development configuration flags and feature toggles
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal Server Error
+  /api/dimAccounting:
+    get:
+      tags:
+        - Dimensions
+      summary: "Dimension: Accounting codes (API-key gated, proxy to prism-training)"
+      x-auth: No authentication required
+      responses:
+        '200':
+          description: Success
+      security: []
+  /api/dimCountry:
+    get:
+      tags:
+        - Dimensions
+      summary: "Dimension: Countries and territories (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/dimCurrency:
+    get:
+      tags:
+        - Dimensions
+      summary: "Dimension: Currencies (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/dimCustomerClass:
+    get:
+      tags:
+        - Dimensions
+      summary: "Dimension: Customer classification types (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/dimDivision:
+    get:
+      tags:
+        - Dimensions
+      summary: "Dimension: Organisational divisions (API-key gated, proxy to prism-training)"
+      x-auth: No authentication required
+      responses:
+        '200':
+          description: Success
+      security: []
+  /api/dimElectricityRegulations:
+    get:
+      tags:
+        - Dimensions
+      summary: "Dimension: Electricity regulation frameworks (API-key gated, proxy to prism-training)"
+      x-auth: No authentication required
+      responses:
+        '200':
+          description: Success
+      security: []
+  /api/dimEnergyProvider:
+    get:
+      tags:
+        - Dimensions
+      summary: "Dimension: Energy providers by type (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/dimEnergySource:
+    get:
+      tags:
+        - Dimensions
+      summary: "Dimension: Energy source classifications (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/dimEnergyType:
+    get:
+      tags:
+        - Dimensions
+      summary: "Dimension: Energy type categories (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/dimFeeder:
+    get:
+      tags:
+        - Dimensions
+      summary: "Dimension: Electrical feeder classifications (API-key gated, proxy to prism-training)"
+      x-auth: No authentication required
+      responses:
+        '200':
+          description: Success
+      security: []
+  /api/dimFuelAccess:
+    get:
+      tags:
+        - Dimensions
+      summary: "Dimension: Fuel access levels (API-key gated, proxy to prism-training)"
+      x-auth: No authentication required
+      responses:
+        '200':
+          description: Success
+      security: []
+  /api/dimFuelRegulation:
+    get:
+      tags:
+        - Dimensions
+      summary: "Dimension: Fuel regulation types (API-key gated, proxy to prism-training)"
+      x-auth: No authentication required
+      responses:
+        '200':
+          description: Success
+      security: []
+  /api/dimGender:
+    get:
+      tags:
+        - Dimensions
+      summary: "Dimension: Gender categories for workforce data (API-key gated, proxy to prism-training)"
+      x-auth: No authentication required
+      responses:
+        '200':
+          description: Success
+      security: []
+  /api/dimGenerators:
+    get:
+      tags:
+        - Dimensions
+      summary: "Dimension: Power generation units and plants (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/dimGovernance:
+    get:
+      tags:
+        - Dimensions
+      summary: "Dimension: Governance structures and types (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/dimOwnership:
+    get:
+      tags:
+        - Dimensions
+      summary: "Dimension: Ownership types (public, private, mixed) (API-key gated, proxy to prism-training)"
+      x-auth: No authentication required
+      responses:
+        '200':
+          description: Success
+      security: []
+  /api/dimQuality:
+    get:
+      tags:
+        - Dimensions
+      summary: "Dimension: Quality standards and metrics (API-key gated, proxy to prism-training)"
+      x-auth: No authentication required
+      responses:
+        '200':
+          description: Success
+      security: []
+  /api/dimRegion:
+    get:
+      tags:
+        - Dimensions
+      summary: "Dimension: Geographic regions and subregions (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/dimRegulation:
+    get:
+      tags:
+        - Dimensions
+      summary: "Dimension: Regulatory body types (API-key gated, proxy to prism-training)"
+      x-auth: No authentication required
+      responses:
+        '200':
+          description: Success
+      security: []
+  /api/dimReportType:
+    get:
+      tags:
+        - Dimensions
+      summary: "Dimension: Report type definitions (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/dimRoles:
+    get:
+      tags:
+        - Dimensions
+      summary: "Dimension: User roles and permissions (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/dimServiceAreas:
+    get:
+      tags:
+        - Dimensions
+      summary: "Dimension: Geographic service areas (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/dimUnits:
+    get:
+      tags:
+        - Dimensions
+      summary: "Dimension: Measurement units (API-key gated, proxy to prism-training)"
+      x-auth: No authentication required
+      responses:
+        '200':
+          description: Success
+      security: []
+  /api/dimUtilities:
+    get:
+      tags:
+        - Dimensions
+      summary: "Dimension: Utility companies and energy providers (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/factAirConnectivity:
+    get:
+      tags:
+        - Facts
+      summary: "Fact: Air transportation connectivity data (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/factCountryContextData:
+    get:
+      tags:
+        - Facts
+      summary: "Fact: Country-level context and metadata (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/factCurrency:
+    get:
+      tags:
+        - Facts
+      summary: "Fact: Currency exchange rates over time (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/factDistribution:
+    get:
+      tags:
+        - Facts
+      summary: "Fact: Electricity distribution data (losses, reliability) (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/factElectricityAccess:
+    get:
+      tags:
+        - Facts
+      summary: "Fact: Electricity access rates (rural, urban, national) (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/factEmployee:
+    get:
+      tags:
+        - Facts
+      summary: "Fact: Workforce and employee data (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/factFinancialAccounts:
+    get:
+      tags:
+        - Facts
+      summary: "Fact: Financial account data (revenue, costs, subsidies) (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/factGdpPerCapita:
+    get:
+      tags:
+        - Facts
+      summary: "Fact: GDP per capita economic indicators (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/factGeneration:
+    get:
+      tags:
+        - Facts
+      summary: "Fact: Electricity generation data (KWh, fuel consumption, capacity) (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/factGeneratorData:
+    get:
+      tags:
+        - Facts
+      summary: "Fact: Generator operational data and performance metrics (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/factGovernance:
+    get:
+      tags:
+        - Facts
+      summary: "Fact: Governance assessment data (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/factHouseholds:
+    get:
+      tags:
+        - Facts
+      summary: "Fact: Household count and electrification data (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/factInflationRate:
+    get:
+      tags:
+        - Facts
+      summary: "Fact: Inflation rate economic indicators (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/factIslands:
+    get:
+      tags:
+        - Facts
+      summary: "Fact: Island geography and connectivity data (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/factLandArea:
+    get:
+      tags:
+        - Facts
+      summary: "Fact: Geographic land area data (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/factLeadership:
+    get:
+      tags:
+        - Facts
+      summary: "Fact: Leadership and management data (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/factMetering:
+    get:
+      tags:
+        - Facts
+      summary: "Fact: Metering infrastructure data (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/factPopulation:
+    get:
+      tags:
+        - Facts
+      summary: "Fact: Population data by country/region (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/factPopulationDistribution:
+    get:
+      tags:
+        - Facts
+      summary: "Fact: Population distribution (urban/rural breakdowns) (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/factSafety:
+    get:
+      tags:
+        - Facts
+      summary: "Fact: Workplace safety incident data (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/factSaidiAndSaifi:
+    get:
+      tags:
+        - Facts
+      summary: "Fact: SAIDI/SAIFI reliability indices (API-key gated, proxy to prism-training)"
+      x-auth: No authentication required
+      responses:
+        '200':
+          description: Success
+      security: []
+  /api/factTariffStructure:
+    get:
+      tags:
+        - Facts
+      summary: "Fact: Electricity tariff structures and rates (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/factTransmission:
+    get:
+      tags:
+        - Facts
+      summary: "Fact: Electricity transmission data (grid, interconnections) (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/factUnemployment:
+    get:
+      tags:
+        - Facts
+      summary: "Fact: Unemployment rate data (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/factUtilityContextData:
+    get:
+      tags:
+        - Facts
+      summary: "Fact: Utility context and metadata (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/factUtilityCosts:
+    get:
+      tags:
+        - Facts
+      summary: "Fact: Utility cost and expense data (API-key gated, proxy to prism-training)"
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/getAzureAccessToken:
+    get:
+      tags:
+        - Power BI
+      summary: Get getAzureAccessToken
+      x-auth: No authentication required
+      responses:
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal Server Error
+      security: []
+  /api/health:
+    get:
+      tags:
+        - Monitoring
+      summary: "Health check endpoint — returns system status, DB connectivity, Power BI circuit breaker state, AI model status, SMTP, and World Bank API reachability"
+      x-auth: No authentication required
+      responses:
+        '200':
+          description: Success
+      security: []
+  /api/kpi/calculation-status:
+    get:
+      tags:
+        - KPIs
+      summary: "Get KPI calculation worker status (pending, processing, completed, failed)"
+      parameters:
+        - name: status
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: string
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '400':
+          description: Bad Request / Validation Error
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal Server Error
+    post:
+      tags:
+        - KPIs
+      summary: Create calculation status
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      requestBody:
+        description: JSON body
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '400':
+          description: Bad Request / Validation Error
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal Server Error
+  /api/logs/audit:
+    get:
+      tags:
+        - Logging
+      summary: "Get audit trail logs (user actions, data changes, auth events)"
+      parameters:
+        - name: format
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: action
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: actor
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: target
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: offset
+          in: query
+          required: true
+          schema:
+            type: string
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /api/logs/error:
+    post:
+      tags:
+        - Logging
+      summary: Record client-side error in server logs
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      requestBody:
+        description: JSON body
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Created
+        '500':
+          description: Internal Server Error
+  /api/logs/errors:
+    get:
+      tags:
+        - Logging
+      summary: GET log errors
+      parameters:
+        - name: severity
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: source
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: errorType
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: from
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: to
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: includeResolved
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: offset
+          in: query
+          required: true
+          schema:
+            type: string
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '400':
+          description: Bad Request / Validation Error
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+    patch:
+      tags:
+        - Logging
+      summary: PATCH log errors
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      requestBody:
+        description: JSON body
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '400':
+          description: Bad Request / Validation Error
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+  /api/logs/system:
+    get:
+      tags:
+        - Logging
+      summary: "Get system logs (filterable by level, source, date)"
+      parameters:
+        - name: level
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: search
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: string
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal Server Error
+  /api/migration/dataEntryStatus:
+    get:
+      tags:
+        - Migration
+      summary: Export data entry statuses for migration
+      security:
+        - migrationKeyAuth: []
+      x-auth: Requires x-migration-key header
+      responses:
+        '200':
+          description: Success
+  /api/migration/input-definitions:
+    get:
+      tags:
+        - Migration
+      summary: Export input definitions for migration
+      security:
+        - migrationKeyAuth: []
+      x-auth: Requires x-migration-key header
+      responses:
+        '500':
+          description: Internal Server Error
+  /api/migration/inputRelevance:
+    get:
+      tags:
+        - Migration
+      summary: Export input relevance mappings for migration
+      security:
+        - migrationKeyAuth: []
+      x-auth: Requires x-migration-key header
+      responses:
+        '200':
+          description: Success
+  /api/migration/prism-training:
+    get:
+      tags:
+        - Migration
+      summary: Export data from prism-training for migration
+      parameters:
+        - name: includeRows
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: offset
+          in: query
+          required: true
+          schema:
+            type: string
+      security:
+        - migrationKeyAuth: []
+      x-auth: Requires x-migration-key header
+      responses:
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal Server Error
+  /api/migration/prism-training/{table}:
+    get:
+      tags:
+        - Migration
+      summary: Export specific table from prism-training for migration
+      parameters:
+        - name: table
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: offset
+          in: query
+          required: true
+          schema:
+            type: string
+      security:
+        - migrationKeyAuth: []
+      x-auth: Requires x-migration-key header
+      responses:
+        '400':
+          description: Bad Request / Validation Error
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal Server Error
+  /api/migration/prism1ToPrism2InputMapping:
+    get:
+      tags:
+        - Migration
+      summary: Get PRISM v1 to v2 input definition mapping
+      security:
+        - migrationKeyAuth: []
+      x-auth: Requires x-migration-key header
+      responses:
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal Server Error
+  /api/migration/users:
+    post:
+      tags:
+        - Migration
+      summary: POST migration users
+      security:
+        - migrationKeyAuth: []
+      x-auth: Requires x-migration-key header
+      responses:
+        '400':
+          description: Bad Request / Validation Error
+        '403':
+          description: Forbidden
+    get:
+      tags:
+        - Migration
+      summary: Export users for migration to PRISM v2
+      security:
+        - migrationKeyAuth: []
+      x-auth: Requires x-migration-key header
+      responses:
+        '400':
+          description: Bad Request / Validation Error
+        '403':
+          description: Forbidden
+  /api/pbiRls:
+    get:
+      tags:
+        - Power BI
+      summary: Power BI Row-Level Security token generation
+      x-auth: No authentication required
+      responses:
+        '401':
+          description: Unauthorized
+      security: []
+  /api/security/overview:
+    get:
+      tags:
+        - Monitoring
+      summary: "Get security overview (auth status, encryption, rate limits, recent alerts)"
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal Server Error
+  /api/settings/users/pending:
+    get:
+      tags:
+        - Settings
+      summary: Get pending user registrations awaiting approval
+      x-auth: No authentication required
+      responses:
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal Server Error
+      security: []
+  /api/settings/users/{userId}/clarifications:
+    get:
+      tags:
+        - Settings
+      summary: GET user clarifications
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      x-auth: No authentication required
+      responses:
+        '400':
+          description: Bad Request / Validation Error
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+        '409':
+          description: Conflict
+        '500':
+          description: Internal Server Error
+        '502':
+          description: HTTP 502
+        '503':
+          description: Service Unavailable
+      security: []
+    post:
+      tags:
+        - Settings
+      summary: Send clarification request to pending user registrant
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      x-auth: No authentication required
+      requestBody:
+        description: JSON body
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '400':
+          description: Bad Request / Validation Error
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+        '409':
+          description: Conflict
+        '500':
+          description: Internal Server Error
+        '502':
+          description: HTTP 502
+        '503':
+          description: Service Unavailable
+      security: []
+  /api/settings/users/{userId}/status:
+    post:
+      tags:
+        - Settings
+      summary: POST user status
+      parameters:
+        - name: userId
+          in: path
+          required: true
+          schema:
+            type: string
+      x-auth: No authentication required
+      requestBody:
+        description: JSON body
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '400':
+          description: Bad Request / Validation Error
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+        '409':
+          description: Conflict
+        '500':
+          description: Internal Server Error
+      security: []
+  /api/submissions:
+    get:
+      tags:
+        - Data Entry
+      summary: Get data entry submission records and statuses
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/ui-style:
+    get:
+      tags:
+        - UI
+      summary: Get dynamic UI theme/style configuration CSS
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal Server Error
+    put:
+      tags:
+        - UI
+      summary: Update ui style
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      requestBody:
+        description: JSON body
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal Server Error
+  /api/users:
+    get:
+      tags:
+        - Users
+      summary: Get users
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
+      responses:
+        '401':
+          description: Unauthorized
+  /api/webhooks/email/replies:
+    post:
+      tags:
+        - Webhooks
+      summary: Receive and process incoming email reply webhooks
+      x-auth: No authentication required
+      requestBody:
+        description: JSON body
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '202':
+          description: HTTP 202
+        '400':
+          description: Bad Request / Validation Error
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal Server Error
+        '503':
+          description: Service Unavailable
+      security: []
