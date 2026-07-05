@@ -3,7 +3,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { magicLink } from "better-auth/plugins";
-import { buildMagicLinkEmail, sendEmail } from "./email.service";
+import { buildMagicLinkEmail, sendEmail } from "./email/email.service";
 import {
   account,
   session,
