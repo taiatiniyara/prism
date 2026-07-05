@@ -1,4 +1,4 @@
-import { executeDaxOnDataset, listDatasets, getDatasetSchema, getReportPages, testPowerBiConnection, getApprovedBenchmarkingList, type DatasetInfo, type TableInfo, type PowerBiQueryResult, type ReportPage, type PowerBiEffectiveIdentity } from "@/lib/powerbi.service";
+import { executeDaxOnDataset, listDatasets, getDatasetSchema, getReportPages, testPowerBiConnection, getApprovedBenchmarkingList, type DatasetInfo, type TableInfo, type PowerBiQueryResult, type ReportPage, type PowerBiEffectiveIdentity } from "@/lib/powerbi";
 import { createToolMetadata } from "./common";
 import { withCache } from "../cache";
 import type { AiToolResult } from "../types";

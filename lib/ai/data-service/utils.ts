@@ -7,7 +7,7 @@ import { desc } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
 import { createToolMetadata } from "./common";
 import type { AiToolResult } from "../types";
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/logging/logger";
 
 // ---- CIRCUIT BREAKER ----
 

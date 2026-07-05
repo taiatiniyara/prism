@@ -5,7 +5,7 @@ import { reportPeriods } from "@/db/schema/reportPeriods";
 import { managedListItems } from "@/db/schema/managedLists";
 import { eq, and, isNotNull } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
-import { dlValue, formatReportPeriodIso } from "@/lib/legacy-dl-resolver";
+import { dlValue, formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
 
 async function getDlItemId(name: string): Promise<number | null> {
   const [item] = await db

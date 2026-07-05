@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getBlockedAccessState } from "@/lib/auth-status-guard";
+import { getBlockedAccessState } from "@/lib/user-status";
 
 describe("status gate active integration", () => {
   it("does not block active users", () => {

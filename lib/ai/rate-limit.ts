@@ -1,7 +1,7 @@
 import { db } from "@/db/connection";
 import { aiUsageMetrics, aiCostBudget, aiRateLimitWindow } from "@/db/schema/ai";
 import { eq, and, sql } from "drizzle-orm";
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/logging/logger";
 
 const DEFAULT_DAILY_COST_LIMIT_CENTS = parseInt(process.env.AI_DEFAULT_DAILY_COST_LIMIT_CENTS || "500", 10) || 500;
 

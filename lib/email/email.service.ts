@@ -58,7 +58,7 @@ const decisionAccentByType: Record<CustomKpiDecisionType, string> = {
   REPLACE: "#7c3aed",
 };
 
-const escapeHtml = (value: string): string =>
+export const escapeHtml = (value: string): string =>
   value
     .replaceAll("&", "&amp;")
     .replaceAll("<", "&lt;")

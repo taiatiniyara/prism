@@ -6,7 +6,7 @@ import { authClient } from "@/lib/auth-client";
 import { eq } from "drizzle-orm";
 import { headers } from "next/headers";
 import crypto from "node:crypto";
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/logging/logger";
 
 const getForwardedAuthHeaders = async () => {
   const headersList = await headers();

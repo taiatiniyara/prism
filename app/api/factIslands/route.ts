@@ -3,7 +3,7 @@ import { countryContext as ccTable, countries } from "@/db/schema/country";
 import { managedListItems } from "@/db/schema/managedLists";
 import { eq } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
-import { dlValue } from "@/lib/legacy-dl-resolver";
+import { dlValue } from "@/lib/legacy/legacy-dl-resolver";
 
 async function getDlItemId(name: string): Promise<number | null> {
   const [item] = await db.select({ id: managedListItems.id }).from(managedListItems).where(eq(managedListItems.name, name)).limit(1);

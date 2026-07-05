@@ -2,10 +2,6 @@
 
 import { DataTableFormResponse } from "@/components/tables/data-table-create-form";
 import { db } from "@/db/connection";
-import {
-  generationRelevance,
-  generationToggleRelevance,
-} from "@/db/schema/dataEntry";
 import { managedListItems } from "@/db/schema/managedLists";
 import {
   NewReportPeriod,
@@ -81,50 +77,6 @@ export async function CreateReportPeriod(
         .update(energyResources)
         .set({ period_entries: newPeriodEntries })
         .where(eq(energyResources.id, resource.id));
-    }
-
-    const prevGenRelevance = await db
-      .select()
-      .from(generationRelevance)
-      .where(eq(generationRelevance.report_period_id, prevRp.id));
-
-    if (prevGenRelevance.length > 0) {
-      const newGenRelevance = prevGenRelevance.map((gr) => ({
-        id: crypto.randomUUID(),
-        report_period_id: rp.id,
-        service_area_id: gr.service_area_id,
-        input_def_id: gr.input_def_id,
-        energy_provider_id: gr.energy_provider_id,
-        energy_source_id: gr.energy_source_id,
-        energy_resource_type_id: gr.energy_resource_type_id,
-        is_relevant: gr.is_relevant,
-        is_deleted: gr.is_deleted,
-        updatedAt: new Date(),
-        updatedById: gr.updatedById,
-      }));
-
-      await db.insert(generationRelevance).values(newGenRelevance);
-    }
-
-    const prevGenToggleRelevance = await db
-      .select()
-      .from(generationToggleRelevance)
-      .where(eq(generationToggleRelevance.report_period_id, prevRp.id));
-
-    if (prevGenToggleRelevance.length > 0) {
-      const newGenToggleRelevance = prevGenToggleRelevance.map((gtr) => ({
-        id: crypto.randomUUID(),
-        report_period_id: rp.id,
-        service_area_id: gtr.service_area_id,
-        energy_provider_id: gtr.energy_provider_id,
-        energy_source_id: gtr.energy_source_id,
-        is_relevant: gtr.is_relevant,
-        is_deleted: gtr.is_deleted,
-        updatedAt: new Date(),
-        updatedById: gtr.updatedById,
-      }));
-
-      await db.insert(generationToggleRelevance).values(newGenToggleRelevance);
     }
   }
 

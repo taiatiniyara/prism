@@ -79,6 +79,10 @@ export type Organisation = typeof organisations.$inferSelect & {
 };
 export type NewOrganisation = typeof organisations.$inferInsert;
 
+interface ServiceAreaReportPeriods {
+  report_period_id: number;
+  is_active: boolean;
+}
 export const serviceAreas = pgTable("service_areas", {
   id: serial("id").primaryKey().notNull(),
   name: varchar("name", { length: 255 }).notNull(),
@@ -89,8 +93,11 @@ export const serviceAreas = pgTable("service_areas", {
   provides_sanitation: boolean("provides_sanitation").notNull().default(false),
   provides_water: boolean("provides_water").notNull().default(false),
   operations_only: boolean("operations_only").default(false),
-  is_active: boolean("is_active").notNull().default(true),
+  report_periods: jsonb("report_periods")
+    .$type<ServiceAreaReportPeriods[]>()
+    .notNull(),
   is_virtual: boolean("is_virtual").notNull().default(false),
+  is_active: boolean("is_active").notNull().default(true),
   agg_level_id: integer("agg_level_id")
     .notNull()
     .references(() => managedListItems.id),

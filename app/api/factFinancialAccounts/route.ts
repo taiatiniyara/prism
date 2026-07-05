@@ -6,7 +6,7 @@ import { reportPeriods } from "@/db/schema/reportPeriods";
 import { managedListItems } from "@/db/schema/managedLists";
 import { eq, isNotNull } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
-import { formatReportPeriodIso } from "@/lib/legacy-dl-resolver";
+import { formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
 import { getAllExchangeRates } from "@/lib/exchange-rates";
 
 export async function GET(req: Request) {

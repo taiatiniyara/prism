@@ -4,7 +4,7 @@ import crypto from "node:crypto";
 import http from "node:http";
 import https from "node:https";
 import { db } from "@/db/connection";
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/logging/logger";
 
 function stringSimilarity(a: string, b: string): number {
   const s1 = a.toLowerCase().replace(/[^a-z0-9]/g, "");
@@ -37,11 +37,12 @@ import {
   dataEntries,
   dataEntryLogs,
   DataEntryStatusId,
-  generationRelevance,
-  generationToggleRelevance,
   InputDefinition,
   inputDlDefMappings,
   inputDefinitions,
+  inputRelevance,
+  tariffRelevance,
+  transmissionRelevance,
 } from "@/db/schema/dataEntry";
 import {
   KpiDefinition,
@@ -50,6 +51,7 @@ import {
   kpiDefinitions,
 } from "@/db/schema/kpi";
 import {
+  energyResourceTypeRelevance,
   ManagedList,
   ManagedListItem,
   managedListItems,
@@ -1269,55 +1271,8 @@ export async function retrieveUtilityData() {
           .set({ period_entries: newPeriodEntries })
           .where(eq(energyResources.id, resource.id));
       }
-
-      const prevGenRelevance = await db
-        .select()
-        .from(generationRelevance)
-        .where(eq(generationRelevance.report_period_id, prevRp.id));
-
-      if (prevGenRelevance.length > 0) {
-        const newGenRelevance = prevGenRelevance.map((gr) => ({
-          id: crypto.randomUUID(),
-          report_period_id: newRpInList.id,
-          service_area_id: gr.service_area_id,
-          input_def_id: gr.input_def_id,
-          energy_provider_id: gr.energy_provider_id,
-          energy_source_id: gr.energy_source_id,
-          energy_resource_type_id: gr.energy_resource_type_id,
-          is_relevant: gr.is_relevant,
-          is_deleted: gr.is_deleted,
-          updatedAt: new Date(),
-          updatedById: gr.updatedById,
-        }));
-
-        await db.insert(generationRelevance).values(newGenRelevance);
-        inserted += newGenRelevance.length;
-      }
-
-      const prevGenToggleRelevance = await db
-        .select()
-        .from(generationToggleRelevance)
-        .where(eq(generationToggleRelevance.report_period_id, prevRp.id));
-
-      if (prevGenToggleRelevance.length > 0) {
-        const newGenToggleRelevance = prevGenToggleRelevance.map((gtr) => ({
-          id: crypto.randomUUID(),
-          report_period_id: newRpInList.id,
-          service_area_id: gtr.service_area_id,
-          energy_provider_id: gtr.energy_provider_id,
-          energy_source_id: gtr.energy_source_id,
-          is_relevant: gtr.is_relevant,
-          is_deleted: gtr.is_deleted,
-          updatedAt: new Date(),
-          updatedById: gtr.updatedById,
-        }));
-
-        await db
-          .insert(generationToggleRelevance)
-          .values(newGenToggleRelevance);
-        inserted += newGenToggleRelevance.length;
-      }
     }
+
   } catch (error: unknown) {
     logMigrationError(error);
   }
@@ -1629,7 +1584,7 @@ export async function retrieveInputDlDefMappings(): Promise<MigrationStepResult>
 
 export async function retrieveReportPeriods() {
   await assertDevMigrationAccess();
-  let inserted = 0;
+  const inserted = 0;
   const updated = 0;
   const call = await fetchMigrationEndpoint("/reportPeriods");
   const list = await call.json();
@@ -1713,55 +1668,8 @@ export async function retrieveReportPeriods() {
           .set({ period_entries: newPeriodEntries })
           .where(eq(energyResources.id, resource.id));
       }
-
-      const prevGenRelevance = await db
-        .select()
-        .from(generationRelevance)
-        .where(eq(generationRelevance.report_period_id, prevRp.id));
-
-      if (prevGenRelevance.length > 0) {
-        const newGenRelevance = prevGenRelevance.map((gr) => ({
-          id: crypto.randomUUID(),
-          report_period_id: newRp.id,
-          service_area_id: gr.service_area_id,
-          input_def_id: gr.input_def_id,
-          energy_provider_id: gr.energy_provider_id,
-          energy_source_id: gr.energy_source_id,
-          energy_resource_type_id: gr.energy_resource_type_id,
-          is_relevant: gr.is_relevant,
-          is_deleted: gr.is_deleted,
-          updatedAt: new Date(),
-          updatedById: gr.updatedById,
-        }));
-
-        await db.insert(generationRelevance).values(newGenRelevance);
-        inserted += newGenRelevance.length;
-      }
-
-      const prevGenToggleRelevance = await db
-        .select()
-        .from(generationToggleRelevance)
-        .where(eq(generationToggleRelevance.report_period_id, prevRp.id));
-
-      if (prevGenToggleRelevance.length > 0) {
-        const newGenToggleRelevance = prevGenToggleRelevance.map((gtr) => ({
-          id: crypto.randomUUID(),
-          report_period_id: newRp.id,
-          service_area_id: gtr.service_area_id,
-          energy_provider_id: gtr.energy_provider_id,
-          energy_source_id: gtr.energy_source_id,
-          is_relevant: gtr.is_relevant,
-          is_deleted: gtr.is_deleted,
-          updatedAt: new Date(),
-          updatedById: gtr.updatedById,
-        }));
-
-        await db
-          .insert(generationToggleRelevance)
-          .values(newGenToggleRelevance);
-        inserted += newGenToggleRelevance.length;
-      }
     }
+
   } catch (error: unknown) {
     logMigrationError(error);
   }
@@ -2339,6 +2247,18 @@ const normalizeOptionalFkId = (
 
 const mapStatus = (row: SourceDataEntryRow): DataEntryStatusId => {
   if (row.not_available) return DataEntryStatusId.Not_Available;
+
+  if (row.status_legacy_id != null) {
+    switch (row.status_legacy_id) {
+      case 5:
+        return DataEntryStatusId.Reviewed;
+      case 6:
+        return DataEntryStatusId.Approved;
+      case 7:
+        return DataEntryStatusId.Entered;
+    }
+  }
+
   if ((row.value ?? "").trim().length > 0) return DataEntryStatusId.Entered;
   return DataEntryStatusId.Pending;
 };
@@ -3316,28 +3236,6 @@ export async function retrieveDataEntries(options?: {
   };
 }
 
-type SourceGenerationRelevanceRow = {
-  source_id?: number;
-  utility_id?: number | null;
-  report_period_id?: number | null;
-  service_area_id?: number | null;
-  training_dl_def_id?: number | string | null;
-  energy_provider_id?: number | null;
-  energy_source_id?: number | null;
-  is_relevant?: boolean | null;
-  is_deleted?: boolean | null;
-  updated_at?: string | Date | null;
-};
-
-type SourceGenerationRelevancePage = {
-  generationRelevance: SourceGenerationRelevanceRow[];
-  pagination: {
-    nextCursor: number | null;
-    hasMore: boolean;
-    returned: number;
-  };
-};
-
 type SourceTransmissionRelevanceRow = {
   source_id?: number;
   utility_id?: number | null;
@@ -3380,194 +3278,48 @@ type SourceTariffRelevancePage = {
   };
 };
 
-export async function retrieveGenerationRelevance(options?: {
-  reportPeriodId?: number;
-  batchSize?: number;
-}) {
-  await assertDevMigrationAccess();
-  let cursor: number | null = null;
-  let hasMore = true;
+type SourceInputRelevanceRow = {
+  source_id?: number;
+  utility_id?: number | null;
+  report_period_id?: number | null;
+  service_area_id?: number | null;
+  training_dl_def_id?: number | string | null;
+  is_relevant?: boolean | null;
+  is_deleted?: boolean | null;
+  updated_at?: string | Date | null;
+};
 
-  const batchSize = Math.max(1, Math.min(2000, options?.batchSize ?? 2000));
+type SourceInputRelevancePage = {
+  inputRelevance: SourceInputRelevanceRow[];
+  pagination: {
+    nextCursor: number | null;
+    hasMore: boolean;
+    returned: number;
+  };
+};
 
-  let inserted = 0;
-  let updated = 0;
-  let skipped = 0;
+type SourceGenerationRelevanceRow = {
+  source_id?: number;
+  utility_id?: number | null;
+  report_period_id?: number | null;
+  service_area_id?: number | null;
+  training_dl_def_id?: number | string | null;
+  energy_provider_id?: number | null;
+  energy_type_id?: number | null;
+  energy_source_id?: number | null;
+  is_relevant?: boolean | null;
+  is_deleted?: boolean | null;
+  updated_at?: string | Date | null;
+};
 
-  const loopStartedAt = Date.now();
-  const LOOP_MAX_MS = 50_000;
-
-  const mappingRows = await db
-    .select({
-      trainingDlDefId: inputDlDefMappings.training_dl_def_id,
-      inputDefId: inputDlDefMappings.input_def_id,
-      updatedAt: inputDlDefMappings.updated_at,
-    })
-    .from(inputDlDefMappings);
-
-  const inputByTrainingDlDefId = new Map<
-    number,
-    { inputDefId: number; updatedAt: Date | null }
-  >();
-
-  for (const mapping of mappingRows) {
-    const existing = inputByTrainingDlDefId.get(mapping.trainingDlDefId);
-    if (!existing) {
-      inputByTrainingDlDefId.set(mapping.trainingDlDefId, {
-        inputDefId: mapping.inputDefId,
-        updatedAt: mapping.updatedAt,
-      });
-      continue;
-    }
-
-    const existingTime = existing.updatedAt?.getTime() ?? 0;
-    const currentTime = mapping.updatedAt?.getTime() ?? 0;
-    if (currentTime >= existingTime) {
-      inputByTrainingDlDefId.set(mapping.trainingDlDefId, {
-        inputDefId: mapping.inputDefId,
-        updatedAt: mapping.updatedAt,
-      });
-    }
-  }
-
-  const [targetReportPeriods, targetServiceAreas, targetManagedListItems] =
-    await Promise.all([
-      db.select({ id: reportPeriods.id }).from(reportPeriods),
-      db.select({ id: serviceAreas.id }).from(serviceAreas),
-      db.select({ id: managedListItems.id }).from(managedListItems),
-    ]);
-
-  const targetReportPeriodIds = new Set(targetReportPeriods.map((r) => r.id));
-  const targetServiceAreaIds = new Set(targetServiceAreas.map((r) => r.id));
-  const targetManagedListItemIds = new Set(
-    targetManagedListItems.map((r) => r.id),
-  );
-
-  try {
-    while (hasMore) {
-      const params = new URLSearchParams();
-      params.set("limit", String(batchSize));
-
-      if (cursor != null) {
-        params.set("cursor", String(cursor));
-      }
-      if (options?.reportPeriodId != null) {
-        params.set("reportPeriodId", String(options.reportPeriodId));
-      }
-
-      const call = await fetchMigrationEndpoint(
-        `/generationRelevance?${params.toString()}`,
-      );
-      if (!call.ok) {
-        throw new Error(
-          `Generation relevance migration API failed: ${call.status}`,
-        );
-      }
-
-      const page: SourceGenerationRelevancePage = await call.json();
-
-      for (const row of page.generationRelevance) {
-        const reportPeriodId = toNumberOrNull(row.report_period_id);
-        const serviceAreaId = toNumberOrNull(row.service_area_id);
-        const sourceTrainingDlDefId = toNumberOrNull(row.training_dl_def_id);
-        const energyProviderId = toNumberOrNull(row.energy_provider_id);
-        const energySourceId = toNumberOrNull(row.energy_source_id);
-
-        if (
-          reportPeriodId == null ||
-          serviceAreaId == null ||
-          sourceTrainingDlDefId == null ||
-          energyProviderId == null ||
-          energySourceId == null
-        ) {
-          skipped += 1;
-          continue;
-        }
-
-        if (
-          !targetReportPeriodIds.has(reportPeriodId) ||
-          !targetServiceAreaIds.has(serviceAreaId) ||
-          !targetManagedListItemIds.has(energyProviderId) ||
-          !targetManagedListItemIds.has(energySourceId)
-        ) {
-          skipped += 1;
-          continue;
-        }
-
-        const mappedInput = inputByTrainingDlDefId.get(sourceTrainingDlDefId);
-        const inputDefId = mappedInput?.inputDefId ?? null;
-
-        if (inputDefId == null) {
-          skipped += 1;
-          continue;
-        }
-
-        const updatedAt = row.updated_at
-          ? new Date(row.updated_at)
-          : new Date();
-
-        const [existing] = await db
-          .select({ id: generationRelevance.id })
-          .from(generationRelevance)
-          .where(
-            and(
-              eq(generationRelevance.report_period_id, reportPeriodId),
-              eq(generationRelevance.service_area_id, serviceAreaId),
-              eq(generationRelevance.input_def_id, inputDefId),
-              eq(generationRelevance.energy_provider_id, energyProviderId),
-              eq(generationRelevance.energy_source_id, energySourceId),
-              isNull(generationRelevance.energy_resource_type_id),
-            ),
-          )
-          .limit(1);
-
-        const payload = {
-          report_period_id: reportPeriodId,
-          service_area_id: serviceAreaId,
-          input_def_id: inputDefId,
-          energy_provider_id: energyProviderId,
-          energy_source_id: energySourceId,
-          energy_resource_type_id: null,
-          is_relevant: row.is_relevant ?? true,
-          is_deleted: row.is_deleted ?? false,
-          updatedAt,
-          updatedById: null,
-        };
-
-        if (existing) {
-          await db
-            .update(generationRelevance)
-            .set(payload)
-            .where(eq(generationRelevance.id, existing.id));
-          updated += 1;
-        } else {
-          await db.insert(generationRelevance).values(payload);
-          inserted += 1;
-        }
-      }
-
-      cursor = page.pagination.nextCursor;
-      hasMore = page.pagination.hasMore === true && cursor != null;
-
-      if (hasMore && Date.now() - loopStartedAt > LOOP_MAX_MS) {
-        logger.warn(
-          `[migration] retrieveGenerationRelevance time budget exhausted after ${inserted + updated} ops ` +
-            `(inserted=${inserted}, updated=${updated}, skipped=${skipped}), ` +
-            `deferring remaining pages (next cursor: ${cursor}). Re-run to continue.`,
-        );
-        break;
-      }
-    }
-  } catch (error: unknown) {
-    logMigrationError(error);
-  }
-
-  revalidatePath("/migration");
-  revalidatePath("/settings/relevance");
-  revalidatePath("/data-entry");
-
-  return { ok: true, inserted, updated, total: inserted + updated };
-}
+type SourceGenerationRelevancePage = {
+  generationRelevance: SourceGenerationRelevanceRow[];
+  pagination: {
+    nextCursor: number | null;
+    hasMore: boolean;
+    returned: number;
+  };
+};
 
 export async function retrieveTransmissionRelevance(options?: {
   reportPeriodId?: number;
@@ -3673,21 +3425,16 @@ export async function retrieveTransmissionRelevance(options?: {
         }
 
         const [existing] = await db
-          .select({ id: dataEntries.id })
-          .from(dataEntries)
+          .select({ id: transmissionRelevance.id })
+          .from(transmissionRelevance)
           .where(
             and(
-              eq(dataEntries.report_period_id, reportPeriodId),
-              eq(dataEntries.service_area_id, serviceAreaId),
-              eq(dataEntries.input_def_id, inputDefId),
-              isNull(dataEntries.energy_resource_id),
-              isNull(dataEntries.energy_provider_id),
-              isNull(dataEntries.energy_source_id),
-              isNull(dataEntries.payment_mode_id),
-              isNull(dataEntries.customer_type_id),
+              eq(transmissionRelevance.report_period_id, reportPeriodId),
+              eq(transmissionRelevance.service_area_id, serviceAreaId),
+              eq(transmissionRelevance.input_def_id, inputDefId),
             ),
           )
-          .orderBy(desc(dataEntries.updatedAt))
+          .orderBy(desc(transmissionRelevance.updatedAt))
           .limit(1);
 
         const updatedAt = row.updated_at
@@ -3696,17 +3443,28 @@ export async function retrieveTransmissionRelevance(options?: {
 
         if (existing) {
           await db
-            .update(dataEntries)
+            .update(transmissionRelevance)
             .set({
               is_relevant: row.is_relevant ?? true,
               is_deleted: row.is_deleted ?? false,
               updatedAt,
               updatedById: null,
             })
-            .where(eq(dataEntries.id, existing.id));
+            .where(eq(transmissionRelevance.id, existing.id));
           updated += 1;
           continue;
         }
+
+        await db.insert(transmissionRelevance).values({
+          report_period_id: reportPeriodId,
+          service_area_id: serviceAreaId,
+          input_def_id: inputDefId,
+          is_relevant: row.is_relevant ?? true,
+          is_deleted: row.is_deleted ?? false,
+          updatedAt,
+          updatedById: null,
+        });
+        updated += 1;
       }
 
       cursor = page.pagination.nextCursor;
@@ -3841,21 +3599,18 @@ export async function retrieveTariffRelevance(options?: {
         }
 
         const [existing] = await db
-          .select({ id: dataEntries.id })
-          .from(dataEntries)
+          .select({ id: tariffRelevance.id })
+          .from(tariffRelevance)
           .where(
             and(
-              eq(dataEntries.report_period_id, reportPeriodId),
-              eq(dataEntries.service_area_id, serviceAreaId),
-              eq(dataEntries.input_def_id, inputDefId),
-              eq(dataEntries.payment_mode_id, paymentModeId),
-              eq(dataEntries.customer_type_id, customerTypeId),
-              isNull(dataEntries.energy_resource_id),
-              isNull(dataEntries.energy_provider_id),
-              isNull(dataEntries.energy_source_id),
+              eq(tariffRelevance.report_period_id, reportPeriodId),
+              eq(tariffRelevance.service_area_id, serviceAreaId),
+              eq(tariffRelevance.input_def_id, inputDefId),
+              eq(tariffRelevance.payment_mode_id, paymentModeId),
+              eq(tariffRelevance.customer_type_id, customerTypeId),
             ),
           )
-          .orderBy(desc(dataEntries.updatedAt))
+          .orderBy(desc(tariffRelevance.updatedAt))
           .limit(1);
 
         const updatedAt = row.updated_at
@@ -3864,17 +3619,30 @@ export async function retrieveTariffRelevance(options?: {
 
         if (existing) {
           await db
-            .update(dataEntries)
+            .update(tariffRelevance)
             .set({
               is_relevant: row.is_relevant ?? true,
               is_deleted: row.is_deleted ?? false,
               updatedAt,
               updatedById: null,
             })
-            .where(eq(dataEntries.id, existing.id));
+            .where(eq(tariffRelevance.id, existing.id));
           updated += 1;
           continue;
         }
+
+        await db.insert(tariffRelevance).values({
+          report_period_id: reportPeriodId,
+          service_area_id: serviceAreaId,
+          input_def_id: inputDefId,
+          payment_mode_id: paymentModeId,
+          customer_type_id: customerTypeId,
+          is_relevant: row.is_relevant ?? true,
+          is_deleted: row.is_deleted ?? false,
+          updatedAt,
+          updatedById: null,
+        });
+        updated += 1;
       }
 
       cursor = page.pagination.nextCursor;
@@ -3899,6 +3667,233 @@ export async function retrieveTariffRelevance(options?: {
           }
         : error },
     );
+    logMigrationError(error);
+  }
+
+  revalidatePath("/migration");
+  revalidatePath("/settings/relevance");
+  revalidatePath("/data-entry");
+
+  return { ok: true, inserted: 0, updated, total: updated };
+}
+
+export async function retrieveInputRelevance(options?: {
+  reportPeriodId?: number;
+  batchSize?: number;
+}) {
+  await assertDevMigrationAccess();
+  let updated = 0;
+  let cursor: number | null = null;
+  let hasMore = true;
+
+  const batchSize = Math.max(1, Math.min(2000, options?.batchSize ?? 500));
+
+  const mappingRows = await db
+    .select({
+      trainingDlDefId: inputDlDefMappings.training_dl_def_id,
+      inputDefId: inputDlDefMappings.input_def_id,
+      updatedAt: inputDlDefMappings.updated_at,
+    })
+    .from(inputDlDefMappings);
+
+  const inputByTrainingDlDefId = new Map<
+    number,
+    { inputDefId: number; updatedAt: Date | null }
+  >();
+
+  for (const mapping of mappingRows) {
+    const existing = inputByTrainingDlDefId.get(mapping.trainingDlDefId);
+    if (!existing) {
+      inputByTrainingDlDefId.set(mapping.trainingDlDefId, {
+        inputDefId: mapping.inputDefId,
+        updatedAt: mapping.updatedAt,
+      });
+      continue;
+    }
+
+    const existingTime = existing.updatedAt?.getTime() ?? 0;
+    const currentTime = mapping.updatedAt?.getTime() ?? 0;
+    if (currentTime >= existingTime) {
+      inputByTrainingDlDefId.set(mapping.trainingDlDefId, {
+        inputDefId: mapping.inputDefId,
+        updatedAt: mapping.updatedAt,
+      });
+    }
+  }
+
+  const [targetServiceAreas] = await Promise.all([
+    db.select({ id: serviceAreas.id }).from(serviceAreas),
+  ]);
+
+  const targetServiceAreaIds = new Set(targetServiceAreas.map((r) => r.id));
+
+  try {
+    while (hasMore) {
+      const params = new URLSearchParams();
+      params.set("limit", String(batchSize));
+
+      if (cursor != null) {
+        params.set("cursor", String(cursor));
+      }
+      if (options?.reportPeriodId != null) {
+        params.set("reportPeriodId", String(options.reportPeriodId));
+      }
+
+      const call = await fetchMigrationEndpoint(
+        `/inputRelevance?${params.toString()}`,
+      );
+
+      if (!call.ok) {
+        throw new Error(
+          `Input relevance migration API failed: ${call.status}`,
+        );
+      }
+
+      const page: SourceInputRelevancePage = await call.json();
+
+      for (const row of page.inputRelevance) {
+        const serviceAreaId = toNumberOrNull(row.service_area_id);
+        const sourceTrainingDlDefId = toNumberOrNull(row.training_dl_def_id);
+
+        if (serviceAreaId == null || sourceTrainingDlDefId == null) {
+          continue;
+        }
+
+        if (!targetServiceAreaIds.has(serviceAreaId)) {
+          continue;
+        }
+
+        const mappedInput = inputByTrainingDlDefId.get(sourceTrainingDlDefId);
+        const inputDefId = mappedInput?.inputDefId ?? null;
+
+        if (inputDefId == null) {
+          continue;
+        }
+
+        const [existing] = await db
+          .select({ id: inputRelevance.id })
+          .from(inputRelevance)
+          .where(
+            and(
+              eq(inputRelevance.input_def_id, inputDefId),
+              eq(inputRelevance.dimension_id, serviceAreaId),
+            ),
+          )
+          .limit(1);
+
+        if (existing) {
+          await db
+            .update(inputRelevance)
+            .set({
+              is_relevant: row.is_relevant ?? true,
+            })
+            .where(eq(inputRelevance.id, existing.id));
+          updated += 1;
+          continue;
+        }
+
+        await db.insert(inputRelevance).values({
+          input_def_id: inputDefId,
+          dimension_id: serviceAreaId,
+          is_relevant: row.is_relevant ?? true,
+        });
+        updated += 1;
+      }
+
+      cursor = page.pagination.nextCursor;
+      hasMore = page.pagination.hasMore === true && cursor != null;
+    }
+  } catch (error: unknown) {
+    logMigrationError(error);
+  }
+
+  revalidatePath("/migration");
+  revalidatePath("/settings/relevance");
+  revalidatePath("/data-entry");
+
+  return { ok: true, inserted: 0, updated, total: updated };
+}
+
+export async function retrieveGenerationRelevance(options?: {
+  reportPeriodId?: number;
+  batchSize?: number;
+}) {
+  await assertDevMigrationAccess();
+  let updated = 0;
+  let cursor: number | null = null;
+  let hasMore = true;
+
+  const batchSize = Math.max(1, Math.min(2000, options?.batchSize ?? 500));
+
+  try {
+    while (hasMore) {
+      const params = new URLSearchParams();
+      params.set("limit", String(batchSize));
+
+      if (cursor != null) {
+        params.set("cursor", String(cursor));
+      }
+      if (options?.reportPeriodId != null) {
+        params.set("reportPeriodId", String(options.reportPeriodId));
+      }
+
+      const call = await fetchMigrationEndpoint(
+        `/generationRelevance?${params.toString()}`,
+      );
+
+      if (!call.ok) {
+        throw new Error(
+          `Generation relevance migration API failed: ${call.status}`,
+        );
+      }
+
+      const page: SourceGenerationRelevancePage = await call.json();
+
+      for (const row of page.generationRelevance) {
+        const energyResourceTypeId = toNumberOrNull(row.energy_provider_id);
+        const energyTypeId = toNumberOrNull(row.energy_type_id);
+        const energySourceId = toNumberOrNull(row.energy_source_id);
+
+        if (
+          energyResourceTypeId == null ||
+          energyTypeId == null ||
+          energySourceId == null
+        ) {
+          continue;
+        }
+
+        const [existing] = await db
+          .select({ id: energyResourceTypeRelevance.id })
+          .from(energyResourceTypeRelevance)
+          .where(
+            and(
+              eq(
+                energyResourceTypeRelevance.energy_resource_type_id,
+                energyResourceTypeId,
+              ),
+              eq(energyResourceTypeRelevance.energy_type_id, energyTypeId),
+              eq(energyResourceTypeRelevance.energy_source_id, energySourceId),
+            ),
+          )
+          .limit(1);
+
+        if (existing) {
+          updated += 1;
+          continue;
+        }
+
+        await db.insert(energyResourceTypeRelevance).values({
+          energy_resource_type_id: energyResourceTypeId,
+          energy_type_id: energyTypeId,
+          energy_source_id: energySourceId,
+        });
+        updated += 1;
+      }
+
+      cursor = page.pagination.nextCursor;
+      hasMore = page.pagination.hasMore === true && cursor != null;
+    }
+  } catch (error: unknown) {
     logMigrationError(error);
   }
 
@@ -5670,11 +5665,11 @@ export async function purgeAllDataEntryRecords(): Promise<{
     const r4 = await db.delete(dataEntries);
     counts["data_entries"] = r4.rowCount ?? 0;
 
-    const r5 = await db.delete(generationRelevance);
-    counts["generation_relevance"] = r5.rowCount ?? 0;
+    const r5 = await db.delete(tariffRelevance);
+    counts["tariff_relevance"] = r5.rowCount ?? 0;
 
-    const r6 = await db.delete(generationToggleRelevance);
-    counts["generation_toggle_relevance"] = r6.rowCount ?? 0;
+    const r6 = await db.delete(transmissionRelevance);
+    counts["transmission_relevance"] = r6.rowCount ?? 0;
 
     revalidatePath("/migration");
     revalidatePath("/data-entry");

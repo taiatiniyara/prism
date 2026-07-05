@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/logging/logger";
 
 export default function DataEntryError({
   error,

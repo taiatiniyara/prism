@@ -13,9 +13,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import { FieldGroup } from "../ui/field-group";
-import BorderedStack from "../ui/bordered-stack";
-import BorderedForm from "../ui/bordered-form";
-import BorderedGrid from "../ui/bordered-grid";
+import BorderedBox from "../ui/bordered-box";
 import { evaluateKpiFormula } from "@/app/data-entry/kpi-worker/evaluator";
 import {
   Dialog,
@@ -501,7 +499,7 @@ export function CustomKpiRequestForm(props: {
   };
 
   return (
-    <BorderedForm
+    <BorderedBox variant="form"
       className="space-y-3"
       onSubmit={onSubmit}
       noValidate
@@ -779,7 +777,7 @@ export function CustomKpiRequestForm(props: {
 
             <div className="max-h-80 space-y-2 overflow-y-auto pr-1">
               {form.proposedUnits.map((item, index) => (
-                <BorderedGrid
+                <BorderedBox variant="grid"
                   key={`proposed-unit-${index}`}
                   className="grid gap-2 sm:grid-cols-2"
                 >
@@ -828,7 +826,7 @@ export function CustomKpiRequestForm(props: {
                   >
                     Remove
                   </Button>
-                </BorderedGrid>
+                </BorderedBox>
               ))}
             </div>
           </div>
@@ -866,7 +864,7 @@ export function CustomKpiRequestForm(props: {
 
             <div className="max-h-96 space-y-2 overflow-y-auto pr-1">
               {form.proposedInputs.map((item, index) => (
-                <BorderedGrid
+                <BorderedBox variant="grid"
                   key={`proposed-input-${index}`}
                   className="grid gap-2 sm:grid-cols-2"
                 >
@@ -971,7 +969,7 @@ export function CustomKpiRequestForm(props: {
                   >
                     Remove
                   </Button>
-                </BorderedGrid>
+                </BorderedBox>
               ))}
             </div>
           </div>
@@ -1152,7 +1150,7 @@ export function CustomKpiRequestForm(props: {
           </FieldGroup>
         </div>
 
-        <BorderedStack className="w-full space-y-2 p-3 lg:w-[35%]">
+        <BorderedBox variant="stack" className="w-full space-y-2 p-3 lg:w-[35%]">
           <p className="text-xs font-medium">KPI Result</p>
           <p className="mt-1 text-sm font-semibold">
             {formulaPreview.status === "ok"
@@ -1185,7 +1183,7 @@ export function CustomKpiRequestForm(props: {
             />
             <span>KPI results match my calculations.</span>
           </label>
-        </BorderedStack>
+        </BorderedBox>
       </div>
 
       <Button
@@ -1199,6 +1197,6 @@ export function CustomKpiRequestForm(props: {
       >
         {submitting ? "Submitting..." : "Submit for review"}
       </Button>
-    </BorderedForm>
+    </BorderedBox>
   );
 }

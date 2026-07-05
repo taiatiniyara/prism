@@ -1,4 +1,4 @@
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/logging/logger";
 import { recordToolFailure } from "../data-service/utils";
 
 export const TOOL_TIMEOUT_MS = 15000;

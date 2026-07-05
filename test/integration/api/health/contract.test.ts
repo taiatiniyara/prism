@@ -12,7 +12,7 @@ vi.mock("@/db/connection", () => ({
   db: { execute: mocks.execute },
 }));
 
-vi.mock("@/lib/powerbi.service", () => ({
+vi.mock("@/lib/powerbi", () => ({
   testPowerBiConnection: mocks.testPowerBiConnection,
 }));
 

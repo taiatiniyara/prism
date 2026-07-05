@@ -1,6 +1,6 @@
 "use server";
 
-import { sendEmail } from "@/lib/email.service";
+import { sendEmail } from "@/lib/email/email.service";
 import { db } from "@/db/connection";
 import { user } from "@/db/schema/auth-schema";
 import { and, eq } from "drizzle-orm";

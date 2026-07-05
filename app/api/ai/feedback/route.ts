@@ -3,7 +3,7 @@ import { aiChatSession, aiChatTurn, aiFeedback, aiReviewQueue } from "@/db/schem
 import { getCurrentUser } from "@/lib/user.service";
 import { eq, and } from "drizzle-orm";
 import { isValidOrigin } from "@/lib/ai/origin";
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/logging/logger";
 
 export async function POST(request: Request) {
   let user;

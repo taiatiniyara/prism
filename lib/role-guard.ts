@@ -21,14 +21,21 @@ export const ROLE_ROUTE_PREFIXES: Record<string, string[]> = {
     "/data-entry/downloads",
     "/prism-ai",
   ],
-  BLO: ["/dashboard", "/data-entry", "/settings", "/profile", "/docs", "/prism-ai"],
+  BLO: [
+    "/dashboard",
+    "/data-entry",
+    "/settings",
+    "/profile",
+    "/docs",
+    "/prism-ai",
+  ],
   CEO: ["/dashboard", "/data-entry", "/profile", "/docs", "/prism-ai"],
   DAOF: ["/dashboard", "/data-entry", "/profile", "/docs", "/prism-ai"],
   DAOH: ["/dashboard", "/data-entry", "/profile", "/docs", "/prism-ai"],
   DAOO: ["/dashboard", "/data-entry", "/profile", "/docs", "/prism-ai"],
-  EXE: ["/dashboard", "/data-entry", "/profile", "/docs", "/prism-ai"],
+  EXE: ["/dashboard", "/profile", "/docs", "/prism-ai"],
   EXT: ["/dashboard", "/profile", "/docs", "/prism-ai"],
-  MGR: ["/dashboard", "/data-entry", "/profile", "/docs", "/prism-ai"],
+  MGR: ["/dashboard", "/profile", "/docs", "/prism-ai"],
 };
 
 export const ROLE_DEFAULT_PAGES: Record<string, string> = {
@@ -57,10 +64,7 @@ export function getDefaultPageForRole(role: string | null | undefined): string {
   return ROLE_DEFAULT_PAGES[role] ?? "/dashboard";
 }
 
-export function canAccessRoute(
-  role: string | null,
-  pathname: string,
-): boolean {
+export function canAccessRoute(role: string | null, pathname: string): boolean {
   if (!role) return false;
 
   const allowed = ROLE_ROUTE_PREFIXES[role];

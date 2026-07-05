@@ -5,6 +5,7 @@ import { getCurrentUser } from "@/lib/user.service";
 import MigrationButtons from "./buttons";
 import DataEntryBreakdownPanel from "./data-entry-breakdown-panel";
 import DataEntryComparisonPanel from "./data-entry-comparison-panel";
+import MigrationHistory from "./history";
 import { getDataEntryBreakdownFilterOptions, getDataEntryComparisonFilterOptions } from "./service";
 
 export default async function MigrationPage({
@@ -43,6 +44,9 @@ export default async function MigrationPage({
         />
       </Suspense>
       <DataEntryComparisonPanel options={comparisonOptions} />
+      <Suspense fallback={<div className="mt-6 text-sm text-muted-foreground">Loading history...</div>}>
+        <MigrationHistory />
+      </Suspense>
     </div>
   );
 }

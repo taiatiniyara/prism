@@ -3,7 +3,7 @@ import { countries, countryContext, subRegions } from "@/db/schema/country";
 import { managedLists, managedListItems } from "@/db/schema/managedLists";
 import { eq, and } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
-import { dlValueOrNull } from "@/lib/legacy-dl-resolver";
+import { dlValueOrNull } from "@/lib/legacy/legacy-dl-resolver";
 
 async function getManagedListByName(listName: string) {
   const [list] = await db

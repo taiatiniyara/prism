@@ -4,7 +4,7 @@ import { reportPeriods } from "@/db/schema/reportPeriods";
 import { managedListItems } from "@/db/schema/managedLists";
 import { eq, isNotNull } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
-import { dlValue, formatReportPeriodIso } from "@/lib/legacy-dl-resolver";
+import { dlValue, formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
 
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);

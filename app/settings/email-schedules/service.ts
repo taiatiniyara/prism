@@ -12,7 +12,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { roles, user } from "@/db/schema/auth-schema";
 import { organisations } from "@/db/schema/utility";
-import { sendEmail } from "@/lib/email.service";
+import { sendEmail } from "@/lib/email/email.service";
 import { getCurrentUser } from "@/lib/user.service";
 import type { CurrentUser } from "@/lib/user.service";
 import { GetReportPeriods } from "@/app/data-entry/service";

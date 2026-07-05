@@ -1,5 +1,5 @@
 import { timingSafeEqual } from "node:crypto";
-import { getAzureToken } from "@/lib/powerbi.service";
+import { getAzureToken } from "@/lib/powerbi";
 
 export async function GET(req: Request) {
   const apiKey = process.env.API_KEY ?? "";

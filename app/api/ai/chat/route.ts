@@ -10,7 +10,7 @@ import { getSystemPrompt } from "@/lib/ai/prompt";
 import { checkUserUtility } from "@/lib/ai/data-service/utils";
 import { runAiStream, runAiGenerate, getCircuitState } from "@/lib/ai/service";
 import { isValidOrigin } from "@/lib/ai/origin";
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/logging/logger";
 
 export const maxDuration = 120;
 

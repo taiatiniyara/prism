@@ -1,9 +1,9 @@
 import { db } from "@/db/connection";
 import { sql } from "drizzle-orm";
-import { testPowerBiConnection, isPbiHealthy } from "@/lib/powerbi.service";
+import { testPowerBiConnection, isPbiHealthy } from "@/lib/powerbi";
 import { getCircuitState } from "@/lib/ai/service";
 import { AI_MODELS } from "@/lib/ai/types";
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/logging/logger";
 
 interface CheckResult {
   ok: boolean;

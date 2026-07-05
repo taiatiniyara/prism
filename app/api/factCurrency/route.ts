@@ -5,7 +5,7 @@ import { reportPeriods } from "@/db/schema/reportPeriods";
 import { managedListItems } from "@/db/schema/managedLists";
 import { eq, and, isNotNull } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
-import { dlValue, formatReportPeriodIso, resolveDlIds } from "@/lib/legacy-dl-resolver";
+import { dlValue, formatReportPeriodIso, resolveDlIds } from "@/lib/legacy/legacy-dl-resolver";
 
 const FxRateTrainingId = 4213040060;
 

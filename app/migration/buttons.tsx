@@ -9,6 +9,7 @@ import {
   retrieveDataEntries,
   retrieveEnergyResources,
   retrieveGenerationRelevance,
+  retrieveInputRelevance,
   retrieveManagedLists,
   retrieveReportPeriods,
   retrieveRoles,
@@ -52,9 +53,10 @@ const steps: Step[] = [
   { label: "Input DL Def Mappings", fn: retrieveInputDlDefMappings, heavy: true },
   { label: "Country Context", fn: retrieveCountryContextData as () => Promise<MigrationStepResult>, heavy: true },
   { label: "Utility Context", fn: retrieveUtilityContextData as () => Promise<MigrationStepResult>, heavy: true },
-  { label: "Generation Relevance", fn: retrieveGenerationRelevance as () => Promise<MigrationStepResult>, heavy: true },
   { label: "Transmission Relevance", fn: retrieveTransmissionRelevance as () => Promise<MigrationStepResult>, heavy: true },
   { label: "Tariff Relevance", fn: retrieveTariffRelevance as () => Promise<MigrationStepResult>, heavy: true },
+  { label: "Input Relevance", fn: retrieveInputRelevance as () => Promise<MigrationStepResult>, heavy: true },
+  { label: "Generation Relevance", fn: retrieveGenerationRelevance as () => Promise<MigrationStepResult>, heavy: true },
   { label: "Data Entries", fn: (() => retrieveDataEntries()) as () => Promise<MigrationStepResult>, heavy: true },
 ];
 

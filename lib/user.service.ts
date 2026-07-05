@@ -1,13 +1,10 @@
 import { db } from "@/db/connection";
 import { roles, user, type UserStatus } from "@/db/schema/auth-schema";
-import { organisations } from "@/db/schema/utility";
 import { auth } from "@/lib/auth";
+import { resolveDevOrganisationContext } from "@/lib/utility-context";
 import { eq } from "drizzle-orm";
-import { cookies, headers } from "next/headers";
-import {
-  DEV_UTILITY_CONTEXT_COOKIE,
-  parseOrganisationContextId,
-} from "@/lib/utility-context";
+import { headers } from "next/headers";
+
 
 export interface CurrentUser {
   name: string;
@@ -69,32 +66,8 @@ export const getCurrentUser = async (): Promise<CurrentUser> => {
     .where(eq(roles.id, u.role_id!))
     .limit(1);
 
-  let scopedOrgId = u.organisation_id;
-  let isUtilityContextScoped = false;
-
-  if (role?.name === "DEV") {
-    const cookieStore = await cookies();
-    const requestedContextId = parseOrganisationContextId(
-      cookieStore.get(DEV_UTILITY_CONTEXT_COOKIE)?.value,
-    );
-
-    if (requestedContextId != null) {
-      const [scopedOrganisation] = await db
-        .select({ id: organisations.id })
-        .from(organisations)
-        .where(eq(organisations.id, requestedContextId))
-        .limit(1);
-
-      if (scopedOrganisation) {
-        scopedOrgId = scopedOrganisation.id;
-        isUtilityContextScoped = true;
-      } else {
-        scopedOrgId = null;
-      }
-    } else {
-      scopedOrgId = null;
-    }
-  }
+  const { effectiveOrganisationId: scopedOrgId, isUtilityContextScoped } =
+    await resolveDevOrganisationContext(u.organisation_id, role?.name);
 
   return {
     name: u.name,

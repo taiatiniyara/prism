@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { createElement } from "react";
 
-import { getBlockedAccessState } from "@/lib/auth-status-guard";
+import { getBlockedAccessState } from "@/lib/user-status";
 import BlockedAccessOverlay from "@/components/auth/blocked-access-overlay";
 
 describe("status gate deactivated integration", () => {

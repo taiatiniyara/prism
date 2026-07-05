@@ -22,7 +22,7 @@ import {
   buildCustomKpiSubmissionReviewEmail,
   buildCustomKpiReviewOutcomeEmail,
   sendEmail,
-} from "@/lib/email.service";
+} from "@/lib/email/email.service";
 
 const normalize = (value: string): string =>
   value.trim().replace(/\s+/g, " ").toLowerCase();

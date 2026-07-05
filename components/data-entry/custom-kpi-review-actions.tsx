@@ -11,8 +11,7 @@ import {
   SelectValue,
 } from "../ui/select";
 import { FieldGroup } from "../ui/field-group";
-import BorderedPanel from "../ui/bordered-panel";
-import BorderedStack from "../ui/bordered-stack";
+import BorderedBox from "../ui/bordered-box";
 
 type DecisionType = "APPROVE" | "REJECT" | "REPLACE";
 
@@ -237,7 +236,7 @@ export function CustomKpiReviewActions({
   };
 
   return (
-    <BorderedPanel>
+    <BorderedBox variant="panel">
       <form
         className="space-y-2"
         onSubmit={onSubmitDecision}
@@ -383,7 +382,7 @@ export function CustomKpiReviewActions({
                 </FieldGroup>
               </div>
 
-              <BorderedStack className="space-y-2 p-2">
+              <BorderedBox variant="stack" className="space-y-2 p-2">
                 <p className="text-xs font-medium text-muted-foreground">
                   Proposed units resolution
                 </p>
@@ -457,9 +456,9 @@ export function CustomKpiReviewActions({
                     </div>
                   ))
                 )}
-              </BorderedStack>
+              </BorderedBox>
 
-              <BorderedStack className="space-y-2 p-2">
+              <BorderedBox variant="stack" className="space-y-2 p-2">
                 <p className="text-xs font-medium text-muted-foreground">
                   Proposed inputs resolution
                 </p>
@@ -573,7 +572,7 @@ export function CustomKpiReviewActions({
                     </div>
                   ))
                 )}
-              </BorderedStack>
+              </BorderedBox>
             </div>
           ) : null}
 
@@ -622,6 +621,6 @@ export function CustomKpiReviewActions({
         ) : null}
         {error ? <p className="text-xs text-red-700">{error}</p> : null}
       </div>
-    </BorderedPanel>
+    </BorderedBox>
   );
 }

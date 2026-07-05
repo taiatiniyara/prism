@@ -4,12 +4,12 @@ import { db } from "@/db/connection";
 import {
   dataEntries,
   energyResources,
-  generationRelevance,
-  generationToggleRelevance,
   inputRelevance,
   inputDefinitions,
   organisations,
   serviceAreas,
+  tariffRelevance,
+  transmissionRelevance,
   user as authUsers,
 } from "@/db/schema";
 import { kpiDefinitions } from "@/db/schema/kpi";
@@ -38,7 +38,7 @@ import {
 } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { GetManagedListItemByName } from "../managed-lists/service";
-import { DataEntryStatusId } from "@/db/schema/dataEntry";
+import { EnergyResourcePeriodEntry } from "@/db/schema/utility";
 
 interface RelevanceFilterOption {
   id: number;
@@ -749,37 +749,36 @@ export async function GetUtilityTariffRelevance(
     };
   }
 
-  const dataEntry = await db
+  const tariffRelRows = await db
     .select({
-      report_period_id: dataEntries.report_period_id,
-      payment_mode_id: dataEntries.payment_mode_id,
-      customer_type_id: dataEntries.customer_type_id,
-      input_def_id: dataEntries.input_def_id,
-      is_relevant: dataEntries.is_relevant,
-      id: dataEntries.id,
-      updatedAt: dataEntries.updatedAt,
+      report_period_id: tariffRelevance.report_period_id,
+      payment_mode_id: tariffRelevance.payment_mode_id,
+      customer_type_id: tariffRelevance.customer_type_id,
+      input_def_id: tariffRelevance.input_def_id,
+      is_relevant: tariffRelevance.is_relevant,
+      id: tariffRelevance.id,
+      updatedAt: tariffRelevance.updatedAt,
     })
-    .from(dataEntries)
+    .from(tariffRelevance)
     .where(
       and(
-        eq(dataEntries.report_period_id, selectedReportPeriodId),
-        eq(dataEntries.service_area_id, selectedServiceAreaId),
-        eq(dataEntries.is_deleted, false),
-        isNull(dataEntries.energy_resource_id),
+        eq(tariffRelevance.report_period_id, selectedReportPeriodId),
+        eq(tariffRelevance.service_area_id, selectedServiceAreaId),
+        eq(tariffRelevance.is_deleted, false),
         inArray(
-          dataEntries.input_def_id,
+          tariffRelevance.input_def_id,
           inputList.map((i) => i.id),
         ),
       ),
     )
-    .orderBy(desc(dataEntries.updatedAt));
+    .orderBy(desc(tariffRelevance.updatedAt));
 
   const relevanceByDimension = new Map<
     string,
     Map<number, { isRelevant: boolean; dataEntryId: string }>
   >();
 
-  for (const entry of dataEntry) {
+  for (const entry of tariffRelRows) {
     if (
       entry.report_period_id == null ||
       entry.payment_mode_id == null ||
@@ -880,19 +879,18 @@ export async function SetUtilityTariffDataLabelRelevance(
   }
 
   const [existing] = await db
-    .select({ id: dataEntries.id })
-    .from(dataEntries)
+    .select({ id: tariffRelevance.id })
+    .from(tariffRelevance)
     .where(
       and(
-        eq(dataEntries.report_period_id, payload.reportPeriodId),
-        eq(dataEntries.service_area_id, payload.serviceAreaId),
-        eq(dataEntries.input_def_id, payload.inputDefId),
-        eq(dataEntries.payment_mode_id, payload.paymentModeId),
-        eq(dataEntries.customer_type_id, payload.customerTypeId),
-        isNull(dataEntries.energy_resource_id),
+        eq(tariffRelevance.report_period_id, payload.reportPeriodId),
+        eq(tariffRelevance.service_area_id, payload.serviceAreaId),
+        eq(tariffRelevance.input_def_id, payload.inputDefId),
+        eq(tariffRelevance.payment_mode_id, payload.paymentModeId),
+        eq(tariffRelevance.customer_type_id, payload.customerTypeId),
       ),
     )
-    .orderBy(desc(dataEntries.updatedAt))
+    .orderBy(desc(tariffRelevance.updatedAt))
     .limit(1);
 
   if (!existing && payload.isRelevant) {
@@ -904,24 +902,21 @@ export async function SetUtilityTariffDataLabelRelevance(
 
   if (existing) {
     await db
-      .update(dataEntries)
+      .update(tariffRelevance)
       .set({
         is_relevant: payload.isRelevant,
         is_deleted: false,
         updatedAt: new Date(),
         updatedById: user.id,
       })
-      .where(eq(dataEntries.id, existing.id));
+      .where(eq(tariffRelevance.id, existing.id));
   } else {
-    await db.insert(dataEntries).values({
+    await db.insert(tariffRelevance).values({
       report_period_id: payload.reportPeriodId,
       service_area_id: payload.serviceAreaId,
       input_def_id: payload.inputDefId,
       payment_mode_id: payload.paymentModeId,
       customer_type_id: payload.customerTypeId,
-      value: null,
-      comments: null,
-      status_id: DataEntryStatusId.Entered,
       is_relevant: payload.isRelevant,
       is_deleted: false,
       updatedAt: new Date(),
@@ -986,27 +981,24 @@ export async function GetTransmissionRelevance(
 
   const entries = await db
     .select({
-      inputDefId: dataEntries.input_def_id,
-      isRelevant: dataEntries.is_relevant,
-      id: dataEntries.id,
-      updatedAt: dataEntries.updatedAt,
+      inputDefId: transmissionRelevance.input_def_id,
+      isRelevant: transmissionRelevance.is_relevant,
+      id: transmissionRelevance.id,
+      updatedAt: transmissionRelevance.updatedAt,
     })
-    .from(dataEntries)
+    .from(transmissionRelevance)
     .where(
       and(
-        eq(dataEntries.report_period_id, selectedReportPeriodId),
-        eq(dataEntries.service_area_id, selectedServiceAreaId),
-        eq(dataEntries.is_deleted, false),
-        isNull(dataEntries.energy_resource_id),
-        isNull(dataEntries.payment_mode_id),
-        isNull(dataEntries.customer_type_id),
+        eq(transmissionRelevance.report_period_id, selectedReportPeriodId),
+        eq(transmissionRelevance.service_area_id, selectedServiceAreaId),
+        eq(transmissionRelevance.is_deleted, false),
         inArray(
-          dataEntries.input_def_id,
+          transmissionRelevance.input_def_id,
           inputList.map((input) => input.id),
         ),
       ),
     )
-    .orderBy(desc(dataEntries.updatedAt));
+    .orderBy(desc(transmissionRelevance.updatedAt));
 
   const entryByInputDefId = new Map<
     number,
@@ -1081,19 +1073,16 @@ export async function SetTransmissionDataLabelRelevance(
   }
 
   const [existing] = await db
-    .select({ id: dataEntries.id })
-    .from(dataEntries)
+    .select({ id: transmissionRelevance.id })
+    .from(transmissionRelevance)
     .where(
       and(
-        eq(dataEntries.report_period_id, payload.reportPeriodId),
-        eq(dataEntries.service_area_id, payload.serviceAreaId),
-        eq(dataEntries.input_def_id, payload.inputDefId),
-        isNull(dataEntries.energy_resource_id),
-        isNull(dataEntries.payment_mode_id),
-        isNull(dataEntries.customer_type_id),
+        eq(transmissionRelevance.report_period_id, payload.reportPeriodId),
+        eq(transmissionRelevance.service_area_id, payload.serviceAreaId),
+        eq(transmissionRelevance.input_def_id, payload.inputDefId),
       ),
     )
-    .orderBy(desc(dataEntries.updatedAt))
+    .orderBy(desc(transmissionRelevance.updatedAt))
     .limit(1);
 
   if (!existing && payload.isRelevant) {
@@ -1105,24 +1094,19 @@ export async function SetTransmissionDataLabelRelevance(
 
   if (existing) {
     await db
-      .update(dataEntries)
+      .update(transmissionRelevance)
       .set({
         is_relevant: payload.isRelevant,
         is_deleted: false,
         updatedAt: new Date(),
         updatedById: user.id,
       })
-      .where(eq(dataEntries.id, existing.id));
+      .where(eq(transmissionRelevance.id, existing.id));
   } else {
-    await db.insert(dataEntries).values({
+    await db.insert(transmissionRelevance).values({
       report_period_id: payload.reportPeriodId,
       service_area_id: payload.serviceAreaId,
       input_def_id: payload.inputDefId,
-      payment_mode_id: null,
-      customer_type_id: null,
-      value: null,
-      comments: null,
-      status_id: DataEntryStatusId.Entered,
       is_relevant: payload.isRelevant,
       is_deleted: false,
       updatedAt: new Date(),
@@ -1210,10 +1194,6 @@ export async function GetUtilityGenerationRelevance(
     mappings: configuredTypeSourceMappings,
   });
 
-  const visibleEnergySourceIds = Array.from(
-    new Set(generationTypeSourcePairs.map((pair) => pair.energySourceId)),
-  );
-
   const visibleEnergyResourceTypes = Array.from(
     new Set(generationTypeSourcePairs.map((pair) => pair.energyResourceType)),
   ).sort((a, b) => a.localeCompare(b));
@@ -1253,108 +1233,34 @@ export async function GetUtilityGenerationRelevance(
     };
   }
 
-  const toggleEntries =
-    energyProviders.length > 0 && visibleEnergySourceIds.length > 0
+  const energyResourcesForScope =
+    selectedServiceAreaId != null
       ? await db
           .select({
-            reportPeriodId: generationToggleRelevance.report_period_id,
-            energySourceId: generationToggleRelevance.energy_source_id,
-            energyProviderId: generationToggleRelevance.energy_provider_id,
-            isRelevant: generationToggleRelevance.is_relevant,
+            energySourceId: energyResources.energy_source_id,
+            energyProviderId: energyResources.energy_provider_id,
+            periodEntries: energyResources.period_entries,
           })
-          .from(generationToggleRelevance)
+          .from(energyResources)
           .where(
             and(
-              eq(
-                generationToggleRelevance.report_period_id,
-                selectedReportPeriodId,
-              ),
-              eq(
-                generationToggleRelevance.service_area_id,
-                selectedServiceAreaId,
-              ),
-              eq(generationToggleRelevance.is_deleted, false),
-              inArray(
-                generationToggleRelevance.energy_provider_id,
-                energyProviders.map((provider) => provider.id),
-              ),
-              inArray(
-                generationToggleRelevance.energy_source_id,
-                visibleEnergySourceIds,
-              ),
+              eq(energyResources.utility_id, user.org_id!),
+              eq(energyResources.service_area_id, selectedServiceAreaId),
+              eq(energyResources.is_virtual, false),
             ),
           )
-          .orderBy(desc(generationToggleRelevance.updatedAt))
-      : [];
-
-  const entries =
-    energyProviders.length > 0 &&
-    generationTypeSourcePairs.length > 0 &&
-    inputDefIds.length > 0
-      ? await db
-          .select({
-            reportPeriodId: generationRelevance.report_period_id,
-            energySourceId: generationRelevance.energy_source_id,
-            energyProviderId: generationRelevance.energy_provider_id,
-            inputDefId: generationRelevance.input_def_id,
-            isRelevant: generationRelevance.is_relevant,
-            id: generationRelevance.id,
-            updatedAt: generationRelevance.updatedAt,
-          })
-          .from(generationRelevance)
-          .where(
-            and(
-              eq(generationRelevance.report_period_id, selectedReportPeriodId),
-              eq(generationRelevance.service_area_id, selectedServiceAreaId),
-              eq(generationRelevance.is_deleted, false),
-              inArray(generationRelevance.input_def_id, inputDefIds),
-              inArray(
-                generationRelevance.energy_provider_id,
-                energyProviders.map((provider) => provider.id),
-              ),
-              inArray(
-                generationRelevance.energy_source_id,
-                visibleEnergySourceIds,
-              ),
-            ),
-          )
-          .orderBy(desc(generationRelevance.updatedAt))
       : [];
 
   const cellHasFalse = new Map<string, boolean>();
 
-  for (const entry of toggleEntries) {
-    if (
-      entry.reportPeriodId == null ||
-      entry.energySourceId == null ||
-      entry.energyProviderId == null
-    ) {
-      continue;
+  for (const resource of energyResourcesForScope) {
+    const entries = (resource.periodEntries as EnergyResourcePeriodEntry[] | undefined) ?? [];
+    for (const pe of entries) {
+      if (pe.report_period_id === selectedReportPeriodId && !pe.is_active) {
+        const key = `${selectedReportPeriodId}:${resource.energySourceId}:${resource.energyProviderId}`;
+        cellHasFalse.set(key, true);
+      }
     }
-
-    if (entry.isRelevant) {
-      continue;
-    }
-
-    const key = `${entry.reportPeriodId}:${entry.energySourceId}:${entry.energyProviderId}`;
-    cellHasFalse.set(key, true);
-  }
-
-  for (const entry of entries) {
-    if (
-      entry.reportPeriodId == null ||
-      entry.energySourceId == null ||
-      entry.energyProviderId == null
-    ) {
-      continue;
-    }
-
-    if (entry.isRelevant) {
-      continue;
-    }
-
-    const key = `${entry.reportPeriodId}:${entry.energySourceId}:${entry.energyProviderId}`;
-    cellHasFalse.set(key, true);
   }
 
   return {
@@ -1412,22 +1318,11 @@ export async function SetUtilityGenerationDataLabelRelevance(
     };
   }
 
-  const inputList = await getGenerationInputDefinitions();
-
-  const [energyProvider] = await db
-    .select({ id: managedListItems.id })
-    .from(managedListItems)
-    .where(eq(managedListItems.id, payload.energyProviderId))
-    .limit(1);
-
-  const [energySource] = await db
-    .select({ id: managedListItems.id })
-    .from(managedListItems)
-    .where(eq(managedListItems.id, payload.energySourceId))
-    .limit(1);
-
-  const [resourceMatch] = await db
-    .select({ id: energyResources.id })
+  const resources = await db
+    .select({
+      id: energyResources.id,
+      periodEntries: energyResources.period_entries,
+    })
     .from(energyResources)
     .where(
       and(
@@ -1436,135 +1331,46 @@ export async function SetUtilityGenerationDataLabelRelevance(
         eq(energyResources.energy_provider_id, payload.energyProviderId),
         eq(energyResources.energy_source_id, payload.energySourceId),
       ),
-    )
-    .limit(1);
-
-  if ((!energyProvider || !energySource) && !resourceMatch) {
-    return {
-      success: false,
-      message: "Selected energy provider or source is invalid.",
-    };
-  }
-
-  const [existingToggle] = await db
-    .select({ id: generationToggleRelevance.id })
-    .from(generationToggleRelevance)
-    .where(
-      and(
-        eq(generationToggleRelevance.report_period_id, payload.reportPeriodId),
-        eq(generationToggleRelevance.service_area_id, payload.serviceAreaId),
-        eq(
-          generationToggleRelevance.energy_provider_id,
-          payload.energyProviderId,
-        ),
-        eq(generationToggleRelevance.energy_source_id, payload.energySourceId),
-      ),
-    )
-    .orderBy(desc(generationToggleRelevance.updatedAt))
-    .limit(1);
-
-  if (existingToggle) {
-    await db
-      .update(generationToggleRelevance)
-      .set({
-        is_relevant: payload.isRelevant,
-        is_deleted: false,
-        updatedAt: new Date(),
-        updatedById: user.id,
-      })
-      .where(eq(generationToggleRelevance.id, existingToggle.id));
-  } else if (!payload.isRelevant) {
-    await db.insert(generationToggleRelevance).values({
-      report_period_id: payload.reportPeriodId,
-      service_area_id: payload.serviceAreaId,
-      energy_provider_id: payload.energyProviderId,
-      energy_source_id: payload.energySourceId,
-      is_relevant: false,
-      is_deleted: false,
-      updatedAt: new Date(),
-      updatedById: user.id,
-    });
-  }
-
-  const inputDefIds = inputList.map((input) => input.id);
-
-  if (inputDefIds.length === 0) {
-    revalidateRelevanceAndDataEntry();
-
-    return {
-      success: true,
-      message: "Generation relevance updated.",
-    };
-  }
-
-  const existingRows = await db
-    .select({
-      id: generationRelevance.id,
-      inputDefId: generationRelevance.input_def_id,
-    })
-    .from(generationRelevance)
-    .where(
-      and(
-        eq(generationRelevance.report_period_id, payload.reportPeriodId),
-        eq(generationRelevance.service_area_id, payload.serviceAreaId),
-        inArray(generationRelevance.input_def_id, inputDefIds),
-        eq(generationRelevance.energy_provider_id, payload.energyProviderId),
-        eq(generationRelevance.energy_source_id, payload.energySourceId),
-      ),
-    )
-    .orderBy(desc(generationRelevance.updatedAt));
-
-  const existingByInputDefId = new Map<number, string>();
-
-  for (const row of existingRows) {
-    if (existingByInputDefId.has(row.inputDefId)) {
-      continue;
-    }
-
-    existingByInputDefId.set(row.inputDefId, row.id);
-  }
-
-  if (existingByInputDefId.size === 0 && payload.isRelevant) {
-    return {
-      success: true,
-      message: "Relevance already set by default.",
-    };
-  }
-
-  if (existingByInputDefId.size > 0) {
-    const existingIds = Array.from(existingByInputDefId.values());
-
-    await db
-      .update(generationRelevance)
-      .set({
-        is_relevant: payload.isRelevant,
-        is_deleted: false,
-        updatedAt: new Date(),
-        updatedById: user.id,
-      })
-      .where(inArray(generationRelevance.id, existingIds));
-  }
-
-  if (!payload.isRelevant) {
-    const missingInputDefIds = inputDefIds.filter(
-      (inputDefId) => !existingByInputDefId.has(inputDefId),
     );
 
-    if (missingInputDefIds.length > 0) {
-      await db.insert(generationRelevance).values(
-        missingInputDefIds.map((inputDefId) => ({
-          report_period_id: payload.reportPeriodId,
-          service_area_id: payload.serviceAreaId,
-          input_def_id: inputDefId,
-          energy_provider_id: payload.energyProviderId,
-          energy_source_id: payload.energySourceId,
-          is_relevant: false,
-          is_deleted: false,
-          updatedAt: new Date(),
-          updatedById: user.id,
-        })),
+  if (resources.length === 0) {
+    return {
+      success: false,
+      message: "No energy resources found for this provider and source.",
+    };
+  }
+
+  for (const resource of resources) {
+    const periodEntries = (resource.periodEntries as EnergyResourcePeriodEntry[] | undefined) ?? [];
+    const existingIdx = periodEntries.findIndex(
+      (pe) => pe.report_period_id === payload.reportPeriodId,
+    );
+
+    let updatedEntries: EnergyResourcePeriodEntry[];
+
+    if (existingIdx >= 0) {
+      updatedEntries = periodEntries.map((pe, i) =>
+        i === existingIdx ? { ...pe, is_active: payload.isRelevant } : pe,
       );
+    } else {
+      updatedEntries = [
+        ...periodEntries,
+        {
+          report_period_id: payload.reportPeriodId,
+          capacity_mw: null,
+          is_active: payload.isRelevant,
+        },
+      ];
     }
+
+    await db
+      .update(energyResources)
+      .set({
+        period_entries: updatedEntries,
+        updated_at: new Date(),
+        updated_by_id: user.id,
+      })
+      .where(eq(energyResources.id, resource.id));
   }
 
   revalidateRelevanceAndDataEntry();
@@ -2363,52 +2169,32 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
   const generationTotalByOrganisationId = new Map<number, number>();
   const generationNotRelevantByOrganisationId = new Map<number, number>();
   {
-    const totalRows = await db
+    const resources = await db
       .select({
-        organisationId: serviceAreas.utility_id,
-        count: sql<number>`cast(count(*) as int)`,
+        utilityId: energyResources.utility_id,
+        periodEntries: energyResources.period_entries,
       })
-      .from(generationRelevance)
-      .innerJoin(
-        serviceAreas,
-        eq(generationRelevance.service_area_id, serviceAreas.id),
-      )
-      .where(eq(generationRelevance.is_deleted, false))
-      .groupBy(serviceAreas.utility_id);
+      .from(energyResources)
+      .where(eq(energyResources.is_virtual, false));
 
-    for (const row of totalRows) {
-      if (utilityIdSet.has(row.organisationId)) {
-        generationTotalByOrganisationId.set(
-          row.organisationId,
-          Number(row.count),
-        );
+    for (const resource of resources) {
+      if (!utilityIdSet.has(resource.utilityId)) {
+        continue;
       }
-    }
 
-    const notRelevantRows = await db
-      .select({
-        organisationId: serviceAreas.utility_id,
-        count: sql<number>`cast(count(*) as int)`,
-      })
-      .from(generationRelevance)
-      .innerJoin(
-        serviceAreas,
-        eq(generationRelevance.service_area_id, serviceAreas.id),
-      )
-      .where(
-        and(
-          eq(generationRelevance.is_deleted, false),
-          eq(generationRelevance.is_relevant, false),
-        ),
-      )
-      .groupBy(serviceAreas.utility_id);
+      const entries = (resource.periodEntries as EnergyResourcePeriodEntry[] | undefined) ?? [];
+      generationTotalByOrganisationId.set(
+        resource.utilityId,
+        (generationTotalByOrganisationId.get(resource.utilityId) ?? 0) + entries.length,
+      );
 
-    for (const row of notRelevantRows) {
-      if (utilityIdSet.has(row.organisationId)) {
-        generationNotRelevantByOrganisationId.set(
-          row.organisationId,
-          Number(row.count),
-        );
+      for (const pe of entries) {
+        if (!pe.is_active) {
+          generationNotRelevantByOrganisationId.set(
+            resource.utilityId,
+            (generationNotRelevantByOrganisationId.get(resource.utilityId) ?? 0) + 1,
+          );
+        }
       }
     }
   }
@@ -2416,64 +2202,6 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
   const generationRelevantByOrganisationId = subtractMaps(
     generationTotalByOrganisationId,
     generationNotRelevantByOrganisationId,
-  );
-
-  const generationToggleTotalByOrganisationId = new Map<number, number>();
-  const generationToggleNotRelevantByOrganisationId = new Map<number, number>();
-  {
-    const totalRows = await db
-      .select({
-        organisationId: serviceAreas.utility_id,
-        count: sql<number>`cast(count(*) as int)`,
-      })
-      .from(generationToggleRelevance)
-      .innerJoin(
-        serviceAreas,
-        eq(generationToggleRelevance.service_area_id, serviceAreas.id),
-      )
-      .where(eq(generationToggleRelevance.is_deleted, false))
-      .groupBy(serviceAreas.utility_id);
-
-    for (const row of totalRows) {
-      if (utilityIdSet.has(row.organisationId)) {
-        generationToggleTotalByOrganisationId.set(
-          row.organisationId,
-          Number(row.count),
-        );
-      }
-    }
-
-    const notRelevantRows = await db
-      .select({
-        organisationId: serviceAreas.utility_id,
-        count: sql<number>`cast(count(*) as int)`,
-      })
-      .from(generationToggleRelevance)
-      .innerJoin(
-        serviceAreas,
-        eq(generationToggleRelevance.service_area_id, serviceAreas.id),
-      )
-      .where(
-        and(
-          eq(generationToggleRelevance.is_deleted, false),
-          eq(generationToggleRelevance.is_relevant, false),
-        ),
-      )
-      .groupBy(serviceAreas.utility_id);
-
-    for (const row of notRelevantRows) {
-      if (utilityIdSet.has(row.organisationId)) {
-        generationToggleNotRelevantByOrganisationId.set(
-          row.organisationId,
-          Number(row.count),
-        );
-      }
-    }
-  }
-
-  const generationToggleRelevantByOrganisationId = subtractMaps(
-    generationToggleTotalByOrganisationId,
-    generationToggleNotRelevantByOrganisationId,
   );
 
   const customKpiAssignedByOrganisationId = new Map<number, number>();
@@ -2637,23 +2365,8 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
       },
       {
         id: "generation-not-relevant",
-        label: "Generation explicit not-relevant rows (count)",
+        label: "Energy resource period entries (inactive)",
         values: toValues(generationNotRelevantByOrganisationId),
-      },
-      {
-        id: "generation-toggle-total",
-        label: "Generation toggle rows (total)",
-        values: toValues(generationToggleTotalByOrganisationId),
-      },
-      {
-        id: "generation-toggle-relevant",
-        label: "Generation toggle relevant rows (count)",
-        values: toValues(generationToggleRelevantByOrganisationId),
-      },
-      {
-        id: "generation-toggle-not-relevant",
-        label: "Generation toggle not-relevant rows (count)",
-        values: toValues(generationToggleNotRelevantByOrganisationId),
       },
     ],
   };

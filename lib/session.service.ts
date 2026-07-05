@@ -1,16 +1,13 @@
 import { unstable_noStore as noStore } from "next/cache";
-import { cookies, headers } from "next/headers";
+import { headers } from "next/headers";
 import { asc, eq } from "drizzle-orm";
 import { db } from "@/db/connection";
 import { roles, user } from "@/db/schema/auth-schema";
 import { auth } from "./auth";
 import { organisations } from "@/db/schema/utility";
 import { sidebarAccess } from "@/db/schema/rls";
-import { getBlockedAccessState } from "@/lib/auth-status-guard";
-import {
-  DEV_UTILITY_CONTEXT_COOKIE,
-  parseOrganisationContextId,
-} from "@/lib/utility-context";
+import { getBlockedAccessState } from "@/lib/user-status";
+import { resolveDevOrganisationContext } from "@/lib/utility-context";
 
 export async function getSession() {
   // Opt-out of static caching so we always read fresh cookies per request
@@ -59,32 +56,11 @@ export async function getSession() {
     .from(sidebarAccess)
     .orderBy(asc(sidebarAccess.order));
 
-  let effectiveOrganisationId = currentUser.organisation_id;
-  let isUtilityContextScoped = false;
-
-  if (role?.name === "DEV") {
-    const cookieStore = await cookies();
-    const requestedContextId = parseOrganisationContextId(
-      cookieStore.get(DEV_UTILITY_CONTEXT_COOKIE)?.value,
+  const { effectiveOrganisationId, isUtilityContextScoped } =
+    await resolveDevOrganisationContext(
+      currentUser.organisation_id,
+      role?.name,
     );
-
-    if (requestedContextId != null) {
-      const [scopedOrganisation] = await db
-        .select({ id: organisations.id })
-        .from(organisations)
-        .where(eq(organisations.id, requestedContextId))
-        .limit(1);
-
-      if (scopedOrganisation) {
-        effectiveOrganisationId = scopedOrganisation.id;
-        isUtilityContextScoped = true;
-      } else {
-        effectiveOrganisationId = null;
-      }
-    } else {
-      effectiveOrganisationId = null;
-    }
-  }
 
   const [org] = effectiveOrganisationId
     ? await db

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { tool } from "ai";
 import type { CurrentUser } from "@/lib/user.service";
-import { isConfiguredForDax, isPbiHealthy } from "@/lib/powerbi.service";
+import { isConfiguredForDax, isPbiHealthy } from "@/lib/powerbi";
 import { getUsageStats } from "../rate-limit";
 import {
   getPbiSchema, runPbiQuery, getQueryCatalogData,

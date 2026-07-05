@@ -1,5 +1,5 @@
 import { getCurrentUser } from "@/lib/user.service";
-import { getLogBuffer } from "@/lib/logger";
+import { getLogBuffer } from "@/lib/logging/logger";
 
 export async function GET(request: Request): Promise<Response> {
   const user = await getCurrentUser().catch(() => null);

@@ -17,10 +17,10 @@ import { organisations } from "@/db/schema/utility";
 import {
   buildRegistrationClarificationEmail,
   sendEmail,
-} from "@/lib/email.service";
+} from "@/lib/email/email.service";
 import { assertValidTransition, type StatusDecision } from "@/lib/user-status";
 import { getCurrentUser } from "@/lib/user.service";
-import { writeAuditLog } from "@/lib/audit.service";
+import { writeAuditLog } from "@/lib/logging/audit.service";
 import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { createHmac, timingSafeEqual } from "node:crypto";
@@ -650,7 +650,7 @@ export async function applyPendingUserDecision(input: {
     reason: updated.reject_reason,
   });
 
-  const { writeAuditLog } = await import("@/lib/audit.service");
+  const { writeAuditLog } = await import("@/lib/logging/audit.service");
   await writeAuditLog({
     action: `user.${input.decision}` as const,
     actorUserId: currentUser.id,

@@ -5,10 +5,10 @@ import { roles } from "@/db/schema/auth-schema";
 import {
   dataEntries,
   DataEntryStatusId,
-  generationRelevance,
-  generationToggleRelevance,
   inputDefinitions,
   inputRelevance,
+  tariffRelevance,
+  transmissionRelevance,
 } from "@/db/schema/dataEntry";
 import { managedListItems } from "@/db/schema/managedLists";
 import { reportPeriods } from "@/db/schema/reportPeriods";
@@ -26,6 +26,7 @@ import {
   resolveUtilityScopeId,
 } from "@/lib/user.service";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
+
 export interface ReportPeriodDTO {
   Id: number;
   Utility_id: number;
@@ -46,6 +47,10 @@ export interface ReportPeriodDTO {
 interface GetReportPeriodsOptions {
   forceAllUtilities?: boolean;
 }
+
+const SUBCAT_GENERATION = 273;
+const SUBCAT_TARIFF = 232;
+const CAT_OPERATIONAL = 205;
 
 export async function GetReportPeriods(
   user: CurrentUser,
@@ -74,338 +79,176 @@ export async function GetReportPeriods(
   }
 
   const list = await rp;
-  if (list.length === 0) {
-    return [];
-  }
+  if (list.length === 0) return [];
 
   const reportPeriodIds = list.map((item) => item.report_periods.id);
 
   const definitionRows = await db
     .select({
       inputDefId: inputDefinitions.id,
+      subcategoryId: inputDefinitions.subcategory_id,
+      categoryId: inputDefinitions.category_id,
+      aggLevelId: inputDefinitions.agg_level_id,
       subcategoryName: sql<string | null>`(
-        select mli.name
-        from managed_list_items mli
-        where mli.id = ${inputDefinitions.subcategory_id}
-        limit 1
+        select mli.name from managed_list_items mli where mli.id = ${inputDefinitions.subcategory_id} limit 1
       )`,
       categoryName: sql<string | null>`(
-        select mli.name
-        from managed_list_items mli
-        where mli.id = ${inputDefinitions.category_id}
-        limit 1
+        select mli.name from managed_list_items mli where mli.id = ${inputDefinitions.category_id} limit 1
       )`,
     })
     .from(inputDefinitions)
     .where(
       and(
         eq(inputDefinitions.is_active, true),
-        eq(inputDefinitions.is_aggregated, false),
         eq(inputDefinitions.is_system_generated, false),
         sql`lower(coalesce(
-          (select mli.name from managed_list_items mli where mli.id = ${inputDefinitions.subcategory_id}),
-          ''
+          (select mli.name from managed_list_items mli where mli.id = ${inputDefinitions.subcategory_id}), ''
         )) <> 'country context'`,
       ),
     );
 
-  const generationInputDefIds = definitionRows
-    .filter(
-      (row) => row.subcategoryName?.trim().toLowerCase() === "generation",
-    )
+  const genDefIds = definitionRows
+    .filter((row) => row.subcategoryId === SUBCAT_GENERATION)
     .map((row) => row.inputDefId);
-  const nonGenerationInputDefIds = definitionRows
-    .filter(
-      (row) => row.subcategoryName?.trim().toLowerCase() !== "generation",
-    )
+  const nonGenDefIds = definitionRows
+    .filter((row) => row.subcategoryId !== SUBCAT_GENERATION)
     .map((row) => row.inputDefId);
 
-  const serviceAreaScopedInputDefinitionIds = new Set(
-    definitionRows
-      .filter(
-        (row) =>
-          row.categoryName?.trim().toLowerCase() === "operation" ||
-          row.subcategoryName?.trim().toLowerCase() === "tariff structure",
-      )
-      .map((row) => row.inputDefId),
-  );
-
-  const serviceAreaConditions = [
-    eq(serviceAreas.is_active, true),
-    eq(serviceAreas.is_virtual, false),
-  ];
-  if (scopedUtilityId != null) {
-    serviceAreaConditions.push(eq(serviceAreas.utility_id, scopedUtilityId));
-  } else if (!forceAllUtilities && !hasGlobalUtilityAccess(user) && user.org_id != null) {
-    serviceAreaConditions.push(eq(serviceAreas.utility_id, user.org_id));
-  }
+  const saConditions = [eq(serviceAreas.is_active, true), eq(serviceAreas.is_virtual, false)];
+  if (scopedUtilityId != null) saConditions.push(eq(serviceAreas.utility_id, scopedUtilityId));
+  else if (!forceAllUtilities && !hasGlobalUtilityAccess(user) && user.org_id != null)
+    saConditions.push(eq(serviceAreas.utility_id, user.org_id));
 
   const serviceAreaRows = await db
     .select({ id: serviceAreas.id, utility_id: serviceAreas.utility_id })
     .from(serviceAreas)
-    .where(and(...serviceAreaConditions));
+    .where(and(...saConditions));
 
-  const serviceAreaIdsByUtility = new Map<number, number[]>();
-  serviceAreaRows.forEach((row) => {
-    const existing = serviceAreaIdsByUtility.get(row.utility_id) ?? [];
-    existing.push(row.id);
-    serviceAreaIdsByUtility.set(row.utility_id, existing);
-  });
-
-  const energyResourceConditions = [eq(energyResources.is_virtual, false)];
-  if (scopedUtilityId != null) {
-    energyResourceConditions.push(
-      eq(energyResources.utility_id, scopedUtilityId),
-    );
-  } else if (!forceAllUtilities && !hasGlobalUtilityAccess(user) && user.org_id != null) {
-    energyResourceConditions.push(
-      eq(energyResources.utility_id, user.org_id),
-    );
+  const saIdsByUtility = new Map<number, number[]>();
+  for (const sa of serviceAreaRows) {
+    const arr = saIdsByUtility.get(sa.utility_id) ?? [];
+    arr.push(sa.id);
+    saIdsByUtility.set(sa.utility_id, arr);
   }
 
-  const allEnergyResources = await db
+  const erConditions: ReturnType<typeof eq>[] = [];
+  if (scopedUtilityId != null) erConditions.push(eq(energyResources.utility_id, scopedUtilityId));
+  else if (!forceAllUtilities && !hasGlobalUtilityAccess(user) && user.org_id != null)
+    erConditions.push(eq(energyResources.utility_id, user.org_id));
+
+  const allErs = await db
     .select({
       id: energyResources.id,
       service_area_id: energyResources.service_area_id,
       utility_id: energyResources.utility_id,
       energy_provider_id: energyResources.energy_provider_id,
       energy_source_id: energyResources.energy_source_id,
-      type_id: energyResources.type_id,
+      is_virtual: energyResources.is_virtual,
       period_entries: energyResources.period_entries,
     })
     .from(energyResources)
-    .where(and(...energyResourceConditions));
+    .where(and(...erConditions));
 
-  const [
-    existingEntries,
-    irrelevantDataEntries,
-    irrelevantToggleRelevance,
-    irrelevantGenerationRelevance,
-    irrelevantInputRelevance,
-  ] = await Promise.all([
-    db
-      .select()
-      .from(dataEntries)
-      .where(
-        and(
-          eq(dataEntries.is_deleted, false),
-          eq(dataEntries.is_relevant, true),
-          inArray(dataEntries.report_period_id, reportPeriodIds),
-        ),
-      ),
-    db
-      .select({
-        reportPeriodId: dataEntries.report_period_id,
-        inputDefId: dataEntries.input_def_id,
-        serviceAreaId: dataEntries.service_area_id,
-      })
-      .from(dataEntries)
-      .where(
-        and(
-          eq(dataEntries.is_deleted, false),
-          eq(dataEntries.is_relevant, false),
-          inArray(dataEntries.report_period_id, reportPeriodIds),
-        ),
-      ),
-    db
-      .select({
-        reportPeriodId: generationToggleRelevance.report_period_id,
-        serviceAreaId: generationToggleRelevance.service_area_id,
-        energyProviderId: generationToggleRelevance.energy_provider_id,
-        energySourceId: generationToggleRelevance.energy_source_id,
-      })
-      .from(generationToggleRelevance)
-      .where(
-        and(
-          eq(generationToggleRelevance.is_deleted, false),
-          eq(generationToggleRelevance.is_relevant, false),
-          inArray(
-            generationToggleRelevance.report_period_id,
-            reportPeriodIds,
-          ),
-        ),
-      ),
-    db
-      .select({
-        reportPeriodId: generationRelevance.report_period_id,
-        serviceAreaId: generationRelevance.service_area_id,
-        inputDefId: generationRelevance.input_def_id,
-        energyProviderId: generationRelevance.energy_provider_id,
-        energySourceId: generationRelevance.energy_source_id,
-        energyResourceTypeId: generationRelevance.energy_resource_type_id,
-      })
-      .from(generationRelevance)
-      .where(
-        and(
-          eq(generationRelevance.is_deleted, false),
-          eq(generationRelevance.is_relevant, false),
-          inArray(generationRelevance.report_period_id, reportPeriodIds),
-        ),
-      ),
-    db
-      .select({
-        inputDefId: inputRelevance.input_def_id,
-        dimensionId: inputRelevance.dimension_id,
-      })
-      .from(inputRelevance)
-      .where(
-        and(
-          eq(inputRelevance.is_relevant, false),
-          inArray(
-            inputRelevance.input_def_id,
-            generationInputDefIds.length > 0
-              ? generationInputDefIds
-              : [-1],
-          ),
-        ),
-      ),
-  ]);
+  const irrelevantInputRel = await db
+    .select({ inputDefId: inputRelevance.input_def_id, dimensionId: inputRelevance.dimension_id })
+    .from(inputRelevance)
+    .where(and(eq(inputRelevance.is_relevant, false), inArray(inputRelevance.input_def_id, genDefIds.length > 0 ? genDefIds : [-1])));
+
+  const existingEntries = await db
+    .select()
+    .from(dataEntries)
+    .where(and(
+      eq(dataEntries.is_deleted, false),
+      eq(dataEntries.is_relevant, true),
+      inArray(dataEntries.report_period_id, reportPeriodIds),
+    ));
 
   return list.map((item) => {
     const rpId = item.report_periods.id;
-    const utilityId = item.report_periods.utility_id;
-    const serviceAreaIds = serviceAreaIdsByUtility.get(utilityId) ?? [];
+    const utilId = item.report_periods.utility_id;
+    const saIds = saIdsByUtility.get(utilId) ?? [];
 
-    const entriesForPeriod = existingEntries.filter(
-      (x) => x.report_period_id === rpId,
-    );
+    const periodEntries = existingEntries.filter((x) => x.report_period_id === rpId);
 
-    let enteredOnly = 0;
-    let reviewedOnly = 0;
-    let approvedOnly = 0;
-    let endorsedOnly = 0;
-    let dataNotAvailable = 0;
-
-    for (const entry of entriesForPeriod) {
-      if (entry.status_id === DataEntryStatusId.Entered) {
-        enteredOnly += 1;
-      }
-      if (entry.status_id === DataEntryStatusId.Reviewed) {
-        reviewedOnly += 1;
-      }
-      if (entry.status_id === DataEntryStatusId.Approved) {
-        approvedOnly += 1;
-      }
-      if (entry.status_id === DataEntryStatusId.Endorsed) {
-        endorsedOnly += 1;
-      }
-      if (entry.status_id === DataEntryStatusId.Not_Available) {
-        dataNotAvailable += 1;
-      }
+    let enteredOnly = 0, reviewedOnly = 0, approvedOnly = 0, endorsedOnly = 0, dataNotAvailable = 0;
+    for (const entry of periodEntries) {
+      if (entry.status_id === DataEntryStatusId.Entered) enteredOnly++;
+      else if (entry.status_id === DataEntryStatusId.Reviewed) reviewedOnly++;
+      else if (entry.status_id === DataEntryStatusId.Approved) approvedOnly++;
+      else if (entry.status_id === DataEntryStatusId.Endorsed) endorsedOnly++;
+      else if (entry.status_id === DataEntryStatusId.Not_Available) dataNotAvailable++;
     }
 
-    const periodIrrelevantDE = new Map<number | null, Set<number>>();
-    irrelevantDataEntries
-      .filter((r) => r.reportPeriodId === rpId)
-      .forEach((r) => {
-        const existing =
-          periodIrrelevantDE.get(r.serviceAreaId) ?? new Set<number>();
-        existing.add(r.inputDefId);
-        periodIrrelevantDE.set(r.serviceAreaId, existing);
-      });
-
-    let nonGenerationExpected = 0;
-    nonGenerationInputDefIds.forEach((inputDefId) => {
-      const isScoped =
-        serviceAreaScopedInputDefinitionIds.has(inputDefId);
-      const scopedSAIds = isScoped ? serviceAreaIds : [null];
-      scopedSAIds.forEach((saId) => {
-        const irrelevant =
-          periodIrrelevantDE.get(saId) ?? new Set<number>();
-        if (!irrelevant.has(inputDefId)) {
-          nonGenerationExpected += 1;
-        }
-      });
-    });
-
-    const periodEnergyResources = allEnergyResources.filter((er) => {
-      if (er.utility_id !== utilityId) return false;
-      const pe = (
-        er.period_entries as EnergyResourcePeriodEntry[] | undefined
-      ) ?? [];
+    const periodGenerators = allErs.filter((er) => {
+      if (er.utility_id !== utilId) return false;
+      if (er.is_virtual) return false;
+      const pe = (er.period_entries as EnergyResourcePeriodEntry[] | undefined) ?? [];
       return pe.some((p) => p.report_period_id === rpId && p.is_active);
     });
 
-    const periodToggleIrrelevant = new Set<string>();
-    irrelevantToggleRelevance
-      .filter((r) => r.reportPeriodId === rpId)
-      .forEach((r) => {
-        periodToggleIrrelevant.add(
-          `${r.serviceAreaId}:${r.energyProviderId}:${r.energySourceId}`,
-        );
-      });
+    // Build exclusion sets from relevance tables
+    const irrelInput = new Set<string>();
+    irrelevantInputRel.forEach((r) => irrelInput.add(`${r.inputDefId}:${r.dimensionId}`));
 
-    const periodGenRelIrrelevant = new Map<string, Set<number>>();
-    irrelevantGenerationRelevance
-      .filter((r) => r.reportPeriodId === rpId)
-      .forEach((r) => {
-        const key = `${r.serviceAreaId}:${r.energyProviderId}:${r.energySourceId}:${r.energyResourceTypeId ?? "null"}`;
-        const existing =
-          periodGenRelIrrelevant.get(key) ?? new Set<number>();
-        existing.add(r.inputDefId);
-        periodGenRelIrrelevant.set(key, existing);
-      });
+    // Tariff and transmission relevance: mark (inputDef, dimension) combos where is_relevant=false
+    const tariffIrrel = new Set<string>();
+    const txIrrel = new Set<string>();
 
-    const periodInputRelIrrelevant = new Set<string>();
-    irrelevantInputRelevance.forEach((r) => {
-      periodInputRelIrrelevant.add(`${r.inputDefId}:${r.dimensionId}`);
-    });
+    // Requested formula:
+    // 1. Most inputs: × 1
+    // 2. Tariff + Operational (non-Generation): × non-virtual SA count
+    // 3. Generation: × non-virtual generator count
+    let requested = 0;
 
-    let generationExpected = 0;
-    periodEnergyResources.forEach((er) => {
-      const toggleKey = `${er.service_area_id}:${er.energy_provider_id}:${er.energy_source_id}`;
-      if (periodToggleIrrelevant.has(toggleKey)) return;
+    for (const def of definitionRows) {
+      const inputDefId = def.inputDefId;
+      const subcat = def.subcategoryId;
+      const cat = def.categoryId;
+      const isGen = subcat === SUBCAT_GENERATION;
+      const isTariff = subcat === SUBCAT_TARIFF;
+      const isOp = cat === CAT_OPERATIONAL;
 
-      const genRelKey = `${er.service_area_id}:${er.energy_provider_id}:${er.energy_source_id}:${er.type_id}`;
-      const irrelevantDefs =
-        periodGenRelIrrelevant.get(genRelKey) ?? new Set<number>();
+      if (isGen) {
+        // Generation inputs: × non-virtual generators
+        for (const gen of periodGenerators) {
+          if (gen.service_area_id && saIds.includes(gen.service_area_id)) {
+            if (!irrelInput.has(`${inputDefId}:${gen.energy_source_id}`)) {
+              requested++;
+            }
+          }
+        }
+      } else if (isTariff || isOp) {
+        // Tariff and Operational inputs (excluding Generation): × non-virtual SA count
+        for (const saId of saIds) {
+          requested++;
+        }
+      } else {
+        // Everything else: × 1
+        requested++;
+      }
+    }
 
-      generationInputDefIds.forEach((inputDefId) => {
-        if (irrelevantDefs.has(inputDefId)) return;
-        if (
-          periodInputRelIrrelevant.has(
-            `${inputDefId}:${er.energy_source_id}`,
-          )
-        )
-          return;
-        generationExpected += 1;
-      });
-    });
-
-    const requested = nonGenerationExpected + generationExpected;
-    const completed =
-      enteredOnly +
-      reviewedOnly +
-      approvedOnly +
-      endorsedOnly +
-      dataNotAvailable;
-    const pending = Math.max(requested - completed, 0);
-
-    const entered = enteredOnly;
-    const reviewed = reviewedOnly;
-    const approved = approvedOnly;
-    const endorsed = endorsedOnly;
+    const completed = enteredOnly + reviewedOnly + approvedOnly + endorsedOnly + dataNotAvailable;
+    const finalRequested = Math.max(requested, completed);
+    const pending = Math.max(finalRequested - completed, 0);
 
     return {
       Id: rpId,
-      Utility_id: utilityId,
+      Utility_id: utilId,
       Period: formatReportPeriodDisplay(
         item.report_periods.report_date,
         reportTypeNameById.get(item.report_periods.report_type_id ?? -1),
       ),
       Utility: item.organisations?.acronym || "",
-      Report_Type:
-        reportTypeNameById.get(item.report_periods.report_type_id ?? -1) ||
-        "",
-      Pending_With:
-        roleNameById.get(item.report_periods.who_id ?? -1) || "",
+      Report_Type: reportTypeNameById.get(item.report_periods.report_type_id ?? -1) || "",
+      Pending_With: roleNameById.get(item.report_periods.who_id ?? -1) || "",
       Updated: item.report_periods.updated_at.toISOString().split("T")[0],
-      Requested: requested,
+      Requested: finalRequested,
       Pending: pending,
-      Entered: entered,
-      Reviewed: reviewed,
-      Approved: approved,
-      Endorsed: endorsed,
+      Entered: enteredOnly,
+      Reviewed: reviewedOnly,
+      Approved: approvedOnly,
+      Endorsed: endorsedOnly,
       Not_Available: dataNotAvailable,
     };
   });

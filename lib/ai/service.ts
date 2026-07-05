@@ -6,7 +6,7 @@ import { getSystemPrompt, getPromptVersion } from "./prompt";
 import { validateInput, filterOutput } from "./guardrails";
 import { recordRequest, recordError } from "./rate-limit";
 import { AI_MODELS, AI_DEFAULTS, type AiChatMessage } from "./types";
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/logging/logger";
 
 interface AiServiceOptions {
   messages: AiChatMessage[];

@@ -4,7 +4,7 @@ import { energyResources, serviceAreas } from "@/db/schema/utility";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { managedListItems } from "@/db/schema/managedLists";
 import { eq, and, isNotNull, inArray } from "drizzle-orm";
-import { resolveDlIds, dlValue, formatReportPeriodIso } from "@/lib/legacy-dl-resolver";
+import { resolveDlIds, dlValue, formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
 
 const trainingIds = {
   TotalPlannedInterruptionEvents: 3213040300,

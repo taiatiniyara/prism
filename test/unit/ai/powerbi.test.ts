@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { isConfiguredForDax } from "@/lib/powerbi.service";
+import { isConfiguredForDax } from "@/lib/powerbi";
 import { sanitizeDax } from "@/lib/ai/data-service/dax-sanitizer";
 import { PBI_QUERIES } from "@/lib/ai/data-service/pbi-queries";
 

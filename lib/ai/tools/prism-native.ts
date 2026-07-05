@@ -2,9 +2,9 @@ import { z } from "zod";
 import { tool } from "ai";
 import type { CurrentUser } from "@/lib/user.service";
 import type { AiToolResult } from "../types";
-import { isConfiguredForDax, isConfigured, isPbiHealthy } from "@/lib/powerbi.service";
+import { isConfiguredForDax, isConfigured, isPbiHealthy } from "@/lib/powerbi";
 import { validateToolAccess } from "../guardrails";
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/logging/logger";
 import {
   getKpiStatus, getBenchmarkingData, getCompletenessBreakdown, getTrendAnalysis,
   getAnomalyInsights, getGovernanceAudit, getConfigurationOptions, getKpiDiagnostics,

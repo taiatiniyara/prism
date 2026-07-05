@@ -5,7 +5,7 @@
  * dashboard deep links, export, and NL query resolution.
  */
 
-import { getEnv, getAzureToken, isConfigured, type PowerBiConfig } from "@/lib/powerbi.service";
+import { getEnv, getAzureToken, isConfigured, type PowerBiConfig } from "@/lib/powerbi";
 import { PBI_QUERIES, resolveQueryFromNL } from "./pbi-queries";
 import type { AiToolResult } from "../types";
 import { createToolMetadata } from "./common";

@@ -5,7 +5,7 @@ import { eq } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
 import type { AiToolResult } from "../types";
 import { createToolMetadata } from "./common";
-import { logger } from "@/lib/logger";
+import { logger } from "@/lib/logging/logger";
 
 // ── Types ──
 

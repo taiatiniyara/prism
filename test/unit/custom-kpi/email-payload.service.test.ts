@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildCustomKpiReviewOutcomeEmail } from "@/lib/email.service";
+import { buildCustomKpiReviewOutcomeEmail } from "@/lib/email/email.service";
 
 describe("custom KPI review outcome email payload", () => {
   it("builds approved outcome payload", () => {

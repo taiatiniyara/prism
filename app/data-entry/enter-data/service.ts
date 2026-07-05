@@ -24,7 +24,6 @@ import {
   DataEntryComment,
   DataEntryStatusId,
   dataEntryLogs,
-  generationRelevance,
   inputDefinitions,
   inputRelevance,
 } from "@/db/schema/dataEntry";
@@ -652,47 +651,6 @@ const getGenerationGroupsForContext = async (
     return [];
   }
 
-  const generationRelevanceRows = await db
-    .select({
-      inputDefId: generationRelevance.input_def_id,
-      energyProviderId: generationRelevance.energy_provider_id,
-      energySourceId: generationRelevance.energy_source_id,
-      isRelevant: generationRelevance.is_relevant,
-    })
-    .from(generationRelevance)
-    .where(
-      and(
-        eq(generationRelevance.report_period_id, context.reportPeriodId),
-        eq(generationRelevance.service_area_id, context.serviceAreaId),
-        eq(generationRelevance.is_deleted, false),
-        inArray(
-          generationRelevance.input_def_id,
-          definitionRows.map((row) => row.inputDefId),
-        ),
-        inArray(
-          generationRelevance.energy_provider_id,
-          generators.map((generator) => generator.energyProviderId),
-        ),
-        inArray(
-          generationRelevance.energy_source_id,
-          generators.map((generator) => generator.energySourceId),
-        ),
-      ),
-    )
-    .orderBy(desc(generationRelevance.updatedAt));
-
-  const relevanceByDimension = new Map<string, boolean>();
-
-  for (const row of generationRelevanceRows) {
-    const key = `${row.inputDefId}:${row.energyProviderId}:${row.energySourceId}`;
-
-    if (relevanceByDimension.has(key)) {
-      continue;
-    }
-
-    relevanceByDimension.set(key, row.isRelevant);
-  }
-
   const inputRelevanceRows = await db
     .select({
       id: inputRelevance.id,
@@ -763,11 +721,9 @@ const getGenerationGroupsForContext = async (
     definitionRows,
     entries,
     (generator, definition) => {
-      const generationKey = `${definition.inputDefId}:${generator.energyProviderId}:${generator.energySourceId}`;
       const sourceKey = `${definition.inputDefId}:${generator.energySourceId}`;
 
-      const isGenerationRelevant =
-        relevanceByDimension.get(generationKey) ?? false;
+      const isGenerationRelevant = true;
       const isSourceRelevant =
         sourceRelevanceByDimension.get(sourceKey) ?? false;
 

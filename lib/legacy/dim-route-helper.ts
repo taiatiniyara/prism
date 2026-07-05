@@ -1,5 +1,5 @@
 import { authorizeApiKey } from "@/app/api/service";
-import { getManagedListByName } from "@/lib/legacy-dl-resolver";
+import { getManagedListByName } from "@/lib/legacy/legacy-dl-resolver";
 
 export async function dimManagedListRoute(
   req: Request,

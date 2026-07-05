@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { getBlockedAccessState } from "@/lib/auth-status-guard";
+import { getBlockedAccessState } from "@/lib/user-status";
 import { getBlockedMessage } from "@/app/auth/blocked/state";
 
 describe("status gate pending integration", () => {

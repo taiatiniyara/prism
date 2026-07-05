@@ -1,4 +1,4 @@
-import { powerBiDetails } from "@/lib/powerbi.service";
+import { powerBiDetails } from "@/lib/powerbi";
 import PowerBiDashboard from "./pbi";
 import { headers } from "next/headers";
 import { getCurrentUser } from "@/lib/user.service";

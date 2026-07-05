@@ -146,20 +146,20 @@ export const DataEntryStatus = {
   Requested: DataEntryStatusId.Requested,
   Pending: DataEntryStatusId.Pending,
   Entered: DataEntryStatusId.Entered,
-  Not_Available: DataEntryStatusId.Not_Available,
   Reviewed: DataEntryStatusId.Reviewed,
   Approved: DataEntryStatusId.Approved,
   Endorsed: DataEntryStatusId.Endorsed,
+  Not_Available: DataEntryStatusId.Not_Available,
 };
 
 export const dataEntryStatusColors = {
   Requested: "#fb923c",
   Pending: "#facc15",
   Entered: "#a3e635",
-  Not_Available: "#94a3b8",
   Reviewed: "#34d399",
   Approved: "#38bdf8",
   Endorsed: "#a78bfa",
+  Not_Available: "#94a3b8",
 };
 
 export const DataEntryStatusList = Object.keys(DataEntryStatus).map((key) => ({
@@ -229,8 +229,8 @@ export const dataEntries = pgTable(
   ],
 );
 
-export const generationRelevance = pgTable(
-  "generation_relevance",
+export const tariffRelevance = pgTable(
+  "tariff_relevance",
   {
     id: uuid("id").primaryKey().notNull().defaultRandom(),
     report_period_id: integer("report_period_id")
@@ -242,34 +242,30 @@ export const generationRelevance = pgTable(
     input_def_id: integer("input_def_id")
       .notNull()
       .references(() => inputDefinitions.id),
-    energy_provider_id: integer("energy_provider_id")
+    payment_mode_id: integer("payment_mode_id")
       .notNull()
       .references(() => managedListItems.id),
-    energy_source_id: integer("energy_source_id")
+    customer_type_id: integer("customer_type_id")
       .notNull()
       .references(() => managedListItems.id),
-    energy_resource_type_id: integer("energy_resource_type_id").references(
-      () => managedListItems.id,
-    ),
     is_relevant: boolean("is_relevant").default(true).notNull(),
     is_deleted: boolean("is_deleted").default(false).notNull(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
     updatedById: text("updated_by_id").references(() => user.id),
   },
   (table) => [
-    index("uniq_generation_relevance").on(
+    index("uniq_tariff_relevance").on(
       table.report_period_id,
       table.service_area_id,
       table.input_def_id,
-      table.energy_provider_id,
-      table.energy_source_id,
-      table.energy_resource_type_id,
+      table.payment_mode_id,
+      table.customer_type_id,
     ),
   ],
 );
 
-export const generationToggleRelevance = pgTable(
-  "generation_toggle_relevance",
+export const transmissionRelevance = pgTable(
+  "transmission_relevance",
   {
     id: uuid("id").primaryKey().notNull().defaultRandom(),
     report_period_id: integer("report_period_id")
@@ -278,23 +274,19 @@ export const generationToggleRelevance = pgTable(
     service_area_id: integer("service_area_id")
       .notNull()
       .references(() => serviceAreas.id),
-    energy_provider_id: integer("energy_provider_id")
+    input_def_id: integer("input_def_id")
       .notNull()
-      .references(() => managedListItems.id),
-    energy_source_id: integer("energy_source_id")
-      .notNull()
-      .references(() => managedListItems.id),
+      .references(() => inputDefinitions.id),
     is_relevant: boolean("is_relevant").default(true).notNull(),
     is_deleted: boolean("is_deleted").default(false).notNull(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
     updatedById: text("updated_by_id").references(() => user.id),
   },
   (table) => [
-    index("uniq_generation_toggle_relevance").on(
+    index("uniq_transmission_relevance").on(
       table.report_period_id,
       table.service_area_id,
-      table.energy_provider_id,
-      table.energy_source_id,
+      table.input_def_id,
     ),
   ],
 );
@@ -312,12 +304,10 @@ export type DataEntry = typeof dataEntries.$inferSelect & {
   payment_mode?: string | null;
 };
 export type NewDataEntry = typeof dataEntries.$inferInsert;
-export type GenerationRelevance = typeof generationRelevance.$inferSelect;
-export type NewGenerationRelevance = typeof generationRelevance.$inferInsert;
-export type GenerationToggleRelevance =
-  typeof generationToggleRelevance.$inferSelect;
-export type NewGenerationToggleRelevance =
-  typeof generationToggleRelevance.$inferInsert;
+export type TariffRelevance = typeof tariffRelevance.$inferSelect;
+export type NewTariffRelevance = typeof tariffRelevance.$inferInsert;
+export type TransmissionRelevance = typeof transmissionRelevance.$inferSelect;
+export type NewTransmissionRelevance = typeof transmissionRelevance.$inferInsert;
 
 export const inputDlDefMappings = pgTable(
   "input_dl_def_mappings",

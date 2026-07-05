@@ -9,7 +9,7 @@ import {
   resolveDlName,
   formatReportPeriodIso,
   dlValue,
-} from "@/lib/legacy-dl-resolver";
+} from "@/lib/legacy/legacy-dl-resolver";
 
 const NationalPopulationTrainingId = 5203040006;
 

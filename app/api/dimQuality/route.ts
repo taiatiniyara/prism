@@ -1,4 +1,4 @@
-import { dimManagedListRoute } from "@/lib/dim-route-helper";
+import { dimManagedListRoute } from "@/lib/legacy/dim-route-helper";
 
 export async function GET(req: Request) {
   return dimManagedListRoute(req, "Power Quality Standards", "Power Quality Standards");

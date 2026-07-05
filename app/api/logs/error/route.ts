@@ -1,4 +1,4 @@
-import { logErrorAndNotifyDev } from "@/lib/error-log.service";
+import { logErrorAndNotifyDev } from "@/lib/logging/error-log.service";
 import { getCurrentUser } from "@/lib/user.service";
 
 export async function POST(request: Request) {

@@ -5,7 +5,7 @@ import { reportPeriods } from "@/db/schema/reportPeriods";
 import { managedListItems } from "@/db/schema/managedLists";
 import { eq, and, isNotNull, inArray } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
-import { resolveDlIds, dlValue, formatReportPeriodIso } from "@/lib/legacy-dl-resolver";
+import { resolveDlIds, dlValue, formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
 
 const trainingIds = {
   TotalHoursInPeriod: 4213040270,

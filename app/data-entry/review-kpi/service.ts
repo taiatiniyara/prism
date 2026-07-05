@@ -45,7 +45,7 @@ import {
   processPendingCustomKpiOutcomeEmailsForDecision,
   recordCustomKpiLifecycleEvent,
 } from "@/app/settings/kpi/custom-kpi/service";
-import { writeAuditLog } from "@/lib/audit.service";
+import { writeAuditLog } from "@/lib/logging/audit.service";
 
 const EDIT_ROLES = new Set(["DEV", "BMO", "BLO", "DAOO", "DAOF"]);
 const CUSTOM_KPI_REVIEWER_ROLES = new Set(["DEV"]);
