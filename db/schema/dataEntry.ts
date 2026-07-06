@@ -225,6 +225,8 @@ export const dataEntries = pgTable(
       table.energy_source_id,
       table.energy_provider_id,
       table.energy_resource_id,
+      table.customer_type_id,
+      table.payment_mode_id,
     ),
   ],
 );
@@ -307,7 +309,8 @@ export type NewDataEntry = typeof dataEntries.$inferInsert;
 export type TariffRelevance = typeof tariffRelevance.$inferSelect;
 export type NewTariffRelevance = typeof tariffRelevance.$inferInsert;
 export type TransmissionRelevance = typeof transmissionRelevance.$inferSelect;
-export type NewTransmissionRelevance = typeof transmissionRelevance.$inferInsert;
+export type NewTransmissionRelevance =
+  typeof transmissionRelevance.$inferInsert;
 
 export const inputDlDefMappings = pgTable(
   "input_dl_def_mappings",
