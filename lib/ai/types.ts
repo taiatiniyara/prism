@@ -199,7 +199,7 @@ export interface AiGuardrailResult {
   reason?: string;
 }
 
-export const AI_PROMPT_VERSION = "2026-06-25-v4";
+export const AI_PROMPT_VERSION = "2026-07-07-v5";
 
 export const AI_MODELS = {
   primary: "claude-sonnet-4-6",

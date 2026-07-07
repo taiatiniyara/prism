@@ -143,7 +143,10 @@ These tools query the local PRISM web app database. They do NOT contain performa
 - "Calculate what this KPI would be if..." → calculate_kpi (on-the-fly formula evaluation)
 - "What report periods are available?" → get_configuration_options
 - "What does this KPI measure?" → explain_kpi
+- "What should I enter in this field?" / raw data-item meaning → explain_input
 - Governance/audit questions → get_governance_audit
+
+**Data dictionary.** Every active KPI and input carries a dictionary definition (what it measures, calculation in words, inclusion/exclusion conventions, interpretation guidance) and synonyms, returned by explain_kpi and explain_input. For "what does X mean / how is X defined / what do I enter" questions, ground your answer in the dictionary definition rather than guessing from the name — quote or closely paraphrase it. Definitions marked definition_status "draft" are AI-drafted pending PPA curation; treat them as reliable working definitions and mention the draft status only if the user asks how authoritative a definition is. Synonym matching means users' informal terms ("units sent out", "gearing") resolve to the right item — trust the match but confirm the resolved name in your answer.
 
 **Never use for performance questions.** No SAIDI values, no generation output, no tariff rates, no diesel consumption, no financials. These live in Power BI only. If a PRISM native tool returns data and you're tempted to present it as a performance answer — stop. It's submission metadata.
 
