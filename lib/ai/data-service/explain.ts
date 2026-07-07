@@ -1,8 +1,9 @@
 import { db } from "@/db/connection";
 import { kpiDefinitions } from "@/db/schema/kpi";
 import { customKpiRequests } from "@/db/schema/custom-kpi-requests";
+import { inputDefinitions } from "@/db/schema/dataEntry";
 import { managedListItems } from "@/db/schema/managedLists";
-import { eq, and, like, sql, desc } from "drizzle-orm";
+import { eq, and, or, ilike, sql, desc } from "drizzle-orm";
 import { createToolMetadata } from "./common";
 import type { AiToolResult } from "../types";
 
@@ -10,6 +11,9 @@ export interface KpiDefinition {
   id: number;
   name: string;
   description: string;
+  definition: string | null;
+  definition_status: "draft" | "curated" | null;
+  synonyms: string[] | null;
   formula: string;
   formula_explanation: string;
   category: string;
@@ -40,7 +44,13 @@ export const explainKpi = async (
   if (options.kpi_def_id) {
     predicates.push(eq(kpiDefinitions.id, options.kpi_def_id));
   } else {
-    predicates.push(like(kpiDefinitions.name, `%${options.kpi_name}%`));
+    const term = `%${options.kpi_name}%`;
+    predicates.push(
+      or(
+        ilike(kpiDefinitions.name, term),
+        sql`${kpiDefinitions.synonyms}::text ILIKE ${term}`,
+      )!,
+    );
   }
 
   const [def] = await db
@@ -48,6 +58,9 @@ export const explainKpi = async (
       id: kpiDefinitions.id,
       name: kpiDefinitions.name,
       description: kpiDefinitions.description,
+      definition: kpiDefinitions.definition,
+      definitionStatus: kpiDefinitions.definition_status,
+      synonyms: kpiDefinitions.synonyms,
       formula: kpiDefinitions.formula,
       categoryId: kpiDefinitions.category_id,
       subcategoryId: kpiDefinitions.subcategory_id,
@@ -95,6 +108,9 @@ export const explainKpi = async (
       id: def.id,
       name: def.name,
       description: def.description ?? "",
+      definition: def.definition,
+      definition_status: def.definitionStatus,
+      synonyms: def.synonyms,
       formula: def.formula ?? "No formula defined",
       formula_explanation: explainFormula(def.formula ?? "", def.name),
       category: nameMap.get(def.categoryId ?? -1) ?? "Unknown",
@@ -106,6 +122,113 @@ export const explainKpi = async (
       limits: limits ? { min: limits.lower ?? 0, max: limits.upper ?? 0, unit: limits.unit ?? "" } : null,
     },
     metadata: createToolMetadata({ freshness: new Date(), source: "kpi_definitions" }),
+  };
+};
+
+export interface InputDefinitionExplanation {
+  id: number;
+  name: string;
+  variable_name: string | null;
+  definition: string | null;
+  definition_status: "draft" | "curated" | null;
+  synonyms: string[] | null;
+  category: string;
+  subcategory: string;
+  unit: string;
+  is_calculated: boolean;
+  is_mandatory: boolean;
+  formula: string | null;
+}
+
+export const explainInput = async (
+  options: {
+    input_name?: string;
+    input_def_id?: number;
+  } = {},
+): Promise<AiToolResult<InputDefinitionExplanation | null>> => {
+  if (!options.input_name && !options.input_def_id) {
+    return {
+      data: null,
+      metadata: createToolMetadata({ source: "input_definitions" }),
+      error: "No input name or ID specified",
+    };
+  }
+
+  const predicates = [eq(inputDefinitions.is_active, true)];
+
+  if (options.input_def_id) {
+    predicates.push(eq(inputDefinitions.id, options.input_def_id));
+  } else {
+    const term = `%${options.input_name}%`;
+    predicates.push(
+      or(
+        ilike(inputDefinitions.name, term),
+        ilike(inputDefinitions.variable_name, term),
+        sql`${inputDefinitions.synonyms}::text ILIKE ${term}`,
+      )!,
+    );
+  }
+
+  const [def] = await db
+    .select({
+      id: inputDefinitions.id,
+      name: inputDefinitions.name,
+      variableName: inputDefinitions.variable_name,
+      definition: inputDefinitions.definition,
+      definitionStatus: inputDefinitions.definition_status,
+      synonyms: inputDefinitions.synonyms,
+      categoryId: inputDefinitions.category_id,
+      subcategoryId: inputDefinitions.subcategory_id,
+      unitId: inputDefinitions.unit_id,
+      isCalculated: inputDefinitions.is_calculated,
+      isMandatory: inputDefinitions.is_mandatory,
+      formula: inputDefinitions.formula,
+    })
+    .from(inputDefinitions)
+    .where(and(...predicates))
+    .limit(1);
+
+  if (!def) {
+    return {
+      data: null,
+      metadata: createToolMetadata({ source: "input_definitions" }),
+      error: `No input definition found matching "${options.input_name}"`,
+    };
+  }
+
+  const ids = [
+    ...new Set(
+      [def.categoryId, def.subcategoryId, def.unitId].filter(
+        (id): id is number => id != null,
+      ),
+    ),
+  ];
+
+  const mliRows = ids.length > 0
+    ? await db
+        .select({ id: managedListItems.id, name: managedListItems.name })
+        .from(managedListItems)
+        .where(sql`${managedListItems.id} IN ${ids}`)
+    : [];
+
+  const nameMap = new Map(mliRows.map((r) => [r.id, r.name]));
+
+  return {
+    data: {
+      id: def.id,
+      name: def.name,
+      variable_name: def.variableName,
+      definition: def.definition,
+      definition_status: def.definitionStatus,
+      synonyms: def.synonyms,
+      category: nameMap.get(def.categoryId ?? -1) ?? "Unknown",
+      subcategory: nameMap.get(def.subcategoryId ?? -1) ?? "Unknown",
+      unit: nameMap.get(def.unitId ?? -1) ?? "",
+      is_calculated: def.isCalculated,
+      is_mandatory: def.isMandatory,
+      formula: def.formula,
+    },
+    metadata: createToolMetadata({ freshness: new Date(), source: "input_definitions" }),
   };
 };
 
