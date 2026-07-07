@@ -22,7 +22,7 @@ import {
 } from "./utility";
 import { user } from "./auth-schema";
 import { relations } from "drizzle-orm";
-import { countries, subRegions } from "./country";
+import { countries, Region, subRegions } from "./country";
 
 export interface FormulaInput {
   input_def_id: number;
@@ -210,10 +210,7 @@ export const dataEntries = pgTable(
     utility_id: integer("utility_id").references(() => organisations.id),
     country_id: integer("country_id").references(() => countries.id),
     subregion_id: integer("subregion_id").references(() => subRegions.id),
-    region_id: integer("region_id").references(() => managedListItems.id),
-    region: varchar("region", { length: 255 }).references(
-      () => subRegions.un_continental_region,
-    ),
+    region: varchar("region", { length: 255 }).$type<Region>(),
     input_def_id: integer("input_def_id")
       .notNull()
       .references(() => inputDefinitions.id),

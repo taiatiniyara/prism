@@ -142,53 +142,6 @@ paths:
           description: Forbidden
         '404':
           description: Not Found
-  /api/ai/sessions:
-    get:
-      tags:
-        - AI / Chatbot
-      summary: List AI chat sessions for the current user
-      parameters:
-        - name: admin_all
-          in: query
-          required: true
-          schema:
-            type: string
-        - name: offset
-          in: query
-          required: true
-          schema:
-            type: string
-        - name: limit
-          in: query
-          required: true
-          schema:
-            type: string
-      security:
-        - sessionAuth: []
-      x-auth: Requires valid Better Auth session (getCurrentUser)
-      responses:
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-    post:
-      tags:
-        - AI / Chatbot
-      summary: Create a new AI chat session
-      security:
-        - sessionAuth: []
-      x-auth: Requires valid Better Auth session (getCurrentUser)
-      requestBody:
-        description: JSON body
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
   /api/ai/sessions/{sessionId}:
     get:
       tags:
@@ -262,6 +215,53 @@ paths:
           description: Forbidden
         '404':
           description: Not Found
+  /api/ai/sessions:
+    get:
+      tags:
+        - AI / Chatbot
+      summary: List AI chat sessions for the current user
+      parameters:
+        - name: admin_all
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: offset
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: string
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+    post:
+      tags:
+        - AI / Chatbot
+      summary: Create a new AI chat session
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      requestBody:
+        description: JSON body
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
   /api/ai/usage:
     get:
       tags:
@@ -398,6 +398,23 @@ paths:
         '500':
           description: Internal Server Error
       security: []
+  /api/data-entry/aggregated-runs/{runId}:
+    get:
+      tags:
+        - Data Entry
+      summary: Get aggregated run details by ID
+      parameters:
+        - name: runId
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '404':
+          description: Not Found
   /api/data-entry/aggregated-runs:
     get:
       tags:
@@ -425,23 +442,6 @@ paths:
       responses:
         '200':
           description: Success
-  /api/data-entry/aggregated-runs/{runId}:
-    get:
-      tags:
-        - Data Entry
-      summary: Get aggregated run details by ID
-      parameters:
-        - name: runId
-          in: path
-          required: true
-          schema:
-            type: string
-      security:
-        - sessionAuth: []
-      x-auth: Requires valid Better Auth session (getCurrentUser)
-      responses:
-        '404':
-          description: Not Found
   /api/data-entry/balanced-scorecard/new-bsc/kpi-options:
     get:
       tags:
@@ -491,23 +491,6 @@ paths:
       responses:
         '200':
           description: Success
-  /api/data-entry/balanced-scorecard/new-bsc/strategy-map/links:
-    post:
-      tags:
-        - Data Entry
-      summary: Create strategy map link
-      security:
-        - sessionAuth: []
-      x-auth: Requires valid Better Auth session (getCurrentUser)
-      requestBody:
-        description: JSON body — validated by parseCreateObjectiveLinkPayload()
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '201':
-          description: Created
   /api/data-entry/balanced-scorecard/new-bsc/strategy-map/links/{id}:
     put:
       tags:
@@ -547,6 +530,23 @@ paths:
       responses:
         '200':
           description: Success
+  /api/data-entry/balanced-scorecard/new-bsc/strategy-map/links:
+    post:
+      tags:
+        - Data Entry
+      summary: Create strategy map link
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      requestBody:
+        description: JSON body — validated by parseCreateObjectiveLinkPayload()
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Created
   /api/data-entry/balanced-scorecard/new-bsc/strategy-map/nodes/{id}:
     put:
       tags:
@@ -625,33 +625,6 @@ paths:
       responses:
         '200':
           description: Success
-  /api/data-entry/balanced-scorecard/new-bsc/template:
-    get:
-      tags:
-        - Data Entry
-      summary: List all BSC template nodes
-      security:
-        - sessionAuth: []
-      x-auth: Requires valid Better Auth session (getCurrentUser)
-      responses:
-        '200':
-          description: Success
-    post:
-      tags:
-        - Data Entry
-      summary: Create a new BSC template node
-      security:
-        - sessionAuth: []
-      x-auth: Requires valid Better Auth session (getCurrentUser)
-      requestBody:
-        description: JSON body — validated by parseCreateTemplateNodePayload()
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '200':
-          description: Success
   /api/data-entry/balanced-scorecard/new-bsc/template/{id}/links:
     put:
       tags:
@@ -711,6 +684,33 @@ paths:
       security:
         - sessionAuth: []
       x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '200':
+          description: Success
+  /api/data-entry/balanced-scorecard/new-bsc/template:
+    get:
+      tags:
+        - Data Entry
+      summary: List all BSC template nodes
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '200':
+          description: Success
+    post:
+      tags:
+        - Data Entry
+      summary: Create a new BSC template node
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      requestBody:
+        description: JSON body — validated by parseCreateTemplateNodePayload()
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         '200':
           description: Success
@@ -777,49 +777,6 @@ paths:
           description: Forbidden
         '500':
           description: Internal Server Error
-  /api/data-entry/custom-kpi/requests:
-    post:
-      tags:
-        - Data Entry
-      summary: Create a custom KPI request
-      security:
-        - sessionAuth: []
-      x-auth: Requires valid Better Auth session (getCurrentUser)
-      requestBody:
-        description: JSON body
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '201':
-          description: Created
-        '400':
-          description: Bad Request / Validation Error
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-        '500':
-          description: Internal Server Error
-    get:
-      tags:
-        - Data Entry
-      summary: List custom KPI requests
-      security:
-        - sessionAuth: []
-      x-auth: Requires valid Better Auth session (getCurrentUser)
-      responses:
-        '201':
-          description: Created
-        '400':
-          description: Bad Request / Validation Error
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-        '500':
-          description: Internal Server Error
   /api/data-entry/custom-kpi/requests/{requestId}/decision:
     post:
       tags:
@@ -878,6 +835,49 @@ paths:
           description: Forbidden
         '409':
           description: Conflict
+        '500':
+          description: Internal Server Error
+  /api/data-entry/custom-kpi/requests:
+    post:
+      tags:
+        - Data Entry
+      summary: Create a custom KPI request
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      requestBody:
+        description: JSON body
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Created
+        '400':
+          description: Bad Request / Validation Error
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal Server Error
+    get:
+      tags:
+        - Data Entry
+      summary: List custom KPI requests
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '201':
+          description: Created
+        '400':
+          description: Bad Request / Validation Error
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
         '500':
           description: Internal Server Error
   /api/data-entry/governance:
@@ -1994,35 +1994,6 @@ paths:
       responses:
         '200':
           description: Success
-  /api/migration/prism-training:
-    get:
-      tags:
-        - Migration
-      summary: Export data from prism-training for migration
-      parameters:
-        - name: includeRows
-          in: query
-          required: true
-          schema:
-            type: string
-        - name: limit
-          in: query
-          required: true
-          schema:
-            type: string
-        - name: offset
-          in: query
-          required: true
-          schema:
-            type: string
-      security:
-        - migrationKeyAuth: []
-      x-auth: Requires x-migration-key header
-      responses:
-        '401':
-          description: Unauthorized
-        '500':
-          description: Internal Server Error
   /api/migration/prism-training/{table}:
     get:
       tags:
@@ -2050,6 +2021,35 @@ paths:
       responses:
         '400':
           description: Bad Request / Validation Error
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal Server Error
+  /api/migration/prism-training:
+    get:
+      tags:
+        - Migration
+      summary: Export data from prism-training for migration
+      parameters:
+        - name: includeRows
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: offset
+          in: query
+          required: true
+          schema:
+            type: string
+      security:
+        - migrationKeyAuth: []
+      x-auth: Requires x-migration-key header
+      responses:
         '401':
           description: Unauthorized
         '500':
@@ -2211,20 +2211,6 @@ paths:
           description: Forbidden
         '500':
           description: Internal Server Error
-  /api/settings/users/pending:
-    get:
-      tags:
-        - Settings
-      summary: Get pending user registrations awaiting approval
-      x-auth: No authentication required
-      responses:
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-        '500':
-          description: Internal Server Error
-      security: []
   /api/settings/users/{userId}/clarifications:
     get:
       tags:
@@ -2319,6 +2305,20 @@ paths:
           description: Not Found
         '409':
           description: Conflict
+        '500':
+          description: Internal Server Error
+      security: []
+  /api/settings/users/pending:
+    get:
+      tags:
+        - Settings
+      summary: Get pending user registrations awaiting approval
+      x-auth: No authentication required
+      responses:
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
         '500':
           description: Internal Server Error
       security: []

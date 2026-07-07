@@ -8,7 +8,7 @@ import {
 } from "drizzle-orm/pg-core";
 import { managedListItems } from "./managedLists";
 
-type Region = "Oceania" | "Europe" | "Asia" | "Africa" | "Americas";
+export type Region = "Oceania" | "Europe" | "Asia" | "Africa" | "Americas";
 
 export const subRegions = pgTable("sub_regions", {
   id: serial("id").primaryKey().notNull(),
