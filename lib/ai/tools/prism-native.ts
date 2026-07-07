@@ -8,7 +8,7 @@ import { logger } from "@/lib/logging/logger";
 import {
   getKpiStatus, getBenchmarkingData, getCompletenessBreakdown, getTrendAnalysis,
   getAnomalyInsights, getGovernanceAudit, getConfigurationOptions, getKpiDiagnostics,
-  calculateKpis, getReviewQueue, getInputStatus, explainKpi, getCustomKpiStatus,
+  calculateKpis, getReviewQueue, getInputStatus, explainKpi, explainInput, getCustomKpiStatus,
   getServiceAreaBreakdown, getPeerGroupAnalysis, getRiskAssessment, getDataQualityReport,
   getWhatChanged, comparePeriods, type CompletenessDimension, getComplianceStatus,
   getKpiTargets, getKpiCorrelation, compareKpisAcrossUtilities, generateExport,
@@ -242,13 +242,25 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
 
     explain_kpi: tool({
       description:
-        "Explain what a KPI is, how it's calculated, what category it belongs to, and what its benchmarking limits are. Use this when the user asks 'what does X mean?' or 'how is Y calculated?'.",
+        "Explain what a KPI is, how it's calculated, what category it belongs to, and what its benchmarking limits are. Returns the dictionary definition (with inclusion/exclusion conventions and interpretation guidance) plus synonyms; matches on name or synonym. Use this when the user asks 'what does X mean?' or 'how is Y calculated?'. Quote the dictionary definition when present; if definition_status is 'draft', it is AI-drafted pending PPA curation — mention that only if the user asks about the definition's authority.",
       inputSchema: z.object({
-        kpi_name: z.string().describe("KPI name to explain (partial match)."),
+        kpi_name: z.string().describe("KPI name or synonym to explain (partial match)."),
         kpi_def_id: z.number().optional().describe("Specific KPI definition ID."),
       }),
       execute: async ({ kpi_name, kpi_def_id }) => {
         return withTimeout(explainKpi({ kpi_name, kpi_def_id }), "explain_kpi");
+      },
+    }),
+
+    explain_input: tool({
+      description:
+        "Explain a data-entry input definition: what should be reported, inclusion/exclusion conventions, unit, and which figure to use. Matches on name, variable name, or synonym. Use this when a user asks what an input field means, what to enter, or how a raw (non-KPI) data item is defined. Quote the dictionary definition when present; if definition_status is 'draft', it is AI-drafted pending PPA curation — mention that only if the user asks about the definition's authority.",
+      inputSchema: z.object({
+        input_name: z.string().describe("Input name, variable name, or synonym (partial match)."),
+        input_def_id: z.number().optional().describe("Specific input definition ID."),
+      }),
+      execute: async ({ input_name, input_def_id }) => {
+        return withTimeout(explainInput({ input_name, input_def_id }), "explain_input");
       },
     }),
 

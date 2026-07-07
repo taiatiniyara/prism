@@ -1,0 +1,4632 @@
+[
+ {
+  "id": 4,
+  "name": "Air Connectivity per 1000 People",
+  "current_description": "Air Connectivity per 1000 People",
+  "formula": "air_connectivity_per_1000_people",
+  "formula_inputs": [
+   {
+    "input_def_id": 1013,
+    "variable_name": "air_connectivity_per_1000_people"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Country and Utility Context",
+  "subcategory": "Air Connectivity",
+  "unit": "% per 1000 persons",
+  "agg_level": "Lvl_Country",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 5,
+  "name": "Air Connectivity per Unit GDP",
+  "current_description": "Air Connectivity per Unit GDP",
+  "formula": "air_connectivity_per_unit_gdp",
+  "formula_inputs": [
+   {
+    "input_def_id": 1014,
+    "variable_name": "air_connectivity_per_unit_gdp"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Country and Utility Context",
+  "subcategory": "Air Connectivity",
+  "unit": "% per unit GDP",
+  "agg_level": "Lvl_Country",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 3,
+  "name": "IATA Air Connectivity Score",
+  "current_description": "IATA Air Connectivity Score",
+  "formula": "iata_air_connectivity_score",
+  "formula_inputs": [
+   {
+    "input_def_id": 1012,
+    "variable_name": "iata_air_connectivity_score"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Country and Utility Context",
+  "subcategory": "Air Connectivity",
+  "unit": "Air Connectivity Score",
+  "agg_level": "Lvl_Country",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 14,
+  "name": "Access to Electricity",
+  "current_description": "Access to Electricity",
+  "formula": "access_to_electricity",
+  "formula_inputs": [
+   {
+    "input_def_id": 1008,
+    "variable_name": "access_to_electricity"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Country and Utility Context",
+  "subcategory": "Economy",
+  "unit": "%",
+  "agg_level": "Lvl_Country",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 11,
+  "name": "GDP per Capita",
+  "current_description": "GDP per Capita",
+  "formula": "gdp_per_capita",
+  "formula_inputs": [
+   {
+    "input_def_id": 1009,
+    "variable_name": "gdp_per_capita"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Country and Utility Context",
+  "subcategory": "Economy",
+  "unit": "Currency",
+  "agg_level": "Lvl_Country",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 12,
+  "name": "Inflation Rate",
+  "current_description": "Inflation Rate",
+  "formula": "inflation_rate",
+  "formula_inputs": [
+   {
+    "input_def_id": 1010,
+    "variable_name": "inflation_rate"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Country and Utility Context",
+  "subcategory": "Economy",
+  "unit": "%",
+  "agg_level": "Lvl_Country",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 13,
+  "name": "Unemployment Rate",
+  "current_description": "Unemployment Rate",
+  "formula": "unemployment_rate",
+  "formula_inputs": [
+   {
+    "input_def_id": 1011,
+    "variable_name": "unemployment_rate"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Country and Utility Context",
+  "subcategory": "Economy",
+  "unit": "%",
+  "agg_level": "Lvl_Country",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 22,
+  "name": "USD Exchange Rate",
+  "current_description": "USD Exchange Rate",
+  "formula": "usd_exchange_rate",
+  "formula_inputs": [
+   {
+    "input_def_id": 1200,
+    "variable_name": "usd_exchange_rate",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Country and Utility Context",
+  "subcategory": "Foreign Exchange",
+  "unit": "Number",
+  "agg_level": "Lvl_Country",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 15,
+  "name": "Fuel Pricing Regulation",
+  "current_description": "Fuel Pricing Regulation",
+  "formula": "fuel_pricing_regulation",
+  "formula_inputs": [
+   {
+    "input_def_id": 1016,
+    "variable_name": "fuel_pricing_regulation"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Country and Utility Context",
+  "subcategory": "Fuel",
+  "unit": "Units N/A",
+  "agg_level": "Lvl_Country",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 18,
+  "name": "Fuel Supply Access",
+  "current_description": "Fuel Supply Access",
+  "formula": "fuel_supply_access",
+  "formula_inputs": [
+   {
+    "input_def_id": 1015,
+    "variable_name": "fuel_supply_access"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Country and Utility Context",
+  "subcategory": "Fuel",
+  "unit": "Units N/A",
+  "agg_level": "Lvl_Country",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 2,
+  "name": "Islands",
+  "current_description": "Islands",
+  "formula": "islands",
+  "formula_inputs": [
+   {
+    "input_def_id": 1002,
+    "variable_name": "islands"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Country and Utility Context",
+  "subcategory": "Geography",
+  "unit": "Islands",
+  "agg_level": "Lvl_Country",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 1,
+  "name": "Land Area",
+  "current_description": "Land Area",
+  "formula": "land_area",
+  "formula_inputs": [
+   {
+    "input_def_id": 1001,
+    "variable_name": "land_area"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Country and Utility Context",
+  "subcategory": "Geography",
+  "unit": "km2",
+  "agg_level": "Lvl_Country",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 10,
+  "name": "Average Household Size",
+  "current_description": "Average Household Size",
+  "formula": "average_household_size",
+  "formula_inputs": [
+   {
+    "input_def_id": 1007,
+    "variable_name": "average_household_size"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Country and Utility Context",
+  "subcategory": "Population",
+  "unit": "Persons per Household",
+  "agg_level": "Lvl_Country",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 9,
+  "name": "Households",
+  "current_description": "Households",
+  "formula": "households",
+  "formula_inputs": [
+   {
+    "input_def_id": 1006,
+    "variable_name": "households"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Country and Utility Context",
+  "subcategory": "Population",
+  "unit": "Households",
+  "agg_level": "Lvl_Country",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 6,
+  "name": "Population",
+  "current_description": "Population",
+  "formula": "population",
+  "formula_inputs": [
+   {
+    "input_def_id": 1003,
+    "variable_name": "population",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Country and Utility Context",
+  "subcategory": "Population",
+  "unit": "Persons",
+  "agg_level": "Lvl_Country",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 8,
+  "name": "Rural Population",
+  "current_description": "Rural Population",
+  "formula": "rural_population",
+  "formula_inputs": [
+   {
+    "input_def_id": 1005,
+    "variable_name": "rural_population"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Country and Utility Context",
+  "subcategory": "Population",
+  "unit": "%",
+  "agg_level": "Lvl_Country",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 7,
+  "name": "Urban Population",
+  "current_description": "Urban Population",
+  "formula": "urban_population",
+  "formula_inputs": [
+   {
+    "input_def_id": 1004,
+    "variable_name": "urban_population"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Country and Utility Context",
+  "subcategory": "Population",
+  "unit": "%",
+  "agg_level": "Lvl_Country",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 17,
+  "name": "Accounting Standards",
+  "current_description": "Accounting Standards",
+  "formula": "accounting_standards",
+  "formula_inputs": [
+   {
+    "input_def_id": 1018,
+    "variable_name": "accounting_standards"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Country and Utility Context",
+  "subcategory": "Utility Context",
+  "unit": "Units N/A",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 16,
+  "name": "Electricity Regulation",
+  "current_description": "Electricity Regulation",
+  "formula": "electricity_regulation",
+  "formula_inputs": [
+   {
+    "input_def_id": 1020,
+    "variable_name": "electricity_regulation"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Country and Utility Context",
+  "subcategory": "Utility Context",
+  "unit": "Units N/A",
+  "agg_level": "Lvl_Country",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 21,
+  "name": "Feeder Type",
+  "current_description": "Feeder Type",
+  "formula": "feeder_type",
+  "formula_inputs": [
+   {
+    "input_def_id": 1021,
+    "variable_name": "feeder_type"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Country and Utility Context",
+  "subcategory": "Utility Context",
+  "unit": "Units N/A",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 20,
+  "name": "Ownership Type",
+  "current_description": "Ownership Type",
+  "formula": "entity_ownership_type",
+  "formula_inputs": [
+   {
+    "input_def_id": 1017,
+    "variable_name": "entity_ownership_type"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Country and Utility Context",
+  "subcategory": "Utility Context",
+  "unit": "Units N/A",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 19,
+  "name": "Power Quality Standards",
+  "current_description": "Power Quality Standards",
+  "formula": "power_quality_standards",
+  "formula_inputs": [
+   {
+    "input_def_id": 1019,
+    "variable_name": "power_quality_standards",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Country and Utility Context",
+  "subcategory": "Utility Context",
+  "unit": "Units N/A",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 29,
+  "name": "Duty on Fuel and Lube Oil",
+  "current_description": "Duty on Fuel and Lube Oil",
+  "formula": "apportioned_cost_duty_and_taxes_fuel__oil",
+  "formula_inputs": [
+   {
+    "input_def_id": 1211,
+    "variable_name": "apportioned_cost_duty_and_taxes_fuel__oil"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Financial",
+  "subcategory": "Cost Breakdown",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 23,
+  "name": "Fuel Expenditure",
+  "current_description": "Fuel Expenditure",
+  "formula": "om_costs_fuel__oil / service_total_costs",
+  "formula_inputs": [
+   {
+    "input_def_id": 1209,
+    "variable_name": "om_costs_fuel__oil",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1322,
+    "variable_name": "service_total_costs",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Financial",
+  "subcategory": "Cost Breakdown",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 30,
+  "name": "Generation Labor Costs",
+  "current_description": "Generation Labor Costs",
+  "formula": "om_costs_generation / service_total_costs",
+  "formula_inputs": [
+   {
+    "input_def_id": 1206,
+    "variable_name": "om_costs_generation",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1322,
+    "variable_name": "service_total_costs",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Financial",
+  "subcategory": "Cost Breakdown",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 24,
+  "name": "Generation O&M Costs",
+  "current_description": "Generation O&M Costs",
+  "formula": "om_costs_generation / service_total_costs",
+  "formula_inputs": [
+   {
+    "input_def_id": 1206,
+    "variable_name": "om_costs_generation",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1322,
+    "variable_name": "service_total_costs",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Financial",
+  "subcategory": "Cost Breakdown",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 32,
+  "name": "Other Duty and Taxes",
+  "current_description": "Other Duty and Taxes",
+  "formula": "apportioned_cost_duty_and_taxes_others / service_total_costs",
+  "formula_inputs": [
+   {
+    "input_def_id": 1212,
+    "variable_name": "apportioned_cost_duty_and_taxes_others",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1322,
+    "variable_name": "service_total_costs",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Financial",
+  "subcategory": "Cost Breakdown",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 28,
+  "name": "Other Expenditure",
+  "current_description": "Other Expenditure",
+  "formula": "service_other_operating_expenses / service_total_costs",
+  "formula_inputs": [
+   {
+    "input_def_id": 1302,
+    "variable_name": "service_other_operating_expenses",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1322,
+    "variable_name": "service_total_costs",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Financial",
+  "subcategory": "Cost Breakdown",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 27,
+  "name": "Other Labor Expenditure",
+  "current_description": "Other Labor Expenditure",
+  "formula": "staff_costs_other_labor_expenditure / service_total_costs",
+  "formula_inputs": [
+   {
+    "input_def_id": 1322,
+    "variable_name": "service_total_costs",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1205,
+    "variable_name": "staff_costs_other_labor_expenditure",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Financial",
+  "subcategory": "Cost Breakdown",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 25,
+  "name": "Power Purchase Costs",
+  "current_description": "Power Purchase Costs",
+  "formula": "power_purchase_costs / service_total_costs",
+  "formula_inputs": [
+   {
+    "input_def_id": 1210,
+    "variable_name": "power_purchase_costs",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1322,
+    "variable_name": "service_total_costs",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Financial",
+  "subcategory": "Cost Breakdown",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 31,
+  "name": "Transmission and Distribution Labor Costs",
+  "current_description": "Transmission and Distribution Labor Costs",
+  "formula": "( staff_costs_transmission + staff_costs_distribution ) service_total_costs",
+  "formula_inputs": [
+   {
+    "input_def_id": 1322,
+    "variable_name": "service_total_costs",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1203,
+    "variable_name": "staff_costs_distribution",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1204,
+    "variable_name": "staff_costs_transmission",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Financial",
+  "subcategory": "Cost Breakdown",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 26,
+  "name": "Transmission and Distribution O&M Costs",
+  "current_description": "Transmission and Distribution O&M Costs",
+  "formula": "( om_costs_transmission + om_costs_distribution ) / service_total_costs",
+  "formula_inputs": [
+   {
+    "input_def_id": 1207,
+    "variable_name": "om_costs_distribution",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1208,
+    "variable_name": "om_costs_transmission",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1322,
+    "variable_name": "service_total_costs",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Financial",
+  "subcategory": "Cost Breakdown",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 36,
+  "name": "Operating Cost Covered by Subsidies",
+  "current_description": "Operating Cost Covered by Subsidies",
+  "formula": "service_government_subsidies / ( service_cost_of_sales + service_other_operating_expenses - service_bad_debt_expense + service_income_tax )",
+  "formula_inputs": [
+   {
+    "input_def_id": 1306,
+    "variable_name": "service_bad_debt_expense",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1301,
+    "variable_name": "service_cost_of_sales",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1315,
+    "variable_name": "service_government_subsidies",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1312,
+    "variable_name": "service_income_tax",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1302,
+    "variable_name": "service_other_operating_expenses",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Financial",
+  "subcategory": "Efficiency",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 34,
+  "name": "Operating Cost Recovery",
+  "current_description": "Operating Cost Recovery",
+  "formula": "service_revenue / ( service_cost_of_sales + service_other_operating_expenses - service_bad_debt_expense + service_income_tax )",
+  "formula_inputs": [
+   {
+    "input_def_id": 1306,
+    "variable_name": "service_bad_debt_expense",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1301,
+    "variable_name": "service_cost_of_sales",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1312,
+    "variable_name": "service_income_tax",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1302,
+    "variable_name": "service_other_operating_expenses",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1300,
+    "variable_name": "service_revenue",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Financial",
+  "subcategory": "Efficiency",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 35,
+  "name": "Operating Ratio",
+  "current_description": "Operating Ratio",
+  "formula": "( service_cost_of_sales + service_other_operating_expenses ) / service_revenue",
+  "formula_inputs": [
+   {
+    "input_def_id": 1301,
+    "variable_name": "service_cost_of_sales",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1302,
+    "variable_name": "service_other_operating_expenses",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1300,
+    "variable_name": "service_revenue",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Financial",
+  "subcategory": "Efficiency",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": "Operating expenses as percentage of operating revenue",
+  "direction": "lower_is_better",
+  "developing_nation_benchmark": 85,
+  "developed_nation_benchmark": 60,
+  "pacific_regional_average": 78,
+  "ppa_target": 70,
+  "benchmark_unit": "%"
+ },
+ {
+  "id": 38,
+  "name": "Current Ratio",
+  "current_description": "Current Ratio",
+  "formula": "service_total_current_assets / service_total_current_liabilities",
+  "formula_inputs": [
+   {
+    "input_def_id": 1316,
+    "variable_name": "service_total_current_assets"
+   },
+   {
+    "input_def_id": 1319,
+    "variable_name": "service_total_current_liabilities"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Financial",
+  "subcategory": "Liquidity",
+  "unit": "Ratio",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 37,
+  "name": "Debtor Days",
+  "current_description": "Debtor Days",
+  "formula": "service_trade_receivables / service_revenue * 365",
+  "formula_inputs": [
+   {
+    "input_def_id": 1300,
+    "variable_name": "service_revenue",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1314,
+    "variable_name": "service_trade_receivables",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Financial",
+  "subcategory": "Liquidity",
+  "unit": "Days",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 42,
+  "name": "EBITDA Margin",
+  "current_description": "EBITDA Margin",
+  "formula": "( service_revenue - service_other_income - service_cost_of_sales - service_other_operating_expenses ) / service_revenue",
+  "formula_inputs": [
+   {
+    "input_def_id": 1301,
+    "variable_name": "service_cost_of_sales",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1303,
+    "variable_name": "service_other_income",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1302,
+    "variable_name": "service_other_operating_expenses",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1300,
+    "variable_name": "service_revenue",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Financial",
+  "subcategory": "Profitability",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 43,
+  "name": "EBIT Margin",
+  "current_description": "EBIT Margin",
+  "formula": "( service_revenue + service_other_income - service_cost_of_sales - service_other_operating_expenses - service_depreciation_expense - service_amortization_expenses ) / service_revenue",
+  "formula_inputs": [
+   {
+    "input_def_id": 1305,
+    "variable_name": "service_amortization_expenses",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1301,
+    "variable_name": "service_cost_of_sales",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1304,
+    "variable_name": "service_depreciation_expense",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1303,
+    "variable_name": "service_other_income",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1302,
+    "variable_name": "service_other_operating_expenses",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1300,
+    "variable_name": "service_revenue",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Financial",
+  "subcategory": "Profitability",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 44,
+  "name": "Profit Margin",
+  "current_description": "Profit Margin",
+  "formula": "service_profit / service_revenue",
+  "formula_inputs": [
+   {
+    "input_def_id": 1323,
+    "variable_name": "service_profit",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1300,
+    "variable_name": "service_revenue",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Financial",
+  "subcategory": "Profitability",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 40,
+  "name": "Return on Assets",
+  "current_description": "Return on Assets",
+  "formula": "service_profit / service_total_assets",
+  "formula_inputs": [
+   {
+    "input_def_id": 1323,
+    "variable_name": "service_profit",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1317,
+    "variable_name": "service_total_assets",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Financial",
+  "subcategory": "Profitability",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 41,
+  "name": "Return on Equity",
+  "current_description": "Return on Equity",
+  "formula": "service_profit / service_total_equity",
+  "formula_inputs": [
+   {
+    "input_def_id": 1323,
+    "variable_name": "service_profit",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1318,
+    "variable_name": "service_total_equity",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Financial",
+  "subcategory": "Profitability",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 109,
+  "name": "Customer Sales",
+  "current_description": "Customer Sales",
+  "formula": "service_revenue",
+  "formula_inputs": [
+   {
+    "input_def_id": 1300,
+    "variable_name": "service_revenue"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Financial",
+  "subcategory": "Revenue Breakdown",
+  "unit": "Currency",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 39,
+  "name": "Debt to Equity Ratio",
+  "current_description": "Debt to Equity Ratio",
+  "formula": "service_total_liabilities / service_total_equity",
+  "formula_inputs": [
+   {
+    "input_def_id": 1318,
+    "variable_name": "service_total_equity",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1320,
+    "variable_name": "service_total_liabilities",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Financial",
+  "subcategory": "Solvency",
+  "unit": "Ratio",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 135,
+  "name": "10,000 kWh",
+  "current_description": "10,000 kWh",
+  "formula": null,
+  "formula_inputs": null,
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Financial",
+  "subcategory": "Tariff Structure",
+  "unit": "Currency",
+  "agg_level": "Lvl_ServiceArea",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 133,
+  "name": "1,000 kWh",
+  "current_description": "1,000 kWh",
+  "formula": null,
+  "formula_inputs": null,
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Financial",
+  "subcategory": "Tariff Structure",
+  "unit": "Currency",
+  "agg_level": "Lvl_ServiceArea",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 130,
+  "name": "100 kWh",
+  "current_description": "100 kWh",
+  "formula": null,
+  "formula_inputs": null,
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Financial",
+  "subcategory": "Tariff Structure",
+  "unit": "Currency",
+  "agg_level": "Lvl_ServiceArea",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 131,
+  "name": "200 kWh",
+  "current_description": "200 kWh",
+  "formula": null,
+  "formula_inputs": null,
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Financial",
+  "subcategory": "Tariff Structure",
+  "unit": "Currency",
+  "agg_level": "Lvl_ServiceArea",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 134,
+  "name": "5,000 kWh",
+  "current_description": "5,000 kWh",
+  "formula": null,
+  "formula_inputs": null,
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Financial",
+  "subcategory": "Tariff Structure",
+  "unit": "Currency",
+  "agg_level": "Lvl_ServiceArea",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 132,
+  "name": "500 kWh",
+  "current_description": "500 kWh",
+  "formula": null,
+  "formula_inputs": null,
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Financial",
+  "subcategory": "Tariff Structure",
+  "unit": "Currency",
+  "agg_level": "Lvl_ServiceArea",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 128,
+  "name": "Lifeline 120 kWh",
+  "current_description": "Lifeline 120 kWh",
+  "formula": null,
+  "formula_inputs": null,
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Financial",
+  "subcategory": "Tariff Structure",
+  "unit": "Currency",
+  "agg_level": "Lvl_ServiceArea",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 129,
+  "name": "Lifeline 180 kWh",
+  "current_description": "Lifeline 180 kWh",
+  "formula": null,
+  "formula_inputs": null,
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Financial",
+  "subcategory": "Tariff Structure",
+  "unit": "Currency",
+  "agg_level": "Lvl_ServiceArea",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 127,
+  "name": "Lifeline 60 kWh",
+  "current_description": "Lifeline 60 kWh",
+  "formula": null,
+  "formula_inputs": null,
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Financial",
+  "subcategory": "Tariff Structure",
+  "unit": "Currency",
+  "agg_level": "Lvl_ServiceArea",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 54,
+  "name": "Are Ministers appointed to the Board",
+  "current_description": "Are Ministers appointed to the Board",
+  "formula": "are_ministers_appointed_to_the_board",
+  "formula_inputs": [
+   {
+    "input_def_id": 1100,
+    "variable_name": "are_ministers_appointed_to_the_board"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Governance",
+  "subcategory": "Appointments",
+  "unit": "Units N/A",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 55,
+  "name": "Are Ministers or public servants representing the line/sector Ministry appointed to the Board",
+  "current_description": "Are Ministers or public servants representing the line/sector Ministry appointed to the Board",
+  "formula": "are_linesector_ministers_or_public_servants_appointed_to_the_board",
+  "formula_inputs": [
+   {
+    "input_def_id": 1101,
+    "variable_name": "are_linesector_ministers_or_public_servants_appointed_to_the_board"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Governance",
+  "subcategory": "Appointments",
+  "unit": "Units N/A",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 48,
+  "name": "Is a Commercial mandate implemented",
+  "current_description": "Is a Commercial mandate implemented",
+  "formula": "is_a_commercial_mandate_implemented",
+  "formula_inputs": [
+   {
+    "input_def_id": 1105,
+    "variable_name": "is_a_commercial_mandate_implemented"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Governance",
+  "subcategory": "Commercial Focus",
+  "unit": "Units N/A",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 47,
+  "name": "Is a Commercial mandate in place",
+  "current_description": "Is a Commercial mandate in place",
+  "formula": "is_a_commercial_mandate_in_place",
+  "formula_inputs": [
+   {
+    "input_def_id": 1104,
+    "variable_name": "is_a_commercial_mandate_in_place"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Governance",
+  "subcategory": "Commercial Focus",
+  "unit": "Units N/A",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 46,
+  "name": "Is a Code of Conduct implemented",
+  "current_description": "Is a Code of Conduct implemented",
+  "formula": "is_a_code_of_conduct_implemented",
+  "formula_inputs": [
+   {
+    "input_def_id": 1103,
+    "variable_name": "is_a_code_of_conduct_implemented"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Governance",
+  "subcategory": "Conduct",
+  "unit": "Units N/A",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 45,
+  "name": "Is a Code of Conduct in place",
+  "current_description": "Is a Code of Conduct in place",
+  "formula": "is_a_code_of_conduct_in_place",
+  "formula_inputs": [
+   {
+    "input_def_id": 1102,
+    "variable_name": "is_a_code_of_conduct_in_place"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Governance",
+  "subcategory": "Conduct",
+  "unit": "Units N/A",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 50,
+  "name": "Does the CEOs performance contract include annual reviews",
+  "current_description": "Does the CEOs performance contract include annual reviews",
+  "formula": "does_the_ceos_performance_contract_include_annual_reviews",
+  "formula_inputs": [
+   {
+    "input_def_id": 1110,
+    "variable_name": "does_the_ceos_performance_contract_include_annual_reviews"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Governance",
+  "subcategory": "Performance",
+  "unit": "Units N/A",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 49,
+  "name": "Is the CEO on a performance contract",
+  "current_description": "Is the CEO on a performance contract",
+  "formula": "is_the_ceo_on_a_performance_contract",
+  "formula_inputs": [
+   {
+    "input_def_id": 1109,
+    "variable_name": "is_the_ceo_on_a_performance_contract"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Governance",
+  "subcategory": "Performance",
+  "unit": "Units N/A",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 52,
+  "name": "Does the Strategic Plan include three or more years of forecasts",
+  "current_description": "Does the Strategic Plan include three or more years of forecasts",
+  "formula": "does_the_strategic_plan_include_three_or_more_years_of_forecasts",
+  "formula_inputs": [
+   {
+    "input_def_id": 1107,
+    "variable_name": "does_the_strategic_plan_include_three_or_more_years_of_forecasts",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Governance",
+  "subcategory": "Planning",
+  "unit": "Units N/A",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 51,
+  "name": "Has a Strategic Plan been adopted",
+  "current_description": "Has a Strategic Plan been adopted",
+  "formula": "has_a_strategic_plan_been_adopted",
+  "formula_inputs": [
+   {
+    "input_def_id": 1106,
+    "variable_name": "has_a_strategic_plan_been_adopted"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Governance",
+  "subcategory": "Planning",
+  "unit": "Units N/A",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 53,
+  "name": "Is the Strategic Plan implemented",
+  "current_description": "Is the Strategic Plan implemented",
+  "formula": "is_the_strategic_plan_implemented",
+  "formula_inputs": [
+   {
+    "input_def_id": 1108,
+    "variable_name": "is_the_strategic_plan_implemented"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Governance",
+  "subcategory": "Planning",
+  "unit": "Units N/A",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 58,
+  "name": "Does the Annual Report disclose performance relative to the Strategic Plan",
+  "current_description": "Does the Annual Report disclose performance relative to the Strategic Plan",
+  "formula": "does_the_annual_report_disclose_performance_relative_to_the_strategic_plan",
+  "formula_inputs": [
+   {
+    "input_def_id": 1112,
+    "variable_name": "does_the_annual_report_disclose_performance_relative_to_the_strategic_plan"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Governance",
+  "subcategory": "Reporting",
+  "unit": "Units N/A",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 57,
+  "name": "Is the Annual Report audited",
+  "current_description": "Is the Annual Report audited",
+  "formula": "is_the_annual_report_audited",
+  "formula_inputs": [
+   {
+    "input_def_id": 1113,
+    "variable_name": "is_the_annual_report_audited"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Governance",
+  "subcategory": "Reporting",
+  "unit": "Units N/A",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 56,
+  "name": "Is the Annual Report completed within four months of the end of the reporting year",
+  "current_description": "Is the Annual Report completed within four months of the end of the reporting year",
+  "formula": "is_the_annual_report_completed_within_four_months_of_the_end_of_the_reporting_year",
+  "formula_inputs": [
+   {
+    "input_def_id": 1111,
+    "variable_name": "is_the_annual_report_completed_within_four_months_of_the_end_of_the_reporting_year",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Governance",
+  "subcategory": "Reporting",
+  "unit": "Units N/A",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 83,
+  "name": "Administrative Employees Female %",
+  "current_description": "Administrative Employees Female %",
+  "formula": "administrative_employees_female / administrative_employees_total",
+  "formula_inputs": [
+   {
+    "input_def_id": 1421,
+    "variable_name": "administrative_employees_female"
+   },
+   {
+    "input_def_id": 1422,
+    "variable_name": "administrative_employees_total"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 82,
+  "name": "Administrative Employees Male %",
+  "current_description": "Administrative Employees Male %",
+  "formula": "administrative_employees_male / administrative_employees_total",
+  "formula_inputs": [
+   {
+    "input_def_id": 1420,
+    "variable_name": "administrative_employees_male"
+   },
+   {
+    "input_def_id": 1422,
+    "variable_name": "administrative_employees_total"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 81,
+  "name": "Administrative Employees Total",
+  "current_description": "Administrative Employees Total",
+  "formula": "administrative_employees_female + administrative_employees_male",
+  "formula_inputs": [
+   {
+    "input_def_id": 1421,
+    "variable_name": "administrative_employees_female"
+   },
+   {
+    "input_def_id": 1420,
+    "variable_name": "administrative_employees_male"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "Employees",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 65,
+  "name": "Employees Female %",
+  "current_description": "Employees Female %",
+  "formula": "( employees_female / employees_total ) * 100",
+  "formula_inputs": [
+   {
+    "input_def_id": 1430,
+    "variable_name": "employees_female"
+   },
+   {
+    "input_def_id": 1431,
+    "variable_name": "employees_total"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 64,
+  "name": "Employees Male %",
+  "current_description": "Employees Male %",
+  "formula": "( employees_male / employees_total ) * 100",
+  "formula_inputs": [
+   {
+    "input_def_id": 1429,
+    "variable_name": "employees_male"
+   },
+   {
+    "input_def_id": 1431,
+    "variable_name": "employees_total"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 68,
+  "name": "Executive Employees Female %",
+  "current_description": "Executive Employees Female %",
+  "formula": "executive_employees_female / executive_employees_total",
+  "formula_inputs": [
+   {
+    "input_def_id": 1403,
+    "variable_name": "executive_employees_female"
+   },
+   {
+    "input_def_id": 1404,
+    "variable_name": "executive_employees_total"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 67,
+  "name": "Executive Employees Male %",
+  "current_description": "Executive Employees Male %",
+  "formula": "executive_employees_male / executive_employees_total",
+  "formula_inputs": [
+   {
+    "input_def_id": 1402,
+    "variable_name": "executive_employees_male"
+   },
+   {
+    "input_def_id": 1404,
+    "variable_name": "executive_employees_total"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 66,
+  "name": "Executive Employees Total",
+  "current_description": "Executive Employees Total",
+  "formula": "executive_employees_female + executive_employees_male",
+  "formula_inputs": [
+   {
+    "input_def_id": 1403,
+    "variable_name": "executive_employees_female",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1402,
+    "variable_name": "executive_employees_male",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "Employees",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 74,
+  "name": "Finance Employees Female %",
+  "current_description": "Finance Employees Female %",
+  "formula": "finance_employees_female / finance_employees_total",
+  "formula_inputs": [
+   {
+    "input_def_id": 1409,
+    "variable_name": "finance_employees_female"
+   },
+   {
+    "input_def_id": 1410,
+    "variable_name": "finance_employees_total"
+   },
+   {
+    "input_def_id": 1408,
+    "variable_name": "finance_employees_male"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 73,
+  "name": "Finance Employees Male %",
+  "current_description": "Finance Employees Male %",
+  "formula": "finance_employees_male / finance_employees_total",
+  "formula_inputs": [
+   {
+    "input_def_id": 1408,
+    "variable_name": "finance_employees_male"
+   },
+   {
+    "input_def_id": 1410,
+    "variable_name": "finance_employees_total"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 72,
+  "name": "Finance Employees Total",
+  "current_description": "Finance Employees Total",
+  "formula": "finance_employees_female + finance_employees_male",
+  "formula_inputs": [
+   {
+    "input_def_id": 1409,
+    "variable_name": "finance_employees_female"
+   },
+   {
+    "input_def_id": 1408,
+    "variable_name": "finance_employees_male"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "Employees",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 60,
+  "name": "Gender of Utility 2nd in command",
+  "current_description": "Gender of Utility 2nd in command",
+  "formula": "gender_of_2ic",
+  "formula_inputs": [
+   {
+    "input_def_id": 1401,
+    "variable_name": "gender_of_2ic"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "Units N/A",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 59,
+  "name": "Gender of Utility CEO",
+  "current_description": "Gender of Utility CEO",
+  "formula": "gender_of_ceo",
+  "formula_inputs": [
+   {
+    "input_def_id": 1400,
+    "variable_name": "gender_of_ceo"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "Units N/A",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 77,
+  "name": "HR Employees Female %",
+  "current_description": "HR Employees Female %",
+  "formula": "human_resource_employees_female / human_resource_employees_total",
+  "formula_inputs": [
+   {
+    "input_def_id": 1415,
+    "variable_name": "human_resource_employees_female"
+   },
+   {
+    "input_def_id": 1416,
+    "variable_name": "human_resource_employees_total"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 76,
+  "name": "HR Employees Male %",
+  "current_description": "HR Employees Male %",
+  "formula": "human_resource_employees_male / human_resource_employees_total",
+  "formula_inputs": [
+   {
+    "input_def_id": 1414,
+    "variable_name": "human_resource_employees_male"
+   },
+   {
+    "input_def_id": 1416,
+    "variable_name": "human_resource_employees_total"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 75,
+  "name": "HR Employees Total",
+  "current_description": "HR Employees Total",
+  "formula": "human_resource_employees_female + human_resource_employees_male",
+  "formula_inputs": [
+   {
+    "input_def_id": 1415,
+    "variable_name": "human_resource_employees_female"
+   },
+   {
+    "input_def_id": 1414,
+    "variable_name": "human_resource_employees_male"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "Employees",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 86,
+  "name": "ICT Employees Female %",
+  "current_description": "ICT Employees Female %",
+  "formula": "ict_employees_female / ict_employees_total",
+  "formula_inputs": [
+   {
+    "input_def_id": 1424,
+    "variable_name": "ict_employees_female"
+   },
+   {
+    "input_def_id": 1425,
+    "variable_name": "ict_employees_total"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 85,
+  "name": "ICT Employees Male %",
+  "current_description": "ICT Employees Male %",
+  "formula": "ict_employees_male / ict_employees_total",
+  "formula_inputs": [
+   {
+    "input_def_id": 1423,
+    "variable_name": "ict_employees_male"
+   },
+   {
+    "input_def_id": 1425,
+    "variable_name": "ict_employees_total"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 84,
+  "name": "ICT Employees Total",
+  "current_description": "ICT Employees Total",
+  "formula": "ict_employees_female + ict_employees_male",
+  "formula_inputs": [
+   {
+    "input_def_id": 1424,
+    "variable_name": "ict_employees_female"
+   },
+   {
+    "input_def_id": 1423,
+    "variable_name": "ict_employees_male"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "Employees",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 89,
+  "name": "Other Divisions Employees Female %",
+  "current_description": "Other Divisions Employees Female %",
+  "formula": "other_employees_female / other_employees_total",
+  "formula_inputs": [
+   {
+    "input_def_id": 1427,
+    "variable_name": "other_employees_female",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1428,
+    "variable_name": "other_employees_total",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 88,
+  "name": "Other Divisions Employees Male %",
+  "current_description": "Other Divisions Employees Male %",
+  "formula": "other_employees_male / other_employees_total",
+  "formula_inputs": [
+   {
+    "input_def_id": 1426,
+    "variable_name": "other_employees_male",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1428,
+    "variable_name": "other_employees_total",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 87,
+  "name": "Other Divisions Employees Total",
+  "current_description": "Other Divisions Employees Total",
+  "formula": "other_employees_female + other_employees_male",
+  "formula_inputs": [
+   {
+    "input_def_id": 1427,
+    "variable_name": "other_employees_female",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1426,
+    "variable_name": "other_employees_male",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "Employees",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 80,
+  "name": "PR Marketing and CustService Employees Female %",
+  "current_description": "PR Marketing and CustService Employees Female %",
+  "formula": "pr_marketing_and_customer_service_employees_female / pr_marketing_and_customer_service_employees_total",
+  "formula_inputs": [
+   {
+    "input_def_id": 1418,
+    "variable_name": "pr_marketing_and_customer_service_employees_female",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1419,
+    "variable_name": "pr_marketing_and_customer_service_employees_total",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 79,
+  "name": "PR Marketing and CustService Employees Male %",
+  "current_description": "PR Marketing and CustService Employees Male %",
+  "formula": "pr_marketing_and_customer_service_employees_male / pr_marketing_and_customer_service_employees_total",
+  "formula_inputs": [
+   {
+    "input_def_id": 1417,
+    "variable_name": "pr_marketing_and_customer_service_employees_male",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1419,
+    "variable_name": "pr_marketing_and_customer_service_employees_total",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 78,
+  "name": "PR Marketing and CustService Employees Total",
+  "current_description": "PR Marketing and CustService Employees Total",
+  "formula": "pr_marketing_and_customer_service_employees_female + pr_marketing_and_customer_service_employees_male",
+  "formula_inputs": [
+   {
+    "input_def_id": 1418,
+    "variable_name": "pr_marketing_and_customer_service_employees_female",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1417,
+    "variable_name": "pr_marketing_and_customer_service_employees_male",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "Employees",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 92,
+  "name": "Procurement Employees Female %",
+  "current_description": "Procurement Employees Female %",
+  "formula": "procurement_employees_female / procurement_employees_total",
+  "formula_inputs": [
+   {
+    "input_def_id": 1412,
+    "variable_name": "procurement_employees_female",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1413,
+    "variable_name": "procurement_employees_total",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 91,
+  "name": "Procurement Employees Male %",
+  "current_description": "Procurement Employees Male %",
+  "formula": "procurement_employees_male / procurement_employees_total",
+  "formula_inputs": [
+   {
+    "input_def_id": 1411,
+    "variable_name": "procurement_employees_male",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1413,
+    "variable_name": "procurement_employees_total",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 90,
+  "name": "Procurement Employees Total",
+  "current_description": "Procurement Employees Total",
+  "formula": "procurement_employees_female + procurement_employees_male",
+  "formula_inputs": [
+   {
+    "input_def_id": 1412,
+    "variable_name": "procurement_employees_female",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1411,
+    "variable_name": "procurement_employees_male",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "Employees",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 71,
+  "name": "Technical Employees Female %",
+  "current_description": "Technical Employees Female %",
+  "formula": "technical_employees_female / technical_employees_total",
+  "formula_inputs": [
+   {
+    "input_def_id": 1406,
+    "variable_name": "technical_employees_female",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1407,
+    "variable_name": "technical_employees_total",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 70,
+  "name": "Technical Employees Male %",
+  "current_description": "Technical Employees Male %",
+  "formula": "technical_employees_male / technical_employees_total",
+  "formula_inputs": [
+   {
+    "input_def_id": 1405,
+    "variable_name": "technical_employees_male",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1407,
+    "variable_name": "technical_employees_total",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 69,
+  "name": "Technical Employees Total",
+  "current_description": "Technical Employees Total",
+  "formula": "technical_employees_female + technical_employees_male",
+  "formula_inputs": [
+   {
+    "input_def_id": 1406,
+    "variable_name": "technical_employees_female",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1405,
+    "variable_name": "technical_employees_male",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "Employees",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 63,
+  "name": "Total Employees",
+  "current_description": "Total Employees",
+  "formula": "employees_male + employees_female",
+  "formula_inputs": [
+   {
+    "input_def_id": 1430,
+    "variable_name": "employees_female"
+   },
+   {
+    "input_def_id": 1429,
+    "variable_name": "employees_male"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "Employees",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 62,
+  "name": "Total Employees Female",
+  "current_description": "Total Employees Female",
+  "formula": "administrative_employees_female + executive_employees_female + finance_employees_female + human_resource_employees_female + ict_employees_female + other_employees_female + pr_marketing_and_customer_service_employees_female + procurement_employees_female + technical_employees_female",
+  "formula_inputs": [
+   {
+    "input_def_id": 1421,
+    "variable_name": "administrative_employees_female"
+   },
+   {
+    "input_def_id": 1403,
+    "variable_name": "executive_employees_female"
+   },
+   {
+    "input_def_id": 1409,
+    "variable_name": "finance_employees_female"
+   },
+   {
+    "input_def_id": 1415,
+    "variable_name": "human_resource_employees_female"
+   },
+   {
+    "input_def_id": 1424,
+    "variable_name": "ict_employees_female"
+   },
+   {
+    "input_def_id": 1427,
+    "variable_name": "other_employees_female"
+   },
+   {
+    "input_def_id": 1418,
+    "variable_name": "pr_marketing_and_customer_service_employees_female"
+   },
+   {
+    "input_def_id": 1412,
+    "variable_name": "procurement_employees_female"
+   },
+   {
+    "input_def_id": 1406,
+    "variable_name": "technical_employees_female"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "Employees",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 61,
+  "name": "Total Employees Male",
+  "current_description": "Total Employees Male",
+  "formula": "administrative_employees_male + executive_employees_male + finance_employees_male + ict_employees_male + other_employees_male + pr_marketing_and_customer_service_employees_male + procurement_employees_male + technical_employees_male",
+  "formula_inputs": [
+   {
+    "input_def_id": 1420,
+    "variable_name": "administrative_employees_male"
+   },
+   {
+    "input_def_id": 1402,
+    "variable_name": "executive_employees_male"
+   },
+   {
+    "input_def_id": 1408,
+    "variable_name": "finance_employees_male"
+   },
+   {
+    "input_def_id": 1423,
+    "variable_name": "ict_employees_male"
+   },
+   {
+    "input_def_id": 1426,
+    "variable_name": "other_employees_male"
+   },
+   {
+    "input_def_id": 1417,
+    "variable_name": "pr_marketing_and_customer_service_employees_male"
+   },
+   {
+    "input_def_id": 1411,
+    "variable_name": "procurement_employees_male"
+   },
+   {
+    "input_def_id": 1405,
+    "variable_name": "technical_employees_male"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "Employees",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 145,
+  "name": "FTE Paid Hours - Conventional Generation",
+  "current_description": "FTE Paid Hours - Conventional Generation",
+  "formula": "hours_paid__conventional_generation / standard_work_hours__conventional_generation",
+  "formula_inputs": [
+   {
+    "input_def_id": 1474,
+    "variable_name": "hours_paid__conventional_generation",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 13,
+    "variable_name": "standard_work_hours__conventional_generation",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1470,
+    "variable_name": "hours_worked__conventional_generation",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Productivity",
+  "unit": "Hours",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 142,
+  "name": "FTE Paid Hours - Distribution",
+  "current_description": "FTE Paid Hours - Distribution",
+  "formula": "hours_paid__distribution / standard_work_hours__distribution",
+  "formula_inputs": [
+   {
+    "input_def_id": 1476,
+    "variable_name": "hours_paid__distribution",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 14,
+    "variable_name": "standard_work_hours__distribution",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Productivity",
+  "unit": "Hours",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 143,
+  "name": "FTE Paid Hours - Other Electrical",
+  "current_description": "FTE Paid Hours - Other Electrical",
+  "formula": "hours_paid__other_electrical / standard_work_hours__other_electrical",
+  "formula_inputs": [
+   {
+    "input_def_id": 1477,
+    "variable_name": "hours_paid__other_electrical",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 16,
+    "variable_name": "standard_work_hours__other_electrical",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Productivity",
+  "unit": "Hours",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 140,
+  "name": "FTE Paid Hours - Renewable Generation",
+  "current_description": "FTE Paid Hours - Renewable Generation",
+  "formula": "hours_paid__renewable_generation / standard_work_hours__renewable_generation",
+  "formula_inputs": [
+   {
+    "input_def_id": 1475,
+    "variable_name": "hours_paid__renewable_generation",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 17,
+    "variable_name": "standard_work_hours__renewable_generation",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Productivity",
+  "unit": "Hours",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 141,
+  "name": "FTE Paid Hours - Transmission",
+  "current_description": "FTE Paid Hours - Transmission",
+  "formula": "hours_paid__transmission / standard_work_hours__transmission",
+  "formula_inputs": [
+   {
+    "input_def_id": 8,
+    "variable_name": "hours_paid__transmission",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 15,
+    "variable_name": "standard_work_hours__transmission",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Productivity",
+  "unit": "Hours",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 144,
+  "name": "FTE Worked Hours - Conventional Generation",
+  "current_description": "FTE Worked hours - Conventional Generation",
+  "formula": "hours_worked__conventional_generation / standard_work_hours__conventional_generation",
+  "formula_inputs": [
+   {
+    "input_def_id": 1470,
+    "variable_name": "hours_worked__conventional_generation",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 13,
+    "variable_name": "standard_work_hours__conventional_generation",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Productivity",
+  "unit": "Hours",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 137,
+  "name": "FTE Worked Hours - Distribution",
+  "current_description": "FTE Worked Hours - Distribution",
+  "formula": "hours_worked__distribution / standard_work_hours__distribution",
+  "formula_inputs": [
+   {
+    "input_def_id": 1472,
+    "variable_name": "hours_worked__distribution",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 14,
+    "variable_name": "standard_work_hours__distribution",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1476,
+    "variable_name": "hours_paid__distribution",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Productivity",
+  "unit": "Hours",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 139,
+  "name": "FTE Worked Hours - Other Electrical",
+  "current_description": "FTE Worked Hours - Other Electrical",
+  "formula": "hours_worked__other_electrical / standard_work_hours__other_electrical",
+  "formula_inputs": [
+   {
+    "input_def_id": 1473,
+    "variable_name": "hours_worked__other_electrical",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 16,
+    "variable_name": "standard_work_hours__other_electrical",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Productivity",
+  "unit": "Hours",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 136,
+  "name": "FTE Worked Hours - Renewable Generation",
+  "current_description": "FTE Worked Hours - Renewable Generation",
+  "formula": "hours_worked__renewable_generation / standard_work_hours__renewable_generation",
+  "formula_inputs": [
+   {
+    "input_def_id": 1471,
+    "variable_name": "hours_worked__renewable_generation",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 17,
+    "variable_name": "standard_work_hours__renewable_generation",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1475,
+    "variable_name": "hours_paid__renewable_generation",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1470,
+    "variable_name": "hours_worked__conventional_generation",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 13,
+    "variable_name": "standard_work_hours__conventional_generation",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Productivity",
+  "unit": "Hours",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 138,
+  "name": "FTE Worked Hours - Transmission",
+  "current_description": "FTE Worked Hours - Transmission",
+  "formula": "hours_worked__transmission / standard_work_hours__transmission",
+  "formula_inputs": [
+   {
+    "input_def_id": 7,
+    "variable_name": "hours_worked__transmission",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 15,
+    "variable_name": "standard_work_hours__transmission",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 8,
+    "variable_name": "hours_paid__transmission",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Productivity",
+  "unit": "Hours",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 93,
+  "name": "Labor Productivity",
+  "current_description": "Labor Productivity",
+  "formula": null,
+  "formula_inputs": null,
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Productivity",
+  "unit": "Customers/Employee",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 94,
+  "name": "Lost Time Injury Duration Rate",
+  "current_description": "Lost Time Injury Duration Rate",
+  "formula": "hours_lost_to_work_related_injuries * 8 / employees_total",
+  "formula_inputs": [
+   {
+    "input_def_id": 1431,
+    "variable_name": "employees_total",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1453,
+    "variable_name": "hours_lost_to_work_related_injuries",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Safety",
+  "unit": "Incidents/Million Hours",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 95,
+  "name": "Lost Time Injury Frequency Rate",
+  "current_description": "Lost Time Injury Frequency Rate",
+  "formula": "( number_of_work_related_injuries / ( hours_worked__conventional_generation + hours_worked__renewable_generation + hours_worked__network + hours_worked__other_electrical ) ) * 1000000",
+  "formula_inputs": [
+   {
+    "input_def_id": 1470,
+    "variable_name": "hours_worked__conventional_generation",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1472,
+    "variable_name": "hours_worked__network",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1473,
+    "variable_name": "hours_worked__other_electrical",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1471,
+    "variable_name": "hours_worked__renewable_generation",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1454,
+    "variable_name": "number_of_work_related_injuries",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Human Resources",
+  "subcategory": "Safety",
+  "unit": "Incidents/Million Hours",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 111,
+  "name": "Customer Consumption",
+  "current_description": "Customer Consumption",
+  "formula": "electricity_sold_to_customers",
+  "formula_inputs": [
+   {
+    "input_def_id": 1500,
+    "variable_name": "electricity_sold_to_customers"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Operational",
+  "subcategory": "Distribution",
+  "unit": "MWh",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 110,
+  "name": "Customer Count",
+  "current_description": "Customer Count",
+  "formula": "electricity_customers_metered_connections",
+  "formula_inputs": [
+   {
+    "input_def_id": 1501,
+    "variable_name": "electricity_customers_metered_connections"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Operational",
+  "subcategory": "Distribution",
+  "unit": "Customers",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 116,
+  "name": "Customers per Distribution Employee",
+  "current_description": "Customers per Distribution Employee",
+  "formula": "electricity_customers_metered_connections / fte_employees_in_distribution",
+  "formula_inputs": [
+   {
+    "input_def_id": 1501,
+    "variable_name": "electricity_customers_metered_connections"
+   },
+   {
+    "input_def_id": 1451,
+    "variable_name": "fte_employees_in_distribution"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Operational",
+  "subcategory": "Distribution",
+  "unit": "Customers/Employee",
+  "agg_level": "Lvl_ServiceArea",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 115,
+  "name": "Distribution O&M Cost per km",
+  "current_description": "Distribution O&M Cost per km",
+  "formula": "om_costs_distribution / distribution_network_length",
+  "formula_inputs": [
+   {
+    "input_def_id": 1550,
+    "variable_name": "distribution_network_length"
+   },
+   {
+    "input_def_id": 1207,
+    "variable_name": "om_costs_distribution"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Operational",
+  "subcategory": "Distribution",
+  "unit": "Cost/km",
+  "agg_level": "Lvl_ServiceArea",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 114,
+  "name": "Distribution Reliability",
+  "current_description": "Distribution Reliability",
+  "formula": "distribution_network_unplanned_downtime_events / distribution_network_length * 100",
+  "formula_inputs": [
+   {
+    "input_def_id": 1550,
+    "variable_name": "distribution_network_length",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1555,
+    "variable_name": "distribution_network_unplanned_downtime_events",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Operational",
+  "subcategory": "Distribution",
+  "unit": "%",
+  "agg_level": "Lvl_ServiceArea",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 112,
+  "name": "Network Delivery Losses",
+  "current_description": "Network Delivery Losses",
+  "formula": "( electricity_generated - station_auxilliary_usage - electricity_sold_to_customers ) / electricity_generated",
+  "formula_inputs": [
+   {
+    "input_def_id": 1652,
+    "variable_name": "electricity_generated"
+   },
+   {
+    "input_def_id": 1500,
+    "variable_name": "electricity_sold_to_customers"
+   },
+   {
+    "input_def_id": 1661,
+    "variable_name": "station_auxilliary_usage"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Operational",
+  "subcategory": "Distribution",
+  "unit": "%",
+  "agg_level": "Lvl_ServiceArea",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 113,
+  "name": "Transformer Utilization Factor",
+  "current_description": "Transformer Utilization Factor",
+  "formula": "distribution_average_transformer_load / distribution_total_transformer_capacity",
+  "formula_inputs": [
+   {
+    "input_def_id": 1552,
+    "variable_name": "distribution_average_transformer_load",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1551,
+    "variable_name": "distribution_total_transformer_capacity",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Operational",
+  "subcategory": "Distribution",
+  "unit": "%",
+  "agg_level": "Lvl_ServiceArea",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 108,
+  "name": "Storage Efficiency",
+  "current_description": "Storage Efficiency",
+  "formula": null,
+  "formula_inputs": null,
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Operational",
+  "subcategory": "Energy Storage",
+  "unit": "%",
+  "agg_level": "Lvl_Equipment",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 106,
+  "name": "Engine Oil Consumption",
+  "current_description": "Engine Oil Consumption",
+  "formula": "( oil_for_generators ) / ( electricity_generated",
+  "formula_inputs": [
+   {
+    "input_def_id": 1652,
+    "variable_name": "electricity_generated",
+    "energy_provider_id": 21,
+    "energy_type_id": null,
+    "energy_source_id": 46
+   },
+   {
+    "input_def_id": 1659,
+    "variable_name": "oil_for_generators",
+    "energy_provider_id": 21,
+    "energy_type_id": null,
+    "energy_source_id": 46
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Operational",
+  "subcategory": "Generation",
+  "unit": "kWh/litre",
+  "agg_level": "Lvl_Equipment",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 101,
+  "name": "Generation Labor Productivity",
+  "current_description": "Generation Labor Productivity",
+  "formula": "( electricity_generated ) / fte_employees_in_generation",
+  "formula_inputs": [
+   {
+    "input_def_id": 1652,
+    "variable_name": "electricity_generated",
+    "energy_provider_id": 21,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1450,
+    "variable_name": "fte_employees_in_generation",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Operational",
+  "subcategory": "Generation",
+  "unit": "MWh/Employee",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 102,
+  "name": "Generation O&M Costs per MWh",
+  "current_description": "Generation O&M Costs per MWh",
+  "formula": "om_costs_generation / electricity_generated",
+  "formula_inputs": [
+   {
+    "input_def_id": 1652,
+    "variable_name": "electricity_generated"
+   },
+   {
+    "input_def_id": 1206,
+    "variable_name": "om_costs_generation"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Operational",
+  "subcategory": "Generation",
+  "unit": "Cost/MWh",
+  "agg_level": "Lvl_Organisation",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 98,
+  "name": "Generator Availability Factor",
+  "current_description": "Generator Availability Factor",
+  "formula": "( hours_in_period - ( downtime_planned_duration + downtime_unplanned_duration ) / hours_in_period",
+  "formula_inputs": [
+   {
+    "input_def_id": 1654,
+    "variable_name": "downtime_planned_duration",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1656,
+    "variable_name": "downtime_unplanned_duration",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1650,
+    "variable_name": "hours_in_period",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Operational",
+  "subcategory": "Generation",
+  "unit": "%",
+  "agg_level": "Lvl_Equipment",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 97,
+  "name": "Generator Capacity Factor",
+  "current_description": "Generator Capacity Factor",
+  "formula": "electricity_generated / installed_capacity",
+  "formula_inputs": [
+   {
+    "input_def_id": 1652,
+    "variable_name": "electricity_generated"
+   },
+   {
+    "input_def_id": 1651,
+    "variable_name": "installed_capacity"
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Operational",
+  "subcategory": "Generation",
+  "unit": "%",
+  "agg_level": "Lvl_Equipment",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 99,
+  "name": "Generator Forced Outage Indicator",
+  "current_description": "Generator Forced Outage Indicator",
+  "formula": "downtime_unplanned_duration / ( hours_in_period * active_generators )",
+  "formula_inputs": [
+   {
+    "input_def_id": 1656,
+    "variable_name": "downtime_unplanned_duration",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1650,
+    "variable_name": "hours_in_period",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Operational",
+  "subcategory": "Generation",
+  "unit": "%",
+  "agg_level": "Lvl_Equipment",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 100,
+  "name": "Generator Planned Outage Indicator",
+  "current_description": "Generator Planned Outage Indicator",
+  "formula": "downtime_planned_duration / ( hours_in_period * count_active_generators )",
+  "formula_inputs": [
+   {
+    "input_def_id": 1654,
+    "variable_name": "downtime_planned_duration",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1650,
+    "variable_name": "hours_in_period",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Operational",
+  "subcategory": "Generation",
+  "unit": "%",
+  "agg_level": "Lvl_Equipment",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 104,
+  "name": "IPP Generation",
+  "current_description": "IPP Generation",
+  "formula": "electricity_generated / electricity_generated",
+  "formula_inputs": [
+   {
+    "input_def_id": 1652,
+    "variable_name": "electricity_generated",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1421,
+    "variable_name": "administrative_employees_female",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Operational",
+  "subcategory": "Generation",
+  "unit": "%",
+  "agg_level": "Lvl_ServiceArea",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 96,
+  "name": "Load Factor",
+  "current_description": "Load Factor",
+  "formula": "electricity_demand_average_load / electricity_demand_peak_load",
+  "formula_inputs": [
+   {
+    "input_def_id": 1503,
+    "variable_name": "electricity_demand_average_load",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1504,
+    "variable_name": "electricity_demand_peak_load",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Operational",
+  "subcategory": "Generation",
+  "unit": "%",
+  "agg_level": "Lvl_ServiceArea",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 107,
+  "name": "Lubrication Oil Consumption",
+  "current_description": "Lubrication Oil Consumption",
+  "formula": "( electricity_generated / oil_for_lubrication ) * 1000",
+  "formula_inputs": [
+   {
+    "input_def_id": 1652,
+    "variable_name": "electricity_generated",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1660,
+    "variable_name": "oil_for_lubrication",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Operational",
+  "subcategory": "Generation",
+  "unit": "kWh/litre",
+  "agg_level": "Lvl_Equipment",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 105,
+  "name": "Renewable Energy to Grid",
+  "current_description": "Renewable Energy to Grid",
+  "formula": "electricity_generated / electricity_generated",
+  "formula_inputs": [
+   {
+    "input_def_id": 1652,
+    "variable_name": "electricity_generated",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Operational",
+  "subcategory": "Generation",
+  "unit": "%",
+  "agg_level": "Lvl_ServiceArea",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 103,
+  "name": "Station Usage/Station Auxiliaries",
+  "current_description": "Station Usage/Station Auxiliaries",
+  "formula": "station_auxilliary_usage / electricity_generated",
+  "formula_inputs": [
+   {
+    "input_def_id": 1652,
+    "variable_name": "electricity_generated",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1661,
+    "variable_name": "station_auxilliary_usage",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Operational",
+  "subcategory": "Generation",
+  "unit": "%",
+  "agg_level": "Lvl_ServiceArea",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 123,
+  "name": "Planned SAIDI",
+  "current_description": "Planned SAIDI",
+  "formula": "total_planned_interruptions_customer_duration / total_planned_interruptions_customers_affected",
+  "formula_inputs": [
+   {
+    "input_def_id": 1802,
+    "variable_name": "total_planned_interruptions_customer_duration",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1801,
+    "variable_name": "total_planned_interruptions_customers_affected",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Operational",
+  "subcategory": "Interruptions",
+  "unit": "Minutes/Customer",
+  "agg_level": "Lvl_ServiceArea",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 124,
+  "name": "Planned SAIFI",
+  "current_description": "Planned SAIFI",
+  "formula": "total_planned_interruptions_events / total_planned_interruptions_customers_affected",
+  "formula_inputs": [
+   {
+    "input_def_id": 1801,
+    "variable_name": "total_planned_interruptions_customers_affected",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1800,
+    "variable_name": "total_planned_interruptions_events",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Operational",
+  "subcategory": "Interruptions",
+  "unit": "Events/Customer",
+  "agg_level": "Lvl_ServiceArea",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 125,
+  "name": "Unplanned SAIDI",
+  "current_description": "Unplanned SAIDI",
+  "formula": null,
+  "formula_inputs": null,
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Operational",
+  "subcategory": "Interruptions",
+  "unit": "Minutes/Customer",
+  "agg_level": "Lvl_ServiceArea",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 126,
+  "name": "Unplanned SAIFI",
+  "current_description": "Unplanned SAIFI",
+  "formula": null,
+  "formula_inputs": null,
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": false,
+  "category": "Operational",
+  "subcategory": "Interruptions",
+  "unit": "Events/Customer",
+  "agg_level": "Lvl_ServiceArea",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 117,
+  "name": "Transmission Network Losses",
+  "current_description": "Transmission Network Losses",
+  "formula": "( electricity_generated - station_auxilliary_usage - transmission_electricity_sold_to_customers - electricity_sold_to_customers ) / ( electricity_generated - station_auxilliary_usage )",
+  "formula_inputs": [
+   {
+    "input_def_id": 1652,
+    "variable_name": "electricity_generated",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1500,
+    "variable_name": "electricity_sold_to_customers",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1661,
+    "variable_name": "station_auxilliary_usage",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1602,
+    "variable_name": "transmission_electricity_sold_to_customers",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Operational",
+  "subcategory": "Transmission",
+  "unit": "%",
+  "agg_level": "Lvl_ServiceArea",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 118,
+  "name": "Transmission Reliability",
+  "current_description": "Transmission Reliability",
+  "formula": "( ( transmission_network_planned_downtime_events + transmission_network_unplanned_downtime_events ) / transmission_network_length ) * 100",
+  "formula_inputs": [
+   {
+    "input_def_id": 1600,
+    "variable_name": "transmission_network_length",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1604,
+    "variable_name": "transmission_network_planned_downtime_events",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1606,
+    "variable_name": "transmission_network_unplanned_downtime_events",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   },
+   {
+    "input_def_id": 1607,
+    "variable_name": "transmission_network_unplanned_downtime_duration",
+    "energy_provider_id": null,
+    "energy_type_id": null,
+    "energy_source_id": null
+   }
+  ],
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Operational",
+  "subcategory": "Transmission",
+  "unit": "Outages/100km",
+  "agg_level": "Lvl_ServiceArea",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 119,
+  "name": "Transmission SAIDI Planned",
+  "current_description": "Transmission SAIDI Planned",
+  "formula": null,
+  "formula_inputs": null,
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Operational",
+  "subcategory": "Transmission",
+  "unit": "Minutes/Customer",
+  "agg_level": "Lvl_ServiceArea",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 120,
+  "name": "Transmission SAIDI Unplanned",
+  "current_description": "Transmission SAIDI Unplanned",
+  "formula": null,
+  "formula_inputs": null,
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Operational",
+  "subcategory": "Transmission",
+  "unit": "Minutes/Customer",
+  "agg_level": "Lvl_ServiceArea",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 121,
+  "name": "Transmission SAIFI Planned",
+  "current_description": "Transmission SAIFI Planned",
+  "formula": null,
+  "formula_inputs": null,
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Operational",
+  "subcategory": "Transmission",
+  "unit": "Events/Customer",
+  "agg_level": "Lvl_ServiceArea",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ },
+ {
+  "id": 122,
+  "name": "Transmission SAIFI Unplanned",
+  "current_description": "Transmission SAIFI Unplanned",
+  "formula": null,
+  "formula_inputs": null,
+  "type": "benchmarking",
+  "is_aggregated": false,
+  "is_currency": true,
+  "category": "Operational",
+  "subcategory": "Transmission",
+  "unit": "Events/Customer",
+  "agg_level": "Lvl_ServiceArea",
+  "benchmark_description": null,
+  "direction": null,
+  "developing_nation_benchmark": null,
+  "developed_nation_benchmark": null,
+  "pacific_regional_average": null,
+  "ppa_target": null,
+  "benchmark_unit": null
+ }
+]
