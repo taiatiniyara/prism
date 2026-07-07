@@ -28,6 +28,8 @@ export interface FormulaInput {
 
 export type InputDefinitionAlternativeNames = Record<string, string>;
 
+export type DefinitionStatus = "draft" | "curated";
+
 export const inputDefinitions = pgTable("input_definitions", {
   id: serial("id").primaryKey().notNull(),
   name: varchar("name", { length: 255 }).notNull(),
@@ -75,6 +77,11 @@ export const inputDefinitions = pgTable("input_definitions", {
   alternative_names:
     json("alternative_names").$type<InputDefinitionAlternativeNames>(),
   sort_order: integer("sort_order").default(0).notNull(),
+  definition: text("definition"),
+  synonyms: json("synonyms").$type<string[]>(),
+  definition_status: varchar("definition_status", {
+    length: 16,
+  }).$type<DefinitionStatus>(),
 });
 export type InputDefinition = typeof inputDefinitions.$inferSelect & {
   category?: string | null;

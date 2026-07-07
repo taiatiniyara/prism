@@ -11,7 +11,7 @@ import {
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
-import { dataEntries, FormulaInput } from "./dataEntry";
+import { dataEntries, DefinitionStatus, FormulaInput } from "./dataEntry";
 import { reportPeriods } from "./reportPeriods";
 import { managedListItems } from "./managedLists";
 import { organisations } from "./utility";
@@ -82,6 +82,11 @@ export const kpiDefinitions = pgTable("kpi_definitions", {
   is_kpi_input: boolean("is_kpi_input").default(true).notNull(),
   owner_user_id: text("owner_user_id").references(() => user.id),
   is_private: boolean("is_private").default(false).notNull(),
+  definition: text("definition"),
+  synonyms: json("synonyms").$type<string[]>(),
+  definition_status: varchar("definition_status", {
+    length: 16,
+  }).$type<DefinitionStatus>(),
   updated_at: timestamp("updated_at")
     .defaultNow()
     .$onUpdate(() => /* @__PURE__ */ new Date())
