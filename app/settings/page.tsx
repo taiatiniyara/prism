@@ -2,9 +2,9 @@ import Link from "next/link";
 
 import { getSession } from "@/lib/session.service";
 
-// The BSC Master Template editor is restricted to DEV/BMO (the page itself also
-// enforces this).
-const BSC_TEMPLATE_ADMIN_ROLES = new Set(["DEV", "BMO"]);
+// The BSC Master Template editor and the KPI Formula Guide are restricted to
+// DEV/BMO (each route also enforces this itself).
+const DEV_BMO_ROLES = new Set(["DEV", "BMO"]);
 
 export default async function SettingsHomePage() {
   const session = await getSession();
@@ -18,15 +18,24 @@ export default async function SettingsHomePage() {
     .filter((item) => item.page.startsWith("/settings/"))
     .map((item) => ({ label: item.name, href: item.page }));
 
-  // Robustness: the BSC Master Template card is gated purely by role, so it shows
-  // even on environments whose DB is missing the sidebar_access row — the
-  // data-only migration `0016_bsc_template_sidebar.sql` is NOT applied by the
-  // deploy's `db-push` (schema only). De-duped against the DB-driven list above.
-  if (
-    BSC_TEMPLATE_ADMIN_ROLES.has(role) &&
-    !cards.some((c) => c.href === "/settings/bsc-template")
-  ) {
-    cards.push({ label: "BSC Master Template", href: "/settings/bsc-template" });
+  // Robustness: these DEV/BMO cards are gated purely by role, so they show even
+  // on environments whose DB is missing the sidebar_access rows — the data-only
+  // migrations (`0016_bsc_template_sidebar.sql`, `0032_kpi_formula_guide_sidebar.sql`)
+  // are NOT applied by the deploy's `db-push` (schema only). De-duped against the
+  // DB-driven list above.
+  if (DEV_BMO_ROLES.has(role)) {
+    if (!cards.some((c) => c.href === "/settings/bsc-template")) {
+      cards.push({
+        label: "BSC Master Template",
+        href: "/settings/bsc-template",
+      });
+    }
+    if (!cards.some((c) => c.href === "/settings/kpi-formula-guide")) {
+      cards.push({
+        label: "KPI Formula Guide",
+        href: "/settings/kpi-formula-guide",
+      });
+    }
   }
 
   return (
