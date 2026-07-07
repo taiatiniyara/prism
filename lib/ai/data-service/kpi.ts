@@ -1,4 +1,4 @@
-import { GetReportPeriods } from "@/app/data-entry/service";
+import { getAccessibleReportPeriods } from "./common";
 import type { CurrentUser } from "@/lib/user.service";
 import { hasGlobalUtilityAccess } from "@/lib/user.service";
 import { withCache } from "../cache";
@@ -44,7 +44,7 @@ export const getKpiStatus = async (
   const forceAllUtilities = options.all_utilities === true && hasGlobalUtilityAccess(user);
   const periods = await withCache(
     `report_periods:${forceAllUtilities}:${user.id}`,
-    () => GetReportPeriods(user, { forceAllUtilities }),
+    () => getAccessibleReportPeriods(user, { forceAllUtilities }),
   );
 
   if (periods.length === 0) {

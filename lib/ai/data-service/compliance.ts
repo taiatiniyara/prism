@@ -5,7 +5,7 @@ import { organisations } from "@/db/schema/utility";
 import { eq, and, sql } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
 import { hasGlobalUtilityAccess } from "@/lib/user.service";
-import { GetReportPeriods } from "@/app/data-entry/service";
+import { getAccessibleReportPeriods } from "./common";
 import { createToolMetadata } from "./common";
 import type { AiToolResult } from "../types";
 import { withCache } from "../cache";
@@ -45,7 +45,7 @@ export const getComplianceStatus = async (
 
   const periods = await withCache(
     `report_periods:${forceAll}:${user.id}`,
-    () => GetReportPeriods(user, { forceAllUtilities: forceAll }),
+    () => getAccessibleReportPeriods(user, { forceAllUtilities: forceAll }),
   );
 
   const targetPeriodId = options.report_period_id ?? periods[0]?.Id;

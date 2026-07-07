@@ -4,7 +4,7 @@ import { countries, subRegions } from "@/db/schema/country";
 import { eq, sql } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
 import { hasGlobalUtilityAccess } from "@/lib/user.service";
-import { GetReportPeriods } from "@/app/data-entry/service";
+import { getAccessibleReportPeriods } from "./common";
 import { listReviewKpiRows } from "@/app/data-entry/review-kpi/service";
 import { createToolMetadata, resolvePeriod } from "./common";
 import type { AiToolResult } from "../types";
@@ -72,7 +72,7 @@ export const getServiceAreaBreakdown = async (
     }))
     .sort((a, b) => a.completeness_pct - b.completeness_pct);
 
-  const periods = await GetReportPeriods(user, { forceAllUtilities: hasGlobalUtilityAccess(user) });
+  const periods = await getAccessibleReportPeriods(user, { forceAllUtilities: hasGlobalUtilityAccess(user) });
   const match = periods.find((p) => p.Id === period.id);
 
   return {
@@ -109,7 +109,7 @@ export const getPeerGroupAnalysis = async (
     group_value?: string;
   } = {},
 ): Promise<AiToolResult<PeerGroupData>> => {
-  const periods = await GetReportPeriods(user, { forceAllUtilities: hasGlobalUtilityAccess(user) });
+  const periods = await getAccessibleReportPeriods(user, { forceAllUtilities: hasGlobalUtilityAccess(user) });
   if (periods.length === 0) {
     return {
       data: { peers: [], group_average_completion: 0, group_average_score: null, user_utility_rank: null, total_peers: 0 },
@@ -198,7 +198,7 @@ export const comparePeriods = async (
     year_b?: number | null;
   } = {},
 ): Promise<AiToolResult<ComparePeriodsData>> => {
-  const periods = await GetReportPeriods(user, { forceAllUtilities: false });
+  const periods = await getAccessibleReportPeriods(user, { forceAllUtilities: false });
   if (periods.length < 2) {
     return {
       data: { comparisons: [], period_a: "", period_b: "", utility: "" },

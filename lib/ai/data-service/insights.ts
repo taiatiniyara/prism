@@ -1,4 +1,4 @@
-import { GetReportPeriods } from "@/app/data-entry/service";
+import { getAccessibleReportPeriods } from "./common";
 import { db } from "@/db/connection";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { kpi, kpiDefinitions } from "@/db/schema/kpi";
@@ -31,7 +31,7 @@ export const getRiskAssessment = async (
     all_utilities?: boolean;
   } = {},
 ): Promise<AiToolResult<RiskAssessmentData>> => {
-  const periods = await GetReportPeriods(user, {
+  const periods = await getAccessibleReportPeriods(user, {
     forceAllUtilities: options.all_utilities === true && hasGlobalUtilityAccess(user),
   });
 
@@ -232,7 +232,7 @@ export const getWhatChanged = async (
     year?: number | null;
   } = {},
 ): Promise<AiToolResult<WhatChangedData>> => {
-  const periods = await GetReportPeriods(user, { forceAllUtilities: false });
+  const periods = await getAccessibleReportPeriods(user, { forceAllUtilities: false });
   if (periods.length < 2) {
     return {
       data: { items: [], period_a: null, period_b: null },
