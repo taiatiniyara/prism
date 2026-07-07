@@ -24,6 +24,22 @@ for it to work end-to-end, plus the engine gaps the guide documents.
 | 9 | Give aggregation levels an explicit sort order (not managed-list item IDs) | `shouldRollup` compares raw IDs; inserting a new level between existing ones would break the coarser-than check silently | pending |
 | 10 | Update the guide when #7/#8 land (Part 4 blank-filter warning, Part 2/7 station-level status) | Keep the doc truthful | pending |
 
+## Formula Builder UI changes (`/settings/kpi` — assessed 2026-07-08)
+
+The builder already supports per-variable dimension filters (inline
+`WHERE provider=… AND type=… AND source=…` syntax, parsed into
+`formula_inputs` ids and reconstructed on load) and a live preview using the
+real engine evaluator. But it cannot express the guide's core pattern:
+
+| # | Change | Why | Status |
+|---|---|---|---|
+| 11 | **Alias support — the blocker.** Tokens are the input definition's canonical `variable_name`; filters are keyed by input id; `getFormulaInputs` dedups by `input_def_id`. One input = one binding = one filter set, so "same input twice with different filters" (renewable share, IPP share) is impossible to author — which is exactly how IPP Generation became X÷X. The engine already supports aliases (bindings keyed by free-text `variable_name`); the UI needs alias creation on drop (suggest `<variable>__<filter>`), filters keyed by token not input id, and dedup by variable name | Blocks re-authoring the two always-100% KPIs (item 5) | pending |
+| 12 | Fix `all`/`*` WHERE values: `parseInlineFormula` maps them to null, which the engine reads as "unlabelled rows only", and unfiltered tokens display "All filters" — the UI actively teaches the wrong semantics. Pair with the engine "Any" option (item 7) or warn until it exists | Silent wrong numbers | pending |
+| 13 | Validation: same token with two different WHERE clauses silently merges (last-wins in `effectiveInputFilters`); should error and point to aliases. Also flag recipe tokens bound to nothing | Guardrail for the naming rule | pending |
+| 14 | Surface levels in the builder: show the KPI's output level and each input's level + a "rows will be summed" indicator (agg_level editing already exists on the KPI definition form on the same page) | Author currently gets no roll-up signal | pending |
+| 15 | Preview with real data + roll-up: the service already ships `actualSamples` (real rows with dimension ids) but the preview ignores them and hash-generates one value per token. Filter samples per binding and SUM them (mirroring `resolveInputs`) so filter mistakes and the blank-filter trap surface before saving | Preview currently can't catch the bugs this guide is about | pending |
+| 16 | Review `app/settings/inputs/formulaBuilder.tsx` (aggregated-input builder) for the same gaps once 11–15 are settled | Shares the design | pending |
+
 ## Related, already tracked elsewhere
 
 - Remaining formula bugs from the dictionary pass (Total Employees Male, Planned
