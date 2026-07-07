@@ -1,10 +1,76 @@
 import { db } from "@/db/connection";
 import { organisations } from "@/db/schema/utility";
 import { reportPeriods } from "@/db/schema/reportPeriods";
-import { eq, desc, and, sql } from "drizzle-orm";
+import { eq, desc, and, or, sql, type SQL } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
 import { hasGlobalUtilityAccess } from "@/lib/user.service";
+import { GetReportPeriods, type ReportPeriodDTO } from "@/app/data-entry/service";
+import type { GetReportPeriodsOptions } from "@/app/data-entry/service";
 import type { AiToolMetadata } from "../types";
+
+// PPA access policy: utility Monthly datasets are private to the owning
+// utility. Global-access roles (BMO/DEV) may reach other utilities'
+// Financial Year periods only.
+export const FINANCIAL_YEAR_REPORT_TYPE = "Financial Year";
+
+const fyReportTypePredicate = (): SQL =>
+  sql`${reportPeriods.report_type_id} IN (
+    SELECT mli.id FROM managed_list_items mli
+    WHERE mli.name = ${FINANCIAL_YEAR_REPORT_TYPE}
+  )`;
+
+export const periodAccessPredicate = (user: CurrentUser): SQL | undefined => {
+  if (!hasGlobalUtilityAccess(user)) {
+    return user.org_id != null
+      ? eq(reportPeriods.utility_id, user.org_id)
+      : undefined;
+  }
+  return user.org_id != null
+    ? or(eq(reportPeriods.utility_id, user.org_id), fyReportTypePredicate())
+    : fyReportTypePredicate();
+};
+
+export const isPeriodIdAccessible = async (
+  user: CurrentUser,
+  periodId: number,
+): Promise<boolean> => {
+  const [row] = await db
+    .select({
+      utilityId: reportPeriods.utility_id,
+      typeName: sql<string | null>`(
+        SELECT mli.name FROM managed_list_items mli
+        WHERE mli.id = ${reportPeriods.report_type_id}
+      )`,
+    })
+    .from(reportPeriods)
+    .where(eq(reportPeriods.id, periodId))
+    .limit(1);
+
+  if (!row) return false;
+  if (user.org_id != null && row.utilityId === user.org_id) return true;
+  if (!hasGlobalUtilityAccess(user)) return user.org_id == null;
+  return row.typeName === FINANCIAL_YEAR_REPORT_TYPE;
+};
+
+export const filterAccessibleReportPeriods = (
+  user: CurrentUser,
+  periods: ReportPeriodDTO[],
+): ReportPeriodDTO[] => {
+  if (!hasGlobalUtilityAccess(user)) return periods;
+  return periods.filter(
+    (p) =>
+      p.Report_Type === FINANCIAL_YEAR_REPORT_TYPE ||
+      (user.org_id != null && p.Utility_id === user.org_id),
+  );
+};
+
+export const getAccessibleReportPeriods = async (
+  user: CurrentUser,
+  options: GetReportPeriodsOptions = {},
+): Promise<ReportPeriodDTO[]> => {
+  const periods = await GetReportPeriods(user, options);
+  return filterAccessibleReportPeriods(user, periods);
+};
 
 export interface AiDataServiceContext {
   user: CurrentUser;
@@ -68,12 +134,15 @@ export const resolvePeriodId = async (
   user: CurrentUser,
   options: ResolvePeriodOptions = {},
 ): Promise<number | null> => {
-  if (options.report_period_id) return options.report_period_id;
+  if (options.report_period_id) {
+    return (await isPeriodIdAccessible(user, options.report_period_id))
+      ? options.report_period_id
+      : null;
+  }
 
   const predicates = [];
-  if (!hasGlobalUtilityAccess(user) && user.org_id != null) {
-    predicates.push(eq(reportPeriods.utility_id, user.org_id));
-  }
+  const access = periodAccessPredicate(user);
+  if (access) predicates.push(access);
   if (options.year) {
     predicates.push(
       sql`EXTRACT(YEAR FROM ${reportPeriods.report_date}) = ${options.year}`,
@@ -100,9 +169,8 @@ export const resolveRecentPeriodIds = async (
   limit: number = 5,
 ): Promise<number[]> => {
   const predicates = [];
-  if (!hasGlobalUtilityAccess(user) && user.org_id != null) {
-    predicates.push(eq(reportPeriods.utility_id, user.org_id));
-  }
+  const access = periodAccessPredicate(user);
+  if (access) predicates.push(access);
 
   const periods = await db
     .select({ id: reportPeriods.id })
@@ -124,6 +192,9 @@ export const resolvePeriod = async (
   utilityId: number;
 } | null> => {
   if (options.report_period_id) {
+    if (!(await isPeriodIdAccessible(user, options.report_period_id))) {
+      return null;
+    }
     const [period] = await db
       .select({
         id: reportPeriods.id,
@@ -139,9 +210,8 @@ export const resolvePeriod = async (
   }
 
   const predicates = [];
-  if (!hasGlobalUtilityAccess(user) && user.org_id != null) {
-    predicates.push(eq(reportPeriods.utility_id, user.org_id));
-  }
+  const access = periodAccessPredicate(user);
+  if (access) predicates.push(access);
   if (options.year) {
     predicates.push(
       sql`EXTRACT(YEAR FROM ${reportPeriods.report_date}) = ${options.year}`,

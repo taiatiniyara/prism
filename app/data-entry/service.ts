@@ -42,7 +42,7 @@ export interface ReportPeriodDTO {
   Updated: string;
 }
 
-interface GetReportPeriodsOptions {
+export interface GetReportPeriodsOptions {
   forceAllUtilities?: boolean;
 }
 
