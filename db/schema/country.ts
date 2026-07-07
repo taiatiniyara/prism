@@ -8,12 +8,16 @@ import {
 } from "drizzle-orm/pg-core";
 import { managedListItems } from "./managedLists";
 
+type Region = "Oceania" | "Europe" | "Asia" | "Africa" | "Americas";
+
 export const subRegions = pgTable("sub_regions", {
   id: serial("id").primaryKey().notNull(),
   name: varchar("name", { length: 255 }).notNull(),
   un_continental_region: varchar("un_continental_region", {
     length: 255,
-  }).notNull(),
+  })
+    .notNull()
+    .$type<Region>(),
   is_active: boolean("is_active").notNull().default(true),
 });
 export type SubRegion = typeof subRegions.$inferSelect;
