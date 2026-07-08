@@ -18,14 +18,18 @@ Items 1–4 can produce **wrong published KPI values** and should be verified be
 2. **`Planned SAIDI` / `Planned SAIFI`** — formulas divide by *customers affected* rather than
    *total customers served*. This is methodologically non-standard (CAIDI-like) and overstates the
    indices relative to the industry definition used in the PPA Benchmarking Report.
-   — **BLOCKED (2026-07-08): there is NO active "total customers served" input** (only inactive
-   legacy ones: 153 `electricitycustomers`, 1501 `electricity_customers_metered_connections`,
-   95 org-level total). Options: (a) (re)activate a customers-served input and re-point the
-   denominators — standard-compliant, but adds a data-collection requirement; (b) keep the
-   formulas and rename/redocument the KPIs as CAIDI-like. Note also that `Unplanned SAIDI` (125)
-   and `Unplanned SAIFI` (126) have **no formulas at all**, and the Planned SAIDI numerator input
-   1802 (`total_planned_interruptions_customer_duration`) is **inactive** — verify duration data
-   is still being collected before deciding.
+   — **SAIFI RESOLVED on dev 2026-07-08** (user confirmed customers-served data exists — it was
+   under legacy input 153): `scripts/migrate-customers-served.ts` deduped 153's rows (248 → 105,
+   preserving All GEN scope tags) into input 1501 and activated it; `scripts/fix-saifi-formulas.ts`
+   re-pointed **Planned SAIFI (124)** and authored **Unplanned SAIFI (126)** as
+   `events / electricity_customers_metered_connections` (bindings carry the full
+   provider=21/type=30/source=40 triple the engine's matcher requires), and re-pointed the
+   **Planned SAIDI (123)** denominator as prep. End-to-end verified via `scripts/verify-saifi.ts`
+   (engine output matches hand computation, e.g. Majuro Grid 25/5,097). **Expect SAIFI values to
+   drop vs previously published** — customers-served ≥ customers-affected. **SAIDI still cannot
+   compute**: the duration numerators (1802/1805) have zero data ever collected and are inactive —
+   either restart collecting customer-minutes or park the SAIDI KPIs. `Unplanned SAIDI` (125)
+   still has no formula. Run both scripts on prod after re-checking with the inspect scripts.
 3. **`Generator Availability Factor`** — formula has unbalanced parentheses; the KPI worker's
    evaluator will fail on it. Check `kpi_calculation_attempts` for repeated failures.
    — **FIXED on dev 2026-07-08** (`(hours − (planned + unplanned)) / hours`, plain ratio per the
@@ -49,6 +53,15 @@ Items 1–4 can produce **wrong published KPI values** and should be verified be
     `…_customer_duration`) while their event/affected counterparts are active — yet 1802 is the
     numerator of the active Planned SAIDI. If duration data is no longer collected, Planned SAIDI
     cannot compute at all.
+16. **Scopes hold blank and conflicting duplicate rows, and the engine picked rows blindly** —
+    e.g. one (period, grid, resource) scope held 75 rows for Electricity Generated / Oil for
+    Generators: mostly blank legacy copies plus **two conflicting Electricity Generated values
+    (147.945 and 63)**. The KPI worker's single-value path took `candidates[0]` with no ordering,
+    so a blank copy could win and fail the KPI as "missing-input" nondeterministically.
+    — **ENGINE FIXED 2026-07-08** (`resolveInputs.ts`: rows ordered newest-first; the single-value
+    path now takes the first candidate that actually carries a number). The conflicting-value
+    pairs themselves still need a data cleanup pass (ties into the total-vs-detail validation
+    opportunity in the KPI guide follow-ups, item 19).
 
 ## Needs developer verification (may be intentional)
 
