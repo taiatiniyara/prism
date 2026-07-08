@@ -26,10 +26,21 @@ Items 1–4 can produce **wrong published KPI values** and should be verified be
    provider=21/type=30/source=40 triple the engine's matcher requires), and re-pointed the
    **Planned SAIDI (123)** denominator as prep. End-to-end verified via `scripts/verify-saifi.ts`
    (engine output matches hand computation, e.g. Majuro Grid 25/5,097). **Expect SAIFI values to
-   drop vs previously published** — customers-served ≥ customers-affected. **SAIDI still cannot
-   compute**: the duration numerators (1802/1805) have zero data ever collected and are inactive —
-   either restart collecting customer-minutes or park the SAIDI KPIs. `Unplanned SAIDI` (125)
-   still has no formula. Run both scripts on prod after re-checking with the inspect scripts.
+   drop vs previously published** — customers-served ≥ customers-affected. Run both scripts on prod
+   after re-checking with the inspect scripts.
+   — **SAIDI UPDATE (2026-07-08):** the customer-minutes duration data **does exist in the source
+   system** — it's a **migration-mapping gap** (source minutes didn't land under 1802/1805); BMO to
+   recheck the source→PRISM mapping. Inputs **1802 + 1805 activated** on dev
+   (`scripts/activate-saidi-duration-inputs.ts`, guarded, run on prod too) so they surface in data
+   entry and can receive the re-migrated values.
+   **TWO SAIDI STEPS REMAIN, deferred until the duration data lands so they can be verified like SAIFI:**
+   (a) **Planned SAIDI (123) numerator binding is currently UNTAGGED** (null provider/type/source).
+   Its sibling event inputs (1800/1803) are tagged provider=21, source=40 (→type 30); the re-migrated
+   1802 will presumably match, so the binding must be re-tagged to that triple (or to 20/30/40 if the
+   All-GEN provider retag is applied) or Planned SAIDI will silently fail with "missing input".
+   (b) **Unplanned SAIDI (125) still has no formula** — author as
+   `total_unplanned_interruptions_customer_duration / electricity_customers_metered_connections`
+   with matching tags. Both to be done + verified once 1802/1805 hold data.
 3. **`Generator Availability Factor`** — formula has unbalanced parentheses; the KPI worker's
    evaluator will fail on it. Check `kpi_calculation_attempts` for repeated failures.
    — **FIXED on dev 2026-07-08** (`(hours − (planned + unplanned)) / hours`, plain ratio per the
