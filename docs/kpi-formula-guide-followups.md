@@ -24,6 +24,18 @@ for it to work end-to-end, plus the engine gaps the guide documents.
 >   and the engine robustness fix (resolveInputs newest-first/skip-blank) survive.
 > - **Gold-layer Phase-1 work is now a hard dependency for KPI correctness**, not
 >   just an AI/reporting enabler. Resume the parked `/to-issues` breakdown.
+>
+> **RESOLVED (2026-07-08, BMO): the gold layer owns ALL raw-data aggregation** —
+> both within-level source sums (diesel+hydro+solar for a service area) and
+> cross-level hierarchy (service area → utility → country → …). The **kpi-worker
+> stays finest-scope only** and gains no same-level Any-sum. Item 7's `-1` Any
+> sentinel is therefore **not needed in the worker**; the "total across sources"
+> semantics live in the gold-layer aggregation SQL. Note `formula_inputs` still
+> needs to express per-variable scope (e.g. type=Renewable vs any) so the gold
+> layer knows what to sum when it re-applies each stored formula per level — that
+> representation stays; only the *actor* moves from worker to gold layer.
+> Definition-reseed protection (point 3): BMO to fold formula fixes into the
+> definition source so a reseed doesn't regress them. Adjourned here.
 
 ## To make the page live
 
