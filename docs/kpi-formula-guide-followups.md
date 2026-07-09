@@ -4,6 +4,39 @@ The guide ships at `/settings/kpi-formula-guide` (DEV/BMO only), served from
 `docs/kpi-formula-guide.html`. Created 2026-07-07. These are the items needed
 for it to work end-to-end, plus the engine gaps the guide documents.
 
+> **DIRECTION CHANGE (2026-07-08, BMO):** the migration scripts are being
+> reworked to (1) **migrate raw inputs only** — PRISM 2 re-computes all
+> calculated/aggregated inputs and KPIs — and (2) **remove all "All GEN" /
+> "All Types" / "All Sources" dummy datasets**, with cross-source/level totals
+> produced by the **gold layer** (sum raw inputs → re-apply stored formulas per
+> level; the parked Phase-1 plan). Consequences for the items below:
+> - **All GEN provider retag: CANCELLED** — the rows are being deleted, not
+>   relabelled. Do not run a 21→20 retag.
+> - **Item 7 (Any sentinel) is now REQUIRED, not optional** — with the All GEN
+>   "total" rows gone, every "total across sources at the same level" must come
+>   from a real aggregation (Any-sum in the worker, or the gold layer). The
+>   "exclude derived-type-All" caveat is moot once All GEN is gone.
+> - **Items 17–19 (deactivate All Conventional/Renewable, ESS, stray provider):
+>   SUPERSEDED** by the wholesale removal of the All-* entries.
+> - **Recent binding-tag work (SAIFI/Engine Oil provider=21/type=30/source=40;
+>   the 153→1501 customers-served stopgap) will need re-verification/re-authoring
+>   against the raw-only model.** The formula-TEXT bug fixes (findings 1/3/4/13)
+>   and the engine robustness fix (resolveInputs newest-first/skip-blank) survive.
+> - **Gold-layer Phase-1 work is now a hard dependency for KPI correctness**, not
+>   just an AI/reporting enabler. Resume the parked `/to-issues` breakdown.
+>
+> **RESOLVED (2026-07-08, BMO): the gold layer owns ALL raw-data aggregation** —
+> both within-level source sums (diesel+hydro+solar for a service area) and
+> cross-level hierarchy (service area → utility → country → …). The **kpi-worker
+> stays finest-scope only** and gains no same-level Any-sum. Item 7's `-1` Any
+> sentinel is therefore **not needed in the worker**; the "total across sources"
+> semantics live in the gold-layer aggregation SQL. Note `formula_inputs` still
+> needs to express per-variable scope (e.g. type=Renewable vs any) so the gold
+> layer knows what to sum when it re-applies each stored formula per level — that
+> representation stays; only the *actor* moves from worker to gold layer.
+> Definition-reseed protection (point 3): BMO to fold formula fixes into the
+> definition source so a reseed doesn't regress them. Adjourned here.
+
 ## To make the page live
 
 | # | Action | Owner | Status |

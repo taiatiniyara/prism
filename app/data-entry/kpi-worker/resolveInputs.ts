@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 
 import { db } from "@/db/connection";
 import type { FormulaInput } from "@/db/schema/dataEntry";
@@ -205,7 +205,10 @@ export const resolveFormulaInputValues = async (
       energySourceId: dataEntries.energy_source_id,
     })
     .from(dataEntries)
-    .where(and(...scopeConditions));
+    .where(and(...scopeConditions))
+    // Newest first, so the single-value path below deterministically prefers
+    // the most recently updated row when a scope holds several copies.
+    .orderBy(desc(dataEntries.updatedAt));
 
   const energySourceIds = [
     ...new Set(
@@ -279,8 +282,13 @@ export const resolveFormulaInputValues = async (
       continue;
     }
 
-    const firstValue = candidates[0] ?? null;
-    const numeric = firstValue ? asNumber(firstValue.value) : null;
+    // A scope can hold several copies of a row (blank placeholders, legacy
+    // imports); take the first candidate that actually carries a number
+    // rather than failing on a blank one.
+    const numeric =
+      candidates
+        .map((candidate) => asNumber(candidate.value))
+        .find((value) => value != null) ?? null;
 
     if (numeric == null) {
       missingVariables.push(formulaInput.variable_name);
