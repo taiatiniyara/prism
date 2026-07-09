@@ -17,9 +17,9 @@ export async function GET(request: Request) {
 
     const data = result.rows.map((row) => {
       return {
+        ...row,
         category_name: row.category_name || null,
         subcategory_name: row.subcategory_name || null,
-        ...row,
       };
     });
 
