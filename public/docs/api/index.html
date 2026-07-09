@@ -53,10 +53,10 @@
 <body>
 <div class="container">
 <h1>prism API Reference</h1>
-<p class="subtitle">Auto-generated from 119 route files &middot; 137 endpoints &middot; 16 tag groups</p>
+<p class="subtitle">Auto-generated from 121 route files &middot; 139 endpoints &middot; 17 tag groups</p>
 <div class="stats">
 <span class="stat"><strong>DELETE</strong> 3</span>
-<span class="stat"><strong>GET</strong> 100</span>
+<span class="stat"><strong>GET</strong> 102</span>
 <span class="stat"><strong>PATCH</strong> 3</span>
 <span class="stat"><strong>POST</strong> 22</span>
 <span class="stat"><strong>PUT</strong> 9</span>
@@ -171,6 +171,52 @@
 <div class="endpoint">
   <div class="ep-header" onclick="this.classList.toggle('open')">
     <span class="method" style="background:#22c55e">GET</span>
+    <span class="ep-path">/api/ai/sessions</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">List AI chat sessions for the current user</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> Session (Better Auth)</span>
+    </div>
+    <div class="ep-params"><strong>Parameters:</strong><ul><li><code>admin_all</code> (query, required)</li><li><code>offset</code> (query, required)</li><li><code>limit</code> (query, required)</li></ul></div>
+    
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-4xx">401 Unauthorized</span>
+<span class="status-code status-4xx">403 Forbidden</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#3b82f6">POST</span>
+    <span class="ep-path">/api/ai/sessions</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">Create a new AI chat session</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> Session (Better Auth)</span>
+    </div>
+    
+    <div class="ep-meta"><span><strong>Body:</strong> JSON body</span></div>
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-4xx">401 Unauthorized</span>
+<span class="status-code status-4xx">403 Forbidden</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#22c55e">GET</span>
     <span class="ep-path">/api/ai/sessions/{sessionId}</span>
     <span class="ep-arrow">&#9654;</span>
   </div>
@@ -246,52 +292,6 @@
 <div class="endpoint">
   <div class="ep-header" onclick="this.classList.toggle('open')">
     <span class="method" style="background:#22c55e">GET</span>
-    <span class="ep-path">/api/ai/sessions</span>
-    <span class="ep-arrow">&#9654;</span>
-  </div>
-  <div class="ep-body">
-    <p style="margin:0 0 8px">List AI chat sessions for the current user</p>
-    <div class="ep-meta">
-      <span><strong>Auth:</strong> Session (Better Auth)</span>
-    </div>
-    <div class="ep-params"><strong>Parameters:</strong><ul><li><code>admin_all</code> (query, required)</li><li><code>offset</code> (query, required)</li><li><code>limit</code> (query, required)</li></ul></div>
-    
-    <div style="margin-top:8px">
-      <strong>Responses:</strong>
-      <div class="status-list" style="margin-top:4px">
-        <span class="status-code status-4xx">401 Unauthorized</span>
-<span class="status-code status-4xx">403 Forbidden</span>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="endpoint">
-  <div class="ep-header" onclick="this.classList.toggle('open')">
-    <span class="method" style="background:#3b82f6">POST</span>
-    <span class="ep-path">/api/ai/sessions</span>
-    <span class="ep-arrow">&#9654;</span>
-  </div>
-  <div class="ep-body">
-    <p style="margin:0 0 8px">Create a new AI chat session</p>
-    <div class="ep-meta">
-      <span><strong>Auth:</strong> Session (Better Auth)</span>
-    </div>
-    
-    <div class="ep-meta"><span><strong>Body:</strong> JSON body</span></div>
-    <div style="margin-top:8px">
-      <strong>Responses:</strong>
-      <div class="status-list" style="margin-top:4px">
-        <span class="status-code status-4xx">401 Unauthorized</span>
-<span class="status-code status-4xx">403 Forbidden</span>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="endpoint">
-  <div class="ep-header" onclick="this.classList.toggle('open')">
-    <span class="method" style="background:#22c55e">GET</span>
     <span class="ep-path">/api/ai/usage</span>
     <span class="ep-arrow">&#9654;</span>
   </div>
@@ -348,28 +348,6 @@
 <div class="endpoint">
   <div class="ep-header" onclick="this.classList.toggle('open')">
     <span class="method" style="background:#22c55e">GET</span>
-    <span class="ep-path">/api/data-entry/aggregated-runs/{runId}</span>
-    <span class="ep-arrow">&#9654;</span>
-  </div>
-  <div class="ep-body">
-    <p style="margin:0 0 8px">Get aggregated run details by ID</p>
-    <div class="ep-meta">
-      <span><strong>Auth:</strong> Session (Better Auth)</span>
-    </div>
-    <div class="ep-params"><strong>Parameters:</strong><ul><li><code>{runId}</code> (path, required)</li></ul></div>
-    
-    <div style="margin-top:8px">
-      <strong>Responses:</strong>
-      <div class="status-list" style="margin-top:4px">
-        <span class="status-code status-4xx">404 Not Found</span>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="endpoint">
-  <div class="ep-header" onclick="this.classList.toggle('open')">
-    <span class="method" style="background:#22c55e">GET</span>
     <span class="ep-path">/api/data-entry/aggregated-runs</span>
     <span class="ep-arrow">&#9654;</span>
   </div>
@@ -384,6 +362,28 @@
       <strong>Responses:</strong>
       <div class="status-list" style="margin-top:4px">
         <span class="status-code status-2xx">200 OK</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#22c55e">GET</span>
+    <span class="ep-path">/api/data-entry/aggregated-runs/{runId}</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">Get aggregated run details by ID</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> Session (Better Auth)</span>
+    </div>
+    <div class="ep-params"><strong>Parameters:</strong><ul><li><code>{runId}</code> (path, required)</li></ul></div>
+    
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-4xx">404 Not Found</span>
       </div>
     </div>
   </div>
@@ -479,6 +479,28 @@
 
 <div class="endpoint">
   <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#3b82f6">POST</span>
+    <span class="ep-path">/api/data-entry/balanced-scorecard/new-bsc/strategy-map/links</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">Create strategy map link</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> Session (Better Auth)</span>
+    </div>
+    
+    <div class="ep-meta"><span><strong>Body:</strong> JSON body — validated by parseCreateObjectiveLinkPayload()</span></div>
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-2xx">201 Created</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
     <span class="method" style="background:#f59e0b">PUT</span>
     <span class="ep-path">/api/data-entry/balanced-scorecard/new-bsc/strategy-map/links/{id}</span>
     <span class="ep-arrow">&#9654;</span>
@@ -516,28 +538,6 @@
       <strong>Responses:</strong>
       <div class="status-list" style="margin-top:4px">
         <span class="status-code status-2xx">200 OK</span>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="endpoint">
-  <div class="ep-header" onclick="this.classList.toggle('open')">
-    <span class="method" style="background:#3b82f6">POST</span>
-    <span class="ep-path">/api/data-entry/balanced-scorecard/new-bsc/strategy-map/links</span>
-    <span class="ep-arrow">&#9654;</span>
-  </div>
-  <div class="ep-body">
-    <p style="margin:0 0 8px">Create strategy map link</p>
-    <div class="ep-meta">
-      <span><strong>Auth:</strong> Session (Better Auth)</span>
-    </div>
-    
-    <div class="ep-meta"><span><strong>Body:</strong> JSON body — validated by parseCreateObjectiveLinkPayload()</span></div>
-    <div style="margin-top:8px">
-      <strong>Responses:</strong>
-      <div class="status-list" style="margin-top:4px">
-        <span class="status-code status-2xx">201 Created</span>
       </div>
     </div>
   </div>
@@ -655,6 +655,50 @@
 
 <div class="endpoint">
   <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#22c55e">GET</span>
+    <span class="ep-path">/api/data-entry/balanced-scorecard/new-bsc/template</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">List all BSC template nodes</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> Session (Better Auth)</span>
+    </div>
+    
+    
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-2xx">200 OK</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#3b82f6">POST</span>
+    <span class="ep-path">/api/data-entry/balanced-scorecard/new-bsc/template</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">Create a new BSC template node</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> Session (Better Auth)</span>
+    </div>
+    
+    <div class="ep-meta"><span><strong>Body:</strong> JSON body — validated by parseCreateTemplateNodePayload()</span></div>
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-2xx">200 OK</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
     <span class="method" style="background:#f59e0b">PUT</span>
     <span class="ep-path">/api/data-entry/balanced-scorecard/new-bsc/template/{id}/links</span>
     <span class="ep-arrow">&#9654;</span>
@@ -710,50 +754,6 @@
     </div>
     <div class="ep-params"><strong>Parameters:</strong><ul><li><code>{id}</code> (path, required)</li></ul></div>
     
-    <div style="margin-top:8px">
-      <strong>Responses:</strong>
-      <div class="status-list" style="margin-top:4px">
-        <span class="status-code status-2xx">200 OK</span>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="endpoint">
-  <div class="ep-header" onclick="this.classList.toggle('open')">
-    <span class="method" style="background:#22c55e">GET</span>
-    <span class="ep-path">/api/data-entry/balanced-scorecard/new-bsc/template</span>
-    <span class="ep-arrow">&#9654;</span>
-  </div>
-  <div class="ep-body">
-    <p style="margin:0 0 8px">List all BSC template nodes</p>
-    <div class="ep-meta">
-      <span><strong>Auth:</strong> Session (Better Auth)</span>
-    </div>
-    
-    
-    <div style="margin-top:8px">
-      <strong>Responses:</strong>
-      <div class="status-list" style="margin-top:4px">
-        <span class="status-code status-2xx">200 OK</span>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="endpoint">
-  <div class="ep-header" onclick="this.classList.toggle('open')">
-    <span class="method" style="background:#3b82f6">POST</span>
-    <span class="ep-path">/api/data-entry/balanced-scorecard/new-bsc/template</span>
-    <span class="ep-arrow">&#9654;</span>
-  </div>
-  <div class="ep-body">
-    <p style="margin:0 0 8px">Create a new BSC template node</p>
-    <div class="ep-meta">
-      <span><strong>Auth:</strong> Session (Better Auth)</span>
-    </div>
-    
-    <div class="ep-meta"><span><strong>Body:</strong> JSON body — validated by parseCreateTemplateNodePayload()</span></div>
     <div style="margin-top:8px">
       <strong>Responses:</strong>
       <div class="status-list" style="margin-top:4px">
@@ -858,6 +858,58 @@
 <div class="endpoint">
   <div class="ep-header" onclick="this.classList.toggle('open')">
     <span class="method" style="background:#3b82f6">POST</span>
+    <span class="ep-path">/api/data-entry/custom-kpi/requests</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">Create a custom KPI request</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> Session (Better Auth)</span>
+    </div>
+    
+    <div class="ep-meta"><span><strong>Body:</strong> JSON body</span></div>
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-2xx">201 Created</span>
+<span class="status-code status-4xx">400 Bad Request</span>
+<span class="status-code status-4xx">401 Unauthorized</span>
+<span class="status-code status-4xx">403 Forbidden</span>
+<span class="status-code status-5xx">500 Error</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#22c55e">GET</span>
+    <span class="ep-path">/api/data-entry/custom-kpi/requests</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">List custom KPI requests</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> Session (Better Auth)</span>
+    </div>
+    
+    
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-2xx">201 Created</span>
+<span class="status-code status-4xx">400 Bad Request</span>
+<span class="status-code status-4xx">401 Unauthorized</span>
+<span class="status-code status-4xx">403 Forbidden</span>
+<span class="status-code status-5xx">500 Error</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#3b82f6">POST</span>
     <span class="ep-path">/api/data-entry/custom-kpi/requests/{requestId}/decision</span>
     <span class="ep-arrow">&#9654;</span>
   </div>
@@ -903,58 +955,6 @@
 <span class="status-code status-4xx">401 Unauthorized</span>
 <span class="status-code status-4xx">403 Forbidden</span>
 <span class="status-code status-4xx">409 Conflict</span>
-<span class="status-code status-5xx">500 Error</span>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="endpoint">
-  <div class="ep-header" onclick="this.classList.toggle('open')">
-    <span class="method" style="background:#3b82f6">POST</span>
-    <span class="ep-path">/api/data-entry/custom-kpi/requests</span>
-    <span class="ep-arrow">&#9654;</span>
-  </div>
-  <div class="ep-body">
-    <p style="margin:0 0 8px">Create a custom KPI request</p>
-    <div class="ep-meta">
-      <span><strong>Auth:</strong> Session (Better Auth)</span>
-    </div>
-    
-    <div class="ep-meta"><span><strong>Body:</strong> JSON body</span></div>
-    <div style="margin-top:8px">
-      <strong>Responses:</strong>
-      <div class="status-list" style="margin-top:4px">
-        <span class="status-code status-2xx">201 Created</span>
-<span class="status-code status-4xx">400 Bad Request</span>
-<span class="status-code status-4xx">401 Unauthorized</span>
-<span class="status-code status-4xx">403 Forbidden</span>
-<span class="status-code status-5xx">500 Error</span>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="endpoint">
-  <div class="ep-header" onclick="this.classList.toggle('open')">
-    <span class="method" style="background:#22c55e">GET</span>
-    <span class="ep-path">/api/data-entry/custom-kpi/requests</span>
-    <span class="ep-arrow">&#9654;</span>
-  </div>
-  <div class="ep-body">
-    <p style="margin:0 0 8px">List custom KPI requests</p>
-    <div class="ep-meta">
-      <span><strong>Auth:</strong> Session (Better Auth)</span>
-    </div>
-    
-    
-    <div style="margin-top:8px">
-      <strong>Responses:</strong>
-      <div class="status-list" style="margin-top:4px">
-        <span class="status-code status-2xx">201 Created</span>
-<span class="status-code status-4xx">400 Bad Request</span>
-<span class="status-code status-4xx">401 Unauthorized</span>
-<span class="status-code status-4xx">403 Forbidden</span>
 <span class="status-code status-5xx">500 Error</span>
       </div>
     </div>
@@ -2628,6 +2628,29 @@
 <div class="endpoint">
   <div class="ep-header" onclick="this.classList.toggle('open')">
     <span class="method" style="background:#22c55e">GET</span>
+    <span class="ep-path">/api/migration/prism-training</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">Export data from prism-training for migration</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> Migration Key (x-migration-key)</span>
+    </div>
+    <div class="ep-params"><strong>Parameters:</strong><ul><li><code>includeRows</code> (query, required)</li><li><code>limit</code> (query, required)</li><li><code>offset</code> (query, required)</li></ul></div>
+    
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-4xx">401 Unauthorized</span>
+<span class="status-code status-5xx">500 Error</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#22c55e">GET</span>
     <span class="ep-path">/api/migration/prism-training/{table}</span>
     <span class="ep-arrow">&#9654;</span>
   </div>
@@ -2643,29 +2666,6 @@
       <div class="status-list" style="margin-top:4px">
         <span class="status-code status-4xx">400 Bad Request</span>
 <span class="status-code status-4xx">401 Unauthorized</span>
-<span class="status-code status-5xx">500 Error</span>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="endpoint">
-  <div class="ep-header" onclick="this.classList.toggle('open')">
-    <span class="method" style="background:#22c55e">GET</span>
-    <span class="ep-path">/api/migration/prism-training</span>
-    <span class="ep-arrow">&#9654;</span>
-  </div>
-  <div class="ep-body">
-    <p style="margin:0 0 8px">Export data from prism-training for migration</p>
-    <div class="ep-meta">
-      <span><strong>Auth:</strong> Migration Key (x-migration-key)</span>
-    </div>
-    <div class="ep-params"><strong>Parameters:</strong><ul><li><code>includeRows</code> (query, required)</li><li><code>limit</code> (query, required)</li><li><code>offset</code> (query, required)</li></ul></div>
-    
-    <div style="margin-top:8px">
-      <strong>Responses:</strong>
-      <div class="status-list" style="margin-top:4px">
-        <span class="status-code status-4xx">401 Unauthorized</span>
 <span class="status-code status-5xx">500 Error</span>
       </div>
     </div>
@@ -3035,6 +3035,30 @@
 <div class="endpoint">
   <div class="ep-header" onclick="this.classList.toggle('open')">
     <span class="method" style="background:#22c55e">GET</span>
+    <span class="ep-path">/api/settings/users/pending</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">Get pending user registrations awaiting approval</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> None (public)</span>
+    </div>
+    
+    
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-4xx">401 Unauthorized</span>
+<span class="status-code status-4xx">403 Forbidden</span>
+<span class="status-code status-5xx">500 Error</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#22c55e">GET</span>
     <span class="ep-path">/api/settings/users/{userId}/clarifications</span>
     <span class="ep-arrow">&#9654;</span>
   </div>
@@ -3116,30 +3140,6 @@
     </div>
   </div>
 </div>
-
-<div class="endpoint">
-  <div class="ep-header" onclick="this.classList.toggle('open')">
-    <span class="method" style="background:#22c55e">GET</span>
-    <span class="ep-path">/api/settings/users/pending</span>
-    <span class="ep-arrow">&#9654;</span>
-  </div>
-  <div class="ep-body">
-    <p style="margin:0 0 8px">Get pending user registrations awaiting approval</p>
-    <div class="ep-meta">
-      <span><strong>Auth:</strong> None (public)</span>
-    </div>
-    
-    
-    <div style="margin-top:8px">
-      <strong>Responses:</strong>
-      <div class="status-list" style="margin-top:4px">
-        <span class="status-code status-4xx">401 Unauthorized</span>
-<span class="status-code status-4xx">403 Forbidden</span>
-<span class="status-code status-5xx">500 Error</span>
-      </div>
-    </div>
-  </div>
-</div>
 </div>
 
 <div class="tag-group" data-tag="System">
@@ -3163,6 +3163,54 @@
       <div class="status-list" style="margin-top:4px">
         <span class="status-code status-4xx">401 Unauthorized</span>
 <span class="status-code status-5xx">500 Error</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="tag-group" data-tag="Tables">
+<h2 class="tag-title">Tables</h2>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#22c55e">GET</span>
+    <span class="ep-path">/api/tables/dataEntry</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">Get dataEntry</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> Migration Key (x-migration-key)</span>
+    </div>
+    
+    
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-2xx">200 OK</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#22c55e">GET</span>
+    <span class="ep-path">/api/tables/inputDefinitions</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">Get inputDefinitions</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> Migration Key (x-migration-key)</span>
+    </div>
+    
+    
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-2xx">200 OK</span>
       </div>
     </div>
   </div>

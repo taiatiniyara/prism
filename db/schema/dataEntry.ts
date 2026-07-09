@@ -11,6 +11,7 @@ import {
   index,
   uniqueIndex,
   timestamp,
+  numeric,
 } from "drizzle-orm/pg-core";
 import { managedListItems } from "./managedLists";
 import { reportPeriods } from "./reportPeriods";
@@ -215,6 +216,8 @@ export const dataEntries = pgTable(
       .notNull()
       .references(() => inputDefinitions.id),
     value: varchar("value", { length: 255 }),
+    boolean_value: boolean("boolean_value"),
+    numberic_value: numeric("numberic_value"),
     comments: json("comments").$type<DataEntryComment[]>(),
     update_medium_id: integer("update_medium_id").references(
       () => managedListItems.id,

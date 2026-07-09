@@ -10,7 +10,10 @@ function PrismAiContent() {
 
   return (
     <main className="h-full w-full">
-      <ChatPanel showSidebar={true} initialSessionId={sessionId ? parseInt(sessionId, 10) : undefined} />
+      <ChatPanel
+        showSidebar={true}
+        initialSessionId={sessionId ? parseInt(sessionId, 10) : undefined}
+      />
     </main>
   );
 }
