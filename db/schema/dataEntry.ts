@@ -216,6 +216,7 @@ export const dataEntries = pgTable(
       .notNull()
       .references(() => inputDefinitions.id),
     value: varchar("value", { length: 255 }),
+    text_value: text("text_value"),
     boolean_value: boolean("boolean_value"),
     numberic_value: numeric("numberic_value"),
     comments: json("comments").$type<DataEntryComment[]>(),
