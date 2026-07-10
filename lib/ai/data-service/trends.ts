@@ -66,8 +66,7 @@ export const getTrendAnalysis = async (
         pair.first.Requested > 0
           ? (pair.first.Entered +
               pair.first.Reviewed +
-              pair.first.Approved +
-              pair.first.Endorsed) /
+              pair.first.Approved) /
             pair.first.Requested
           : 0;
 
@@ -75,8 +74,7 @@ export const getTrendAnalysis = async (
         pair.latest.Requested > 0
           ? (pair.latest.Entered +
               pair.latest.Reviewed +
-              pair.latest.Approved +
-              pair.latest.Endorsed) /
+              pair.latest.Approved) /
             pair.latest.Requested
           : 0;
 

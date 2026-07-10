@@ -144,7 +144,7 @@ export const getPeerGroupAnalysis = async (
   }
 
   const peers: PeerGroupItem[] = filteredPeriods.map((p) => {
-    const completed = p.Entered + p.Reviewed + p.Approved + p.Endorsed;
+    const completed = p.Entered + p.Reviewed + p.Approved;
     const completion = p.Requested > 0 ? Math.round((completed / p.Requested) * 100) : 0;
     return {
       utility_name: p.Utility || "N/A",
@@ -231,8 +231,8 @@ export const comparePeriods = async (
   const comparisons: PeriodComparison[] = [
     {
       metric: "Completion Rate",
-      period_a_value: a.Requested > 0 ? Math.round(((a.Entered + a.Reviewed + a.Approved + a.Endorsed) / a.Requested) * 100) : 0,
-      period_b_value: b.Requested > 0 ? Math.round(((b.Entered + b.Reviewed + b.Approved + b.Endorsed) / b.Requested) * 100) : 0,
+      period_a_value: a.Requested > 0 ? Math.round(((a.Entered + a.Reviewed + a.Approved) / a.Requested) * 100) : 0,
+      period_b_value: b.Requested > 0 ? Math.round(((b.Entered + b.Reviewed + b.Approved) / b.Requested) * 100) : 0,
       delta: 0,
       delta_pct: 0,
       direction: "stable" as const,
@@ -241,7 +241,7 @@ export const comparePeriods = async (
     { metric: "Pending KPIs", period_a_value: a.Pending, period_b_value: b.Pending, delta: 0, delta_pct: 0, direction: "stable" },
     { metric: "Entered KPIs", period_a_value: a.Entered, period_b_value: b.Entered, delta: 0, delta_pct: 0, direction: "stable" },
     { metric: "Reviewed KPIs", period_a_value: a.Reviewed, period_b_value: b.Reviewed, delta: 0, delta_pct: 0, direction: "stable" },
-    { metric: "Approved/Endorsed KPIs", period_a_value: a.Approved + a.Endorsed, period_b_value: b.Approved + b.Endorsed, delta: 0, delta_pct: 0, direction: "stable" },
+    { metric: "Approved KPIs", period_a_value: a.Approved, period_b_value: b.Approved, delta: 0, delta_pct: 0, direction: "stable" },
   ];
 
   for (const c of comparisons) {

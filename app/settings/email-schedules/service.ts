@@ -193,7 +193,6 @@ async function sendGlobalSummary(
       <td style="padding:4px 8px;border-bottom:1px solid #e2e8f0;text-align:right;">${p.Entered}</td>
       <td style="padding:4px 8px;border-bottom:1px solid #e2e8f0;text-align:right;">${p.Reviewed}</td>
       <td style="padding:4px 8px;border-bottom:1px solid #e2e8f0;text-align:right;">${p.Approved}</td>
-      <td style="padding:4px 8px;border-bottom:1px solid #e2e8f0;text-align:right;">${p.Endorsed}</td>
       <td style="padding:4px 8px;border-bottom:1px solid #e2e8f0;text-align:right;">${p.Pending}</td>
       <td style="padding:4px 8px;border-bottom:1px solid #e2e8f0;text-align:right;">${pct}%</td>
     </tr>`;
@@ -227,7 +226,6 @@ async function sendGlobalSummary(
         <th style="padding:4px 8px;">Entered</th>
         <th style="padding:4px 8px;">Reviewed</th>
         <th style="padding:4px 8px;">Approved</th>
-        <th style="padding:4px 8px;">Endorsed</th>
         <th style="padding:4px 8px;">Pending</th>
         <th style="padding:4px 8px;">% Entered</th>
       </tr></thead>

@@ -163,7 +163,7 @@ async function main() {
 
   const statusLabels: Record<number, string> = {
     1: "Requested", 2: "Pending", 3: "Entered",
-    4: "Reviewed", 5: "Approved", 6: "Endorsed", 7: "Not_Available",
+    4: "Reviewed", 5: "Approved", 7: "Not_Available",
   };
   console.log("  By status:");
   for (const s of byStatus) {

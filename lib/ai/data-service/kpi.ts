@@ -14,7 +14,6 @@ export interface KpiStatusSummary {
     entered: number;
     reviewed: number;
     approved: number;
-    endorsed: number;
     not_available: number;
   };
   completion_rate: number;
@@ -73,7 +72,7 @@ export const getKpiStatus = async (
     : periods.filter((p) => p.Utility === defaultUtility);
 
   const summaries: KpiStatusSummary[] = scopedPeriods.slice(0, 12).map((p) => {
-    const completed = p.Entered + p.Reviewed + p.Approved + p.Endorsed;
+    const completed = p.Entered + p.Reviewed + p.Approved;
     const completionRate = p.Requested > 0 ? completed / p.Requested : 0;
 
     return {
@@ -85,7 +84,6 @@ export const getKpiStatus = async (
         entered: p.Entered,
         reviewed: p.Reviewed,
         approved: p.Approved,
-        endorsed: p.Endorsed,
         not_available: p.Not_Available,
       },
       completion_rate: completionRate,
@@ -98,7 +96,7 @@ export const getKpiStatus = async (
       acc.total_requested += p.Requested;
       acc.total_pending += p.Pending;
       acc.total_completed +=
-        p.Entered + p.Reviewed + p.Approved + p.Endorsed;
+        p.Entered + p.Reviewed + p.Approved;
       return acc;
     },
     {

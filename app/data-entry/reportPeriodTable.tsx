@@ -5,7 +5,7 @@ import { ReportPeriodDTO } from "./service";
 import { FaCircle } from "react-icons/fa";
 import { useRouter } from "next/navigation";
 import { useTransition } from "react";
-import { updateFilterContextAction } from "@/app/data-entry/enter-data/service";
+import { updateFilterContextAction } from "@/app/data-entry/enter-data-v2/service";
 import { Button } from "@/components/ui/button";
 
 export default function ReportPeriodTable(props: {
@@ -109,7 +109,7 @@ export default function ReportPeriodTable(props: {
               ))}
               <td className="text-left py-2 px-3 min-w-40">
                 {(() => {
-                    const completed = item.Entered + item.Reviewed + item.Approved + item.Endorsed + item.Not_Available;
+                    const completed = item.Entered + item.Reviewed + item.Approved + item.Not_Available;
                   const progressPct =
                     item.Requested > 0
                       ? Math.round((completed / item.Requested) * 100)

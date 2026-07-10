@@ -1,9 +1,9 @@
-import MeasureEntryFiltersClient from "@/app/data-entry/enter-data-v2/filters.client";
-import DimensionPanel from "@/app/data-entry/enter-data-v2/dimension-panel";
-import MeasureTable from "@/app/data-entry/enter-data-v2/measure-table";
-import { getMeasureEntryFilterViewModel } from "@/app/data-entry/enter-data-v2/service";
+import { getMeasureEntryFilterViewModel } from "./service";
+import MeasureEntryFiltersClient from "./filters.client";
+import DimensionPanel from "./dimension-panel";
+import MeasureTable from "./measure-table";
 
-export default async function EnterDataPage() {
+export default async function EnterDataV2Page() {
   const model = await getMeasureEntryFilterViewModel();
   const noOptions =
     model.options.reportPeriods.length === 0 ||

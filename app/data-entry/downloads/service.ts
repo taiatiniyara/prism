@@ -89,7 +89,6 @@ export async function GetDownloadData(): Promise<DownloadRow[]> {
     3: "Entered",
     4: "Reviewed",
     5: "Approved",
-    6: "Endorsed",
     7: "Not Available",
   };
 

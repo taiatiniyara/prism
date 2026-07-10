@@ -44,7 +44,7 @@ export const getRiskAssessment = async (
   }
 
   const profiles: RiskProfile[] = periods.map((p) => {
-    const completed = p.Entered + p.Reviewed + p.Approved + p.Endorsed;
+    const completed = p.Entered + p.Reviewed + p.Approved;
     const completion = p.Requested > 0 ? Math.round((completed / p.Requested) * 100) : 0;
     const pendingRate = p.Requested > 0 ? Math.round((p.Pending / p.Requested) * 100) : 0;
     const approvalGap = p.Reviewed > 0 ? p.Reviewed : 0;
@@ -61,9 +61,9 @@ export const getRiskAssessment = async (
     if (approvalGap > 20) { score += 25; flags.push(`Large approval gap (${approvalGap} reviewed but not approved)`); }
     else if (approvalGap > 10) { score += 10; flags.push("Approval backlog"); }
 
-    if (p.Approved === 0 && p.Endorsed === 0 && completed > 0) {
+    if (p.Approved === 0 && completed > 0) {
       score += 20;
-      flags.push("Zero approvals/endorsements");
+      flags.push("Zero approvals");
     }
 
     const riskLevel: RiskProfile["risk_level"] =

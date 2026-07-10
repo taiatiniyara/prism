@@ -78,7 +78,7 @@ export const getAnomalyInsights = async (
     const utility = row.Utility || "N/A";
     const requested = row.Requested;
     const completionCount =
-      row.Entered + row.Reviewed + row.Approved + row.Endorsed;
+      row.Entered + row.Reviewed + row.Approved;
     const completionRate = requested > 0 ? completionCount / requested : 0;
     const pendingRate = requested > 0 ? row.Pending / requested : 0;
     const notAvailableRate = requested > 0 ? row.Not_Available / requested : 0;

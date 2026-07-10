@@ -15,7 +15,7 @@ async function main() {
   
   const labels: Record<number, string> = {
     1: "Requested", 2: "Pending", 3: "Entered",
-    4: "Reviewed", 5: "Approved", 6: "Endorsed", 7: "Not_Available",
+    4: "Reviewed", 5: "Approved", 7: "Not_Available",
   };
   console.log("=== Overall Status Distribution ===");
   for (const s of byStatus) {
@@ -54,7 +54,6 @@ async function main() {
       entered: sql<number>`count(case when ${dataEntries.status_id} = 3 then 1 end)`,
       reviewed: sql<number>`count(case when ${dataEntries.status_id} = 4 then 1 end)`,
       approved: sql<number>`count(case when ${dataEntries.status_id} = 5 then 1 end)`,
-      endorsed: sql<number>`count(case when ${dataEntries.status_id} = 6 then 1 end)`,
       notAvail: sql<number>`count(case when ${dataEntries.status_id} = 7 then 1 end)`,
       pending: sql<number>`count(case when ${dataEntries.status_id} = 2 then 1 end)`,
       withVal: sql<number>`count(case when ${dataEntries.value} IS NOT NULL AND ${dataEntries.value} != '' then 1 end)`,
@@ -66,7 +65,7 @@ async function main() {
     .limit(10);
   
   for (const r of rpCounts) {
-    console.log(`  RP ${r.rpId}: total=${r.total} entered=${r.entered} reviewed=${r.reviewed} approved=${r.approved} endorsed=${r.endorsed} na=${r.notAvail} pending=${r.pending} withVal=${r.withVal}`);
+    console.log(`  RP ${r.rpId}: total=${r.total} entered=${r.entered} reviewed=${r.reviewed} approved=${r.approved} na=${r.notAvail} pending=${r.pending} withVal=${r.withVal}`);
   }
 
   // Check: how many entries have status 2 (Pending) but also have values?
@@ -82,13 +81,6 @@ async function main() {
     .from(dataEntries)
     .where(sql`${dataEntries.status_id} = 3 AND (${dataEntries.value} IS NULL OR ${dataEntries.value} = '') AND ${dataEntries.is_deleted} = false`);
   console.log(`  Entered (status 3) entries WITHOUT values: ${enteredNoValue[0].cnt}`);
-
-  // Endorsed with no value
-  const endorsedNoValue = await db
-    .select({ cnt: count() })
-    .from(dataEntries)
-    .where(sql`${dataEntries.status_id} = 6 AND (${dataEntries.value} IS NULL OR ${dataEntries.value} = '') AND ${dataEntries.is_deleted} = false`);
-  console.log(`  Endorsed (status 6) entries WITHOUT values: ${endorsedNoValue[0].cnt}`);
 
   // Status 1 (Requested) entries
   const requested = await db

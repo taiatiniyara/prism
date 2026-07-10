@@ -36,7 +36,6 @@ export interface ReportPeriodDTO {
   Entered: number;
   Reviewed: number;
   Approved: number;
-  Endorsed: number;
   Not_Available: number;
   Pending_With: string;
   Updated: string;
@@ -165,12 +164,12 @@ export async function GetReportPeriods(
 
     const periodEntries = existingEntries.filter((x) => x.report_period_id === rpId);
 
-    let enteredOnly = 0, reviewedOnly = 0, approvedOnly = 0, endorsedOnly = 0, dataNotAvailable = 0;
+    let enteredOnly = 0, reviewedOnly = 0, approvedOnly = 0, dataNotAvailable = 0;
     for (const entry of periodEntries) {
       if (entry.status_id === DataEntryStatusId.Entered) enteredOnly++;
       else if (entry.status_id === DataEntryStatusId.Reviewed) reviewedOnly++;
       else if (entry.status_id === DataEntryStatusId.Approved) approvedOnly++;
-      else if (entry.status_id === DataEntryStatusId.Endorsed) endorsedOnly++;
+      else if (entry.status_id === (DataEntryStatusId as Record<string, unknown>).Endorsed as number) approvedOnly++;
       else if (entry.status_id === DataEntryStatusId.Not_Available) dataNotAvailable++;
     }
 
@@ -219,7 +218,7 @@ export async function GetReportPeriods(
       }
     }
 
-    const completed = enteredOnly + reviewedOnly + approvedOnly + endorsedOnly + dataNotAvailable;
+    const completed = enteredOnly + reviewedOnly + approvedOnly + dataNotAvailable;
     const finalRequested = Math.max(requested, completed);
     const pending = Math.max(finalRequested - completed, 0);
 
@@ -239,7 +238,6 @@ export async function GetReportPeriods(
       Entered: enteredOnly,
       Reviewed: reviewedOnly,
       Approved: approvedOnly,
-      Endorsed: endorsedOnly,
       Not_Available: dataNotAvailable,
     };
   });

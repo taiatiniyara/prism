@@ -56,6 +56,8 @@ async function seedManagedLists() {
     { name: "Ownership Type", description: "Ownership type dimension" },
     { name: "Power Quality Standards", description: "Power quality standards" },
     { name: "Gender", description: "Gender dimension" },
+    { name: "Division", description: "Organisational division dimension" },
+    { name: "Consumption Band", description: "Customer consumption band dimension" },
     { name: "Aggregation Level", description: "Aggregation levels" },
     { name: "Status", description: "Workflow statuses" },
   ];
@@ -111,6 +113,7 @@ async function seedSidebar() {
     { name: "KPI", page: "/settings/kpi", roles: "DEV", order: 21 },
     { name: "BSC Template", page: "/settings/bsc-template", roles: "DEV,BMO", order: 27 },
     { name: "Relevance", page: "/settings/relevance", roles: "DEV", order: 22 },
+    { name: "Measure Scope", page: "/settings/measure-scope", roles: "DEV", order: 22.5 },
     { name: "Reporting", page: "/settings/reporting", roles: "DEV", order: 23 },
     { name: "Email Schedules", page: "/settings/email-schedules", roles: "DEV,BMO", order: 24 },
     { name: "Country Context", page: "/settings/country-context", roles: "DEV", order: 25 },

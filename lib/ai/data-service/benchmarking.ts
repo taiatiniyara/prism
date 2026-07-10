@@ -57,7 +57,7 @@ export const getBenchmarkingData = async (
 
   const ranked: BenchmarkingRecord[] = periods
     .map((p) => {
-      const completed = p.Entered + p.Reviewed + p.Approved + p.Endorsed;
+      const completed = p.Entered + p.Reviewed + p.Approved;
       const completionRate = p.Requested > 0 ? completed / p.Requested : 0;
 
       return {

@@ -90,15 +90,14 @@ async function main() {
     ));
   console.log(`\nExisting entries (relevant=true): ${existingEntries.length}`);
 
-  let enteredOnly = 0, reviewedOnly = 0, approvedOnly = 0, endorsedOnly = 0, notAvail = 0;
+  let enteredOnly = 0, reviewedOnly = 0, approvedOnly = 0, notAvail = 0;
   for (const e of existingEntries) {
     if (e.status_id === 3) enteredOnly++;
     else if (e.status_id === 4) reviewedOnly++;
     else if (e.status_id === 5) approvedOnly++;
-    else if (e.status_id === 6) endorsedOnly++;
     else if (e.status_id === 7) notAvail++;
   }
-  console.log(`  Entered: ${enteredOnly}  Reviewed: ${reviewedOnly}  Approved: ${approvedOnly}  Endorsed: ${endorsedOnly}  NA: ${notAvail}`);
+  console.log(`  Entered: ${enteredOnly}  Reviewed: ${reviewedOnly}  Approved: ${approvedOnly}  NA: ${notAvail}`);
 
   // 5. Irrelevant entries (is_relevant=false)
   const irrelevantDE = await db
@@ -152,7 +151,7 @@ async function main() {
   }
 
   const requested = nonGenExpected + genExpected;
-  const completed = enteredOnly + reviewedOnly + approvedOnly + endorsedOnly + notAvail;
+  const completed = enteredOnly + reviewedOnly + approvedOnly + notAvail;
   const pending = Math.max(requested - completed, 0);
 
   console.log(`\n=== CALCULATED ===`);
@@ -162,7 +161,7 @@ async function main() {
   console.log(`Entered:                 ${enteredOnly}`);
   console.log(`Reviewed:                ${reviewedOnly}`);
   console.log(`Approved:                ${approvedOnly}`);
-  console.log(`Endorsed:                ${endorsedOnly}`);
+
   console.log(`Not_Available:           ${notAvail}`);
   console.log(`Completed:               ${completed}`);
   console.log(`Pending:                 ${pending}`);

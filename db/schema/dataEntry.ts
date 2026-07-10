@@ -8,6 +8,7 @@ import {
   uuid,
   varchar,
   json,
+  jsonb,
   index,
   uniqueIndex,
   timestamp,
@@ -104,6 +105,21 @@ export type InputDefinition = typeof inputDefinitions.$inferSelect & {
 };
 export type NewInputDefinition = typeof inputDefinitions.$inferInsert;
 
+/**
+ * Alias for inputDefinitions — the medallion redesign renames
+ * "input definitions" to "measure definitions".
+ * Points to the same "input_definitions" physical table.
+ */
+export const measureDefinitions = inputDefinitions;
+export type MeasureDefinition = typeof inputDefinitions.$inferSelect & {
+  category?: string | null;
+  subcategory?: string | null;
+  unit?: string | null;
+  data_type?: string | null;
+  agg_level?: string | null;
+};
+export type NewMeasureDefinition = typeof inputDefinitions.$inferInsert;
+
 export const inputRelevance = pgTable("input_relevance", {
   id: serial("id").primaryKey().notNull(),
   input_def_id: integer("input_def_id")
@@ -152,6 +168,7 @@ export enum DataEntryStatusId {
   Entered = 3,
   Reviewed = 4,
   Approved = 5,
+  /** @deprecated Endorsed has been retired — migrated to Approved (5) */
   Endorsed = 6,
   Not_Available = 7,
 }
@@ -162,7 +179,6 @@ export const DataEntryStatus = {
   Entered: DataEntryStatusId.Entered,
   Reviewed: DataEntryStatusId.Reviewed,
   Approved: DataEntryStatusId.Approved,
-  Endorsed: DataEntryStatusId.Endorsed,
   Not_Available: DataEntryStatusId.Not_Available,
 };
 
@@ -172,7 +188,6 @@ export const dataEntryStatusColors = {
   Entered: "#a3e635",
   Reviewed: "#34d399",
   Approved: "#38bdf8",
-  Endorsed: "#a78bfa",
   Not_Available: "#94a3b8",
 };
 
@@ -229,6 +244,9 @@ export const dataEntries = pgTable(
     energy_provider_id: integer("energy_provider_id").references(
       () => managedListItems.id,
     ),
+    energy_type_id: integer("energy_type_id").references(
+      () => managedListItems.id,
+    ),
     energy_source_id: integer("energy_source_id").references(
       () => managedListItems.id,
     ),
@@ -236,6 +254,19 @@ export const dataEntries = pgTable(
       () => managedListItems.id,
     ),
     payment_mode_id: integer("payment_mode_id").references(
+      () => managedListItems.id,
+    ),
+    consumption_band_id: integer("consumption_band_id").references(
+      () => managedListItems.id,
+    ),
+    division_id: integer("division_id").references(
+      () => managedListItems.id,
+    ),
+    gender_id: integer("gender_id").references(
+      () => managedListItems.id,
+    ),
+    value_numeric: numeric("value_numeric"),
+    value_option_id: integer("value_option_id").references(
       () => managedListItems.id,
     ),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -325,9 +356,14 @@ export type DataEntry = typeof dataEntries.$inferSelect & {
   update_medium?: string | null;
   status?: string | null;
   energy_provider?: string | null;
+  energy_type?: string | null;
   energy_source?: string | null;
   customer_type?: string | null;
   payment_mode?: string | null;
+  consumption_band?: string | null;
+  division?: string | null;
+  gender?: string | null;
+  value_option?: string | null;
   utility?: string | null;
   country?: string | null;
   subregion?: string | null;
@@ -386,6 +422,13 @@ export const dataEntryLogs = pgTable("data_entry_logs", {
     .references(() => dataEntries.id, { onDelete: "cascade" }),
   previous_value: varchar("previous_value", { length: 255 }).notNull(),
   new_value: varchar("new_value", { length: 255 }).notNull(),
+  value_snapshot: jsonb("value_snapshot").$type<{
+    value_numeric: number | null;
+    value_boolean: boolean | null;
+    value_option_id: number | null;
+    value_string: string | null;
+    status_id: number | null;
+  }>(),
   updated_by_id: text("updated_by_id")
     .notNull()
     .references(() => user.id),
