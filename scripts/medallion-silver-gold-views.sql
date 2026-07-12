@@ -184,6 +184,7 @@ SELECT
   org.acronym,
   c.name AS country_name,
   c.id AS country_id,
+  c.iso_code_alpha2,
   sr.name AS sub_region,
   sr.id AS sub_region_id,
   COALESCE(mli_usize.name, 'Unknown') AS utility_size,

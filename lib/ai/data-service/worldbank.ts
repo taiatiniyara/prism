@@ -1,7 +1,5 @@
 import { db } from "@/db/connection";
-import { organisations } from "@/db/schema/utility";
-import { countries } from "@/db/schema/country";
-import { eq } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
 import type { AiToolResult } from "../types";
 import { createToolMetadata } from "./common";
@@ -179,14 +177,14 @@ export async function resolveUserIsoCode(user: CurrentUser): Promise<string | nu
   if (!user.org_id) return null;
 
   try {
-    const [org] = await db
-      .select({ iso: countries.iso_code_alpha2 })
-      .from(organisations)
-      .innerJoin(countries, eq(organisations.country_id, countries.id))
-      .where(eq(organisations.id, user.org_id))
-      .limit(1);
-
-    return org?.iso ?? null;
+    const result = await db.execute(sql`
+      SELECT iso_code_alpha2 AS iso
+      FROM gold.dim_utility
+      WHERE utility_id = ${user.org_id}
+      LIMIT 1
+    `);
+    const row = result.rows[0] as { iso: string | null } | undefined;
+    return row?.iso ?? null;
   } catch {
     return null;
   }
