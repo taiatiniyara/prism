@@ -1,7 +1,5 @@
 import { db } from "@/db/connection";
-import { organisations } from "@/db/schema/utility";
-import { countries, subRegions } from "@/db/schema/country";
-import { eq, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
 import { hasGlobalUtilityAccess } from "@/lib/user.service";
 import { getAccessibleReportPeriods } from "./common";
@@ -121,25 +119,22 @@ export const getPeerGroupAnalysis = async (
   let filteredPeriods = periods;
 
   if (options.group_by === "country" && options.group_value) {
-    const countryOrgs = await db
-      .select({ id: organisations.id })
-      .from(organisations)
-      .innerJoin(countries, eq(organisations.country_id, countries.id))
-      .where(sql`LOWER(${countries.name}) = ${options.group_value.toLowerCase()}`)
-      .limit(100);
-
-    const orgIds = new Set(countryOrgs.map((o) => o.id));
+    const countryResult = await db.execute(sql`
+      SELECT DISTINCT utility_id FROM gold.dim_utility
+      WHERE LOWER(country_name) = ${options.group_value!.toLowerCase()}
+      LIMIT 100
+    `);
+    const countryRows = countryResult.rows as Array<{ utility_id: number }>;
+    const orgIds = new Set(countryRows.map((o) => o.utility_id));
     filteredPeriods = periods.filter((p) => orgIds.has(p.Utility_id));
   } else if (options.group_by === "region" && options.group_value) {
-    const regionOrgs = await db
-      .select({ id: organisations.id })
-      .from(organisations)
-      .innerJoin(countries, eq(organisations.country_id, countries.id))
-      .innerJoin(subRegions, eq(countries.sub_region_id, subRegions.id))
-      .where(sql`LOWER(${subRegions.name}) = ${options.group_value.toLowerCase()}`)
-      .limit(100);
-
-    const orgIds = new Set(regionOrgs.map((o) => o.id));
+    const regionResult = await db.execute(sql`
+      SELECT DISTINCT utility_id FROM gold.dim_utility
+      WHERE LOWER(sub_region) = ${options.group_value!.toLowerCase()}
+      LIMIT 100
+    `);
+    const regionRows = regionResult.rows as Array<{ utility_id: number }>;
+    const orgIds = new Set(regionRows.map((o) => o.utility_id));
     filteredPeriods = periods.filter((p) => orgIds.has(p.Utility_id));
   }
 

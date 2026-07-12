@@ -1,8 +1,6 @@
 import { getAccessibleReportPeriods } from "./common";
 import { db } from "@/db/connection";
-import { reportPeriods } from "@/db/schema/reportPeriods";
-import { kpi, kpiDefinitions } from "@/db/schema/kpi";
-import { eq, and, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
 import { hasGlobalUtilityAccess } from "@/lib/user.service";
 import { createToolMetadata } from "./common";
@@ -122,72 +120,69 @@ export const getDataQualityReport = async (
     year?: number | null;
   } = {},
 ): Promise<AiToolResult<DataQualityData>> => {
-  const predicates = [eq(kpiDefinitions.is_active, true)];
+  let query = sql`SELECT kpi_instance_id, kpi_name, actual_value, utility_name, report_date, limits FROM gold.fact_kpi`;
 
   if (options.report_period_id) {
-    predicates.push(eq(kpi.report_period_id, options.report_period_id));
+    query = sql`${query} WHERE report_period_id = ${options.report_period_id}`;
   }
 
-  const rows = await db
-    .select({
-      kpiId: kpi.id,
-      kpiName: kpiDefinitions.name,
-      actualValue: kpi.actual_value,
-      kpiDefId: kpi.kpi_def_id,
-      periodDate: reportPeriods.report_date,
-      utility: sql<string>`COALESCE(${reportPeriods.utility_id}::text, 'N/A')`,
-      limits: kpiDefinitions.limits,
-    })
-    .from(kpi)
-    .innerJoin(kpiDefinitions, eq(kpi.kpi_def_id, kpiDefinitions.id))
-    .innerJoin(reportPeriods, eq(kpi.report_period_id, reportPeriods.id))
-    .where(and(...predicates))
-    .limit(200);
+  query = sql`${query} LIMIT 200`;
+
+  const result = await db.execute(query);
+
+  const rows = result.rows as Array<{
+    kpi_instance_id: number;
+    kpi_name: string;
+    actual_value: string | null;
+    utility_name: string;
+    report_date: string;
+    limits: Array<{ lower?: number | null; upper?: number | null }> | null;
+  }>;
 
   const issues: DataQualityIssue[] = [];
 
   for (const row of rows) {
-    const val = parseFloat(row.actualValue);
+    const val = row.actual_value ? parseFloat(row.actual_value) : NaN;
     if (isNaN(val)) continue;
 
     if (val < 0) {
       issues.push({
-        kpi_name: row.kpiName,
-        utility_name: row.utility,
-        period: String(row.periodDate),
+        kpi_name: row.kpi_name,
+        utility_name: row.utility_name,
+        period: String(row.report_date),
         actual_value: val,
         expected_range: ">= 0",
         issue_type: "negative",
         severity: "high",
-        description: `${row.kpiName} has a negative value (${val}), which is unusual for utility KPIs.`,
+        description: `${row.kpi_name} has a negative value (${val}), which is unusual for utility KPIs.`,
       });
     }
 
-    const limits = row.limits as { min?: number; max?: number }[] | null;
+    const limits = row.limits;
     if (limits?.[0]) {
-      const { min, max } = limits[0];
+      const { lower: min, upper: max } = limits[0];
       if (min != null && val < min) {
         issues.push({
-          kpi_name: row.kpiName,
-          utility_name: row.utility,
-          period: String(row.periodDate),
+          kpi_name: row.kpi_name,
+          utility_name: row.utility_name,
+          period: String(row.report_date),
           actual_value: val,
           expected_range: `${min} - ${max ?? "∞"}`,
           issue_type: "out_of_range",
           severity: "medium",
-          description: `${row.kpiName} value ${val} is below minimum ${min}.`,
+          description: `${row.kpi_name} value ${val} is below minimum ${min}.`,
         });
       }
       if (max != null && val > max) {
         issues.push({
-          kpi_name: row.kpiName,
-          utility_name: row.utility,
-          period: String(row.periodDate),
+          kpi_name: row.kpi_name,
+          utility_name: row.utility_name,
+          period: String(row.report_date),
           actual_value: val,
           expected_range: `${min ?? "0"} - ${max}`,
           issue_type: "out_of_range",
           severity: "medium",
-          description: `${row.kpiName} value ${val} exceeds maximum ${max}.`,
+          description: `${row.kpi_name} value ${val} exceeds maximum ${max}.`,
         });
       }
     }
@@ -244,27 +239,24 @@ export const getWhatChanged = async (
   const latest = periods[0];
   const previous = periods[1];
 
-  const rows = await db
-    .select({
-      kpiName: kpiDefinitions.name,
-      actualValue: kpi.actual_value,
-      reportPeriodId: kpi.report_period_id,
-    })
-    .from(kpi)
-    .innerJoin(kpiDefinitions, eq(kpi.kpi_def_id, kpiDefinitions.id))
-    .where(
-      and(
-        eq(kpiDefinitions.is_active, true),
-        sql`${kpi.report_period_id} IN (${latest.Id}, ${previous.Id})`,
-      ),
-    );
+  const result = await db.execute(sql`
+    SELECT kpi_name, actual_value, report_period_id
+    FROM gold.fact_kpi
+    WHERE report_period_id IN (${latest.Id}, ${previous.Id})
+  `);
+
+  const rows = result.rows as Array<{
+    kpi_name: string;
+    actual_value: string | null;
+    report_period_id: number;
+  }>;
 
   const byName = new Map<string, { current?: number; previous?: number }>();
   for (const row of rows) {
-    const entry = byName.get(row.kpiName) ?? {};
-    if (row.reportPeriodId === latest.Id) entry.current = parseFloat(row.actualValue);
-    if (row.reportPeriodId === previous.Id) entry.previous = parseFloat(row.actualValue);
-    byName.set(row.kpiName, entry);
+    const entry = byName.get(row.kpi_name) ?? {};
+    if (row.report_period_id === latest.Id) entry.current = row.actual_value ? parseFloat(row.actual_value) : undefined;
+    if (row.report_period_id === previous.Id) entry.previous = row.actual_value ? parseFloat(row.actual_value) : undefined;
+    byName.set(row.kpi_name, entry);
   }
 
   const items: WhatChangedItem[] = [];

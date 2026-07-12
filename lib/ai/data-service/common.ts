@@ -83,21 +83,25 @@ export const resolveUserUtility = async (
   requested_utility_id?: number | null,
 ): Promise<{ id: number; name: string } | null> => {
   if (requested_utility_id) {
-    const [org] = await db
-      .select({ id: organisations.id, name: organisations.name })
-      .from(organisations)
-      .where(eq(organisations.id, requested_utility_id))
-      .limit(1);
-    return org ?? null;
+    const result = await db.execute(sql`
+      SELECT utility_id AS id, utility_name AS name
+      FROM gold.dim_utility
+      WHERE utility_id = ${requested_utility_id}
+      LIMIT 1
+    `);
+    const row = result.rows[0] as { id: number; name: string } | undefined;
+    return row ?? null;
   }
 
   if (user.org_id) {
-    const [org] = await db
-      .select({ id: organisations.id, name: organisations.name })
-      .from(organisations)
-      .where(eq(organisations.id, user.org_id))
-      .limit(1);
-    return org ?? null;
+    const result = await db.execute(sql`
+      SELECT utility_id AS id, utility_name AS name
+      FROM gold.dim_utility
+      WHERE utility_id = ${user.org_id}
+      LIMIT 1
+    `);
+    const row = result.rows[0] as { id: number; name: string } | undefined;
+    return row ?? null;
   }
 
   return null;

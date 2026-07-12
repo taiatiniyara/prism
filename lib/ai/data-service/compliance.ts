@@ -1,8 +1,5 @@
 import { db } from "@/db/connection";
-import { kpi, kpiDefinitions } from "@/db/schema/kpi";
-import { reportPeriods } from "@/db/schema/reportPeriods";
-import { organisations } from "@/db/schema/utility";
-import { eq, and, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
 import { hasGlobalUtilityAccess } from "@/lib/user.service";
 import { getAccessibleReportPeriods } from "./common";
@@ -57,91 +54,86 @@ export const getComplianceStatus = async (
     };
   }
 
-  const rows = await db
-    .select({
-      kpiName: kpiDefinitions.name,
-      actualValue: kpi.actual_value,
-      limits: kpiDefinitions.limits,
-      utilityName: organisations.acronym,
-      periodDate: reportPeriods.report_date,
-    })
-    .from(kpi)
-    .innerJoin(kpiDefinitions, eq(kpi.kpi_def_id, kpiDefinitions.id))
-    .innerJoin(reportPeriods, eq(kpi.report_period_id, reportPeriods.id))
-    .innerJoin(organisations, eq(reportPeriods.utility_id, organisations.id))
-    .where(
-      and(
-        eq(kpi.report_period_id, targetPeriodId),
-        eq(kpiDefinitions.is_active, true),
-        sql`${kpiDefinitions.limits} IS NOT NULL`,
-      ),
-    )
-    .limit(500);
+  const result = await db.execute(sql`
+    SELECT kpi_name, actual_value, limits, utility_name, report_date
+    FROM gold.fact_kpi
+    WHERE report_period_id = ${targetPeriodId}
+      AND limits IS NOT NULL
+    LIMIT 500
+  `);
+
+  const rows = result.rows as Array<{
+    kpi_name: string;
+    actual_value: string | null;
+    limits: Array<{ lower?: number | null; upper?: number | null }> | null;
+    utility_name: string;
+    report_date: string;
+  }>;
 
   const issues: ComplianceIssue[] = [];
 
   for (const row of rows) {
-    const val = parseFloat(row.actualValue);
+    const val = row.actual_value ? parseFloat(row.actual_value) : NaN;
     if (isNaN(val)) continue;
 
-    const limits = (row.limits as Array<{ lower?: number | null; upper?: number | null }> | null)?.[0];
+    const limits = row.limits?.[0];
     if (!limits) continue;
 
     if (val < 0) {
       issues.push({
-        kpi_name: row.kpiName,
-        utility_name: row.utilityName ?? "N/A",
-        period: String(row.periodDate),
-        actual_value: row.actualValue,
+        kpi_name: row.kpi_name,
+        utility_name: row.utility_name ?? "N/A",
+        period: String(row.report_date),
+        actual_value: row.actual_value ?? "N/A",
         limit_lower: limits.lower ?? null,
         limit_upper: limits.upper ?? null,
         status: "negative",
         severity: "critical",
-        description: `${row.kpiName} is negative (${row.actualValue}), which violates basic validity.`,
+        description: `${row.kpi_name} is negative (${row.actual_value}), which violates basic validity.`,
       });
       continue;
     }
 
     if (limits.lower != null && val < limits.lower) {
       issues.push({
-        kpi_name: row.kpiName,
-        utility_name: row.utilityName ?? "N/A",
-        period: String(row.periodDate),
-        actual_value: row.actualValue,
+        kpi_name: row.kpi_name,
+        utility_name: row.utility_name ?? "N/A",
+        period: String(row.report_date),
+        actual_value: row.actual_value ?? "N/A",
         limit_lower: limits.lower,
         limit_upper: limits.upper ?? null,
         status: "below_minimum",
         severity: "critical",
-        description: `${row.kpiName} is ${row.actualValue}, below the regulatory minimum of ${limits.lower}.`,
+        description: `${row.kpi_name} is ${row.actual_value}, below the regulatory minimum of ${limits.lower}.`,
       });
       continue;
     }
 
     if (limits.upper != null && val > limits.upper) {
       issues.push({
-        kpi_name: row.kpiName,
-        utility_name: row.utilityName ?? "N/A",
-        period: String(row.periodDate),
-        actual_value: row.actualValue,
+        kpi_name: row.kpi_name,
+        utility_name: row.utility_name ?? "N/A",
+        period: String(row.report_date),
+        actual_value: row.actual_value ?? "N/A",
         limit_lower: limits.lower ?? null,
         limit_upper: limits.upper,
         status: "above_maximum",
         severity: "warning",
-        description: `${row.kpiName} is ${row.actualValue}, above the regulatory maximum of ${limits.upper}.`,
+        description: `${row.kpi_name} is ${row.actual_value}, above the regulatory maximum of ${limits.upper}.`,
       });
       continue;
     }
 
     issues.push({
-      kpi_name: row.kpiName,
-      utility_name: row.utilityName ?? "N/A",
-      period: String(row.periodDate),
-      actual_value: row.actualValue,
+      kpi_name: row.kpi_name,
+      utility_name: row.utility_name ?? "N/A",
+      period: String(row.report_date),
+      actual_value: row.actual_value ?? "N/A",
       limit_lower: limits.lower ?? null,
       limit_upper: limits.upper ?? null,
       status: "ok",
       severity: "ok",
-      description: `${row.kpiName} (${row.actualValue}) is within limits.`,
+      description: `${row.kpi_name} (${row.actual_value}) is within limits.`,
     });
   }
 

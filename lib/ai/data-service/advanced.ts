@@ -1,9 +1,6 @@
 import { db } from "@/db/connection";
-import { kpi, kpiDefinitions } from "@/db/schema/kpi";
-import { reportPeriods } from "@/db/schema/reportPeriods";
-import { organisations } from "@/db/schema/utility";
 import { countries, subRegions } from "@/db/schema/country";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
 import { createToolMetadata, resolvePeriodId } from "./common";
 import type { AiToolResult } from "../types";
@@ -42,28 +39,28 @@ export const getKpiTargets = async (
     return { data: { recommendations: [], peer_count: 0, report_period: null }, metadata: createToolMetadata({ source: "kpi_values" }), error: "No period found" };
   }
 
-  const rows = await db
-    .select({
-      kpiName: kpiDefinitions.name,
-      actualValue: kpi.actual_value,
-      utilityId: reportPeriods.utility_id,
-      utilityName: organisations.acronym,
-      periodDate: reportPeriods.report_date,
-    })
-    .from(kpi)
-    .innerJoin(kpiDefinitions, eq(kpi.kpi_def_id, kpiDefinitions.id))
-    .innerJoin(reportPeriods, eq(kpi.report_period_id, reportPeriods.id))
-    .innerJoin(organisations, eq(reportPeriods.utility_id, organisations.id))
-    .where(and(eq(kpi.report_period_id, periodId), eq(kpiDefinitions.is_active, true)))
-    .limit(2000);
+  const result = await db.execute(sql`
+    SELECT kpi_name, actual_value, utility_id, utility_acronym, report_date
+    FROM gold.fact_kpi
+    WHERE report_period_id = ${periodId}
+    LIMIT 2000
+  `);
+
+  const rows = result.rows as Array<{
+    kpi_name: string;
+    actual_value: string | null;
+    utility_id: number;
+    utility_acronym: string;
+    report_date: string;
+  }>;
 
   const byKpi = new Map<string, number[]>();
   for (const row of rows) {
-    const val = parseFloat(row.actualValue);
+    const val = row.actual_value ? parseFloat(row.actual_value) : NaN;
     if (isNaN(val)) continue;
-    const arr = byKpi.get(row.kpiName) ?? [];
+    const arr = byKpi.get(row.kpi_name) ?? [];
     arr.push(val);
-    byKpi.set(row.kpiName, arr);
+    byKpi.set(row.kpi_name, arr);
   }
 
   const recommendations: KpiTargetRecommendation[] = [];
@@ -96,7 +93,7 @@ export const getKpiTargets = async (
   recommendations.sort((a, b) => b.gap_to_top_quartile - a.gap_to_top_quartile);
 
   return {
-    data: { recommendations, peer_count: new Set(rows.map((r) => r.utilityId)).size, report_period: rows[0]?.periodDate?.toString() ?? null },
+    data: { recommendations, peer_count: new Set(rows.map((r) => r.utility_id)).size, report_period: rows[0]?.report_date?.toString() ?? null },
     metadata: createToolMetadata({ freshness: new Date(), source: "kpi_values" }),
   };
 };
@@ -130,29 +127,30 @@ export const getKpiCorrelation = async (
     return { data: { pairs: [], utility_count: 0, report_period: null }, metadata: createToolMetadata({ source: "kpi_values" }), error: "No period found" };
   }
 
-  const rows = await db
-    .select({
-      kpiName: kpiDefinitions.name,
-      actualValue: kpi.actual_value,
-      utilityId: reportPeriods.utility_id,
-      periodDate: reportPeriods.report_date,
-    })
-    .from(kpi)
-    .innerJoin(kpiDefinitions, eq(kpi.kpi_def_id, kpiDefinitions.id))
-    .innerJoin(reportPeriods, eq(kpi.report_period_id, reportPeriods.id))
-    .where(and(eq(kpi.report_period_id, periodId), eq(kpiDefinitions.is_active, true)))
-    .limit(2000);
+  const result = await db.execute(sql`
+    SELECT kpi_name, actual_value, utility_id, report_date
+    FROM gold.fact_kpi
+    WHERE report_period_id = ${periodId}
+    LIMIT 2000
+  `);
+
+  const rows = result.rows as Array<{
+    kpi_name: string;
+    actual_value: string | null;
+    utility_id: number;
+    report_date: string;
+  }>;
 
   const byUtility = new Map<number, Record<string, number>>();
   for (const row of rows) {
-    const val = parseFloat(row.actualValue);
+    const val = row.actual_value ? parseFloat(row.actual_value) : NaN;
     if (isNaN(val)) continue;
-    const rec = byUtility.get(row.utilityId) ?? {};
-    rec[row.kpiName] = val;
-    byUtility.set(row.utilityId, rec);
+    const rec = byUtility.get(row.utility_id) ?? {};
+    rec[row.kpi_name] = val;
+    byUtility.set(row.utility_id, rec);
   }
 
-  const kpiNames = [...new Set(rows.map((r) => r.kpiName))].slice(0, 20);
+  const kpiNames = [...new Set(rows.map((r) => r.kpi_name))].slice(0, 20);
   const pairs: CorrelationPair[] = [];
 
   for (let i = 0; i < kpiNames.length; i++) {
@@ -175,7 +173,7 @@ export const getKpiCorrelation = async (
   pairs.sort((a, b) => Math.abs(b.coefficient) - Math.abs(a.coefficient));
 
   return {
-    data: { pairs: pairs.slice(0, 30), utility_count: byUtility.size, report_period: rows[0]?.periodDate?.toString() ?? null },
+    data: { pairs: pairs.slice(0, 30), utility_count: byUtility.size, report_period: rows[0]?.report_date?.toString() ?? null },
     metadata: createToolMetadata({ freshness: new Date(), source: "kpi_values" }),
   };
 };
@@ -225,32 +223,26 @@ export const compareKpisAcrossUtilities = async (
   const results: MultiUtilityKpiData[] = [];
 
   for (const kpiName of options.kpi_names) {
-    const rows = await db
-      .select({
-        kpiName: kpiDefinitions.name,
-        actualValue: kpi.actual_value,
-        utilityName: organisations.acronym,
-        utilityId: reportPeriods.utility_id,
-        periodDate: reportPeriods.report_date,
-      })
-      .from(kpi)
-      .innerJoin(kpiDefinitions, eq(kpi.kpi_def_id, kpiDefinitions.id))
-      .innerJoin(reportPeriods, eq(kpi.report_period_id, reportPeriods.id))
-      .innerJoin(organisations, eq(reportPeriods.utility_id, organisations.id))
-      .where(
-        and(
-          eq(kpi.report_period_id, periodId),
-          sql`LOWER(${kpiDefinitions.name}) LIKE ${`%${kpiName.toLowerCase()}%`}`,
-          eq(kpiDefinitions.is_active, true),
-        ),
-      )
-      .limit(100);
+    const result = await db.execute(sql`
+      SELECT kpi_name, actual_value, utility_name, report_date
+      FROM gold.fact_kpi
+      WHERE report_period_id = ${periodId}
+        AND LOWER(kpi_name) LIKE ${`%${kpiName.toLowerCase()}%`}
+      LIMIT 100
+    `);
+
+    const rows = result.rows as Array<{
+      kpi_name: string;
+      actual_value: string | null;
+      utility_name: string;
+      report_date: string;
+    }>;
 
     const values: MultiUtilityKpiValue[] = rows
       .map((r) => {
-        const val = parseFloat(r.actualValue);
+        const val = r.actual_value ? parseFloat(r.actual_value) : NaN;
         if (isNaN(val)) return null;
-        return { utility_name: r.utilityName ?? "N/A", kpi_name: r.kpiName, value: Math.round(val * 100) / 100, rank: 0 };
+        return { utility_name: r.utility_name ?? "N/A", kpi_name: r.kpi_name, value: Math.round(val * 100) / 100, rank: 0 };
       })
       .filter((v): v is MultiUtilityKpiValue => v != null)
       .sort((a, b) => a.value - b.value);
@@ -261,7 +253,7 @@ export const compareKpisAcrossUtilities = async (
       values,
       kpi_name: kpiName,
       utility_count: values.length,
-      report_period: rows[0]?.periodDate?.toString() ?? null,
+      report_period: rows[0]?.report_date?.toString() ?? null,
     });
   }
 

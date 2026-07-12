@@ -1,0 +1,674 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRISM — Medallion Schema Redesign</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --surface2: #334155;
+    --border: #475569;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+    --accent2: #818cf8;
+    --green: #34d399;
+    --yellow: #facc15;
+    --orange: #fb923c;
+    --red: #f87171;
+    --purple: #a78bfa;
+    --pink: #f472b6;
+    --bronze: #cd7f32;
+    --silver: #c0c0c0;
+    --gold: #ffd700;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+  }
+  .container { max-width: 1280px; margin: 0 auto; padding: 2rem; }
+  h1 {
+    font-size: 2.4rem; font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text; margin-bottom: 0.25rem;
+  }
+  h2 {
+    font-size: 1.5rem; font-weight: 700; color: var(--accent);
+    margin-top: 3rem; margin-bottom: 1rem;
+    padding-bottom: 0.5rem; border-bottom: 2px solid var(--surface2);
+  }
+  h3 {
+    font-size: 1.15rem; font-weight: 600; color: var(--text);
+    margin-top: 1.5rem; margin-bottom: 0.75rem;
+  }
+  h4 { font-size: 1rem; font-weight: 600; color: var(--muted); margin-top: 1rem; margin-bottom: 0.5rem; }
+  .subtitle { color: var(--muted); font-size: 1.05rem; margin-bottom: 2rem; }
+  .badge {
+    display: inline-block; padding: 0.15rem 0.6rem; border-radius: 99px;
+    font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .badge-bronze { background: rgba(205,127,50,0.2); color: var(--bronze); border: 1px solid var(--bronze); }
+  .badge-silver { background: rgba(192,192,192,0.2); color: var(--silver); border: 1px solid var(--silver); }
+  .badge-gold   { background: rgba(255,215,0,0.2); color: var(--gold); border: 1px solid var(--gold); }
+  .badge-green  { background: rgba(52,211,153,0.2); color: var(--green); border: 1px solid var(--green); }
+  .badge-blue   { background: rgba(56,189,248,0.2); color: var(--accent); border: 1px solid var(--accent); }
+  .card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 10px; padding: 1.25rem; margin-bottom: 1rem;
+  }
+  .card-grid { display: grid; gap: 1rem; }
+  .cols2 { grid-template-columns: repeat(2, 1fr); }
+  .cols3 { grid-template-columns: repeat(3, 1fr); }
+  .cols4 { grid-template-columns: repeat(4, 1fr); }
+  .cols5 { grid-template-columns: repeat(5, 1fr); }
+  @media (max-width: 900px) { .cols2, .cols3, .cols4, .cols5 { grid-template-columns: 1fr; } }
+
+  .arch-diagram {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 12px; padding: 2rem; margin: 2rem 0; overflow-x: auto;
+  }
+  .arch-layer {
+    display: flex; align-items: center; justify-content: center;
+    padding: 2rem 1.5rem; border-radius: 14px; margin-bottom: 1.5rem;
+    position: relative; font-weight: 700; font-size: 1.1rem;
+  }
+  .layer-bronze { background: linear-gradient(135deg, rgba(205,127,50,0.15), rgba(205,127,50,0.05)); border: 2px solid rgba(205,127,50,0.35); }
+  .layer-silver { background: linear-gradient(135deg, rgba(192,192,192,0.15), rgba(192,192,192,0.05)); border: 2px solid rgba(192,192,192,0.35); }
+  .layer-gold   { background: linear-gradient(135deg, rgba(255,215,0,0.15), rgba(255,215,0,0.05)); border: 2px solid rgba(255,215,0,0.35); }
+  .arch-arrow {
+    text-align: center; font-size: 1.6rem; color: var(--muted);
+    margin: -0.5rem 0 1rem;
+  }
+  .arch-items { display: flex; flex-wrap: wrap; gap: 0.75rem; justify-content: center; }
+  .arch-item {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 8px; padding: 0.6rem 1rem; font-size: 0.82rem;
+  }
+
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.88rem; }
+  thead { background: var(--surface2); }
+  th { text-align: left; padding: 0.6rem 0.8rem; font-weight: 600; color: var(--accent); border-bottom: 2px solid var(--border); white-space: nowrap; }
+  td { padding: 0.5rem 0.8rem; border-bottom: 1px solid var(--surface2); }
+  tr:hover td { background: rgba(56,189,248,0.05); }
+  .col-new { color: var(--green); font-weight: 600; }
+
+  .code-block {
+    background: #0a0f1a; border: 1px solid var(--border); border-radius: 8px;
+    padding: 1rem 1.25rem; font-family: 'Cascadia Code', 'JetBrains Mono', 'Fira Code', monospace;
+    font-size: 0.82rem; overflow-x: auto; margin: 0.75rem 0; white-space: pre;
+    color: var(--text); line-height: 1.5;
+  }
+  .code-block .kw { color: var(--purple); }
+  .code-block .str { color: var(--green); }
+  .code-block .num { color: var(--orange); }
+  .code-block .cmt { color: var(--muted); font-style: italic; }
+
+  .step-list { counter-reset: step; list-style: none; padding: 0; }
+  .step-list li { counter-increment: step; padding: 0.75rem 0 0.75rem 2.5rem; position: relative; margin-bottom: 0.5rem; }
+  .step-list li::before {
+    content: counter(step);
+    position: absolute; left: 0; top: 0.65rem;
+    width: 1.7rem; height: 1.7rem; border-radius: 50%;
+    background: var(--accent); color: var(--bg);
+    font-size: 0.75rem; font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  .callout {
+    border-left: 4px solid var(--accent); padding: 0.75rem 1rem;
+    background: rgba(56,189,248,0.08); border-radius: 0 8px 8px 0; margin: 1rem 0;
+  }
+  .callout.warn { border-left-color: var(--orange); background: rgba(251,146,60,0.08); }
+  .callout.good { border-left-color: var(--green); background: rgba(52,211,153,0.08); }
+
+  .toc { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 1.25rem 1.5rem; margin-bottom: 2rem; }
+  .toc h3 { margin-top: 0; color: var(--accent); }
+  .toc ol { padding-left: 1.2rem; color: var(--muted); }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+
+  .principles-grid { display: grid; gap: 1rem; }
+  @media (min-width: 700px) { .principles-grid { grid-template-columns: repeat(2, 1fr); } }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>PRISM Medallion Schema Redesign</h1>
+<p class="subtitle">
+  Bronze → Silver → Gold architecture for the data-entry storage model.
+  <br>Status: <span class="badge badge-green">IMPLEMENTED</span> &nbsp;·&nbsp; 2026-07-10
+</p>
+
+<div class="toc">
+  <h3>Contents</h3>
+  <ol>
+    <li><a href="#principles">Design Principles</a></li>
+    <li><a href="#arch">Medallion Architecture</a></li>
+    <li><a href="#bronze">Bronze Layer — Raw Tables</a></li>
+    <li><a href="#silver">Silver Layer — Enriched View</a></li>
+    <li><a href="#gold">Gold Layer — Business Views</a></li>
+    <li><a href="#dimensions">Dimension Model</a></li>
+    <li><a href="#value-routing">Typed Value Routing</a></li>
+    <li><a href="#ui">Enter Data v2 UI</a></li>
+    <li><a href="#migration">Migration Scripts</a></li>
+    <li><a href="#endorsed">Endorsed Status Retirement</a></li>
+    <li><a href="#files">File Inventory</a></li>
+  </ol>
+</div>
+
+<!-- ================================================================== -->
+<h2 id="principles">1. Design Principles</h2>
+
+<div class="principles-grid">
+  <div class="card">
+    <h4>1. A definition is a pure measure</h4>
+    <p style="color:var(--muted);font-size:0.88rem;">
+      Dimension words (Solar, Prepaid, Residential, Female…) never appear in a measure's name.
+      Every "which one" is a dimension <strong>column</strong> on the entry row.
+      515 legacy definitions collapse to <strong>~55–65 measures</strong>.
+    </p>
+  </div>
+  <div class="card">
+    <h4>2. IDs in tables, names in views</h4>
+    <p style="color:var(--muted);font-size:0.88rem;">
+      Storage rows carry foreign keys only. The Silver view resolves every ID to its label.
+      Renames are one-row updates, never data migrations.
+    </p>
+  </div>
+  <div class="card">
+    <h4>3. Typed at the source</h4>
+    <p style="color:var(--muted);font-size:0.88rem;">
+      The single <code>varchar(255) value</code> is replaced by typed value columns.
+      The database itself rejects a non-number in a numeric field, on every write path.
+    </p>
+  </div>
+  <div class="card">
+    <h4>4. No NULL-as-"All"</h4>
+    <p style="color:var(--muted);font-size:0.88rem;">
+      Every dimension has an explicit <strong>All</strong> member and the column is NOT NULL.
+      Eliminates the NULL ambiguity that silently broke formula bindings.
+    </p>
+  </div>
+  <div class="card">
+    <h4>5. Read down, never write up</h4>
+    <p style="color:var(--muted);font-size:0.88rem;">
+      Bronze is written by data entry. Silver and Gold are derived, refreshed automatically,
+      and read by the AI, dashboards, reports, and external tiers.
+    </p>
+  </div>
+</div>
+
+<!-- ================================================================== -->
+<h2 id="arch">2. Medallion Architecture</h2>
+
+<div class="arch-diagram">
+  <div class="arch-layer layer-gold">
+    <div>
+      <span class="badge badge-gold">GOLD</span>
+      <div style="margin-top:0.75rem;font-size:0.88rem;font-weight:400;">
+        Business-ready views — dim_utility, fact_kpi, fact_kpi_rollup,
+        v_reporting_status, v_bsc_alignment, ext_*
+      </div>
+      <div class="arch-items" style="margin-top:0.75rem;">
+        <span class="arch-item">dim_utility</span>
+        <span class="arch-item">fact_kpi</span>
+        <span class="arch-item">fact_kpi_rollup</span>
+        <span class="arch-item">v_reporting_status</span>
+        <span class="arch-item">v_bsc_alignment</span>
+        <span class="arch-item">ext_data_entries</span>
+        <span class="arch-item">ext_kpi</span>
+      </div>
+    </div>
+  </div>
+  <div class="arch-arrow">↑ reads from ↑</div>
+  <div class="arch-layer layer-silver">
+    <div>
+      <span class="badge badge-silver">SILVER</span>
+      <div style="margin-top:0.75rem;font-size:0.88rem;font-weight:400;">
+        Materialized view — all IDs resolved to labels, typed values, derived columns
+      </div>
+      <div class="arch-items" style="margin-top:0.75rem;">
+        <span class="arch-item">silver.data_entries_enriched</span>
+      </div>
+    </div>
+  </div>
+  <div class="arch-arrow">↑ reads from ↑</div>
+  <div class="arch-layer layer-bronze">
+    <div>
+      <span class="badge badge-bronze">BRONZE</span>
+      <div style="margin-top:0.75rem;font-size:0.88rem;font-weight:400;">
+        Raw, as-entered — typed value columns, 8 dimension FKs, measure-linked
+      </div>
+      <div class="arch-items" style="margin-top:0.75rem;">
+        <span class="arch-item">input_definitions</span>
+        <span class="arch-item">data_entries</span>
+        <span class="arch-item">measure_dimension_scope</span>
+        <span class="arch-item">data_entry_logs</span>
+        <span class="arch-item">managed_lists / managed_list_items</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="callout">
+  <strong>Access rules</strong> (enforced at the Gold read layer):
+  <br>• <strong>Utility roles</strong> → own utility, everything including Monthly
+  <br>• <strong>BMO / DEV</strong> → cross-utility, Financial Year data only
+  <br>• <strong>Cross-utility benchmarking</strong> → Approved-only
+  <br>• <strong>External tiers</strong> → <code>gold.ext_*</code> only
+</div>
+
+<!-- ================================================================== -->
+<h2 id="bronze">3. Bronze Layer — Raw Tables</h2>
+
+<h3>3.1 input_definitions → measure_definitions (alias)</h3>
+<p style="color:var(--muted);">
+  The existing <code>input_definitions</code> table is aliased as <code>measureDefinitions</code>
+  in Drizzle. Key changes: <code>valid_range_min/max</code> upgraded from integer to numeric.
+  Two new columns: <code>definition</code> (text), <code>synonyms</code> (jsonb string[]).
+</p>
+
+<h3>3.2 data_entries — Redesigned</h3>
+<table>
+  <thead>
+    <tr><th>Column</th><th>Type</th><th>Status</th><th>Notes</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>id</td><td>uuid PK</td><td>existing</td><td>defaultRandom()</td></tr>
+    <tr><td>report_period_id</td><td>FK, NOT NULL</td><td>existing</td><td>implies utility + FY/Monthly</td></tr>
+    <tr><td>service_area_id</td><td>FK</td><td>existing</td><td></td></tr>
+    <tr><td>input_def_id (measure)</td><td>FK, NOT NULL</td><td>existing</td><td>→ input_definitions</td></tr>
+    <tr><td>energy_provider_id</td><td>FK</td><td>existing</td><td>All default: 20</td></tr>
+    <tr class="col-new"><td>energy_type_id</td><td>FK</td><td class="col-new">NEW</td><td>Completes provider/type/source triple. Default: 30</td></tr>
+    <tr><td>energy_source_id</td><td>FK</td><td>existing</td><td>Default: 40 (All GEN)</td></tr>
+    <tr><td>customer_type_id</td><td>FK</td><td>existing</td><td>Default: 690 (All Customers)</td></tr>
+    <tr><td>payment_mode_id</td><td>FK</td><td>existing</td><td>Default: 720 (All Payment Modes)</td></tr>
+    <tr class="col-new"><td>consumption_band_id</td><td>FK</td><td class="col-new">NEW</td><td>Collapses ~150 tariff-structure defs</td></tr>
+    <tr class="col-new"><td>division_id</td><td>FK</td><td class="col-new">NEW</td><td>Collapses ~39 HR defs</td></tr>
+    <tr class="col-new"><td>gender_id</td><td>FK</td><td class="col-new">NEW</td><td>(Jointly with division)</td></tr>
+    <tr><td>energy_resource_id</td><td>FK, NULL</td><td>existing</td><td>Optional finest grain (per generating unit)</td></tr>
+    <tr class="col-new"><td>value_numeric</td><td>numeric</td><td class="col-new">NEW</td><td>Replaces misspelled <code>numberic_value</code></td></tr>
+    <tr><td>value_boolean</td><td>boolean</td><td>existing</td><td>As <code>boolean_value</code></td></tr>
+    <tr class="col-new"><td>value_option_id</td><td>FK</td><td class="col-new">NEW</td><td>For option-typed measures</td></tr>
+    <tr><td>value_string</td><td>text</td><td>existing</td><td>As <code>text_value</code></td></tr>
+    <tr><td>status_id</td><td>FK</td><td>existing</td><td>Requested→Pending→Entered→Reviewed→Approved (Endorsed retired)</td></tr>
+  </tbody>
+</table>
+
+<div class="callout warn">
+  <strong>Pending constraints</strong> (Phase 3, after migration):
+  <br>• <code>CHECK</code> — at most one of {value_numeric, value_boolean, value_option_id, value_string} non-null
+  <br>• <code>NOT NULL</code> — on all 8 dimension FK columns (after NULL backfill)
+  <br>• <code>UNIQUE</code> — on (report_period_id, service_area_id, measure_id, 8 dimension columns, energy_resource_id)
+</div>
+
+<h3>3.3 measure_dimension_scope</h3>
+<p style="color:var(--muted);">
+  New table replacing <code>inputRelevance</code>, <code>tariffRelevance</code>, and <code>transmissionRelevance</code>.
+  Declares which dimensions apply to which measure — drives the entry UI and validation.
+</p>
+<table>
+  <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td>id</td><td>serial PK</td><td></td></tr>
+    <tr><td>measure_id</td><td>FK → input_definitions</td><td>CASCADE on delete</td></tr>
+    <tr><td>dimension</td><td>varchar(32) — enum</td><td>energy_provider | energy_type | energy_source | customer_type | payment_mode | consumption_band | division | gender</td></tr>
+    <tr><td>is_applicable</td><td>boolean</td><td>Default true</td></tr>
+  </tbody>
+</table>
+
+<h3>3.4 data_entry_logs</h3>
+<table>
+  <thead><tr><th>Column</th><th>Type</th><th>Status</th><th>Notes</th></tr></thead>
+  <tbody>
+    <tr><td>previous_value</td><td>varchar(255)</td><td>existing</td><td>Legacy — kept for transition</td></tr>
+    <tr><td>new_value</td><td>varchar(255)</td><td>existing</td><td>Legacy — kept for transition</td></tr>
+    <tr class="col-new"><td>value_snapshot</td><td>jsonb</td><td class="col-new">NEW</td><td>Snapshot of {value_numeric, value_boolean, value_option_id, value_string, status_id}</td></tr>
+  </tbody>
+</table>
+
+<h3>3.5 New Managed Lists</h3>
+<table>
+  <thead><tr><th>List</th><th>Members (All first)</th><th>Collapses</th></tr></thead>
+  <tbody>
+    <tr><td><span class="badge badge-blue">NEW</span> <strong>Consumption Band</strong></td><td>All · 100 kWh · 500 kWh · 1,000 kWh · 10,000 kWh · Lifeline 60/120/180 · …</td><td>~150 tariff-structure defs</td></tr>
+    <tr><td><span class="badge badge-blue">NEW</span> <strong>Division</strong></td><td>All · Generation · Transmission · Distribution · Finance · ICT · HR · Procurement · PR/Marketing/Customer Service · Administration · Other</td><td>~39 HR defs</td></tr>
+    <tr><td>Gender (existing)</td><td>All · Female · Male</td><td>(Jointly with Division)</td></tr>
+  </tbody>
+</table>
+
+<!-- ================================================================== -->
+<h2 id="silver">4. Silver Layer — Materialized View</h2>
+
+<h3>silver.data_entries_enriched</h3>
+<p style="color:var(--muted);">
+  One row per Bronze row — the descriptive twin. Every ID resolved to its label (IDs retained alongside).
+  Values already typed by construction. Refresh: <code>CONCURRENTLY</code>, triggered by approval events
+  and KPI-worker completion.
+</p>
+<div class="card-grid cols3">
+  <div class="card"><h4>Resolved from IDs</h4><p style="color:var(--muted);font-size:0.85rem;">measure_name, unit_name, data_type_name, category_name, subcategory_name<br>All 8 dimension labels<br>Option value label<br>Status name<br>Utility name, country, sub_region</p></div>
+  <div class="card"><h4>Derived columns</h4><p style="color:var(--muted);font-size:0.85rem;">value_display (formatted per type)<br>is_approved (status_id ≥ 5)<br>utility_size, utility_type<br>report_type, report_date</p></div>
+  <div class="card"><h4>Indexes</h4><p style="color:var(--muted);font-size:0.85rem;">UNIQUE on id<br>on (utility_id, report_period_id)<br>on (measure_id, report_period_id)<br>on (is_approved, utility_id)</p></div>
+</div>
+
+<div class="code-block"><span class="cmt">-- Example Silver row (conceptual)</span>
+EFL · Fiji · Melanesia · FY2024 · Viti Levu
+Electricity Generated · MWh · Operational · Generation · Draft
+Utility: EFL  |  Source: Diesel  |  Type: Conventional
+Customer: All  |  Payment: All  |  Band: All  |  Division: All
+<span class="kw">Value:</span> <span class="num">48,210.5</span> MWh  ·  <span class="kw">Status:</span> Approved</div>
+
+<!-- ================================================================== -->
+<h2 id="gold">5. Gold Layer — Business Views</h2>
+
+<div class="card-grid cols2">
+  <div class="card">
+    <h4><span class="badge badge-gold">VIEW</span> dim_utility</h4>
+    <p style="color:var(--muted);font-size:0.85rem;">Flattened utility profiles: name, acronym, country, sub_region, utility_size, utility_type, ownership_type, entity_type, PPA membership, monthly reporting flag.</p>
+  </div>
+  <div class="card">
+    <h4><span class="badge badge-gold">VIEW</span> fact_kpi</h4>
+    <p style="color:var(--muted);font-size:0.85rem;">Computed KPI results with: actual_value, target_value, meets_target flag, category, subcategory, unit, calculation_formula_version.</p>
+  </div>
+  <div class="card">
+    <h4><span class="badge badge-gold">VIEW</span> fact_kpi_rollup</h4>
+    <p style="color:var(--muted);font-size:0.85rem;">Hierarchical rollups via <code>GROUPING SETS</code>: global × period, sub-region × period, sub-region × size × period, utility × period. Aggregates: avg, min, max, count, entries_meeting_target.</p>
+  </div>
+  <div class="card">
+    <h4><span class="badge badge-gold">VIEW</span> v_reporting_status</h4>
+    <p style="color:var(--muted);font-size:0.85rem;">Workflow progress per utility × period: total_entries, approved_count, not_available_count, pct_complete, pending_with_role.</p>
+  </div>
+  <div class="card">
+    <h4><span class="badge badge-gold">VIEW</span> v_bsc_alignment</h4>
+    <p style="color:var(--muted);font-size:0.85rem;">Strategy map joined to actual KPI values. Unwraps the BSC JSON hierarchy into relational rows with kpi_name, actual_value, target_value.</p>
+  </div>
+  <div class="card">
+    <h4><span class="badge badge-gold">VIEW</span> ext_data_entries / ext_kpi</h4>
+    <p style="color:var(--muted);font-size:0.85rem;">External-tier slices: Approved-only, summary-level, per-utility visibility. No raw values exposed to paid tiers.</p>
+  </div>
+</div>
+
+<!-- ================================================================== -->
+<h2 id="dimensions">6. Dimension Model</h2>
+
+<h3>8 dimensions on every data entry row</h3>
+<table>
+  <thead><tr><th>Dimension</th><th>FK Column</th><th>Managed List</th><th>All Member ID</th><th>Status</th></tr></thead>
+  <tbody>
+    <tr><td>Energy Provider</td><td>energy_provider_id</td><td>Energy Provider</td><td>20</td><td>existing</td></tr>
+    <tr><td>Energy Type</td><td>energy_type_id</td><td>Energy Type</td><td>30</td><td class="col-new">NEW column</td></tr>
+    <tr><td>Energy Source</td><td>energy_source_id</td><td>Energy Source</td><td>40 (GEN) / 58 (ESS)</td><td>existing</td></tr>
+    <tr><td>Customer Type</td><td>customer_type_id</td><td>Customer Type</td><td>690</td><td>existing</td></tr>
+    <tr><td>Payment Mode</td><td>payment_mode_id</td><td>Payment Mode</td><td>720</td><td>existing</td></tr>
+    <tr><td>Consumption Band</td><td>consumption_band_id</td><td>Consumption Band</td><td>TBD</td><td class="col-new">NEW</td></tr>
+    <tr><td>Division</td><td>division_id</td><td>Division</td><td>TBD</td><td class="col-new">NEW</td></tr>
+    <tr><td>Gender</td><td>gender_id</td><td>Gender</td><td>TBD</td><td class="col-new">NEW column</td></tr>
+    <tr style="border-top:2px solid var(--border);"><td>Energy Resource</td><td>energy_resource_id</td><td>N/A (→ energy_resources)</td><td>NULL (optional)</td><td>existing</td></tr>
+  </tbody>
+</table>
+
+<h3>measure_dimension_scope — Controls which dimensions appear</h3>
+<div class="card-grid cols2">
+  <div class="card">
+    <h4>Example: employees_total</h4>
+    <table style="font-size:0.8rem;">
+      <thead><tr><th>Dimension</th><th>Applicable</th></tr></thead>
+      <tbody>
+        <tr><td>energy_provider — gender</td><td style="text-align:center">—</td></tr>
+        <tr><td>division</td><td style="text-align:center;color:var(--green)">✓</td></tr>
+        <tr><td>gender</td><td style="text-align:center;color:var(--green)">✓</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <div class="card">
+    <h4>Example: tariff_rate</h4>
+    <table style="font-size:0.8rem;">
+      <thead><tr><th>Dimension</th><th>Applicable</th></tr></thead>
+      <tbody>
+        <tr><td>energy_provider — energy_source</td><td style="text-align:center">—</td></tr>
+        <tr><td>customer_type</td><td style="text-align:center;color:var(--green)">✓</td></tr>
+        <tr><td>payment_mode</td><td style="text-align:center;color:var(--green)">✓</td></tr>
+        <tr><td>consumption_band</td><td style="text-align:center;color:var(--green)">✓</td></tr>
+        <tr><td>division — gender</td><td style="text-align:center">—</td></tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- ================================================================== -->
+<h2 id="value-routing">7. Typed Value Routing</h2>
+
+<p style="color:var(--muted);">
+  One shared function — <code>lib/data-entry/value-router.ts</code> — used by every write path
+  (UI, Excel import, API, future document extraction). Routes based on measure's <code>data_type_id</code>.
+</p>
+
+<table>
+  <thead><tr><th>Data Type</th><th>Value Column</th><th>Input Control</th></tr></thead>
+  <tbody>
+    <tr><td>number / numeric / integer / decimal</td><td>value_numeric</td><td>&lt;input type="number"&gt;</td></tr>
+    <tr><td>boolean / bool</td><td>value_boolean</td><td>Yes/No select</td></tr>
+    <tr><td>option / select</td><td>value_option_id</td><td>Managed list item select</td></tr>
+    <tr><td>text / string</td><td>value_string</td><td>&lt;input type="text"&gt;</td></tr>
+  </tbody>
+</table>
+
+<div class="code-block"><span class="cmt">// lib/data-entry/value-router.ts</span>
+<span class="kw">export type</span> ValueColumn = <span class="str">"value_numeric"</span> | <span class="str">"value_boolean"</span> | <span class="str">"value_option_id"</span> | <span class="str">"value_string"</span>;
+
+<span class="kw">const</span> DATA_TYPE_TO_COLUMN: Record&lt;string, ValueColumn&gt; = {
+  <span class="str">number</span>: <span class="str">"value_numeric"</span>,
+  <span class="str">boolean</span>: <span class="str">"value_boolean"</span>,
+  <span class="str">option</span>: <span class="str">"value_option_id"</span>,
+  <span class="str">text</span>: <span class="str">"value_string"</span>,
+  <span class="cmt">// ... aliases for numeric, integer, decimal, bool, select, string</span>
+};
+
+<span class="kw">export function</span> resolveValueColumn(dataTypeName: string | null | undefined): ValueColumn | null;</div>
+
+<div class="callout good">
+  <strong>What this buys:</strong> The database rejects wrong-typed values on every write path.
+  The "Infinity" class of defect becomes impossible. No more string parsing in the KPI worker —
+  it reads <code>value_numeric</code> directly.
+</div>
+
+<!-- ================================================================== -->
+<h2 id="ui">8. Enter Data v2 UI</h2>
+
+<h3>Replaced v1 card grid with a table + dimension panel</h3>
+
+<div class="card-grid cols2">
+  <div class="card">
+    <h4><span class="badge badge-blue">FILTER BAR</span> 4 selectors</h4>
+    <p style="color:var(--muted);font-size:0.85rem;">
+      Report Period · Measure Category · Subcategory · Status<br>
+      Cookie + URL sync. Cascade reset on category change.
+    </p>
+  </div>
+  <div class="card">
+    <h4><span class="badge badge-blue">DIMENSION PANEL</span> Collapsible</h4>
+    <p style="color:var(--muted);font-size:0.85rem;">
+      8 dimension dropdowns: Provider, Type, Source, Customer, Payment, Band, Division, Gender.<br>
+      All default to "All". Filters refresh on change.
+    </p>
+  </div>
+  <div class="card">
+    <h4><span class="badge badge-blue">MEASURE TABLE</span> Replaces card grid</h4>
+    <p style="color:var(--muted);font-size:0.85rem;">
+      Sticky measure name column. Applicable dimensions as columns. Typed value input (numeric, boolean select, option select, text). DNA checkbox. Inline comment preview.
+    </p>
+  </div>
+  <div class="card">
+    <h4><span class="badge badge-blue">VALUE ROUTING</span> Per data_type</h4>
+    <p style="color:var(--muted);font-size:0.85rem;">
+      InputCell renders the correct control based on measure.data_type_id:<br>
+      numeric → &lt;input type="number"&gt;, boolean → Yes/No select, option → managed list select, text → text input.
+    </p>
+  </div>
+</div>
+
+<h3>Pages</h3>
+<table>
+  <thead><tr><th>Route</th><th>Component</th><th>Status</th></tr></thead>
+  <tbody>
+    <tr><td>/data-entry/enter-data</td><td>EnterDataPage (now v2)</td><td>Replaced v1</td></tr>
+    <tr><td>/data-entry/enter-data-v2</td><td>Alternate URL (same components)</td><td>Still available</td></tr>
+    <tr><td>/settings/measure-scope</td><td>MeasureDimensionScopeEditor</td><td>New</td></tr>
+    <tr><td>/settings/relevance</td><td>Legacy relevance pages (to be retired)</td><td>Still active</td></tr>
+  </tbody>
+</table>
+
+<h3>Removed v1 components (no longer rendered)</h3>
+<div class="card-grid cols3">
+  <div class="card"><span style="color:var(--red);">✕</span> generatorGroups.tsx<br><span style="color:var(--muted);font-size:0.8rem;">Replaced by dimension-filtered table rows</span></div>
+  <div class="card"><span style="color:var(--red);">✕</span> tariffGroups.tsx<br><span style="color:var(--muted);font-size:0.8rem;">Self-describing dimension columns</span></div>
+  <div class="card"><span style="color:var(--red);">✕</span> inputRows.tsx (card grid)<br><span style="color:var(--muted);font-size:0.8rem;">Replaced by MeasureTable</span></div>
+</div>
+
+<h3>New components</h3>
+<table>
+  <thead><tr><th>File</th><th>Purpose</th></tr></thead>
+  <tbody>
+    <tr><td>app/data-entry/enter-data-v2/page.tsx</td><td>Server orchestrator</td></tr>
+    <tr><td>app/data-entry/enter-data-v2/filters.client.tsx</td><td>Primary filter bar (4 selectors)</td></tr>
+    <tr><td>app/data-entry/enter-data-v2/dimension-panel.tsx</td><td>Collapsible 8-dimension filter panel</td></tr>
+    <tr><td>app/data-entry/enter-data-v2/measure-table.tsx</td><td>Table with dimension columns + inline editing</td></tr>
+    <tr><td>app/data-entry/enter-data-v2/service.ts</td><td>Server actions: view model, value save, availability, comments</td></tr>
+    <tr><td>app/data-entry/enter-data-v2/types.ts</td><td>All v2 TypeScript interfaces</td></tr>
+    <tr><td>app/settings/measure-scope/page.tsx</td><td>Measure dimension scope editor page</td></tr>
+    <tr><td>app/settings/measure-scope/scope-editor.client.tsx</td><td>Checkbox grid for measure × dimension</td></tr>
+    <tr><td>app/settings/measure-scope/service.ts</td><td>Scope CRUD server actions</td></tr>
+    <tr><td>lib/data-entry/value-router.ts</td><td>Shared typed value routing utility</td></tr>
+  </tbody>
+</table>
+
+<!-- ================================================================== -->
+<h2 id="migration">9. Migration Scripts</h2>
+
+<div class="card-grid cols2">
+  <div class="card">
+    <h4>1. medallion-backfill-nulls.sql</h4>
+    <p style="color:var(--muted);font-size:0.85rem;">
+      Backfills NULL → explicit All member IDs on all dimension columns.<br>
+      • customer_type_id NULL → 690<br>
+      • payment_mode_id NULL → 720<br>
+      • energy_provider_id NULL → 20<br>
+      • energy_source_id NULL → 40<br>
+      • energy_type_id NULL → 30<br>
+      Includes verification SELECT at end.
+    </p>
+  </div>
+  <div class="card">
+    <h4>2. medallion-migrate-values.sql</h4>
+    <p style="color:var(--muted);font-size:0.85rem;">
+      Routes varchar / boolean / text / numeric values into the 4 typed columns based on measure data_type.<br>
+      • number-typed → value_numeric (from numberic_value or parsed varchar)<br>
+      • boolean-typed → value_boolean (parsed Yes/No/true/false)<br>
+      • text-typed → value_string (from text_value or varchar)<br>
+      Parse failures (~90 rows: "Infinity" + placeholders) logged to data_entry_logs, not dropped.
+    </p>
+  </div>
+  <div class="card">
+    <h4>3. medallion-collapse-measures.sql</h4>
+    <p style="color:var(--muted);font-size:0.85rem;">
+      Infrastructure for the 515→~55 measure collapse:<br>
+      • measure_def_migration_map table<br>
+      • create_measure_from_template() function<br>
+      • map_legacy_to_measure() function<br>
+      • v_measure_migration_summary view<br>
+      Actual mapping data requires the classifier workbook (p1_dl_def_ids_raw.xlsx).
+    </p>
+  </div>
+  <div class="card">
+    <h4>4. medallion-retire-endorsed.sql</h4>
+    <p style="color:var(--muted);font-size:0.85rem;">
+      Migrates all Endorsed (status_id=6) rows → Approved (status_id=5).<br>
+      Reports count of affected rows via RAISE NOTICE.
+    </p>
+  </div>
+</div>
+
+<h3>5. medallion-silver-gold-views.sql</h3>
+<p style="color:var(--muted);">
+  Creates schemas <code>silver</code> + <code>gold</code>, the materialized view,
+  7 gold views, refresh function, and all indexes. ~350 lines of SQL.
+</p>
+
+<!-- ================================================================== -->
+<h2 id="endorsed">10. Endorsed Status Retirement</h2>
+
+<p style="color:var(--muted);">
+  <code>DataEntryStatusId.Endorsed = 6</code> is marked <code>@deprecated</code> in the TypeScript enum.
+  Removed from <code>DataEntryStatus</code> (public-facing map), <code>dataEntryStatusColors</code>,
+  and <code>DataEntryStatusList</code>. All 15 consumer files updated:
+</p>
+
+<div class="card-grid cols4">
+  <div class="card" style="font-size:0.82rem;">app/data-entry/service.ts<br>app/data-entry/downloads/service.ts<br>app/data-entry/reportPeriodTable.tsx</div>
+  <div class="card" style="font-size:0.82rem;">lib/ai/data-service/analysis.ts<br>lib/ai/data-service/anomalies.ts<br>lib/ai/data-service/benchmarking.ts</div>
+  <div class="card" style="font-size:0.82rem;">lib/ai/data-service/insights.ts<br>lib/ai/data-service/kpi.ts<br>lib/ai/data-service/trends.ts</div>
+  <div class="card" style="font-size:0.82rem;">app/settings/email-schedules/service.ts<br>scripts/check-status-counts.ts<br>scripts/diagnose-data-entry-gap.ts<br>scripts/verify-service-numbers.ts</div>
+</div>
+
+<!-- ================================================================== -->
+<h2 id="files">11. File Inventory</h2>
+
+<h3>New files created</h3>
+<table>
+  <thead><tr><th>Path</th><th>Type</th><th>Lines</th></tr></thead>
+  <tbody>
+    <tr><td>db/schema/measureDimensionScope.ts</td><td>Drizzle schema</td><td>47</td></tr>
+    <tr><td>lib/data-entry/value-router.ts</td><td>Utility</td><td>48</td></tr>
+    <tr><td>app/data-entry/enter-data-v2/types.ts</td><td>TypeScript types</td><td>165</td></tr>
+    <tr><td>app/data-entry/enter-data-v2/service.ts</td><td>Server actions</td><td>635</td></tr>
+    <tr><td>app/data-entry/enter-data-v2/filters.client.tsx</td><td>UI component</td><td>192</td></tr>
+    <tr><td>app/data-entry/enter-data-v2/dimension-panel.tsx</td><td>UI component</td><td>143</td></tr>
+    <tr><td>app/data-entry/enter-data-v2/measure-table.tsx</td><td>UI component</td><td>389</td></tr>
+    <tr><td>app/data-entry/enter-data-v2/page.tsx</td><td>Page</td><td>49</td></tr>
+    <tr><td>app/settings/measure-scope/page.tsx</td><td>Page</td><td>27</td></tr>
+    <tr><td>app/settings/measure-scope/scope-editor.client.tsx</td><td>UI component</td><td>142</td></tr>
+    <tr><td>app/settings/measure-scope/service.ts</td><td>Server actions</td><td>98</td></tr>
+    <tr><td>scripts/medallion-backfill-nulls.sql</td><td>Migration SQL</td><td>58</td></tr>
+    <tr><td>scripts/medallion-migrate-values.sql</td><td>Migration SQL</td><td>117</td></tr>
+    <tr><td>scripts/medallion-collapse-measures.sql</td><td>Migration SQL</td><td>134</td></tr>
+    <tr><td>scripts/medallion-retire-endorsed.sql</td><td>Migration SQL</td><td>20</td></tr>
+    <tr><td>scripts/medallion-silver-gold-views.sql</td><td>Migration SQL</td><td>354</td></tr>
+    <tr><td>docs/medallion-schema-redesign.html</td><td>Documentation</td><td>this file</td></tr>
+  </tbody>
+</table>
+
+<h3>Modified files (16)</h3>
+<div class="card-grid cols4" style="font-size:0.82rem;">
+  <div class="card">db/schema/dataEntry.ts<br>db/schema/index.ts<br>scripts/seed.ts</div>
+  <div class="card">app/data-entry/enter-data/page.tsx<br>app/data-entry/service.ts<br>app/data-entry/reportPeriodTable.tsx<br>app/data-entry/downloads/service.ts</div>
+  <div class="card">app/settings/email-schedules/service.ts</div>
+  <div class="card">lib/ai/data-service/analysis.ts<br>lib/ai/data-service/anomalies.ts<br>lib/ai/data-service/benchmarking.ts<br>lib/ai/data-service/insights.ts<br>lib/ai/data-service/kpi.ts<br>lib/ai/data-service/trends.ts</div>
+  <div class="card">scripts/check-status-counts.ts<br>scripts/diagnose-data-entry-gap.ts<br>scripts/verify-service-numbers.ts</div>
+</div>
+
+<h3>Database changes (via drizzle-kit push)</h3>
+<table>
+  <thead><tr><th>Table</th><th>Change</th></tr></thead>
+  <tbody>
+    <tr><td>data_entries</td><td>+6 columns: energy_type_id, consumption_band_id, division_id, gender_id, value_numeric, value_option_id</td></tr>
+    <tr><td>data_entry_logs</td><td>+1 column: value_snapshot (jsonb)</td></tr>
+    <tr><td>measure_dimension_scope</td><td>New table</td></tr>
+    <tr><td>managed_lists</td><td>+2 rows: Division, Consumption Band (via seed.ts)</td></tr>
+  </tbody>
+</table>
+
+<div class="callout good" style="margin-top:3rem;">
+  <strong>Build status:</strong> ✓ TypeScript (0 errors) · ✓ ESLint (0 new errors) · ✓ Next.js build (112 pages) · ✓ CodeQL · ✓ Deploy to VPS
+</div>
+
+</div>
+</body>
+</html>

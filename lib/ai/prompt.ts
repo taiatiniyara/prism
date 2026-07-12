@@ -135,6 +135,20 @@ get_worldbank_context pulls live World Bank data for any Pacific country — inc
 
 Call it once per conversation — cache the result mentally. It works without Power BI and without PRISM DB access. If no country_code is given, it defaults to the user's own country automatically.
 
+## Medallion Data Architecture (Silver & Gold Views)
+PRISM's local database uses a medallion architecture. All read queries go through pre-built views — never raw table joins. This means faster, simpler, and more consistent results:
+
+- **Silver layer** (\`silver.data_entries_enriched\`) — raw data entries with every ID resolved to its label. Utility name, country, sub-region, measure name, unit, all dimension labels, and formatted display values are pre-joined. Use for any data entry questions.
+- **Gold layer** — business-ready views:
+  - \`gold.fact_kpi\` — computed KPI results with targets, limits, meets-target flags, utility context, report date, category, subcategory, and unit. All the joins (kpi → definitions → periods → organisations → managed lists) are pre-resolved.
+  - \`gold.dim_utility\` — flattened utility profile: name, acronym, country, sub-region, size, type, ownership, active status. Use for utility lookups and peer grouping.
+  - \`gold.fact_kpi_rollup\` — hierarchical rollups: service area → utility → country → sub-region → region, and month → FY. Pre-computed aggregations, never averages.
+  - \`gold.v_reporting_status\` — workflow progress per utility × period: counts per status, % complete, pending-with role.
+  - \`gold.v_bsc_alignment\` — strategy map joined to actual KPI results. "How are we tracking against our strategy?" in one query.
+  - \`gold.ext_data_entries\` / \`gold.ext_kpi\` — approved-only, summary-level slices for external readers (no raw values, no targets).
+
+All PRISM-native tools query these views directly. When in doubt, \`gold.fact_kpi\` for KPI results and \`gold.dim_utility\` for utility info.
+
 ## PRISM Native Tools (Strictly Administrative)
 These tools query the local PRISM web app database. They do NOT contain performance data. Use them ONLY for administrative/workflow questions:
 

@@ -193,7 +193,7 @@ SELECT
   org.ppa_membership_type_id,
   org.is_utility,
   org.is_active,
-  org.is_mth_reports_relevant_month AS has_monthly_reporting
+  org.is_mth_report_relevant AS has_monthly_reporting
 FROM organisations org
 INNER JOIN countries c ON c.id = org.country_id
 LEFT JOIN sub_regions sr ON sr.id = c.sub_region_id
@@ -209,12 +209,15 @@ CREATE OR REPLACE VIEW gold.fact_kpi AS
 SELECT
   k.id AS kpi_instance_id,
   k.report_period_id,
+  rp.report_date,
+  rp.report_type_id,
   rp.utility_id,
   org.name AS utility_name,
   org.acronym AS utility_acronym,
   k.kpi_def_id,
   kd.name AS kpi_name,
   kd.description AS kpi_description,
+  kd.limits,
   k.actual_value,
   k.target_value,
   k.comments,
@@ -347,7 +350,7 @@ LEFT JOIN LATERAL (
   SELECT DISTINCT
     kpi_links->>'kpi_id' AS kpi_id
   FROM jsonb_array_elements(
-    CASE jsonb_typeof(b.perspective)
+    CASE jsonb_typeof(b.perspective::jsonb)
       WHEN 'array' THEN b.perspective::jsonb
       ELSE '[]'::jsonb
     END
