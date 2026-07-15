@@ -217,6 +217,9 @@ export const dataEntries = pgTable(
     energy_resource_id: integer("energy_resource_id").references(
       () => energyResources.id,
     ),
+    energy_resource_type_id: integer("energy_resource_type_id").references(
+      () => managedListItems.id,
+    ),
     power_station_id: integer("power_station_id").references(
       () => powerStations.id,
     ),
@@ -259,12 +262,12 @@ export const dataEntries = pgTable(
     consumption_band_id: integer("consumption_band_id").references(
       () => managedListItems.id,
     ),
-    division_id: integer("division_id").references(
+    division_id: integer("division_id").references(() => managedListItems.id),
+    gender_id: integer("gender_id").references(() => managedListItems.id),
+    utility_function_id: integer("utility_function_id").references(
       () => managedListItems.id,
     ),
-    gender_id: integer("gender_id").references(
-      () => managedListItems.id,
-    ),
+
     value_numeric: numeric("value_numeric"),
     value_option_id: integer("value_option_id").references(
       () => managedListItems.id,
