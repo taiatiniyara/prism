@@ -232,7 +232,7 @@ export const dataEntries = pgTable(
     region: varchar("region", { length: 255 }).$type<Region>(),
     input_def_id: integer("input_def_id")
       .notNull()
-      .references(() => inputDefinitions.id),
+      .references(() => inputDefinitions.id, { onDelete: "cascade" }),
     value: varchar("value", { length: 255 }),
     value_text: text("value_text"),
     value_numeric: numeric("value_numeric"),
@@ -299,7 +299,7 @@ export const tariffRelevance = pgTable(
       .references(() => serviceAreas.id),
     input_def_id: integer("input_def_id")
       .notNull()
-      .references(() => inputDefinitions.id),
+      .references(() => inputDefinitions.id, { onDelete: "cascade" }),
     payment_mode_id: integer("payment_mode_id")
       .notNull()
       .references(() => managedListItems.id),
@@ -334,7 +334,7 @@ export const transmissionRelevance = pgTable(
       .references(() => serviceAreas.id),
     input_def_id: integer("input_def_id")
       .notNull()
-      .references(() => inputDefinitions.id),
+      .references(() => inputDefinitions.id, { onDelete: "cascade" }),
     is_relevant: boolean("is_relevant").default(true).notNull(),
     is_deleted: boolean("is_deleted").default(false).notNull(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
