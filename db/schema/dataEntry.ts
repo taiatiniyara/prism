@@ -234,9 +234,9 @@ export const dataEntries = pgTable(
       .notNull()
       .references(() => inputDefinitions.id),
     value: varchar("value", { length: 255 }),
-    text_value: text("text_value"),
-    boolean_value: boolean("boolean_value"),
-    numberic_value: numeric("numberic_value"),
+    value_text: text("value_text"),
+    value_numeric: numeric("value_numeric"),
+    value_boolean: boolean("value_boolean"),
     comments: json("comments").$type<DataEntryComment[]>(),
     update_medium_id: integer("update_medium_id").references(
       () => managedListItems.id,
@@ -267,8 +267,6 @@ export const dataEntries = pgTable(
     utility_function_id: integer("utility_function_id").references(
       () => managedListItems.id,
     ),
-
-    value_numeric: numeric("value_numeric"),
     value_option_id: integer("value_option_id").references(
       () => managedListItems.id,
     ),
