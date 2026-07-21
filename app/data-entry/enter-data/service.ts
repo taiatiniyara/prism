@@ -24,7 +24,7 @@ import {
   DataEntryComment,
   DataEntryStatusId,
   dataEntryLogs,
-  inputDefinitions,
+  measureDefinitions,
   inputRelevance,
 } from "@/db/schema/dataEntry";
 import { managedListItems, managedLists } from "@/db/schema/managedLists";
@@ -58,8 +58,8 @@ import { mapDataTypeToControlType } from "@/app/data-entry/inputControlType.mapp
 import {
   applyCascadedContextWithOptionValidation,
   buildInputRowsFromDefinitions,
-  filterInputDefinitionsByContext,
-  InputDefinitionCandidate,
+  filterMeasureDefinitionsByContext,
+  MeasureDefinitionCandidate,
 } from "@/app/data-entry/enter-data/services/us2.cascadeFiltering.service";
 import {
   buildGenerationGroups,
@@ -297,66 +297,68 @@ const getManagedListOptionsByNamePatterns = async (
   return rows.map((row) => mapOption(row.id, row.name));
 };
 
-const getInputDefinitionsForContext = async (
+const getMeasureDefinitionsForContext = async (
   context: DataEntryFilterContext,
-): Promise<InputDefinitionCandidate[]> => {
+): Promise<MeasureDefinitionCandidate[]> => {
   const conditions = [
     and(
-      eq(inputDefinitions.is_active, true),
-      eq(inputDefinitions.is_aggregated, false),
-      eq(inputDefinitions.is_system_generated, false),
+      eq(measureDefinitions.is_active, true),
+      eq(measureDefinitions.is_aggregated, false),
+      eq(measureDefinitions.is_system_generated, false),
     ),
   ];
 
   if (context.inputCategoryId != null) {
-    conditions.push(eq(inputDefinitions.category_id, context.inputCategoryId));
+    conditions.push(
+      eq(measureDefinitions.category_id, context.inputCategoryId),
+    );
   }
 
   if (context.inputSubcategoryId != null) {
     conditions.push(
-      eq(inputDefinitions.subcategory_id, context.inputSubcategoryId),
+      eq(measureDefinitions.subcategory_id, context.inputSubcategoryId),
     );
   }
 
   const rows = await db
     .select({
-      id: inputDefinitions.id,
-      name: inputDefinitions.name,
-      alternativeNames: inputDefinitions.alternative_names,
-      categoryId: inputDefinitions.category_id,
-      subcategoryId: inputDefinitions.subcategory_id,
-      isMandatory: inputDefinitions.is_mandatory,
+      id: measureDefinitions.id,
+      name: measureDefinitions.name,
+      alternativeNames: measureDefinitions.alternative_names,
+      categoryId: measureDefinitions.category_id,
+      subcategoryId: measureDefinitions.subcategory_id,
+      isMandatory: measureDefinitions.is_mandatory,
       subcategoryName: sql<string | null>`(
         select mli.name
         from managed_list_items mli
-        where mli.id = ${inputDefinitions.subcategory_id}
+        where mli.id = ${measureDefinitions.subcategory_id}
         limit 1
       )`,
-      dataTypeId: inputDefinitions.data_type_id,
+      dataTypeId: measureDefinitions.data_type_id,
       dataTypeName: managedListItems.name,
-      validRangeMin: inputDefinitions.valid_range_min,
-      validRangeMax: inputDefinitions.valid_range_max,
-      validPolarityId: inputDefinitions.valid_polarity_id,
+      validRangeMin: measureDefinitions.valid_range_min,
+      validRangeMax: measureDefinitions.valid_range_max,
+      validPolarityId: measureDefinitions.valid_polarity_id,
       validPolarityName: sql<string | null>`(
         select mli.name
         from managed_list_items mli
-        where mli.id = ${inputDefinitions.valid_polarity_id}
+        where mli.id = ${measureDefinitions.valid_polarity_id}
         limit 1
       )`,
       unitName: sql<string | null>`(
         select mli.name
         from managed_list_items mli
-        where mli.id = ${inputDefinitions.unit_id}
+        where mli.id = ${measureDefinitions.unit_id}
         limit 1
       )`,
     })
-    .from(inputDefinitions)
+    .from(measureDefinitions)
     .leftJoin(
       managedListItems,
-      eq(inputDefinitions.data_type_id, managedListItems.id),
+      eq(measureDefinitions.data_type_id, managedListItems.id),
     )
     .where(and(...conditions))
-    .orderBy(asc(inputDefinitions.sort_order), asc(inputDefinitions.id));
+    .orderBy(asc(measureDefinitions.sort_order), asc(measureDefinitions.id));
 
   return rows
     .filter(
@@ -393,7 +395,7 @@ const isServiceAreaScopedByDefinition = (
   );
 };
 
-const getServiceAreaScopedInputDefinitionIds = async (
+const getServiceAreaScopedMeasureDefinitionIds = async (
   inputDefinitionIds: number[],
 ): Promise<Set<number>> => {
   if (inputDefinitionIds.length === 0) {
@@ -402,22 +404,22 @@ const getServiceAreaScopedInputDefinitionIds = async (
 
   const rows = await db
     .select({
-      id: inputDefinitions.id,
+      id: measureDefinitions.id,
       categoryName: sql<string | null>`(
         select mli.name
         from managed_list_items mli
-        where mli.id = ${inputDefinitions.category_id}
+        where mli.id = ${measureDefinitions.category_id}
         limit 1
       )`,
       subcategoryName: sql<string | null>`(
         select mli.name
         from managed_list_items mli
-        where mli.id = ${inputDefinitions.subcategory_id}
+        where mli.id = ${measureDefinitions.subcategory_id}
         limit 1
       )`,
     })
-    .from(inputDefinitions)
-    .where(inArray(inputDefinitions.id, inputDefinitionIds));
+    .from(measureDefinitions)
+    .where(inArray(measureDefinitions.id, inputDefinitionIds));
 
   return new Set(
     rows
@@ -428,10 +430,10 @@ const getServiceAreaScopedInputDefinitionIds = async (
   );
 };
 
-const getIrrelevantInputDefinitionIdsForContext = async (
+const getIrrelevantMeasureDefinitionIdsForContext = async (
   context: DataEntryFilterContext,
   inputDefinitionIds: number[],
-  serviceAreaScopedInputDefinitionIds: Set<number>,
+  serviceAreaScopedMeasureDefinitionIds: Set<number>,
 ): Promise<Set<number>> => {
   if (context.reportPeriodId == null || inputDefinitionIds.length === 0) {
     return new Set<number>();
@@ -439,14 +441,14 @@ const getIrrelevantInputDefinitionIdsForContext = async (
 
   const relevanceConditions = [
     eq(dataEntries.report_period_id, context.reportPeriodId),
-    inArray(dataEntries.input_def_id, inputDefinitionIds),
+    inArray(dataEntries.measure_def_id, inputDefinitionIds),
     eq(dataEntries.is_deleted, false),
     eq(dataEntries.is_relevant, false),
   ];
 
   const relevantRows = await db
     .select({
-      inputDefId: dataEntries.input_def_id,
+      inputDefId: dataEntries.measure_def_id,
       serviceAreaId: dataEntries.service_area_id,
     })
     .from(dataEntries)
@@ -455,7 +457,7 @@ const getIrrelevantInputDefinitionIdsForContext = async (
   const irrelevantIds = new Set<number>();
 
   relevantRows.forEach((row) => {
-    const isScoped = serviceAreaScopedInputDefinitionIds.has(row.inputDefId);
+    const isScoped = serviceAreaScopedMeasureDefinitionIds.has(row.inputDefId);
     const targetServiceAreaId = isScoped ? context.serviceAreaId : null;
 
     if (targetServiceAreaId == null) {
@@ -480,8 +482,8 @@ const getInputRowsForContext = async (
     return [];
   }
 
-  const definitions = filterInputDefinitionsByContext(
-    await getInputDefinitionsForContext(context),
+  const definitions = filterMeasureDefinitionsByContext(
+    await getMeasureDefinitionsForContext(context),
     context,
   );
 
@@ -489,19 +491,19 @@ const getInputRowsForContext = async (
     return [];
   }
 
-  const serviceAreaScopedInputDefinitionIds =
-    await getServiceAreaScopedInputDefinitionIds(
+  const serviceAreaScopedMeasureDefinitionIds =
+    await getServiceAreaScopedMeasureDefinitionIds(
       definitions.map((definition) => definition.id),
     );
 
-  const irrelevantInputDefinitionIds =
-    await getIrrelevantInputDefinitionIdsForContext(
+  const irrelevantMeasureDefinitionIds =
+    await getIrrelevantMeasureDefinitionIdsForContext(
       context,
       definitions.map((definition) => definition.id),
-      serviceAreaScopedInputDefinitionIds,
+      serviceAreaScopedMeasureDefinitionIds,
     );
   const relevantDefinitions = definitions.filter(
-    (definition) => !irrelevantInputDefinitionIds.has(definition.id),
+    (definition) => !irrelevantMeasureDefinitionIds.has(definition.id),
   );
 
   if (relevantDefinitions.length === 0) {
@@ -511,7 +513,7 @@ const getInputRowsForContext = async (
   const definitionIds = relevantDefinitions.map((definition) => definition.id);
   const entryConditions = [
     eq(dataEntries.report_period_id, context.reportPeriodId),
-    inArray(dataEntries.input_def_id, definitionIds),
+    inArray(dataEntries.measure_def_id, definitionIds),
     eq(dataEntries.is_deleted, false),
     eq(dataEntries.is_relevant, true),
   ];
@@ -519,7 +521,7 @@ const getInputRowsForContext = async (
   const entries = await db
     .select({
       id: dataEntries.id,
-      inputDefId: dataEntries.input_def_id,
+      inputDefId: dataEntries.measure_def_id,
       serviceAreaId: dataEntries.service_area_id,
       statusId: dataEntries.status_id,
       updatedByName: authUser.name,
@@ -537,7 +539,7 @@ const getInputRowsForContext = async (
     relevantDefinitions,
     entries,
     context,
-    serviceAreaScopedInputDefinitionIds,
+    serviceAreaScopedMeasureDefinitionIds,
   );
 
   return baseRows.map((row) => {
@@ -560,27 +562,27 @@ const getInputRowsForContext = async (
   });
 };
 
-const getInputDefinitionRowsForContext = async (
+const getMeasureDefinitionRowsForContext = async (
   context: DataEntryFilterContext,
 ): Promise<DataEntryInputRowView[]> => {
-  const definitions = filterInputDefinitionsByContext(
-    await getInputDefinitionsForContext(context),
+  const definitions = filterMeasureDefinitionsByContext(
+    await getMeasureDefinitionsForContext(context),
     context,
   );
 
-  const serviceAreaScopedInputDefinitionIds =
-    await getServiceAreaScopedInputDefinitionIds(
+  const serviceAreaScopedMeasureDefinitionIds =
+    await getServiceAreaScopedMeasureDefinitionIds(
       definitions.map((definition) => definition.id),
     );
 
-  const irrelevantInputDefinitionIds =
-    await getIrrelevantInputDefinitionIdsForContext(
+  const irrelevantMeasureDefinitionIds =
+    await getIrrelevantMeasureDefinitionIdsForContext(
       context,
       definitions.map((definition) => definition.id),
-      serviceAreaScopedInputDefinitionIds,
+      serviceAreaScopedMeasureDefinitionIds,
     );
   const relevantDefinitions = definitions.filter(
-    (definition) => !irrelevantInputDefinitionIds.has(definition.id),
+    (definition) => !irrelevantMeasureDefinitionIds.has(definition.id),
   );
 
   return relevantDefinitions.map((definition) => ({
@@ -635,8 +637,8 @@ const getGenerationGroupsForContext = async (
     return [];
   }
 
-  const definitionCandidates = filterInputDefinitionsByContext(
-    await getInputDefinitionsForContext(context),
+  const definitionCandidates = filterMeasureDefinitionsByContext(
+    await getMeasureDefinitionsForContext(context),
     context,
   );
   const alternativeNamesByInputDefId = new Map(
@@ -646,7 +648,7 @@ const getGenerationGroupsForContext = async (
     ]),
   );
 
-  const definitionRows = await getInputDefinitionRowsForContext(context);
+  const definitionRows = await getMeasureDefinitionRowsForContext(context);
   if (definitionRows.length === 0) {
     return [];
   }
@@ -654,7 +656,7 @@ const getGenerationGroupsForContext = async (
   const inputRelevanceRows = await db
     .select({
       id: inputRelevance.id,
-      inputDefId: inputRelevance.input_def_id,
+      inputDefId: inputRelevance.measure_def_id,
       dimensionId: inputRelevance.dimension_id,
       isRelevant: inputRelevance.is_relevant,
     })
@@ -662,7 +664,7 @@ const getGenerationGroupsForContext = async (
     .where(
       and(
         inArray(
-          inputRelevance.input_def_id,
+          inputRelevance.measure_def_id,
           definitionRows.map((row) => row.inputDefId),
         ),
         inArray(
@@ -688,7 +690,7 @@ const getGenerationGroupsForContext = async (
   const entries = await db
     .select({
       id: dataEntries.id,
-      inputDefId: dataEntries.input_def_id,
+      inputDefId: dataEntries.measure_def_id,
       energyResourceId: dataEntries.energy_resource_id,
       statusId: dataEntries.status_id,
       updatedByName: authUser.name,
@@ -706,7 +708,7 @@ const getGenerationGroupsForContext = async (
         eq(dataEntries.is_deleted, false),
         eq(dataEntries.is_relevant, true),
         inArray(
-          dataEntries.input_def_id,
+          dataEntries.measure_def_id,
           definitionRows.map((row) => row.inputDefId),
         ),
         inArray(
@@ -769,8 +771,8 @@ const getTariffGroupsForContext = async (
     return [];
   }
 
-  const definitions = filterInputDefinitionsByContext(
-    await getInputDefinitionsForContext(context),
+  const definitions = filterMeasureDefinitionsByContext(
+    await getMeasureDefinitionsForContext(context),
     context,
   );
 
@@ -794,7 +796,7 @@ const getTariffGroupsForContext = async (
   const entries = await db
     .select({
       id: dataEntries.id,
-      inputDefId: dataEntries.input_def_id,
+      inputDefId: dataEntries.measure_def_id,
       paymentModeId: dataEntries.payment_mode_id,
       customerTypeId: dataEntries.customer_type_id,
       isRelevant: dataEntries.is_relevant,
@@ -815,7 +817,7 @@ const getTariffGroupsForContext = async (
         eq(dataEntries.is_deleted, false),
         isNull(dataEntries.energy_resource_id),
         inArray(
-          dataEntries.input_def_id,
+          dataEntries.measure_def_id,
           relevantDefinitions.map((definition) => definition.id),
         ),
         inArray(
@@ -928,25 +930,25 @@ const getOverallProgressForContext = async (
 
   const definitionRows = await db
     .select({
-      inputDefId: inputDefinitions.id,
+      inputDefId: measureDefinitions.id,
       categoryName: sql<string | null>`(
         select mli.name
         from managed_list_items mli
-        where mli.id = ${inputDefinitions.category_id}
+        where mli.id = ${measureDefinitions.category_id}
         limit 1
       )`,
       subcategoryName: managedListItems.name,
     })
-    .from(inputDefinitions)
+    .from(measureDefinitions)
     .leftJoin(
       managedListItems,
-      eq(inputDefinitions.subcategory_id, managedListItems.id),
+      eq(measureDefinitions.subcategory_id, managedListItems.id),
     )
     .where(
       and(
-        eq(inputDefinitions.is_active, true),
-        eq(inputDefinitions.is_aggregated, false),
-        eq(inputDefinitions.is_system_generated, false),
+        eq(measureDefinitions.is_active, true),
+        eq(measureDefinitions.is_aggregated, false),
+        eq(measureDefinitions.is_system_generated, false),
         sql`lower(${managedListItems.name}) <> 'country context'`,
       ),
     );
@@ -958,7 +960,7 @@ const getOverallProgressForContext = async (
     .filter((row) => row.subcategoryName?.trim().toLowerCase() !== "generation")
     .map((row) => row.inputDefId);
 
-  const serviceAreaScopedInputDefinitionIds = new Set(
+  const serviceAreaScopedMeasureDefinitionIds = new Set(
     definitionRows
       .filter((row) =>
         isServiceAreaScopedByDefinition(row.categoryName, row.subcategoryName),
@@ -979,7 +981,7 @@ const getOverallProgressForContext = async (
 
   const irrelevantRows = await db
     .select({
-      inputDefId: dataEntries.input_def_id,
+      inputDefId: dataEntries.measure_def_id,
       serviceAreaId: dataEntries.service_area_id,
     })
     .from(dataEntries)
@@ -989,7 +991,7 @@ const getOverallProgressForContext = async (
         eq(dataEntries.is_deleted, false),
         eq(dataEntries.is_relevant, false),
         inArray(
-          dataEntries.input_def_id,
+          dataEntries.measure_def_id,
           definitionRows.map((row) => row.inputDefId),
         ),
       ),
@@ -1023,7 +1025,7 @@ const getOverallProgressForContext = async (
   const expectedKeys = new Set<string>();
 
   nonGenerationInputDefIds.forEach((inputDefId) => {
-    const isScoped = serviceAreaScopedInputDefinitionIds.has(inputDefId);
+    const isScoped = serviceAreaScopedMeasureDefinitionIds.has(inputDefId);
     const scopedServiceAreaIds = isScoped ? serviceAreaIds : [null];
 
     scopedServiceAreaIds.forEach((serviceAreaId) => {
@@ -1085,7 +1087,7 @@ const getOverallProgressForContext = async (
 
   const completedEntries = await db
     .select({
-      inputDefId: dataEntries.input_def_id,
+      inputDefId: dataEntries.measure_def_id,
       serviceAreaId: dataEntries.service_area_id,
       energyResourceId: dataEntries.energy_resource_id,
     })
@@ -1236,32 +1238,32 @@ export const getInputSubcategoryOptions = async (
     eq(dataEntries.report_period_id, reportPeriodId),
     eq(dataEntries.is_deleted, false),
     eq(reportPeriods.utility_id, user.org_id),
-    eq(inputDefinitions.is_active, true),
-    eq(inputDefinitions.is_aggregated, false),
-    eq(inputDefinitions.is_system_generated, false),
+    eq(measureDefinitions.is_active, true),
+    eq(measureDefinitions.is_aggregated, false),
+    eq(measureDefinitions.is_system_generated, false),
   ];
 
   if (categoryId != null) {
-    relevanceConditions.push(eq(inputDefinitions.category_id, categoryId));
+    relevanceConditions.push(eq(measureDefinitions.category_id, categoryId));
   }
 
   const subcategoryDefinitionRows = await db
     .select({
-      inputDefId: inputDefinitions.id,
-      subcategoryId: inputDefinitions.subcategory_id,
+      inputDefId: measureDefinitions.id,
+      subcategoryId: measureDefinitions.subcategory_id,
     })
-    .from(inputDefinitions)
+    .from(measureDefinitions)
     .where(
       and(
-        eq(inputDefinitions.is_active, true),
-        eq(inputDefinitions.is_aggregated, false),
-        eq(inputDefinitions.is_system_generated, false),
+        eq(measureDefinitions.is_active, true),
+        eq(measureDefinitions.is_aggregated, false),
+        eq(measureDefinitions.is_system_generated, false),
         inArray(
-          inputDefinitions.subcategory_id,
+          measureDefinitions.subcategory_id,
           baseSubcategories.map((subcategory) => subcategory.id),
         ),
         ...(categoryId != null
-          ? [eq(inputDefinitions.category_id, categoryId)]
+          ? [eq(measureDefinitions.category_id, categoryId)]
           : []),
       ),
     );
@@ -1272,14 +1274,14 @@ export const getInputSubcategoryOptions = async (
 
   const relevanceRows = await db
     .select({
-      inputDefId: inputDefinitions.id,
-      subcategoryId: inputDefinitions.subcategory_id,
+      inputDefId: measureDefinitions.id,
+      subcategoryId: measureDefinitions.subcategory_id,
       isRelevant: dataEntries.is_relevant,
     })
     .from(dataEntries)
     .innerJoin(
-      inputDefinitions,
-      eq(dataEntries.input_def_id, inputDefinitions.id),
+      measureDefinitions,
+      eq(dataEntries.measure_def_id, measureDefinitions.id),
     )
     .innerJoin(
       reportPeriods,
@@ -1670,27 +1672,27 @@ const getDataEntryValidationMetadata = async (
 ): Promise<DataEntryValidationMetadata | null> => {
   const [definition] = await db
     .select({
-      inputName: inputDefinitions.name,
-      isMandatory: inputDefinitions.is_mandatory,
-      isCurrency: inputDefinitions.is_currency,
+      inputName: measureDefinitions.name,
+      isMandatory: measureDefinitions.is_mandatory,
+      isCurrency: measureDefinitions.is_currency,
       dataTypeName: sql<string | null>`(
         select mli.name
         from managed_list_items mli
-        where mli.id = ${inputDefinitions.data_type_id}
+        where mli.id = ${measureDefinitions.data_type_id}
         limit 1
       )`,
-      validRangeMin: inputDefinitions.valid_range_min,
-      validRangeMax: inputDefinitions.valid_range_max,
-      validPolarityId: inputDefinitions.valid_polarity_id,
+      validRangeMin: measureDefinitions.valid_range_min,
+      validRangeMax: measureDefinitions.valid_range_max,
+      validPolarityId: measureDefinitions.valid_polarity_id,
       validPolarityName: sql<string | null>`(
         select mli.name
         from managed_list_items mli
-        where mli.id = ${inputDefinitions.valid_polarity_id}
+        where mli.id = ${measureDefinitions.valid_polarity_id}
         limit 1
       )`,
     })
-    .from(inputDefinitions)
-    .where(eq(inputDefinitions.id, inputDefId))
+    .from(measureDefinitions)
+    .where(eq(measureDefinitions.id, inputDefId))
     .limit(1);
 
   return definition ?? null;
@@ -1759,7 +1761,7 @@ const buildExistingDataEntryConditions = (params: {
 }) => {
   const conditions = [
     eq(dataEntries.report_period_id, params.reportPeriodId),
-    eq(dataEntries.input_def_id, params.inputDefId),
+    eq(dataEntries.measure_def_id, params.inputDefId),
   ];
 
   if (params.serviceAreaId == null) {
@@ -1811,8 +1813,8 @@ const resolveDataEntryActionScope = async (
     throw new Error(errors.missingReportPeriod);
   }
 
-  const definitions = filterInputDefinitionsByContext(
-    await getInputDefinitionsForContext(context),
+  const definitions = filterMeasureDefinitionsByContext(
+    await getMeasureDefinitionsForContext(context),
     context,
   );
   const validInputDefIds = new Set(
@@ -1823,9 +1825,9 @@ const resolveDataEntryActionScope = async (
     throw new Error("The selected input is not valid for the active context.");
   }
 
-  const serviceAreaScopedInputDefinitionIds =
-    await getServiceAreaScopedInputDefinitionIds([payload.inputDefId]);
-  const scopedServiceAreaId = serviceAreaScopedInputDefinitionIds.has(
+  const serviceAreaScopedMeasureDefinitionIds =
+    await getServiceAreaScopedMeasureDefinitionIds([payload.inputDefId]);
+  const scopedServiceAreaId = serviceAreaScopedMeasureDefinitionIds.has(
     payload.inputDefId,
   )
     ? context.serviceAreaId
@@ -1940,10 +1942,10 @@ const saveDataEntryValueInternal = async (
       inputDefId: payload.inputDefId,
     })
   ) {
-    const saScopedIds = await getServiceAreaScopedInputDefinitionIds([
+    const saScopedIds = await getServiceAreaScopedMeasureDefinitionIds([
       payload.inputDefId,
     ]);
-    const irrelevantIds = await getIrrelevantInputDefinitionIdsForContext(
+    const irrelevantIds = await getIrrelevantMeasureDefinitionIdsForContext(
       context,
       [payload.inputDefId],
       saScopedIds,
@@ -1987,9 +1989,9 @@ const saveDataEntryValueInternal = async (
     mapDataTypeToControlType(validationMetadata.dataTypeName) === "managedLists"
   ) {
     const [definitionMeta] = await db
-      .select({ inputName: inputDefinitions.name })
-      .from(inputDefinitions)
-      .where(eq(inputDefinitions.id, payload.inputDefId))
+      .select({ inputName: measureDefinitions.name })
+      .from(measureDefinitions)
+      .where(eq(measureDefinitions.id, payload.inputDefId))
       .limit(1);
 
     if (definitionMeta) {
@@ -1998,10 +2000,7 @@ const saveDataEntryValueInternal = async (
           itemName: managedListItems.name,
         })
         .from(managedListItems)
-        .innerJoin(
-          managedLists,
-          eq(managedListItems.list_id, managedLists.id),
-        )
+        .innerJoin(managedLists, eq(managedListItems.list_id, managedLists.id))
         .where(
           and(
             like(managedLists.name, `%${definitionMeta.inputName}%`),
@@ -2014,7 +2013,10 @@ const saveDataEntryValueInternal = async (
         managedListRows.map((row) => row.itemName.trim().toLowerCase()),
       );
 
-      if (validNames.size > 0 && !validNames.has(normalizedValue.toLowerCase())) {
+      if (
+        validNames.size > 0 &&
+        !validNames.has(normalizedValue.toLowerCase())
+      ) {
         throw new Error(
           `"${normalizedValue}" is not a valid option for ${definitionMeta.inputName}.`,
         );
@@ -2044,7 +2046,7 @@ const saveDataEntryValueInternal = async (
 
     const values = {
       report_period_id: reportPeriodId,
-      input_def_id: payload.inputDefId,
+      measure_def_id: payload.inputDefId,
       service_area_id: scopedServiceAreaId,
       energy_resource_id: energyResourceId,
       value: normalizedValue,
@@ -2100,14 +2102,11 @@ export const updateDataEntryValueAction = async (
 ): Promise<{ kpiRunResult: KpiWorkerRunResult | null }> => {
   const result = await saveDataEntryValueInternal(payload);
 
-  runAggregatedWorkerAsync(
-    await getCurrentUser(),
-    {
-      reportPeriodId: result.reportPeriodId,
-      serviceAreaId: result.scopedServiceAreaId,
-      energyResourceId: result.energyResourceId,
-    },
-  );
+  runAggregatedWorkerAsync(await getCurrentUser(), {
+    reportPeriodId: result.reportPeriodId,
+    serviceAreaId: result.scopedServiceAreaId,
+    energyResourceId: result.energyResourceId,
+  });
 
   let kpiRunResult: KpiWorkerRunResult | null = null;
 
@@ -2213,7 +2212,7 @@ export const updateDataEntryCommentAction = async (
   } else {
     await db.insert(dataEntries).values({
       report_period_id: reportPeriodId,
-      input_def_id: payload.inputDefId,
+      measure_def_id: payload.inputDefId,
       service_area_id: scopedServiceAreaId,
       energy_resource_id: energyResourceId,
       value: null,
@@ -2291,7 +2290,7 @@ export const updateDataEntryAvailabilityAction = async (
       .insert(dataEntries)
       .values({
         report_period_id: reportPeriodId,
-        input_def_id: payload.inputDefId,
+        measure_def_id: payload.inputDefId,
         service_area_id: scopedServiceAreaId,
         energy_resource_id: energyResourceId,
         value: null,
@@ -2366,7 +2365,11 @@ export const uploadDataEntryTemplateAction = async (
       );
     }
 
-    if (!hasValue && !row.isDataNotAvailable && row.comments.trim().length === 0) {
+    if (
+      !hasValue &&
+      !row.isDataNotAvailable &&
+      row.comments.trim().length === 0
+    ) {
       continue;
     }
   }
@@ -2378,7 +2381,11 @@ export const uploadDataEntryTemplateAction = async (
   for (const row of rows) {
     const hasValue = (row.value?.trim().length ?? 0) > 0;
 
-    if (!hasValue && !row.isDataNotAvailable && row.comments.trim().length === 0) {
+    if (
+      !hasValue &&
+      !row.isDataNotAvailable &&
+      row.comments.trim().length === 0
+    ) {
       skipped += 1;
       continue;
     }

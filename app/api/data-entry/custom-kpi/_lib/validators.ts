@@ -11,7 +11,7 @@ export type CreateCustomKpiRequestInput = {
     unit: string;
     dataType: string;
   }>;
-  selectedInputDefinitionIds: number[];
+  selectedMeasureDefinitionIds: number[];
 };
 
 const requirePositiveInteger = (value: unknown, field: string): number => {
@@ -75,13 +75,15 @@ const parseBoolean = (value: unknown): boolean => {
   return false;
 };
 
-const parseSelectedInputDefinitionIds = (value: unknown): number[] => {
+const parseSelectedMeasureDefinitionIds = (value: unknown): number[] => {
   if (typeof value === "undefined") {
     return [];
   }
 
   if (!Array.isArray(value)) {
-    throw new Error("VALIDATION:selectedInputDefinitionIds must be an array.");
+    throw new Error(
+      "VALIDATION:selectedMeasureDefinitionIds must be an array.",
+    );
   }
 
   const ids = value
@@ -90,7 +92,7 @@ const parseSelectedInputDefinitionIds = (value: unknown): number[] => {
 
   if (ids.length !== value.length) {
     throw new Error(
-      "VALIDATION:selectedInputDefinitionIds must contain only positive integer IDs.",
+      "VALIDATION:selectedMeasureDefinitionIds must contain only positive integer IDs.",
     );
   }
 
@@ -206,8 +208,8 @@ export const parseCreateCustomKpiRequestPayload = (
     unitId: requirePositiveInteger(source.unitId, "unitId"),
     proposedUnits: parseProposedUnits(source.proposedUnits),
     proposedInputs: parseProposedInputs(source.proposedInputs),
-    selectedInputDefinitionIds: parseSelectedInputDefinitionIds(
-      source.selectedInputDefinitionIds,
+    selectedMeasureDefinitionIds: parseSelectedMeasureDefinitionIds(
+      source.selectedMeasureDefinitionIds,
     ),
   };
 };

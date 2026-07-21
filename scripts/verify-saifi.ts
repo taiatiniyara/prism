@@ -47,11 +47,11 @@ async function main() {
            on d.report_period_id = n.report_period_id
           and d.service_area_id is not distinct from n.service_area_id
           and d.energy_resource_id is not distinct from n.energy_resource_id
-          and d.input_def_id = $2 and d.is_deleted = false
+          and d.measure_def_id = $2 and d.is_deleted = false
           and d.value is not null and trim(d.value) <> ''
          join report_periods rp on rp.id = n.report_period_id
          left join service_areas sa on sa.id = n.service_area_id
-         where n.input_def_id = $1 and n.is_deleted = false
+         where n.measure_def_id = $1 and n.is_deleted = false
            and n.value is not null and trim(n.value) <> ''
            and n.value ~ '^[0-9.]+$' and d.value ~ '^[0-9.]+$'
            and d.value::numeric <> 0

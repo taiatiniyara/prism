@@ -8,7 +8,7 @@ import {
 import { mapDataTypeToControlType } from "@/app/data-entry/inputControlType.mapper";
 import { DataEntryComment, DataEntryStatusId } from "@/db/schema/dataEntry";
 
-export interface InputDefinitionCandidate {
+export interface MeasureDefinitionCandidate {
   id: number;
   name: string;
   alternativeNames: Record<string, string> | null;
@@ -49,7 +49,8 @@ const serializeComments = (
 const hasOption = (
   value: number | null,
   options: DataEntryFilterOption[] | undefined,
-): boolean => value != null && (options?.some((option) => option.id === value) ?? false);
+): boolean =>
+  value != null && (options?.some((option) => option.id === value) ?? false);
 
 const ensureValidOrNull = (
   value: number | null,
@@ -97,10 +98,10 @@ export const applyCascadedContextWithOptionValidation = (
   };
 };
 
-export const filterInputDefinitionsByContext = (
-  definitions: InputDefinitionCandidate[],
+export const filterMeasureDefinitionsByContext = (
+  definitions: MeasureDefinitionCandidate[],
   context: DataEntryFilterContext,
-): InputDefinitionCandidate[] => {
+): MeasureDefinitionCandidate[] => {
   return definitions.filter((definition) => {
     if (
       context.inputCategoryId != null &&
@@ -121,12 +122,12 @@ export const filterInputDefinitionsByContext = (
 };
 
 export const buildInputRowsFromDefinitions = (
-  definitions: InputDefinitionCandidate[],
+  definitions: MeasureDefinitionCandidate[],
   entries: DataEntryValueCandidate[],
   context: DataEntryFilterContext,
   serviceAreaScopedInputDefIds: Set<number> = new Set<number>(),
 ): DataEntryInputRowView[] => {
-  const validDefinitions = filterInputDefinitionsByContext(
+  const validDefinitions = filterMeasureDefinitionsByContext(
     definitions,
     context,
   );

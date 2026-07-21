@@ -1,6 +1,6 @@
 import SectionContainer from "@/components/layout/section-container";
 import { db } from "@/db/connection";
-import { inputDefinitions } from "@/db/schema/dataEntry";
+import { measureDefinitions } from "@/db/schema/dataEntry";
 import { asc } from "drizzle-orm";
 import {
   AutoAcceptHighInputDlMappings,
@@ -12,12 +12,12 @@ import MapBuilderClient from "@/app/settings/inputs/map-builder-client";
 async function getLocalInputs() {
   return db
     .select({
-      id: inputDefinitions.id,
-      name: inputDefinitions.name,
-      variable_name: inputDefinitions.variable_name,
+      id: measureDefinitions.id,
+      name: measureDefinitions.name,
+      variable_name: measureDefinitions.variable_name,
     })
-    .from(inputDefinitions)
-    .orderBy(asc(inputDefinitions.id));
+    .from(measureDefinitions)
+    .orderBy(asc(measureDefinitions.id));
 }
 
 export default async function InputDlMapBuilder() {
@@ -88,12 +88,12 @@ export default async function InputDlMapBuilder() {
           Input to Data Label Map Builder
         </h3>
         <p className="mt-1 text-xs text-muted-foreground">
-          Prism input_definitions rows: {localInputs.length}
+          Prism measure_definitions  rows: {localInputs.length}
         </p>
         <p className="mt-1 text-sm text-muted-foreground">
           Pulling active non-aggregated data-label-definitions from
           prism-training and scoring candidate matches for prism
-          input_definitions.
+          measure_definitions .
         </p>
         <p className="mt-1 text-xs text-muted-foreground">
           Source endpoint: {result.source.endpoint}
@@ -118,7 +118,7 @@ export default async function InputDlMapBuilder() {
 
       {localInputs.length === 0 ? (
         <p className="mt-2 text-xs text-red-600">
-          No rows found in prism.input_definitions.
+          No rows found in prism.measure_definitions .
         </p>
       ) : null}
     </SectionContainer>

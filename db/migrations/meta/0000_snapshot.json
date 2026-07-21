@@ -4604,8 +4604,8 @@
           "primaryKey": false,
           "notNull": false
         },
-        "input_def_id": {
-          "name": "input_def_id",
+        "measure_def_id": {
+          "name": "measure_def_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
@@ -4697,7 +4697,7 @@
               "nulls": "last"
             },
             {
-              "expression": "input_def_id",
+              "expression": "measure_def_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -4776,9 +4776,9 @@
         "data_entries_input_def_id_input_definitions_id_fk": {
           "name": "data_entries_input_def_id_input_definitions_id_fk",
           "tableFrom": "data_entries",
-          "tableTo": "input_definitions",
+          "tableTo": "measure_definitions ",
           "columnsFrom": [
-            "input_def_id"
+            "measure_def_id"
           ],
           "columnsTo": [
             "id"
@@ -4948,8 +4948,8 @@
       "checkConstraints": {},
       "isRLSEnabled": false
     },
-    "public.input_definitions": {
-      "name": "input_definitions",
+    "public.measure_definitions ": {
+      "name": "measure_definitions ",
       "schema": "",
       "columns": {
         "id": {
@@ -5142,7 +5142,7 @@
       "foreignKeys": {
         "input_definitions_category_id_managed_list_items_id_fk": {
           "name": "input_definitions_category_id_managed_list_items_id_fk",
-          "tableFrom": "input_definitions",
+          "tableFrom": "measure_definitions ",
           "tableTo": "managed_list_items",
           "columnsFrom": [
             "category_id"
@@ -5155,7 +5155,7 @@
         },
         "input_definitions_subcategory_id_managed_list_items_id_fk": {
           "name": "input_definitions_subcategory_id_managed_list_items_id_fk",
-          "tableFrom": "input_definitions",
+          "tableFrom": "measure_definitions ",
           "tableTo": "managed_list_items",
           "columnsFrom": [
             "subcategory_id"
@@ -5168,7 +5168,7 @@
         },
         "input_definitions_service_group_id_managed_list_items_id_fk": {
           "name": "input_definitions_service_group_id_managed_list_items_id_fk",
-          "tableFrom": "input_definitions",
+          "tableFrom": "measure_definitions ",
           "tableTo": "managed_list_items",
           "columnsFrom": [
             "service_group_id"
@@ -5181,7 +5181,7 @@
         },
         "input_definitions_unit_id_managed_list_items_id_fk": {
           "name": "input_definitions_unit_id_managed_list_items_id_fk",
-          "tableFrom": "input_definitions",
+          "tableFrom": "measure_definitions ",
           "tableTo": "managed_list_items",
           "columnsFrom": [
             "unit_id"
@@ -5194,7 +5194,7 @@
         },
         "input_definitions_data_type_id_managed_list_items_id_fk": {
           "name": "input_definitions_data_type_id_managed_list_items_id_fk",
-          "tableFrom": "input_definitions",
+          "tableFrom": "measure_definitions ",
           "tableTo": "managed_list_items",
           "columnsFrom": [
             "data_type_id"
@@ -5207,7 +5207,7 @@
         },
         "input_definitions_valid_polarity_id_managed_list_items_id_fk": {
           "name": "input_definitions_valid_polarity_id_managed_list_items_id_fk",
-          "tableFrom": "input_definitions",
+          "tableFrom": "measure_definitions ",
           "tableTo": "managed_list_items",
           "columnsFrom": [
             "valid_polarity_id"
@@ -5220,7 +5220,7 @@
         },
         "input_definitions_valid_trend_id_managed_list_items_id_fk": {
           "name": "input_definitions_valid_trend_id_managed_list_items_id_fk",
-          "tableFrom": "input_definitions",
+          "tableFrom": "measure_definitions ",
           "tableTo": "managed_list_items",
           "columnsFrom": [
             "valid_trend_id"
@@ -5233,7 +5233,7 @@
         },
         "input_definitions_utility_service_id_managed_list_items_id_fk": {
           "name": "input_definitions_utility_service_id_managed_list_items_id_fk",
-          "tableFrom": "input_definitions",
+          "tableFrom": "measure_definitions ",
           "tableTo": "managed_list_items",
           "columnsFrom": [
             "utility_service_id"
@@ -5246,7 +5246,7 @@
         },
         "input_definitions_agg_level_id_managed_list_items_id_fk": {
           "name": "input_definitions_agg_level_id_managed_list_items_id_fk",
-          "tableFrom": "input_definitions",
+          "tableFrom": "measure_definitions ",
           "tableTo": "managed_list_items",
           "columnsFrom": [
             "agg_level_id"
@@ -5274,8 +5274,8 @@
           "primaryKey": true,
           "notNull": true
         },
-        "input_def_id": {
-          "name": "input_def_id",
+        "measure_def_id": {
+          "name": "measure_def_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
@@ -5375,7 +5375,7 @@
           "name": "uniq_input_dl_def_mappings_input_training",
           "columns": [
             {
-              "expression": "input_def_id",
+              "expression": "measure_def_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -5412,9 +5412,9 @@
         "input_dl_def_mappings_input_def_id_input_definitions_id_fk": {
           "name": "input_dl_def_mappings_input_def_id_input_definitions_id_fk",
           "tableFrom": "input_dl_def_mappings",
-          "tableTo": "input_definitions",
+          "tableTo": "measure_definitions ",
           "columnsFrom": [
-            "input_def_id"
+            "measure_def_id"
           ],
           "columnsTo": [
             "id"
@@ -5452,8 +5452,8 @@
           "primaryKey": true,
           "notNull": true
         },
-        "input_def_id": {
-          "name": "input_def_id",
+        "measure_def_id": {
+          "name": "measure_def_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
@@ -5477,9 +5477,9 @@
         "input_relevance_input_def_id_input_definitions_id_fk": {
           "name": "input_relevance_input_def_id_input_definitions_id_fk",
           "tableFrom": "input_relevance",
-          "tableTo": "input_definitions",
+          "tableTo": "measure_definitions ",
           "columnsFrom": [
-            "input_def_id"
+            "measure_def_id"
           ],
           "columnsTo": [
             "id"
@@ -5530,8 +5530,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "input_def_id": {
-          "name": "input_def_id",
+        "measure_def_id": {
+          "name": "measure_def_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
@@ -5593,7 +5593,7 @@
               "nulls": "last"
             },
             {
-              "expression": "input_def_id",
+              "expression": "measure_def_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -5647,9 +5647,9 @@
         "tariff_relevance_input_def_id_input_definitions_id_fk": {
           "name": "tariff_relevance_input_def_id_input_definitions_id_fk",
           "tableFrom": "tariff_relevance",
-          "tableTo": "input_definitions",
+          "tableTo": "measure_definitions ",
           "columnsFrom": [
-            "input_def_id"
+            "measure_def_id"
           ],
           "columnsTo": [
             "id"
@@ -5726,8 +5726,8 @@
           "primaryKey": false,
           "notNull": true
         },
-        "input_def_id": {
-          "name": "input_def_id",
+        "measure_def_id": {
+          "name": "measure_def_id",
           "type": "integer",
           "primaryKey": false,
           "notNull": true
@@ -5777,7 +5777,7 @@
               "nulls": "last"
             },
             {
-              "expression": "input_def_id",
+              "expression": "measure_def_id",
               "isExpression": false,
               "asc": true,
               "nulls": "last"
@@ -5819,9 +5819,9 @@
         "transmission_relevance_input_def_id_input_definitions_id_fk": {
           "name": "transmission_relevance_input_def_id_input_definitions_id_fk",
           "tableFrom": "transmission_relevance",
-          "tableTo": "input_definitions",
+          "tableTo": "measure_definitions ",
           "columnsFrom": [
-            "input_def_id"
+            "measure_def_id"
           ],
           "columnsTo": [
             "id"

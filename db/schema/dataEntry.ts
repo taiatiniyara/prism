@@ -27,18 +27,18 @@ import { relations } from "drizzle-orm";
 import { countries, Region, subRegions } from "./country";
 
 export interface FormulaInput {
-  input_def_id: number;
+  measure_def_id: number;
   variable_name: string;
   energy_provider_id?: number | null;
   energy_type_id?: number | null;
   energy_source_id?: number | null;
 }
 
-export type InputDefinitionAlternativeNames = Record<string, string>;
+export type MeasureDefinitionAlternativeNames = Record<string, string>;
 
 export type DefinitionStatus = "draft" | "curated";
 
-export const inputDefinitions = pgTable("input_definitions", {
+export const measureDefinitions = pgTable("measure_definitions", {
   id: serial("id").primaryKey().notNull(),
   name: varchar("name", { length: 255 }).notNull(),
   description: varchar("description", { length: 255 }),
@@ -83,7 +83,7 @@ export const inputDefinitions = pgTable("input_definitions", {
   is_kpi_input: boolean("is_kpi_input").default(false).notNull(),
   updated_at: timestamp("updated_at").notNull().defaultNow(),
   alternative_names:
-    json("alternative_names").$type<InputDefinitionAlternativeNames>(),
+    json("alternative_names").$type<MeasureDefinitionAlternativeNames>(),
   sort_order: integer("sort_order").default(0).notNull(),
   definition: text("definition"),
   synonyms: json("synonyms").$type<string[]>(),
@@ -91,7 +91,7 @@ export const inputDefinitions = pgTable("input_definitions", {
     length: 16,
   }).$type<DefinitionStatus>(),
 });
-export type InputDefinition = typeof inputDefinitions.$inferSelect & {
+export type MeasureDefinition = typeof measureDefinitions.$inferSelect & {
   category?: string | null;
   subcategory?: string | null;
   energy_provider?: string | null;
@@ -103,28 +103,13 @@ export type InputDefinition = typeof inputDefinitions.$inferSelect & {
   data_type?: string | null;
   agg_level?: string | null;
 };
-export type NewInputDefinition = typeof inputDefinitions.$inferInsert;
-
-/**
- * Alias for inputDefinitions — the medallion redesign renames
- * "input definitions" to "measure definitions".
- * Points to the same "input_definitions" physical table.
- */
-export const measureDefinitions = inputDefinitions;
-export type MeasureDefinition = typeof inputDefinitions.$inferSelect & {
-  category?: string | null;
-  subcategory?: string | null;
-  unit?: string | null;
-  data_type?: string | null;
-  agg_level?: string | null;
-};
-export type NewMeasureDefinition = typeof inputDefinitions.$inferInsert;
+export type NewMeasureDefinition = typeof measureDefinitions.$inferInsert;
 
 export const inputRelevance = pgTable("input_relevance", {
   id: serial("id").primaryKey().notNull(),
-  input_def_id: integer("input_def_id")
+  measure_def_id: integer("measure_def_id")
     .notNull()
-    .references(() => inputDefinitions.id, { onDelete: "cascade" }),
+    .references(() => measureDefinitions.id, { onDelete: "cascade" }),
   dimension_id: integer("dimension_id")
     .notNull()
     .references(() => managedListItems.id, { onDelete: "restrict" }),
@@ -137,26 +122,26 @@ export type InputRelevance = typeof inputRelevance.$inferSelect & {
 export type NewInputRelevance = typeof inputRelevance.$inferInsert;
 
 export const inputDefinitionRelations = relations(
-  inputDefinitions,
+  measureDefinitions,
   ({ one }) => ({
     category: one(managedListItems, {
-      fields: [inputDefinitions.category_id],
+      fields: [measureDefinitions.category_id],
       references: [managedListItems.id],
     }),
     subcategory: one(managedListItems, {
-      fields: [inputDefinitions.subcategory_id],
+      fields: [measureDefinitions.subcategory_id],
       references: [managedListItems.id],
     }),
     unit: one(managedListItems, {
-      fields: [inputDefinitions.unit_id],
+      fields: [measureDefinitions.unit_id],
       references: [managedListItems.id],
     }),
     data_type: one(managedListItems, {
-      fields: [inputDefinitions.data_type_id],
+      fields: [measureDefinitions.data_type_id],
       references: [managedListItems.id],
     }),
     agg_level: one(managedListItems, {
-      fields: [inputDefinitions.agg_level_id],
+      fields: [measureDefinitions.agg_level_id],
       references: [managedListItems.id],
     }),
   }),
@@ -230,9 +215,9 @@ export const dataEntries = pgTable(
     country_id: integer("country_id").references(() => countries.id),
     subregion_id: integer("subregion_id").references(() => subRegions.id),
     region: varchar("region", { length: 255 }).$type<Region>(),
-    input_def_id: integer("input_def_id")
+    measure_def_id: integer("measure_def_id")
       .notNull()
-      .references(() => inputDefinitions.id, { onDelete: "cascade" }),
+      .references(() => measureDefinitions.id, { onDelete: "cascade" }),
     value: varchar("value", { length: 255 }),
     value_text: text("value_text"),
     value_numeric: numeric("value_numeric"),
@@ -276,7 +261,7 @@ export const dataEntries = pgTable(
   (table) => [
     index("uniq_entry").on(
       table.report_period_id,
-      table.input_def_id,
+      table.measure_def_id,
       table.service_area_id,
       table.energy_source_id,
       table.energy_provider_id,
@@ -297,9 +282,9 @@ export const tariffRelevance = pgTable(
     service_area_id: integer("service_area_id")
       .notNull()
       .references(() => serviceAreas.id),
-    input_def_id: integer("input_def_id")
+    measure_def_id: integer("measure_def_id")
       .notNull()
-      .references(() => inputDefinitions.id, { onDelete: "cascade" }),
+      .references(() => measureDefinitions.id, { onDelete: "cascade" }),
     payment_mode_id: integer("payment_mode_id")
       .notNull()
       .references(() => managedListItems.id),
@@ -315,7 +300,7 @@ export const tariffRelevance = pgTable(
     index("uniq_tariff_relevance").on(
       table.report_period_id,
       table.service_area_id,
-      table.input_def_id,
+      table.measure_def_id,
       table.payment_mode_id,
       table.customer_type_id,
     ),
@@ -332,9 +317,9 @@ export const transmissionRelevance = pgTable(
     service_area_id: integer("service_area_id")
       .notNull()
       .references(() => serviceAreas.id),
-    input_def_id: integer("input_def_id")
+    measure_def_id: integer("measure_def_id")
       .notNull()
-      .references(() => inputDefinitions.id, { onDelete: "cascade" }),
+      .references(() => measureDefinitions.id, { onDelete: "cascade" }),
     is_relevant: boolean("is_relevant").default(true).notNull(),
     is_deleted: boolean("is_deleted").default(false).notNull(),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
@@ -344,7 +329,7 @@ export const transmissionRelevance = pgTable(
     index("uniq_transmission_relevance").on(
       table.report_period_id,
       table.service_area_id,
-      table.input_def_id,
+      table.measure_def_id,
     ),
   ],
 );
@@ -380,9 +365,9 @@ export const inputDlDefMappings = pgTable(
   "input_dl_def_mappings",
   {
     id: serial("id").primaryKey().notNull(),
-    input_def_id: integer("input_def_id")
+    measure_def_id: integer("measure_def_id")
       .notNull()
-      .references(() => inputDefinitions.id, { onDelete: "cascade" }),
+      .references(() => measureDefinitions.id, { onDelete: "cascade" }),
     training_dl_def_id: bigint("training_dl_def_id", {
       mode: "number",
     }).notNull(),
@@ -404,7 +389,7 @@ export const inputDlDefMappings = pgTable(
   },
   (table) => [
     uniqueIndex("uniq_input_dl_def_mappings_input_training").on(
-      table.input_def_id,
+      table.measure_def_id,
       table.training_dl_def_id,
     ),
     index("idx_input_dl_def_mappings_training_dl_def_id").on(

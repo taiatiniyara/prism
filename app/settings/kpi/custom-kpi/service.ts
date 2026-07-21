@@ -14,7 +14,7 @@ import {
   customKpiDecisions,
   customKpiRequests,
 } from "@/db/schema/custom-kpi-requests";
-import { inputDefinitions } from "@/db/schema/dataEntry";
+import { measureDefinitions } from "@/db/schema/dataEntry";
 import { managedListItems, managedLists } from "@/db/schema/managedLists";
 import { organisations } from "@/db/schema/utility";
 import { roles, user } from "@/db/schema/auth-schema";
@@ -34,7 +34,7 @@ export const buildCustomKpiDefinitionFingerprint = (input: {
   unitId: number;
   proposedUnits?: CustomKpiProposedUnit[];
   proposedInputs?: CustomKpiProposedInput[];
-  selectedInputDefinitionIds?: number[];
+  selectedMeasureDefinitionIds?: number[];
 }): string =>
   [
     normalize(input.title),
@@ -43,7 +43,7 @@ export const buildCustomKpiDefinitionFingerprint = (input: {
     String(input.unitId),
     JSON.stringify(input.proposedUnits ?? []),
     JSON.stringify(input.proposedInputs ?? []),
-    [...(input.selectedInputDefinitionIds ?? [])]
+    [...(input.selectedMeasureDefinitionIds ?? [])]
       .sort((a, b) => a - b)
       .join(","),
   ].join("::");
@@ -56,7 +56,7 @@ export const isDuplicatePendingCustomKpiSubmission = async (input: {
   unitId: number;
   proposedUnits?: CustomKpiProposedUnit[];
   proposedInputs?: CustomKpiProposedInput[];
-  selectedInputDefinitionIds?: number[];
+  selectedMeasureDefinitionIds?: number[];
 }): Promise<boolean> => {
   const definitionFingerprint = buildCustomKpiDefinitionFingerprint(input);
 
@@ -125,7 +125,7 @@ export type CreateCustomKpiRequestInput = {
   unitId: number;
   proposedUnits: CustomKpiProposedUnit[];
   proposedInputs: CustomKpiProposedInput[];
-  selectedInputDefinitionIds: number[];
+  selectedMeasureDefinitionIds: number[];
 };
 
 export type CustomKpiInputOption = {
@@ -199,25 +199,25 @@ export const assertCustomKpiRequestCreateAccess = (userId: string | null) => {
   }
 };
 
-const assertSelectedInputDefinitionIdsAreValid = async (
-  selectedInputDefinitionIds: number[],
+const assertSelectedMeasureDefinitionIdsAreValid = async (
+  selectedMeasureDefinitionIds: number[],
 ) => {
-  if (selectedInputDefinitionIds.length === 0) {
+  if (selectedMeasureDefinitionIds.length === 0) {
     return;
   }
 
   const existing = await db
-    .select({ id: inputDefinitions.id })
-    .from(inputDefinitions)
+    .select({ id: measureDefinitions.id })
+    .from(measureDefinitions)
     .where(
       and(
-        inArray(inputDefinitions.id, selectedInputDefinitionIds),
-        eq(inputDefinitions.is_active, true),
+        inArray(measureDefinitions.id, selectedMeasureDefinitionIds),
+        eq(measureDefinitions.is_active, true),
       ),
     );
 
   const existingSet = new Set(existing.map((row) => row.id));
-  const missing = selectedInputDefinitionIds.filter(
+  const missing = selectedMeasureDefinitionIds.filter(
     (id) => !existingSet.has(id),
   );
   if (missing.length > 0) {
@@ -232,16 +232,16 @@ export const listCustomKpiInputOptions = async (): Promise<
 > => {
   const rows = await db
     .select({
-      id: inputDefinitions.id,
-      name: inputDefinitions.name,
-      variableName: inputDefinitions.variable_name,
-      unitId: inputDefinitions.unit_id,
-      categoryId: inputDefinitions.category_id,
-      subcategoryId: inputDefinitions.subcategory_id,
+      id: measureDefinitions.id,
+      name: measureDefinitions.name,
+      variableName: measureDefinitions.variable_name,
+      unitId: measureDefinitions.unit_id,
+      categoryId: measureDefinitions.category_id,
+      subcategoryId: measureDefinitions.subcategory_id,
     })
-    .from(inputDefinitions)
-    .where(eq(inputDefinitions.is_active, true))
-    .orderBy(asc(inputDefinitions.name));
+    .from(measureDefinitions)
+    .where(eq(measureDefinitions.is_active, true))
+    .orderBy(asc(measureDefinitions.name));
 
   const managedListIds = [
     ...new Set(
@@ -313,7 +313,7 @@ export const listCustomKpiDataTypeOptions = async (): Promise<
 };
 
 export const listCustomKpiProposalReferenceOptions = async () => {
-  const [availableInputDefinitions, availableUnits, availableDataTypes] =
+  const [availableMeasureDefinitions, availableUnits, availableDataTypes] =
     await Promise.all([
       listCustomKpiInputOptions(),
       listCustomKpiUnitOptions(),
@@ -321,7 +321,7 @@ export const listCustomKpiProposalReferenceOptions = async () => {
     ]);
 
   return {
-    availableInputDefinitions,
+    availableMeasureDefinitions,
     availableUnits,
     availableDataTypes,
   };
@@ -409,8 +409,8 @@ export const createCustomKpiRequest = async (
 ): Promise<CustomKpiRequestListItem> => {
   assertCustomKpiRequestCreateAccess(submitterUserId);
   await assertCustomKpiUnitIdIsValid(input.unitId);
-  await assertSelectedInputDefinitionIdsAreValid(
-    input.selectedInputDefinitionIds,
+  await assertSelectedMeasureDefinitionIdsAreValid(
+    input.selectedMeasureDefinitionIds,
   );
 
   const isDuplicate = await isDuplicatePendingCustomKpiSubmission({
@@ -421,7 +421,7 @@ export const createCustomKpiRequest = async (
     unitId: input.unitId,
     proposedUnits: input.proposedUnits,
     proposedInputs: input.proposedInputs,
-    selectedInputDefinitionIds: input.selectedInputDefinitionIds,
+    selectedMeasureDefinitionIds: input.selectedMeasureDefinitionIds,
   });
 
   if (isDuplicate) {
@@ -437,7 +437,7 @@ export const createCustomKpiRequest = async (
     unitId: input.unitId,
     proposedUnits: input.proposedUnits,
     proposedInputs: input.proposedInputs,
-    selectedInputDefinitionIds: input.selectedInputDefinitionIds,
+    selectedMeasureDefinitionIds: input.selectedMeasureDefinitionIds,
   });
 
   const [created] = await db
@@ -451,7 +451,7 @@ export const createCustomKpiRequest = async (
       unit_id: input.unitId,
       proposed_units: input.proposedUnits,
       proposed_inputs: input.proposedInputs,
-      selected_input_definition_ids: input.selectedInputDefinitionIds,
+      selected_input_definition_ids: input.selectedMeasureDefinitionIds,
       definition_fingerprint: definitionFingerprint,
       status: "PENDING_REVIEW",
       visibility_scope: "SUBMITTER_ONLY",
@@ -483,17 +483,17 @@ export const createCustomKpiRequest = async (
     createdSelectedInputIds.length > 0
       ? await db
           .select({
-            id: inputDefinitions.id,
-            name: inputDefinitions.name,
+            id: measureDefinitions.id,
+            name: measureDefinitions.name,
             unit: managedListItems.name,
-            variableName: inputDefinitions.variable_name,
+            variableName: measureDefinitions.variable_name,
           })
-          .from(inputDefinitions)
+          .from(measureDefinitions)
           .leftJoin(
             managedListItems,
-            eq(inputDefinitions.unit_id, managedListItems.id),
+            eq(measureDefinitions.unit_id, managedListItems.id),
           )
-          .where(inArray(inputDefinitions.id, createdSelectedInputIds))
+          .where(inArray(measureDefinitions.id, createdSelectedInputIds))
       : [];
   const createdSelectedInputById = new Map(
     createdSelectedInputRows.map((row) => [row.id, row]),
@@ -575,7 +575,7 @@ export const listMyCustomKpiRequests = async (
     return [];
   }
 
-  const selectedInputDefinitionIds = [
+  const selectedMeasureDefinitionIds = [
     ...new Set(
       requests.flatMap((request) =>
         Array.isArray(request.selected_input_definition_ids)
@@ -586,20 +586,20 @@ export const listMyCustomKpiRequests = async (
   ];
 
   const selectedInputRows =
-    selectedInputDefinitionIds.length > 0
+    selectedMeasureDefinitionIds.length > 0
       ? await db
           .select({
-            id: inputDefinitions.id,
-            name: inputDefinitions.name,
+            id: measureDefinitions.id,
+            name: measureDefinitions.name,
             unit: managedListItems.name,
-            variableName: inputDefinitions.variable_name,
+            variableName: measureDefinitions.variable_name,
           })
-          .from(inputDefinitions)
+          .from(measureDefinitions)
           .leftJoin(
             managedListItems,
-            eq(inputDefinitions.unit_id, managedListItems.id),
+            eq(measureDefinitions.unit_id, managedListItems.id),
           )
-          .where(inArray(inputDefinitions.id, selectedInputDefinitionIds))
+          .where(inArray(measureDefinitions.id, selectedMeasureDefinitionIds))
       : [];
   const selectedInputById = new Map(
     selectedInputRows.map((row) => [row.id, row]),
@@ -628,7 +628,7 @@ export const listMyCustomKpiRequests = async (
 export const getCustomKpiPageViewModel = async (submitterUserId: string) => {
   const [
     requests,
-    availableInputDefinitions,
+    availableMeasureDefinitions,
     availableUnits,
     availableDataTypes,
   ] = await Promise.all([
@@ -640,7 +640,7 @@ export const getCustomKpiPageViewModel = async (submitterUserId: string) => {
 
   return {
     requests,
-    availableInputDefinitions,
+    availableMeasureDefinitions,
     availableUnits,
     availableDataTypes,
   };
@@ -753,7 +753,7 @@ export const listCustomKpiReviewQueue = async (): Promise<
     submitters.map((submitter) => [submitter.id, submitter]),
   );
 
-  const selectedInputDefinitionIds = [
+  const selectedMeasureDefinitionIds = [
     ...new Set(
       requests.flatMap((request) =>
         Array.isArray(request.selected_input_definition_ids)
@@ -764,19 +764,19 @@ export const listCustomKpiReviewQueue = async (): Promise<
   ];
 
   const selectedInputRows =
-    selectedInputDefinitionIds.length > 0
+    selectedMeasureDefinitionIds.length > 0
       ? await db
           .select({
-            id: inputDefinitions.id,
-            name: inputDefinitions.name,
+            id: measureDefinitions.id,
+            name: measureDefinitions.name,
             unit: managedListItems.name,
           })
-          .from(inputDefinitions)
+          .from(measureDefinitions)
           .leftJoin(
             managedListItems,
-            eq(inputDefinitions.unit_id, managedListItems.id),
+            eq(measureDefinitions.unit_id, managedListItems.id),
           )
-          .where(inArray(inputDefinitions.id, selectedInputDefinitionIds))
+          .where(inArray(measureDefinitions.id, selectedMeasureDefinitionIds))
       : [];
   const selectedInputById = new Map(
     selectedInputRows.map((row) => [row.id, row]),

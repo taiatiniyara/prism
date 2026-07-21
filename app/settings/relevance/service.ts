@@ -5,7 +5,7 @@ import {
   dataEntries,
   energyResources,
   inputRelevance,
-  inputDefinitions,
+  measureDefinitions,
   organisations,
   serviceAreas,
   tariffRelevance,
@@ -60,7 +60,7 @@ interface UtilityGenerationRelevanceFilter {
   serviceAreaId?: number | null;
 }
 
-interface InputDefinitionOption {
+interface MeasureDefinitionOption {
   id: number;
   name: string;
   sortOrder: number | null;
@@ -387,9 +387,9 @@ const revalidateRelevanceAndDataEntry = () => {
   revalidatePath("/data-entry/enter-data");
 };
 
-const getInputDefinitionsForStructure = async (
+const getMeasureDefinitionsForStructure = async (
   structureName: string,
-): Promise<InputDefinitionOption[]> => {
+): Promise<MeasureDefinitionOption[]> => {
   const structureManagedListItem =
     await GetManagedListItemByName(structureName);
 
@@ -399,22 +399,22 @@ const getInputDefinitionsForStructure = async (
 
   const rows = await db
     .select({
-      id: inputDefinitions.id,
-      name: inputDefinitions.name,
-      sortOrder: inputDefinitions.sort_order,
+      id: measureDefinitions.id,
+      name: measureDefinitions.name,
+      sortOrder: measureDefinitions.sort_order,
     })
-    .from(inputDefinitions)
+    .from(measureDefinitions)
     .where(
       and(
-        eq(inputDefinitions.is_active, true),
-        eq(inputDefinitions.is_aggregated, false),
+        eq(measureDefinitions.is_active, true),
+        eq(measureDefinitions.is_aggregated, false),
         or(
-          eq(inputDefinitions.subcategory_id, structureManagedListItem.id),
-          eq(inputDefinitions.category_id, structureManagedListItem.id),
+          eq(measureDefinitions.subcategory_id, structureManagedListItem.id),
+          eq(measureDefinitions.category_id, structureManagedListItem.id),
         ),
       ),
     )
-    .orderBy(asc(inputDefinitions.sort_order), asc(inputDefinitions.name));
+    .orderBy(asc(measureDefinitions.sort_order), asc(measureDefinitions.name));
 
   return rows;
 };
@@ -516,12 +516,12 @@ const filterGenerationResourceTypes = <T extends { name: string }>(
   return items.filter((item) => item.name.trim().toLowerCase() !== "nill");
 };
 
-const getInputDefinitionsForAnyStructure = async (
+const getMeasureDefinitionsForAnyStructure = async (
   structureNames: string[],
-): Promise<InputDefinitionOption[]> => {
+): Promise<MeasureDefinitionOption[]> => {
   for (const structureName of structureNames) {
     try {
-      const rows = await getInputDefinitionsForStructure(structureName);
+      const rows = await getMeasureDefinitionsForStructure(structureName);
 
       if (rows.length > 0) {
         return rows;
@@ -534,10 +534,10 @@ const getInputDefinitionsForAnyStructure = async (
   return [];
 };
 
-const getGenerationInputDefinitions = async (): Promise<
-  InputDefinitionOption[]
+const getGenerationMeasureDefinitions = async (): Promise<
+  MeasureDefinitionOption[]
 > => {
-  const structureScoped = await getInputDefinitionsForAnyStructure([
+  const structureScoped = await getMeasureDefinitionsForAnyStructure([
     "Generation",
     "Energy Resources",
     "Energy Resource",
@@ -551,18 +551,18 @@ const getGenerationInputDefinitions = async (): Promise<
   // Fallback for environments where generation structure labels were renamed.
   const activeRows = await db
     .select({
-      id: inputDefinitions.id,
-      name: inputDefinitions.name,
-      sortOrder: inputDefinitions.sort_order,
+      id: measureDefinitions.id,
+      name: measureDefinitions.name,
+      sortOrder: measureDefinitions.sort_order,
     })
-    .from(inputDefinitions)
+    .from(measureDefinitions)
     .where(
       and(
-        eq(inputDefinitions.is_active, true),
-        eq(inputDefinitions.is_aggregated, false),
+        eq(measureDefinitions.is_active, true),
+        eq(measureDefinitions.is_aggregated, false),
       ),
     )
-    .orderBy(asc(inputDefinitions.sort_order), asc(inputDefinitions.name));
+    .orderBy(asc(measureDefinitions.sort_order), asc(measureDefinitions.name));
 
   if (activeRows.length > 0) {
     return activeRows;
@@ -571,13 +571,13 @@ const getGenerationInputDefinitions = async (): Promise<
   // Final fallback for partially migrated datasets where active flags were reset.
   return db
     .select({
-      id: inputDefinitions.id,
-      name: inputDefinitions.name,
-      sortOrder: inputDefinitions.sort_order,
+      id: measureDefinitions.id,
+      name: measureDefinitions.name,
+      sortOrder: measureDefinitions.sort_order,
     })
-    .from(inputDefinitions)
-    .where(eq(inputDefinitions.is_aggregated, false))
-    .orderBy(asc(inputDefinitions.sort_order), asc(inputDefinitions.name));
+    .from(measureDefinitions)
+    .where(eq(measureDefinitions.is_aggregated, false))
+    .orderBy(asc(measureDefinitions.sort_order), asc(measureDefinitions.name));
 };
 
 const getGenerationDimensionsFromResources = async (
@@ -674,7 +674,7 @@ export async function GetUtilityTariffRelevance(
     selectedServiceAreaId,
   } = await getUtilityRelevanceFilterContext(user.org_id!, user, filters);
 
-  const inputList = await getInputDefinitionsForStructure("Tariff Structure");
+  const inputList = await getMeasureDefinitionsForStructure("Tariff Structure");
 
   const paymentModes = (await getManagedDimensionItems("Payment Mode")).sort(
     (a, b) => a.id - b.id,
@@ -754,7 +754,7 @@ export async function GetUtilityTariffRelevance(
       report_period_id: tariffRelevance.report_period_id,
       payment_mode_id: tariffRelevance.payment_mode_id,
       customer_type_id: tariffRelevance.customer_type_id,
-      input_def_id: tariffRelevance.input_def_id,
+      measure_def_id: tariffRelevance.measure_def_id,
       is_relevant: tariffRelevance.is_relevant,
       id: tariffRelevance.id,
       updatedAt: tariffRelevance.updatedAt,
@@ -766,7 +766,7 @@ export async function GetUtilityTariffRelevance(
         eq(tariffRelevance.service_area_id, selectedServiceAreaId),
         eq(tariffRelevance.is_deleted, false),
         inArray(
-          tariffRelevance.input_def_id,
+          tariffRelevance.measure_def_id,
           inputList.map((i) => i.id),
         ),
       ),
@@ -792,11 +792,11 @@ export async function GetUtilityTariffRelevance(
       relevanceByDimension.get(key) ??
       new Map<number, { isRelevant: boolean; dataEntryId: string }>();
 
-    if (existing.has(entry.input_def_id)) {
+    if (existing.has(entry.measure_def_id)) {
       continue;
     }
 
-    existing.set(entry.input_def_id, {
+    existing.set(entry.measure_def_id, {
       isRelevant: entry.is_relevant,
       dataEntryId: entry.id,
     });
@@ -869,7 +869,7 @@ export async function SetUtilityTariffDataLabelRelevance(
     };
   }
 
-  const inputList = await getInputDefinitionsForStructure("Tariff Structure");
+  const inputList = await getMeasureDefinitionsForStructure("Tariff Structure");
 
   if (!inputList.some((input) => input.id === payload.inputDefId)) {
     return {
@@ -885,7 +885,7 @@ export async function SetUtilityTariffDataLabelRelevance(
       and(
         eq(tariffRelevance.report_period_id, payload.reportPeriodId),
         eq(tariffRelevance.service_area_id, payload.serviceAreaId),
-        eq(tariffRelevance.input_def_id, payload.inputDefId),
+        eq(tariffRelevance.measure_def_id, payload.inputDefId),
         eq(tariffRelevance.payment_mode_id, payload.paymentModeId),
         eq(tariffRelevance.customer_type_id, payload.customerTypeId),
       ),
@@ -914,7 +914,7 @@ export async function SetUtilityTariffDataLabelRelevance(
     await db.insert(tariffRelevance).values({
       report_period_id: payload.reportPeriodId,
       service_area_id: payload.serviceAreaId,
-      input_def_id: payload.inputDefId,
+      measure_def_id: payload.inputDefId,
       payment_mode_id: payload.paymentModeId,
       customer_type_id: payload.customerTypeId,
       is_relevant: payload.isRelevant,
@@ -948,7 +948,7 @@ export async function GetTransmissionRelevance(
     selectedServiceAreaId,
   } = await getUtilityRelevanceFilterContext(user.org_id!, user, filters);
 
-  const inputList = await getInputDefinitionsForStructure("Transmission");
+  const inputList = await getMeasureDefinitionsForStructure("Transmission");
 
   const fallbackItems: UtilityTransmissionRelevanceItem[] = inputList.map(
     (input) => ({
@@ -981,7 +981,7 @@ export async function GetTransmissionRelevance(
 
   const entries = await db
     .select({
-      inputDefId: transmissionRelevance.input_def_id,
+      inputDefId: transmissionRelevance.measure_def_id,
       isRelevant: transmissionRelevance.is_relevant,
       id: transmissionRelevance.id,
       updatedAt: transmissionRelevance.updatedAt,
@@ -993,7 +993,7 @@ export async function GetTransmissionRelevance(
         eq(transmissionRelevance.service_area_id, selectedServiceAreaId),
         eq(transmissionRelevance.is_deleted, false),
         inArray(
-          transmissionRelevance.input_def_id,
+          transmissionRelevance.measure_def_id,
           inputList.map((input) => input.id),
         ),
       ),
@@ -1063,7 +1063,7 @@ export async function SetTransmissionDataLabelRelevance(
     };
   }
 
-  const inputList = await getInputDefinitionsForStructure("Transmission");
+  const inputList = await getMeasureDefinitionsForStructure("Transmission");
 
   if (!inputList.some((input) => input.id === payload.inputDefId)) {
     return {
@@ -1079,7 +1079,7 @@ export async function SetTransmissionDataLabelRelevance(
       and(
         eq(transmissionRelevance.report_period_id, payload.reportPeriodId),
         eq(transmissionRelevance.service_area_id, payload.serviceAreaId),
-        eq(transmissionRelevance.input_def_id, payload.inputDefId),
+        eq(transmissionRelevance.measure_def_id, payload.inputDefId),
       ),
     )
     .orderBy(desc(transmissionRelevance.updatedAt))
@@ -1106,7 +1106,7 @@ export async function SetTransmissionDataLabelRelevance(
     await db.insert(transmissionRelevance).values({
       report_period_id: payload.reportPeriodId,
       service_area_id: payload.serviceAreaId,
-      input_def_id: payload.inputDefId,
+      measure_def_id: payload.inputDefId,
       is_relevant: payload.isRelevant,
       is_deleted: false,
       updatedAt: new Date(),
@@ -1138,7 +1138,7 @@ export async function GetUtilityGenerationRelevance(
     selectedServiceAreaId,
   } = await getUtilityRelevanceFilterContext(user.org_id!, user, filters);
 
-  const inputList = await getGenerationInputDefinitions();
+  const inputList = await getGenerationMeasureDefinitions();
   let energyProviders = await getManagedDimensionItems("Energy Provider");
   let energySources = await getManagedDimensionItemsMergedByAliases([
     "Energy Source",
@@ -1254,7 +1254,8 @@ export async function GetUtilityGenerationRelevance(
   const cellHasFalse = new Map<string, boolean>();
 
   for (const resource of energyResourcesForScope) {
-    const entries = (resource.periodEntries as EnergyResourcePeriodEntry[] | undefined) ?? [];
+    const entries =
+      (resource.periodEntries as EnergyResourcePeriodEntry[] | undefined) ?? [];
     for (const pe of entries) {
       if (pe.report_period_id === selectedReportPeriodId && !pe.is_active) {
         const key = `${selectedReportPeriodId}:${resource.energySourceId}:${resource.energyProviderId}`;
@@ -1341,7 +1342,8 @@ export async function SetUtilityGenerationDataLabelRelevance(
   }
 
   for (const resource of resources) {
-    const periodEntries = (resource.periodEntries as EnergyResourcePeriodEntry[] | undefined) ?? [];
+    const periodEntries =
+      (resource.periodEntries as EnergyResourcePeriodEntry[] | undefined) ?? [];
     const existingIdx = periodEntries.findIndex(
       (pe) => pe.report_period_id === payload.reportPeriodId,
     );
@@ -1428,7 +1430,7 @@ export async function GetCustomKpiRelevance(): Promise<
     new Set(
       kpis.flatMap((kpi) =>
         (kpi.formulaInputs ?? [])
-          .map((input) => input.input_def_id)
+          .map((input) => input.measure_def_id)
           .filter((value): value is number => typeof value === "number"),
       ),
     ),
@@ -1438,11 +1440,11 @@ export async function GetCustomKpiRelevance(): Promise<
     inputDefIds.length > 0
       ? await db
           .select({
-            id: inputDefinitions.id,
-            name: inputDefinitions.name,
+            id: measureDefinitions.id,
+            name: measureDefinitions.name,
           })
-          .from(inputDefinitions)
-          .where(inArray(inputDefinitions.id, inputDefIds))
+          .from(measureDefinitions)
+          .where(inArray(measureDefinitions.id, inputDefIds))
       : [];
 
   const inputNameById = new Map(inputRows.map((row) => [row.id, row.name]));
@@ -1537,7 +1539,7 @@ export async function GetCustomKpiRelevance(): Promise<
 
     const inputs = (kpi.formulaInputs ?? [])
       .map((input) => {
-        const inputDefId = input.input_def_id;
+        const inputDefId = input.measure_def_id;
         if (typeof inputDefId !== "number") {
           return null;
         }
@@ -1679,11 +1681,11 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
     }));
 
   const tariffInputDefIds = (
-    await getInputDefinitionsForAnyStructure(["Tariff Structure"])
+    await getMeasureDefinitionsForAnyStructure(["Tariff Structure"])
   ).map((input) => input.id);
 
   const transmissionInputDefIds = (
-    await getInputDefinitionsForAnyStructure(["Transmission"])
+    await getMeasureDefinitionsForAnyStructure(["Transmission"])
   ).map((input) => input.id);
 
   const dataEntryTotalByOrganisationId = new Map<number, number>();
@@ -1772,7 +1774,7 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
       .where(
         and(
           eq(dataEntries.is_deleted, false),
-          inArray(dataEntries.input_def_id, tariffInputDefIds),
+          inArray(dataEntries.measure_def_id, tariffInputDefIds),
           isNotNull(dataEntries.payment_mode_id),
           isNotNull(dataEntries.customer_type_id),
           isNull(dataEntries.energy_resource_id),
@@ -1800,7 +1802,7 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
         and(
           eq(dataEntries.is_deleted, false),
           eq(dataEntries.is_relevant, true),
-          inArray(dataEntries.input_def_id, tariffInputDefIds),
+          inArray(dataEntries.measure_def_id, tariffInputDefIds),
           isNotNull(dataEntries.payment_mode_id),
           isNotNull(dataEntries.customer_type_id),
           isNull(dataEntries.energy_resource_id),
@@ -1828,7 +1830,7 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
         and(
           eq(dataEntries.is_deleted, false),
           eq(dataEntries.is_relevant, false),
-          inArray(dataEntries.input_def_id, tariffInputDefIds),
+          inArray(dataEntries.measure_def_id, tariffInputDefIds),
           isNotNull(dataEntries.payment_mode_id),
           isNotNull(dataEntries.customer_type_id),
           isNull(dataEntries.energy_resource_id),
@@ -1866,7 +1868,7 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
       .where(
         and(
           eq(dataEntries.is_deleted, false),
-          inArray(dataEntries.input_def_id, transmissionInputDefIds),
+          inArray(dataEntries.measure_def_id, transmissionInputDefIds),
           isNull(dataEntries.payment_mode_id),
           isNull(dataEntries.customer_type_id),
           isNull(dataEntries.energy_resource_id),
@@ -1894,7 +1896,7 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
         and(
           eq(dataEntries.is_deleted, false),
           eq(dataEntries.is_relevant, true),
-          inArray(dataEntries.input_def_id, transmissionInputDefIds),
+          inArray(dataEntries.measure_def_id, transmissionInputDefIds),
           isNull(dataEntries.payment_mode_id),
           isNull(dataEntries.customer_type_id),
           isNull(dataEntries.energy_resource_id),
@@ -1922,7 +1924,7 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
         and(
           eq(dataEntries.is_deleted, false),
           eq(dataEntries.is_relevant, false),
-          inArray(dataEntries.input_def_id, transmissionInputDefIds),
+          inArray(dataEntries.measure_def_id, transmissionInputDefIds),
           isNull(dataEntries.payment_mode_id),
           isNull(dataEntries.customer_type_id),
           isNull(dataEntries.energy_resource_id),
@@ -2054,7 +2056,7 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
       .where(
         and(
           eq(dataEntries.is_deleted, false),
-          inArray(dataEntries.input_def_id, tariffInputDefIds),
+          inArray(dataEntries.measure_def_id, tariffInputDefIds),
           isNotNull(dataEntries.payment_mode_id),
           isNotNull(dataEntries.customer_type_id),
           isNull(dataEntries.energy_resource_id),
@@ -2079,7 +2081,7 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
         and(
           eq(dataEntries.is_deleted, false),
           eq(dataEntries.is_relevant, false),
-          inArray(dataEntries.input_def_id, tariffInputDefIds),
+          inArray(dataEntries.measure_def_id, tariffInputDefIds),
           isNotNull(dataEntries.payment_mode_id),
           isNotNull(dataEntries.customer_type_id),
           isNull(dataEntries.energy_resource_id),
@@ -2115,7 +2117,7 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
       .where(
         and(
           eq(dataEntries.is_deleted, false),
-          inArray(dataEntries.input_def_id, transmissionInputDefIds),
+          inArray(dataEntries.measure_def_id, transmissionInputDefIds),
           isNull(dataEntries.payment_mode_id),
           isNull(dataEntries.customer_type_id),
           isNull(dataEntries.energy_resource_id),
@@ -2143,7 +2145,7 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
         and(
           eq(dataEntries.is_deleted, false),
           eq(dataEntries.is_relevant, false),
-          inArray(dataEntries.input_def_id, transmissionInputDefIds),
+          inArray(dataEntries.measure_def_id, transmissionInputDefIds),
           isNull(dataEntries.payment_mode_id),
           isNull(dataEntries.customer_type_id),
           isNull(dataEntries.energy_resource_id),
@@ -2182,17 +2184,21 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
         continue;
       }
 
-      const entries = (resource.periodEntries as EnergyResourcePeriodEntry[] | undefined) ?? [];
+      const entries =
+        (resource.periodEntries as EnergyResourcePeriodEntry[] | undefined) ??
+        [];
       generationTotalByOrganisationId.set(
         resource.utilityId,
-        (generationTotalByOrganisationId.get(resource.utilityId) ?? 0) + entries.length,
+        (generationTotalByOrganisationId.get(resource.utilityId) ?? 0) +
+          entries.length,
       );
 
       for (const pe of entries) {
         if (!pe.is_active) {
           generationNotRelevantByOrganisationId.set(
             resource.utilityId,
-            (generationNotRelevantByOrganisationId.get(resource.utilityId) ?? 0) + 1,
+            (generationNotRelevantByOrganisationId.get(resource.utilityId) ??
+              0) + 1,
           );
         }
       }
@@ -2770,22 +2776,22 @@ export async function GetDevInputRelevance(): Promise<DevInputRelevanceItem[]> {
   const rows = await db
     .select({
       id: inputRelevance.id,
-      inputDefId: inputRelevance.input_def_id,
-      inputDef: inputDefinitions.name,
+      inputDefId: inputRelevance.measure_def_id,
+      inputDef: measureDefinitions.name,
       dimensionId: inputRelevance.dimension_id,
       dimension: managedListItems.name,
       isRelevant: inputRelevance.is_relevant,
     })
     .from(inputRelevance)
     .innerJoin(
-      inputDefinitions,
-      eq(inputRelevance.input_def_id, inputDefinitions.id),
+      measureDefinitions,
+      eq(inputRelevance.measure_def_id, measureDefinitions.id),
     )
     .innerJoin(
       managedListItems,
       eq(inputRelevance.dimension_id, managedListItems.id),
     )
-    .orderBy(asc(inputDefinitions.name), asc(managedListItems.name));
+    .orderBy(asc(measureDefinitions.name), asc(managedListItems.name));
 
   return rows;
 }
@@ -2806,12 +2812,12 @@ export async function GetDevInputRelevanceOptions(): Promise<{
 
   const inputOptions = await db
     .select({
-      id: inputDefinitions.id,
-      name: inputDefinitions.name,
+      id: measureDefinitions.id,
+      name: measureDefinitions.name,
     })
-    .from(inputDefinitions)
-    .where(eq(inputDefinitions.is_active, true))
-    .orderBy(asc(inputDefinitions.name));
+    .from(measureDefinitions)
+    .where(eq(measureDefinitions.is_active, true))
+    .orderBy(asc(measureDefinitions.name));
 
   const dimensionRows = await db
     .select({
@@ -2864,12 +2870,12 @@ export async function AddDevInputRelevance(payload: {
   }
 
   const [inputDef] = await db
-    .select({ id: inputDefinitions.id })
-    .from(inputDefinitions)
+    .select({ id: measureDefinitions.id })
+    .from(measureDefinitions)
     .where(
       and(
-        eq(inputDefinitions.id, payload.inputDefId),
-        eq(inputDefinitions.is_active, true),
+        eq(measureDefinitions.id, payload.inputDefId),
+        eq(measureDefinitions.is_active, true),
       ),
     )
     .limit(1);
@@ -2904,7 +2910,7 @@ export async function AddDevInputRelevance(payload: {
     .from(inputRelevance)
     .where(
       and(
-        eq(inputRelevance.input_def_id, payload.inputDefId),
+        eq(inputRelevance.measure_def_id, payload.inputDefId),
         eq(inputRelevance.dimension_id, payload.dimensionId),
       ),
     )
@@ -2920,7 +2926,7 @@ export async function AddDevInputRelevance(payload: {
   const [created] = await db
     .insert(inputRelevance)
     .values({
-      input_def_id: payload.inputDefId,
+      measure_def_id: payload.inputDefId,
       dimension_id: payload.dimensionId,
       is_relevant: payload.isRelevant,
     })
@@ -2936,16 +2942,16 @@ export async function AddDevInputRelevance(payload: {
   const [item] = await db
     .select({
       id: inputRelevance.id,
-      inputDefId: inputRelevance.input_def_id,
-      inputDef: inputDefinitions.name,
+      inputDefId: inputRelevance.measure_def_id,
+      inputDef: measureDefinitions.name,
       dimensionId: inputRelevance.dimension_id,
       dimension: managedListItems.name,
       isRelevant: inputRelevance.is_relevant,
     })
     .from(inputRelevance)
     .innerJoin(
-      inputDefinitions,
-      eq(inputRelevance.input_def_id, inputDefinitions.id),
+      measureDefinitions,
+      eq(inputRelevance.measure_def_id, measureDefinitions.id),
     )
     .innerJoin(
       managedListItems,
@@ -3003,12 +3009,12 @@ export async function UpdateDevInputRelevance(payload: {
   }
 
   const [inputDef] = await db
-    .select({ id: inputDefinitions.id })
-    .from(inputDefinitions)
+    .select({ id: measureDefinitions.id })
+    .from(measureDefinitions)
     .where(
       and(
-        eq(inputDefinitions.id, payload.inputDefId),
-        eq(inputDefinitions.is_active, true),
+        eq(measureDefinitions.id, payload.inputDefId),
+        eq(measureDefinitions.is_active, true),
       ),
     )
     .limit(1);
@@ -3043,7 +3049,7 @@ export async function UpdateDevInputRelevance(payload: {
     .from(inputRelevance)
     .where(
       and(
-        eq(inputRelevance.input_def_id, payload.inputDefId),
+        eq(inputRelevance.measure_def_id, payload.inputDefId),
         eq(inputRelevance.dimension_id, payload.dimensionId),
       ),
     )
@@ -3059,7 +3065,7 @@ export async function UpdateDevInputRelevance(payload: {
   await db
     .update(inputRelevance)
     .set({
-      input_def_id: payload.inputDefId,
+      measure_def_id: payload.inputDefId,
       dimension_id: payload.dimensionId,
       is_relevant: payload.isRelevant,
     })
@@ -3068,16 +3074,16 @@ export async function UpdateDevInputRelevance(payload: {
   const [item] = await db
     .select({
       id: inputRelevance.id,
-      inputDefId: inputRelevance.input_def_id,
-      inputDef: inputDefinitions.name,
+      inputDefId: inputRelevance.measure_def_id,
+      inputDef: measureDefinitions.name,
       dimensionId: inputRelevance.dimension_id,
       dimension: managedListItems.name,
       isRelevant: inputRelevance.is_relevant,
     })
     .from(inputRelevance)
     .innerJoin(
-      inputDefinitions,
-      eq(inputRelevance.input_def_id, inputDefinitions.id),
+      measureDefinitions,
+      eq(inputRelevance.measure_def_id, measureDefinitions.id),
     )
     .innerJoin(
       managedListItems,

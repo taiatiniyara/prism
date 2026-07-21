@@ -36,7 +36,7 @@ Financial-Year-only; Endorsed status retired).
 
 ## 1. BRONZE — raw, as entered (tables)
 
-### 1.1 `measure_definitions` (today: `input_definitions`)
+### 1.1 `measure_definitions` (today: `measure_definitions `)
 
 The collapsed catalogue. One row per measure, ~55–65 rows.
 
@@ -230,7 +230,7 @@ casting logic** — only joins.
 2. **% storage convention** — audit finding 14: 28 %-KPIs store ratios, 2 store
    0–100. Recommended: store ratios everywhere; format as % at display. Decide
    once, normalise in migration.
-3. **Rename `input_definitions` → `measure_definitions`?** Cosmetic but
+3. **Rename `measure_definitions ` → `measure_definitions`?** Cosmetic but
    clarifying; the code currently says "input" everywhere. Decide before
    migration, not after.
 4. **`energy_resource_id` grain** — keep per-generating-unit entries as an

@@ -16,9 +16,9 @@ async function main() {
     select i.id, i.name, i.is_active,
            count(de.id) filter (where de.is_deleted = false
              and de.value is not null and trim(de.value) <> '')::int as rows_with_value
-    from input_definitions i
+    from measure_definitions  i
     join managed_list_items u on u.id = i.unit_id and u.name = 'Minutes'
-    left join data_entries de on de.input_def_id = i.id
+    left join data_entries de on de.measure_def_id = i.id
     group by i.id, i.name, i.is_active
     order by rows_with_value desc, i.id
   `);
@@ -30,10 +30,10 @@ async function main() {
            count(de.id) filter (where de.is_deleted = false
              and de.value is not null and trim(de.value) <> '')::int as rows_with_value,
            max(rp.report_date)::date as latest
-    from input_definitions i
+    from measure_definitions  i
     left join managed_list_items u on u.id = i.unit_id
     left join managed_list_items sc on sc.id = i.subcategory_id
-    left join data_entries de on de.input_def_id = i.id
+    left join data_entries de on de.measure_def_id = i.id
     left join report_periods rp on rp.id = de.report_period_id
     where sc.name ilike '%interruption%' or i.name ilike '%interruption%'
     group by i.id, i.name, i.is_active, u.name

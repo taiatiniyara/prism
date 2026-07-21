@@ -45,20 +45,24 @@ async function main() {
   `,
     [ids],
   );
-  console.log(`kpi_definitions formula_inputs referencing All/Any: ${kpiRefs.rowCount}`);
+  console.log(
+    `kpi_definitions formula_inputs referencing All/Any: ${kpiRefs.rowCount}`,
+  );
   console.table(kpiRefs.rows.slice(0, 20));
 
   const inputRefs = await pool.query(
     `
     select i.id, i.name, fi.value as binding
-    from input_definitions i, jsonb_array_elements(i.formula_inputs::jsonb) fi
+    from measure_definitions  i, jsonb_array_elements(i.formula_inputs::jsonb) fi
     where (fi.value->>'energy_provider_id')::numeric = any($1::int[])
        or (fi.value->>'energy_type_id')::numeric = any($1::int[])
        or (fi.value->>'energy_source_id')::numeric = any($1::int[])
   `,
     [ids],
   );
-  console.log(`input_definitions formula_inputs referencing All/Any: ${inputRefs.rowCount}`);
+  console.log(
+    `measure_definitions  formula_inputs referencing All/Any: ${inputRefs.rowCount}`,
+  );
   console.table(inputRefs.rows.slice(0, 20));
 
   // Do the All/Any source items have a parent (type)? Broken type derivation check.

@@ -169,7 +169,7 @@ export type ScorecardKpiOption = {
 };
 
 export type CustomKpiReferenceOptions = {
-  availableInputDefinitions: Array<{
+  availableMeasureDefinitions: Array<{
     id: number;
     name: string;
     variableName: string | null;

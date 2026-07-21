@@ -2,7 +2,11 @@ import { and, eq, isNull } from "drizzle-orm";
 
 import type { AggregatedWorkerScope } from "@/app/data-entry/enter-data/services/aggregated-worker/source-reader";
 import { db } from "@/db/connection";
-import { dataEntries, dataEntryLogs, DataEntryStatusId } from "@/db/schema/dataEntry";
+import {
+  dataEntries,
+  dataEntryLogs,
+  DataEntryStatusId,
+} from "@/db/schema/dataEntry";
 import { getCurrentUser } from "@/lib/user.service";
 
 interface WriteTargetValueInput {
@@ -22,7 +26,7 @@ export const writeCalculatedTargetValue = async ({
   return db.transaction(async (tx) => {
     const existingConditions = [
       eq(dataEntries.report_period_id, scope.reportPeriodId),
-      eq(dataEntries.input_def_id, inputDefId),
+      eq(dataEntries.measure_def_id, inputDefId),
     ];
 
     if (scope.serviceAreaId == null) {
@@ -51,7 +55,7 @@ export const writeCalculatedTargetValue = async ({
 
     const writeValues = {
       report_period_id: scope.reportPeriodId,
-      input_def_id: inputDefId,
+      measure_def_id: inputDefId,
       service_area_id: scope.serviceAreaId ?? null,
       energy_resource_id: scope.energyResourceId ?? null,
       value,

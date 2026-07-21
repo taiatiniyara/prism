@@ -2,7 +2,7 @@ import { count, sql } from "drizzle-orm";
 import { db } from "@/db/connection";
 import { dataEntries } from "@/db/schema/dataEntry";
 import { reportPeriods } from "@/db/schema/reportPeriods";
-import { inputDefinitions } from "@/db/schema/dataEntry";
+import { measureDefinitions } from "@/db/schema/dataEntry";
 import { inputDlDefMappings } from "@/db/schema/dataEntry";
 
 const MIGRATION_URL = process.env.PRISM_TRAINING_MIGRATION_URL?.trim();
@@ -61,7 +61,9 @@ async function main() {
     totalSource += entries.length;
     pages++;
     if (pages <= 3) {
-      console.error(`  Page ${pages}: ${entries.length} entries, nextCursor=${page.pagination?.nextCursor}`);
+      console.error(
+        `  Page ${pages}: ${entries.length} entries, nextCursor=${page.pagination?.nextCursor}`,
+      );
     }
 
     for (const row of entries) {
@@ -73,10 +75,10 @@ async function main() {
       else sourceDeleted.no++;
       if ((row.value ?? "").trim().length > 0) sourceWithValue.yes++;
       else sourceWithValue.no++;
-      if (row.input_def_id != null) {
-        sourceDlDefIds.add(row.input_def_id);
-        if (row.input_def_name && !sourceDlDefNames.has(row.input_def_id)) {
-          sourceDlDefNames.set(row.input_def_id, row.input_def_name);
+      if (row.measure_def_id != null) {
+        sourceDlDefIds.add(row.measure_def_id);
+        if (row.input_def_name && !sourceDlDefNames.has(row.measure_def_id)) {
+          sourceDlDefNames.set(row.measure_def_id, row.input_def_name);
         }
       }
       if (row.report_period_id != null) sourceRpIds.add(row.report_period_id);
@@ -84,27 +86,48 @@ async function main() {
 
     cursor = page.pagination?.nextCursor;
     hasMore = page.pagination?.hasMore === true && cursor != null;
-    if (pages >= 50) { hasMore = false; console.error("  (truncated at 50 pages)"); }
+    if (pages >= 50) {
+      hasMore = false;
+      console.error("  (truncated at 50 pages)");
+    }
   }
 
-  console.log(`\n  Total source entries sampled: ${totalSource.toLocaleString()} (${pages} pages)`);
+  console.log(
+    `\n  Total source entries sampled: ${totalSource.toLocaleString()} (${pages} pages)`,
+  );
   console.log(`  Unique source dl_def_ids: ${sourceDlDefIds.size}`);
   console.log(`  Unique source report_period_ids: ${sourceRpIds.size}`);
-  console.log(`  Source not_available: yes=${sourceNotAvail.yes.toLocaleString()}, no=${sourceNotAvail.no.toLocaleString()}`);
-  console.log(`  Source is_deleted: yes=${sourceDeleted.yes.toLocaleString()}, no=${sourceDeleted.no.toLocaleString()}`);
-  console.log(`  Source with value: ${sourceWithValue.yes.toLocaleString()}, without: ${sourceWithValue.no.toLocaleString()}`);
+  console.log(
+    `  Source not_available: yes=${sourceNotAvail.yes.toLocaleString()}, no=${sourceNotAvail.no.toLocaleString()}`,
+  );
+  console.log(
+    `  Source is_deleted: yes=${sourceDeleted.yes.toLocaleString()}, no=${sourceDeleted.no.toLocaleString()}`,
+  );
+  console.log(
+    `  Source with value: ${sourceWithValue.yes.toLocaleString()}, without: ${sourceWithValue.no.toLocaleString()}`,
+  );
 
   console.log("\n  Full source status_id distribution:");
-  const sortedStatuses = Object.entries(sourceStatusCounts).sort(([,a], [,b]) => b - a);
+  const sortedStatuses = Object.entries(sourceStatusCounts).sort(
+    ([, a], [, b]) => b - a,
+  );
   for (const [sid, cnt] of sortedStatuses) {
     const label =
-      sid === "1" ? "Requested" :
-      sid === "2" ? "Pending" :
-      sid === "3" ? "Entered" :
-      sid === "5" ? "Reviewed" :
-      sid === "6" ? "Approved" :
-      sid === "7" ? "Uploaded" :
-      sid === "null" ? "null" : `?`;
+      sid === "1"
+        ? "Requested"
+        : sid === "2"
+          ? "Pending"
+          : sid === "3"
+            ? "Entered"
+            : sid === "5"
+              ? "Reviewed"
+              : sid === "6"
+                ? "Approved"
+                : sid === "7"
+                  ? "Uploaded"
+                  : sid === "null"
+                    ? "null"
+                    : `?`;
     console.log(`    ${label} (${sid}): ${cnt.toLocaleString()}`);
   }
 
@@ -137,13 +160,17 @@ async function main() {
   // ─── 3. Estimate expected prism count ───────────────────────────────
   // Count how many source entries have mapped dl_def_ids AND valid report_periods
   const targetRpIds = new Set(
-    (await db.select({ id: reportPeriods.id }).from(reportPeriods)).map((r) => r.id),
+    (await db.select({ id: reportPeriods.id }).from(reportPeriods)).map(
+      (r) => r.id,
+    ),
   );
 
   const expectedMapped = sourceDlDefIds.size - unmappedIds.length;
   const rpOverlap = [...sourceRpIds].filter((id) => targetRpIds.has(id)).length;
   console.log(`\n  Source rp_ids: ${sourceRpIds.size}, in prism: ${rpOverlap}`);
-  console.log(`  Unmapped dl_def_ids: ${unmappedIds.length} (${((unmappedIds.length / sourceDlDefIds.size) * 100).toFixed(1)}% of source)`);
+  console.log(
+    `  Unmapped dl_def_ids: ${unmappedIds.length} (${((unmappedIds.length / sourceDlDefIds.size) * 100).toFixed(1)}% of source)`,
+  );
 
   // ─── 4. Prism side breakdown ────────────────────────────────────────
   console.log("\n--- Prism (target) full breakdown ---");
@@ -162,12 +189,18 @@ async function main() {
     .orderBy(dataEntries.status_id);
 
   const statusLabels: Record<number, string> = {
-    1: "Requested", 2: "Pending", 3: "Entered",
-    4: "Reviewed", 5: "Approved", 7: "Not_Available",
+    1: "Requested",
+    2: "Pending",
+    3: "Entered",
+    4: "Reviewed",
+    5: "Approved",
+    7: "Not_Available",
   };
   console.log("  By status:");
   for (const s of byStatus) {
-    console.log(`    ${statusLabels[s.status_id] ?? `?(${s.status_id})`}: ${s.cnt.toLocaleString()}`);
+    console.log(
+      `    ${statusLabels[s.status_id] ?? `?(${s.status_id})`}: ${s.cnt.toLocaleString()}`,
+    );
   }
 
   // ─── 5. Potential gaps ──────────────────────────────────────────────
@@ -176,11 +209,17 @@ async function main() {
   console.log(`  Total prism:  ${activePrism[0].cnt.toLocaleString()}`);
   const estimatedDelta =
     totalSource * (unmappedIds.length / sourceDlDefIds.size);
-  console.log(`  ~${estimatedDelta.toLocaleString(0)} entries likely unmatched due to input def mapping gaps`);
-  console.log(`  Remaining gap ~${(totalSource - activePrism[0].cnt - estimatedDelta).toLocaleString()}`);
+  console.log(
+    `  ~${estimatedDelta.toLocaleString(0)} entries likely unmatched due to input def mapping gaps`,
+  );
+  console.log(
+    `  Remaining gap ~${(totalSource - activePrism[0].cnt - estimatedDelta).toLocaleString()}`,
+  );
 
   console.log("\n--- Action Plan ---");
-  console.log("1. Run 'Sync Input DL Def Mappings' on /migration to map unmapped definitions");
+  console.log(
+    "1. Run 'Sync Input DL Def Mappings' on /migration to map unmapped definitions",
+  );
   console.log("2. Run 'Data Entries' migration after mappings are updated");
   console.log("3. Re-run this diagnostic to verify gap closure");
 

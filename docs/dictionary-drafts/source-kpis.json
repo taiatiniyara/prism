@@ -6,7 +6,7 @@
   "formula": "air_connectivity_per_1000_people",
   "formula_inputs": [
    {
-    "input_def_id": 1013,
+    "measure_def_id": 1013,
     "variable_name": "air_connectivity_per_1000_people"
    }
   ],
@@ -32,7 +32,7 @@
   "formula": "air_connectivity_per_unit_gdp",
   "formula_inputs": [
    {
-    "input_def_id": 1014,
+    "measure_def_id": 1014,
     "variable_name": "air_connectivity_per_unit_gdp"
    }
   ],
@@ -58,7 +58,7 @@
   "formula": "iata_air_connectivity_score",
   "formula_inputs": [
    {
-    "input_def_id": 1012,
+    "measure_def_id": 1012,
     "variable_name": "iata_air_connectivity_score"
    }
   ],
@@ -84,7 +84,7 @@
   "formula": "access_to_electricity",
   "formula_inputs": [
    {
-    "input_def_id": 1008,
+    "measure_def_id": 1008,
     "variable_name": "access_to_electricity"
    }
   ],
@@ -110,7 +110,7 @@
   "formula": "gdp_per_capita",
   "formula_inputs": [
    {
-    "input_def_id": 1009,
+    "measure_def_id": 1009,
     "variable_name": "gdp_per_capita"
    }
   ],
@@ -136,7 +136,7 @@
   "formula": "inflation_rate",
   "formula_inputs": [
    {
-    "input_def_id": 1010,
+    "measure_def_id": 1010,
     "variable_name": "inflation_rate"
    }
   ],
@@ -162,7 +162,7 @@
   "formula": "unemployment_rate",
   "formula_inputs": [
    {
-    "input_def_id": 1011,
+    "measure_def_id": 1011,
     "variable_name": "unemployment_rate"
    }
   ],
@@ -188,7 +188,7 @@
   "formula": "usd_exchange_rate",
   "formula_inputs": [
    {
-    "input_def_id": 1200,
+    "measure_def_id": 1200,
     "variable_name": "usd_exchange_rate",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -217,7 +217,7 @@
   "formula": "fuel_pricing_regulation",
   "formula_inputs": [
    {
-    "input_def_id": 1016,
+    "measure_def_id": 1016,
     "variable_name": "fuel_pricing_regulation"
    }
   ],
@@ -243,7 +243,7 @@
   "formula": "fuel_supply_access",
   "formula_inputs": [
    {
-    "input_def_id": 1015,
+    "measure_def_id": 1015,
     "variable_name": "fuel_supply_access"
    }
   ],
@@ -269,7 +269,7 @@
   "formula": "islands",
   "formula_inputs": [
    {
-    "input_def_id": 1002,
+    "measure_def_id": 1002,
     "variable_name": "islands"
    }
   ],
@@ -295,7 +295,7 @@
   "formula": "land_area",
   "formula_inputs": [
    {
-    "input_def_id": 1001,
+    "measure_def_id": 1001,
     "variable_name": "land_area"
    }
   ],
@@ -321,7 +321,7 @@
   "formula": "average_household_size",
   "formula_inputs": [
    {
-    "input_def_id": 1007,
+    "measure_def_id": 1007,
     "variable_name": "average_household_size"
    }
   ],
@@ -347,7 +347,7 @@
   "formula": "households",
   "formula_inputs": [
    {
-    "input_def_id": 1006,
+    "measure_def_id": 1006,
     "variable_name": "households"
    }
   ],
@@ -373,7 +373,7 @@
   "formula": "population",
   "formula_inputs": [
    {
-    "input_def_id": 1003,
+    "measure_def_id": 1003,
     "variable_name": "population",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -402,7 +402,7 @@
   "formula": "rural_population",
   "formula_inputs": [
    {
-    "input_def_id": 1005,
+    "measure_def_id": 1005,
     "variable_name": "rural_population"
    }
   ],
@@ -428,7 +428,7 @@
   "formula": "urban_population",
   "formula_inputs": [
    {
-    "input_def_id": 1004,
+    "measure_def_id": 1004,
     "variable_name": "urban_population"
    }
   ],
@@ -454,7 +454,7 @@
   "formula": "accounting_standards",
   "formula_inputs": [
    {
-    "input_def_id": 1018,
+    "measure_def_id": 1018,
     "variable_name": "accounting_standards"
    }
   ],
@@ -480,7 +480,7 @@
   "formula": "electricity_regulation",
   "formula_inputs": [
    {
-    "input_def_id": 1020,
+    "measure_def_id": 1020,
     "variable_name": "electricity_regulation"
    }
   ],
@@ -506,7 +506,7 @@
   "formula": "feeder_type",
   "formula_inputs": [
    {
-    "input_def_id": 1021,
+    "measure_def_id": 1021,
     "variable_name": "feeder_type"
    }
   ],
@@ -532,7 +532,7 @@
   "formula": "entity_ownership_type",
   "formula_inputs": [
    {
-    "input_def_id": 1017,
+    "measure_def_id": 1017,
     "variable_name": "entity_ownership_type"
    }
   ],
@@ -558,7 +558,7 @@
   "formula": "power_quality_standards",
   "formula_inputs": [
    {
-    "input_def_id": 1019,
+    "measure_def_id": 1019,
     "variable_name": "power_quality_standards",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -587,7 +587,7 @@
   "formula": "apportioned_cost_duty_and_taxes_fuel__oil",
   "formula_inputs": [
    {
-    "input_def_id": 1211,
+    "measure_def_id": 1211,
     "variable_name": "apportioned_cost_duty_and_taxes_fuel__oil"
    }
   ],
@@ -613,14 +613,14 @@
   "formula": "om_costs_fuel__oil / service_total_costs",
   "formula_inputs": [
    {
-    "input_def_id": 1209,
+    "measure_def_id": 1209,
     "variable_name": "om_costs_fuel__oil",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1322,
+    "measure_def_id": 1322,
     "variable_name": "service_total_costs",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -649,14 +649,14 @@
   "formula": "om_costs_generation / service_total_costs",
   "formula_inputs": [
    {
-    "input_def_id": 1206,
+    "measure_def_id": 1206,
     "variable_name": "om_costs_generation",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1322,
+    "measure_def_id": 1322,
     "variable_name": "service_total_costs",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -685,14 +685,14 @@
   "formula": "om_costs_generation / service_total_costs",
   "formula_inputs": [
    {
-    "input_def_id": 1206,
+    "measure_def_id": 1206,
     "variable_name": "om_costs_generation",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1322,
+    "measure_def_id": 1322,
     "variable_name": "service_total_costs",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -721,14 +721,14 @@
   "formula": "apportioned_cost_duty_and_taxes_others / service_total_costs",
   "formula_inputs": [
    {
-    "input_def_id": 1212,
+    "measure_def_id": 1212,
     "variable_name": "apportioned_cost_duty_and_taxes_others",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1322,
+    "measure_def_id": 1322,
     "variable_name": "service_total_costs",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -757,14 +757,14 @@
   "formula": "service_other_operating_expenses / service_total_costs",
   "formula_inputs": [
    {
-    "input_def_id": 1302,
+    "measure_def_id": 1302,
     "variable_name": "service_other_operating_expenses",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1322,
+    "measure_def_id": 1322,
     "variable_name": "service_total_costs",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -793,14 +793,14 @@
   "formula": "staff_costs_other_labor_expenditure / service_total_costs",
   "formula_inputs": [
    {
-    "input_def_id": 1322,
+    "measure_def_id": 1322,
     "variable_name": "service_total_costs",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1205,
+    "measure_def_id": 1205,
     "variable_name": "staff_costs_other_labor_expenditure",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -829,14 +829,14 @@
   "formula": "power_purchase_costs / service_total_costs",
   "formula_inputs": [
    {
-    "input_def_id": 1210,
+    "measure_def_id": 1210,
     "variable_name": "power_purchase_costs",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1322,
+    "measure_def_id": 1322,
     "variable_name": "service_total_costs",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -865,21 +865,21 @@
   "formula": "( staff_costs_transmission + staff_costs_distribution ) service_total_costs",
   "formula_inputs": [
    {
-    "input_def_id": 1322,
+    "measure_def_id": 1322,
     "variable_name": "service_total_costs",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1203,
+    "measure_def_id": 1203,
     "variable_name": "staff_costs_distribution",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1204,
+    "measure_def_id": 1204,
     "variable_name": "staff_costs_transmission",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -908,21 +908,21 @@
   "formula": "( om_costs_transmission + om_costs_distribution ) / service_total_costs",
   "formula_inputs": [
    {
-    "input_def_id": 1207,
+    "measure_def_id": 1207,
     "variable_name": "om_costs_distribution",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1208,
+    "measure_def_id": 1208,
     "variable_name": "om_costs_transmission",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1322,
+    "measure_def_id": 1322,
     "variable_name": "service_total_costs",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -951,35 +951,35 @@
   "formula": "service_government_subsidies / ( service_cost_of_sales + service_other_operating_expenses - service_bad_debt_expense + service_income_tax )",
   "formula_inputs": [
    {
-    "input_def_id": 1306,
+    "measure_def_id": 1306,
     "variable_name": "service_bad_debt_expense",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1301,
+    "measure_def_id": 1301,
     "variable_name": "service_cost_of_sales",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1315,
+    "measure_def_id": 1315,
     "variable_name": "service_government_subsidies",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1312,
+    "measure_def_id": 1312,
     "variable_name": "service_income_tax",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1302,
+    "measure_def_id": 1302,
     "variable_name": "service_other_operating_expenses",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -1008,35 +1008,35 @@
   "formula": "service_revenue / ( service_cost_of_sales + service_other_operating_expenses - service_bad_debt_expense + service_income_tax )",
   "formula_inputs": [
    {
-    "input_def_id": 1306,
+    "measure_def_id": 1306,
     "variable_name": "service_bad_debt_expense",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1301,
+    "measure_def_id": 1301,
     "variable_name": "service_cost_of_sales",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1312,
+    "measure_def_id": 1312,
     "variable_name": "service_income_tax",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1302,
+    "measure_def_id": 1302,
     "variable_name": "service_other_operating_expenses",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1300,
+    "measure_def_id": 1300,
     "variable_name": "service_revenue",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -1065,21 +1065,21 @@
   "formula": "( service_cost_of_sales + service_other_operating_expenses ) / service_revenue",
   "formula_inputs": [
    {
-    "input_def_id": 1301,
+    "measure_def_id": 1301,
     "variable_name": "service_cost_of_sales",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1302,
+    "measure_def_id": 1302,
     "variable_name": "service_other_operating_expenses",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1300,
+    "measure_def_id": 1300,
     "variable_name": "service_revenue",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -1108,11 +1108,11 @@
   "formula": "service_total_current_assets / service_total_current_liabilities",
   "formula_inputs": [
    {
-    "input_def_id": 1316,
+    "measure_def_id": 1316,
     "variable_name": "service_total_current_assets"
    },
    {
-    "input_def_id": 1319,
+    "measure_def_id": 1319,
     "variable_name": "service_total_current_liabilities"
    }
   ],
@@ -1138,14 +1138,14 @@
   "formula": "service_trade_receivables / service_revenue * 365",
   "formula_inputs": [
    {
-    "input_def_id": 1300,
+    "measure_def_id": 1300,
     "variable_name": "service_revenue",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1314,
+    "measure_def_id": 1314,
     "variable_name": "service_trade_receivables",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -1174,28 +1174,28 @@
   "formula": "( service_revenue - service_other_income - service_cost_of_sales - service_other_operating_expenses ) / service_revenue",
   "formula_inputs": [
    {
-    "input_def_id": 1301,
+    "measure_def_id": 1301,
     "variable_name": "service_cost_of_sales",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1303,
+    "measure_def_id": 1303,
     "variable_name": "service_other_income",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1302,
+    "measure_def_id": 1302,
     "variable_name": "service_other_operating_expenses",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1300,
+    "measure_def_id": 1300,
     "variable_name": "service_revenue",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -1224,42 +1224,42 @@
   "formula": "( service_revenue + service_other_income - service_cost_of_sales - service_other_operating_expenses - service_depreciation_expense - service_amortization_expenses ) / service_revenue",
   "formula_inputs": [
    {
-    "input_def_id": 1305,
+    "measure_def_id": 1305,
     "variable_name": "service_amortization_expenses",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1301,
+    "measure_def_id": 1301,
     "variable_name": "service_cost_of_sales",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1304,
+    "measure_def_id": 1304,
     "variable_name": "service_depreciation_expense",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1303,
+    "measure_def_id": 1303,
     "variable_name": "service_other_income",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1302,
+    "measure_def_id": 1302,
     "variable_name": "service_other_operating_expenses",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1300,
+    "measure_def_id": 1300,
     "variable_name": "service_revenue",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -1288,14 +1288,14 @@
   "formula": "service_profit / service_revenue",
   "formula_inputs": [
    {
-    "input_def_id": 1323,
+    "measure_def_id": 1323,
     "variable_name": "service_profit",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1300,
+    "measure_def_id": 1300,
     "variable_name": "service_revenue",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -1324,14 +1324,14 @@
   "formula": "service_profit / service_total_assets",
   "formula_inputs": [
    {
-    "input_def_id": 1323,
+    "measure_def_id": 1323,
     "variable_name": "service_profit",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1317,
+    "measure_def_id": 1317,
     "variable_name": "service_total_assets",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -1360,14 +1360,14 @@
   "formula": "service_profit / service_total_equity",
   "formula_inputs": [
    {
-    "input_def_id": 1323,
+    "measure_def_id": 1323,
     "variable_name": "service_profit",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1318,
+    "measure_def_id": 1318,
     "variable_name": "service_total_equity",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -1396,7 +1396,7 @@
   "formula": "service_revenue",
   "formula_inputs": [
    {
-    "input_def_id": 1300,
+    "measure_def_id": 1300,
     "variable_name": "service_revenue"
    }
   ],
@@ -1422,14 +1422,14 @@
   "formula": "service_total_liabilities / service_total_equity",
   "formula_inputs": [
    {
-    "input_def_id": 1318,
+    "measure_def_id": 1318,
     "variable_name": "service_total_equity",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1320,
+    "measure_def_id": 1320,
     "variable_name": "service_total_liabilities",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -1647,7 +1647,7 @@
   "formula": "are_ministers_appointed_to_the_board",
   "formula_inputs": [
    {
-    "input_def_id": 1100,
+    "measure_def_id": 1100,
     "variable_name": "are_ministers_appointed_to_the_board"
    }
   ],
@@ -1673,7 +1673,7 @@
   "formula": "are_linesector_ministers_or_public_servants_appointed_to_the_board",
   "formula_inputs": [
    {
-    "input_def_id": 1101,
+    "measure_def_id": 1101,
     "variable_name": "are_linesector_ministers_or_public_servants_appointed_to_the_board"
    }
   ],
@@ -1699,7 +1699,7 @@
   "formula": "is_a_commercial_mandate_implemented",
   "formula_inputs": [
    {
-    "input_def_id": 1105,
+    "measure_def_id": 1105,
     "variable_name": "is_a_commercial_mandate_implemented"
    }
   ],
@@ -1725,7 +1725,7 @@
   "formula": "is_a_commercial_mandate_in_place",
   "formula_inputs": [
    {
-    "input_def_id": 1104,
+    "measure_def_id": 1104,
     "variable_name": "is_a_commercial_mandate_in_place"
    }
   ],
@@ -1751,7 +1751,7 @@
   "formula": "is_a_code_of_conduct_implemented",
   "formula_inputs": [
    {
-    "input_def_id": 1103,
+    "measure_def_id": 1103,
     "variable_name": "is_a_code_of_conduct_implemented"
    }
   ],
@@ -1777,7 +1777,7 @@
   "formula": "is_a_code_of_conduct_in_place",
   "formula_inputs": [
    {
-    "input_def_id": 1102,
+    "measure_def_id": 1102,
     "variable_name": "is_a_code_of_conduct_in_place"
    }
   ],
@@ -1803,7 +1803,7 @@
   "formula": "does_the_ceos_performance_contract_include_annual_reviews",
   "formula_inputs": [
    {
-    "input_def_id": 1110,
+    "measure_def_id": 1110,
     "variable_name": "does_the_ceos_performance_contract_include_annual_reviews"
    }
   ],
@@ -1829,7 +1829,7 @@
   "formula": "is_the_ceo_on_a_performance_contract",
   "formula_inputs": [
    {
-    "input_def_id": 1109,
+    "measure_def_id": 1109,
     "variable_name": "is_the_ceo_on_a_performance_contract"
    }
   ],
@@ -1855,7 +1855,7 @@
   "formula": "does_the_strategic_plan_include_three_or_more_years_of_forecasts",
   "formula_inputs": [
    {
-    "input_def_id": 1107,
+    "measure_def_id": 1107,
     "variable_name": "does_the_strategic_plan_include_three_or_more_years_of_forecasts",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -1884,7 +1884,7 @@
   "formula": "has_a_strategic_plan_been_adopted",
   "formula_inputs": [
    {
-    "input_def_id": 1106,
+    "measure_def_id": 1106,
     "variable_name": "has_a_strategic_plan_been_adopted"
    }
   ],
@@ -1910,7 +1910,7 @@
   "formula": "is_the_strategic_plan_implemented",
   "formula_inputs": [
    {
-    "input_def_id": 1108,
+    "measure_def_id": 1108,
     "variable_name": "is_the_strategic_plan_implemented"
    }
   ],
@@ -1936,7 +1936,7 @@
   "formula": "does_the_annual_report_disclose_performance_relative_to_the_strategic_plan",
   "formula_inputs": [
    {
-    "input_def_id": 1112,
+    "measure_def_id": 1112,
     "variable_name": "does_the_annual_report_disclose_performance_relative_to_the_strategic_plan"
    }
   ],
@@ -1962,7 +1962,7 @@
   "formula": "is_the_annual_report_audited",
   "formula_inputs": [
    {
-    "input_def_id": 1113,
+    "measure_def_id": 1113,
     "variable_name": "is_the_annual_report_audited"
    }
   ],
@@ -1988,7 +1988,7 @@
   "formula": "is_the_annual_report_completed_within_four_months_of_the_end_of_the_reporting_year",
   "formula_inputs": [
    {
-    "input_def_id": 1111,
+    "measure_def_id": 1111,
     "variable_name": "is_the_annual_report_completed_within_four_months_of_the_end_of_the_reporting_year",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -2017,11 +2017,11 @@
   "formula": "administrative_employees_female / administrative_employees_total",
   "formula_inputs": [
    {
-    "input_def_id": 1421,
+    "measure_def_id": 1421,
     "variable_name": "administrative_employees_female"
    },
    {
-    "input_def_id": 1422,
+    "measure_def_id": 1422,
     "variable_name": "administrative_employees_total"
    }
   ],
@@ -2047,11 +2047,11 @@
   "formula": "administrative_employees_male / administrative_employees_total",
   "formula_inputs": [
    {
-    "input_def_id": 1420,
+    "measure_def_id": 1420,
     "variable_name": "administrative_employees_male"
    },
    {
-    "input_def_id": 1422,
+    "measure_def_id": 1422,
     "variable_name": "administrative_employees_total"
    }
   ],
@@ -2077,11 +2077,11 @@
   "formula": "administrative_employees_female + administrative_employees_male",
   "formula_inputs": [
    {
-    "input_def_id": 1421,
+    "measure_def_id": 1421,
     "variable_name": "administrative_employees_female"
    },
    {
-    "input_def_id": 1420,
+    "measure_def_id": 1420,
     "variable_name": "administrative_employees_male"
    }
   ],
@@ -2107,11 +2107,11 @@
   "formula": "( employees_female / employees_total ) * 100",
   "formula_inputs": [
    {
-    "input_def_id": 1430,
+    "measure_def_id": 1430,
     "variable_name": "employees_female"
    },
    {
-    "input_def_id": 1431,
+    "measure_def_id": 1431,
     "variable_name": "employees_total"
    }
   ],
@@ -2137,11 +2137,11 @@
   "formula": "( employees_male / employees_total ) * 100",
   "formula_inputs": [
    {
-    "input_def_id": 1429,
+    "measure_def_id": 1429,
     "variable_name": "employees_male"
    },
    {
-    "input_def_id": 1431,
+    "measure_def_id": 1431,
     "variable_name": "employees_total"
    }
   ],
@@ -2167,11 +2167,11 @@
   "formula": "executive_employees_female / executive_employees_total",
   "formula_inputs": [
    {
-    "input_def_id": 1403,
+    "measure_def_id": 1403,
     "variable_name": "executive_employees_female"
    },
    {
-    "input_def_id": 1404,
+    "measure_def_id": 1404,
     "variable_name": "executive_employees_total"
    }
   ],
@@ -2197,11 +2197,11 @@
   "formula": "executive_employees_male / executive_employees_total",
   "formula_inputs": [
    {
-    "input_def_id": 1402,
+    "measure_def_id": 1402,
     "variable_name": "executive_employees_male"
    },
    {
-    "input_def_id": 1404,
+    "measure_def_id": 1404,
     "variable_name": "executive_employees_total"
    }
   ],
@@ -2227,14 +2227,14 @@
   "formula": "executive_employees_female + executive_employees_male",
   "formula_inputs": [
    {
-    "input_def_id": 1403,
+    "measure_def_id": 1403,
     "variable_name": "executive_employees_female",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1402,
+    "measure_def_id": 1402,
     "variable_name": "executive_employees_male",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -2263,15 +2263,15 @@
   "formula": "finance_employees_female / finance_employees_total",
   "formula_inputs": [
    {
-    "input_def_id": 1409,
+    "measure_def_id": 1409,
     "variable_name": "finance_employees_female"
    },
    {
-    "input_def_id": 1410,
+    "measure_def_id": 1410,
     "variable_name": "finance_employees_total"
    },
    {
-    "input_def_id": 1408,
+    "measure_def_id": 1408,
     "variable_name": "finance_employees_male"
    }
   ],
@@ -2297,11 +2297,11 @@
   "formula": "finance_employees_male / finance_employees_total",
   "formula_inputs": [
    {
-    "input_def_id": 1408,
+    "measure_def_id": 1408,
     "variable_name": "finance_employees_male"
    },
    {
-    "input_def_id": 1410,
+    "measure_def_id": 1410,
     "variable_name": "finance_employees_total"
    }
   ],
@@ -2327,11 +2327,11 @@
   "formula": "finance_employees_female + finance_employees_male",
   "formula_inputs": [
    {
-    "input_def_id": 1409,
+    "measure_def_id": 1409,
     "variable_name": "finance_employees_female"
    },
    {
-    "input_def_id": 1408,
+    "measure_def_id": 1408,
     "variable_name": "finance_employees_male"
    }
   ],
@@ -2357,7 +2357,7 @@
   "formula": "gender_of_2ic",
   "formula_inputs": [
    {
-    "input_def_id": 1401,
+    "measure_def_id": 1401,
     "variable_name": "gender_of_2ic"
    }
   ],
@@ -2383,7 +2383,7 @@
   "formula": "gender_of_ceo",
   "formula_inputs": [
    {
-    "input_def_id": 1400,
+    "measure_def_id": 1400,
     "variable_name": "gender_of_ceo"
    }
   ],
@@ -2409,11 +2409,11 @@
   "formula": "human_resource_employees_female / human_resource_employees_total",
   "formula_inputs": [
    {
-    "input_def_id": 1415,
+    "measure_def_id": 1415,
     "variable_name": "human_resource_employees_female"
    },
    {
-    "input_def_id": 1416,
+    "measure_def_id": 1416,
     "variable_name": "human_resource_employees_total"
    }
   ],
@@ -2439,11 +2439,11 @@
   "formula": "human_resource_employees_male / human_resource_employees_total",
   "formula_inputs": [
    {
-    "input_def_id": 1414,
+    "measure_def_id": 1414,
     "variable_name": "human_resource_employees_male"
    },
    {
-    "input_def_id": 1416,
+    "measure_def_id": 1416,
     "variable_name": "human_resource_employees_total"
    }
   ],
@@ -2469,11 +2469,11 @@
   "formula": "human_resource_employees_female + human_resource_employees_male",
   "formula_inputs": [
    {
-    "input_def_id": 1415,
+    "measure_def_id": 1415,
     "variable_name": "human_resource_employees_female"
    },
    {
-    "input_def_id": 1414,
+    "measure_def_id": 1414,
     "variable_name": "human_resource_employees_male"
    }
   ],
@@ -2499,11 +2499,11 @@
   "formula": "ict_employees_female / ict_employees_total",
   "formula_inputs": [
    {
-    "input_def_id": 1424,
+    "measure_def_id": 1424,
     "variable_name": "ict_employees_female"
    },
    {
-    "input_def_id": 1425,
+    "measure_def_id": 1425,
     "variable_name": "ict_employees_total"
    }
   ],
@@ -2529,11 +2529,11 @@
   "formula": "ict_employees_male / ict_employees_total",
   "formula_inputs": [
    {
-    "input_def_id": 1423,
+    "measure_def_id": 1423,
     "variable_name": "ict_employees_male"
    },
    {
-    "input_def_id": 1425,
+    "measure_def_id": 1425,
     "variable_name": "ict_employees_total"
    }
   ],
@@ -2559,11 +2559,11 @@
   "formula": "ict_employees_female + ict_employees_male",
   "formula_inputs": [
    {
-    "input_def_id": 1424,
+    "measure_def_id": 1424,
     "variable_name": "ict_employees_female"
    },
    {
-    "input_def_id": 1423,
+    "measure_def_id": 1423,
     "variable_name": "ict_employees_male"
    }
   ],
@@ -2589,14 +2589,14 @@
   "formula": "other_employees_female / other_employees_total",
   "formula_inputs": [
    {
-    "input_def_id": 1427,
+    "measure_def_id": 1427,
     "variable_name": "other_employees_female",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1428,
+    "measure_def_id": 1428,
     "variable_name": "other_employees_total",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -2625,14 +2625,14 @@
   "formula": "other_employees_male / other_employees_total",
   "formula_inputs": [
    {
-    "input_def_id": 1426,
+    "measure_def_id": 1426,
     "variable_name": "other_employees_male",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1428,
+    "measure_def_id": 1428,
     "variable_name": "other_employees_total",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -2661,14 +2661,14 @@
   "formula": "other_employees_female + other_employees_male",
   "formula_inputs": [
    {
-    "input_def_id": 1427,
+    "measure_def_id": 1427,
     "variable_name": "other_employees_female",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1426,
+    "measure_def_id": 1426,
     "variable_name": "other_employees_male",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -2697,14 +2697,14 @@
   "formula": "pr_marketing_and_customer_service_employees_female / pr_marketing_and_customer_service_employees_total",
   "formula_inputs": [
    {
-    "input_def_id": 1418,
+    "measure_def_id": 1418,
     "variable_name": "pr_marketing_and_customer_service_employees_female",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1419,
+    "measure_def_id": 1419,
     "variable_name": "pr_marketing_and_customer_service_employees_total",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -2733,14 +2733,14 @@
   "formula": "pr_marketing_and_customer_service_employees_male / pr_marketing_and_customer_service_employees_total",
   "formula_inputs": [
    {
-    "input_def_id": 1417,
+    "measure_def_id": 1417,
     "variable_name": "pr_marketing_and_customer_service_employees_male",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1419,
+    "measure_def_id": 1419,
     "variable_name": "pr_marketing_and_customer_service_employees_total",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -2769,14 +2769,14 @@
   "formula": "pr_marketing_and_customer_service_employees_female + pr_marketing_and_customer_service_employees_male",
   "formula_inputs": [
    {
-    "input_def_id": 1418,
+    "measure_def_id": 1418,
     "variable_name": "pr_marketing_and_customer_service_employees_female",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1417,
+    "measure_def_id": 1417,
     "variable_name": "pr_marketing_and_customer_service_employees_male",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -2805,14 +2805,14 @@
   "formula": "procurement_employees_female / procurement_employees_total",
   "formula_inputs": [
    {
-    "input_def_id": 1412,
+    "measure_def_id": 1412,
     "variable_name": "procurement_employees_female",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1413,
+    "measure_def_id": 1413,
     "variable_name": "procurement_employees_total",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -2841,14 +2841,14 @@
   "formula": "procurement_employees_male / procurement_employees_total",
   "formula_inputs": [
    {
-    "input_def_id": 1411,
+    "measure_def_id": 1411,
     "variable_name": "procurement_employees_male",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1413,
+    "measure_def_id": 1413,
     "variable_name": "procurement_employees_total",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -2877,14 +2877,14 @@
   "formula": "procurement_employees_female + procurement_employees_male",
   "formula_inputs": [
    {
-    "input_def_id": 1412,
+    "measure_def_id": 1412,
     "variable_name": "procurement_employees_female",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1411,
+    "measure_def_id": 1411,
     "variable_name": "procurement_employees_male",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -2913,14 +2913,14 @@
   "formula": "technical_employees_female / technical_employees_total",
   "formula_inputs": [
    {
-    "input_def_id": 1406,
+    "measure_def_id": 1406,
     "variable_name": "technical_employees_female",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1407,
+    "measure_def_id": 1407,
     "variable_name": "technical_employees_total",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -2949,14 +2949,14 @@
   "formula": "technical_employees_male / technical_employees_total",
   "formula_inputs": [
    {
-    "input_def_id": 1405,
+    "measure_def_id": 1405,
     "variable_name": "technical_employees_male",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1407,
+    "measure_def_id": 1407,
     "variable_name": "technical_employees_total",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -2985,14 +2985,14 @@
   "formula": "technical_employees_female + technical_employees_male",
   "formula_inputs": [
    {
-    "input_def_id": 1406,
+    "measure_def_id": 1406,
     "variable_name": "technical_employees_female",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1405,
+    "measure_def_id": 1405,
     "variable_name": "technical_employees_male",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -3021,11 +3021,11 @@
   "formula": "employees_male + employees_female",
   "formula_inputs": [
    {
-    "input_def_id": 1430,
+    "measure_def_id": 1430,
     "variable_name": "employees_female"
    },
    {
-    "input_def_id": 1429,
+    "measure_def_id": 1429,
     "variable_name": "employees_male"
    }
   ],
@@ -3051,39 +3051,39 @@
   "formula": "administrative_employees_female + executive_employees_female + finance_employees_female + human_resource_employees_female + ict_employees_female + other_employees_female + pr_marketing_and_customer_service_employees_female + procurement_employees_female + technical_employees_female",
   "formula_inputs": [
    {
-    "input_def_id": 1421,
+    "measure_def_id": 1421,
     "variable_name": "administrative_employees_female"
    },
    {
-    "input_def_id": 1403,
+    "measure_def_id": 1403,
     "variable_name": "executive_employees_female"
    },
    {
-    "input_def_id": 1409,
+    "measure_def_id": 1409,
     "variable_name": "finance_employees_female"
    },
    {
-    "input_def_id": 1415,
+    "measure_def_id": 1415,
     "variable_name": "human_resource_employees_female"
    },
    {
-    "input_def_id": 1424,
+    "measure_def_id": 1424,
     "variable_name": "ict_employees_female"
    },
    {
-    "input_def_id": 1427,
+    "measure_def_id": 1427,
     "variable_name": "other_employees_female"
    },
    {
-    "input_def_id": 1418,
+    "measure_def_id": 1418,
     "variable_name": "pr_marketing_and_customer_service_employees_female"
    },
    {
-    "input_def_id": 1412,
+    "measure_def_id": 1412,
     "variable_name": "procurement_employees_female"
    },
    {
-    "input_def_id": 1406,
+    "measure_def_id": 1406,
     "variable_name": "technical_employees_female"
    }
   ],
@@ -3109,35 +3109,35 @@
   "formula": "administrative_employees_male + executive_employees_male + finance_employees_male + ict_employees_male + other_employees_male + pr_marketing_and_customer_service_employees_male + procurement_employees_male + technical_employees_male",
   "formula_inputs": [
    {
-    "input_def_id": 1420,
+    "measure_def_id": 1420,
     "variable_name": "administrative_employees_male"
    },
    {
-    "input_def_id": 1402,
+    "measure_def_id": 1402,
     "variable_name": "executive_employees_male"
    },
    {
-    "input_def_id": 1408,
+    "measure_def_id": 1408,
     "variable_name": "finance_employees_male"
    },
    {
-    "input_def_id": 1423,
+    "measure_def_id": 1423,
     "variable_name": "ict_employees_male"
    },
    {
-    "input_def_id": 1426,
+    "measure_def_id": 1426,
     "variable_name": "other_employees_male"
    },
    {
-    "input_def_id": 1417,
+    "measure_def_id": 1417,
     "variable_name": "pr_marketing_and_customer_service_employees_male"
    },
    {
-    "input_def_id": 1411,
+    "measure_def_id": 1411,
     "variable_name": "procurement_employees_male"
    },
    {
-    "input_def_id": 1405,
+    "measure_def_id": 1405,
     "variable_name": "technical_employees_male"
    }
   ],
@@ -3163,21 +3163,21 @@
   "formula": "hours_paid__conventional_generation / standard_work_hours__conventional_generation",
   "formula_inputs": [
    {
-    "input_def_id": 1474,
+    "measure_def_id": 1474,
     "variable_name": "hours_paid__conventional_generation",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 13,
+    "measure_def_id": 13,
     "variable_name": "standard_work_hours__conventional_generation",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1470,
+    "measure_def_id": 1470,
     "variable_name": "hours_worked__conventional_generation",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -3206,14 +3206,14 @@
   "formula": "hours_paid__distribution / standard_work_hours__distribution",
   "formula_inputs": [
    {
-    "input_def_id": 1476,
+    "measure_def_id": 1476,
     "variable_name": "hours_paid__distribution",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 14,
+    "measure_def_id": 14,
     "variable_name": "standard_work_hours__distribution",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -3242,14 +3242,14 @@
   "formula": "hours_paid__other_electrical / standard_work_hours__other_electrical",
   "formula_inputs": [
    {
-    "input_def_id": 1477,
+    "measure_def_id": 1477,
     "variable_name": "hours_paid__other_electrical",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 16,
+    "measure_def_id": 16,
     "variable_name": "standard_work_hours__other_electrical",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -3278,14 +3278,14 @@
   "formula": "hours_paid__renewable_generation / standard_work_hours__renewable_generation",
   "formula_inputs": [
    {
-    "input_def_id": 1475,
+    "measure_def_id": 1475,
     "variable_name": "hours_paid__renewable_generation",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 17,
+    "measure_def_id": 17,
     "variable_name": "standard_work_hours__renewable_generation",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -3314,14 +3314,14 @@
   "formula": "hours_paid__transmission / standard_work_hours__transmission",
   "formula_inputs": [
    {
-    "input_def_id": 8,
+    "measure_def_id": 8,
     "variable_name": "hours_paid__transmission",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 15,
+    "measure_def_id": 15,
     "variable_name": "standard_work_hours__transmission",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -3350,14 +3350,14 @@
   "formula": "hours_worked__conventional_generation / standard_work_hours__conventional_generation",
   "formula_inputs": [
    {
-    "input_def_id": 1470,
+    "measure_def_id": 1470,
     "variable_name": "hours_worked__conventional_generation",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 13,
+    "measure_def_id": 13,
     "variable_name": "standard_work_hours__conventional_generation",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -3386,21 +3386,21 @@
   "formula": "hours_worked__distribution / standard_work_hours__distribution",
   "formula_inputs": [
    {
-    "input_def_id": 1472,
+    "measure_def_id": 1472,
     "variable_name": "hours_worked__distribution",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 14,
+    "measure_def_id": 14,
     "variable_name": "standard_work_hours__distribution",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1476,
+    "measure_def_id": 1476,
     "variable_name": "hours_paid__distribution",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -3429,14 +3429,14 @@
   "formula": "hours_worked__other_electrical / standard_work_hours__other_electrical",
   "formula_inputs": [
    {
-    "input_def_id": 1473,
+    "measure_def_id": 1473,
     "variable_name": "hours_worked__other_electrical",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 16,
+    "measure_def_id": 16,
     "variable_name": "standard_work_hours__other_electrical",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -3465,35 +3465,35 @@
   "formula": "hours_worked__renewable_generation / standard_work_hours__renewable_generation",
   "formula_inputs": [
    {
-    "input_def_id": 1471,
+    "measure_def_id": 1471,
     "variable_name": "hours_worked__renewable_generation",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 17,
+    "measure_def_id": 17,
     "variable_name": "standard_work_hours__renewable_generation",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1475,
+    "measure_def_id": 1475,
     "variable_name": "hours_paid__renewable_generation",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1470,
+    "measure_def_id": 1470,
     "variable_name": "hours_worked__conventional_generation",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 13,
+    "measure_def_id": 13,
     "variable_name": "standard_work_hours__conventional_generation",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -3522,21 +3522,21 @@
   "formula": "hours_worked__transmission / standard_work_hours__transmission",
   "formula_inputs": [
    {
-    "input_def_id": 7,
+    "measure_def_id": 7,
     "variable_name": "hours_worked__transmission",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 15,
+    "measure_def_id": 15,
     "variable_name": "standard_work_hours__transmission",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 8,
+    "measure_def_id": 8,
     "variable_name": "hours_paid__transmission",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -3586,14 +3586,14 @@
   "formula": "hours_lost_to_work_related_injuries * 8 / employees_total",
   "formula_inputs": [
    {
-    "input_def_id": 1431,
+    "measure_def_id": 1431,
     "variable_name": "employees_total",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1453,
+    "measure_def_id": 1453,
     "variable_name": "hours_lost_to_work_related_injuries",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -3622,35 +3622,35 @@
   "formula": "( number_of_work_related_injuries / ( hours_worked__conventional_generation + hours_worked__renewable_generation + hours_worked__network + hours_worked__other_electrical ) ) * 1000000",
   "formula_inputs": [
    {
-    "input_def_id": 1470,
+    "measure_def_id": 1470,
     "variable_name": "hours_worked__conventional_generation",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1472,
+    "measure_def_id": 1472,
     "variable_name": "hours_worked__network",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1473,
+    "measure_def_id": 1473,
     "variable_name": "hours_worked__other_electrical",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1471,
+    "measure_def_id": 1471,
     "variable_name": "hours_worked__renewable_generation",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1454,
+    "measure_def_id": 1454,
     "variable_name": "number_of_work_related_injuries",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -3679,7 +3679,7 @@
   "formula": "electricity_sold_to_customers",
   "formula_inputs": [
    {
-    "input_def_id": 1500,
+    "measure_def_id": 1500,
     "variable_name": "electricity_sold_to_customers"
    }
   ],
@@ -3705,7 +3705,7 @@
   "formula": "electricity_customers_metered_connections",
   "formula_inputs": [
    {
-    "input_def_id": 1501,
+    "measure_def_id": 1501,
     "variable_name": "electricity_customers_metered_connections"
    }
   ],
@@ -3731,11 +3731,11 @@
   "formula": "electricity_customers_metered_connections / fte_employees_in_distribution",
   "formula_inputs": [
    {
-    "input_def_id": 1501,
+    "measure_def_id": 1501,
     "variable_name": "electricity_customers_metered_connections"
    },
    {
-    "input_def_id": 1451,
+    "measure_def_id": 1451,
     "variable_name": "fte_employees_in_distribution"
    }
   ],
@@ -3761,11 +3761,11 @@
   "formula": "om_costs_distribution / distribution_network_length",
   "formula_inputs": [
    {
-    "input_def_id": 1550,
+    "measure_def_id": 1550,
     "variable_name": "distribution_network_length"
    },
    {
-    "input_def_id": 1207,
+    "measure_def_id": 1207,
     "variable_name": "om_costs_distribution"
    }
   ],
@@ -3791,14 +3791,14 @@
   "formula": "distribution_network_unplanned_downtime_events / distribution_network_length * 100",
   "formula_inputs": [
    {
-    "input_def_id": 1550,
+    "measure_def_id": 1550,
     "variable_name": "distribution_network_length",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1555,
+    "measure_def_id": 1555,
     "variable_name": "distribution_network_unplanned_downtime_events",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -3827,15 +3827,15 @@
   "formula": "( electricity_generated - station_auxilliary_usage - electricity_sold_to_customers ) / electricity_generated",
   "formula_inputs": [
    {
-    "input_def_id": 1652,
+    "measure_def_id": 1652,
     "variable_name": "electricity_generated"
    },
    {
-    "input_def_id": 1500,
+    "measure_def_id": 1500,
     "variable_name": "electricity_sold_to_customers"
    },
    {
-    "input_def_id": 1661,
+    "measure_def_id": 1661,
     "variable_name": "station_auxilliary_usage"
    }
   ],
@@ -3861,14 +3861,14 @@
   "formula": "distribution_average_transformer_load / distribution_total_transformer_capacity",
   "formula_inputs": [
    {
-    "input_def_id": 1552,
+    "measure_def_id": 1552,
     "variable_name": "distribution_average_transformer_load",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1551,
+    "measure_def_id": 1551,
     "variable_name": "distribution_total_transformer_capacity",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -3918,14 +3918,14 @@
   "formula": "( oil_for_generators ) / ( electricity_generated",
   "formula_inputs": [
    {
-    "input_def_id": 1652,
+    "measure_def_id": 1652,
     "variable_name": "electricity_generated",
     "energy_provider_id": 21,
     "energy_type_id": null,
     "energy_source_id": 46
    },
    {
-    "input_def_id": 1659,
+    "measure_def_id": 1659,
     "variable_name": "oil_for_generators",
     "energy_provider_id": 21,
     "energy_type_id": null,
@@ -3954,14 +3954,14 @@
   "formula": "( electricity_generated ) / fte_employees_in_generation",
   "formula_inputs": [
    {
-    "input_def_id": 1652,
+    "measure_def_id": 1652,
     "variable_name": "electricity_generated",
     "energy_provider_id": 21,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1450,
+    "measure_def_id": 1450,
     "variable_name": "fte_employees_in_generation",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -3990,11 +3990,11 @@
   "formula": "om_costs_generation / electricity_generated",
   "formula_inputs": [
    {
-    "input_def_id": 1652,
+    "measure_def_id": 1652,
     "variable_name": "electricity_generated"
    },
    {
-    "input_def_id": 1206,
+    "measure_def_id": 1206,
     "variable_name": "om_costs_generation"
    }
   ],
@@ -4020,21 +4020,21 @@
   "formula": "( hours_in_period - ( downtime_planned_duration + downtime_unplanned_duration ) / hours_in_period",
   "formula_inputs": [
    {
-    "input_def_id": 1654,
+    "measure_def_id": 1654,
     "variable_name": "downtime_planned_duration",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1656,
+    "measure_def_id": 1656,
     "variable_name": "downtime_unplanned_duration",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1650,
+    "measure_def_id": 1650,
     "variable_name": "hours_in_period",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -4063,11 +4063,11 @@
   "formula": "electricity_generated / installed_capacity",
   "formula_inputs": [
    {
-    "input_def_id": 1652,
+    "measure_def_id": 1652,
     "variable_name": "electricity_generated"
    },
    {
-    "input_def_id": 1651,
+    "measure_def_id": 1651,
     "variable_name": "installed_capacity"
    }
   ],
@@ -4093,14 +4093,14 @@
   "formula": "downtime_unplanned_duration / ( hours_in_period * active_generators )",
   "formula_inputs": [
    {
-    "input_def_id": 1656,
+    "measure_def_id": 1656,
     "variable_name": "downtime_unplanned_duration",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1650,
+    "measure_def_id": 1650,
     "variable_name": "hours_in_period",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -4129,14 +4129,14 @@
   "formula": "downtime_planned_duration / ( hours_in_period * count_active_generators )",
   "formula_inputs": [
    {
-    "input_def_id": 1654,
+    "measure_def_id": 1654,
     "variable_name": "downtime_planned_duration",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1650,
+    "measure_def_id": 1650,
     "variable_name": "hours_in_period",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -4165,14 +4165,14 @@
   "formula": "electricity_generated / electricity_generated",
   "formula_inputs": [
    {
-    "input_def_id": 1652,
+    "measure_def_id": 1652,
     "variable_name": "electricity_generated",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1421,
+    "measure_def_id": 1421,
     "variable_name": "administrative_employees_female",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -4201,14 +4201,14 @@
   "formula": "electricity_demand_average_load / electricity_demand_peak_load",
   "formula_inputs": [
    {
-    "input_def_id": 1503,
+    "measure_def_id": 1503,
     "variable_name": "electricity_demand_average_load",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1504,
+    "measure_def_id": 1504,
     "variable_name": "electricity_demand_peak_load",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -4237,14 +4237,14 @@
   "formula": "( electricity_generated / oil_for_lubrication ) * 1000",
   "formula_inputs": [
    {
-    "input_def_id": 1652,
+    "measure_def_id": 1652,
     "variable_name": "electricity_generated",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1660,
+    "measure_def_id": 1660,
     "variable_name": "oil_for_lubrication",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -4273,7 +4273,7 @@
   "formula": "electricity_generated / electricity_generated",
   "formula_inputs": [
    {
-    "input_def_id": 1652,
+    "measure_def_id": 1652,
     "variable_name": "electricity_generated",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -4302,14 +4302,14 @@
   "formula": "station_auxilliary_usage / electricity_generated",
   "formula_inputs": [
    {
-    "input_def_id": 1652,
+    "measure_def_id": 1652,
     "variable_name": "electricity_generated",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1661,
+    "measure_def_id": 1661,
     "variable_name": "station_auxilliary_usage",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -4338,14 +4338,14 @@
   "formula": "total_planned_interruptions_customer_duration / total_planned_interruptions_customers_affected",
   "formula_inputs": [
    {
-    "input_def_id": 1802,
+    "measure_def_id": 1802,
     "variable_name": "total_planned_interruptions_customer_duration",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1801,
+    "measure_def_id": 1801,
     "variable_name": "total_planned_interruptions_customers_affected",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -4374,14 +4374,14 @@
   "formula": "total_planned_interruptions_events / total_planned_interruptions_customers_affected",
   "formula_inputs": [
    {
-    "input_def_id": 1801,
+    "measure_def_id": 1801,
     "variable_name": "total_planned_interruptions_customers_affected",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1800,
+    "measure_def_id": 1800,
     "variable_name": "total_planned_interruptions_events",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -4452,28 +4452,28 @@
   "formula": "( electricity_generated - station_auxilliary_usage - transmission_electricity_sold_to_customers - electricity_sold_to_customers ) / ( electricity_generated - station_auxilliary_usage )",
   "formula_inputs": [
    {
-    "input_def_id": 1652,
+    "measure_def_id": 1652,
     "variable_name": "electricity_generated",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1500,
+    "measure_def_id": 1500,
     "variable_name": "electricity_sold_to_customers",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1661,
+    "measure_def_id": 1661,
     "variable_name": "station_auxilliary_usage",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1602,
+    "measure_def_id": 1602,
     "variable_name": "transmission_electricity_sold_to_customers",
     "energy_provider_id": null,
     "energy_type_id": null,
@@ -4502,28 +4502,28 @@
   "formula": "( ( transmission_network_planned_downtime_events + transmission_network_unplanned_downtime_events ) / transmission_network_length ) * 100",
   "formula_inputs": [
    {
-    "input_def_id": 1600,
+    "measure_def_id": 1600,
     "variable_name": "transmission_network_length",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1604,
+    "measure_def_id": 1604,
     "variable_name": "transmission_network_planned_downtime_events",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1606,
+    "measure_def_id": 1606,
     "variable_name": "transmission_network_unplanned_downtime_events",
     "energy_provider_id": null,
     "energy_type_id": null,
     "energy_source_id": null
    },
    {
-    "input_def_id": 1607,
+    "measure_def_id": 1607,
     "variable_name": "transmission_network_unplanned_downtime_duration",
     "energy_provider_id": null,
     "energy_type_id": null,

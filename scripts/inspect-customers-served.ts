@@ -19,7 +19,7 @@ async function main() {
   const def = await pool.query(
     `select i.id, i.name, i.variable_name, i.is_active, i.is_aggregated,
             al.name as agg_level, u.name as unit, c.name as category, sc.name as subcategory
-     from input_definitions i
+     from measure_definitions  i
      left join managed_list_items al on al.id = i.agg_level_id
      left join managed_list_items u on u.id = i.unit_id
      left join managed_list_items c on c.id = i.category_id
@@ -36,16 +36,16 @@ async function main() {
   }
 
   const coverage = await pool.query(
-    `select de.input_def_id, count(*)::int as rows,
+    `select de.measure_def_id, count(*)::int as rows,
             count(distinct de.report_period_id)::int as periods,
             count(distinct de.service_area_id)::int as service_areas,
             count(*) filter (where de.value is not null and trim(de.value) <> '')::int as with_value,
             max(rp.report_date)::date as latest_period
      from data_entries de
      join report_periods rp on rp.id = de.report_period_id
-     where de.input_def_id = any($1::int[]) and de.is_deleted = false
-     group by de.input_def_id
-     order by de.input_def_id`,
+     where de.measure_def_id = any($1::int[]) and de.is_deleted = false
+     group by de.measure_def_id
+     order by de.measure_def_id`,
     [Object.values(INPUTS)],
   );
   console.log("\nData coverage per input:");
@@ -57,14 +57,14 @@ async function main() {
     `with interruption as (
        select report_period_id, service_area_id
        from data_entries
-       where input_def_id in ($2, $3) and is_deleted = false
+       where measure_def_id in ($2, $3) and is_deleted = false
          and value is not null and trim(value) <> ''
        group by 1, 2
      ),
      customers as (
        select report_period_id, service_area_id
        from data_entries
-       where input_def_id = $1 and is_deleted = false
+       where measure_def_id = $1 and is_deleted = false
          and value is not null and trim(value) <> ''
        group by 1, 2
      )
@@ -74,7 +74,9 @@ async function main() {
        (select count(*)::int from interruption i join customers c using (report_period_id, service_area_id)) as both_scopes`,
     [INPUTS.customers, INPUTS.plannedDuration, INPUTS.plannedEvents],
   );
-  console.log("scope overlap (period+service area with planned-interruption data vs customers data):");
+  console.log(
+    "scope overlap (period+service area with planned-interruption data vs customers data):",
+  );
   console.table(overlap.rows);
 
   const sample = await pool.query(
@@ -83,7 +85,7 @@ async function main() {
      join report_periods rp on rp.id = de.report_period_id
      left join organisations o on o.id = rp.utility_id
      left join service_areas sa on sa.id = de.service_area_id
-     where de.input_def_id = $1 and de.is_deleted = false
+     where de.measure_def_id = $1 and de.is_deleted = false
        and de.value is not null and trim(de.value) <> ''
      order by rp.report_date desc
      limit 8`,

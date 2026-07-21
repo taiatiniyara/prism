@@ -1,28 +1,59 @@
 import { db } from "@/db/connection";
-import { dataEntries, inputDefinitions, inputRelevance } from "@/db/schema/dataEntry";
+import {
+  dataEntries,
+  measureDefinitions,
+  inputRelevance,
+} from "@/db/schema/dataEntry";
 import { reportPeriods } from "@/db/schema/reportPeriods";
-import { energyResources, serviceAreas, organisations } from "@/db/schema/utility";
+import {
+  energyResources,
+  serviceAreas,
+  organisations,
+} from "@/db/schema/utility";
 import { sql, eq, and, inArray } from "drizzle-orm";
 
 async function main() {
   const definitionRows = await db
     .select({
-      inputDefId: inputDefinitions.id,
-      subcategoryName: sql<string | null>`(select mli.name from managed_list_items mli where mli.id = ${inputDefinitions.subcategory_id} limit 1)`,
-      categoryName: sql<string | null>`(select mli.name from managed_list_items mli where mli.id = ${inputDefinitions.category_id} limit 1)`,
+      inputDefId: measureDefinitions.id,
+      subcategoryName: sql<
+        string | null
+      >`(select mli.name from managed_list_items mli where mli.id = ${measureDefinitions.subcategory_id} limit 1)`,
+      categoryName: sql<
+        string | null
+      >`(select mli.name from managed_list_items mli where mli.id = ${measureDefinitions.category_id} limit 1)`,
     })
-    .from(inputDefinitions)
-    .where(and(eq(inputDefinitions.is_active, true), eq(inputDefinitions.is_system_generated, false),
-      sql`lower(coalesce((select mli.name from managed_list_items mli where mli.id = ${inputDefinitions.subcategory_id}), '')) <> 'country context'`));
+    .from(measureDefinitions)
+    .where(
+      and(
+        eq(measureDefinitions.is_active, true),
+        eq(measureDefinitions.is_system_generated, false),
+        sql`lower(coalesce((select mli.name from managed_list_items mli where mli.id = ${measureDefinitions.subcategory_id}), '')) <> 'country context'`,
+      ),
+    );
 
-  const genIds = definitionRows.filter(r => r.subcategoryName?.trim().toLowerCase() === "generation").map(r => r.inputDefId);
-  const nonGenIds = definitionRows.filter(r => r.subcategoryName?.trim().toLowerCase() !== "generation").map(r => r.inputDefId);
-  const scopedIds = new Set(definitionRows.filter(r =>
-    r.categoryName?.trim().toLowerCase() === "operational" ||
-    r.subcategoryName?.trim().toLowerCase() === "tariff structure"
-  ).map(r => r.inputDefId));
+  const genIds = definitionRows
+    .filter((r) => r.subcategoryName?.trim().toLowerCase() === "generation")
+    .map((r) => r.inputDefId);
+  const nonGenIds = definitionRows
+    .filter((r) => r.subcategoryName?.trim().toLowerCase() !== "generation")
+    .map((r) => r.inputDefId);
+  const scopedIds = new Set(
+    definitionRows
+      .filter(
+        (r) =>
+          r.categoryName?.trim().toLowerCase() === "operational" ||
+          r.subcategoryName?.trim().toLowerCase() === "tariff structure",
+      )
+      .map((r) => r.inputDefId),
+  );
 
-  const allSas = await db.select({ id: serviceAreas.id, utility_id: serviceAreas.utility_id }).from(serviceAreas).where(and(eq(serviceAreas.is_active, true), eq(serviceAreas.is_virtual, false)));
+  const allSas = await db
+    .select({ id: serviceAreas.id, utility_id: serviceAreas.utility_id })
+    .from(serviceAreas)
+    .where(
+      and(eq(serviceAreas.is_active, true), eq(serviceAreas.is_virtual, false)),
+    );
   const saByUtil = new Map<number, number[]>();
   for (const sa of allSas) {
     const arr = saByUtil.get(sa.utility_id) ?? [];
@@ -30,30 +61,73 @@ async function main() {
     saByUtil.set(sa.utility_id, arr);
   }
 
-  const allErs = await db.select({ id: energyResources.id, utility_id: energyResources.utility_id, energy_source_id: energyResources.energy_source_id, period_entries: energyResources.period_entries }).from(energyResources);
+  const allErs = await db
+    .select({
+      id: energyResources.id,
+      utility_id: energyResources.utility_id,
+      energy_source_id: energyResources.energy_source_id,
+      period_entries: energyResources.period_entries,
+    })
+    .from(energyResources);
 
-  const irrelevants = await db.select({ inputDefId: inputRelevance.input_def_id, dimensionId: inputRelevance.dimension_id }).from(inputRelevance).where(and(eq(inputRelevance.is_relevant, false), inArray(inputRelevance.input_def_id, genIds.length > 0 ? genIds : [-1])));
-  const genIrrelevant = new Set(irrelevants.map(r => `${r.inputDefId}:${r.dimensionId}`));
+  const irrelevants = await db
+    .select({
+      inputDefId: inputRelevance.measure_def_id,
+      dimensionId: inputRelevance.dimension_id,
+    })
+    .from(inputRelevance)
+    .where(
+      and(
+        eq(inputRelevance.is_relevant, false),
+        inArray(
+          inputRelevance.measure_def_id,
+          genIds.length > 0 ? genIds : [-1],
+        ),
+      ),
+    );
+  const genIrrelevant = new Set(
+    irrelevants.map((r) => `${r.inputDefId}:${r.dimensionId}`),
+  );
 
-  const allEntries = await db.select().from(dataEntries).where(eq(dataEntries.is_deleted, false));
+  const allEntries = await db
+    .select()
+    .from(dataEntries)
+    .where(eq(dataEntries.is_deleted, false));
 
-  const utilAcronyms = new Map((await db.select({ id: organisations.id, a: organisations.acronym }).from(organisations)).map(u => [u.id, u.a ?? `ID${u.id}`]));
+  const utilAcronyms = new Map(
+    (
+      await db
+        .select({ id: organisations.id, a: organisations.acronym })
+        .from(organisations)
+    ).map((u) => [u.id, u.a ?? `ID${u.id}`]),
+  );
 
-  const allRps = await db.select({ id: reportPeriods.id, utility_id: reportPeriods.utility_id, date: reportPeriods.report_date }).from(reportPeriods).orderBy(reportPeriods.utility_id, reportPeriods.report_date);
+  const allRps = await db
+    .select({
+      id: reportPeriods.id,
+      utility_id: reportPeriods.utility_id,
+      date: reportPeriods.report_date,
+    })
+    .from(reportPeriods)
+    .orderBy(reportPeriods.utility_id, reportPeriods.report_date);
 
   let issues = 0;
-  
+
   for (const rp of allRps) {
     const utilId = rp.utility_id;
     const utilName = utilAcronyms.get(utilId) ?? `?`;
     const rpId = rp.id;
     const saIds = saByUtil.get(utilId) ?? [];
 
-    const periodEntries = allEntries.filter(e => e.report_period_id === rpId);
-    const relevantEntries = periodEntries.filter(e => e.is_relevant);
-    const irrelevantEntries = periodEntries.filter(e => !e.is_relevant);
+    const periodEntries = allEntries.filter((e) => e.report_period_id === rpId);
+    const relevantEntries = periodEntries.filter((e) => e.is_relevant);
+    const irrelevantEntries = periodEntries.filter((e) => !e.is_relevant);
 
-    let entered = 0, reviewed = 0, approved = 0, endorsed = 0, na = 0;
+    let entered = 0,
+      reviewed = 0,
+      approved = 0,
+      endorsed = 0,
+      na = 0;
     for (const e of relevantEntries) {
       if (e.status_id === 3) entered++;
       else if (e.status_id === 4) reviewed++;
@@ -67,15 +141,17 @@ async function main() {
     for (const e of irrelevantEntries) {
       const k = String(e.service_area_id ?? "null");
       const s = irrelBySA.get(k) ?? new Set<number>();
-      s.add(e.input_def_id);
+      s.add(e.measure_def_id);
       irrelBySA.set(k, s);
     }
 
     // Actual non-gen combos
     const actualNonGenCombos = new Set<string>();
     for (const e of relevantEntries) {
-      if (!genIds.includes(e.input_def_id)) {
-        actualNonGenCombos.add(`${e.input_def_id}:${e.service_area_id ?? "null"}`);
+      if (!genIds.includes(e.measure_def_id)) {
+        actualNonGenCombos.add(
+          `${e.measure_def_id}:${e.service_area_id ?? "null"}`,
+        );
       }
     }
 
@@ -92,9 +168,11 @@ async function main() {
       }
     }
 
-    const periodErs = allErs.filter(er => {
+    const periodErs = allErs.filter((er) => {
       if (er.utility_id !== utilId) return false;
-      return ((er.period_entries as any[]) ?? []).some((p: any) => p.report_period_id === rpId && p.is_active);
+      return ((er.period_entries as any[]) ?? []).some(
+        (p: any) => p.report_period_id === rpId && p.is_active,
+      );
     });
 
     let gExpected = 0;
@@ -110,7 +188,9 @@ async function main() {
     if (completed > requested) {
       issues++;
       if (issues <= 5) {
-        console.log(`OVER: ${utilName} RP ${rpId} → Req=${requested} Compl=${completed} (${((completed/requested)*100).toFixed(0)}%) +${completed - requested}`);
+        console.log(
+          `OVER: ${utilName} RP ${rpId} → Req=${requested} Compl=${completed} (${((completed / requested) * 100).toFixed(0)}%) +${completed - requested}`,
+        );
       }
     }
   }

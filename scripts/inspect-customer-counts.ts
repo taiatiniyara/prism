@@ -12,10 +12,10 @@ async function main() {
            count(de.id) filter (where de.is_deleted = false
              and de.value is not null and trim(de.value) <> '')::int as rows_with_value,
            max(rp.report_date)::date as latest
-    from input_definitions i
+    from measure_definitions  i
     left join managed_list_items u on u.id = i.unit_id
     left join managed_list_items al on al.id = i.agg_level_id
-    left join data_entries de on de.input_def_id = i.id
+    left join data_entries de on de.measure_def_id = i.id
     left join report_periods rp on rp.id = de.report_period_id
     where u.name in ('Customers', 'Connections', 'Consumers', 'Accounts', 'Number')
        or i.name ilike '%connection%' or i.name ilike '%customers%'

@@ -27,14 +27,14 @@ async function main() {
   const de = await pool.query(
     `
     select mli.name, count(*)::int as data_entry_rows,
-           count(distinct de.input_def_id)::int as distinct_inputs,
+           count(distinct de.measure_def_id)::int as distinct_inputs,
            count(distinct de.report_period_id)::int as distinct_periods
     from data_entries de
     join managed_list_items mli on mli.id = de.energy_source_id
     where de.energy_source_id = any($1::int[])
     group by mli.name
     union all
-    select 'via energy_provider_id: ' || mli.name, count(*)::int, count(distinct de.input_def_id)::int, count(distinct de.report_period_id)::int
+    select 'via energy_provider_id: ' || mli.name, count(*)::int, count(distinct de.measure_def_id)::int, count(distinct de.report_period_id)::int
     from data_entries de
     join managed_list_items mli on mli.id = de.energy_provider_id
     where de.energy_provider_id = any($1::int[])

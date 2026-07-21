@@ -21,7 +21,7 @@ import {
   saveDevValidationBuilderConfig,
 } from "./service";
 
-type InputDefinitionOption = {
+type MeasureDefinitionOption = {
   id: number;
   name: string;
   dataType: string;
@@ -44,7 +44,7 @@ const CODE_LABELS: Array<{ key: ValidationCode; label: string }> = [
 
 export default function ValidationBuilderClient(props: {
   initialConfig: DevValidationBuilderConfig;
-  inputDefinitions: InputDefinitionOption[];
+  measureDefinitions: MeasureDefinitionOption[];
 }) {
   const [isPending, startTransition] = useTransition();
   const [config, setConfig] = useState<DevValidationBuilderConfig>(
@@ -52,22 +52,22 @@ export default function ValidationBuilderClient(props: {
   );
   const [inputSearch, setInputSearch] = useState("");
   const [selectedInputDefId, setSelectedInputDefId] = useState<number>(
-    props.inputDefinitions[0]?.id ?? 0,
+    props.measureDefinitions[0]?.id ?? 0,
   );
   const [selectedCodes, setSelectedCodes] = useState<ValidationCode[]>([]);
 
-  const filteredInputDefinitions = useMemo(() => {
+  const filteredMeasureDefinitions = useMemo(() => {
     const search = inputSearch.trim().toLowerCase();
     if (!search) {
-      return props.inputDefinitions;
+      return props.measureDefinitions;
     }
-    return props.inputDefinitions.filter((item) =>
+    return props.measureDefinitions.filter((item) =>
       item.name.toLowerCase().includes(search),
     );
-  }, [inputSearch, props.inputDefinitions]);
+  }, [inputSearch, props.measureDefinitions]);
 
   const getInputLabel = (inputDefId: number) =>
-    props.inputDefinitions.find((item) => item.id === inputDefId)?.name ??
+    props.measureDefinitions.find((item) => item.id === inputDefId)?.name ??
     `Input ${inputDefId}`;
 
   const toggleRule = (ruleName: ValidationRuleName, enabled: boolean) => {
@@ -267,7 +267,7 @@ export default function ValidationBuilderClient(props: {
                 setSelectedInputDefId(Number(event.target.value))
               }
             >
-              {filteredInputDefinitions.map((item) => (
+              {filteredMeasureDefinitions.map((item) => (
                 <option
                   key={item.id}
                   value={item.id}

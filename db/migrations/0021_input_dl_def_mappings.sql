@@ -1,6 +1,6 @@
 create table if not exists input_dl_def_mappings (
   id serial primary key,
-  input_def_id integer not null references input_definitions(id),
+  measure_def_id integer not null references measure_definitions (id),
   training_dl_def_id integer not null,
   training_dl_legacy_id varchar(64) not null,
   training_source_id integer,
@@ -18,7 +18,7 @@ create table if not exists input_dl_def_mappings (
 );
 
 create unique index if not exists uniq_input_dl_def_mappings_input_def_id
-  on input_dl_def_mappings (input_def_id);
+  on input_dl_def_mappings (measure_def_id);
 
 create index if not exists idx_input_dl_def_mappings_training_dl_def_id
   on input_dl_def_mappings (training_dl_def_id);

@@ -5,7 +5,7 @@ import { roles } from "@/db/schema/auth-schema";
 import {
   dataEntries,
   DataEntryStatusId,
-  inputDefinitions,
+  measureDefinitions,
   inputRelevance,
 } from "@/db/schema/dataEntry";
 import { managedListItems } from "@/db/schema/managedLists";
@@ -54,8 +54,9 @@ export async function GetReportPeriods(
   options: GetReportPeriodsOptions = {},
 ): Promise<ReportPeriodDTO[]> {
   const forceAllUtilities = options.forceAllUtilities === true;
-  const scopedUtilityId =
-    !forceAllUtilities ? resolveUtilityScopeId(user) : null;
+  const scopedUtilityId = !forceAllUtilities
+    ? resolveUtilityScopeId(user)
+    : null;
 
   const [ml, rolesList] = await Promise.all([
     db.select().from(managedListItems),
@@ -82,24 +83,24 @@ export async function GetReportPeriods(
 
   const definitionRows = await db
     .select({
-      inputDefId: inputDefinitions.id,
-      subcategoryId: inputDefinitions.subcategory_id,
-      categoryId: inputDefinitions.category_id,
-      aggLevelId: inputDefinitions.agg_level_id,
+      inputDefId: measureDefinitions.id,
+      subcategoryId: measureDefinitions.subcategory_id,
+      categoryId: measureDefinitions.category_id,
+      aggLevelId: measureDefinitions.agg_level_id,
       subcategoryName: sql<string | null>`(
-        select mli.name from managed_list_items mli where mli.id = ${inputDefinitions.subcategory_id} limit 1
+        select mli.name from managed_list_items mli where mli.id = ${measureDefinitions.subcategory_id} limit 1
       )`,
       categoryName: sql<string | null>`(
-        select mli.name from managed_list_items mli where mli.id = ${inputDefinitions.category_id} limit 1
+        select mli.name from managed_list_items mli where mli.id = ${measureDefinitions.category_id} limit 1
       )`,
     })
-    .from(inputDefinitions)
+    .from(measureDefinitions)
     .where(
       and(
-        eq(inputDefinitions.is_active, true),
-        eq(inputDefinitions.is_system_generated, false),
+        eq(measureDefinitions.is_active, true),
+        eq(measureDefinitions.is_system_generated, false),
         sql`lower(coalesce(
-          (select mli.name from managed_list_items mli where mli.id = ${inputDefinitions.subcategory_id}), ''
+          (select mli.name from managed_list_items mli where mli.id = ${measureDefinitions.subcategory_id}), ''
         )) <> 'country context'`,
       ),
     );
@@ -108,9 +109,17 @@ export async function GetReportPeriods(
     .filter((row) => row.subcategoryId === SUBCAT_GENERATION)
     .map((row) => row.inputDefId);
 
-  const saConditions = [eq(serviceAreas.is_active, true), eq(serviceAreas.is_virtual, false)];
-  if (scopedUtilityId != null) saConditions.push(eq(serviceAreas.utility_id, scopedUtilityId));
-  else if (!forceAllUtilities && !hasGlobalUtilityAccess(user) && user.org_id != null)
+  const saConditions = [
+    eq(serviceAreas.is_active, true),
+    eq(serviceAreas.is_virtual, false),
+  ];
+  if (scopedUtilityId != null)
+    saConditions.push(eq(serviceAreas.utility_id, scopedUtilityId));
+  else if (
+    !forceAllUtilities &&
+    !hasGlobalUtilityAccess(user) &&
+    user.org_id != null
+  )
     saConditions.push(eq(serviceAreas.utility_id, user.org_id));
 
   const serviceAreaRows = await db
@@ -126,8 +135,13 @@ export async function GetReportPeriods(
   }
 
   const erConditions: ReturnType<typeof eq>[] = [];
-  if (scopedUtilityId != null) erConditions.push(eq(energyResources.utility_id, scopedUtilityId));
-  else if (!forceAllUtilities && !hasGlobalUtilityAccess(user) && user.org_id != null)
+  if (scopedUtilityId != null)
+    erConditions.push(eq(energyResources.utility_id, scopedUtilityId));
+  else if (
+    !forceAllUtilities &&
+    !hasGlobalUtilityAccess(user) &&
+    user.org_id != null
+  )
     erConditions.push(eq(energyResources.utility_id, user.org_id));
 
   const allErs = await db
@@ -144,45 +158,71 @@ export async function GetReportPeriods(
     .where(and(...erConditions));
 
   const irrelevantInputRel = await db
-    .select({ inputDefId: inputRelevance.input_def_id, dimensionId: inputRelevance.dimension_id })
+    .select({
+      inputDefId: inputRelevance.measure_def_id,
+      dimensionId: inputRelevance.dimension_id,
+    })
     .from(inputRelevance)
-    .where(and(eq(inputRelevance.is_relevant, false), inArray(inputRelevance.input_def_id, genDefIds.length > 0 ? genDefIds : [-1])));
+    .where(
+      and(
+        eq(inputRelevance.is_relevant, false),
+        inArray(
+          inputRelevance.measure_def_id,
+          genDefIds.length > 0 ? genDefIds : [-1],
+        ),
+      ),
+    );
 
   const existingEntries = await db
     .select()
     .from(dataEntries)
-    .where(and(
-      eq(dataEntries.is_deleted, false),
-      eq(dataEntries.is_relevant, true),
-      inArray(dataEntries.report_period_id, reportPeriodIds),
-    ));
+    .where(
+      and(
+        eq(dataEntries.is_deleted, false),
+        eq(dataEntries.is_relevant, true),
+        inArray(dataEntries.report_period_id, reportPeriodIds),
+      ),
+    );
 
   return list.map((item) => {
     const rpId = item.report_periods.id;
     const utilId = item.report_periods.utility_id;
     const saIds = saIdsByUtility.get(utilId) ?? [];
 
-    const periodEntries = existingEntries.filter((x) => x.report_period_id === rpId);
+    const periodEntries = existingEntries.filter(
+      (x) => x.report_period_id === rpId,
+    );
 
-    let enteredOnly = 0, reviewedOnly = 0, approvedOnly = 0, dataNotAvailable = 0;
+    let enteredOnly = 0,
+      reviewedOnly = 0,
+      approvedOnly = 0,
+      dataNotAvailable = 0;
     for (const entry of periodEntries) {
       if (entry.status_id === DataEntryStatusId.Entered) enteredOnly++;
       else if (entry.status_id === DataEntryStatusId.Reviewed) reviewedOnly++;
       else if (entry.status_id === DataEntryStatusId.Approved) approvedOnly++;
-      else if (entry.status_id === (DataEntryStatusId as Record<string, unknown>).Endorsed as number) approvedOnly++;
-      else if (entry.status_id === DataEntryStatusId.Not_Available) dataNotAvailable++;
+      else if (
+        entry.status_id ===
+        ((DataEntryStatusId as Record<string, unknown>).Endorsed as number)
+      )
+        approvedOnly++;
+      else if (entry.status_id === DataEntryStatusId.Not_Available)
+        dataNotAvailable++;
     }
 
     const periodGenerators = allErs.filter((er) => {
       if (er.utility_id !== utilId) return false;
       if (er.is_virtual) return false;
-      const pe = (er.period_entries as EnergyResourcePeriodEntry[] | undefined) ?? [];
+      const pe =
+        (er.period_entries as EnergyResourcePeriodEntry[] | undefined) ?? [];
       return pe.some((p) => p.report_period_id === rpId && p.is_active);
     });
 
     // Build exclusion sets from relevance tables
     const irrelInput = new Set<string>();
-    irrelevantInputRel.forEach((r) => irrelInput.add(`${r.inputDefId}:${r.dimensionId}`));
+    irrelevantInputRel.forEach((r) =>
+      irrelInput.add(`${r.inputDefId}:${r.dimensionId}`),
+    );
 
     // Requested formula:
     // 1. Most inputs: × 1
@@ -218,7 +258,8 @@ export async function GetReportPeriods(
       }
     }
 
-    const completed = enteredOnly + reviewedOnly + approvedOnly + dataNotAvailable;
+    const completed =
+      enteredOnly + reviewedOnly + approvedOnly + dataNotAvailable;
     const finalRequested = Math.max(requested, completed);
     const pending = Math.max(finalRequested - completed, 0);
 
@@ -230,7 +271,8 @@ export async function GetReportPeriods(
         reportTypeNameById.get(item.report_periods.report_type_id ?? -1),
       ),
       Utility: item.organisations?.acronym || "",
-      Report_Type: reportTypeNameById.get(item.report_periods.report_type_id ?? -1) || "",
+      Report_Type:
+        reportTypeNameById.get(item.report_periods.report_type_id ?? -1) || "",
       Pending_With: roleNameById.get(item.report_periods.who_id ?? -1) || "",
       Updated: item.report_periods.updated_at.toISOString().split("T")[0],
       Requested: finalRequested,

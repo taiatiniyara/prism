@@ -8,7 +8,7 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 async function main() {
   const cust = await pool.query(`
     select id, name, variable_name, is_active
-    from input_definitions
+    from measure_definitions 
     where name ilike '%customer%' or name ilike '%connection%'
        or name ilike '%consumer%' or name ilike '%account%'
        or variable_name ilike '%connection%' or variable_name ilike '%served%'
@@ -17,7 +17,9 @@ async function main() {
   `);
   console.log("Customer-count candidate inputs (active first):");
   for (const r of cust.rows) {
-    console.log(`  [${r.id}] active=${r.is_active} ${r.variable_name}  (${r.name})`);
+    console.log(
+      `  [${r.id}] active=${r.is_active} ${r.variable_name}  (${r.name})`,
+    );
   }
 
   const pct = await pool.query(`
@@ -32,7 +34,9 @@ async function main() {
   console.log("\nActive %-unit KPIs and whether formula includes *100:");
   for (const r of pct.rows) {
     const has100 = /100/.test(r.formula);
-    console.log(`  [${r.id}] ${has100 ? "*100 YES" : "*100 no "} | ${r.name}: ${r.formula}`);
+    console.log(
+      `  [${r.id}] ${has100 ? "*100 YES" : "*100 no "} | ${r.name}: ${r.formula}`,
+    );
   }
 }
 

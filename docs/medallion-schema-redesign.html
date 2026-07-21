@@ -247,7 +247,7 @@
         Raw, as-entered — typed value columns, 8 dimension FKs, measure-linked
       </div>
       <div class="arch-items" style="margin-top:0.75rem;">
-        <span class="arch-item">input_definitions</span>
+        <span class="arch-item">measure_definitions </span>
         <span class="arch-item">data_entries</span>
         <span class="arch-item">measure_dimension_scope</span>
         <span class="arch-item">data_entry_logs</span>
@@ -268,9 +268,9 @@
 <!-- ================================================================== -->
 <h2 id="bronze">3. Bronze Layer — Raw Tables</h2>
 
-<h3>3.1 input_definitions → measure_definitions (alias)</h3>
+<h3>3.1 measure_definitions  → measure_definitions (alias)</h3>
 <p style="color:var(--muted);">
-  The existing <code>input_definitions</code> table is aliased as <code>measureDefinitions</code>
+  The existing <code>measure_definitions </code> table is aliased as <code>measureDefinitions</code>
   in Drizzle. Key changes: <code>valid_range_min/max</code> upgraded from integer to numeric.
   Two new columns: <code>definition</code> (text), <code>synonyms</code> (jsonb string[]).
 </p>
@@ -284,7 +284,7 @@
     <tr><td>id</td><td>uuid PK</td><td>existing</td><td>defaultRandom()</td></tr>
     <tr><td>report_period_id</td><td>FK, NOT NULL</td><td>existing</td><td>implies utility + FY/Monthly</td></tr>
     <tr><td>service_area_id</td><td>FK</td><td>existing</td><td></td></tr>
-    <tr><td>input_def_id (measure)</td><td>FK, NOT NULL</td><td>existing</td><td>→ input_definitions</td></tr>
+    <tr><td>measure_def_id (measure)</td><td>FK, NOT NULL</td><td>existing</td><td>→ measure_definitions </td></tr>
     <tr><td>energy_provider_id</td><td>FK</td><td>existing</td><td>All default: 20</td></tr>
     <tr class="col-new"><td>energy_type_id</td><td>FK</td><td class="col-new">NEW</td><td>Completes provider/type/source triple. Default: 30</td></tr>
     <tr><td>energy_source_id</td><td>FK</td><td>existing</td><td>Default: 40 (All GEN)</td></tr>
@@ -318,7 +318,7 @@
   <thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead>
   <tbody>
     <tr><td>id</td><td>serial PK</td><td></td></tr>
-    <tr><td>measure_id</td><td>FK → input_definitions</td><td>CASCADE on delete</td></tr>
+    <tr><td>measure_id</td><td>FK → measure_definitions </td><td>CASCADE on delete</td></tr>
     <tr><td>dimension</td><td>varchar(32) — enum</td><td>energy_provider | energy_type | energy_source | customer_type | payment_mode | consumption_band | division | gender</td></tr>
     <tr><td>is_applicable</td><td>boolean</td><td>Default true</td></tr>
   </tbody>

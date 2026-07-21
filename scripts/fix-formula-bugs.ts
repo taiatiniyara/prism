@@ -26,18 +26,18 @@ const FIXES: Fix[] = [
     fixedFormula:
       "administrative_employees_male + executive_employees_male + finance_employees_male + human_resource_employees_male + ict_employees_male + other_employees_male + pr_marketing_and_customer_service_employees_male + procurement_employees_male + technical_employees_male",
     fixedInputs: [
-      { input_def_id: 1420, variable_name: "administrative_employees_male" },
-      { input_def_id: 1402, variable_name: "executive_employees_male" },
-      { input_def_id: 1408, variable_name: "finance_employees_male" },
-      { input_def_id: 1414, variable_name: "human_resource_employees_male" },
-      { input_def_id: 1423, variable_name: "ict_employees_male" },
-      { input_def_id: 1426, variable_name: "other_employees_male" },
+      { measure_def_id: 1420, variable_name: "administrative_employees_male" },
+      { measure_def_id: 1402, variable_name: "executive_employees_male" },
+      { measure_def_id: 1408, variable_name: "finance_employees_male" },
+      { measure_def_id: 1414, variable_name: "human_resource_employees_male" },
+      { measure_def_id: 1423, variable_name: "ict_employees_male" },
+      { measure_def_id: 1426, variable_name: "other_employees_male" },
       {
-        input_def_id: 1417,
+        measure_def_id: 1417,
         variable_name: "pr_marketing_and_customer_service_employees_male",
       },
-      { input_def_id: 1411, variable_name: "procurement_employees_male" },
-      { input_def_id: 1405, variable_name: "technical_employees_male" },
+      { measure_def_id: 1411, variable_name: "procurement_employees_male" },
+      { measure_def_id: 1405, variable_name: "technical_employees_male" },
     ],
   },
   {
@@ -80,7 +80,9 @@ async function main() {
         `Fixed formula for KPI ${fix.kpiId} does not evaluate: ${result.failureReason}`,
       );
     }
-    console.log(`evaluator OK  [${fix.kpiId}] ${fix.fixedFormula} -> ${result.value}`);
+    console.log(
+      `evaluator OK  [${fix.kpiId}] ${fix.fixedFormula} -> ${result.value}`,
+    );
   }
 
   const client = await pool.connect();

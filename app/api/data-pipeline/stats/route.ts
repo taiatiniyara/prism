@@ -18,14 +18,20 @@ export async function GET(_request: Request): Promise<Response> {
       SELECT status_id AS "statusId", count(*)::int AS count
       FROM data_entries WHERE is_deleted = false GROUP BY status_id
     `);
-    const srows = statusResult.rows as Array<{ statusId: number; count: number }>;
+    const srows = statusResult.rows as Array<{
+      statusId: number;
+      count: number;
+    }>;
     const statusMap: Record<number, number> = {};
     let total = 0;
-    for (const row of srows) { statusMap[row.statusId] = row.count; total += row.count; }
+    for (const row of srows) {
+      statusMap[row.statusId] = row.count;
+      total += row.count;
+    }
     const completed = (statusMap[6] ?? 0) + (statusMap[7] ?? 0);
 
     const stuckResult = await db.execute(sql`
-      SELECT id, input_def_id AS "inputDefId", status_id AS "statusId",
+      SELECT id, measure_def_id AS "inputDefId", status_id AS "statusId",
         service_area_id AS "serviceAreaId", report_period_id AS "reportPeriodId",
         updated_at AS "updatedAt"
       FROM data_entries
@@ -39,9 +45,12 @@ export async function GET(_request: Request): Promise<Response> {
 
     return Response.json({
       statusCounts: {
-        requested: statusMap[1] ?? 0, pending: statusMap[2] ?? 0,
-        entered: statusMap[3] ?? 0, reviewed: statusMap[4] ?? 0,
-        approved: statusMap[5] ?? 0, endorsed: statusMap[6] ?? 0,
+        requested: statusMap[1] ?? 0,
+        pending: statusMap[2] ?? 0,
+        entered: statusMap[3] ?? 0,
+        reviewed: statusMap[4] ?? 0,
+        approved: statusMap[5] ?? 0,
+        endorsed: statusMap[6] ?? 0,
         notAvailable: statusMap[7] ?? 0,
       },
       totalEntries: total,

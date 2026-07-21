@@ -10,8 +10,8 @@ describe("formula variable resolution", () => {
   it("prefers formula input metadata mapping when available", () => {
     expect(
       extractFormulaVariables("A + B", [
-        { input_def_id: 1, variable_name: "X" },
-        { input_def_id: 2, variable_name: "Y" },
+        { measure_def_id: 1, variable_name: "X" },
+        { measure_def_id: 2, variable_name: "Y" },
       ]),
     ).toEqual(["X", "Y"]);
   });

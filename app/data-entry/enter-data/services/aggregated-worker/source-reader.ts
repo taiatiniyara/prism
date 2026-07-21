@@ -1,7 +1,7 @@
 import { and, eq, inArray, isNull, or } from "drizzle-orm";
 
 import { db } from "@/db/connection";
-import { dataEntries, inputDefinitions } from "@/db/schema/dataEntry";
+import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
 
 export interface AggregatedWorkerScope {
   reportPeriodId: number;
@@ -33,19 +33,19 @@ export const resolveVariableMappings = async (
   const conditions = [];
 
   if (variableNames.length > 0) {
-    conditions.push(inArray(inputDefinitions.variable_name, variableNames));
+    conditions.push(inArray(measureDefinitions.variable_name, variableNames));
   }
 
   if (inputDefIds.length > 0) {
-    conditions.push(inArray(inputDefinitions.id, inputDefIds));
+    conditions.push(inArray(measureDefinitions.id, inputDefIds));
   }
 
   const rows = await db
     .select({
-      inputDefId: inputDefinitions.id,
-      variableName: inputDefinitions.variable_name,
+      inputDefId: measureDefinitions.id,
+      variableName: measureDefinitions.variable_name,
     })
-    .from(inputDefinitions)
+    .from(measureDefinitions)
     .where(conditions.length > 1 ? or(...conditions) : conditions[0]);
 
   const resolvedInputDefIds = new Set<number>(inputDefIds);
@@ -81,7 +81,7 @@ export const readSourceSnapshot = async (
 
   const conditions = [
     eq(dataEntries.report_period_id, scope.reportPeriodId),
-    inArray(dataEntries.input_def_id, mapping.inputDefIds),
+    inArray(dataEntries.measure_def_id, mapping.inputDefIds),
     eq(dataEntries.is_deleted, false),
   ];
 
@@ -99,7 +99,7 @@ export const readSourceSnapshot = async (
 
   const rows = await db
     .select({
-      inputDefId: dataEntries.input_def_id,
+      inputDefId: dataEntries.measure_def_id,
       value: dataEntries.value,
     })
     .from(dataEntries)

@@ -2,7 +2,7 @@ CREATE TABLE IF NOT EXISTS "generation_relevance" (
   "id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
   "report_period_id" integer NOT NULL,
   "service_area_id" integer NOT NULL,
-  "input_def_id" integer NOT NULL,
+  "measure_def_id" integer NOT NULL,
   "energy_provider_id" integer NOT NULL,
   "energy_source_id" integer NOT NULL,
   "is_relevant" boolean DEFAULT true NOT NULL,
@@ -35,7 +35,7 @@ DO $$
 BEGIN
   ALTER TABLE "generation_relevance"
     ADD CONSTRAINT "generation_relevance_input_def_id_input_definitions_id_fk"
-    FOREIGN KEY ("input_def_id") REFERENCES "public"."input_definitions"("id")
+    FOREIGN KEY ("measure_def_id") REFERENCES "public"."measure_definitions "("id")
     ON DELETE NO ACTION ON UPDATE NO ACTION;
 EXCEPTION
   WHEN duplicate_object THEN NULL;
@@ -75,7 +75,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS "uniq_generation_relevance"
   ON "generation_relevance" (
     "report_period_id",
     "service_area_id",
-    "input_def_id",
+    "measure_def_id",
     "energy_provider_id",
     "energy_source_id"
   );

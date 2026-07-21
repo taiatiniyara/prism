@@ -12,12 +12,12 @@ describe("formula input inference", () => {
 
     expect(inferred).toEqual(
       expect.arrayContaining([
-        { input_def_id: 11, variable_name: "Total Income" },
-        { input_def_id: 12, variable_name: "Total Expenses" },
+        { measure_def_id: 11, variable_name: "Total Income" },
+        { measure_def_id: 12, variable_name: "Total Expenses" },
       ]),
     );
     expect(inferred).not.toEqual(
-      expect.arrayContaining([{ input_def_id: 13, variable_name: "Income" }]),
+      expect.arrayContaining([{ measure_def_id: 13, variable_name: "Income" }]),
     );
   });
 
@@ -29,8 +29,8 @@ describe("formula input inference", () => {
 
     expect(inferred).toEqual(
       expect.arrayContaining([
-        { input_def_id: 21, variable_name: "A" },
-        { input_def_id: 22, variable_name: "AB" },
+        { measure_def_id: 21, variable_name: "A" },
+        { measure_def_id: 22, variable_name: "AB" },
       ]),
     );
   });

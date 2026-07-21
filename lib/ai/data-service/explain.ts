@@ -1,7 +1,7 @@
 import { db } from "@/db/connection";
 import { kpiDefinitions } from "@/db/schema/kpi";
 import { customKpiRequests } from "@/db/schema/custom-kpi-requests";
-import { inputDefinitions } from "@/db/schema/dataEntry";
+import { measureDefinitions } from "@/db/schema/dataEntry";
 import { managedListItems } from "@/db/schema/managedLists";
 import { eq, and, or, ilike, sql, desc } from "drizzle-orm";
 import { createToolMetadata } from "./common";
@@ -90,18 +90,22 @@ export const explainKpi = async (
     ),
   ];
 
-  const mliRows = ids.length > 0
-    ? await db
-        .select({ id: managedListItems.id, name: managedListItems.name })
-        .from(managedListItems)
-        .where(sql`${managedListItems.id} IN ${ids}`)
-    : [];
+  const mliRows =
+    ids.length > 0
+      ? await db
+          .select({ id: managedListItems.id, name: managedListItems.name })
+          .from(managedListItems)
+          .where(sql`${managedListItems.id} IN ${ids}`)
+      : [];
 
   const nameMap = new Map(mliRows.map((r) => [r.id, r.name]));
 
-  const limits = def.limits && Array.isArray(def.limits)
-    ? (def.limits[0] as unknown as { lower?: number | null; upper?: number | null; unit?: string } | undefined)
-    : null;
+  const limits =
+    def.limits && Array.isArray(def.limits)
+      ? (def.limits[0] as unknown as
+          | { lower?: number | null; upper?: number | null; unit?: string }
+          | undefined)
+      : null;
 
   return {
     data: {
@@ -119,13 +123,22 @@ export const explainKpi = async (
       agg_level: nameMap.get(def.aggLevelId ?? -1) ?? "Unknown",
       category_description: `Part of the ${nameMap.get(def.categoryId ?? -1) ?? "Unknown"} category`,
       benchmarking_type: def.type ?? "benchmarking",
-      limits: limits ? { min: limits.lower ?? 0, max: limits.upper ?? 0, unit: limits.unit ?? "" } : null,
+      limits: limits
+        ? {
+            min: limits.lower ?? 0,
+            max: limits.upper ?? 0,
+            unit: limits.unit ?? "",
+          }
+        : null,
     },
-    metadata: createToolMetadata({ freshness: new Date(), source: "kpi_definitions" }),
+    metadata: createToolMetadata({
+      freshness: new Date(),
+      source: "kpi_definitions",
+    }),
   };
 };
 
-export interface InputDefinitionExplanation {
+export interface MeasureDefinitionExplanation {
   id: number;
   name: string;
   variable_name: string | null;
@@ -143,55 +156,55 @@ export interface InputDefinitionExplanation {
 export const explainInput = async (
   options: {
     input_name?: string;
-    input_def_id?: number;
+    measure_def_id?: number;
   } = {},
-): Promise<AiToolResult<InputDefinitionExplanation | null>> => {
-  if (!options.input_name && !options.input_def_id) {
+): Promise<AiToolResult<MeasureDefinitionExplanation | null>> => {
+  if (!options.input_name && !options.measure_def_id) {
     return {
       data: null,
-      metadata: createToolMetadata({ source: "input_definitions" }),
+      metadata: createToolMetadata({ source: "measure_definitions " }),
       error: "No input name or ID specified",
     };
   }
 
-  const predicates = [eq(inputDefinitions.is_active, true)];
+  const predicates = [eq(measureDefinitions.is_active, true)];
 
-  if (options.input_def_id) {
-    predicates.push(eq(inputDefinitions.id, options.input_def_id));
+  if (options.measure_def_id) {
+    predicates.push(eq(measureDefinitions.id, options.measure_def_id));
   } else {
     const term = `%${options.input_name}%`;
     predicates.push(
       or(
-        ilike(inputDefinitions.name, term),
-        ilike(inputDefinitions.variable_name, term),
-        sql`${inputDefinitions.synonyms}::text ILIKE ${term}`,
+        ilike(measureDefinitions.name, term),
+        ilike(measureDefinitions.variable_name, term),
+        sql`${measureDefinitions.synonyms}::text ILIKE ${term}`,
       )!,
     );
   }
 
   const [def] = await db
     .select({
-      id: inputDefinitions.id,
-      name: inputDefinitions.name,
-      variableName: inputDefinitions.variable_name,
-      definition: inputDefinitions.definition,
-      definitionStatus: inputDefinitions.definition_status,
-      synonyms: inputDefinitions.synonyms,
-      categoryId: inputDefinitions.category_id,
-      subcategoryId: inputDefinitions.subcategory_id,
-      unitId: inputDefinitions.unit_id,
-      isCalculated: inputDefinitions.is_calculated,
-      isMandatory: inputDefinitions.is_mandatory,
-      formula: inputDefinitions.formula,
+      id: measureDefinitions.id,
+      name: measureDefinitions.name,
+      variableName: measureDefinitions.variable_name,
+      definition: measureDefinitions.definition,
+      definitionStatus: measureDefinitions.definition_status,
+      synonyms: measureDefinitions.synonyms,
+      categoryId: measureDefinitions.category_id,
+      subcategoryId: measureDefinitions.subcategory_id,
+      unitId: measureDefinitions.unit_id,
+      isCalculated: measureDefinitions.is_calculated,
+      isMandatory: measureDefinitions.is_mandatory,
+      formula: measureDefinitions.formula,
     })
-    .from(inputDefinitions)
+    .from(measureDefinitions)
     .where(and(...predicates))
     .limit(1);
 
   if (!def) {
     return {
       data: null,
-      metadata: createToolMetadata({ source: "input_definitions" }),
+      metadata: createToolMetadata({ source: "measure_definitions " }),
       error: `No input definition found matching "${options.input_name}"`,
     };
   }
@@ -204,12 +217,13 @@ export const explainInput = async (
     ),
   ];
 
-  const mliRows = ids.length > 0
-    ? await db
-        .select({ id: managedListItems.id, name: managedListItems.name })
-        .from(managedListItems)
-        .where(sql`${managedListItems.id} IN ${ids}`)
-    : [];
+  const mliRows =
+    ids.length > 0
+      ? await db
+          .select({ id: managedListItems.id, name: managedListItems.name })
+          .from(managedListItems)
+          .where(sql`${managedListItems.id} IN ${ids}`)
+      : [];
 
   const nameMap = new Map(mliRows.map((r) => [r.id, r.name]));
 
@@ -228,7 +242,10 @@ export const explainInput = async (
       is_mandatory: def.isMandatory,
       formula: def.formula,
     },
-    metadata: createToolMetadata({ freshness: new Date(), source: "input_definitions" }),
+    metadata: createToolMetadata({
+      freshness: new Date(),
+      source: "measure_definitions ",
+    }),
   };
 };
 
@@ -251,10 +268,17 @@ export interface CustomKpiRequest {
 
 export interface CustomKpiStatusData {
   requests: CustomKpiRequest[];
-  summary: { total: number; pending: number; approved: number; rejected: number };
+  summary: {
+    total: number;
+    pending: number;
+    approved: number;
+    rejected: number;
+  };
 }
 
-export const getCustomKpiStatus = async (): Promise<AiToolResult<CustomKpiStatusData>> => {
+export const getCustomKpiStatus = async (): Promise<
+  AiToolResult<CustomKpiStatusData>
+> => {
   try {
     const rows = await db
       .select({
@@ -281,16 +305,24 @@ export const getCustomKpiStatus = async (): Promise<AiToolResult<CustomKpiStatus
       total: requests.length,
       pending: requests.filter((r) => r.status === "PENDING_REVIEW").length,
       approved: requests.filter((r) => r.status === "APPROVED").length,
-      rejected: requests.filter((r) => r.status === "REJECTED" || r.status === "REPLACED").length,
+      rejected: requests.filter(
+        (r) => r.status === "REJECTED" || r.status === "REPLACED",
+      ).length,
     };
 
     return {
       data: { requests, summary },
-      metadata: createToolMetadata({ source: "custom_kpi_requests", freshness: new Date() }),
+      metadata: createToolMetadata({
+        source: "custom_kpi_requests",
+        freshness: new Date(),
+      }),
     };
   } catch {
     return {
-      data: { requests: [], summary: { total: 0, pending: 0, approved: 0, rejected: 0 } },
+      data: {
+        requests: [],
+        summary: { total: 0, pending: 0, approved: 0, rejected: 0 },
+      },
       metadata: createToolMetadata({ source: "custom_kpi_requests" }),
       error: "Custom KPI requests data is currently unavailable.",
     };

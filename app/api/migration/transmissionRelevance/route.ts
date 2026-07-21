@@ -25,10 +25,14 @@ export async function GET(request: Request) {
   const limit = Math.max(1, Math.min(MAX_LIMIT, rawLimit ?? DEFAULT_LIMIT));
 
   const conditions = [];
-  if (reportPeriodId != null) conditions.push(eq(transmissionRelevance.report_period_id, reportPeriodId));
-  if (serviceAreaId != null) conditions.push(eq(transmissionRelevance.service_area_id, serviceAreaId));
-  if (inputDefId != null) conditions.push(eq(transmissionRelevance.input_def_id, inputDefId));
-  if (!includeDeleted) conditions.push(eq(transmissionRelevance.is_deleted, false));
+  if (reportPeriodId != null)
+    conditions.push(eq(transmissionRelevance.report_period_id, reportPeriodId));
+  if (serviceAreaId != null)
+    conditions.push(eq(transmissionRelevance.service_area_id, serviceAreaId));
+  if (inputDefId != null)
+    conditions.push(eq(transmissionRelevance.measure_def_id, inputDefId));
+  if (!includeDeleted)
+    conditions.push(eq(transmissionRelevance.is_deleted, false));
   if (cursor != null) conditions.push(gt(transmissionRelevance.id, cursor));
 
   const rows = await db
@@ -45,7 +49,7 @@ export async function GET(request: Request) {
       id: r.id,
       report_period_id: r.report_period_id,
       service_area_id: r.service_area_id,
-      input_def_id: r.input_def_id,
+      measure_def_id: r.measure_def_id,
       is_relevant: r.is_relevant,
       is_deleted: r.is_deleted,
       updated_at: r.updatedAt,

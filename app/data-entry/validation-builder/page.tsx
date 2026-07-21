@@ -1,11 +1,11 @@
 import { db } from "@/db/connection";
-import { inputDefinitions, managedListItems } from "@/db/schema";
+import { measureDefinitions, managedListItems } from "@/db/schema";
 import { getCurrentUser } from "@/lib/user.service";
 import { asc, eq } from "drizzle-orm";
 import { getDevValidationBuilderConfig } from "./service";
 import ValidationBuilderClient from "./builderClient";
 
-type InputDefinitionOption = {
+type MeasureDefinitionOption = {
   id: number;
   name: string;
   dataType: string;
@@ -27,21 +27,21 @@ export default async function DevValidationBuilderPage() {
     getDevValidationBuilderConfig(),
     db
       .select({
-        id: inputDefinitions.id,
-        name: inputDefinitions.name,
+        id: measureDefinitions.id,
+        name: measureDefinitions.name,
         dataType: managedListItems.name,
-        isMandatory: inputDefinitions.is_mandatory,
+        isMandatory: measureDefinitions.is_mandatory,
       })
-      .from(inputDefinitions)
+      .from(measureDefinitions)
       .leftJoin(
         managedListItems,
-        eq(inputDefinitions.data_type_id, managedListItems.id),
+        eq(measureDefinitions.data_type_id, managedListItems.id),
       )
-      .where(eq(inputDefinitions.is_active, true))
-      .orderBy(asc(inputDefinitions.name)),
+      .where(eq(measureDefinitions.is_active, true))
+      .orderBy(asc(measureDefinitions.name)),
   ]);
 
-  const options: InputDefinitionOption[] = inputDefinitionRows.map((row) => ({
+  const options: MeasureDefinitionOption[] = inputDefinitionRows.map((row) => ({
     id: row.id,
     name: row.name,
     dataType: row.dataType ?? "Unknown",
@@ -59,7 +59,7 @@ export default async function DevValidationBuilderPage() {
 
       <ValidationBuilderClient
         initialConfig={configResult.data}
-        inputDefinitions={options}
+        measureDefinitions={options}
       />
     </div>
   );

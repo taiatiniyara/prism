@@ -1,10 +1,7 @@
 "use server";
 
 import { db } from "@/db/connection";
-import {
-  dataEntries,
-  inputDefinitions,
-} from "@/db/schema/dataEntry";
+import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
 import { kpiDefinitions } from "@/db/schema/kpi";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { managedListItems } from "@/db/schema/managedLists";
@@ -42,9 +39,8 @@ export async function GetIncompleteKpis(): Promise<IncompleteKpiRow[]> {
   const user = await getCurrentUser();
   const scopeId = resolveUtilityScopeId(user);
 
-  const rpWhere = scopeId != null
-    ? [eq(reportPeriods.utility_id, scopeId)]
-    : [];
+  const rpWhere =
+    scopeId != null ? [eq(reportPeriods.utility_id, scopeId)] : [];
 
   const periods = await db
     .select({
@@ -58,7 +54,10 @@ export async function GetIncompleteKpis(): Promise<IncompleteKpiRow[]> {
     })
     .from(reportPeriods)
     .leftJoin(organisations, eq(reportPeriods.utility_id, organisations.id))
-    .leftJoin(managedListItems, eq(reportPeriods.report_type_id, managedListItems.id))
+    .leftJoin(
+      managedListItems,
+      eq(reportPeriods.report_type_id, managedListItems.id),
+    )
     .where(and(...rpWhere))
     .orderBy(reportPeriods.report_date);
 
@@ -104,12 +103,12 @@ export async function GetIncompleteKpis(): Promise<IncompleteKpiRow[]> {
 
   const allInputDefs = await db
     .select({
-      id: inputDefinitions.id,
-      name: inputDefinitions.name,
-      unit_id: inputDefinitions.unit_id,
+      id: measureDefinitions.id,
+      name: measureDefinitions.name,
+      unit_id: measureDefinitions.unit_id,
     })
-    .from(inputDefinitions)
-    .where(eq(inputDefinitions.is_active, true));
+    .from(measureDefinitions)
+    .where(eq(measureDefinitions.is_active, true));
 
   const inputDefById = new Map(allInputDefs.map((d) => [d.id, d]));
 
@@ -120,7 +119,7 @@ export async function GetIncompleteKpis(): Promise<IncompleteKpiRow[]> {
           .select({
             id: dataEntries.id,
             report_period_id: dataEntries.report_period_id,
-            input_def_id: dataEntries.input_def_id,
+            measure_def_id: dataEntries.measure_def_id,
             value: dataEntries.value,
           })
           .from(dataEntries)
@@ -144,16 +143,16 @@ export async function GetIncompleteKpis(): Promise<IncompleteKpiRow[]> {
 
   for (const period of periods) {
     const periodEntries = entriesByPeriod.get(period.id) ?? [];
-    const periodEntryByInputDef = new Map<number, typeof allEntries[0]>();
+    const periodEntryByInputDef = new Map<number, (typeof allEntries)[0]>();
     for (const entry of periodEntries) {
-      if (!periodEntryByInputDef.has(entry.input_def_id)) {
-        periodEntryByInputDef.set(entry.input_def_id, entry);
+      if (!periodEntryByInputDef.has(entry.measure_def_id)) {
+        periodEntryByInputDef.set(entry.measure_def_id, entry);
       }
     }
 
     for (const kpiDef of kpiDefs) {
       const inputDefIds = (kpiDef.formula_inputs ?? []).map(
-        (fi) => fi.input_def_id,
+        (fi) => fi.measure_def_id,
       );
       if (inputDefIds.length === 0) continue;
 
@@ -170,23 +169,36 @@ export async function GetIncompleteKpis(): Promise<IncompleteKpiRow[]> {
       results.push({
         kpiDefId: kpiDef.id,
         kpiName: kpiDef.name,
-        unitName: (kpiDef.unit_id != null ? mlById.get(kpiDef.unit_id)?.name : null) ?? null,
-        categoryName: (kpiDef.category_id != null ? mlById.get(kpiDef.category_id)?.name : null) ?? null,
-        subcategoryName: (kpiDef.subcategory_id != null ? mlById.get(kpiDef.subcategory_id)?.name : null) ?? null,
+        unitName:
+          (kpiDef.unit_id != null ? mlById.get(kpiDef.unit_id)?.name : null) ??
+          null,
+        categoryName:
+          (kpiDef.category_id != null
+            ? mlById.get(kpiDef.category_id)?.name
+            : null) ?? null,
+        subcategoryName:
+          (kpiDef.subcategory_id != null
+            ? mlById.get(kpiDef.subcategory_id)?.name
+            : null) ?? null,
         formulaText: kpiDef.formula,
         reportPeriodId: period.id,
-        reportPeriodLabel: formatReportPeriodDisplay(period.report_date, period.report_type_name),
+        reportPeriodLabel: formatReportPeriodDisplay(
+          period.report_date,
+          period.report_type_name,
+        ),
         reportTypeId: period.report_type_id ?? null,
         kpiCategoryId: kpiDef.category_id ?? null,
         utilityName: period.utility_acronym ?? period.utility_name ?? "",
         inputs: relevantEntries.map((e) => {
-          const def = inputDefById.get(e.input_def_id);
+          const def = inputDefById.get(e.measure_def_id);
           return {
             dataEntryId: e.id,
-            inputDefId: e.input_def_id,
-            inputName: def?.name ?? `ID ${e.input_def_id}`,
+            inputDefId: e.measure_def_id,
+            inputName: def?.name ?? `ID ${e.measure_def_id}`,
             value: e.value,
-            unitName: def?.unit_id ? mlById.get(def.unit_id)?.name ?? null : null,
+            unitName: def?.unit_id
+              ? (mlById.get(def.unit_id)?.name ?? null)
+              : null,
           };
         }),
       });

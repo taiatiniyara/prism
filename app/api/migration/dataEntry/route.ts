@@ -25,8 +25,10 @@ export async function GET(request: Request) {
   const limit = Math.max(1, Math.min(MAX_LIMIT, rawLimit ?? DEFAULT_LIMIT));
 
   const conditions = [];
-  if (reportPeriodId != null) conditions.push(eq(dataEntries.report_period_id, reportPeriodId));
-  if (inputDefId != null) conditions.push(eq(dataEntries.input_def_id, inputDefId));
+  if (reportPeriodId != null)
+    conditions.push(eq(dataEntries.report_period_id, reportPeriodId));
+  if (inputDefId != null)
+    conditions.push(eq(dataEntries.measure_def_id, inputDefId));
   if (statusId != null) conditions.push(eq(dataEntries.status_id, statusId));
   if (!includeDeleted) conditions.push(eq(dataEntries.is_deleted, false));
   if (cursor != null) conditions.push(gt(dataEntries.id, cursor));
@@ -46,7 +48,7 @@ export async function GET(request: Request) {
       report_period_id: d.report_period_id,
       energy_resource_id: d.energy_resource_id,
       service_area_id: d.service_area_id,
-      input_def_id: d.input_def_id,
+      measure_def_id: d.measure_def_id,
       value: d.value,
       comments: d.comments,
       update_medium_id: d.update_medium_id,

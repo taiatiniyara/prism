@@ -1,10 +1,7 @@
 "use server";
 
 import { db } from "@/db/connection";
-import {
-  dataEntries,
-  inputDefinitions,
-} from "@/db/schema/dataEntry";
+import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { organisations } from "@/db/schema/utility";
 import { managedListItems } from "@/db/schema/managedLists";
@@ -28,9 +25,8 @@ export async function GetDownloadData(): Promise<DownloadRow[]> {
   const user = await getCurrentUser();
   const scopeId = resolveUtilityScopeId(user);
 
-  const rpWhere = scopeId != null
-    ? [eq(reportPeriods.utility_id, scopeId)]
-    : [];
+  const rpWhere =
+    scopeId != null ? [eq(reportPeriods.utility_id, scopeId)] : [];
 
   const periods = await db
     .select({
@@ -44,7 +40,10 @@ export async function GetDownloadData(): Promise<DownloadRow[]> {
     })
     .from(reportPeriods)
     .leftJoin(organisations, eq(reportPeriods.utility_id, organisations.id))
-    .leftJoin(managedListItems, eq(reportPeriods.report_type_id, managedListItems.id))
+    .leftJoin(
+      managedListItems,
+      eq(reportPeriods.report_type_id, managedListItems.id),
+    )
     .where(and(...rpWhere))
     .orderBy(reportPeriods.report_date);
 
@@ -57,26 +56,23 @@ export async function GetDownloadData(): Promise<DownloadRow[]> {
       report_period_id: dataEntries.report_period_id,
       value: dataEntries.value,
       status_id: dataEntries.status_id,
-      input_def_id: dataEntries.input_def_id,
+      measure_def_id: dataEntries.measure_def_id,
     })
     .from(dataEntries)
     .where(
-      and(
-        eq(dataEntries.is_deleted, false),
-        eq(dataEntries.is_relevant, true),
-      ),
+      and(eq(dataEntries.is_deleted, false), eq(dataEntries.is_relevant, true)),
     );
 
   const allInputDefs = await db
     .select({
-      id: inputDefinitions.id,
-      name: inputDefinitions.name,
-      category_id: inputDefinitions.category_id,
-      subcategory_id: inputDefinitions.subcategory_id,
-      unit_id: inputDefinitions.unit_id,
+      id: measureDefinitions.id,
+      name: measureDefinitions.name,
+      category_id: measureDefinitions.category_id,
+      subcategory_id: measureDefinitions.subcategory_id,
+      unit_id: measureDefinitions.unit_id,
     })
-    .from(inputDefinitions)
-    .where(eq(inputDefinitions.is_active, true));
+    .from(measureDefinitions)
+    .where(eq(measureDefinitions.is_active, true));
 
   const mlItems = await db.select().from(managedListItems);
 
@@ -100,7 +96,7 @@ export async function GetDownloadData(): Promise<DownloadRow[]> {
     );
 
     for (const entry of periodEntries) {
-      const inputDef = inputDefById.get(entry.input_def_id);
+      const inputDef = inputDefById.get(entry.measure_def_id);
       if (!inputDef) continue;
 
       const category = mlById.get(inputDef.category_id)?.name ?? "";
@@ -110,13 +106,19 @@ export async function GetDownloadData(): Promise<DownloadRow[]> {
       rows.push({
         utility: period.utility_acronym ?? period.utility_name ?? "",
         report_type: period.report_type_name ?? "",
-        report_period: formatReportPeriodDisplay(period.report_date, period.report_type_name),
+        report_period: formatReportPeriodDisplay(
+          period.report_date,
+          period.report_type_name,
+        ),
         category,
         subcategory,
         input_def_name: inputDef.name,
         value: entry.value ?? "",
         unit,
-        status: entry.status_id != null ? (statusLabels[entry.status_id] ?? String(entry.status_id)) : "",
+        status:
+          entry.status_id != null
+            ? (statusLabels[entry.status_id] ?? String(entry.status_id))
+            : "",
       });
     }
   }

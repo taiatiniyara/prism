@@ -1,6 +1,6 @@
 import { count } from "drizzle-orm";
 import { db } from "@/db/connection";
-import { inputDefinitions } from "@/db/schema/dataEntry";
+import { measureDefinitions } from "@/db/schema/dataEntry";
 import { inputDlDefMappings } from "@/db/schema/dataEntry";
 
 const MIGRATION_URL = process.env.PRISM_TRAINING_MIGRATION_URL?.trim();
@@ -35,26 +35,34 @@ async function main() {
   // Get all prism input definitions
   const prismDefs = await db
     .select({
-      id: inputDefinitions.id,
-      name: inputDefinitions.name,
-      variableName: inputDefinitions.variable_name,
+      id: measureDefinitions.id,
+      name: measureDefinitions.name,
+      variableName: measureDefinitions.variable_name,
     })
-    .from(inputDefinitions);
+    .from(measureDefinitions);
   console.log(`Prism input definitions: ${prismDefs.length}`);
 
   // Get existing mappings
   const existingMappings = await db
     .select({ trainingDlDefId: inputDlDefMappings.training_dl_def_id })
     .from(inputDlDefMappings);
-  const mappedTrainingIds = new Set(existingMappings.map((m) => m.trainingDlDefId));
+  const mappedTrainingIds = new Set(
+    existingMappings.map((m) => m.trainingDlDefId),
+  );
   console.log(`Existing mappings: ${mappedTrainingIds.size}`);
 
   // Try to get input definitions from prism-training
   console.log("\nFetching input definitions from prism-training...");
   try {
-    const sourceResult = await fetchSource("/inputDefinitions", MIGRATION_KEY);
-    const sourceDefs: Array<{ id: number; name: string; variable_name?: string }> =
-      sourceResult.inputDefinitions ?? [];
+    const sourceResult = await fetchSource(
+      "/measureDefinitions",
+      MIGRATION_KEY,
+    );
+    const sourceDefs: Array<{
+      id: number;
+      name: string;
+      variable_name?: string;
+    }> = sourceResult.measureDefinitions ?? [];
     console.log(`Source input definitions: ${sourceDefs.length}`);
 
     const prismIds = new Set(prismDefs.map((d) => d.id));
@@ -63,27 +71,39 @@ async function main() {
     if (missing.length > 0) {
       console.log("  First 10:");
       for (const d of missing.slice(0, 10)) {
-        console.log(`    ${d.id}: ${d.name} (vn: ${d.variable_name ?? "none"})`);
+        console.log(
+          `    ${d.id}: ${d.name} (vn: ${d.variable_name ?? "none"})`,
+        );
       }
     }
   } catch (err) {
-    console.log(`  Could not fetch input defs: ${err instanceof Error ? err.message : String(err)}`);
+    console.log(
+      `  Could not fetch input defs: ${err instanceof Error ? err.message : String(err)}`,
+    );
   }
 
   // Try dlDef endpoint
   console.log("\nFetching dl_defs from prism-training...");
   try {
-    const baseUrlDirect = (MIGRATION_URL ?? "").replace(/\/api\/migration\/?$/, "");
+    const baseUrlDirect = (MIGRATION_URL ?? "").replace(
+      /\/api\/migration\/?$/,
+      "",
+    );
     const dlDefUrl = `${baseUrlDirect}/api/mig/dlDef`;
     console.log(`  GET ${dlDefUrl}`);
     const headers: Record<string, string> = { Accept: "application/json" };
     if (MIGRATION_KEY) headers["x-migration-key"] = MIGRATION_KEY;
-    const res = await fetch(dlDefUrl, { headers, signal: AbortSignal.timeout(30000) });
+    const res = await fetch(dlDefUrl, {
+      headers,
+      signal: AbortSignal.timeout(30000),
+    });
     if (!res.ok) {
       console.log(`  dlDef endpoint returned ${res.status}`);
     } else {
       const text = await res.text();
-      const rows = JSON.parse(text, (_, v) => typeof v === "bigint" ? Number(v) : v) as Array<Array<unknown>>;
+      const rows = JSON.parse(text, (_, v) =>
+        typeof v === "bigint" ? Number(v) : v,
+      ) as Array<Array<unknown>>;
       console.log(`  Got ${rows.length} dl_defs`);
 
       let mappableCount = 0;
@@ -97,14 +117,18 @@ async function main() {
         if (!id || !name) continue;
 
         const nameKey = name.trim().toLowerCase();
-        const varName = typeof row[2] === "string" ? String(row[2]).trim().toLowerCase() : "";
+        const varName =
+          typeof row[2] === "string" ? String(row[2]).trim().toLowerCase() : "";
 
         // Try to match to prism input def
         let matched = false;
         for (const pd of prismDefs) {
           const pName = (pd.name ?? "").trim().toLowerCase();
           const pVar = (pd.variableName ?? "").trim().toLowerCase();
-          if ((varName && pVar === varName) || (!varName && pName === nameKey)) {
+          if (
+            (varName && pVar === varName) ||
+            (!varName && pName === nameKey)
+          ) {
             matched = true;
             break;
           }
@@ -128,13 +152,19 @@ async function main() {
       }
     }
   } catch (err) {
-    console.log(`  Could not fetch dl_defs: ${err instanceof Error ? err.message : String(err)}`);
+    console.log(
+      `  Could not fetch dl_defs: ${err instanceof Error ? err.message : String(err)}`,
+    );
   }
 
   // Show a few prism def names for comparison
   console.log("\nSample prism input definitions (generation-related):");
   const genDefs = prismDefs
-    .filter((d) => (d.name ?? "").toLowerCase().includes("gen") || (d.variableName ?? "").toLowerCase().includes("gen"))
+    .filter(
+      (d) =>
+        (d.name ?? "").toLowerCase().includes("gen") ||
+        (d.variableName ?? "").toLowerCase().includes("gen"),
+    )
     .slice(0, 15);
   for (const d of genDefs) {
     console.log(`  ${d.id}: ${d.name} (vn: ${d.variableName ?? "none"})`);

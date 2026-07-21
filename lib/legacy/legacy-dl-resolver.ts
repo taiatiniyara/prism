@@ -21,18 +21,21 @@ export async function getManagedListByName(
     conditions.push(eq(managedListItems.is_active, true));
   }
 
-  return db.select().from(managedListItems).where(and(...conditions));
+  return db
+    .select()
+    .from(managedListItems)
+    .where(and(...conditions));
 }
 
 export async function resolveDlId(
   trainingDlId: number,
 ): Promise<number | null> {
   const [row] = await db
-    .select({ input_def_id: inputDlDefMappings.input_def_id })
+    .select({ measure_def_id: inputDlDefMappings.measure_def_id })
     .from(inputDlDefMappings)
     .where(eq(inputDlDefMappings.training_dl_def_id, trainingDlId))
     .limit(1);
-  return row?.input_def_id ?? null;
+  return row?.measure_def_id ?? null;
 }
 
 export async function resolveDlName(
@@ -53,7 +56,7 @@ export async function resolveDlIds(
     .select()
     .from(inputDlDefMappings)
     .where(inArray(inputDlDefMappings.training_dl_def_id, trainingDlIds));
-  return new Map(rows.map((r) => [r.training_dl_def_id, r.input_def_id]));
+  return new Map(rows.map((r) => [r.training_dl_def_id, r.measure_def_id]));
 }
 
 export async function getCountryContextValue(
@@ -86,10 +89,7 @@ export async function getCountryContextValue(
 }
 
 export async function getSubmittedReportPeriods() {
-  return db
-    .select()
-    .from(reportPeriods)
-    .where(eq(reportPeriods.status_id, 3));
+  return db.select().from(reportPeriods).where(eq(reportPeriods.status_id, 3));
 }
 
 export function formatReportPeriodIso(

@@ -12,8 +12,8 @@ describe("resolveAffectedKpiTargets", () => {
           is_active: true,
           formula: "A + B",
           formula_inputs: [
-            { input_def_id: 100, variable_name: "A" },
-            { input_def_id: 200, variable_name: "B" },
+            { measure_def_id: 100, variable_name: "A" },
+            { measure_def_id: 200, variable_name: "B" },
           ],
           targets: [
             {
@@ -29,7 +29,7 @@ describe("resolveAffectedKpiTargets", () => {
           agg_level_id: 2,
           is_active: false,
           formula: "A * 2",
-          formula_inputs: [{ input_def_id: 100, variable_name: "A" }],
+          formula_inputs: [{ measure_def_id: 100, variable_name: "A" }],
           targets: null,
         },
         {
@@ -37,7 +37,7 @@ describe("resolveAffectedKpiTargets", () => {
           agg_level_id: 1,
           is_active: true,
           formula: null,
-          formula_inputs: [{ input_def_id: 100, variable_name: "A" }],
+          formula_inputs: [{ measure_def_id: 100, variable_name: "A" }],
           targets: null,
         },
       ],
@@ -52,8 +52,8 @@ describe("resolveAffectedKpiTargets", () => {
     expect(resolved).toHaveLength(1);
     expect(resolved[0].kpiDefId).toBe(10);
     expect(resolved[0].formulaInputs).toEqual([
-      { input_def_id: 100, variable_name: "A" },
-      { input_def_id: 200, variable_name: "B" },
+      { measure_def_id: 100, variable_name: "A" },
+      { measure_def_id: 200, variable_name: "B" },
     ]);
     expect(resolved[0].targetValue).toBe("85");
     expect(resolved[0].formulaVersion.length).toBeGreaterThan(10);

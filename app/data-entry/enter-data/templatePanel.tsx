@@ -26,7 +26,7 @@ import {
 
 type TemplateRow = {
   context_mode: "flat" | "grouped-by-generator" | "grouped-by-payment-mode";
-  input_def_id: number;
+  measure_def_id: number;
   input_name: string;
   unit_name: string;
   energy_resource_id: number | null;
@@ -47,7 +47,7 @@ type TemplateRow = {
 };
 
 type TemplateRowLookupKey = {
-  input_def_id: number;
+  measure_def_id: number;
   input_name: string;
   unit_name: string;
 };
@@ -81,7 +81,7 @@ const normalizeKeyText = (value: unknown) =>
 
 const createTemplateRowLookupKey = (value: TemplateRowLookupKey) =>
   [
-    value.input_def_id,
+    value.measure_def_id,
     normalizeKeyText(value.input_name),
     normalizeKeyText(value.unit_name),
   ].join("|");
@@ -181,7 +181,7 @@ const buildValueValidationFormula = (params: {
       config: params.builderConfig,
       ruleName: "required-value",
       code: "REQUIRED",
-      inputDefId: params.row.input_def_id,
+      inputDefId: params.row.measure_def_id,
     }) &&
     params.row.is_mandatory
   ) {
@@ -195,7 +195,7 @@ const buildValueValidationFormula = (params: {
       config: params.builderConfig,
       ruleName: "data-type",
       code: "INVALID_TYPE",
-      inputDefId: params.row.input_def_id,
+      inputDefId: params.row.measure_def_id,
     })
   ) {
     const normalizedType = normalizeTypeName(params.row.data_type_name);
@@ -224,7 +224,7 @@ const buildValueValidationFormula = (params: {
       config: params.builderConfig,
       ruleName: "range-polarity",
       code: "RANGE_OR_POLARITY",
-      inputDefId: params.row.input_def_id,
+      inputDefId: params.row.measure_def_id,
     })
   ) {
     if (params.row.valid_range_min != null) {
@@ -422,7 +422,7 @@ const flattenTemplateRows = (
   if (inputs.mode === "flat") {
     return inputs.rows.map((row) => ({
       context_mode: "flat" as const,
-      input_def_id: row.inputDefId,
+      measure_def_id: row.inputDefId,
       input_name: row.inputName,
       unit_name: row.unitName ?? "",
       energy_resource_id: row.energyResourceId ?? null,
@@ -447,7 +447,7 @@ const flattenTemplateRows = (
     return inputs.groups.flatMap((group) =>
       group.rows.map((row) => ({
         context_mode: "grouped-by-generator" as const,
-        input_def_id: row.inputDefId,
+        measure_def_id: row.inputDefId,
         input_name: row.inputName,
         unit_name: row.unitName ?? "",
         energy_resource_id: row.energyResourceId ?? group.generatorId,
@@ -473,7 +473,7 @@ const flattenTemplateRows = (
     paymentModeGroup.customerTypeGroups.flatMap((customerTypeGroup) =>
       customerTypeGroup.rows.map((row) => ({
         context_mode: "grouped-by-payment-mode" as const,
-        input_def_id: row.inputDefId,
+        measure_def_id: row.inputDefId,
         input_name: row.inputName,
         unit_name: row.unitName ?? "",
         energy_resource_id: row.energyResourceId ?? null,
@@ -689,7 +689,7 @@ export default function EnterDataTemplatePanel({
       return raw;
     });
     const requiredHeaders = [
-      "input_def_id",
+      "measure_def_id",
       "input_name",
       "unit_name",
       "value",
@@ -710,7 +710,7 @@ export default function EnterDataTemplatePanel({
     const templateRowLookup = new Map<string, TemplateRow[]>();
     templateRows.forEach((templateRow) => {
       const key = createTemplateRowLookupKey({
-        input_def_id: templateRow.input_def_id,
+        measure_def_id: templateRow.measure_def_id,
         input_name: templateRow.input_name,
         unit_name: templateRow.unit_name,
       });
@@ -724,13 +724,13 @@ export default function EnterDataTemplatePanel({
     });
 
     return dataRows.map((row, index): DataEntryTemplateUploadRowPayload => {
-      const inputDefId = toNullableNumber(getCell(row, "input_def_id"));
+      const inputDefId = toNullableNumber(getCell(row, "measure_def_id"));
       if (inputDefId == null || inputDefId <= 0) {
-        throw new Error(`Row ${index + 2} has an invalid input_def_id.`);
+        throw new Error(`Row ${index + 2} has an invalid measure_def_id.`);
       }
 
       const rowLookupKey = createTemplateRowLookupKey({
-        input_def_id: inputDefId,
+        measure_def_id: inputDefId,
         input_name: String(getCell(row, "input_name") ?? ""),
         unit_name: String(getCell(row, "unit_name") ?? ""),
       });

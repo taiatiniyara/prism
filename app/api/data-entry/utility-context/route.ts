@@ -1,7 +1,7 @@
 import { db } from "@/db/connection";
 import { utilityContextData } from "@/db/schema/governance";
 import { organisations } from "@/db/schema/utility";
-import { inputDefinitions } from "@/db/schema/dataEntry";
+import { measureDefinitions } from "@/db/schema/dataEntry";
 import { managedListItems } from "@/db/schema/managedLists";
 import { eq, asc, and } from "drizzle-orm";
 import { NextRequest, NextResponse } from "next/server";
@@ -23,8 +23,8 @@ export async function GET() {
 
   const inputDefs = await db
     .select()
-    .from(inputDefinitions)
-    .where(eq(inputDefinitions.is_active, true));
+    .from(measureDefinitions)
+    .where(eq(measureDefinitions.is_active, true));
 
   const allItems = await db
     .select()

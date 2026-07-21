@@ -54,14 +54,14 @@ type FormState = {
   formulaExpression: string;
   proposedUnits: ProposedUnitDraft[];
   proposedInputs: ProposedInputDraft[];
-  selectedInputDefinitionIds: number[];
+  selectedMeasureDefinitionIds: number[];
 };
 
 const INITIAL_STATE: FormState = {
   formulaExpression: "",
   proposedUnits: [],
   proposedInputs: [],
-  selectedInputDefinitionIds: [],
+  selectedMeasureDefinitionIds: [],
 };
 
 const FORMULA_OPERATORS = ["+", "-", "*", "/", "(", ")", "AND", "OR"];
@@ -149,9 +149,9 @@ export function CustomKpiRequestForm(props: {
   }, [props.inputOptions, selectedInputCategory]);
 
   const selectedInputOptions = useMemo(() => {
-    const selectedSet = new Set(form.selectedInputDefinitionIds);
+    const selectedSet = new Set(form.selectedMeasureDefinitionIds);
     return props.inputOptions.filter((option) => selectedSet.has(option.id));
-  }, [form.selectedInputDefinitionIds, props.inputOptions]);
+  }, [form.selectedMeasureDefinitionIds, props.inputOptions]);
 
   const unitNameById = useMemo(
     () => new Map(props.unitOptions.map((option) => [option.id, option.name])),
@@ -374,7 +374,7 @@ export function CustomKpiRequestForm(props: {
     console.info("custom_kpi_submit:start", {
       submitDebugId,
       titleLength: title.length,
-      selectedInputCount: form.selectedInputDefinitionIds.length,
+      selectedInputCount: form.selectedMeasureDefinitionIds.length,
       proposedUnitCount: form.proposedUnits.length,
       proposedInputCount: form.proposedInputs.length,
     });
@@ -393,7 +393,7 @@ export function CustomKpiRequestForm(props: {
           description,
           isPrivate,
           unitId: parsedUnitId,
-          selectedInputDefinitionIds: form.selectedInputDefinitionIds,
+          selectedMeasureDefinitionIds: form.selectedMeasureDefinitionIds,
           proposedUnits: form.proposedUnits
             .map((item) => ({
               name: item.name.trim(),
@@ -710,7 +710,7 @@ export function CustomKpiRequestForm(props: {
             </div>
           ) : (
             filteredInputOptions.map((option) => {
-              const isChecked = form.selectedInputDefinitionIds.includes(
+              const isChecked = form.selectedMeasureDefinitionIds.includes(
                 option.id,
               );
 
@@ -727,9 +727,9 @@ export function CustomKpiRequestForm(props: {
                     onChange={(event) => {
                       setForm((current) => ({
                         ...current,
-                        selectedInputDefinitionIds: event.target.checked
-                          ? [...current.selectedInputDefinitionIds, option.id]
-                          : current.selectedInputDefinitionIds.filter(
+                        selectedMeasureDefinitionIds: event.target.checked
+                          ? [...current.selectedMeasureDefinitionIds, option.id]
+                          : current.selectedMeasureDefinitionIds.filter(
                               (id) => id !== option.id,
                             ),
                       }));

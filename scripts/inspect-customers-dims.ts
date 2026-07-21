@@ -8,16 +8,16 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 async function main() {
   const dims = await pool.query(`
-    select input_def_id,
+    select measure_def_id,
            count(*)::int as rows,
            count(*) filter (where energy_resource_id is not null)::int as with_resource,
            count(*) filter (where energy_source_id is not null)::int as with_source,
            count(*) filter (where energy_provider_id is not null)::int as with_provider,
            count(distinct energy_resource_id)::int as distinct_resources
     from data_entries
-    where input_def_id in (153, 1800, 1803) and is_deleted = false
+    where measure_def_id in (153, 1800, 1803) and is_deleted = false
       and value is not null and trim(value) <> ''
-    group by input_def_id order by input_def_id
+    group by measure_def_id order by measure_def_id
   `);
   console.log("Dimension tagging per input:");
   console.table(dims.rows);
@@ -27,7 +27,7 @@ async function main() {
            count(distinct value)::int as distinct_values,
            count(distinct energy_resource_id)::int as distinct_resources
     from data_entries
-    where input_def_id = 153 and is_deleted = false
+    where measure_def_id = 153 and is_deleted = false
       and value is not null and trim(value) <> ''
     group by 1, 2
     having count(*) > 1
@@ -44,7 +44,7 @@ async function main() {
       select report_period_id, service_area_id,
              count(*) as copies, count(distinct value) as distinct_values
       from data_entries
-      where input_def_id = 153 and is_deleted = false
+      where measure_def_id = 153 and is_deleted = false
         and value is not null and trim(value) <> ''
       group by 1, 2 having count(*) > 1
     ) d

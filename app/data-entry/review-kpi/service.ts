@@ -14,7 +14,7 @@ import { db } from "@/db/connection";
 import {
   dataEntries,
   DataEntryComment,
-  inputDefinitions,
+  measureDefinitions,
 } from "@/db/schema/dataEntry";
 import { kpiDefinitions } from "@/db/schema/kpi";
 import { kpi } from "@/db/schema/kpi";
@@ -493,7 +493,7 @@ export const listReviewKpiRows = async (
   const referencedInputDefIds = [
     ...new Set(
       kpiDefinitionRows.flatMap((row) =>
-        (row.formulaInputs ?? []).map((input) => input.input_def_id),
+        (row.formulaInputs ?? []).map((input) => input.measure_def_id),
       ),
     ),
   ];
@@ -501,22 +501,22 @@ export const listReviewKpiRows = async (
   const inputDefinitionRows = referencedInputDefIds.length
     ? await db
         .select({
-          id: inputDefinitions.id,
-          name: inputDefinitions.name,
+          id: measureDefinitions.id,
+          name: measureDefinitions.name,
           unitName: sql<string | null>`(
             select ${managedListItems.name}
             from ${managedListItems}
-            where ${managedListItems.id} = ${inputDefinitions.unit_id}
+            where ${managedListItems.id} = ${measureDefinitions.unit_id}
             limit 1
           )`,
           dataTypeName: managedListItems.name,
         })
-        .from(inputDefinitions)
+        .from(measureDefinitions)
         .leftJoin(
           managedListItems,
-          eq(inputDefinitions.data_type_id, managedListItems.id),
+          eq(measureDefinitions.data_type_id, managedListItems.id),
         )
-        .where(inArray(inputDefinitions.id, referencedInputDefIds))
+        .where(inArray(measureDefinitions.id, referencedInputDefIds))
     : [];
 
   const inputDefinitionById = new Map(
@@ -536,7 +536,7 @@ export const listReviewKpiRows = async (
 
   if (referencedInputDefIds.length > 0) {
     dataEntryWhereConditions.push(
-      inArray(dataEntries.input_def_id, referencedInputDefIds),
+      inArray(dataEntries.measure_def_id, referencedInputDefIds),
     );
   }
 
@@ -544,7 +544,7 @@ export const listReviewKpiRows = async (
     ? await db
         .select({
           id: dataEntries.id,
-          inputDefId: dataEntries.input_def_id,
+          inputDefId: dataEntries.measure_def_id,
           value: dataEntries.value,
           comments: dataEntries.comments,
           updatedAt: dataEntries.updatedAt,
@@ -602,16 +602,16 @@ export const listReviewKpiRows = async (
     const inputs: ReviewKpiInputValue[] = (
       kpiDefinition.formulaInputs ?? []
     ).flatMap((formulaInput) => {
-      const def = inputDefinitionById.get(formulaInput.input_def_id);
+      const def = inputDefinitionById.get(formulaInput.measure_def_id);
       const sourceRows =
-        dataEntryByInputDefId.get(formulaInput.input_def_id) ?? [];
+        dataEntryByInputDefId.get(formulaInput.measure_def_id) ?? [];
 
       if (sourceRows.length === 0) {
         return [
           {
-            dataEntryId: `missing-${formulaInput.input_def_id}`,
-            inputDefId: formulaInput.input_def_id,
-            inputName: def?.name ?? `Input ${formulaInput.input_def_id}`,
+            dataEntryId: `missing-${formulaInput.measure_def_id}`,
+            inputDefId: formulaInput.measure_def_id,
+            inputName: def?.name ?? `Input ${formulaInput.measure_def_id}`,
             unitName: def?.unitName ?? null,
             value: null,
             controlType: mapDataTypeToControlType(def?.dataTypeName),
@@ -700,30 +700,30 @@ const getReviewKpiDataEntryById = async (dataEntryId: string) => {
   const [row] = await db
     .select({
       id: dataEntries.id,
-      inputDefId: dataEntries.input_def_id,
+      inputDefId: dataEntries.measure_def_id,
       value: dataEntries.value,
       comments: dataEntries.comments,
       updatedAt: dataEntries.updatedAt,
       updatedById: dataEntries.updatedById,
       reportPeriodId: dataEntries.report_period_id,
       serviceAreaId: dataEntries.service_area_id,
-      inputName: inputDefinitions.name,
+      inputName: measureDefinitions.name,
       unitName: sql<string | null>`(
         select ${managedListItems.name}
         from ${managedListItems}
-        where ${managedListItems.id} = ${inputDefinitions.unit_id}
+        where ${managedListItems.id} = ${measureDefinitions.unit_id}
         limit 1
       )`,
       dataTypeName: managedListItems.name,
     })
     .from(dataEntries)
     .innerJoin(
-      inputDefinitions,
-      eq(dataEntries.input_def_id, inputDefinitions.id),
+      measureDefinitions,
+      eq(dataEntries.measure_def_id, measureDefinitions.id),
     )
     .leftJoin(
       managedListItems,
-      eq(inputDefinitions.data_type_id, managedListItems.id),
+      eq(measureDefinitions.data_type_id, managedListItems.id),
     )
     .where(eq(dataEntries.id, dataEntryId))
     .limit(1);
@@ -766,7 +766,7 @@ const resolveKpiDefIdForInput = async (
 
   const definition = definitions.find((item) =>
     (item.formulaInputs ?? []).some(
-      (formulaInput) => formulaInput.input_def_id === inputDefId,
+      (formulaInput) => formulaInput.measure_def_id === inputDefId,
     ),
   );
 
@@ -919,7 +919,7 @@ export const addReviewKpiInputComment = async (
     .select({
       id: dataEntries.id,
       comments: dataEntries.comments,
-      inputDefId: dataEntries.input_def_id,
+      inputDefId: dataEntries.measure_def_id,
       reportPeriodId: dataEntries.report_period_id,
       serviceAreaId: dataEntries.service_area_id,
     })
@@ -1265,7 +1265,7 @@ const resolveProposedUnitNameToId = async (
   return byNormalizedName;
 };
 
-const resolveProposedInputDefinitionIds = async (input: {
+const resolveProposedMeasureDefinitionIds = async (input: {
   proposedInputs: ApplyCustomKpiDecisionInput["proposedInputs"];
   categoryId: number;
   subcategoryId: number;
@@ -1289,9 +1289,9 @@ const resolveProposedInputDefinitionIds = async (input: {
 
   const [existingInputs, dataTypeRows] = await Promise.all([
     db
-      .select({ id: inputDefinitions.id, name: inputDefinitions.name })
-      .from(inputDefinitions)
-      .where(eq(inputDefinitions.is_active, true)),
+      .select({ id: measureDefinitions.id, name: measureDefinitions.name })
+      .from(measureDefinitions)
+      .where(eq(measureDefinitions.is_active, true)),
     db
       .select({ id: managedListItems.id, name: managedListItems.name })
       .from(managedListItems)
@@ -1351,7 +1351,7 @@ const resolveProposedInputDefinitionIds = async (input: {
     const variableName = buildVariableNameFromInputName(proposedInput.name);
 
     const [createdInput] = await db
-      .insert(inputDefinitions)
+      .insert(measureDefinitions)
       .values({
         name: proposedInput.name.trim(),
         description: proposedInput.description,
@@ -1362,7 +1362,7 @@ const resolveProposedInputDefinitionIds = async (input: {
         data_type_id: dataTypeId,
         is_active: true,
       })
-      .returning({ id: inputDefinitions.id, name: inputDefinitions.name });
+      .returning({ id: measureDefinitions.id, name: measureDefinitions.name });
 
     inputNameToId.set(normalizedName, createdInput.id);
     resolvedIds.push(createdInput.id);
@@ -1383,7 +1383,7 @@ const getCustomKpiDecisionRequestOrThrow = async (requestId: string) => {
       unitId: customKpiRequests.unit_id,
       proposedUnits: customKpiRequests.proposed_units,
       proposedInputs: customKpiRequests.proposed_inputs,
-      selectedInputDefinitionIds:
+      selectedMeasureDefinitionIds:
         customKpiRequests.selected_input_definition_ids,
       existingKpiDefinitionId: customKpiRequests.replacement_kpi_def_id,
       status: customKpiRequests.status,
@@ -1475,7 +1475,7 @@ export const applyCustomKpiReviewDecision = async (
       input.proposedUnits,
     );
 
-    const resolvedProposedInputIds = await resolveProposedInputDefinitionIds({
+    const resolvedProposedInputIds = await resolveProposedMeasureDefinitionIds({
       proposedInputs: input.proposedInputs,
       categoryId: input.categoryId!,
       subcategoryId: input.subcategoryId!,
@@ -1483,32 +1483,32 @@ export const applyCustomKpiReviewDecision = async (
       proposedUnitNameToId,
     });
 
-    const resolvedInputDefinitionIds = [
+    const resolvedMeasureDefinitionIds = [
       ...new Set([
-        ...(request.selectedInputDefinitionIds ?? []),
+        ...(request.selectedMeasureDefinitionIds ?? []),
         ...resolvedProposedInputIds,
       ]),
     ];
 
-    const selectedInputDefinitions =
-      resolvedInputDefinitionIds.length > 0
+    const selectedMeasureDefinitions =
+      resolvedMeasureDefinitionIds.length > 0
         ? await db
             .select({
-              id: inputDefinitions.id,
-              variableName: inputDefinitions.variable_name,
+              id: measureDefinitions.id,
+              variableName: measureDefinitions.variable_name,
             })
-            .from(inputDefinitions)
-            .where(inArray(inputDefinitions.id, resolvedInputDefinitionIds))
+            .from(measureDefinitions)
+            .where(inArray(measureDefinitions.id, resolvedMeasureDefinitionIds))
         : [];
 
-    const formulaInputs = selectedInputDefinitions
+    const formulaInputs = selectedMeasureDefinitions
       .filter(
         (item) =>
           typeof item.variableName === "string" &&
           item.variableName.trim().length > 0,
       )
       .map((item) => ({
-        input_def_id: item.id,
+        measure_def_id: item.id,
         variable_name: item.variableName as string,
       }));
 
@@ -1623,9 +1623,7 @@ export const applyCustomKpiReviewDecision = async (
       toStatus: nextStatus,
       rationale: input.rationale,
     },
-  }).catch((err) =>
-    console.error("[audit] settings.kpi.update failed", err),
-  );
+  }).catch((err) => console.error("[audit] settings.kpi.update failed", err));
 
   if (lineage.requiresOverride) {
     await recordCustomKpiLifecycleEvent({
@@ -1716,9 +1714,7 @@ export const promoteCustomKpiRequestVisibility = async (
       fromScope: "SUBMITTER_ONLY",
       toScope: "GLOBAL",
     },
-  }).catch((err) =>
-    console.error("[audit] settings.kpi.update failed", err),
-  );
+  }).catch((err) => console.error("[audit] settings.kpi.update failed", err));
 
   return {
     requestId,

@@ -16,7 +16,7 @@ async function main() {
            u.name AS unit, dt.name AS data_type, al.name AS agg_level,
            i.valid_range_min, i.valid_range_max,
            i.alternative_names
-    FROM input_definitions i
+    FROM measure_definitions  i
     LEFT JOIN managed_list_items c  ON c.id  = i.category_id
     LEFT JOIN managed_list_items s  ON s.id  = i.subcategory_id
     LEFT JOIN managed_list_items u  ON u.id  = i.unit_id
@@ -47,7 +47,8 @@ async function main() {
   `);
 
   // Reverse lookup: which KPIs consume each input variable
-  const inputRows = inputs.rows ?? (inputs as unknown as Record<string, unknown>[]);
+  const inputRows =
+    inputs.rows ?? (inputs as unknown as Record<string, unknown>[]);
   const kpiRows = kpis.rows ?? (kpis as unknown as Record<string, unknown>[]);
 
   const idToVar = new Map<number, string>();
@@ -58,8 +59,11 @@ async function main() {
   const usedBy = new Map<string, string[]>();
   for (const k of kpiRows as { name: string; formula_inputs: unknown }[]) {
     const fi = Array.isArray(k.formula_inputs) ? k.formula_inputs : [];
-    for (const f of fi as { input_def_id?: number }[]) {
-      const v = f.input_def_id != null ? idToVar.get(Number(f.input_def_id)) : undefined;
+    for (const f of fi as { measure_def_id?: number }[]) {
+      const v =
+        f.measure_def_id != null
+          ? idToVar.get(Number(f.measure_def_id))
+          : undefined;
       if (v) {
         if (!usedBy.has(v)) usedBy.set(v, []);
         if (!usedBy.get(v)!.includes(k.name)) usedBy.get(v)!.push(k.name);
@@ -72,17 +76,31 @@ async function main() {
     used_by_kpis: usedBy.get(r.variable_name) ?? [],
   }));
 
-  writeFileSync(`${OUT_DIR}/source-inputs.json`, JSON.stringify(inputsOut, null, 1));
-  writeFileSync(`${OUT_DIR}/source-kpis.json`, JSON.stringify(kpiRows, null, 1));
+  writeFileSync(
+    `${OUT_DIR}/source-inputs.json`,
+    JSON.stringify(inputsOut, null, 1),
+  );
+  writeFileSync(
+    `${OUT_DIR}/source-kpis.json`,
+    JSON.stringify(kpiRows, null, 1),
+  );
 
   const cats = (arr: { category: string | null }[]) => {
     const m = new Map<string, number>();
-    for (const r of arr) m.set(r.category ?? "?", (m.get(r.category ?? "?") ?? 0) + 1);
+    for (const r of arr)
+      m.set(r.category ?? "?", (m.get(r.category ?? "?") ?? 0) + 1);
     return [...m.entries()];
   };
-  console.log("inputs:", inputsOut.length, JSON.stringify(cats(inputsOut as never)));
+  console.log(
+    "inputs:",
+    inputsOut.length,
+    JSON.stringify(cats(inputsOut as never)),
+  );
   console.log("kpis:", kpiRows.length, JSON.stringify(cats(kpiRows as never)));
   process.exit(0);
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

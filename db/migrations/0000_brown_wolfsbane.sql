@@ -467,7 +467,7 @@ CREATE TABLE "data_entries" (
 	"report_period_id" integer NOT NULL,
 	"energy_resource_id" integer,
 	"service_area_id" integer,
-	"input_def_id" integer NOT NULL,
+	"measure_def_id" integer NOT NULL,
 	"value" varchar(255),
 	"comments" json,
 	"update_medium_id" integer,
@@ -491,7 +491,7 @@ CREATE TABLE "data_entry_logs" (
 	"updated_at" timestamp NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE "input_definitions" (
+CREATE TABLE "measure_definitions " (
 	"id" serial PRIMARY KEY NOT NULL,
 	"name" varchar(255) NOT NULL,
 	"description" varchar(255),
@@ -525,7 +525,7 @@ CREATE TABLE "input_definitions" (
 --> statement-breakpoint
 CREATE TABLE "input_dl_def_mappings" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"input_def_id" integer NOT NULL,
+	"measure_def_id" integer NOT NULL,
 	"training_dl_def_id" bigint NOT NULL,
 	"training_dl_legacy_id" varchar(64) NOT NULL,
 	"training_source_id" integer,
@@ -544,7 +544,7 @@ CREATE TABLE "input_dl_def_mappings" (
 --> statement-breakpoint
 CREATE TABLE "input_relevance" (
 	"id" serial PRIMARY KEY NOT NULL,
-	"input_def_id" integer NOT NULL,
+	"measure_def_id" integer NOT NULL,
 	"dimension_id" integer NOT NULL,
 	"is_relevant" boolean DEFAULT true NOT NULL
 );
@@ -553,7 +553,7 @@ CREATE TABLE "tariff_relevance" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"report_period_id" integer NOT NULL,
 	"service_area_id" integer NOT NULL,
-	"input_def_id" integer NOT NULL,
+	"measure_def_id" integer NOT NULL,
 	"payment_mode_id" integer NOT NULL,
 	"customer_type_id" integer NOT NULL,
 	"is_relevant" boolean DEFAULT true NOT NULL,
@@ -566,7 +566,7 @@ CREATE TABLE "transmission_relevance" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
 	"report_period_id" integer NOT NULL,
 	"service_area_id" integer NOT NULL,
-	"input_def_id" integer NOT NULL,
+	"measure_def_id" integer NOT NULL,
 	"is_relevant" boolean DEFAULT true NOT NULL,
 	"is_deleted" boolean DEFAULT false NOT NULL,
 	"updated_at" timestamp DEFAULT now() NOT NULL,
@@ -905,7 +905,7 @@ ALTER TABLE "custom_kpi_request" ADD CONSTRAINT "custom_kpi_request_replacement_
 ALTER TABLE "data_entries" ADD CONSTRAINT "data_entries_report_period_id_report_periods_id_fk" FOREIGN KEY ("report_period_id") REFERENCES "public"."report_periods"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "data_entries" ADD CONSTRAINT "data_entries_energy_resource_id_energy_resources_id_fk" FOREIGN KEY ("energy_resource_id") REFERENCES "public"."energy_resources"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "data_entries" ADD CONSTRAINT "data_entries_service_area_id_service_areas_id_fk" FOREIGN KEY ("service_area_id") REFERENCES "public"."service_areas"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "data_entries" ADD CONSTRAINT "data_entries_input_def_id_input_definitions_id_fk" FOREIGN KEY ("input_def_id") REFERENCES "public"."input_definitions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "data_entries" ADD CONSTRAINT "data_entries_input_def_id_input_definitions_id_fk" FOREIGN KEY ("measure_def_id") REFERENCES "public"."measure_definitions "("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "data_entries" ADD CONSTRAINT "data_entries_update_medium_id_managed_list_items_id_fk" FOREIGN KEY ("update_medium_id") REFERENCES "public"."managed_list_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "data_entries" ADD CONSTRAINT "data_entries_energy_provider_id_managed_list_items_id_fk" FOREIGN KEY ("energy_provider_id") REFERENCES "public"."managed_list_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "data_entries" ADD CONSTRAINT "data_entries_energy_source_id_managed_list_items_id_fk" FOREIGN KEY ("energy_source_id") REFERENCES "public"."managed_list_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -914,28 +914,28 @@ ALTER TABLE "data_entries" ADD CONSTRAINT "data_entries_payment_mode_id_managed_
 ALTER TABLE "data_entries" ADD CONSTRAINT "data_entries_updated_by_id_user_id_fk" FOREIGN KEY ("updated_by_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "data_entry_logs" ADD CONSTRAINT "data_entry_logs_data_entry_id_data_entries_id_fk" FOREIGN KEY ("data_entry_id") REFERENCES "public"."data_entries"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "data_entry_logs" ADD CONSTRAINT "data_entry_logs_updated_by_id_user_id_fk" FOREIGN KEY ("updated_by_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "input_definitions" ADD CONSTRAINT "input_definitions_category_id_managed_list_items_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."managed_list_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "input_definitions" ADD CONSTRAINT "input_definitions_subcategory_id_managed_list_items_id_fk" FOREIGN KEY ("subcategory_id") REFERENCES "public"."managed_list_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "input_definitions" ADD CONSTRAINT "input_definitions_service_group_id_managed_list_items_id_fk" FOREIGN KEY ("service_group_id") REFERENCES "public"."managed_list_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "input_definitions" ADD CONSTRAINT "input_definitions_unit_id_managed_list_items_id_fk" FOREIGN KEY ("unit_id") REFERENCES "public"."managed_list_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "input_definitions" ADD CONSTRAINT "input_definitions_data_type_id_managed_list_items_id_fk" FOREIGN KEY ("data_type_id") REFERENCES "public"."managed_list_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "input_definitions" ADD CONSTRAINT "input_definitions_valid_polarity_id_managed_list_items_id_fk" FOREIGN KEY ("valid_polarity_id") REFERENCES "public"."managed_list_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "input_definitions" ADD CONSTRAINT "input_definitions_valid_trend_id_managed_list_items_id_fk" FOREIGN KEY ("valid_trend_id") REFERENCES "public"."managed_list_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "input_definitions" ADD CONSTRAINT "input_definitions_utility_service_id_managed_list_items_id_fk" FOREIGN KEY ("utility_service_id") REFERENCES "public"."managed_list_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "input_definitions" ADD CONSTRAINT "input_definitions_agg_level_id_managed_list_items_id_fk" FOREIGN KEY ("agg_level_id") REFERENCES "public"."managed_list_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "input_dl_def_mappings" ADD CONSTRAINT "input_dl_def_mappings_input_def_id_input_definitions_id_fk" FOREIGN KEY ("input_def_id") REFERENCES "public"."input_definitions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "measure_definitions " ADD CONSTRAINT "input_definitions_category_id_managed_list_items_id_fk" FOREIGN KEY ("category_id") REFERENCES "public"."managed_list_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "measure_definitions " ADD CONSTRAINT "input_definitions_subcategory_id_managed_list_items_id_fk" FOREIGN KEY ("subcategory_id") REFERENCES "public"."managed_list_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "measure_definitions " ADD CONSTRAINT "input_definitions_service_group_id_managed_list_items_id_fk" FOREIGN KEY ("service_group_id") REFERENCES "public"."managed_list_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "measure_definitions " ADD CONSTRAINT "input_definitions_unit_id_managed_list_items_id_fk" FOREIGN KEY ("unit_id") REFERENCES "public"."managed_list_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "measure_definitions " ADD CONSTRAINT "input_definitions_data_type_id_managed_list_items_id_fk" FOREIGN KEY ("data_type_id") REFERENCES "public"."managed_list_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "measure_definitions " ADD CONSTRAINT "input_definitions_valid_polarity_id_managed_list_items_id_fk" FOREIGN KEY ("valid_polarity_id") REFERENCES "public"."managed_list_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "measure_definitions " ADD CONSTRAINT "input_definitions_valid_trend_id_managed_list_items_id_fk" FOREIGN KEY ("valid_trend_id") REFERENCES "public"."managed_list_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "measure_definitions " ADD CONSTRAINT "input_definitions_utility_service_id_managed_list_items_id_fk" FOREIGN KEY ("utility_service_id") REFERENCES "public"."managed_list_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "measure_definitions " ADD CONSTRAINT "input_definitions_agg_level_id_managed_list_items_id_fk" FOREIGN KEY ("agg_level_id") REFERENCES "public"."managed_list_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "input_dl_def_mappings" ADD CONSTRAINT "input_dl_def_mappings_input_def_id_input_definitions_id_fk" FOREIGN KEY ("measure_def_id") REFERENCES "public"."measure_definitions "("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "input_dl_def_mappings" ADD CONSTRAINT "input_dl_def_mappings_approved_by_id_user_id_fk" FOREIGN KEY ("approved_by_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "input_relevance" ADD CONSTRAINT "input_relevance_input_def_id_input_definitions_id_fk" FOREIGN KEY ("input_def_id") REFERENCES "public"."input_definitions"("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "input_relevance" ADD CONSTRAINT "input_relevance_input_def_id_input_definitions_id_fk" FOREIGN KEY ("measure_def_id") REFERENCES "public"."measure_definitions "("id") ON DELETE cascade ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "input_relevance" ADD CONSTRAINT "input_relevance_dimension_id_managed_list_items_id_fk" FOREIGN KEY ("dimension_id") REFERENCES "public"."managed_list_items"("id") ON DELETE restrict ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "tariff_relevance" ADD CONSTRAINT "tariff_relevance_report_period_id_report_periods_id_fk" FOREIGN KEY ("report_period_id") REFERENCES "public"."report_periods"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "tariff_relevance" ADD CONSTRAINT "tariff_relevance_service_area_id_service_areas_id_fk" FOREIGN KEY ("service_area_id") REFERENCES "public"."service_areas"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "tariff_relevance" ADD CONSTRAINT "tariff_relevance_input_def_id_input_definitions_id_fk" FOREIGN KEY ("input_def_id") REFERENCES "public"."input_definitions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "tariff_relevance" ADD CONSTRAINT "tariff_relevance_input_def_id_input_definitions_id_fk" FOREIGN KEY ("measure_def_id") REFERENCES "public"."measure_definitions "("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "tariff_relevance" ADD CONSTRAINT "tariff_relevance_payment_mode_id_managed_list_items_id_fk" FOREIGN KEY ("payment_mode_id") REFERENCES "public"."managed_list_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "tariff_relevance" ADD CONSTRAINT "tariff_relevance_customer_type_id_managed_list_items_id_fk" FOREIGN KEY ("customer_type_id") REFERENCES "public"."managed_list_items"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "tariff_relevance" ADD CONSTRAINT "tariff_relevance_updated_by_id_user_id_fk" FOREIGN KEY ("updated_by_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "transmission_relevance" ADD CONSTRAINT "transmission_relevance_report_period_id_report_periods_id_fk" FOREIGN KEY ("report_period_id") REFERENCES "public"."report_periods"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "transmission_relevance" ADD CONSTRAINT "transmission_relevance_service_area_id_service_areas_id_fk" FOREIGN KEY ("service_area_id") REFERENCES "public"."service_areas"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
-ALTER TABLE "transmission_relevance" ADD CONSTRAINT "transmission_relevance_input_def_id_input_definitions_id_fk" FOREIGN KEY ("input_def_id") REFERENCES "public"."input_definitions"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
+ALTER TABLE "transmission_relevance" ADD CONSTRAINT "transmission_relevance_input_def_id_input_definitions_id_fk" FOREIGN KEY ("measure_def_id") REFERENCES "public"."measure_definitions "("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "transmission_relevance" ADD CONSTRAINT "transmission_relevance_updated_by_id_user_id_fk" FOREIGN KEY ("updated_by_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "dev_validation_builder_config" ADD CONSTRAINT "dev_validation_builder_config_updated_by_id_user_id_fk" FOREIGN KEY ("updated_by_id") REFERENCES "public"."user"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
 ALTER TABLE "email_schedules" ADD CONSTRAINT "email_schedules_utility_id_organisations_id_fk" FOREIGN KEY ("utility_id") REFERENCES "public"."organisations"("id") ON DELETE no action ON UPDATE no action;--> statement-breakpoint
@@ -1054,11 +1054,11 @@ CREATE INDEX "custom_kpi_lifecycle_request_idx" ON "custom_kpi_lifecycle_event" 
 CREATE INDEX "custom_kpi_request_submitter_idx" ON "custom_kpi_request" USING btree ("submitter_user_id");--> statement-breakpoint
 CREATE INDEX "custom_kpi_request_status_idx" ON "custom_kpi_request" USING btree ("status");--> statement-breakpoint
 CREATE INDEX "custom_kpi_request_fingerprint_idx" ON "custom_kpi_request" USING btree ("submitter_user_id","definition_fingerprint","status");--> statement-breakpoint
-CREATE INDEX "uniq_entry" ON "data_entries" USING btree ("report_period_id","input_def_id","service_area_id","energy_source_id","energy_provider_id","energy_resource_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "uniq_input_dl_def_mappings_input_training" ON "input_dl_def_mappings" USING btree ("input_def_id","training_dl_def_id");--> statement-breakpoint
+CREATE INDEX "uniq_entry" ON "data_entries" USING btree ("report_period_id","measure_def_id","service_area_id","energy_source_id","energy_provider_id","energy_resource_id");--> statement-breakpoint
+CREATE UNIQUE INDEX "uniq_input_dl_def_mappings_input_training" ON "input_dl_def_mappings" USING btree ("measure_def_id","training_dl_def_id");--> statement-breakpoint
 CREATE INDEX "idx_input_dl_def_mappings_training_dl_def_id" ON "input_dl_def_mappings" USING btree ("training_dl_def_id");--> statement-breakpoint
-CREATE INDEX "uniq_tariff_relevance" ON "tariff_relevance" USING btree ("report_period_id","service_area_id","input_def_id","payment_mode_id","customer_type_id");--> statement-breakpoint
-CREATE INDEX "uniq_transmission_relevance" ON "transmission_relevance" USING btree ("report_period_id","service_area_id","input_def_id");--> statement-breakpoint
+CREATE INDEX "uniq_tariff_relevance" ON "tariff_relevance" USING btree ("report_period_id","service_area_id","measure_def_id","payment_mode_id","customer_type_id");--> statement-breakpoint
+CREATE INDEX "uniq_transmission_relevance" ON "transmission_relevance" USING btree ("report_period_id","service_area_id","measure_def_id");--> statement-breakpoint
 CREATE INDEX "kpi_calc_attempt_trigger_idx" ON "kpi_calculation_attempts" USING btree ("trigger_id");--> statement-breakpoint
 CREATE INDEX "kpi_calc_attempt_scope_status_idx" ON "kpi_calculation_attempts" USING btree ("report_period_id","kpi_def_id","status");--> statement-breakpoint
 CREATE UNIQUE INDEX "kpi_target_trajectory_utility_kpi_idx" ON "kpi_target_trajectory" USING btree ("utility_id","kpi_def_id");--> statement-breakpoint

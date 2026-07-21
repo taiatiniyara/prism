@@ -2,7 +2,7 @@
 
 import { DataTableFormResponse } from "@/components/tables/data-table-create-form";
 import { db } from "@/db/connection";
-import { FormulaInput, inputDefinitions } from "@/db/schema/dataEntry";
+import { FormulaInput, measureDefinitions } from "@/db/schema/dataEntry";
 import {
   KpiDefinition,
   kpiDefinitions,
@@ -736,19 +736,19 @@ export async function GetKpiFormulaBuilderData(): Promise<KpiFormulaBuilderData>
 
   const inputs = await db
     .select({
-      id: inputDefinitions.id,
-      name: inputDefinitions.name,
-      variable_name: inputDefinitions.variable_name,
-      unitId: inputDefinitions.unit_id,
+      id: measureDefinitions.id,
+      name: measureDefinitions.name,
+      variable_name: measureDefinitions.variable_name,
+      unitId: measureDefinitions.unit_id,
     })
-    .from(inputDefinitions)
+    .from(measureDefinitions)
     .where(
       and(
-        eq(inputDefinitions.is_active, true),
-        eq(inputDefinitions.is_kpi_input, true),
+        eq(measureDefinitions.is_active, true),
+        eq(measureDefinitions.is_kpi_input, true),
       ),
     )
-    .orderBy(asc(inputDefinitions.name));
+    .orderBy(asc(measureDefinitions.name));
 
   const previewContextLabel = "Preview uses sample values.";
 
@@ -1065,7 +1065,11 @@ export async function GetKpiTargetsFilterOptions(): Promise<KpiTargetsFilterOpti
       parent_id: row.parentId,
     })),
     ...missingSubcategoryIds
-      .filter((id) => !existingSubcategoryIds.has(id) && !missingSubcategoryRows.some((row) => row.id === id))
+      .filter(
+        (id) =>
+          !existingSubcategoryIds.has(id) &&
+          !missingSubcategoryRows.some((row) => row.id === id),
+      )
       .map((id) => ({
         id,
         name: `Subcategory #${id}`,

@@ -75,15 +75,15 @@ describe("aggregated worker orchestrator cascade", () => {
         variableName: "C",
         formula: "A + B",
         formulaInputs: [
-          { input_def_id: 11, variable_name: "A" },
-          { input_def_id: 12, variable_name: "B" },
+          { measure_def_id: 11, variable_name: "A" },
+          { measure_def_id: 12, variable_name: "B" },
         ],
       }),
       buildAggregatedTarget({
         inputDefId: 2002,
         variableName: "D",
         formula: "C * 2",
-        formulaInputs: [{ input_def_id: 2001, variable_name: "C" }],
+        formulaInputs: [{ measure_def_id: 2001, variable_name: "C" }],
       }),
     ]);
 
@@ -130,15 +130,15 @@ describe("aggregated worker orchestrator cascade", () => {
         variableName: null,
         formula: "A + B",
         formulaInputs: [
-          { input_def_id: 11, variable_name: "A" },
-          { input_def_id: 12, variable_name: "B" },
+          { measure_def_id: 11, variable_name: "A" },
+          { measure_def_id: 12, variable_name: "B" },
         ],
       }),
       buildAggregatedTarget({
         inputDefId: 3002,
         variableName: "NET",
         formula: "TOTAL_EXP * 2",
-        formulaInputs: [{ input_def_id: 3001, variable_name: "TOTAL_EXP" }],
+        formulaInputs: [{ measure_def_id: 3001, variable_name: "TOTAL_EXP" }],
       }),
     ]);
 
@@ -193,8 +193,8 @@ describe("aggregated worker orchestrator cascade", () => {
         variableName: "TOTAL_EXPENSES",
         formula: "OPERATING_EXPENSES + ADMIN_EXPENSES",
         formulaInputs: [
-          { input_def_id: 201, variable_name: "OPERATING_EXPENSES" },
-          { input_def_id: 202, variable_name: "ADMIN_EXPENSES" },
+          { measure_def_id: 201, variable_name: "OPERATING_EXPENSES" },
+          { measure_def_id: 202, variable_name: "ADMIN_EXPENSES" },
         ],
       }),
       buildAggregatedTarget({
@@ -202,8 +202,8 @@ describe("aggregated worker orchestrator cascade", () => {
         variableName: "TOTAL_INCOME",
         formula: "OPERATING_INCOME + OTHER_INCOME",
         formulaInputs: [
-          { input_def_id: 101, variable_name: "OPERATING_INCOME" },
-          { input_def_id: 102, variable_name: "OTHER_INCOME" },
+          { measure_def_id: 101, variable_name: "OPERATING_INCOME" },
+          { measure_def_id: 102, variable_name: "OTHER_INCOME" },
         ],
       }),
       buildAggregatedTarget({
@@ -211,8 +211,8 @@ describe("aggregated worker orchestrator cascade", () => {
         variableName: "NET_PROFIT",
         formula: "TOTAL_INCOME - TOTAL_EXPENSES",
         formulaInputs: [
-          { input_def_id: 302, variable_name: "TOTAL_INCOME" },
-          { input_def_id: 301, variable_name: "TOTAL_EXPENSES" },
+          { measure_def_id: 302, variable_name: "TOTAL_INCOME" },
+          { measure_def_id: 301, variable_name: "TOTAL_EXPENSES" },
         ],
       }),
     ]);
@@ -271,8 +271,8 @@ describe("aggregated worker orchestrator cascade", () => {
         variableName: "Total Expenses",
         formula: "Operating Expenses + Administrative Expenses",
         formulaInputs: [
-          { input_def_id: 401, variable_name: "Operating Expenses" },
-          { input_def_id: 402, variable_name: "Administrative Expenses" },
+          { measure_def_id: 401, variable_name: "Operating Expenses" },
+          { measure_def_id: 402, variable_name: "Administrative Expenses" },
         ],
       }),
       buildAggregatedTarget({
@@ -280,8 +280,8 @@ describe("aggregated worker orchestrator cascade", () => {
         variableName: "Total Income",
         formula: "Operating Income + Other Income",
         formulaInputs: [
-          { input_def_id: 403, variable_name: "Operating Income" },
-          { input_def_id: 404, variable_name: "Other Income" },
+          { measure_def_id: 403, variable_name: "Operating Income" },
+          { measure_def_id: 404, variable_name: "Other Income" },
         ],
       }),
       buildAggregatedTarget({
@@ -289,8 +289,8 @@ describe("aggregated worker orchestrator cascade", () => {
         variableName: "Net Profit",
         formula: "Total Income - Total Expenses",
         formulaInputs: [
-          { input_def_id: 502, variable_name: "Total Income" },
-          { input_def_id: 501, variable_name: "Total Expenses" },
+          { measure_def_id: 502, variable_name: "Total Income" },
+          { measure_def_id: 501, variable_name: "Total Expenses" },
         ],
       }),
     ]);

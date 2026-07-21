@@ -6,8 +6,8 @@ export const buildAggregatedTarget = (
   inputDefId: 1001,
   formula: "A + B",
   formulaInputs: [
-    { input_def_id: 11, variable_name: "A" },
-    { input_def_id: 12, variable_name: "B" },
+    { measure_def_id: 11, variable_name: "A" },
+    { measure_def_id: 12, variable_name: "B" },
   ],
   ...overrides,
 });

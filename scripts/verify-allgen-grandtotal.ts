@@ -13,7 +13,7 @@ async function main() {
       select distinct on (report_period_id, service_area_id, energy_resource_id)
              report_period_id, service_area_id, value::numeric as total
       from data_entries
-      where input_def_id = 1652 and energy_source_id = 40 and is_deleted = false
+      where measure_def_id = 1652 and energy_source_id = 40 and is_deleted = false
         and value ~ '^[0-9.]+$'
       order by report_period_id, service_area_id, energy_resource_id, updated_at desc
     ),
@@ -28,7 +28,7 @@ async function main() {
              report_period_id, service_area_id, value::numeric as v,
              energy_provider_id
       from data_entries
-      where input_def_id = 1652 and energy_source_id <> 40 and is_deleted = false
+      where measure_def_id = 1652 and energy_source_id <> 40 and is_deleted = false
         and value ~ '^[0-9.]+$'
       order by report_period_id, service_area_id, energy_resource_id,
                energy_source_id, energy_provider_id, updated_at desc
@@ -57,7 +57,7 @@ async function main() {
       select distinct on (report_period_id, service_area_id, energy_resource_id)
              report_period_id, service_area_id, value::numeric as total
       from data_entries
-      where input_def_id = 1652 and energy_source_id = 40 and is_deleted = false
+      where measure_def_id = 1652 and energy_source_id = 40 and is_deleted = false
         and value ~ '^[0-9.]+$'
       order by report_period_id, service_area_id, energy_resource_id, updated_at desc
     ),
@@ -66,7 +66,7 @@ async function main() {
       select distinct on (report_period_id, service_area_id, energy_resource_id, energy_source_id, energy_provider_id)
              report_period_id, service_area_id, value::numeric as v
       from data_entries
-      where input_def_id = 1652 and energy_source_id <> 40 and is_deleted = false and value ~ '^[0-9.]+$'
+      where measure_def_id = 1652 and energy_source_id <> 40 and is_deleted = false and value ~ '^[0-9.]+$'
       order by report_period_id, service_area_id, energy_resource_id, energy_source_id, energy_provider_id, updated_at desc
     ),
     detail_scope as (select report_period_id, service_area_id, sum(v) t from detail group by 1,2)

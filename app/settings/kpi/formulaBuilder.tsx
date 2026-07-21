@@ -78,7 +78,7 @@ function getFormulaInputs(
   const fromFormula = inputs
     .filter((item) => item.variable_name && tokenSet.has(item.variable_name))
     .map((item) => ({
-      input_def_id: item.id,
+      measure_def_id: item.id,
       variable_name: item.variable_name as string,
     }));
 
@@ -86,15 +86,15 @@ function getFormulaInputs(
   const fromSelection = inputs
     .filter((item) => selectedSet.has(item.id) && !!item.variable_name)
     .map((item) => ({
-      input_def_id: item.id,
+      measure_def_id: item.id,
       variable_name: item.variable_name as string,
     }));
 
   const merged = [...fromFormula, ...fromSelection];
   const dedup = new Map<number, FormulaInput>();
   for (const item of merged) {
-    const filters = selectedInputFilters[item.input_def_id];
-    dedup.set(item.input_def_id, {
+    const filters = selectedInputFilters[item.measure_def_id];
+    dedup.set(item.measure_def_id, {
       ...item,
       energy_provider_id: filters?.energyProviderId ?? null,
       energy_type_id: filters?.energyTypeId ?? null,
@@ -672,7 +672,7 @@ export default function KpiFormulaBuilder(props: {
       ),
     );
     setSelectedInputIds(
-      formulaInputs.map((item) => normalizeInputId(item.input_def_id)),
+      formulaInputs.map((item) => normalizeInputId(item.measure_def_id)),
     );
     setKpiSearch("");
     setSearch("");

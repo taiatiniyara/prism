@@ -1,11 +1,11 @@
 import DataTable from "@/components/tables/data-table";
-import { InputDefinition } from "@/db/schema/dataEntry";
+import { MeasureDefinition } from "@/db/schema/dataEntry";
 import InputFormulaBuilder from "./formulaBuilder";
 import {
-  CreateInputDefinition,
-  GetAllInputDefinitions,
+  CreateMeasureDefinition,
+  GetAllMeasureDefinitions,
   GetInputFormulaBuilderData,
-  UpdateInputDefinition,
+  UpdateMeasureDefinition,
 } from "./service";
 import UploadInputsFromExcel from "./uploadFromExcel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -31,7 +31,7 @@ export default async function InputsSettingsPage(props: {
 }) {
   const searchParams = await Promise.resolve(props.searchParams);
   const defaultTab = resolveDefaultTab(searchParams?.tab);
-  const inputDefinitions = await GetAllInputDefinitions();
+  const measureDefinitions = await GetAllMeasureDefinitions();
   const formulaBuilderData = await GetInputFormulaBuilderData();
 
   return (
@@ -49,7 +49,7 @@ export default async function InputsSettingsPage(props: {
 
         <TabsContent value="definitions">
           <SectionContainer>
-            <DataTable<InputDefinition>
+            <DataTable<MeasureDefinition>
               columns={[
                 "name",
                 "sort_order",
@@ -59,9 +59,9 @@ export default async function InputsSettingsPage(props: {
                 "is_active",
               ]}
               title="Inputs"
-              data={inputDefinitions}
+              data={measureDefinitions}
               createFormProps={{
-                formAction: CreateInputDefinition,
+                formAction: CreateMeasureDefinition,
                 fields: [
                   {
                     key: "name",
@@ -104,7 +104,7 @@ export default async function InputsSettingsPage(props: {
                 ],
               }}
               updateFormProps={{
-                formAction: UpdateInputDefinition,
+                formAction: UpdateMeasureDefinition,
                 fields: [
                   {
                     key: "name",

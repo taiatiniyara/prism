@@ -50,7 +50,7 @@ const collectAllInputDefIds = (
   targets.forEach((target) => {
     inputDefIds.add(target.inputDefId);
     target.formulaInputs.forEach((formulaInput) => {
-      inputDefIds.add(formulaInput.input_def_id);
+      inputDefIds.add(formulaInput.measure_def_id);
     });
   });
 
@@ -67,7 +67,7 @@ const buildTargetValueMap = (
   if (target.formulaInputs.length > 0) {
     target.formulaInputs.forEach((formulaInput) => {
       map[formulaInput.variable_name] =
-        snapshot.values.byInputDefId[formulaInput.input_def_id] ??
+        snapshot.values.byInputDefId[formulaInput.measure_def_id] ??
         snapshot.values.byVariable[formulaInput.variable_name];
     });
 
@@ -99,7 +99,7 @@ const buildInputDefVariableAliases = (
   for (const target of targets) {
     addAlias(target.inputDefId, target.variableName);
     for (const formulaInput of target.formulaInputs) {
-      addAlias(formulaInput.input_def_id, formulaInput.variable_name);
+      addAlias(formulaInput.measure_def_id, formulaInput.variable_name);
     }
   }
 
@@ -346,7 +346,9 @@ export const runAggregatedWorkerAsync = (
   queueMicrotask(() => {
     void runAggregatedWorker(user, scope).catch((error) => {
       const errorMessage =
-        error instanceof Error ? error.message : "Unknown aggregated worker error";
+        error instanceof Error
+          ? error.message
+          : "Unknown aggregated worker error";
       console.error("[Aggregated worker] run failed", {
         reportPeriodId: scope.reportPeriodId,
         serviceAreaId: scope.serviceAreaId ?? null,

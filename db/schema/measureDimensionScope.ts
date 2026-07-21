@@ -6,7 +6,7 @@ import {
   varchar,
   uniqueIndex,
 } from "drizzle-orm/pg-core";
-import { inputDefinitions } from "./dataEntry";
+import { measureDefinitions } from "./dataEntry";
 
 export const MEASURE_DIMENSIONS = [
   "energy_provider",
@@ -27,7 +27,7 @@ export const measureDimensionScope = pgTable(
     id: serial("id").primaryKey().notNull(),
     measure_id: integer("measure_id")
       .notNull()
-      .references(() => inputDefinitions.id, { onDelete: "cascade" }),
+      .references(() => measureDefinitions.id, { onDelete: "cascade" }),
     dimension: varchar("dimension", { length: 32 })
       .$type<MeasureDimension>()
       .notNull(),
@@ -41,7 +41,6 @@ export const measureDimensionScope = pgTable(
   ],
 );
 
-export type MeasureDimensionScope =
-  typeof measureDimensionScope.$inferSelect;
+export type MeasureDimensionScope = typeof measureDimensionScope.$inferSelect;
 export type NewMeasureDimensionScope =
   typeof measureDimensionScope.$inferInsert;

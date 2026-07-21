@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   applyCascadedContextWithOptionValidation,
   buildInputRowsFromDefinitions,
-  filterInputDefinitionsByContext,
+  filterMeasureDefinitionsByContext,
 } from "@/app/data-entry/enter-data/services/us2.cascadeFiltering.service";
 import {
   buildFilterContextFixture,
@@ -80,7 +80,7 @@ describe("filter cascade behavior", () => {
       },
     ];
 
-    const filtered = filterInputDefinitionsByContext(definitions, context);
+    const filtered = filterMeasureDefinitionsByContext(definitions, context);
     expect(filtered.map((item) => item.id)).toEqual([1]);
 
     const rows = buildInputRowsFromDefinitions(

@@ -18,7 +18,7 @@ async function main() {
   const byProvider = await pool.query(`
     select coalesce(p.name, '(null)') as provider, de.energy_provider_id,
            count(*)::int as rows,
-           count(distinct de.input_def_id)::int as inputs
+           count(distinct de.measure_def_id)::int as inputs
     from data_entries de
     left join managed_list_items p on p.id = de.energy_provider_id
     where de.energy_source_id = 40 and de.is_deleted = false
@@ -50,11 +50,13 @@ async function main() {
 
   const inputBind = await pool.query(`
     select i.id, i.name, fi.value->>'variable_name' as var
-    from input_definitions i, jsonb_array_elements(i.formula_inputs::jsonb) fi
+    from measure_definitions  i, jsonb_array_elements(i.formula_inputs::jsonb) fi
     where (fi.value->>'energy_provider_id') = '21'
     order by i.id
   `);
-  console.log(`Input (aggregated) bindings pinning provider=21: ${inputBind.rowCount}`);
+  console.log(
+    `Input (aggregated) bindings pinning provider=21: ${inputBind.rowCount}`,
+  );
   console.table(inputBind.rows);
 
   // Does the All GEN generation total already include IPP? Compare, per scope,
@@ -66,7 +68,7 @@ async function main() {
       select report_period_id, service_area_id, energy_resource_id,
              max(value::numeric) as total
       from data_entries
-      where input_def_id = 1652 and energy_source_id = 40 and is_deleted = false
+      where measure_def_id = 1652 and energy_source_id = 40 and is_deleted = false
         and value ~ '^[0-9.]+$'
       group by 1, 2, 3
     ),
@@ -75,7 +77,7 @@ async function main() {
              sum(value::numeric) as sum_detail,
              bool_or(energy_provider_id = 22) as has_ipp
       from data_entries
-      where input_def_id = 1652 and energy_source_id <> 40 and is_deleted = false
+      where measure_def_id = 1652 and energy_source_id <> 40 and is_deleted = false
         and value ~ '^[0-9.]+$'
       group by 1, 2
     )

@@ -310,7 +310,7 @@
     <!-- DB -->
     <rect x="500" y="155" width="200" height="85" rx="8" fill="#4e1b1b" stroke="#f87171" stroke-width="1.5"/>
     <text x="600" y="178" text-anchor="middle" fill="#f87171" font-size="13" font-weight="600">PostgreSQL</text>
-    <text x="600" y="195" text-anchor="middle" fill="#e2e8f0" font-size="10">input_definitions</text>
+    <text x="600" y="195" text-anchor="middle" fill="#e2e8f0" font-size="10">measure_definitions </text>
     <text x="600" y="210" text-anchor="middle" fill="#e2e8f0" font-size="10">data_entries · input_relevance</text>
     <text x="600" y="225" text-anchor="middle" fill="#e2e8f0" font-size="10">data_entry_logs · managed_lists</text>
 
@@ -842,18 +842,18 @@
       <th>Purpose</th>
     </tr>
     <tr>
-      <td><code>input_definitions</code></td>
+      <td><code>measure_definitions </code></td>
       <td>id, name, variable_name, formula, formula_inputs (JSON), category_id, subcategory_id, data_type_id, valid_range_min/max, valid_polarity_id, is_aggregated, is_kpi, is_kpi_input, is_mandatory, is_calculated, is_active, sort_order</td>
       <td>Master list of all input field definitions — the "what to collect" catalog</td>
     </tr>
     <tr>
       <td><code>data_entries</code></td>
-      <td>id (UUID), report_period_id, input_def_id, value, comments (JSON), status_id, is_relevant, energy_resource_id, service_area_id, customer_type_id, payment_mode_id, updated_by_id</td>
-      <td>Actual data values entered by users; unique index on <code>(report_period_id, input_def_id, service_area_id, energy_source_id, energy_provider_id, energy_resource_id)</code></td>
+      <td>id (UUID), report_period_id, measure_def_id, value, comments (JSON), status_id, is_relevant, energy_resource_id, service_area_id, customer_type_id, payment_mode_id, updated_by_id</td>
+      <td>Actual data values entered by users; unique index on <code>(report_period_id, measure_def_id, service_area_id, energy_source_id, energy_provider_id, energy_resource_id)</code></td>
     </tr>
     <tr>
       <td><code>input_relevance</code></td>
-      <td>id, input_def_id, dimension_id, is_relevant</td>
+      <td>id, measure_def_id, dimension_id, is_relevant</td>
       <td>Which input definitions are relevant for which dimensions (e.g., specific generators)</td>
     </tr>
     <tr>
@@ -863,17 +863,17 @@
     </tr>
     <tr>
       <td><code>tariff_relevance</code></td>
-      <td>id, report_period_id, service_area_id, input_def_id, payment_mode_id, customer_type_id, is_relevant</td>
+      <td>id, report_period_id, service_area_id, measure_def_id, payment_mode_id, customer_type_id, is_relevant</td>
       <td>Which inputs are relevant for tariff payment mode × customer type combinations</td>
     </tr>
     <tr>
       <td><code>transmission_relevance</code></td>
-      <td>id, report_period_id, service_area_id, input_def_id, is_relevant</td>
+      <td>id, report_period_id, service_area_id, measure_def_id, is_relevant</td>
       <td>Which inputs are relevant for transmission contexts</td>
     </tr>
     <tr>
       <td><code>input_dl_def_mappings</code></td>
-      <td>id, input_def_id, training_dl_def_id, training_dl_legacy_id, training_source_id, score, confidence, is_auto, is_approved</td>
+      <td>id, measure_def_id, training_dl_def_id, training_dl_legacy_id, training_source_id, score, confidence, is_auto, is_approved</td>
       <td>Mapping bridge between PRISM and legacy prism-training data definitions</td>
     </tr>
   </table>

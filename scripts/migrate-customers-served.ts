@@ -14,7 +14,7 @@ async function main() {
     await client.query("begin");
 
     const activated = await client.query(
-      `update input_definitions set is_active = true, updated_at = now()
+      `update measure_definitions  set is_active = true, updated_at = now()
        where id = 1501 and is_active = false`,
     );
     console.log(
@@ -26,7 +26,7 @@ async function main() {
     const inserted = await client.query(`
       insert into data_entries (
         report_period_id, energy_resource_id, power_station_id, service_area_id,
-        utility_id, country_id, subregion_id, region, input_def_id, value,
+        utility_id, country_id, subregion_id, region, measure_def_id, value,
         comments, update_medium_id, status_id, is_relevant, is_deleted,
         energy_provider_id, energy_source_id, customer_type_id, payment_mode_id,
         updated_by_id
@@ -42,11 +42,11 @@ async function main() {
         de.energy_source_id, de.customer_type_id, de.payment_mode_id,
         de.updated_by_id
       from data_entries de
-      where de.input_def_id = 153 and de.is_deleted = false
+      where de.measure_def_id = 153 and de.is_deleted = false
         and de.value is not null and trim(de.value) <> ''
         and not exists (
           select 1 from data_entries t
-          where t.input_def_id = 1501 and t.is_deleted = false
+          where t.measure_def_id = 1501 and t.is_deleted = false
             and t.report_period_id = de.report_period_id
             and t.service_area_id is not distinct from de.service_area_id
             and t.energy_resource_id is not distinct from de.energy_resource_id
@@ -74,7 +74,7 @@ async function main() {
            count(distinct report_period_id)::int as periods,
            count(distinct service_area_id)::int as service_areas
     from data_entries
-    where input_def_id = 1501 and is_deleted = false
+    where measure_def_id = 1501 and is_deleted = false
       and value is not null and trim(value) <> ''
   `);
   console.log("Post-migration 1501 coverage:");

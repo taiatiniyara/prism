@@ -22,7 +22,7 @@ export async function GET(req: NextRequest) {
     const result = await db.execute(sql`
       SELECT
         m.id,
-        m.input_def_id,
+        m.measure_def_id,
         m.training_dl_def_id,
         m.training_dl_legacy_id,
         m.training_source_id,
@@ -45,7 +45,7 @@ export async function GET(req: NextRequest) {
         cat.name AS category_name,
         sub.name AS subcategory_name
       FROM input_dl_def_mappings m
-      LEFT JOIN input_definitions i ON m.input_def_id = i.id
+      LEFT JOIN measure_definitions  i ON m.measure_def_id = i.id
       LEFT JOIN managed_list_items cat ON i.category_id = cat.id
       LEFT JOIN managed_list_items sub ON i.subcategory_id = sub.id
       ORDER BY m.id

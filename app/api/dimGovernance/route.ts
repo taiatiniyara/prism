@@ -1,5 +1,5 @@
 import { db } from "@/db/connection";
-import { inputDefinitions } from "@/db/schema/dataEntry";
+import { measureDefinitions } from "@/db/schema/dataEntry";
 import { managedListItems } from "@/db/schema/managedLists";
 import { eq } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
@@ -22,8 +22,8 @@ export async function GET(req: Request) {
 
   const dlDefs = await db
     .select()
-    .from(inputDefinitions)
-    .where(eq(inputDefinitions.is_active, true));
+    .from(measureDefinitions)
+    .where(eq(measureDefinitions.is_active, true));
 
   return Response.json(
     dlDefs.map((dl) => ({

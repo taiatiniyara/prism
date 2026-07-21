@@ -1,7 +1,7 @@
 import { db } from "@/db/connection";
 import { aiReviewQueue } from "@/db/schema/ai";
 import { kpiDefinitions } from "@/db/schema/kpi";
-import { inputDefinitions } from "@/db/schema/dataEntry";
+import { measureDefinitions } from "@/db/schema/dataEntry";
 import { like, inArray } from "drizzle-orm";
 import { desc } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
@@ -11,16 +11,26 @@ import { logger } from "@/lib/logging/logger";
 
 // ---- CIRCUIT BREAKER ----
 
-const toolFailures = new Map<string, { count: number; lastFail: number; cooldownUntil: number }>();
+const toolFailures = new Map<
+  string,
+  { count: number; lastFail: number; cooldownUntil: number }
+>();
 const MAX_FAILURES = 5;
 const COOLDOWN_MS = 60000;
 
 export const recordToolFailure = (toolName: string): boolean => {
   const now = Date.now();
-  const entry = toolFailures.get(toolName) ?? { count: 0, lastFail: 0, cooldownUntil: 0 };
+  const entry = toolFailures.get(toolName) ?? {
+    count: 0,
+    lastFail: 0,
+    cooldownUntil: 0,
+  };
 
   if (now < entry.cooldownUntil) {
-    logger.warn("[ai-circuit-breaker] Tool in cooldown", { toolName, cooldownUntil: new Date(entry.cooldownUntil).toISOString() });
+    logger.warn("[ai-circuit-breaker] Tool in cooldown", {
+      toolName,
+      cooldownUntil: new Date(entry.cooldownUntil).toISOString(),
+    });
     return false;
   }
 
@@ -30,12 +40,20 @@ export const recordToolFailure = (toolName: string): boolean => {
   if (entry.count >= MAX_FAILURES) {
     entry.cooldownUntil = now + COOLDOWN_MS;
     entry.count = 0;
-    logger.error("[ai-circuit-breaker] Tool circuit opened", { toolName, failures: MAX_FAILURES, cooldownMs: COOLDOWN_MS });
+    logger.error("[ai-circuit-breaker] Tool circuit opened", {
+      toolName,
+      failures: MAX_FAILURES,
+      cooldownMs: COOLDOWN_MS,
+    });
     return false;
   }
 
   toolFailures.set(toolName, entry);
-  logger.warn("[ai-circuit-breaker] Tool failure recorded", { toolName, failureCount: entry.count, maxFailures: MAX_FAILURES });
+  logger.warn("[ai-circuit-breaker] Tool failure recorded", {
+    toolName,
+    failureCount: entry.count,
+    maxFailures: MAX_FAILURES,
+  });
   return true;
 };
 
@@ -44,7 +62,11 @@ export const resetToolCircuit = (toolName: string): void => {
   logger.info("[ai-circuit-breaker] Tool circuit reset", { toolName });
 };
 
-export const getCircuitStatus = (): Array<{ toolName: string; failures: number; cooldownUntil: number | null }> => {
+export const getCircuitStatus = (): Array<{
+  toolName: string;
+  failures: number;
+  cooldownUntil: number | null;
+}> => {
   const now = Date.now();
   return [...toolFailures.entries()].map(([toolName, entry]) => ({
     toolName,
@@ -110,7 +132,10 @@ export const getReviewQueueEntries = async (
       total_pending: pending,
       total_reviewed: mapped.length - pending,
     },
-    metadata: createToolMetadata({ freshness: new Date(), source: "ai_review_queue" }),
+    metadata: createToolMetadata({
+      freshness: new Date(),
+      source: "ai_review_queue",
+    }),
   };
 };
 
@@ -119,7 +144,7 @@ export const getReviewQueueEntries = async (
 export interface GuidedEntryStep {
   step: number;
   input_name: string;
-  input_def_id: number | null;
+  measure_def_id: number | null;
   description: string;
   current_value: string | null;
   required: boolean;
@@ -147,7 +172,8 @@ export const getGuidedEntry = async (
         steps: [],
         total_steps: 0,
         completed_steps: 0,
-        message: "No KPI name provided. Please specify a KPI name for data entry guidance.",
+        message:
+          "No KPI name provided. Please specify a KPI name for data entry guidance.",
       },
       metadata: createToolMetadata({ source: "data_entry" }),
     };
@@ -182,38 +208,41 @@ export const getGuidedEntry = async (
 
     for (const def of defs) {
       if (def.formula && Array.isArray(def.formula)) {
-        for (const fi of def.formula as Array<{ input_def_id?: number }>) {
-          if (fi.input_def_id) inputDefIds.add(fi.input_def_id);
+        for (const fi of def.formula as Array<{ measure_def_id?: number }>) {
+          if (fi.measure_def_id) inputDefIds.add(fi.measure_def_id);
         }
       }
     }
 
-    const inputs = inputDefIds.size > 0
-      ? await db
-          .select({
-            id: inputDefinitions.id,
-            name: inputDefinitions.name,
-            description: inputDefinitions.description,
-            variable_name: inputDefinitions.variable_name,
-          })
-          .from(inputDefinitions)
-          .where(inArray(inputDefinitions.id, [...inputDefIds]))
-          .limit(50)
-      : [];
+    const inputs =
+      inputDefIds.size > 0
+        ? await db
+            .select({
+              id: measureDefinitions.id,
+              name: measureDefinitions.name,
+              description: measureDefinitions.description,
+              variable_name: measureDefinitions.variable_name,
+            })
+            .from(measureDefinitions)
+            .where(inArray(measureDefinitions.id, [...inputDefIds]))
+            .limit(50)
+        : [];
 
     for (let i = 0; i < inputs.length; i++) {
-        const inp = inputs[i];
-        allSteps.push({
-          step: allSteps.length + 1,
-          input_name: inp.name || `Input ${i + 1}`,
-          input_def_id: inp.id,
-          description: inp.description || `Enter a value for ${inp.name || inp.variable_name || `input ${i + 1}`}`,
-          current_value: null,
-          required: true,
-          formula_variable: inp.variable_name,
-          example: null,
-        });
-      }
+      const inp = inputs[i];
+      allSteps.push({
+        step: allSteps.length + 1,
+        input_name: inp.name || `Input ${i + 1}`,
+        measure_def_id: inp.id,
+        description:
+          inp.description ||
+          `Enter a value for ${inp.name || inp.variable_name || `input ${i + 1}`}`,
+        current_value: null,
+        required: true,
+        formula_variable: inp.variable_name,
+        example: null,
+      });
+    }
 
     if (allSteps.length === 0) {
       return {
@@ -236,7 +265,10 @@ export const getGuidedEntry = async (
         completed_steps: 0,
         message: `Found ${allSteps.length} input${allSteps.length !== 1 ? "s" : ""} for "${defs[0].name}". Navigate to /data-entry/enter-data to fill in these values. Use get_input_status to check which inputs are already filled.`,
       },
-      metadata: createToolMetadata({ source: "data_entry", freshness: new Date() }),
+      metadata: createToolMetadata({
+        source: "data_entry",
+        freshness: new Date(),
+      }),
     };
   } catch {
     return {
@@ -260,7 +292,8 @@ export const checkUserUtility = (
   if (!user.org_id) {
     return {
       valid: false,
-      message: "Your account is not associated with a specific utility. Contact your PRISM administrator to be assigned to an organisation. Until then, I can only answer general questions about the platform.",
+      message:
+        "Your account is not associated with a specific utility. Contact your PRISM administrator to be assigned to an organisation. Until then, I can only answer general questions about the platform.",
     };
   }
   return { valid: true, message: null };

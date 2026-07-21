@@ -65,7 +65,7 @@ function getFormulaInputs(
   const fromFormula = inputs
     .filter((item) => item.variable_name && tokenSet.has(item.variable_name))
     .map((item) => ({
-      input_def_id: item.id,
+      measure_def_id: item.id,
       variable_name: item.variable_name as string,
     }));
 
@@ -73,15 +73,15 @@ function getFormulaInputs(
   const fromSelection = inputs
     .filter((item) => selectedSet.has(item.id) && !!item.variable_name)
     .map((item) => ({
-      input_def_id: item.id,
+      measure_def_id: item.id,
       variable_name: item.variable_name as string,
     }));
 
   const merged = [...fromFormula, ...fromSelection];
   const dedup = new Map<number, FormulaInput>();
   for (const item of merged) {
-    const filters = selectedInputFilters[item.input_def_id];
-    dedup.set(item.input_def_id, {
+    const filters = selectedInputFilters[item.measure_def_id];
+    dedup.set(item.measure_def_id, {
       ...item,
       energy_provider_id: filters?.energyProviderId ?? null,
       energy_type_id: filters?.energyTypeId ?? null,
@@ -183,7 +183,7 @@ export default function InputFormulaBuilder(props: {
 
   const normalizeInputId = (id: number) => Number(id);
 
-  const filteredInputDefinitions = useMemo(() => {
+  const filteredMeasureDefinitions = useMemo(() => {
     const term = inputSearch.trim().toLowerCase();
 
     return props.inputs.filter((input) => {
@@ -640,7 +640,7 @@ export default function InputFormulaBuilder(props: {
       ),
     );
     setSelectedDependencyIds(
-      formulaInputs.map((item) => normalizeInputId(item.input_def_id)),
+      formulaInputs.map((item) => normalizeInputId(item.measure_def_id)),
     );
     setInputSearch("");
     setSearch("");
@@ -801,7 +801,7 @@ export default function InputFormulaBuilder(props: {
           <SearchableSelect
             value={selectedInputId}
             onValueChange={handleInputChange}
-            options={filteredInputDefinitions.map((input) => ({
+            options={filteredMeasureDefinitions.map((input) => ({
               value: input.id.toString(),
               label: input.name,
             }))}

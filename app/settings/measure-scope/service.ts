@@ -4,7 +4,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/user.service";
 import { db } from "@/db/connection";
-import { inputDefinitions } from "@/db/schema/dataEntry";
+import { measureDefinitions } from "@/db/schema/dataEntry";
 import {
   measureDimensionScope,
   MEASURE_DIMENSIONS,
@@ -29,15 +29,15 @@ export async function getMeasureScopeViewModel(): Promise<{
 
   const measures = await db
     .select({
-      id: inputDefinitions.id,
-      name: inputDefinitions.name,
-      variableName: inputDefinitions.variable_name,
-      categoryId: inputDefinitions.category_id,
-      dataTypeId: inputDefinitions.data_type_id,
+      id: measureDefinitions.id,
+      name: measureDefinitions.name,
+      variableName: measureDefinitions.variable_name,
+      categoryId: measureDefinitions.category_id,
+      dataTypeId: measureDefinitions.data_type_id,
     })
-    .from(inputDefinitions)
-    .where(eq(inputDefinitions.is_active, true))
-    .orderBy(inputDefinitions.name);
+    .from(measureDefinitions)
+    .where(eq(measureDefinitions.is_active, true))
+    .orderBy(measureDefinitions.name);
 
   const measureIds = measures.map((m) => m.id);
   const scopes =
@@ -85,10 +85,7 @@ export async function saveMeasureDimensionScope(
     .where(
       and(
         eq(measureDimensionScope.measure_id, measureId),
-        eq(
-          measureDimensionScope.dimension,
-          dimension as MeasureDimension,
-        ),
+        eq(measureDimensionScope.dimension, dimension as MeasureDimension),
       ),
     )
     .limit(1);

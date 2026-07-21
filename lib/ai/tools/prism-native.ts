@@ -6,35 +6,83 @@ import { isConfiguredForDax, isConfigured, isPbiHealthy } from "@/lib/powerbi";
 import { validateToolAccess } from "../guardrails";
 import { logger } from "@/lib/logging/logger";
 import {
-  getKpiStatus, getBenchmarkingData, getCompletenessBreakdown, getTrendAnalysis,
-  getAnomalyInsights, getGovernanceAudit, getConfigurationOptions, getKpiDiagnostics,
-  calculateKpis, getReviewQueue, getInputStatus, explainKpi, explainInput, getCustomKpiStatus,
-  getServiceAreaBreakdown, getPeerGroupAnalysis, getRiskAssessment, getDataQualityReport,
-  getWhatChanged, comparePeriods, type CompletenessDimension, getComplianceStatus,
-  getKpiTargets, getKpiCorrelation, compareKpisAcrossUtilities, generateExport,
-  getCountryHierarchy, getIndustryBenchmarks, getExecutiveDigest, getReviewQueueEntries,
-  getGuidedEntry, queryPowerBi, diagnosePowerBi, discoverDatasets, discoverSchema,
-  discoverReport, getWorldBankCountryContext, resolveUserIsoCode,
+  getKpiStatus,
+  getBenchmarkingData,
+  getCompletenessBreakdown,
+  getTrendAnalysis,
+  getAnomalyInsights,
+  getGovernanceAudit,
+  getConfigurationOptions,
+  getKpiDiagnostics,
+  calculateKpis,
+  getReviewQueue,
+  getInputStatus,
+  explainKpi,
+  explainInput,
+  getCustomKpiStatus,
+  getServiceAreaBreakdown,
+  getPeerGroupAnalysis,
+  getRiskAssessment,
+  getDataQualityReport,
+  getWhatChanged,
+  comparePeriods,
+  type CompletenessDimension,
+  getComplianceStatus,
+  getKpiTargets,
+  getKpiCorrelation,
+  compareKpisAcrossUtilities,
+  generateExport,
+  getCountryHierarchy,
+  getIndustryBenchmarks,
+  getExecutiveDigest,
+  getReviewQueueEntries,
+  getGuidedEntry,
+  queryPowerBi,
+  diagnosePowerBi,
+  discoverDatasets,
+  discoverSchema,
+  discoverReport,
+  getWorldBankCountryContext,
+  resolveUserIsoCode,
   type ReportData,
 } from "../data-service";
 
 import { PBI_TOOL_TIMEOUT_MS, withTimeout } from "./utils";
 
-const PBI_UNAVAILABLE_MSG = "Power BI is currently unavailable. Use PRISM-native tools instead: get_kpi_status, get_benchmarking_data, get_trend_analysis, get_completeness_breakdown, get_peer_group_analysis, get_risk_assessment, get_executive_digest, get_anomaly_insights, get_compliance_status, get_data_quality_report, get_kpi_correlation, compare_kpis_across_utilities, compare_periods, get_industry_benchmarks, calculate_kpi, explain_kpi, get_kpi_targets, get_service_area_breakdown.";
+const PBI_UNAVAILABLE_MSG =
+  "Power BI is currently unavailable. Use PRISM-native tools instead: get_kpi_status, get_benchmarking_data, get_trend_analysis, get_completeness_breakdown, get_peer_group_analysis, get_risk_assessment, get_executive_digest, get_anomaly_insights, get_compliance_status, get_data_quality_report, get_kpi_correlation, compare_kpis_across_utilities, compare_periods, get_industry_benchmarks, calculate_kpi, explain_kpi, get_kpi_targets, get_service_area_breakdown.";
 
-export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSignal, _sessionId?: number) {
+export function createPrismNativeTools(
+  user: CurrentUser,
+  _abortSignal?: AbortSignal,
+  _sessionId?: number,
+) {
   const pbiDown = !isPbiHealthy() || !isConfiguredForDax();
   return {
     get_kpi_status: tool({
       description:
         "Get current KPI status and submission progress for a utility or all utilities. Returns completion rates, status counts (pending, entered, reviewed, approved, endorsed), and aggregate metrics.",
       inputSchema: z.object({
-        utility_id: z.number().optional().describe("Specific utility ID to query. Defaults to user's utility."),
-        report_period_id: z.number().optional().describe("Specific report period ID. Defaults to most recent."),
-        all_utilities: z.boolean().optional().describe("Set to true to query all utilities for benchmarking."),
+        utility_id: z
+          .number()
+          .optional()
+          .describe(
+            "Specific utility ID to query. Defaults to user's utility.",
+          ),
+        report_period_id: z
+          .number()
+          .optional()
+          .describe("Specific report period ID. Defaults to most recent."),
+        all_utilities: z
+          .boolean()
+          .optional()
+          .describe("Set to true to query all utilities for benchmarking."),
       }),
       execute: async ({ utility_id, report_period_id, all_utilities }) => {
-        return withTimeout(getKpiStatus(user, { utility_id, report_period_id, all_utilities }), "get_kpi_status");
+        return withTimeout(
+          getKpiStatus(user, { utility_id, report_period_id, all_utilities }),
+          "get_kpi_status",
+        );
       },
     }),
 
@@ -42,12 +90,26 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
       description:
         "Get benchmarking data comparing utilities by completion rates. Returns rankings, peer averages, top/bottom performers, and user's utility position relative to peers.",
       inputSchema: z.object({
-        report_period_id: z.number().optional().describe("Specific report period ID for comparison."),
-        limit: z.number().optional().describe("Maximum number of records to return. Defaults to 20."),
-        all_utilities: z.boolean().optional().describe("Set to true to compare across all utilities (requires global access)."),
+        report_period_id: z
+          .number()
+          .optional()
+          .describe("Specific report period ID for comparison."),
+        limit: z
+          .number()
+          .optional()
+          .describe("Maximum number of records to return. Defaults to 20."),
+        all_utilities: z
+          .boolean()
+          .optional()
+          .describe(
+            "Set to true to compare across all utilities (requires global access).",
+          ),
       }),
       execute: async ({ report_period_id, limit, all_utilities }) => {
-        return withTimeout(getBenchmarkingData(user, { report_period_id, limit, all_utilities }), "get_benchmarking_data");
+        return withTimeout(
+          getBenchmarkingData(user, { report_period_id, limit, all_utilities }),
+          "get_benchmarking_data",
+        );
       },
     }),
 
@@ -69,10 +131,18 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
             "payment_mode",
           ])
           .describe("The dimension to break down completeness by."),
-        report_period_id: z.number().optional().describe("Specific report period ID."),
+        report_period_id: z
+          .number()
+          .optional()
+          .describe("Specific report period ID."),
       }),
       execute: async ({ dimension, report_period_id }) => {
-        return withTimeout(getCompletenessBreakdown(user, dimension as CompletenessDimension, { report_period_id }), "get_completeness_breakdown");
+        return withTimeout(
+          getCompletenessBreakdown(user, dimension as CompletenessDimension, {
+            report_period_id,
+          }),
+          "get_completeness_breakdown",
+        );
       },
     }),
 
@@ -80,10 +150,16 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
       description:
         "Get trend analysis showing completion rate changes over time. Returns trends per utility with direction (improved/declined/stable) and delta in percentage points.",
       inputSchema: z.object({
-        all_utilities: z.boolean().optional().describe("Set to true to analyze trends across all utilities."),
+        all_utilities: z
+          .boolean()
+          .optional()
+          .describe("Set to true to analyze trends across all utilities."),
       }),
       execute: async ({ all_utilities }) => {
-        return withTimeout(getTrendAnalysis(user, { all_utilities }), "get_trend_analysis");
+        return withTimeout(
+          getTrendAnalysis(user, { all_utilities }),
+          "get_trend_analysis",
+        );
       },
     }),
 
@@ -91,10 +167,16 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
       description:
         "Get anomaly detection insights including completion drops, pending increases, and not-available increases. Returns anomalies with severity levels and a watchlist of high-pending utilities.",
       inputSchema: z.object({
-        all_utilities: z.boolean().optional().describe("Set to true to detect anomalies across all utilities."),
+        all_utilities: z
+          .boolean()
+          .optional()
+          .describe("Set to true to detect anomalies across all utilities."),
       }),
       execute: async ({ all_utilities }) => {
-        return withTimeout(getAnomalyInsights(user, { all_utilities }), "get_anomaly_insights");
+        return withTimeout(
+          getAnomalyInsights(user, { all_utilities }),
+          "get_anomaly_insights",
+        );
       },
     }),
 
@@ -102,14 +184,20 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
       description:
         "Get governance and audit information including pending ownership distribution and recent updates. Shows who is responsible for pending items.",
       inputSchema: z.object({
-        all_utilities: z.boolean().optional().describe("Set to true to audit across all utilities."),
+        all_utilities: z
+          .boolean()
+          .optional()
+          .describe("Set to true to audit across all utilities."),
       }),
       execute: async ({ all_utilities }) => {
         const accessCheck = validateToolAccess("get_governance_audit", user);
         if (!accessCheck.passed) {
           return { error: accessCheck.reason };
         }
-        return withTimeout(getGovernanceAudit(user, { all_utilities }), "get_governance_audit");
+        return withTimeout(
+          getGovernanceAudit(user, { all_utilities }),
+          "get_governance_audit",
+        );
       },
     }),
 
@@ -118,11 +206,17 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
         "Get available configuration options including report types, report periods, KPI categories, subcategories, and service areas.",
       inputSchema: z.object({}),
       execute: async () => {
-        const accessCheck = validateToolAccess("get_configuration_options", user);
+        const accessCheck = validateToolAccess(
+          "get_configuration_options",
+          user,
+        );
         if (!accessCheck.passed) {
           return { error: accessCheck.reason };
         }
-        return withTimeout(getConfigurationOptions(user), "get_configuration_options");
+        return withTimeout(
+          getConfigurationOptions(user),
+          "get_configuration_options",
+        );
       },
     }),
 
@@ -130,11 +224,22 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
       description:
         "Get KPI diagnostics including missing input KPIs, error KPIs, stale KPIs, and unresolved comments. Useful for root cause analysis.",
       inputSchema: z.object({
-        report_period_id: z.number().optional().describe("Report period ID. If omitted, uses the latest period."),
-        year: z.number().optional().describe("Year to query (e.g. 2023). Resolves to the matching report period."),
+        report_period_id: z
+          .number()
+          .optional()
+          .describe("Report period ID. If omitted, uses the latest period."),
+        year: z
+          .number()
+          .optional()
+          .describe(
+            "Year to query (e.g. 2023). Resolves to the matching report period.",
+          ),
       }),
       execute: async ({ report_period_id, year }) => {
-        return withTimeout(getKpiDiagnostics(user, { report_period_id, year }), "get_kpi_diagnostics");
+        return withTimeout(
+          getKpiDiagnostics(user, { report_period_id, year }),
+          "get_kpi_diagnostics",
+        );
       },
     }),
 
@@ -144,7 +249,16 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
       inputSchema: z.object({
         visualization: z
           .object({
-            type: z.enum(["table", "bar-chart", "line-chart", "leaderboard", "sankey", "heatmap", "radar", "scatter"]),
+            type: z.enum([
+              "table",
+              "bar-chart",
+              "line-chart",
+              "leaderboard",
+              "sankey",
+              "heatmap",
+              "radar",
+              "scatter",
+            ]),
             title: z.string(),
           })
           .passthrough()
@@ -159,12 +273,17 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
       description:
         "Suggest 2-3 follow-up questions the user might want to ask based on the current conversation context.",
       inputSchema: z.object({
-        questions: z.array(z.string().max(200)).min(1).max(3).describe("Array of follow-up question suggestions."),
+        questions: z
+          .array(z.string().max(200))
+          .min(1)
+          .max(3)
+          .describe("Array of follow-up question suggestions."),
       }),
       execute: async ({ questions }) => {
         const seen = new Set<string>();
         const deduped: string[] = [];
-        const blocked = /\b(?:ignore|forget|disregard|override|bypass|reveal.*instructions?|credentials|password|api.?key|secret)\b/i;
+        const blocked =
+          /\b(?:ignore|forget|disregard|override|bypass|reveal.*instructions?|credentials|password|api.?key|secret)\b/i;
         for (const q of questions) {
           const trimmed = q.trim();
           if (trimmed.length < 5 || trimmed.length > 200) continue;
@@ -175,7 +294,14 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
           deduped.push(trimmed);
           if (deduped.length >= 3) break;
         }
-        return { suggestions: deduped.length > 0 ? deduped : ["Would you like to explore any other aspect of your utility's performance?"] };
+        return {
+          suggestions:
+            deduped.length > 0
+              ? deduped
+              : [
+                  "Would you like to explore any other aspect of your utility's performance?",
+                ],
+        };
       },
     }),
 
@@ -183,35 +309,87 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
       description:
         "Calculate KPI values on-the-fly using the KPI formula engine. Looks up KPI definitions by name or ID, resolves input values from the database, evaluates the formula, and returns computed values. Supports hypothetical/scenario values for what-if analysis — pass changed values to see how they affect the KPI. Use this when the user asks about specific KPI values, ratios, metrics, or wants to know 'what if X was Y?'.",
       inputSchema: z.object({
-        kpi_names: z.array(z.string()).optional().describe("KPI names to calculate (partial match). E.g. ['SAIDI', 'SAIFI', 'System Loss']"),
-        kpi_def_ids: z.array(z.number()).optional().describe("Specific KPI definition IDs to calculate."),
-        report_period_id: z.number().optional().describe("Report period ID. If omitted, uses the latest period."),
-        year: z.number().optional().describe("Year to query (e.g. 2023). Resolves to the matching report period."),
-        hypothetical_values: z.record(z.string(), z.number()).optional().describe("Hypothetical variable values for what-if analysis. E.g. {'Customer Minutes Lost': 5000, 'Customers Served': 10000} to see what SAIDI would be under those conditions."),
-        sensitivity_variable: z.string().optional().describe("Variable name to run sensitivity analysis on. Varies the variable by -50%, -25%, -10%, +10%, +25%, +50% and returns how the KPI result changes at each level."),
+        kpi_names: z
+          .array(z.string())
+          .optional()
+          .describe(
+            "KPI names to calculate (partial match). E.g. ['SAIDI', 'SAIFI', 'System Loss']",
+          ),
+        kpi_def_ids: z
+          .array(z.number())
+          .optional()
+          .describe("Specific KPI definition IDs to calculate."),
+        report_period_id: z
+          .number()
+          .optional()
+          .describe("Report period ID. If omitted, uses the latest period."),
+        year: z
+          .number()
+          .optional()
+          .describe(
+            "Year to query (e.g. 2023). Resolves to the matching report period.",
+          ),
+        hypothetical_values: z
+          .record(z.string(), z.number())
+          .optional()
+          .describe(
+            "Hypothetical variable values for what-if analysis. E.g. {'Customer Minutes Lost': 5000, 'Customers Served': 10000} to see what SAIDI would be under those conditions.",
+          ),
+        sensitivity_variable: z
+          .string()
+          .optional()
+          .describe(
+            "Variable name to run sensitivity analysis on. Varies the variable by -50%, -25%, -10%, +10%, +25%, +50% and returns how the KPI result changes at each level.",
+          ),
       }),
-      execute: async ({ kpi_names, kpi_def_ids, report_period_id, year, hypothetical_values, sensitivity_variable }) => {
+      execute: async ({
+        kpi_names,
+        kpi_def_ids,
+        report_period_id,
+        year,
+        hypothetical_values,
+        sensitivity_variable,
+      }) => {
         return withTimeout(
-          calculateKpis(user, { kpi_names, kpi_def_ids, report_period_id, year, hypothetical_values: hypothetical_values as Record<string, number>, sensitivity_variable }),
+          calculateKpis(user, {
+            kpi_names,
+            kpi_def_ids,
+            report_period_id,
+            year,
+            hypothetical_values: hypothetical_values as Record<string, number>,
+            sensitivity_variable,
+          }),
           "calculate_kpi",
         );
       },
     }),
 
     dashboard_link: tool({
-      description: "Generate a deep link to a relevant dashboard page with pre-applied filters.",
+      description:
+        "Generate a deep link to a relevant dashboard page with pre-applied filters.",
       inputSchema: z.object({
         route: z
           .string()
-          .describe("The dashboard route (e.g., '/data-entry', '/data-entry/review-kpi', '/data-entry/balanced-scorecard')."),
-        filters: z.record(z.string()).optional().describe("Optional query parameters to pre-apply filters."),
+          .describe(
+            "The dashboard route (e.g., '/data-entry', '/data-entry/review-kpi', '/data-entry/balanced-scorecard').",
+          ),
+        filters: z
+          .record(z.string())
+          .optional()
+          .describe("Optional query parameters to pre-apply filters."),
         label: z.string().optional().describe("Optional label for the link."),
       }),
       execute: async ({ route, filters, label }) => {
         const queryString = filters
-          ? "?" + Object.entries(filters).map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join("&")
+          ? "?" +
+            Object.entries(filters)
+              .map(([key, value]) => `${key}=${encodeURIComponent(value)}`)
+              .join("&")
           : "";
-        return { url: `${route}${queryString}`, label: label ?? `Go to ${route}` };
+        return {
+          url: `${route}${queryString}`,
+          label: label ?? `Go to ${route}`,
+        };
       },
     }),
 
@@ -223,7 +401,10 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
         year: z.number().optional().describe("Year to query (e.g. 2023)."),
       }),
       execute: async ({ report_period_id, year }) => {
-        return withTimeout(getReviewQueue(user, { report_period_id, year }), "get_review_queue");
+        return withTimeout(
+          getReviewQueue(user, { report_period_id, year }),
+          "get_review_queue",
+        );
       },
     }),
 
@@ -231,12 +412,19 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
       description:
         "Get the status of individual inputs for a specific KPI. Shows which data entry fields are filled, which are missing, and the formula variables they feed into. Use this when a user asks why a particular KPI is incomplete or what data needs to be entered to complete it.",
       inputSchema: z.object({
-        kpi_name: z.string().describe("Name of the KPI to check inputs for (partial match supported)."),
+        kpi_name: z
+          .string()
+          .describe(
+            "Name of the KPI to check inputs for (partial match supported).",
+          ),
         report_period_id: z.number().optional().describe("Report period ID."),
         year: z.number().optional().describe("Year to query (e.g. 2023)."),
       }),
       execute: async ({ kpi_name, report_period_id, year }) => {
-        return withTimeout(getInputStatus(user, { kpi_name, report_period_id, year }), "get_input_status");
+        return withTimeout(
+          getInputStatus(user, { kpi_name, report_period_id, year }),
+          "get_input_status",
+        );
       },
     }),
 
@@ -244,8 +432,13 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
       description:
         "Explain what a KPI is, how it's calculated, what category it belongs to, and what its benchmarking limits are. Returns the dictionary definition (with inclusion/exclusion conventions and interpretation guidance) plus synonyms; matches on name or synonym. Use this when the user asks 'what does X mean?' or 'how is Y calculated?'. Quote the dictionary definition when present; if definition_status is 'draft', it is AI-drafted pending PPA curation — mention that only if the user asks about the definition's authority.",
       inputSchema: z.object({
-        kpi_name: z.string().describe("KPI name or synonym to explain (partial match)."),
-        kpi_def_id: z.number().optional().describe("Specific KPI definition ID."),
+        kpi_name: z
+          .string()
+          .describe("KPI name or synonym to explain (partial match)."),
+        kpi_def_id: z
+          .number()
+          .optional()
+          .describe("Specific KPI definition ID."),
       }),
       execute: async ({ kpi_name, kpi_def_id }) => {
         return withTimeout(explainKpi({ kpi_name, kpi_def_id }), "explain_kpi");
@@ -256,11 +449,19 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
       description:
         "Explain a data-entry input definition: what should be reported, inclusion/exclusion conventions, unit, and which figure to use. Matches on name, variable name, or synonym. Use this when a user asks what an input field means, what to enter, or how a raw (non-KPI) data item is defined. Quote the dictionary definition when present; if definition_status is 'draft', it is AI-drafted pending PPA curation — mention that only if the user asks about the definition's authority.",
       inputSchema: z.object({
-        input_name: z.string().describe("Input name, variable name, or synonym (partial match)."),
-        input_def_id: z.number().optional().describe("Specific input definition ID."),
+        input_name: z
+          .string()
+          .describe("Input name, variable name, or synonym (partial match)."),
+        measure_def_id: z
+          .number()
+          .optional()
+          .describe("Specific input definition ID."),
       }),
-      execute: async ({ input_name, input_def_id }) => {
-        return withTimeout(explainInput({ input_name, input_def_id }), "explain_input");
+      execute: async ({ input_name, measure_def_id }) => {
+        return withTimeout(
+          explainInput({ input_name, measure_def_id }),
+          "explain_input",
+        );
       },
     }),
 
@@ -281,7 +482,10 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
         year: z.number().optional().describe("Year to query (e.g. 2023)."),
       }),
       execute: async ({ report_period_id, year }) => {
-        return withTimeout(getServiceAreaBreakdown(user, { report_period_id, year }), "get_service_area_breakdown");
+        return withTimeout(
+          getServiceAreaBreakdown(user, { report_period_id, year }),
+          "get_service_area_breakdown",
+        );
       },
     }),
 
@@ -291,11 +495,25 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
       inputSchema: z.object({
         report_period_id: z.number().optional().describe("Report period ID."),
         year: z.number().optional().describe("Year to query (e.g. 2023)."),
-        group_by: z.enum(["country", "size", "region"]).optional().describe("How to group peers."),
-        group_value: z.string().optional().describe("The specific group value."),
+        group_by: z
+          .enum(["country", "size", "region"])
+          .optional()
+          .describe("How to group peers."),
+        group_value: z
+          .string()
+          .optional()
+          .describe("The specific group value."),
       }),
       execute: async ({ report_period_id, year, group_by, group_value }) => {
-        return withTimeout(getPeerGroupAnalysis(user, { report_period_id, year, group_by, group_value }), "get_peer_group_analysis");
+        return withTimeout(
+          getPeerGroupAnalysis(user, {
+            report_period_id,
+            year,
+            group_by,
+            group_value,
+          }),
+          "get_peer_group_analysis",
+        );
       },
     }),
 
@@ -303,10 +521,16 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
       description:
         "Assess risk across utilities. Computes a risk score (0-100) based on completion gaps, pending rates, approval backlogs, and governance issues. Returns risk profiles sorted by severity with flags explaining each risk.",
       inputSchema: z.object({
-        all_utilities: z.boolean().optional().describe("Set to true to assess risk across all utilities."),
+        all_utilities: z
+          .boolean()
+          .optional()
+          .describe("Set to true to assess risk across all utilities."),
       }),
       execute: async ({ all_utilities }) => {
-        return withTimeout(getRiskAssessment(user, { all_utilities }), "get_risk_assessment");
+        return withTimeout(
+          getRiskAssessment(user, { all_utilities }),
+          "get_risk_assessment",
+        );
       },
     }),
 
@@ -314,11 +538,17 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
       description:
         "Scan KPI values for data quality issues: negative values, values outside expected ranges, and anomalous jumps. Returns flagged values with severity and descriptions.",
       inputSchema: z.object({
-        report_period_id: z.number().optional().describe("Report period ID to scan."),
+        report_period_id: z
+          .number()
+          .optional()
+          .describe("Report period ID to scan."),
         year: z.number().optional().describe("Year to query (e.g. 2023)."),
       }),
       execute: async ({ report_period_id, year }) => {
-        return withTimeout(getDataQualityReport(user, { report_period_id, year }), "get_data_quality_report");
+        return withTimeout(
+          getDataQualityReport(user, { report_period_id, year }),
+          "get_data_quality_report",
+        );
       },
     }),
 
@@ -327,12 +557,24 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
         "Compare two report periods side-by-side. Shows completion rates, KPI counts, pending/entered/reviewed/approved counts, and the delta between periods with direction (improved/declined/stable).",
       inputSchema: z.object({
         period_a_id: z.number().optional().describe("First period ID (older)."),
-        period_b_id: z.number().optional().describe("Second period ID (newer)."),
-        year_a: z.number().optional().describe("First year to compare (e.g. 2022)."),
-        year_b: z.number().optional().describe("Second year to compare (e.g. 2023)."),
+        period_b_id: z
+          .number()
+          .optional()
+          .describe("Second period ID (newer)."),
+        year_a: z
+          .number()
+          .optional()
+          .describe("First year to compare (e.g. 2022)."),
+        year_b: z
+          .number()
+          .optional()
+          .describe("Second year to compare (e.g. 2023)."),
       }),
       execute: async ({ period_a_id, period_b_id, year_a, year_b }) => {
-        return withTimeout(comparePeriods(user, { period_a_id, period_b_id, year_a, year_b }), "compare_periods");
+        return withTimeout(
+          comparePeriods(user, { period_a_id, period_b_id, year_a, year_b }),
+          "compare_periods",
+        );
       },
     }),
 
@@ -340,11 +582,17 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
       description:
         "Detect what changed between the latest two periods. Automatically identifies the KPIs with the biggest value changes (up or down) and ranks them by magnitude.",
       inputSchema: z.object({
-        report_period_id: z.number().optional().describe("Report period ID (defaults to latest)."),
+        report_period_id: z
+          .number()
+          .optional()
+          .describe("Report period ID (defaults to latest)."),
         year: z.number().optional().describe("Year to query (e.g. 2023)."),
       }),
       execute: async ({ report_period_id, year }) => {
-        return withTimeout(getWhatChanged(user, { report_period_id, year }), "get_what_changed");
+        return withTimeout(
+          getWhatChanged(user, { report_period_id, year }),
+          "get_what_changed",
+        );
       },
     }),
 
@@ -354,10 +602,16 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
       inputSchema: z.object({
         report_period_id: z.number().optional().describe("Report period ID."),
         year: z.number().optional().describe("Year to query (e.g. 2023)."),
-        all_utilities: z.boolean().optional().describe("Set to true to check compliance across all utilities."),
+        all_utilities: z
+          .boolean()
+          .optional()
+          .describe("Set to true to check compliance across all utilities."),
       }),
       execute: async ({ report_period_id, year, all_utilities }) => {
-        return withTimeout(getComplianceStatus(user, { report_period_id, year, all_utilities }), "get_compliance_status");
+        return withTimeout(
+          getComplianceStatus(user, { report_period_id, year, all_utilities }),
+          "get_compliance_status",
+        );
       },
     }),
 
@@ -367,11 +621,20 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
       inputSchema: z.object({
         report_period_id: z.number().optional().describe("Report period ID."),
         year: z.number().optional().describe("Year to query (e.g. 2023)."),
-        month: z.number().optional().describe("Month (1-12) for monthly granularity."),
-        all_utilities: z.boolean().optional().describe("Set to true for cross-utility benchmarks."),
+        month: z
+          .number()
+          .optional()
+          .describe("Month (1-12) for monthly granularity."),
+        all_utilities: z
+          .boolean()
+          .optional()
+          .describe("Set to true for cross-utility benchmarks."),
       }),
       execute: async ({ report_period_id, year, month, all_utilities }) => {
-        return withTimeout(getKpiTargets(user, { report_period_id, year, month, all_utilities }), "get_kpi_targets");
+        return withTimeout(
+          getKpiTargets(user, { report_period_id, year, month, all_utilities }),
+          "get_kpi_targets",
+        );
       },
     }),
 
@@ -381,10 +644,16 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
       inputSchema: z.object({
         report_period_id: z.number().optional().describe("Report period ID."),
         year: z.number().optional().describe("Year to query (e.g. 2023)."),
-        month: z.number().optional().describe("Month (1-12) for monthly granularity."),
+        month: z
+          .number()
+          .optional()
+          .describe("Month (1-12) for monthly granularity."),
       }),
       execute: async ({ report_period_id, year, month }) => {
-        return withTimeout(getKpiCorrelation(user, { report_period_id, year, month }), "get_kpi_correlation");
+        return withTimeout(
+          getKpiCorrelation(user, { report_period_id, year, month }),
+          "get_kpi_correlation",
+        );
       },
     }),
 
@@ -392,13 +661,26 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
       description:
         "Compare actual KPI values across multiple utilities. Returns per-utility values with rankings. Use this to compare specific KPI performance across utilities.",
       inputSchema: z.object({
-        kpi_names: z.array(z.string()).describe("KPI names to compare (e.g. ['SAIDI', 'System Loss'])."),
+        kpi_names: z
+          .array(z.string())
+          .describe("KPI names to compare (e.g. ['SAIDI', 'System Loss'])."),
         report_period_id: z.number().optional().describe("Report period ID."),
         year: z.number().optional().describe("Year to query (e.g. 2023)."),
-        month: z.number().optional().describe("Month (1-12) for monthly granularity."),
+        month: z
+          .number()
+          .optional()
+          .describe("Month (1-12) for monthly granularity."),
       }),
       execute: async ({ kpi_names, report_period_id, year, month }) => {
-        return withTimeout(compareKpisAcrossUtilities(user, { kpi_names, report_period_id, year, month }), "compare_kpis_across_utilities");
+        return withTimeout(
+          compareKpisAcrossUtilities(user, {
+            kpi_names,
+            report_period_id,
+            year,
+            month,
+          }),
+          "compare_kpis_across_utilities",
+        );
       },
     }),
 
@@ -408,11 +690,21 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
       inputSchema: z.object({
         title: z.string().describe("Report title."),
         columns: z.array(z.string()).describe("Column headers."),
-        rows: z.array(z.array(z.union([z.string(), z.number()]))).describe("Row data."),
+        rows: z
+          .array(z.array(z.union([z.string(), z.number()])))
+          .describe("Row data."),
         format: z.enum(["csv", "excel"]).describe("Export format."),
       }),
       execute: async ({ title, columns, rows, format }) => {
-        return withTimeout(generateExport(user, { title, columns, rows: rows as Array<Array<string | number>>, format }), "generate_export");
+        return withTimeout(
+          generateExport(user, {
+            title,
+            columns,
+            rows: rows as Array<Array<string | number>>,
+            format,
+          }),
+          "generate_export",
+        );
       },
     }),
 
@@ -438,16 +730,25 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
       description:
         "Get live World Bank country context for a Pacific island nation. Returns income classification (LIC/LMIC/UMIC/HIC), lending category (IDA/IBRD/Blend), key development indicators (GDP per capita, population, electricity access %, renewable energy %, CO2 emissions), and active World Bank-funded projects. Use this to anchor recommendations in the country's economic reality — donor eligibility, concessional financing access, and development stage all depend on these classifications. If no country_code is provided, defaults to the user's own country.",
       inputSchema: z.object({
-        country_code: z.string().optional().describe("ISO alpha-2 country code (e.g. FJ, WS, PG, SB, VU, KI, TO, CK, NR, TV, FM, MH, PW). Omit to use the user's own country."),
+        country_code: z
+          .string()
+          .optional()
+          .describe(
+            "ISO alpha-2 country code (e.g. FJ, WS, PG, SB, VU, KI, TO, CK, NR, TV, FM, MH, PW). Omit to use the user's own country.",
+          ),
       }),
       execute: async ({ country_code }) => {
         const code = country_code ?? (await resolveUserIsoCode(user));
         if (!code) {
           return {
-            error: "Could not determine country. Provide a country_code (ISO alpha-2, e.g. 'FJ' for Fiji) or ensure your account is linked to an organisation with a country.",
+            error:
+              "Could not determine country. Provide a country_code (ISO alpha-2, e.g. 'FJ' for Fiji) or ensure your account is linked to an organisation with a country.",
           };
         }
-        return withTimeout(getWorldBankCountryContext(code), "get_worldbank_context");
+        return withTimeout(
+          getWorldBankCountryContext(code),
+          "get_worldbank_context",
+        );
       },
     }),
 
@@ -465,7 +766,10 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
         "View the AI review queue — flagged conversations that need human review. Shows pending and reviewed entries with status. Admin only (DEV/BMO).",
       inputSchema: z.object({}),
       execute: async () => {
-        return withTimeout(getReviewQueueEntries(user), "get_review_queue_entries");
+        return withTimeout(
+          getReviewQueueEntries(user),
+          "get_review_queue_entries",
+        );
       },
     }),
 
@@ -473,10 +777,15 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
       description:
         "Get step-by-step guidance for entering data for a specific KPI. Tells the user which inputs to fill, where to find them in PRISM, and what values are expected.",
       inputSchema: z.object({
-        kpi_name: z.string().describe("Name of the KPI to get data entry guidance for."),
+        kpi_name: z
+          .string()
+          .describe("Name of the KPI to get data entry guidance for."),
       }),
       execute: async ({ kpi_name }) => {
-        return withTimeout(getGuidedEntry(user, { kpi_name }), "get_guided_entry");
+        return withTimeout(
+          getGuidedEntry(user, { kpi_name }),
+          "get_guided_entry",
+        );
       },
     }),
 
@@ -484,12 +793,25 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
       description:
         "Query a Power BI dataset using DAX. First use discover_datasets to find available datasets, then discover_schema to see tables/columns/measures in a dataset, then run custom DAX queries. Requires Power BI to be configured.",
       inputSchema: z.object({
-        custom_dax: z.string().optional().describe("Custom DAX query. Use EVALUATE table_name or EVALUATE SUMMARIZECOLUMNS(...)."),
-        dataset_id: z.string().optional().describe("Specific dataset ID to query. Use the ID from discover_datasets."),
+        custom_dax: z
+          .string()
+          .optional()
+          .describe(
+            "Custom DAX query. Use EVALUATE table_name or EVALUATE SUMMARIZECOLUMNS(...).",
+          ),
+        dataset_id: z
+          .string()
+          .optional()
+          .describe(
+            "Specific dataset ID to query. Use the ID from discover_datasets.",
+          ),
       }),
       execute: async ({ custom_dax, dataset_id }) => {
         if (pbiDown) return { error: PBI_UNAVAILABLE_MSG };
-        return withTimeout(queryPowerBi({ custom_dax, dataset_id }, user), "query_power_bi");
+        return withTimeout(
+          queryPowerBi({ custom_dax, dataset_id }, user),
+          "query_power_bi",
+        );
       },
     }),
 
@@ -517,12 +839,26 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
       description:
         "Get the full schema of a Power BI dataset. Returns all table names (auto-discovered), measures, and column structure for the first 10 tables. Pass table_names to get columns for specific tables. Requires Power BI to be configured.",
       inputSchema: z.object({
-        dataset_id: z.string().optional().describe("Dataset ID from discover_datasets. Uses default if omitted."),
-        table_names: z.array(z.string()).optional().describe("Specific tables to get column details for. If omitted, columns are discovered for the first 10 tables."),
+        dataset_id: z
+          .string()
+          .optional()
+          .describe(
+            "Dataset ID from discover_datasets. Uses default if omitted.",
+          ),
+        table_names: z
+          .array(z.string())
+          .optional()
+          .describe(
+            "Specific tables to get column details for. If omitted, columns are discovered for the first 10 tables.",
+          ),
       }),
       execute: async ({ dataset_id, table_names }) => {
         if (pbiDown) return { error: PBI_UNAVAILABLE_MSG };
-        return withTimeout(discoverSchema({ dataset_id, table_names }), "discover_schema", PBI_TOOL_TIMEOUT_MS);
+        return withTimeout(
+          discoverSchema({ dataset_id, table_names }),
+          "discover_schema",
+          PBI_TOOL_TIMEOUT_MS,
+        );
       },
     }),
 
@@ -530,16 +866,25 @@ export function createPrismNativeTools(user: CurrentUser, _abortSignal?: AbortSi
       description:
         "Discover the pages in a Power BI report. Lists all pages with names and order. Requires Power BI to be configured.",
       inputSchema: z.object({
-        report_id: z.string().optional().describe("Report ID. Uses the default POWERBI_REPORT_ID if omitted."),
+        report_id: z
+          .string()
+          .optional()
+          .describe(
+            "Report ID. Uses the default POWERBI_REPORT_ID if omitted.",
+          ),
       }),
       execute: async ({ report_id }) => {
         if (!isConfigured()) {
-          logger.warn("[powerbi] Power BI not configured (discover_report)", { userId: user.id });
-          return { data: { pages: [], report_id: report_id || "default" }, error: "Power BI is not configured." } satisfies AiToolResult<ReportData>;
+          logger.warn("[powerbi] Power BI not configured (discover_report)", {
+            userId: user.id,
+          });
+          return {
+            data: { pages: [], report_id: report_id || "default" },
+            error: "Power BI is not configured.",
+          } satisfies AiToolResult<ReportData>;
         }
         return withTimeout(discoverReport({ report_id }), "discover_report");
       },
     }),
-
   };
 }

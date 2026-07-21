@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { sql } from "drizzle-orm";
 import { db } from "@/db/connection";
 
-// Loads AI-drafted dictionary definitions into input_definitions / kpi_definitions.
+// Loads AI-drafted dictionary definitions into measure_definitions  / kpi_definitions.
 // Rules: never overwrite 'curated' rows; overwrite existing 'draft'/empty rows only
 // when --force is passed, otherwise fill blanks only.
 const FORCE = process.argv.includes("--force");
@@ -15,11 +15,17 @@ interface DraftRow {
 }
 
 async function applyMigration() {
-  const ddl = readFileSync("db/migrations/0031_dictionary_definitions.sql", "utf8");
+  const ddl = readFileSync(
+    "db/migrations/0031_dictionary_definitions.sql",
+    "utf8",
+  );
   await db.execute(sql.raw(ddl));
 }
 
-async function loadTable(table: "input_definitions" | "kpi_definitions", file: string) {
+async function loadTable(
+  table: "measure_definitions " | "kpi_definitions",
+  file: string,
+) {
   const rows: DraftRow[] = JSON.parse(readFileSync(`${DIR}/${file}`, "utf8"));
   let updated = 0;
   let skipped = 0;
@@ -38,20 +44,22 @@ async function loadTable(table: "input_definitions" | "kpi_definitions", file: s
     if (count > 0) updated += 1;
     else skipped += 1;
   }
-  console.log(`${table}: ${updated} updated, ${skipped} skipped (of ${rows.length})`);
+  console.log(
+    `${table}: ${updated} updated, ${skipped} skipped (of ${rows.length})`,
+  );
 }
 
 async function main() {
   await applyMigration();
   console.log("migration 0031 applied (idempotent)");
-  await loadTable("input_definitions", "dictionary-inputs.json");
+  await loadTable("measure_definitions ", "dictionary-inputs.json");
   await loadTable("kpi_definitions", "dictionary-kpis.json");
 
   const verify = await db.execute(sql`
     SELECT 'inputs' AS t,
            count(*) FILTER (WHERE definition_status = 'draft')::int AS draft,
            count(*) FILTER (WHERE definition_status = 'curated')::int AS curated
-    FROM input_definitions WHERE is_active
+    FROM measure_definitions  WHERE is_active
     UNION ALL
     SELECT 'kpis',
            count(*) FILTER (WHERE definition_status = 'draft')::int,
@@ -62,4 +70,7 @@ async function main() {
   process.exit(0);
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

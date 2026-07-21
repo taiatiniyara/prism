@@ -2,7 +2,7 @@ import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
 
 import { db } from "@/db/connection";
 import type { FormulaInput } from "@/db/schema/dataEntry";
-import { dataEntries, inputDefinitions } from "@/db/schema/dataEntry";
+import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
 import { managedListItems } from "@/db/schema/managedLists";
 
 import type { KpiWorkerScope } from "./types";
@@ -38,7 +38,7 @@ const toNullableNumber = (value: unknown): number | null => {
 
 const normalizeFormulaInput = (input: FormulaInput): FormulaInput | null => {
   const inputDefId = toNullableNumber(
-    (input as FormulaInput & { input_def_id?: unknown }).input_def_id,
+    (input as FormulaInput & { measure_def_id?: unknown }).measure_def_id,
   );
 
   if (inputDefId == null) {
@@ -51,7 +51,7 @@ const normalizeFormulaInput = (input: FormulaInput): FormulaInput | null => {
 
   return {
     ...input,
-    input_def_id: inputDefId,
+    measure_def_id: inputDefId,
     ...(energyProviderId != null
       ? { energy_provider_id: energyProviderId }
       : {}),
@@ -129,16 +129,16 @@ export const resolveFormulaInputValues = async (
   }
 
   const inputDefIds = [
-    ...new Set(formulaInputs.map((item) => item.input_def_id)),
+    ...new Set(formulaInputs.map((item) => item.measure_def_id)),
   ];
 
   const inputDefs = await db
     .select({
-      id: inputDefinitions.id,
-      aggLevelId: inputDefinitions.agg_level_id,
+      id: measureDefinitions.id,
+      aggLevelId: measureDefinitions.agg_level_id,
     })
-    .from(inputDefinitions)
-    .where(inArray(inputDefinitions.id, inputDefIds));
+    .from(measureDefinitions)
+    .where(inArray(measureDefinitions.id, inputDefIds));
 
   const aggLevelMap = new Map<number, number | null>(
     inputDefs.map((row) => [row.id, row.aggLevelId]),
@@ -148,7 +148,7 @@ export const resolveFormulaInputValues = async (
     ReturnType<typeof eq> | ReturnType<typeof isNull>
   > = [
     eq(dataEntries.report_period_id, request.scope.reportPeriodId),
-    inArray(dataEntries.input_def_id, inputDefIds),
+    inArray(dataEntries.measure_def_id, inputDefIds),
     eq(dataEntries.is_deleted, false),
     eq(dataEntries.is_relevant, true),
   ];
@@ -197,7 +197,7 @@ export const resolveFormulaInputValues = async (
 
   const rows = await db
     .select({
-      inputDefId: dataEntries.input_def_id,
+      inputDefId: dataEntries.measure_def_id,
       value: dataEntries.value,
       isDeleted: dataEntries.is_deleted,
       isRelevant: dataEntries.is_relevant,
@@ -250,7 +250,7 @@ export const resolveFormulaInputValues = async (
   const missingVariables: string[] = [];
 
   for (const formulaInput of formulaInputs) {
-    const sourceRows = byInputDef.get(formulaInput.input_def_id) ?? [];
+    const sourceRows = byInputDef.get(formulaInput.measure_def_id) ?? [];
     const effectiveEnergyProviderId = formulaInput.energy_provider_id ?? null;
     const effectiveEnergyTypeId = formulaInput.energy_type_id ?? null;
     const effectiveEnergySourceId = formulaInput.energy_source_id ?? null;
@@ -269,7 +269,8 @@ export const resolveFormulaInputValues = async (
           effectiveEnergySourceId,
         ),
     );
-    const inputAggLevelId = aggLevelMap.get(formulaInput.input_def_id) ?? null;
+    const inputAggLevelId =
+      aggLevelMap.get(formulaInput.measure_def_id) ?? null;
 
     if (shouldRollup(request.kpiAggLevelId, inputAggLevelId)) {
       const rollup = sumRollupValues(candidates);

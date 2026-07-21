@@ -1,17 +1,11 @@
 "use server";
 
 import { db } from "@/db/connection";
-import {
-  dataEntries,
-  inputDefinitions,
-} from "@/db/schema/dataEntry";
+import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { organisations } from "@/db/schema/utility";
 import { managedListItems } from "@/db/schema/managedLists";
-import {
-  getCurrentUser,
-  hasGlobalUtilityAccess,
-} from "@/lib/user.service";
+import { getCurrentUser, hasGlobalUtilityAccess } from "@/lib/user.service";
 import { formatReportPeriodDisplay } from "@/lib/formatters";
 import { and, eq } from "drizzle-orm";
 
@@ -46,7 +40,10 @@ export async function GetReviewFeedback(): Promise<ReviewFeedbackRow[]> {
     })
     .from(reportPeriods)
     .leftJoin(organisations, eq(reportPeriods.utility_id, organisations.id))
-    .leftJoin(managedListItems, eq(reportPeriods.report_type_id, managedListItems.id))
+    .leftJoin(
+      managedListItems,
+      eq(reportPeriods.report_type_id, managedListItems.id),
+    )
     .orderBy(reportPeriods.report_date);
 
   const results: ReviewFeedbackRow[] = [];
@@ -55,7 +52,7 @@ export async function GetReviewFeedback(): Promise<ReviewFeedbackRow[]> {
     const entries = await db
       .select({
         id: dataEntries.id,
-        input_def_id: dataEntries.input_def_id,
+        measure_def_id: dataEntries.measure_def_id,
         value: dataEntries.value,
         comments: dataEntries.comments,
       })
@@ -73,11 +70,11 @@ export async function GetReviewFeedback(): Promise<ReviewFeedbackRow[]> {
 
       const [inputDef] = await db
         .select({
-          name: inputDefinitions.name,
-          unit_id: inputDefinitions.unit_id,
+          name: measureDefinitions.name,
+          unit_id: measureDefinitions.unit_id,
         })
-        .from(inputDefinitions)
-        .where(eq(inputDefinitions.id, entry.input_def_id))
+        .from(measureDefinitions)
+        .where(eq(measureDefinitions.id, entry.measure_def_id))
         .limit(1);
 
       const unitName = inputDef?.unit_id
@@ -91,10 +88,13 @@ export async function GetReviewFeedback(): Promise<ReviewFeedbackRow[]> {
 
       results.push({
         dataEntryId: entry.id,
-        inputName: inputDef?.name ?? `ID ${entry.input_def_id}`,
+        inputName: inputDef?.name ?? `ID ${entry.measure_def_id}`,
         unitName,
         value: entry.value,
-        reportPeriodLabel: formatReportPeriodDisplay(period.report_date, period.report_type_name),
+        reportPeriodLabel: formatReportPeriodDisplay(
+          period.report_date,
+          period.report_type_name,
+        ),
         utilityName: period.utility_acronym ?? period.utility_name ?? "",
         comments: entry.comments.map((c) => ({
           comment: c.comment,

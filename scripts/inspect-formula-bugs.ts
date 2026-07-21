@@ -21,14 +21,16 @@ async function main() {
     order by k.name
   `);
   for (const r of kpis.rows) {
-    console.log(`\n[${r.id}] ${r.name} | unit=${r.unit} | level=${r.agg_level} | active=${r.is_active}`);
+    console.log(
+      `\n[${r.id}] ${r.name} | unit=${r.unit} | level=${r.agg_level} | active=${r.is_active}`,
+    );
     console.log(`  formula: ${r.formula}`);
     console.log(`  inputs:  ${JSON.stringify(r.formula_inputs)}`);
   }
 
   const inputs = await pool.query(`
     select id, name, variable_name, is_active
-    from input_definitions
+    from measure_definitions 
     where is_active = true and (
       variable_name ilike '%customer%' or variable_name ilike '%employees_male%'
       or variable_name ilike '%employees_female%' or variable_name ilike '%hours%'

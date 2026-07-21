@@ -14,7 +14,7 @@ async function main() {
            count(*) filter (where energy_source_id is not null)::int as with_source,
            bool_and(value ~ '^[0-9., ]+$')::text as all_numeric
     from data_entries
-    where input_def_id = 153 and is_deleted = false
+    where measure_def_id = 153 and is_deleted = false
       and value is not null and trim(value) <> ''
   `);
   console.log("Input 153 row shape:");
@@ -22,20 +22,20 @@ async function main() {
 
   const overlap = await pool.query(`
     with ev as (
-      select report_period_id, service_area_id, input_def_id
+      select report_period_id, service_area_id, measure_def_id
       from data_entries
-      where input_def_id in (1800, 1803) and is_deleted = false
+      where measure_def_id in (1800, 1803) and is_deleted = false
         and value is not null and trim(value) <> ''
       group by 1, 2, 3
     ),
     cust as (
       select report_period_id, service_area_id
       from data_entries
-      where input_def_id = 153 and is_deleted = false
+      where measure_def_id = 153 and is_deleted = false
         and value is not null and trim(value) <> ''
       group by 1, 2
     )
-    select ev.input_def_id,
+    select ev.measure_def_id,
            count(*)::int as event_scopes,
            count(*) filter (where cust.report_period_id is not null)::int as with_customers_same_scope,
            count(*) filter (where cust2.report_period_id is not null)::int as with_customers_same_period_null_sa
@@ -44,7 +44,7 @@ async function main() {
                   and cust.service_area_id is not distinct from ev.service_area_id
     left join cust cust2 on cust2.report_period_id = ev.report_period_id
                   and cust2.service_area_id is null
-    group by ev.input_def_id
+    group by ev.measure_def_id
   `);
   console.log("Interruption-event scopes with a customers value available:");
   console.table(overlap.rows);
@@ -55,7 +55,7 @@ async function main() {
     join report_periods rp on rp.id = de.report_period_id
     left join organisations o on o.id = rp.utility_id
     left join service_areas sa on sa.id = de.service_area_id
-    where de.input_def_id = 153 and de.is_deleted = false
+    where de.measure_def_id = 153 and de.is_deleted = false
       and de.value is not null and trim(de.value) <> ''
     order by rp.report_date desc limit 6
   `);

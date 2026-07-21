@@ -20,7 +20,7 @@ const ALL_GEN_TAG = {
 };
 
 const CUSTOMERS = {
-  input_def_id: 1501,
+  measure_def_id: 1501,
   variable_name: "electricity_customers_metered_connections",
   ...ALL_GEN_TAG,
 };
@@ -42,7 +42,7 @@ const UPDATES: DefUpdate[] = [
       "total_planned_interruptions_events / electricity_customers_metered_connections",
     inputs: [
       {
-        input_def_id: 1800,
+        measure_def_id: 1800,
         variable_name: "total_planned_interruptions_events",
         ...ALL_GEN_TAG,
       },
@@ -57,7 +57,7 @@ const UPDATES: DefUpdate[] = [
       "total_unplanned_interruptions_events / electricity_customers_metered_connections",
     inputs: [
       {
-        input_def_id: 1803,
+        measure_def_id: 1803,
         variable_name: "total_unplanned_interruptions_events",
         ...ALL_GEN_TAG,
       },
@@ -72,7 +72,7 @@ const UPDATES: DefUpdate[] = [
       "total_planned_interruptions_customer_duration / electricity_customers_metered_connections",
     inputs: [
       {
-        input_def_id: 1802,
+        measure_def_id: 1802,
         variable_name: "total_planned_interruptions_customer_duration",
       },
       CUSTOMERS,
@@ -81,16 +81,16 @@ const UPDATES: DefUpdate[] = [
   {
     kpiId: 106,
     name: "Engine Oil Consumption — bindings tagged Diesel(46) but oil/generation rows are tagged All GEN(40); retag so the KPI can resolve",
-    guardSql: `formula = 'electricity_generated / oil_for_generators' and formula_inputs::jsonb = '[{"input_def_id":1652,"variable_name":"electricity_generated","energy_provider_id":21,"energy_type_id":null,"energy_source_id":46},{"input_def_id":1659,"variable_name":"oil_for_generators","energy_provider_id":21,"energy_type_id":null,"energy_source_id":46}]'::jsonb`,
+    guardSql: `formula = 'electricity_generated / oil_for_generators' and formula_inputs::jsonb = '[{"measure_def_id":1652,"variable_name":"electricity_generated","energy_provider_id":21,"energy_type_id":null,"energy_source_id":46},{"measure_def_id":1659,"variable_name":"oil_for_generators","energy_provider_id":21,"energy_type_id":null,"energy_source_id":46}]'::jsonb`,
     formula: "electricity_generated / oil_for_generators",
     inputs: [
       {
-        input_def_id: 1652,
+        measure_def_id: 1652,
         variable_name: "electricity_generated",
         ...ALL_GEN_TAG,
       },
       {
-        input_def_id: 1659,
+        measure_def_id: 1659,
         variable_name: "oil_for_generators",
         ...ALL_GEN_TAG,
       },

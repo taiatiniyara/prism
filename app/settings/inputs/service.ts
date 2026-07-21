@@ -4,10 +4,10 @@ import { DataTableFormResponse } from "@/components/tables/data-table-create-for
 import { db } from "@/db/connection";
 import {
   FormulaInput,
-  InputDefinition,
-  InputDefinitionAlternativeNames,
+  MeasureDefinition,
+  MeasureDefinitionAlternativeNames,
   inputDlDefMappings,
-  inputDefinitions,
+  measureDefinitions,
 } from "@/db/schema/dataEntry";
 import { managedListItems, managedLists } from "@/db/schema/managedLists";
 import { createVariableName } from "@/lib/formatters";
@@ -49,11 +49,11 @@ export interface SaveInputFormulaPayload {
   formulaInputs: FormulaInput[];
 }
 
-interface CreateInputDefinitionPayload {
+interface CreateMeasureDefinitionPayload {
   name: string;
   sort_order?: string | number | null;
   description?: string | null;
-  alternative_names?: InputDefinitionAlternativeNames | string | null;
+  alternative_names?: MeasureDefinitionAlternativeNames | string | null;
   data_type_id: string | number;
   category_id: string | number;
   subcategory_id: string | number;
@@ -61,12 +61,12 @@ interface CreateInputDefinitionPayload {
   utility_service_id: number | null;
 }
 
-interface UpdateInputDefinitionPayload {
+interface UpdateMeasureDefinitionPayload {
   id: string | number;
   name?: string;
   sort_order?: string | number;
   description?: string | null;
-  alternative_names?: InputDefinitionAlternativeNames | string | null;
+  alternative_names?: MeasureDefinitionAlternativeNames | string | null;
   data_type_id?: string | number;
   category_id?: string | number;
   subcategory_id?: string | number;
@@ -76,8 +76,8 @@ interface UpdateInputDefinitionPayload {
 }
 
 const parseAlternativeNames = (
-  raw: InputDefinitionAlternativeNames | string | null | undefined,
-): InputDefinitionAlternativeNames | null => {
+  raw: MeasureDefinitionAlternativeNames | string | null | undefined,
+): MeasureDefinitionAlternativeNames | null => {
   if (raw == null) {
     return null;
   }
@@ -147,14 +147,14 @@ const parseAlternativeNames = (
   return Object.fromEntries(normalizedEntries);
 };
 
-export async function GetAllInputDefinitions(): Promise<InputDefinition[]> {
+export async function GetAllMeasureDefinitions(): Promise<MeasureDefinition[]> {
   const ml = await GetAllManagedListItems();
   const managedListNamesById = buildManagedListNameMap(ml);
   const list = await db
     .select()
-    .from(inputDefinitions)
-    .orderBy(inputDefinitions.name);
-  const returnList: InputDefinition[] = list.map((item) => ({
+    .from(measureDefinitions)
+    .orderBy(measureDefinitions.name);
+  const returnList: MeasureDefinition[] = list.map((item) => ({
     ...item,
     category:
       resolveManagedListName(managedListNamesById, item.category_id, null) ||
@@ -172,9 +172,9 @@ export async function GetAllInputDefinitions(): Promise<InputDefinition[]> {
   return returnList;
 }
 
-export async function CreateInputDefinition(
-  data: CreateInputDefinitionPayload,
-): Promise<DataTableFormResponse<InputDefinition>> {
+export async function CreateMeasureDefinition(
+  data: CreateMeasureDefinitionPayload,
+): Promise<DataTableFormResponse<MeasureDefinition>> {
   const name = data.name?.trim();
   if (!name) {
     return {
@@ -184,7 +184,7 @@ export async function CreateInputDefinition(
   }
 
   const toNumber = (value: string | number) => Number(value);
-  let alternativeNames: InputDefinitionAlternativeNames | null = null;
+  let alternativeNames: MeasureDefinitionAlternativeNames | null = null;
 
   try {
     alternativeNames = parseAlternativeNames(data.alternative_names);
@@ -228,9 +228,9 @@ export async function CreateInputDefinition(
   }
 
   const existing = await db
-    .select({ id: inputDefinitions.id })
-    .from(inputDefinitions)
-    .where(ilike(inputDefinitions.name, name))
+    .select({ id: measureDefinitions.id })
+    .from(measureDefinitions)
+    .where(ilike(measureDefinitions.name, name))
     .limit(1);
 
   if (existing.length > 0) {
@@ -241,7 +241,7 @@ export async function CreateInputDefinition(
   }
 
   const [result] = await db
-    .insert(inputDefinitions)
+    .insert(measureDefinitions)
     .values(payload)
     .returning();
 
@@ -254,9 +254,9 @@ export async function CreateInputDefinition(
   };
 }
 
-export async function UpdateInputDefinition(
-  data: Partial<UpdateInputDefinitionPayload>,
-): Promise<DataTableFormResponse<InputDefinition>> {
+export async function UpdateMeasureDefinition(
+  data: Partial<UpdateMeasureDefinitionPayload>,
+): Promise<DataTableFormResponse<MeasureDefinition>> {
   const id = Number(data.id);
   if (Number.isNaN(id)) {
     return {
@@ -265,7 +265,7 @@ export async function UpdateInputDefinition(
     };
   }
 
-  const patch: Partial<InputDefinition> = {};
+  const patch: Partial<MeasureDefinition> = {};
 
   if (typeof data.name === "string") {
     const trimmedName = data.name.trim();
@@ -277,9 +277,9 @@ export async function UpdateInputDefinition(
     }
 
     const duplicate = await db
-      .select({ id: inputDefinitions.id })
-      .from(inputDefinitions)
-      .where(ilike(inputDefinitions.name, trimmedName));
+      .select({ id: measureDefinitions.id })
+      .from(measureDefinitions)
+      .where(ilike(measureDefinitions.name, trimmedName));
 
     if (duplicate.some((item) => item.id !== id)) {
       return {
@@ -309,7 +309,7 @@ export async function UpdateInputDefinition(
 
   const assignNumericField = (
     key: keyof Pick<
-      UpdateInputDefinitionPayload,
+      UpdateMeasureDefinitionPayload,
       | "data_type_id"
       | "category_id"
       | "subcategory_id"
@@ -354,9 +354,9 @@ export async function UpdateInputDefinition(
   }
 
   const [result] = await db
-    .update(inputDefinitions)
+    .update(measureDefinitions)
     .set(patch)
-    .where(eq(inputDefinitions.id, id))
+    .where(eq(measureDefinitions.id, id))
     .returning();
 
   revalidatePath("/settings/inputs");
@@ -368,7 +368,7 @@ export async function UpdateInputDefinition(
   };
 }
 
-export interface ExcelInputDefinition {
+export interface ExcelMeasureDefinition {
   agg_level_id: number;
   data_type_id: number;
   description: string;
@@ -395,10 +395,10 @@ export interface ExcelInputDefinition {
   variable_name: string;
 }
 
-export async function UpdateInputDefinitionFromExcel(
-  data: ExcelInputDefinition[],
+export async function UpdateMeasureDefinitionFromExcel(
+  data: ExcelMeasureDefinition[],
 ) {
-  const existing = await db.select().from(inputDefinitions);
+  const existing = await db.select().from(measureDefinitions);
   const filteredExisting = data.filter(
     (item) =>
       !existing.some(
@@ -407,7 +407,7 @@ export async function UpdateInputDefinitionFromExcel(
           e.name.toLowerCase() === item.name.toLowerCase(),
       ),
   );
-  const createList: InputDefinition[] = filteredExisting.map((item) => ({
+  const createList: MeasureDefinition[] = filteredExisting.map((item) => ({
     id: item.input_id,
     name: item.name,
     sort_order: 0,
@@ -443,7 +443,7 @@ export async function UpdateInputDefinitionFromExcel(
   }));
   if (createList.length > 0) {
     try {
-      await db.insert(inputDefinitions).values(createList);
+      await db.insert(measureDefinitions).values(createList);
     } catch (error) {
       console.error("Error inserting input definitions from Excel:", error);
       throw new Error("Failed to insert input definitions from Excel");
@@ -459,17 +459,17 @@ export async function GetInputFormulaBuilderData(): Promise<InputFormulaBuilderD
 
   const inputs = await db
     .select({
-      id: inputDefinitions.id,
-      name: inputDefinitions.name,
-      description: inputDefinitions.description,
-      variable_name: inputDefinitions.variable_name,
-      unitId: inputDefinitions.unit_id,
-      formula: inputDefinitions.formula,
-      formula_inputs: inputDefinitions.formula_inputs,
-      is_active: inputDefinitions.is_active,
+      id: measureDefinitions.id,
+      name: measureDefinitions.name,
+      description: measureDefinitions.description,
+      variable_name: measureDefinitions.variable_name,
+      unitId: measureDefinitions.unit_id,
+      formula: measureDefinitions.formula,
+      formula_inputs: measureDefinitions.formula_inputs,
+      is_active: measureDefinitions.is_active,
     })
-    .from(inputDefinitions)
-    .orderBy(asc(inputDefinitions.name));
+    .from(measureDefinitions)
+    .orderBy(asc(measureDefinitions.name));
 
   const energyProviderRows = await db
     .select({
@@ -557,7 +557,7 @@ export async function SaveInputFormula(payload: SaveInputFormulaPayload) {
   }
 
   const containsSelfReference = payload.formulaInputs.some(
-    (item) => item.input_def_id === payload.inputId,
+    (item) => item.measure_def_id === payload.inputId,
   );
   if (containsSelfReference) {
     return {
@@ -568,13 +568,13 @@ export async function SaveInputFormula(payload: SaveInputFormulaPayload) {
 
   try {
     await db
-      .update(inputDefinitions)
+      .update(measureDefinitions)
       .set({
         formula,
         formula_inputs: payload.formulaInputs,
         is_calculated: true,
       })
-      .where(eq(inputDefinitions.id, payload.inputId));
+      .where(eq(measureDefinitions.id, payload.inputId));
   } catch (error) {
     console.error("Failed to save input formula:", error);
     return {
@@ -590,11 +590,11 @@ export async function SaveInputFormula(payload: SaveInputFormulaPayload) {
 
 export async function getInputsBySubcategory(
   subcategoryId: number,
-): Promise<InputDefinition[]> {
+): Promise<MeasureDefinition[]> {
   const inputs = await db
     .select()
-    .from(inputDefinitions)
-    .where(eq(inputDefinitions.subcategory_id, subcategoryId));
+    .from(measureDefinitions)
+    .where(eq(measureDefinitions.subcategory_id, subcategoryId));
   return inputs;
 }
 
@@ -688,7 +688,7 @@ const confidenceFromScore = (
 };
 
 function scoreMapping(
-  input: InputDefinition,
+  input: MeasureDefinition,
   training: TrainingDataLabelDefinition,
 ): InputDlMapCandidate {
   const reasons: string[] = [];
@@ -732,9 +732,7 @@ function scoreMapping(
     );
 
     if (inputWords.size > 0 && trainingWords.size > 0) {
-      const intersection = [...inputWords].filter((w) =>
-        trainingWords.has(w),
-      );
+      const intersection = [...inputWords].filter((w) => trainingWords.has(w));
       const union = new Set([...inputWords, ...trainingWords]);
       const jaccard = intersection.length / union.size;
 
@@ -827,7 +825,9 @@ async function fetchTrainingDataLabelDefinitions() {
   }
 
   const rawRows = (await response.json()) as unknown[];
-  const rows: TrainingDataLabelDefinition[] = (Array.isArray(rawRows) ? rawRows : [])
+  const rows: TrainingDataLabelDefinition[] = (
+    Array.isArray(rawRows) ? rawRows : []
+  )
     .filter((r): r is unknown[] => Array.isArray(r))
     .map((r) => ({
       id: Number(r[1]) || 0,
@@ -853,7 +853,7 @@ async function fetchSavedInputDlMappings(): Promise<SavedInputDlMapping[]> {
   try {
     const rows = await db.select().from(inputDlDefMappings);
     return rows.map((row) => ({
-      inputDefId: row.input_def_id,
+      inputDefId: row.measure_def_id,
       trainingDlDefId: row.training_dl_def_id,
       trainingDlLegacyId: row.training_dl_legacy_id,
       trainingSourceId: row.training_source_id,
@@ -878,7 +878,7 @@ async function fetchSavedInputDlMappings(): Promise<SavedInputDlMapping[]> {
 
 export async function BuildInputDlMappingCandidates(): Promise<InputDlMapBuilderResult> {
   const [inputs, savedMappings] = await Promise.all([
-    db.select().from(inputDefinitions).orderBy(asc(inputDefinitions.id)),
+    db.select().from(measureDefinitions).orderBy(asc(measureDefinitions.id)),
     fetchSavedInputDlMappings(),
   ]);
 
@@ -902,7 +902,10 @@ export async function BuildInputDlMappingCandidates(): Promise<InputDlMapBuilder
       baseUrl,
       endpoint,
       data: [],
-      error: error instanceof Error ? error.message : "Unknown error fetching training labels",
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unknown error fetching training labels",
     };
   }
 
@@ -1031,9 +1034,9 @@ export async function SaveInputDlMappings(
 
   const inputIds = items.map((item) => item.inputId);
   const existingInputs = await db
-    .select({ id: inputDefinitions.id })
-    .from(inputDefinitions)
-    .where(inArray(inputDefinitions.id, inputIds));
+    .select({ id: measureDefinitions.id })
+    .from(measureDefinitions)
+    .where(inArray(measureDefinitions.id, inputIds));
 
   const existingSet = new Set(existingInputs.map((item) => item.id));
   const validItems = items.filter((item) => existingSet.has(item.inputId));
@@ -1085,7 +1088,7 @@ export async function SaveInputDlMappings(
         const inserted = await tx
           .insert(inputDlDefMappings)
           .values({
-            input_def_id: item.inputId,
+            measure_def_id: item.inputId,
             training_dl_def_id: mapped.trainingDlDefId,
             training_dl_legacy_id: mapped.trainingDlLegacyId,
             training_source_id: mapped.trainingSourceId,
@@ -1101,7 +1104,7 @@ export async function SaveInputDlMappings(
           })
           .onConflictDoNothing({
             target: [
-              inputDlDefMappings.input_def_id,
+              inputDlDefMappings.measure_def_id,
               inputDlDefMappings.training_dl_def_id,
             ],
           })
@@ -1155,7 +1158,7 @@ export async function AutoAcceptHighInputDlMappings(): Promise<{
       const inserted = await tx
         .insert(inputDlDefMappings)
         .values({
-          input_def_id: item.inputId,
+          measure_def_id: item.inputId,
           training_dl_def_id: candidate.trainingDlDefId,
           training_dl_legacy_id: candidate.trainingDlLegacyId,
           training_source_id: candidate.trainingSourceId,
@@ -1171,7 +1174,7 @@ export async function AutoAcceptHighInputDlMappings(): Promise<{
         })
         .onConflictDoNothing({
           target: [
-            inputDlDefMappings.input_def_id,
+            inputDlDefMappings.measure_def_id,
             inputDlDefMappings.training_dl_def_id,
           ],
         })

@@ -1,4 +1,4 @@
--- Medallion Phase 2c: Collapse 515 input_definitions → ~55-65 measure_definitions
+-- Medallion Phase 2c: Collapse 515 measure_definitions  → ~55-65 measure_definitions
 -- Creates the migration mapping infrastructure.
 -- The actual measure family mapping data comes from the p1_dl_def_ids_raw.xlsx classifier.
 
@@ -7,8 +7,8 @@ BEGIN;
 -- 1. Create migration mapping table
 CREATE TABLE IF NOT EXISTS measure_def_migration_map (
   id SERIAL PRIMARY KEY,
-  legacy_input_def_id INTEGER NOT NULL REFERENCES input_definitions(id) ON DELETE CASCADE,
-  new_measure_id INTEGER NOT NULL REFERENCES input_definitions(id) ON DELETE CASCADE,
+  legacy_input_def_id INTEGER NOT NULL REFERENCES measure_definitions (id) ON DELETE CASCADE,
+  new_measure_id INTEGER NOT NULL REFERENCES measure_definitions (id) ON DELETE CASCADE,
   energy_provider_id INTEGER REFERENCES managed_list_items(id),
   energy_type_id INTEGER REFERENCES managed_list_items(id),
   energy_source_id INTEGER REFERENCES managed_list_items(id),
@@ -25,7 +25,7 @@ CREATE TABLE IF NOT EXISTS measure_def_migration_map (
 
 -- 2. Create a "Measure Category" marker to distinguish measures from input defs
 --    We use is_aggregated as a temporary flag, or add a new column.
---    For now, create measures as new rows in input_definitions that represent
+--    For now, create measures as new rows in measure_definitions  that represent
 --    the collapsed/"pure" measure (no dimension words in name).
 
 -- 3. Create a function to insert a measure from an input definition template
@@ -46,7 +46,7 @@ CREATE OR REPLACE FUNCTION create_measure_from_template(
 DECLARE
   new_id INTEGER;
 BEGIN
-  INSERT INTO input_definitions (
+  INSERT INTO measure_definitions  (
     name,
     variable_name,
     definition,
@@ -153,7 +153,7 @@ SELECT
   COUNT(*) FILTER (WHERE NOT mm.is_mechanical) AS judgment_maps,
   STRING_AGG(DISTINCT mm.confidence, ', ') AS confidence_levels
 FROM measure_def_migration_map mm
-INNER JOIN input_definitions idf ON idf.id = mm.new_measure_id
+INNER JOIN measure_definitions  idf ON idf.id = mm.new_measure_id
 GROUP BY mm.new_measure_id, idf.name
 ORDER BY legacy_defs_mapped DESC;
 

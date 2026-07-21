@@ -1,7 +1,7 @@
 import { db } from "@/db/connection";
 import { roles, user } from "@/db/schema/auth-schema";
 import { countries, subRegions } from "@/db/schema/country";
-import { dataEntries, inputDefinitions } from "@/db/schema/dataEntry";
+import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
 import { kpiDefinitions } from "@/db/schema/kpi";
 import { managedListItems, managedLists } from "@/db/schema/managedLists";
 import { reportPeriods } from "@/db/schema/reportPeriods";
@@ -22,7 +22,7 @@ export const SUPPORTED_TABLES = [
   "service_areas",
   "report_periods",
   "energy_resources",
-  "input_definitions",
+  "measure_definitions ",
   "kpi_definitions",
   "data_entries",
 ] as const;
@@ -55,7 +55,8 @@ export const parseOffset = (raw: string | null) => {
 };
 
 export const assertMigrationKey = (request: Request) => {
-  const required = process.env.PRISM_TRAINING_MIGRATION_KEY ?? process.env.MIGRATION_API_KEY;
+  const required =
+    process.env.PRISM_TRAINING_MIGRATION_KEY ?? process.env.MIGRATION_API_KEY;
   if (!required) {
     throw new Error("MIGRATION_API_KEY is not configured on this server.");
   }
@@ -110,8 +111,8 @@ const getRows = async (
     return db.select().from(energyResources).limit(limit).offset(offset);
   }
 
-  if (table === "input_definitions") {
-    return db.select().from(inputDefinitions).limit(limit).offset(offset);
+  if (table === "measure_definitions ") {
+    return db.select().from(measureDefinitions).limit(limit).offset(offset);
   }
 
   if (table === "kpi_definitions") {

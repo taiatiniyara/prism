@@ -11,7 +11,7 @@ async function main() {
       count(*) FILTER (WHERE variable_name IS NOT NULL AND length(trim(variable_name)) > 0)::int AS has_variable_name,
       count(*) FILTER (WHERE alternative_names IS NOT NULL AND alternative_names::text NOT IN ('{}', 'null'))::int AS has_alt_names,
       round(avg(length(trim(description))) FILTER (WHERE description IS NOT NULL AND length(trim(description)) > 0))::int AS avg_desc_len
-    FROM input_definitions
+    FROM measure_definitions 
   `);
 
   const kpiStats = await db.execute(sql`
@@ -33,7 +33,7 @@ async function main() {
   const inputSamples = await db.execute(sql`
     SELECT i.id, i.name, i.variable_name, left(coalesce(i.description,''), 80) AS description,
            c.name AS category, u.name AS unit
-    FROM input_definitions i
+    FROM measure_definitions  i
     LEFT JOIN managed_list_items c ON c.id = i.category_id
     LEFT JOIN managed_list_items u ON u.id = i.unit_id
     WHERE i.is_active
@@ -56,7 +56,7 @@ async function main() {
       count(*) FILTER (WHERE variable_name ~ '[A-Z]')::int AS has_uppercase,
       count(*) FILTER (WHERE variable_name ~ '\s')::int AS has_spaces,
       count(*) FILTER (WHERE variable_name IS NULL OR trim(variable_name) = '')::int AS missing
-    FROM input_definitions WHERE is_active
+    FROM measure_definitions  WHERE is_active
   `);
 
   console.log("=== INPUT DEFINITIONS ===");
@@ -72,4 +72,7 @@ async function main() {
   process.exit(0);
 }
 
-main().catch((e) => { console.error(e); process.exit(1); });
+main().catch((e) => {
+  console.error(e);
+  process.exit(1);
+});

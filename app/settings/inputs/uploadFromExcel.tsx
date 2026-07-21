@@ -1,11 +1,11 @@
 "use client";
 import {
-  ExcelInputDefinition,
-  UpdateInputDefinitionFromExcel,
+  ExcelMeasureDefinition,
+  UpdateMeasureDefinitionFromExcel,
 } from "./service";
 import ExcelUploadForm from "@/components/settings/excel-upload-form";
 
-function parseExcelInputRow(row: Record<string, unknown>): ExcelInputDefinition {
+function parseExcelInputRow(row: Record<string, unknown>): ExcelMeasureDefinition {
   return {
     agg_level_id: Number(row.agg_level_id ?? 0),
     data_type_id: Number(row.data_type_id ?? 0),
@@ -40,7 +40,7 @@ export default function UploadInputsFromExcel() {
       title="Upload Inputs from Excel"
       sheetName="Input Source"
       onUpload={async (rows) => {
-        await UpdateInputDefinitionFromExcel(rows.map(parseExcelInputRow));
+        await UpdateMeasureDefinitionFromExcel(rows.map(parseExcelInputRow));
         return {
           success: true,
           message: "Inputs updated successfully",

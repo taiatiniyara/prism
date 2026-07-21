@@ -9,7 +9,7 @@ export async function GET(request: Request) {
 
     const result = await db.execute(sql`
       SELECT i.*, cat.name AS category_name, sub.name AS subcategory_name
-      FROM input_definitions i
+      FROM measure_definitions  i
       LEFT JOIN managed_list_items cat ON i.category_id = cat.id
       LEFT JOIN managed_list_items sub ON i.subcategory_id = sub.id
       ORDER BY i.id

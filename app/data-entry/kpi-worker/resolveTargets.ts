@@ -81,7 +81,7 @@ const toNullableNumber = (value: unknown): number | null => {
 
 const normalizeFormulaInput = (input: FormulaInput): FormulaInput | null => {
   const inputDefId = toNullableNumber(
-    (input as FormulaInput & { input_def_id?: unknown }).input_def_id,
+    (input as FormulaInput & { measure_def_id?: unknown }).measure_def_id,
   );
 
   if (inputDefId == null) {
@@ -94,7 +94,7 @@ const normalizeFormulaInput = (input: FormulaInput): FormulaInput | null => {
 
   return {
     ...input,
-    input_def_id: inputDefId,
+    measure_def_id: inputDefId,
     ...(energyProviderId != null
       ? { energy_provider_id: energyProviderId }
       : {}),
@@ -121,7 +121,7 @@ export const filterAffectedKpiTargets = (
         return false;
       }
 
-      return formulaInputs.some((input) => input.input_def_id === inputDefId);
+      return formulaInputs.some((input) => input.measure_def_id === inputDefId);
     })
     .map((definition) => {
       const formulaInputs = (definition.formula_inputs ?? [])

@@ -1,13 +1,13 @@
 import { and, eq, isNotNull, ne, sql } from "drizzle-orm";
 
 import { db } from "@/db/connection";
-import { inputDefinitions } from "@/db/schema/dataEntry";
+import { measureDefinitions } from "@/db/schema/dataEntry";
 
 export interface AggregatedFormulaTarget {
   inputDefId: number;
   variableName?: string | null;
   formula: string;
-  formulaInputs: Array<{ input_def_id: number; variable_name: string }>;
+  formulaInputs: Array<{ measure_def_id: number; variable_name: string }>;
 }
 
 interface FormulaInputCandidate {
@@ -24,13 +24,13 @@ const isIdentifier = (value: string): boolean =>
 export const inferFormulaInputs = (
   formula: string,
   candidates: FormulaInputCandidate[],
-): Array<{ input_def_id: number; variable_name: string }> => {
+): Array<{ measure_def_id: number; variable_name: string }> => {
   if (!formula.trim() || candidates.length === 0) {
     return [];
   }
 
   const occupiedRanges: Array<[number, number]> = [];
-  const inferred: Array<{ input_def_id: number; variable_name: string }> = [];
+  const inferred: Array<{ measure_def_id: number; variable_name: string }> = [];
 
   const orderedCandidates = [...candidates].sort(
     (left, right) => right.variableName.length - left.variableName.length,
@@ -57,7 +57,7 @@ export const inferFormulaInputs = (
       if (!overlaps(start, end)) {
         occupiedRanges.push([start, end]);
         inferred.push({
-          input_def_id: candidate.inputDefId,
+          measure_def_id: candidate.inputDefId,
           variable_name: candidate.variableName,
         });
         break;
@@ -86,32 +86,32 @@ export const selectAggregatedFormulaTargets = async (): Promise<
 > => {
   const rows = await db
     .select({
-      inputDefId: inputDefinitions.id,
-      variableName: inputDefinitions.variable_name,
-      formula: inputDefinitions.formula,
-      formulaInputs: inputDefinitions.formula_inputs,
+      inputDefId: measureDefinitions.id,
+      variableName: measureDefinitions.variable_name,
+      formula: measureDefinitions.formula,
+      formulaInputs: measureDefinitions.formula_inputs,
     })
-    .from(inputDefinitions)
+    .from(measureDefinitions)
     .where(
       and(
-        eq(inputDefinitions.is_active, true),
-        eq(inputDefinitions.is_aggregated, true),
-        isNotNull(inputDefinitions.formula),
-        ne(sql`trim(${inputDefinitions.formula})`, ""),
+        eq(measureDefinitions.is_active, true),
+        eq(measureDefinitions.is_aggregated, true),
+        isNotNull(measureDefinitions.formula),
+        ne(sql`trim(${measureDefinitions.formula})`, ""),
       ),
     );
 
   const variableRows = await db
     .select({
-      inputDefId: inputDefinitions.id,
-      variableName: inputDefinitions.variable_name,
+      inputDefId: measureDefinitions.id,
+      variableName: measureDefinitions.variable_name,
     })
-    .from(inputDefinitions)
+    .from(measureDefinitions)
     .where(
       and(
-        eq(inputDefinitions.is_active, true),
-        isNotNull(inputDefinitions.variable_name),
-        ne(sql`trim(${inputDefinitions.variable_name})`, ""),
+        eq(measureDefinitions.is_active, true),
+        isNotNull(measureDefinitions.variable_name),
+        ne(sql`trim(${measureDefinitions.variable_name})`, ""),
       ),
     );
 

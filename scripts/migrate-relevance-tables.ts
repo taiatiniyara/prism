@@ -30,7 +30,7 @@ async function main() {
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
       report_period_id integer NOT NULL,
       service_area_id integer NOT NULL,
-      input_def_id integer NOT NULL,
+      measure_def_id integer NOT NULL,
       payment_mode_id integer NOT NULL,
       customer_type_id integer NOT NULL,
       is_relevant boolean DEFAULT true NOT NULL,
@@ -46,7 +46,7 @@ async function main() {
       id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
       report_period_id integer NOT NULL,
       service_area_id integer NOT NULL,
-      input_def_id integer NOT NULL,
+      measure_def_id integer NOT NULL,
       is_relevant boolean DEFAULT true NOT NULL,
       is_deleted boolean DEFAULT false NOT NULL,
       "updatedAt" timestamp DEFAULT now() NOT NULL,
@@ -62,7 +62,7 @@ async function main() {
       id: dataEntries.id,
       report_period_id: dataEntries.report_period_id,
       service_area_id: dataEntries.service_area_id,
-      input_def_id: dataEntries.input_def_id,
+      measure_def_id: dataEntries.measure_def_id,
       payment_mode_id: dataEntries.payment_mode_id,
       customer_type_id: dataEntries.customer_type_id,
       is_relevant: dataEntries.is_relevant,
@@ -80,14 +80,16 @@ async function main() {
       ),
     );
 
-  console.log(`Found ${tariffRows.length} tariff relevance rows in data_entries`);
+  console.log(
+    `Found ${tariffRows.length} tariff relevance rows in data_entries`,
+  );
 
   let tariffInserted = 0;
   for (const row of tariffRows) {
     await db.insert(tariffRelevance).values({
       report_period_id: row.report_period_id!,
       service_area_id: row.service_area_id!,
-      input_def_id: row.input_def_id!,
+      measure_def_id: row.measure_def_id!,
       payment_mode_id: row.payment_mode_id!,
       customer_type_id: row.customer_type_id!,
       is_relevant: row.is_relevant,
@@ -100,9 +102,9 @@ async function main() {
 
   if (tariffRows.length > 0) {
     const tariffIds = tariffRows.map((r) => r.id);
-    await db.delete(dataEntries).where(
-      and(...tariffIds.map((id) => eq(dataEntries.id, id))),
-    );
+    await db
+      .delete(dataEntries)
+      .where(and(...tariffIds.map((id) => eq(dataEntries.id, id))));
     console.log(`  → migrated ${tariffInserted} rows to tariff_relevance`);
     console.log(`  → deleted ${tariffRows.length} rows from data_entries\n`);
   } else {
@@ -116,7 +118,7 @@ async function main() {
       id: dataEntries.id,
       report_period_id: dataEntries.report_period_id,
       service_area_id: dataEntries.service_area_id,
-      input_def_id: dataEntries.input_def_id,
+      measure_def_id: dataEntries.measure_def_id,
       is_relevant: dataEntries.is_relevant,
       is_deleted: dataEntries.is_deleted,
       updatedAt: dataEntries.updatedAt,
@@ -134,14 +136,16 @@ async function main() {
       ),
     );
 
-  console.log(`Found ${transmissionRows.length} transmission relevance rows in data_entries`);
+  console.log(
+    `Found ${transmissionRows.length} transmission relevance rows in data_entries`,
+  );
 
   let transmissionInserted = 0;
   for (const row of transmissionRows) {
     await db.insert(transmissionRelevance).values({
       report_period_id: row.report_period_id!,
       service_area_id: row.service_area_id!,
-      input_def_id: row.input_def_id!,
+      measure_def_id: row.measure_def_id!,
       is_relevant: row.is_relevant,
       is_deleted: row.is_deleted,
       updatedAt: row.updatedAt,
@@ -152,11 +156,15 @@ async function main() {
 
   if (transmissionRows.length > 0) {
     const transmissionIds = transmissionRows.map((r) => r.id);
-    await db.delete(dataEntries).where(
-      and(...transmissionIds.map((id) => eq(dataEntries.id, id))),
+    await db
+      .delete(dataEntries)
+      .where(and(...transmissionIds.map((id) => eq(dataEntries.id, id))));
+    console.log(
+      `  → migrated ${transmissionInserted} rows to transmission_relevance`,
     );
-    console.log(`  → migrated ${transmissionInserted} rows to transmission_relevance`);
-    console.log(`  → deleted ${transmissionRows.length} rows from data_entries\n`);
+    console.log(
+      `  → deleted ${transmissionRows.length} rows from data_entries\n`,
+    );
   } else {
     console.log("  → nothing to migrate\n");
   }
@@ -167,7 +175,9 @@ async function main() {
   await db.execute(sql`DROP TABLE IF EXISTS generation_relevance CASCADE`);
   console.log("  → dropped generation_relevance");
 
-  await db.execute(sql`DROP TABLE IF EXISTS generation_toggle_relevance CASCADE`);
+  await db.execute(
+    sql`DROP TABLE IF EXISTS generation_toggle_relevance CASCADE`,
+  );
   console.log("  → dropped generation_toggle_relevance");
 
   console.log("\nDone.");

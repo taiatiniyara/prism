@@ -7,7 +7,7 @@ import { getCurrentUser, hasGlobalUtilityAccess } from "@/lib/user.service";
 import { db } from "@/db/connection";
 import {
   dataEntries,
-  inputDefinitions,
+  measureDefinitions,
   DataEntryStatusId,
   DataEntryComment,
 } from "@/db/schema/dataEntry";
@@ -171,11 +171,11 @@ export async function getMeasureEntryFilterViewModel(): Promise<MeasureEntryPage
     conditions.push(eq(dataEntries.report_period_id, ctx.reportPeriodId));
   }
   if (ctx.measureCategoryId) {
-    conditions.push(eq(inputDefinitions.category_id, ctx.measureCategoryId));
+    conditions.push(eq(measureDefinitions.category_id, ctx.measureCategoryId));
   }
   if (ctx.measureSubcategoryId) {
     conditions.push(
-      eq(inputDefinitions.subcategory_id, ctx.measureSubcategoryId),
+      eq(measureDefinitions.subcategory_id, ctx.measureSubcategoryId),
     );
   }
   if (ctx.dataEntryStatusId) {
@@ -211,12 +211,12 @@ export async function getMeasureEntryFilterViewModel(): Promise<MeasureEntryPage
   const rawRows = await db
     .select({
       dataEntryId: dataEntries.id,
-      measureId: inputDefinitions.id,
-      measureName: inputDefinitions.name,
+      measureId: measureDefinitions.id,
+      measureName: measureDefinitions.name,
       unitName: managedListItems.name,
-      categoryId: inputDefinitions.category_id,
-      subcategoryId: inputDefinitions.subcategory_id,
-      dataTypeId: inputDefinitions.data_type_id,
+      categoryId: measureDefinitions.category_id,
+      subcategoryId: measureDefinitions.subcategory_id,
+      dataTypeId: measureDefinitions.data_type_id,
       valueNumeric: dataEntries.value_numeric,
       valueBoolean: dataEntries.value_boolean,
       valueOptionId: dataEntries.value_option_id,
@@ -231,20 +231,20 @@ export async function getMeasureEntryFilterViewModel(): Promise<MeasureEntryPage
       genderId: dataEntries.gender_id,
       energyResourceId: dataEntries.energy_resource_id,
       statusId: dataEntries.status_id,
-      isMandatory: inputDefinitions.is_mandatory,
-      validRangeMin: inputDefinitions.valid_range_min,
-      validRangeMax: inputDefinitions.valid_range_max,
+      isMandatory: measureDefinitions.is_mandatory,
+      validRangeMin: measureDefinitions.valid_range_min,
+      validRangeMax: measureDefinitions.valid_range_max,
       comments: dataEntries.comments,
       updatedAt: dataEntries.updatedAt,
     })
     .from(dataEntries)
     .innerJoin(
-      inputDefinitions,
-      eq(dataEntries.input_def_id, inputDefinitions.id),
+      measureDefinitions,
+      eq(dataEntries.measure_def_id, measureDefinitions.id),
     )
     .leftJoin(
       managedListItems,
-      eq(inputDefinitions.unit_id, managedListItems.id),
+      eq(measureDefinitions.unit_id, managedListItems.id),
     )
     .where(and(...conditions))
     .limit(500);
@@ -254,15 +254,15 @@ export async function getMeasureEntryFilterViewModel(): Promise<MeasureEntryPage
   if (measureIds.length > 0) {
     const dtRows = await db
       .select({
-        id: inputDefinitions.id,
+        id: measureDefinitions.id,
         name: sql<string>`ml.name`,
       })
-      .from(inputDefinitions)
+      .from(measureDefinitions)
       .innerJoin(
         sql`managed_list_items ml`,
-        sql`${inputDefinitions.data_type_id} = ml.id`,
+        sql`${measureDefinitions.data_type_id} = ml.id`,
       )
-      .where(inArray(inputDefinitions.id, measureIds));
+      .where(inArray(measureDefinitions.id, measureIds));
     for (const row of dtRows) {
       dataTypeMap.set(row.id, row.name);
     }
@@ -307,8 +307,7 @@ export async function getMeasureEntryFilterViewModel(): Promise<MeasureEntryPage
     } else if (valueColumn === "value_boolean" && r.valueBoolean != null) {
       displayValue = r.valueBoolean ? "Yes" : "No";
     } else if (valueColumn === "value_option_id" && r.valueOptionId != null) {
-      displayValue =
-        dimNameMap.get(r.valueOptionId) ?? String(r.valueOptionId);
+      displayValue = dimNameMap.get(r.valueOptionId) ?? String(r.valueOptionId);
     } else if (valueColumn === "value_string" && r.valueString != null) {
       displayValue = r.valueString;
     }
@@ -456,14 +455,13 @@ export async function updateMeasureEntryValueAction(
   "use server";
   const user = await getCurrentUser();
 
-  const existing =
-    payload.dataEntryId
-      ? await db
-          .select({ id: dataEntries.id })
-          .from(dataEntries)
-          .where(eq(dataEntries.id, payload.dataEntryId))
-          .limit(1)
-      : [];
+  const existing = payload.dataEntryId
+    ? await db
+        .select({ id: dataEntries.id })
+        .from(dataEntries)
+        .where(eq(dataEntries.id, payload.dataEntryId))
+        .limit(1)
+    : [];
 
   if (existing.length > 0 && payload.dataEntryId) {
     const updateData: Record<string, unknown> = {
@@ -490,7 +488,7 @@ export async function updateMeasureEntryValueAction(
   } else {
     await db.insert(dataEntries).values({
       report_period_id: await getReportPeriodIdFromContext(),
-      input_def_id: payload.measureId,
+      measure_def_id: payload.measureId,
       energy_provider_id: payload.energyProviderId,
       energy_type_id: payload.energyTypeId,
       energy_source_id: payload.energySourceId,
@@ -545,7 +543,7 @@ export async function updateMeasureEntryAvailabilityAction(
   } else if (payload.isDataNotAvailable) {
     await db.insert(dataEntries).values({
       report_period_id: await getReportPeriodIdFromContext(),
-      input_def_id: payload.measureId,
+      measure_def_id: payload.measureId,
       energy_provider_id: payload.energyProviderId,
       energy_type_id: payload.energyTypeId,
       energy_source_id: payload.energySourceId,
@@ -579,17 +577,16 @@ export async function updateMeasureEntryCommentAction(
     date: new Date(),
   };
 
-  const existing =
-    payload.dataEntryId
-      ? await db
-          .select({
-            id: dataEntries.id,
-            comments: dataEntries.comments,
-          })
-          .from(dataEntries)
-          .where(eq(dataEntries.id, payload.dataEntryId))
-          .limit(1)
-      : [];
+  const existing = payload.dataEntryId
+    ? await db
+        .select({
+          id: dataEntries.id,
+          comments: dataEntries.comments,
+        })
+        .from(dataEntries)
+        .where(eq(dataEntries.id, payload.dataEntryId))
+        .limit(1)
+    : [];
 
   if (existing.length > 0 && payload.dataEntryId) {
     const existingComments = (existing[0].comments ?? []) as DataEntryComment[];
@@ -605,7 +602,7 @@ export async function updateMeasureEntryCommentAction(
   } else {
     await db.insert(dataEntries).values({
       report_period_id: await getReportPeriodIdFromContext(),
-      input_def_id: payload.measureId,
+      measure_def_id: payload.measureId,
       energy_provider_id: payload.energyProviderId,
       energy_type_id: payload.energyTypeId,
       energy_source_id: payload.energySourceId,

@@ -1,5 +1,5 @@
 -- Medallion Phase 2b: Route values from old columns to typed value columns
--- Based on input_definitions.data_type_id → managed_list_items.name lookup.
+-- Based on measure_definitions .data_type_id → managed_list_items.name lookup.
 -- Parse failures are logged to data_entry_logs, not dropped.
 
 BEGIN;
@@ -12,7 +12,7 @@ BEGIN;
 --     falls back to parsing the varchar "value" column.
 WITH number_measures AS (
   SELECT id
-  FROM input_definitions idf
+  FROM measure_definitions  idf
   INNER JOIN managed_list_items mli ON mli.id = idf.data_type_id
   INNER JOIN managed_lists ml ON ml.id = mli.list_id
   WHERE LOWER(mli.name) IN ('number', 'numeric', 'integer', 'decimal')
@@ -31,7 +31,7 @@ SET
     ELSE de.status_id
   END
 FROM number_measures nm
-WHERE de.input_def_id = nm.id
+WHERE de.measure_def_id = nm.id
   AND de.is_deleted = false
   AND de.value_numeric IS NULL
   AND (de.numberic_value IS NOT NULL OR (de.value IS NOT NULL AND de.value != ''));
@@ -40,7 +40,7 @@ WHERE de.input_def_id = nm.id
 --     Parse "Yes"/"No"/"true"/"false" from varchar value column.
 WITH boolean_measures AS (
   SELECT id
-  FROM input_definitions idf
+  FROM measure_definitions  idf
   INNER JOIN managed_list_items mli ON mli.id = idf.data_type_id
   INNER JOIN managed_lists ml ON ml.id = mli.list_id
   WHERE LOWER(mli.name) IN ('boolean', 'bool')
@@ -60,13 +60,13 @@ SET
     ELSE de.status_id
   END
 FROM boolean_measures bm
-WHERE de.input_def_id = bm.id
+WHERE de.measure_def_id = bm.id
   AND de.is_deleted = false;
 
 -- 1c. Text/string-type inputs → value_string (use text_value, falls back to varchar value)
 WITH text_measures AS (
   SELECT id
-  FROM input_definitions idf
+  FROM measure_definitions  idf
   INNER JOIN managed_list_items mli ON mli.id = idf.data_type_id
   INNER JOIN managed_lists ml ON ml.id = mli.list_id
   WHERE LOWER(mli.name) IN ('text', 'string')
@@ -81,7 +81,7 @@ SET
     ELSE de.status_id
   END
 FROM text_measures tm
-WHERE de.input_def_id = tm.id
+WHERE de.measure_def_id = tm.id
   AND de.is_deleted = false
   AND de.value_string IS NULL
   AND (de.text_value IS NOT NULL OR (de.value IS NOT NULL AND de.value != ''));

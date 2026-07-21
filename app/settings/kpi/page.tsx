@@ -58,12 +58,12 @@ export default async function KpiSettingsPage() {
     : null;
   const customKpiProposalReferenceOptions = showCustomKpiReviewView
     ? await listCustomKpiProposalReferenceOptions().catch(() => ({
-        availableInputDefinitions: [],
+        availableMeasureDefinitions: [],
         availableUnits: [],
         availableDataTypes: [],
       }))
     : {
-        availableInputDefinitions: [],
+        availableMeasureDefinitions: [],
         availableUnits: [],
         availableDataTypes: [],
       };
@@ -78,7 +78,7 @@ export default async function KpiSettingsPage() {
       {showCustomKpiRequestsView && customKpiViewModel ? (
         <>
           <CustomKpiRequestDialog
-            inputOptions={customKpiViewModel.availableInputDefinitions}
+            inputOptions={customKpiViewModel.availableMeasureDefinitions}
             unitOptions={customKpiViewModel.availableUnits}
             dataTypeOptions={customKpiViewModel.availableDataTypes}
           />
@@ -362,7 +362,7 @@ export default async function KpiSettingsPage() {
                         customKpiApprovalOptions.subcategories
                       }
                       existingInputOptions={
-                        customKpiProposalReferenceOptions.availableInputDefinitions
+                        customKpiProposalReferenceOptions.availableMeasureDefinitions
                       }
                       existingUnitOptions={
                         customKpiProposalReferenceOptions.availableUnits

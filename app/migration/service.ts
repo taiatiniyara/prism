@@ -37,9 +37,9 @@ import {
   dataEntries,
   dataEntryLogs,
   DataEntryStatusId,
-  InputDefinition,
+  MeasureDefinition,
   inputDlDefMappings,
-  inputDefinitions,
+  measureDefinitions,
   inputRelevance,
   tariffRelevance,
   transmissionRelevance,
@@ -191,7 +191,9 @@ const legacyMigBaseUrls = Array.from(
 );
 
 const logMigrationError = (error: unknown) => {
-  logger.error("[migration] operation failed", { error: error instanceof Error ? error.message : String(error) });
+  logger.error("[migration] operation failed", {
+    error: error instanceof Error ? error.message : String(error),
+  });
 };
 
 const isProtocolHeaderError = (error: unknown): boolean => {
@@ -602,7 +604,7 @@ export async function retrieveUtilityContextData(options?: {
     const mappingRows = await db
       .select({
         trainingDlDefId: inputDlDefMappings.training_dl_def_id,
-        inputDefId: inputDlDefMappings.input_def_id,
+        inputDefId: inputDlDefMappings.measure_def_id,
         updatedAt: inputDlDefMappings.updated_at,
       })
       .from(inputDlDefMappings);
@@ -633,7 +635,7 @@ export async function retrieveUtilityContextData(options?: {
 
     const [targetInputDefs, targetReportPeriods, targetManagedItems] =
       await Promise.all([
-        db.select({ id: inputDefinitions.id }).from(inputDefinitions),
+        db.select({ id: measureDefinitions.id }).from(measureDefinitions),
         db
           .select({ id: reportPeriods.id })
           .from(reportPeriods)
@@ -703,7 +705,7 @@ export async function retrieveUtilityContextData(options?: {
 
       const payload = {
         report_period_id: reportPeriodId,
-        input_def_id: inputDefId,
+        measure_def_id: inputDefId,
         service_area_id: null,
         energy_resource_id: null,
         energy_provider_id: energyProviderId,
@@ -729,7 +731,7 @@ export async function retrieveUtilityContextData(options?: {
         .where(
           and(
             eq(dataEntries.report_period_id, reportPeriodId),
-            eq(dataEntries.input_def_id, inputDefId),
+            eq(dataEntries.measure_def_id, inputDefId),
             isNull(dataEntries.service_area_id),
             isNull(dataEntries.energy_resource_id),
             energyProviderId == null
@@ -791,7 +793,7 @@ export async function retrieveCountryContextData(options?: {
     const mappingRows = await db
       .select({
         trainingDlDefId: inputDlDefMappings.training_dl_def_id,
-        inputDefId: inputDlDefMappings.input_def_id,
+        inputDefId: inputDlDefMappings.measure_def_id,
         updatedAt: inputDlDefMappings.updated_at,
       })
       .from(inputDlDefMappings);
@@ -821,7 +823,7 @@ export async function retrieveCountryContextData(options?: {
     }
 
     const [targetInputDefs, targetReportPeriods] = await Promise.all([
-      db.select({ id: inputDefinitions.id }).from(inputDefinitions),
+      db.select({ id: measureDefinitions.id }).from(measureDefinitions),
       db
         .select({ id: reportPeriods.id })
         .from(reportPeriods)
@@ -870,7 +872,7 @@ export async function retrieveCountryContextData(options?: {
 
       const payload = {
         report_period_id: reportPeriodId,
-        input_def_id: inputDefId,
+        measure_def_id: inputDefId,
         service_area_id: null,
         energy_resource_id: null,
         energy_provider_id: null,
@@ -896,7 +898,7 @@ export async function retrieveCountryContextData(options?: {
         .where(
           and(
             eq(dataEntries.report_period_id, reportPeriodId),
-            eq(dataEntries.input_def_id, inputDefId),
+            eq(dataEntries.measure_def_id, inputDefId),
             isNull(dataEntries.service_area_id),
             isNull(dataEntries.energy_resource_id),
             isNull(dataEntries.energy_provider_id),
@@ -1272,7 +1274,6 @@ export async function retrieveUtilityData() {
           .where(eq(energyResources.id, resource.id));
       }
     }
-
   } catch (error: unknown) {
     logMigrationError(error);
   }
@@ -1367,25 +1368,25 @@ export async function retrieveManagedLists() {
   return { ok: true, inserted, updated, total: inserted + updated };
 }
 
-export async function retrieveInputDefinitions() {
+export async function retrieveMeasureDefinitions() {
   await assertDevMigrationAccess();
   const inserted = 0;
   const updated = 0;
-  const call = await fetchMigrationEndpoint("/inputDefinitions");
+  const call = await fetchMigrationEndpoint("/measureDefinitions");
   const list = await call.json();
-  const inputDefinitionsList: InputDefinition[] = list.inputDefinitions;
-  const existingInputDefinitions = await db.select().from(inputDefinitions);
-  const existingInputDefinitionIds = new Set(
-    existingInputDefinitions.map((id) => id.id),
+  const inputDefinitionsList: MeasureDefinition[] = list.measureDefinitions;
+  const existingMeasureDefinitions = await db.select().from(measureDefinitions);
+  const existingMeasureDefinitionIds = new Set(
+    existingMeasureDefinitions.map((id) => id.id),
   );
-  const nonExistingInputDefinitions = inputDefinitionsList.filter(
-    (def) => !existingInputDefinitionIds.has(def.id),
+  const nonExistingMeasureDefinitions = inputDefinitionsList.filter(
+    (def) => !existingMeasureDefinitionIds.has(def.id),
   );
 
   try {
-    if (nonExistingInputDefinitions.length > 0) {
-      await db.insert(inputDefinitions).values(
-        nonExistingInputDefinitions.map((def) => ({
+    if (nonExistingMeasureDefinitions.length > 0) {
+      await db.insert(measureDefinitions).values(
+        nonExistingMeasureDefinitions.map((def) => ({
           ...def,
           energy_provider_id: 20,
           energy_source_id: 41,
@@ -1410,11 +1411,11 @@ export async function retrieveInputDlDefMappings(): Promise<MigrationStepResult>
     // Get all prism input definitions
     const prismDefs = await db
       .select({
-        id: inputDefinitions.id,
-        name: inputDefinitions.name,
-        variableName: inputDefinitions.variable_name,
+        id: measureDefinitions.id,
+        name: measureDefinitions.name,
+        variableName: measureDefinitions.variable_name,
       })
-      .from(inputDefinitions);
+      .from(measureDefinitions);
 
     const byVarName = new Map<string, number>();
     const byName = new Map<string, number>();
@@ -1481,14 +1482,14 @@ export async function retrieveInputDlDefMappings(): Promise<MigrationStepResult>
           );
           const page = (await call.json()) as {
             dataEntry?: Array<{
-              input_def_id?: number;
+              measure_def_id?: number;
               input_def_name?: string;
               input_def_variable_name?: string;
             }>;
           };
           const entries = page.dataEntry ?? [];
           for (const e of entries) {
-            const id = e.input_def_id;
+            const id = e.measure_def_id;
             if (id == null || seenIds.has(id)) continue;
             seenIds.add(id);
             dlDefs.push({
@@ -1556,7 +1557,7 @@ export async function retrieveInputDlDefMappings(): Promise<MigrationStepResult>
       existingTrainingIds.add(dl.id);
 
       await db.insert(inputDlDefMappings).values({
-        input_def_id: prismId,
+        measure_def_id: prismId,
         training_dl_def_id: dl.id,
         training_dl_legacy_id: String(dl.id),
         training_source_id: null,
@@ -1669,7 +1670,6 @@ export async function retrieveReportPeriods() {
           .where(eq(energyResources.id, resource.id));
       }
     }
-
   } catch (error: unknown) {
     logMigrationError(error);
   }
@@ -1871,9 +1871,9 @@ export async function retrieveEnergyResources() {
     }
 
     if (skippedInvalidForeignKeys > 0) {
-        logger.warn(
-          `[migration] retrieveEnergyResources skipped ${skippedInvalidForeignKeys} rows with invalid foreign keys`,
-        );
+      logger.warn(
+        `[migration] retrieveEnergyResources skipped ${skippedInvalidForeignKeys} rows with invalid foreign keys`,
+      );
     }
   } catch (error: unknown) {
     logMigrationError(error);
@@ -2028,7 +2028,7 @@ type SourceDataEntryRow = {
   report_period_id: number;
   energy_resource_id: number | null;
   service_area_id: number | null;
-  input_def_id: number;
+  measure_def_id: number;
   input_def_legacy_id?: string | null;
   input_def_name?: string | null;
   input_def_variable_name?: string | null;
@@ -2328,7 +2328,7 @@ const isCountryContextInput = (
 const buildDataEntryKeyForTargetPeriod = (
   reportPeriodId: number,
   entry: {
-    input_def_id: number;
+    measure_def_id: number;
     service_area_id: number | null;
     energy_resource_id: number | null;
     energy_provider_id: number | null;
@@ -2339,7 +2339,7 @@ const buildDataEntryKeyForTargetPeriod = (
 ): string => {
   return [
     reportPeriodId,
-    entry.input_def_id,
+    entry.measure_def_id,
     nullableKeyPart(entry.service_area_id),
     nullableKeyPart(entry.energy_resource_id),
     nullableKeyPart(entry.energy_provider_id),
@@ -2359,11 +2359,11 @@ async function backfillUtilityContextDataEntriesFromPreviousPeriods(options?: {
 
   const inputRows = await db
     .select({
-      id: inputDefinitions.id,
-      categoryId: inputDefinitions.category_id,
-      subcategoryId: inputDefinitions.subcategory_id,
+      id: measureDefinitions.id,
+      categoryId: measureDefinitions.category_id,
+      subcategoryId: measureDefinitions.subcategory_id,
     })
-    .from(inputDefinitions);
+    .from(measureDefinitions);
 
   const utilityContextInputIds = inputRows
     .filter((input) => isUtilityContextInput(input, managedListNameById))
@@ -2404,7 +2404,7 @@ async function backfillUtilityContextDataEntriesFromPreviousPeriods(options?: {
   const entries = await db
     .select({
       report_period_id: dataEntries.report_period_id,
-      input_def_id: dataEntries.input_def_id,
+      measure_def_id: dataEntries.measure_def_id,
       service_area_id: dataEntries.service_area_id,
       energy_resource_id: dataEntries.energy_resource_id,
       energy_provider_id: dataEntries.energy_provider_id,
@@ -2419,7 +2419,7 @@ async function backfillUtilityContextDataEntriesFromPreviousPeriods(options?: {
       is_deleted: dataEntries.is_deleted,
     })
     .from(dataEntries)
-    .where(inArray(dataEntries.input_def_id, utilityContextInputIds));
+    .where(inArray(dataEntries.measure_def_id, utilityContextInputIds));
 
   const entriesByPeriodId = new Map<number, typeof entries>();
   for (const entry of entries) {
@@ -2489,7 +2489,7 @@ async function backfillUtilityContextDataEntriesFromPreviousPeriods(options?: {
       pendingInsertKeySet.add(key);
       rowsToInsert.push({
         report_period_id: targetPeriod.id,
-        input_def_id: sourceEntry.input_def_id,
+        measure_def_id: sourceEntry.measure_def_id,
         service_area_id: sourceEntry.service_area_id,
         energy_resource_id: sourceEntry.energy_resource_id,
         energy_provider_id: sourceEntry.energy_provider_id,
@@ -2529,11 +2529,11 @@ async function backfillCountryContextDataEntriesFromPreviousPeriods(options?: {
 
   const inputRows = await db
     .select({
-      id: inputDefinitions.id,
-      categoryId: inputDefinitions.category_id,
-      subcategoryId: inputDefinitions.subcategory_id,
+      id: measureDefinitions.id,
+      categoryId: measureDefinitions.category_id,
+      subcategoryId: measureDefinitions.subcategory_id,
     })
-    .from(inputDefinitions);
+    .from(measureDefinitions);
 
   const countryContextInputIds = inputRows
     .filter((input) => isCountryContextInput(input, managedListNameById))
@@ -2574,7 +2574,7 @@ async function backfillCountryContextDataEntriesFromPreviousPeriods(options?: {
   const entries = await db
     .select({
       report_period_id: dataEntries.report_period_id,
-      input_def_id: dataEntries.input_def_id,
+      measure_def_id: dataEntries.measure_def_id,
       service_area_id: dataEntries.service_area_id,
       energy_resource_id: dataEntries.energy_resource_id,
       energy_provider_id: dataEntries.energy_provider_id,
@@ -2589,7 +2589,7 @@ async function backfillCountryContextDataEntriesFromPreviousPeriods(options?: {
       is_deleted: dataEntries.is_deleted,
     })
     .from(dataEntries)
-    .where(inArray(dataEntries.input_def_id, countryContextInputIds));
+    .where(inArray(dataEntries.measure_def_id, countryContextInputIds));
 
   const entriesByPeriodId = new Map<number, typeof entries>();
   for (const entry of entries) {
@@ -2659,7 +2659,7 @@ async function backfillCountryContextDataEntriesFromPreviousPeriods(options?: {
       pendingInsertKeySet.add(key);
       rowsToInsert.push({
         report_period_id: targetPeriod.id,
-        input_def_id: sourceEntry.input_def_id,
+        measure_def_id: sourceEntry.measure_def_id,
         service_area_id: sourceEntry.service_area_id,
         energy_resource_id: sourceEntry.energy_resource_id,
         energy_provider_id: sourceEntry.energy_provider_id,
@@ -2739,7 +2739,7 @@ export async function retrieveDataEntries(options?: {
   const mappingRows = await db
     .select({
       trainingDlDefId: inputDlDefMappings.training_dl_def_id,
-      inputDefId: inputDlDefMappings.input_def_id,
+      inputDefId: inputDlDefMappings.measure_def_id,
       updatedAt: inputDlDefMappings.updated_at,
     })
     .from(inputDlDefMappings);
@@ -2770,11 +2770,11 @@ export async function retrieveDataEntries(options?: {
 
   const targetInputDefs = await db
     .select({
-      id: inputDefinitions.id,
-      name: inputDefinitions.name,
-      variableName: inputDefinitions.variable_name,
+      id: measureDefinitions.id,
+      name: measureDefinitions.name,
+      variableName: measureDefinitions.variable_name,
     })
-    .from(inputDefinitions);
+    .from(measureDefinitions);
 
   const targetInputDefIds = new Set<number>(targetInputDefs.map((d) => d.id));
   const targetInputDefByName = new Map<string, number>();
@@ -2881,7 +2881,7 @@ export async function retrieveDataEntries(options?: {
         const reportPeriodId = normalizeRequiredId(row.report_period_id);
         let inputDefId: number | null = null;
 
-        const sourceTrainingDlDefId = toNumberOrNull(row.input_def_id);
+        const sourceTrainingDlDefId = toNumberOrNull(row.measure_def_id);
         if (sourceTrainingDlDefId != null) {
           const mapped = inputByTrainingDlDefId.get(sourceTrainingDlDefId);
           if (mapped) {
@@ -2890,7 +2890,7 @@ export async function retrieveDataEntries(options?: {
         }
 
         if (inputDefId == null) {
-          inputDefId = normalizeRequiredId(row.input_def_id);
+          inputDefId = normalizeRequiredId(row.measure_def_id);
         }
 
         if (inputDefId != null && !targetInputDefIds.has(inputDefId)) {
@@ -3046,7 +3046,7 @@ export async function retrieveDataEntries(options?: {
           .select({
             id: dataEntries.id,
             report_period_id: dataEntries.report_period_id,
-            input_def_id: dataEntries.input_def_id,
+            measure_def_id: dataEntries.measure_def_id,
             service_area_id: dataEntries.service_area_id,
             energy_resource_id: dataEntries.energy_resource_id,
             energy_provider_id: dataEntries.energy_provider_id,
@@ -3058,14 +3058,14 @@ export async function retrieveDataEntries(options?: {
           .where(
             and(
               inArray(dataEntries.report_period_id, uniqueReportPeriodIds),
-              inArray(dataEntries.input_def_id, uniqueInputDefIds),
+              inArray(dataEntries.measure_def_id, uniqueInputDefIds),
             ),
           );
 
         for (const ex of existingRows) {
           const key = [
             ex.report_period_id,
-            ex.input_def_id,
+            ex.measure_def_id,
             nullableKeyPart(ex.service_area_id),
             nullableKeyPart(ex.energy_resource_id),
             nullableKeyPart(ex.energy_provider_id),
@@ -3078,7 +3078,7 @@ export async function retrieveDataEntries(options?: {
           if (ex.energy_resource_id != null) {
             const nullErKey = [
               ex.report_period_id,
-              ex.input_def_id,
+              ex.measure_def_id,
               nullableKeyPart(ex.service_area_id),
               "null",
               nullableKeyPart(ex.energy_provider_id),
@@ -3111,7 +3111,7 @@ export async function retrieveDataEntries(options?: {
 
         const payload = {
           report_period_id: reportPeriodId,
-          input_def_id: inputDefId,
+          measure_def_id: inputDefId,
           service_area_id: serviceAreaId,
           energy_resource_id: energyResourceId,
           energy_provider_id: energyProviderId,
@@ -3157,7 +3157,7 @@ export async function retrieveDataEntries(options?: {
 
             const uniqueKeyConditions = [
               eq(dataEntries.report_period_id, reportPeriodId),
-              eq(dataEntries.input_def_id, inputDefId),
+              eq(dataEntries.measure_def_id, inputDefId),
               serviceAreaId == null
                 ? isNull(dataEntries.service_area_id)
                 : eq(dataEntries.service_area_id, serviceAreaId),
@@ -3335,7 +3335,7 @@ export async function retrieveTransmissionRelevance(options?: {
   const mappingRows = await db
     .select({
       trainingDlDefId: inputDlDefMappings.training_dl_def_id,
-      inputDefId: inputDlDefMappings.input_def_id,
+      inputDefId: inputDlDefMappings.measure_def_id,
       updatedAt: inputDlDefMappings.updated_at,
     })
     .from(inputDlDefMappings);
@@ -3431,7 +3431,7 @@ export async function retrieveTransmissionRelevance(options?: {
             and(
               eq(transmissionRelevance.report_period_id, reportPeriodId),
               eq(transmissionRelevance.service_area_id, serviceAreaId),
-              eq(transmissionRelevance.input_def_id, inputDefId),
+              eq(transmissionRelevance.measure_def_id, inputDefId),
             ),
           )
           .orderBy(desc(transmissionRelevance.updatedAt))
@@ -3458,7 +3458,7 @@ export async function retrieveTransmissionRelevance(options?: {
         await db.insert(transmissionRelevance).values({
           report_period_id: reportPeriodId,
           service_area_id: serviceAreaId,
-          input_def_id: inputDefId,
+          measure_def_id: inputDefId,
           is_relevant: row.is_relevant ?? true,
           is_deleted: row.is_deleted ?? false,
           updatedAt,
@@ -3496,7 +3496,7 @@ export async function retrieveTariffRelevance(options?: {
   const mappingRows = await db
     .select({
       trainingDlDefId: inputDlDefMappings.training_dl_def_id,
-      inputDefId: inputDlDefMappings.input_def_id,
+      inputDefId: inputDlDefMappings.measure_def_id,
       updatedAt: inputDlDefMappings.updated_at,
     })
     .from(inputDlDefMappings);
@@ -3605,7 +3605,7 @@ export async function retrieveTariffRelevance(options?: {
             and(
               eq(tariffRelevance.report_period_id, reportPeriodId),
               eq(tariffRelevance.service_area_id, serviceAreaId),
-              eq(tariffRelevance.input_def_id, inputDefId),
+              eq(tariffRelevance.measure_def_id, inputDefId),
               eq(tariffRelevance.payment_mode_id, paymentModeId),
               eq(tariffRelevance.customer_type_id, customerTypeId),
             ),
@@ -3634,7 +3634,7 @@ export async function retrieveTariffRelevance(options?: {
         await db.insert(tariffRelevance).values({
           report_period_id: reportPeriodId,
           service_area_id: serviceAreaId,
-          input_def_id: inputDefId,
+          measure_def_id: inputDefId,
           payment_mode_id: paymentModeId,
           customer_type_id: customerTypeId,
           is_relevant: row.is_relevant ?? true,
@@ -3658,15 +3658,15 @@ export async function retrieveTariffRelevance(options?: {
       }
     }
   } catch (error: unknown) {
-    logger.error(
-      "[migration:tariffRelevance] ERROR",
-      { error: error instanceof Error
-        ? {
-            message: error.message,
-            stack: error.stack,
-          }
-        : error },
-    );
+    logger.error("[migration:tariffRelevance] ERROR", {
+      error:
+        error instanceof Error
+          ? {
+              message: error.message,
+              stack: error.stack,
+            }
+          : error,
+    });
     logMigrationError(error);
   }
 
@@ -3691,7 +3691,7 @@ export async function retrieveInputRelevance(options?: {
   const mappingRows = await db
     .select({
       trainingDlDefId: inputDlDefMappings.training_dl_def_id,
-      inputDefId: inputDlDefMappings.input_def_id,
+      inputDefId: inputDlDefMappings.measure_def_id,
       updatedAt: inputDlDefMappings.updated_at,
     })
     .from(inputDlDefMappings);
@@ -3744,9 +3744,7 @@ export async function retrieveInputRelevance(options?: {
       );
 
       if (!call.ok) {
-        throw new Error(
-          `Input relevance migration API failed: ${call.status}`,
-        );
+        throw new Error(`Input relevance migration API failed: ${call.status}`);
       }
 
       const page: SourceInputRelevancePage = await call.json();
@@ -3775,7 +3773,7 @@ export async function retrieveInputRelevance(options?: {
           .from(inputRelevance)
           .where(
             and(
-              eq(inputRelevance.input_def_id, inputDefId),
+              eq(inputRelevance.measure_def_id, inputDefId),
               eq(inputRelevance.dimension_id, serviceAreaId),
             ),
           )
@@ -3793,7 +3791,7 @@ export async function retrieveInputRelevance(options?: {
         }
 
         await db.insert(inputRelevance).values({
-          input_def_id: inputDefId,
+          measure_def_id: inputDefId,
           dimension_id: serviceAreaId,
           is_relevant: row.is_relevant ?? true,
         });
@@ -3919,7 +3917,7 @@ const nullableKeyPart = (value: number | null | undefined): string =>
 
 const buildDataEntryComparisonKey = (entry: {
   report_period_id: number;
-  input_def_id: number;
+  measure_def_id: number;
   service_area_id: number | null;
   energy_resource_id: number | null;
   energy_provider_id: number | null;
@@ -3929,7 +3927,7 @@ const buildDataEntryComparisonKey = (entry: {
 }): string => {
   return [
     entry.report_period_id,
-    entry.input_def_id,
+    entry.measure_def_id,
     nullableKeyPart(entry.service_area_id),
     nullableKeyPart(entry.energy_resource_id),
     nullableKeyPart(entry.energy_provider_id),
@@ -3960,7 +3958,7 @@ const parseDataEntryComparisonKey = (key: string) => {
 
   return {
     report_period_id: Number(reportPeriod),
-    input_def_id: Number(inputDef),
+    measure_def_id: Number(inputDef),
     service_area_id: parseNullableId(serviceArea),
     energy_resource_id: parseNullableId(energyResource),
     energy_provider_id: parseNullableId(energyProvider),
@@ -3998,10 +3996,10 @@ export async function getDataEntryComparisonFilterOptions(): Promise<DataEntryCo
 
   const inputDefList = await db
     .select({
-      categoryId: inputDefinitions.category_id,
-      subcategoryId: inputDefinitions.subcategory_id,
+      categoryId: measureDefinitions.category_id,
+      subcategoryId: measureDefinitions.subcategory_id,
     })
-    .from(inputDefinitions);
+    .from(measureDefinitions);
 
   const categoryIds = Array.from(
     new Set(
@@ -4105,17 +4103,17 @@ export async function compareDataEntries(
   if (categoryId != null || subcategoryId != null) {
     const inputDefConditions = [];
     if (categoryId != null) {
-      inputDefConditions.push(eq(inputDefinitions.category_id, categoryId));
+      inputDefConditions.push(eq(measureDefinitions.category_id, categoryId));
     }
     if (subcategoryId != null) {
       inputDefConditions.push(
-        eq(inputDefinitions.subcategory_id, subcategoryId),
+        eq(measureDefinitions.subcategory_id, subcategoryId),
       );
     }
 
     const defs = await db
-      .select({ id: inputDefinitions.id })
-      .from(inputDefinitions)
+      .select({ id: measureDefinitions.id })
+      .from(measureDefinitions)
       .where(
         inputDefConditions.length === 1
           ? inputDefConditions[0]
@@ -4140,15 +4138,15 @@ export async function compareDataEntries(
     }
     conditions.push(
       scopedInputDefIds.length === 1
-        ? eq(dataEntries.input_def_id, scopedInputDefIds[0])
-        : inArray(dataEntries.input_def_id, scopedInputDefIds),
+        ? eq(dataEntries.measure_def_id, scopedInputDefIds[0])
+        : inArray(dataEntries.measure_def_id, scopedInputDefIds),
     );
   }
 
   const targetRowsQuery = db
     .select({
       report_period_id: dataEntries.report_period_id,
-      input_def_id: dataEntries.input_def_id,
+      measure_def_id: dataEntries.measure_def_id,
       service_area_id: dataEntries.service_area_id,
       energy_resource_id: dataEntries.energy_resource_id,
       energy_provider_id: dataEntries.energy_provider_id,
@@ -4200,11 +4198,11 @@ export async function compareDataEntries(
 
   const comparisonInputDefs = await db
     .select({
-      id: inputDefinitions.id,
-      name: inputDefinitions.name,
-      variableName: inputDefinitions.variable_name,
+      id: measureDefinitions.id,
+      name: measureDefinitions.name,
+      variableName: measureDefinitions.variable_name,
     })
-    .from(inputDefinitions);
+    .from(measureDefinitions);
 
   const comparisonInputDefIds = new Set(comparisonInputDefs.map((d) => d.id));
   const comparisonInputDefByName = new Map<string, number>();
@@ -4225,7 +4223,7 @@ export async function compareDataEntries(
   const mappingRows = await db
     .select({
       trainingDlDefId: inputDlDefMappings.training_dl_def_id,
-      inputDefId: inputDlDefMappings.input_def_id,
+      inputDefId: inputDlDefMappings.measure_def_id,
       updatedAt: inputDlDefMappings.updated_at,
     })
     .from(inputDlDefMappings);
@@ -4280,7 +4278,7 @@ export async function compareDataEntries(
     string,
     {
       report_period_id: number;
-      input_def_id: number;
+      measure_def_id: number;
       service_area_id: number | null;
       energy_resource_id: number | null;
       energy_provider_id: number | null;
@@ -4294,7 +4292,7 @@ export async function compareDataEntries(
     const normalizedReportPeriodId = normalizeRequiredId(row.report_period_id);
     let normalizedInputDefId: number | null = null;
 
-    const sourceTrainingDlDefId = toNumberOrNull(row.input_def_id);
+    const sourceTrainingDlDefId = toNumberOrNull(row.measure_def_id);
     if (sourceTrainingDlDefId != null) {
       const mapped = inputByTrainingDlDefId.get(sourceTrainingDlDefId);
       if (mapped) {
@@ -4303,7 +4301,7 @@ export async function compareDataEntries(
     }
 
     if (normalizedInputDefId == null) {
-      normalizedInputDefId = normalizeRequiredId(row.input_def_id);
+      normalizedInputDefId = normalizeRequiredId(row.measure_def_id);
     }
 
     if (
@@ -4377,7 +4375,7 @@ export async function compareDataEntries(
 
     const normalized = {
       report_period_id: normalizedReportPeriodId,
-      input_def_id: normalizedInputDefId,
+      measure_def_id: normalizedInputDefId,
       service_area_id: serviceAreaId,
       energy_resource_id: energyResourceId,
       energy_provider_id: energyProviderId,
@@ -4395,7 +4393,7 @@ export async function compareDataEntries(
     string,
     {
       report_period_id: number;
-      input_def_id: number;
+      measure_def_id: number;
       service_area_id: number | null;
       energy_resource_id: number | null;
       energy_provider_id: number | null;
@@ -4424,7 +4422,7 @@ export async function compareDataEntries(
   const inputDefIds = Array.from(
     new Set(
       Array.from(unionKeys)
-        .map((key) => parseDataEntryComparisonKey(key).input_def_id)
+        .map((key) => parseDataEntryComparisonKey(key).measure_def_id)
         .filter((id) => isPgInt32(id)),
     ),
   );
@@ -4479,13 +4477,13 @@ export async function compareDataEntries(
       ? []
       : await db
           .select({
-            id: inputDefinitions.id,
-            name: inputDefinitions.name,
-            categoryId: inputDefinitions.category_id,
-            subcategoryId: inputDefinitions.subcategory_id,
+            id: measureDefinitions.id,
+            name: measureDefinitions.name,
+            categoryId: measureDefinitions.category_id,
+            subcategoryId: measureDefinitions.subcategory_id,
           })
-          .from(inputDefinitions)
-          .where(inArray(inputDefinitions.id, inputDefIds));
+          .from(measureDefinitions)
+          .where(inArray(measureDefinitions.id, inputDefIds));
 
   const serviceAreaList =
     serviceAreaIds.length === 0
@@ -4567,7 +4565,7 @@ export async function compareDataEntries(
     const inSource = sourceByKey.has(key);
     const inPrism = targetByKey.has(key);
     const parsed = parseDataEntryComparisonKey(key);
-    const inputDef = inputDefById.get(parsed.input_def_id);
+    const inputDef = inputDefById.get(parsed.measure_def_id);
 
     const status: DataEntryComparisonRow["status"] = inSource
       ? inPrism
@@ -4585,8 +4583,8 @@ export async function compareDataEntries(
       reportPeriodLabel:
         reportPeriodLabelById.get(parsed.report_period_id) ??
         String(parsed.report_period_id),
-      inputDefId: parsed.input_def_id,
-      inputDefName: inputDef?.name ?? String(parsed.input_def_id),
+      inputDefId: parsed.measure_def_id,
+      inputDefName: inputDef?.name ?? String(parsed.measure_def_id),
       categoryId: inputDef?.categoryId ?? null,
       categoryName:
         inputDef?.categoryId != null
@@ -4694,10 +4692,10 @@ export async function getDataEntryBreakdownFilterOptions(): Promise<DataEntryBre
       .where(eq(organisations.is_utility, true)),
     db
       .select({
-        categoryId: inputDefinitions.category_id,
-        subcategoryId: inputDefinitions.subcategory_id,
+        categoryId: measureDefinitions.category_id,
+        subcategoryId: measureDefinitions.subcategory_id,
       })
-      .from(inputDefinitions),
+      .from(measureDefinitions),
   ]);
 
   const categoryIds = Array.from(
@@ -4809,24 +4807,24 @@ export async function getInputBreakdown(
     if (org) resolvedUtilityId = org.id;
   }
 
-  const defConditions = [eq(inputDefinitions.is_active, true)];
+  const defConditions = [eq(measureDefinitions.is_active, true)];
   if (categoryId != null)
-    defConditions.push(eq(inputDefinitions.category_id, categoryId));
+    defConditions.push(eq(measureDefinitions.category_id, categoryId));
   if (subcategoryId != null)
-    defConditions.push(eq(inputDefinitions.subcategory_id, subcategoryId));
+    defConditions.push(eq(measureDefinitions.subcategory_id, subcategoryId));
 
   const defs = await db
     .select({
-      id: inputDefinitions.id,
-      name: inputDefinitions.name,
+      id: measureDefinitions.id,
+      name: measureDefinitions.name,
       categoryName: catAlias.name,
       subcategoryName: subAlias.name,
     })
-    .from(inputDefinitions)
-    .innerJoin(catAlias, eq(inputDefinitions.category_id, catAlias.id))
-    .innerJoin(subAlias, eq(inputDefinitions.subcategory_id, subAlias.id))
+    .from(measureDefinitions)
+    .innerJoin(catAlias, eq(measureDefinitions.category_id, catAlias.id))
+    .innerJoin(subAlias, eq(measureDefinitions.subcategory_id, subAlias.id))
     .where(and(...defConditions))
-    .orderBy(inputDefinitions.name);
+    .orderBy(measureDefinitions.name);
 
   const rpConditions: Array<ReturnType<typeof eq> | ReturnType<typeof sql>> =
     [];
@@ -4858,27 +4856,27 @@ export async function getInputBreakdown(
 
   const v2Rows = await db
     .select({
-      inputDefId: dataEntries.input_def_id,
+      inputDefId: dataEntries.measure_def_id,
       cnt: count(dataEntries.id),
     })
     .from(dataEntries)
     .innerJoin(
-      inputDefinitions,
-      eq(dataEntries.input_def_id, inputDefinitions.id),
+      measureDefinitions,
+      eq(dataEntries.measure_def_id, measureDefinitions.id),
     )
     .where(
       and(
         inArray(dataEntries.report_period_id, rpIds),
         eq(dataEntries.is_deleted, false),
         categoryId > 0
-          ? eq(inputDefinitions.category_id, categoryId)
+          ? eq(measureDefinitions.category_id, categoryId)
           : undefined,
         subcategoryId > 0
-          ? eq(inputDefinitions.subcategory_id, subcategoryId)
+          ? eq(measureDefinitions.subcategory_id, subcategoryId)
           : undefined,
       ),
     )
-    .groupBy(dataEntries.input_def_id);
+    .groupBy(dataEntries.measure_def_id);
 
   const v2ByInput = new Map<number, number>();
   let totalV2 = 0;
@@ -4986,28 +4984,28 @@ export async function getDataEntryBreakdown(
   }
 
   // 1. Identify managed list item IDs for the special categories/subcategories
-  //    by finding which ones are actually referenced from input_definitions
+  //    by finding which ones are actually referenced from measure_definitions
   const catAlias = aliasedTable(managedListItems, "cat");
   const subAlias = aliasedTable(managedListItems, "sub");
 
   const catLookup = await db
     .selectDistinct({
-      id: inputDefinitions.category_id,
+      id: measureDefinitions.category_id,
       name: catAlias.name,
     })
-    .from(inputDefinitions)
-    .innerJoin(catAlias, eq(inputDefinitions.category_id, catAlias.id))
+    .from(measureDefinitions)
+    .innerJoin(catAlias, eq(measureDefinitions.category_id, catAlias.id))
     .where(
       sql`LOWER(${catAlias.name}) IN ('operational', 'tariff structure', 'generation', 'country & utility context', 'hr & safety', 'governance', 'financial')`,
     );
 
   const subLookup = await db
     .selectDistinct({
-      id: inputDefinitions.subcategory_id,
+      id: measureDefinitions.subcategory_id,
       name: subAlias.name,
     })
-    .from(inputDefinitions)
-    .innerJoin(subAlias, eq(inputDefinitions.subcategory_id, subAlias.id))
+    .from(measureDefinitions)
+    .innerJoin(subAlias, eq(measureDefinitions.subcategory_id, subAlias.id))
     .where(
       sql`LOWER(${subAlias.name}) IN ('operational', 'tariff structure', 'generation', 'country context', 'utility context')`,
     );
@@ -5046,23 +5044,25 @@ export async function getDataEntryBreakdown(
   }
 
   // 2. Get all relevant input definitions
-  const inputDefConditions = [eq(inputDefinitions.is_active, true)];
+  const inputDefConditions = [eq(measureDefinitions.is_active, true)];
   if (categoryId != null)
-    inputDefConditions.push(eq(inputDefinitions.category_id, categoryId));
+    inputDefConditions.push(eq(measureDefinitions.category_id, categoryId));
   if (subcategoryId != null)
-    inputDefConditions.push(eq(inputDefinitions.subcategory_id, subcategoryId));
+    inputDefConditions.push(
+      eq(measureDefinitions.subcategory_id, subcategoryId),
+    );
 
   const allInputDefs = await db
     .select({
-      id: inputDefinitions.id,
-      categoryId: inputDefinitions.category_id,
+      id: measureDefinitions.id,
+      categoryId: measureDefinitions.category_id,
       categoryName: catAlias.name,
-      subcategoryId: inputDefinitions.subcategory_id,
+      subcategoryId: measureDefinitions.subcategory_id,
       subcategoryName: subAlias.name,
     })
-    .from(inputDefinitions)
-    .innerJoin(catAlias, eq(inputDefinitions.category_id, catAlias.id))
-    .innerJoin(subAlias, eq(inputDefinitions.subcategory_id, subAlias.id))
+    .from(measureDefinitions)
+    .innerJoin(catAlias, eq(measureDefinitions.category_id, catAlias.id))
+    .innerJoin(subAlias, eq(measureDefinitions.subcategory_id, subAlias.id))
     .where(and(...inputDefConditions));
 
   // 3. Get relevant report periods with utility info
@@ -5115,7 +5115,7 @@ export async function getDataEntryBreakdown(
     const opTariffRows = await db
       .selectDistinct({
         utilityId: reportPeriods.utility_id,
-        inputId: dataEntries.input_def_id,
+        inputId: dataEntries.measure_def_id,
         saId: dataEntries.service_area_id,
       })
       .from(dataEntries)
@@ -5124,8 +5124,8 @@ export async function getDataEntryBreakdown(
         eq(dataEntries.report_period_id, reportPeriods.id),
       )
       .innerJoin(
-        inputDefinitions,
-        eq(dataEntries.input_def_id, inputDefinitions.id),
+        measureDefinitions,
+        eq(dataEntries.measure_def_id, measureDefinitions.id),
       )
       .where(
         and(
@@ -5134,11 +5134,11 @@ export async function getDataEntryBreakdown(
           eq(dataEntries.is_deleted, false),
           sql`${dataEntries.service_area_id} IS NOT NULL`,
           sql`(
-            ${inputDefinitions.category_id} = ${operationalCatId ?? -1}
-            OR ${inputDefinitions.subcategory_id} = ${tariffStructureSubId ?? -1}
-            OR ${inputDefinitions.category_id} = ${hrSafetyCatId ?? -1}
-            OR ${inputDefinitions.category_id} = ${governanceCatId ?? -1}
-            OR ${inputDefinitions.category_id} = ${financialCatId ?? -1}
+            ${measureDefinitions.category_id} = ${operationalCatId ?? -1}
+            OR ${measureDefinitions.subcategory_id} = ${tariffStructureSubId ?? -1}
+            OR ${measureDefinitions.category_id} = ${hrSafetyCatId ?? -1}
+            OR ${measureDefinitions.category_id} = ${governanceCatId ?? -1}
+            OR ${measureDefinitions.category_id} = ${financialCatId ?? -1}
           )`,
         ),
       );
@@ -5154,7 +5154,7 @@ export async function getDataEntryBreakdown(
       const rows = await db
         .selectDistinct({
           utilityId: reportPeriods.utility_id,
-          inputId: dataEntries.input_def_id,
+          inputId: dataEntries.measure_def_id,
           saId: dataEntries.service_area_id,
         })
         .from(dataEntries)
@@ -5163,8 +5163,8 @@ export async function getDataEntryBreakdown(
           eq(dataEntries.report_period_id, reportPeriods.id),
         )
         .innerJoin(
-          inputDefinitions,
-          eq(dataEntries.input_def_id, inputDefinitions.id),
+          measureDefinitions,
+          eq(dataEntries.measure_def_id, measureDefinitions.id),
         )
         .where(
           and(
@@ -5172,7 +5172,7 @@ export async function getDataEntryBreakdown(
             inArray(dataEntries.report_period_id, rpIds),
             eq(dataEntries.is_deleted, false),
             sql`${dataEntries.service_area_id} IS NOT NULL`,
-            sql`${inputDefinitions.category_id} = ${hrSafetyCatId}`,
+            sql`${measureDefinitions.category_id} = ${hrSafetyCatId}`,
           ),
         );
       for (const r of rows)
@@ -5185,7 +5185,7 @@ export async function getDataEntryBreakdown(
       const rows = await db
         .selectDistinct({
           utilityId: reportPeriods.utility_id,
-          inputId: dataEntries.input_def_id,
+          inputId: dataEntries.measure_def_id,
           saId: dataEntries.service_area_id,
         })
         .from(dataEntries)
@@ -5194,8 +5194,8 @@ export async function getDataEntryBreakdown(
           eq(dataEntries.report_period_id, reportPeriods.id),
         )
         .innerJoin(
-          inputDefinitions,
-          eq(dataEntries.input_def_id, inputDefinitions.id),
+          measureDefinitions,
+          eq(dataEntries.measure_def_id, measureDefinitions.id),
         )
         .where(
           and(
@@ -5203,7 +5203,7 @@ export async function getDataEntryBreakdown(
             inArray(dataEntries.report_period_id, rpIds),
             eq(dataEntries.is_deleted, false),
             sql`${dataEntries.service_area_id} IS NOT NULL`,
-            sql`${inputDefinitions.category_id} = ${governanceCatId}`,
+            sql`${measureDefinitions.category_id} = ${governanceCatId}`,
           ),
         );
       for (const r of rows)
@@ -5216,7 +5216,7 @@ export async function getDataEntryBreakdown(
       const rows = await db
         .selectDistinct({
           utilityId: reportPeriods.utility_id,
-          inputId: dataEntries.input_def_id,
+          inputId: dataEntries.measure_def_id,
           saId: dataEntries.service_area_id,
         })
         .from(dataEntries)
@@ -5225,8 +5225,8 @@ export async function getDataEntryBreakdown(
           eq(dataEntries.report_period_id, reportPeriods.id),
         )
         .innerJoin(
-          inputDefinitions,
-          eq(dataEntries.input_def_id, inputDefinitions.id),
+          measureDefinitions,
+          eq(dataEntries.measure_def_id, measureDefinitions.id),
         )
         .where(
           and(
@@ -5234,7 +5234,7 @@ export async function getDataEntryBreakdown(
             inArray(dataEntries.report_period_id, rpIds),
             eq(dataEntries.is_deleted, false),
             sql`${dataEntries.service_area_id} IS NOT NULL`,
-            sql`${inputDefinitions.category_id} = ${financialCatId}`,
+            sql`${measureDefinitions.category_id} = ${financialCatId}`,
           ),
         );
       for (const r of rows)
@@ -5248,7 +5248,7 @@ export async function getDataEntryBreakdown(
     const ctxRows = await db
       .selectDistinct({
         utilityId: reportPeriods.utility_id,
-        inputId: dataEntries.input_def_id,
+        inputId: dataEntries.measure_def_id,
         saId: dataEntries.service_area_id,
       })
       .from(dataEntries)
@@ -5257,8 +5257,8 @@ export async function getDataEntryBreakdown(
         eq(dataEntries.report_period_id, reportPeriods.id),
       )
       .innerJoin(
-        inputDefinitions,
-        eq(dataEntries.input_def_id, inputDefinitions.id),
+        measureDefinitions,
+        eq(dataEntries.measure_def_id, measureDefinitions.id),
       )
       .where(
         and(
@@ -5267,9 +5267,9 @@ export async function getDataEntryBreakdown(
           eq(dataEntries.is_deleted, false),
           sql`${dataEntries.service_area_id} IS NOT NULL`,
           sql`(
-            ${inputDefinitions.category_id} = ${countryUtilCatId ?? -1}
-            OR ${inputDefinitions.subcategory_id} = ${countryContextSubId ?? -1}
-            OR ${inputDefinitions.subcategory_id} = ${utilityContextSubId ?? -1}
+            ${measureDefinitions.category_id} = ${countryUtilCatId ?? -1}
+            OR ${measureDefinitions.subcategory_id} = ${countryContextSubId ?? -1}
+            OR ${measureDefinitions.subcategory_id} = ${utilityContextSubId ?? -1}
           )`,
         ),
       );
@@ -5284,7 +5284,7 @@ export async function getDataEntryBreakdown(
     const genPairRows = await db
       .selectDistinct({
         utilityId: reportPeriods.utility_id,
-        inputId: dataEntries.input_def_id,
+        inputId: dataEntries.measure_def_id,
         genId: dataEntries.energy_resource_id,
       })
       .from(dataEntries)
@@ -5293,8 +5293,8 @@ export async function getDataEntryBreakdown(
         eq(dataEntries.report_period_id, reportPeriods.id),
       )
       .innerJoin(
-        inputDefinitions,
-        eq(dataEntries.input_def_id, inputDefinitions.id),
+        measureDefinitions,
+        eq(dataEntries.measure_def_id, measureDefinitions.id),
       )
       .where(
         and(
@@ -5302,7 +5302,7 @@ export async function getDataEntryBreakdown(
           inArray(dataEntries.report_period_id, rpIds),
           eq(dataEntries.is_deleted, false),
           sql`${dataEntries.energy_resource_id} IS NOT NULL`,
-          sql`${inputDefinitions.subcategory_id} = ${generationSubId ?? -1}`,
+          sql`${measureDefinitions.subcategory_id} = ${generationSubId ?? -1}`,
         ),
       );
     for (const r of genPairRows) {
@@ -5481,9 +5481,9 @@ export async function getDataEntryBreakdown(
     deConditions.push(inArray(dataEntries.report_period_id, rpIds));
   }
   if (categoryId != null)
-    deConditions.push(eq(inputDefinitions.category_id, categoryId));
+    deConditions.push(eq(measureDefinitions.category_id, categoryId));
   if (subcategoryId != null)
-    deConditions.push(eq(inputDefinitions.subcategory_id, subcategoryId));
+    deConditions.push(eq(measureDefinitions.subcategory_id, subcategoryId));
 
   const v2Map = new Map<string, number>();
   if (rpIds.length > 0) {
@@ -5503,11 +5503,11 @@ export async function getDataEntryBreakdown(
       )
       .innerJoin(organisations, eq(reportPeriods.utility_id, organisations.id))
       .innerJoin(
-        inputDefinitions,
-        eq(dataEntries.input_def_id, inputDefinitions.id),
+        measureDefinitions,
+        eq(dataEntries.measure_def_id, measureDefinitions.id),
       )
-      .innerJoin(catAlias, eq(inputDefinitions.category_id, catAlias.id))
-      .innerJoin(subAlias, eq(inputDefinitions.subcategory_id, subAlias.id))
+      .innerJoin(catAlias, eq(measureDefinitions.category_id, catAlias.id))
+      .innerJoin(subAlias, eq(measureDefinitions.subcategory_id, subAlias.id))
       .where(and(...deConditions))
       .groupBy(
         organisations.name,
@@ -5678,7 +5678,9 @@ export async function purgeAllDataEntryRecords(): Promise<{
     return { ok: true, tables: counts };
   } catch (error) {
     const message = error instanceof Error ? error.message : String(error);
-    logger.error("[purge] Failed to purge data entry records:", { error: message });
+    logger.error("[purge] Failed to purge data entry records:", {
+      error: message,
+    });
     return { ok: false, tables: counts, error: message };
   }
 }
@@ -5697,7 +5699,7 @@ export async function deduplicateDataEntries(): Promise<{
     const dupes6 = await db.execute(sql`
       WITH dupes AS (
         SELECT
-          report_period_id, input_def_id, service_area_id,
+          report_period_id, measure_def_id, service_area_id,
           energy_source_id, energy_provider_id, energy_resource_id,
           COUNT(*) as cnt,
           array_agg(id ORDER BY updated_at DESC) as ids
@@ -5717,7 +5719,7 @@ export async function deduplicateDataEntries(): Promise<{
     const dupes8 = await db.execute(sql`
       WITH dupes AS (
         SELECT
-          report_period_id, input_def_id, service_area_id,
+          report_period_id, measure_def_id, service_area_id,
           energy_resource_id, energy_provider_id, energy_source_id,
           customer_type_id, payment_mode_id,
           COUNT(*) as cnt,
@@ -5738,14 +5740,14 @@ export async function deduplicateDataEntries(): Promise<{
     //   For inputs NOT in Operational/Tariff/Generation, keep only the row
     //   with NULL service_area_id/energy_resource_id.
     //   Delete rows where SA/ER/EP/ES are non-null when a NULL version exists
-    //   for the same (report_period_id, input_def_id).
+    //   for the same (report_period_id, measure_def_id).
     const dupesNull = await db.execute(sql`
       WITH pairs AS (
         SELECT de1.id as keep_id, de2.id as delete_id
         FROM data_entries de1
         JOIN data_entries de2
           ON de1.report_period_id = de2.report_period_id
-         AND de1.input_def_id = de2.input_def_id
+         AND de1.measure_def_id = de2.measure_def_id
          AND de1.is_deleted = false AND de2.is_deleted = false
          AND de1.id != de2.id
          AND de1.service_area_id IS NULL
@@ -5756,23 +5758,23 @@ export async function deduplicateDataEntries(): Promise<{
            OR de2.energy_resource_id IS NOT NULL
            OR de2.energy_provider_id IS NOT NULL
            OR de2.energy_source_id IS NOT NULL)
-        JOIN input_definitions id ON de1.input_def_id = id.id
+        JOIN measure_definitions  id ON de1.measure_def_id = id.id
         WHERE id.category_id NOT IN (
-          SELECT DISTINCT category_id FROM input_definitions
+          SELECT DISTINCT category_id FROM measure_definitions 
           WHERE category_id IS NOT NULL
             AND category_id IN (
               SELECT id FROM managed_list_items WHERE LOWER(name) = 'operational'
             )
         )
         AND id.subcategory_id NOT IN (
-          SELECT DISTINCT subcategory_id FROM input_definitions
+          SELECT DISTINCT subcategory_id FROM measure_definitions 
           WHERE subcategory_id IS NOT NULL
             AND subcategory_id IN (
               SELECT id FROM managed_list_items WHERE LOWER(name) IN ('tariff structure', 'generation')
             )
         )
         AND id.category_id NOT IN (
-          SELECT DISTINCT category_id FROM input_definitions
+          SELECT DISTINCT category_id FROM measure_definitions 
           WHERE category_id IS NOT NULL
             AND category_id IN (
             SELECT id FROM managed_list_items WHERE LOWER(name) IN ('hr & safety', 'governance', 'financial')

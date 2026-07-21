@@ -21,7 +21,7 @@ SELECT
   de.id,
   de.report_period_id,
   de.service_area_id,
-  de.input_def_id AS measure_id,
+  de.measure_def_id AS measure_id,
   idf.name AS measure_name,
   idf.variable_name AS measure_variable_name,
   idf.definition AS measure_definition,
@@ -106,7 +106,7 @@ SELECT
   de.updated_by_id
 
 FROM data_entries de
-INNER JOIN input_definitions idf ON idf.id = de.input_def_id
+INNER JOIN measure_definitions  idf ON idf.id = de.measure_def_id
 INNER JOIN report_periods rp ON rp.id = de.report_period_id
 INNER JOIN organisations org ON org.id = rp.utility_id
 INNER JOIN countries c ON c.id = org.country_id

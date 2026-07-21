@@ -17,12 +17,14 @@ async function fetchSource(path: string) {
 async function main() {
   console.log("=== Sync Generation Relevance → input_relevance ===\n");
 
-  // Load training ID → prism input_def_id mappings
+  // Load training ID → prism measure_def_id mappings
   const mappings = new Map<number, number>();
-  for (const m of await db.select({
-    training: inputDlDefMappings.training_dl_def_id,
-    prism: inputDlDefMappings.input_def_id,
-  }).from(inputDlDefMappings)) {
+  for (const m of await db
+    .select({
+      training: inputDlDefMappings.training_dl_def_id,
+      prism: inputDlDefMappings.measure_def_id,
+    })
+    .from(inputDlDefMappings)) {
     mappings.set(m.training, m.prism);
   }
   console.log(`Mappings loaded: ${mappings.size}`);
@@ -54,24 +56,34 @@ async function main() {
     const values: string[] = [];
     for (const row of rows) {
       const prismDefId = mappings.get(row.training_dl_def_id);
-      if (!prismDefId) { skipped++; continue; }
+      if (!prismDefId) {
+        skipped++;
+        continue;
+      }
       values.push(`(${prismDefId},${row.energy_source_id},${row.is_relevant})`);
     }
 
     if (values.length > 0) {
-      await db.execute(sql.raw(
-        `INSERT INTO input_relevance (input_def_id, dimension_id, is_relevant) VALUES ${values.join(",")} ON CONFLICT DO NOTHING`
-      ));
+      await db.execute(
+        sql.raw(
+          `INSERT INTO input_relevance (measure_def_id, dimension_id, is_relevant) VALUES ${values.join(",")} ON CONFLICT DO NOTHING`,
+        ),
+      );
       inserted += values.length;
     }
 
     cursor = page.pagination?.nextCursor;
     hasMore = page.pagination?.hasMore === true && cursor != null;
 
-    if (pages % 20 === 0) console.log(`  Page ${pages}: inserted ${inserted}, skipped ${skipped}...`);
+    if (pages % 20 === 0)
+      console.log(
+        `  Page ${pages}: inserted ${inserted}, skipped ${skipped}...`,
+      );
   }
 
-  console.log(`\nDone. ${pages} pages, ${inserted.toLocaleString()} inserted, ${skipped.toLocaleString()} skipped (no mapping)`);
+  console.log(
+    `\nDone. ${pages} pages, ${inserted.toLocaleString()} inserted, ${skipped.toLocaleString()} skipped (no mapping)`,
+  );
 
   const total = await db
     .select({ cnt: sql<number>`count(*)` })

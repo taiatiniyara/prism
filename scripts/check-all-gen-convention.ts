@@ -28,13 +28,13 @@ async function main() {
 
   const coexist = await pool.query(`
     with allgen as (
-      select report_period_id, input_def_id, service_area_id
+      select report_period_id, measure_def_id, service_area_id
       from data_entries
       where energy_source_id = 40 and is_deleted = false
       group by 1, 2, 3
     ),
     detail as (
-      select report_period_id, input_def_id, service_area_id
+      select report_period_id, measure_def_id, service_area_id
       from data_entries
       where energy_source_id in (43,44,45,46,47,48,49,50,51,52,53,54,55,56,57)
         and is_deleted = false
@@ -44,16 +44,18 @@ async function main() {
       (select count(*)::int from allgen) as allgen_scopes,
       (select count(*)::int from detail) as detail_scopes,
       (select count(*)::int from allgen a
-        join detail d using (report_period_id, input_def_id, service_area_id)
+        join detail d using (report_period_id, measure_def_id, service_area_id)
       ) as overlapping_scopes
   `);
-  console.log("scope overlap (same period+input+service area has BOTH All GEN and per-source rows):");
+  console.log(
+    "scope overlap (same period+input+service area has BOTH All GEN and per-source rows):",
+  );
   console.table(coexist.rows);
 
   const sample = await pool.query(`
     select i.name as input, count(*)::int as rows_tagged_allgen
     from data_entries de
-    join input_definitions i on i.id = de.input_def_id
+    join measure_definitions  i on i.id = de.measure_def_id
     where de.energy_source_id = 40 and de.is_deleted = false
     group by i.name
     order by count(*) desc
