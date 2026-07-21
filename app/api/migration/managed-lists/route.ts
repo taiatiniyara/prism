@@ -16,6 +16,7 @@ export async function GET(req: Request) {
         id: m.managed_list_items.id,
         name: m.managed_list_items.name,
         typeId: m.managed_lists?.id,
+        typeName: m.managed_lists?.name,
         parentId: m.managed_list_items.parent_id,
         isActive: m.managed_list_items.is_active,
       };
