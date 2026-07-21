@@ -21,6 +21,7 @@ interface SourceRow {
   used_by_kpis?: string[];
 }
 
+// eslint-disable-next-line security/detect-non-literal-fs-filename
 const load = <T>(f: string): T => JSON.parse(readFileSync(`${DIR}/${f}`, "utf8"));
 
 const sourceInputs = load<SourceRow[]>("source-inputs.json");
@@ -64,8 +65,8 @@ if (problems.length) {
 }
 
 const bySrc = <T extends SourceRow>(src: T[]) => new Map(src.map((s) => [s.id, s]));
-const inputSrcMap = bySrc(sourceInputs);
-const kpiSrcMap = bySrc(sourceKpis);
+const _inputSrcMap = bySrc(sourceInputs);
+const _kpiSrcMap = bySrc(sourceKpis);
 
 const finalInputs = sourceInputs.map((s) => {
   const d = inputDrafts.find((x) => x.id === s.id)!;

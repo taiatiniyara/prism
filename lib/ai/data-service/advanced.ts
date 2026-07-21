@@ -269,7 +269,7 @@ export interface ExportReportData {
 }
 
 export const generateExport = async (
-  user: CurrentUser,
+  _user: CurrentUser,
   options: {
     title: string;
     columns: string[];

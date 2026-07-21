@@ -2,7 +2,7 @@ import { count, sql } from "drizzle-orm";
 import { db } from "@/db/connection";
 import { dataEntries } from "@/db/schema/dataEntry";
 import { reportPeriods } from "@/db/schema/reportPeriods";
-import { measureDefinitions } from "@/db/schema/dataEntry";
+import { measureDefinitions as _measureDefinitions } from "@/db/schema/dataEntry";
 import { inputDlDefMappings } from "@/db/schema/dataEntry";
 
 const MIGRATION_URL = process.env.PRISM_TRAINING_MIGRATION_URL?.trim();
@@ -165,7 +165,7 @@ async function main() {
     ),
   );
 
-  const expectedMapped = sourceDlDefIds.size - unmappedIds.length;
+  const _expectedMapped = sourceDlDefIds.size - unmappedIds.length;
   const rpOverlap = [...sourceRpIds].filter((id) => targetRpIds.has(id)).length;
   console.log(`\n  Source rp_ids: ${sourceRpIds.size}, in prism: ${rpOverlap}`);
   console.log(

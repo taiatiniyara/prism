@@ -114,7 +114,7 @@ export interface DataQualityData {
 }
 
 export const getDataQualityReport = async (
-  user: CurrentUser,
+  _user: CurrentUser,
   options: {
     report_period_id?: number | null;
     year?: number | null;

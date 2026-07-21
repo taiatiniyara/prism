@@ -69,14 +69,14 @@ async function main() {
       SELECT count(*) FROM data_entries WHERE measure_def_id IN (${sql.join(ids.map(String), sql`,`)}) AND is_deleted = false
     `);
     console.log(
-      `\nData entries referencing these defs: ${(entryCount as any).rows[0].count}`,
+      `\nData entries referencing these defs: ${(entryCount as unknown as { rows: Array<{ count: number }> }).rows[0].count}`,
     );
 
     // Show alternatives — existing defs that might be similar
     for (const d of newDefs) {
       console.log(`\n--- ${d.trainingName} ---`);
       // Search for similar names in existing defs
-      const similar = await db.execute(sql`
+      const _similar = await db.execute(sql`
         SELECT id, name FROM measure_definitions  
         WHERE id NOT IN (${sql.join(ids.map(String), sql`,`)}) 
         AND is_active = true

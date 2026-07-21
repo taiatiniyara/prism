@@ -91,6 +91,7 @@ export const measureDefinitions = pgTable("measure_definitions", {
     length: 16,
   }).$type<DefinitionStatus>(),
 });
+
 export type MeasureDefinition = typeof measureDefinitions.$inferSelect & {
   category?: string | null;
   subcategory?: string | null;

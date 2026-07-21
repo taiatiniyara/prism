@@ -26,6 +26,7 @@ async function loadTable(
   table: "measure_definitions " | "kpi_definitions",
   file: string,
 ) {
+  // eslint-disable-next-line security/detect-non-literal-fs-filename
   const rows: DraftRow[] = JSON.parse(readFileSync(`${DIR}/${file}`, "utf8"));
   let updated = 0;
   let skipped = 0;

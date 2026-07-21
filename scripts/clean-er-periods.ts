@@ -1,7 +1,7 @@
 import { db } from "@/db/connection";
 import { energyResources } from "@/db/schema/utility";
 import { reportPeriods } from "@/db/schema/reportPeriods";
-import { sql, eq } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 async function main() {
   // Get valid report_period_ids per utility

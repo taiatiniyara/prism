@@ -27,7 +27,7 @@ async function main() {
       WHERE de.measure_def_id = measure_definitions .id AND de.is_deleted = false
     )
   `);
-  console.log(`\nDeactivated ${(result as any).rowCount} defs with no data`);
+  console.log(`\nDeactivated ${(result as unknown as { rowCount: number }).rowCount} defs with no data`);
 
   // Verify
   const activeNow = await db

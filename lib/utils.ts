@@ -25,7 +25,7 @@ interface KeyTypePair {
  * @param obj - The source object to inspect.
  * @returns An array of KeyTypePair objects.
  */
-export function listColumnsAndTypes(obj: Record<string, any>): KeyTypePair[] {
+export function listColumnsAndTypes(obj: Record<string, unknown>): KeyTypePair[] {
   // Using Object.entries() to destructure the object into [key, value] pairs
   return Object.entries(obj).map(([column, value]) => {
     // Handle the JavaScript 'null' quirk (typeof null is 'object')

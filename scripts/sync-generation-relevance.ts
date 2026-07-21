@@ -1,8 +1,8 @@
 import { db } from "@/db/connection";
 import { inputRelevance, inputDlDefMappings } from "@/db/schema/dataEntry";
-import { sql, inArray } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 
-const KEY = process.env.PRISM_TRAINING_MIGRATION_KEY?.trim()!;
+const KEY = process.env.PRISM_TRAINING_MIGRATION_KEY?.trim() ?? "";
 
 async function fetchSource(path: string) {
   const url = `https://prismdashboard.org/api/migration${path}`;

@@ -71,7 +71,7 @@ async function main() {
 
       for (const u of updates) {
         const exists = await db.execute(sql`SELECT id FROM sub_regions WHERE id = ${u.oldId}`);
-        if ((exists as any).rows?.length === 0) {
+        if ((exists as unknown as { rows: unknown[] }).rows?.length === 0) {
           log(`  ${u.name}: already updated, skipping`);
           continue;
         }
@@ -82,7 +82,7 @@ async function main() {
 
       for (const ins of inserts) {
         const exists = await db.execute(sql`SELECT id FROM sub_regions WHERE id = ${ins.newId}`);
-        if ((exists as any).rows?.length > 0) {
+        if ((exists as unknown as { rows: unknown[] }).rows?.length > 0) {
           await db.execute(sql`UPDATE sub_regions SET name = ${ins.name}, un_continental_region = ${ins.region} WHERE id = ${ins.newId}`);
           log(`  Existing id=${ins.newId} → "${ins.name}"`);
         } else {
@@ -123,8 +123,8 @@ async function main() {
 
       for (const u of updates) {
         const newIdExists = await db.execute(sql`SELECT id, name FROM countries WHERE id = ${u.newId}`);
-        if ((newIdExists as any).rows?.length > 0) {
-          const row = (newIdExists as any).rows[0];
+        if ((newIdExists as unknown as { rows: Record<string, unknown>[] }).rows?.length > 0) {
+          const row = (newIdExists as unknown as { rows: Record<string, unknown>[] }).rows[0];
           if (row.name === u.name) {
             log(`  ${u.name}: already at id ${u.newId}, skipping`);
             continue;
@@ -132,7 +132,7 @@ async function main() {
         }
         
         const oldIdExists = await db.execute(sql`SELECT id FROM countries WHERE id = ${u.oldId}`);
-        if ((oldIdExists as any).rows?.length === 0) continue;
+        if ((oldIdExists as unknown as { rows: unknown[] }).rows?.length === 0) continue;
         
         const tempId = -u.oldId;
         await db.execute(sql`UPDATE organisations SET country_id = ${tempId} WHERE country_id = ${u.oldId}`);
@@ -145,11 +145,11 @@ async function main() {
       for (const u of updates) {
         const tempId = -u.oldId;
         const tempExists = await db.execute(sql`SELECT id FROM countries WHERE id = ${tempId}`);
-        if ((tempExists as any).rows?.length === 0) continue;
+        if ((tempExists as unknown as { rows: unknown[] }).rows?.length === 0) continue;
         
         const newIdExists = await db.execute(sql`SELECT id, name FROM countries WHERE id = ${u.newId}`);
-        if ((newIdExists as any).rows?.length > 0) {
-          const row = (newIdExists as any).rows[0];
+        if ((newIdExists as unknown as { rows: Record<string, unknown>[] }).rows?.length > 0) {
+          const row = (newIdExists as unknown as { rows: Record<string, unknown>[] }).rows[0];
           if (row.name === u.name) {
             log(`  ${u.name}: already at id ${u.newId}, cleaning up temp id ${tempId}`);
             await db.execute(sql`DELETE FROM countries WHERE id = ${tempId}`);
@@ -172,7 +172,7 @@ async function main() {
     const rWs = wb.getWorksheet("p2_region");
     if (rWs) {
       const check = await db.execute(sql`SELECT to_regclass('regions')`);
-      if (!(check as any).rows?.[0]?.to_regclass) {
+      if (!(check as unknown as { rows: Array<{ to_regclass: string | null }> }).rows?.[0]?.to_regclass) {
         await db.execute(sql`CREATE TABLE regions (id integer PRIMARY KEY NOT NULL, name varchar(255) NOT NULL)`);
         log(`  Created regions table`);
       }
@@ -181,7 +181,7 @@ async function main() {
         const name = row.getCell(3).value as string;
         if (!p2Id || !name) continue;
         const exists = await db.execute(sql`SELECT id FROM regions WHERE id = ${p2Id}`);
-        if ((exists as any).rows?.length > 0) {
+        if ((exists as unknown as { rows: unknown[] }).rows?.length > 0) {
           await db.execute(sql`UPDATE regions SET name = ${name} WHERE id = ${p2Id}`);
         } else {
           await db.execute(sql`INSERT INTO regions (id, name) VALUES (${p2Id}, ${name})`);
@@ -199,11 +199,11 @@ async function main() {
     ];
     
     const countries = await db.execute(sql`SELECT id, name FROM countries`);
-    const countryById = new Map((countries as any).rows.map((c: any) => [c.id, c.name]));
+    const countryById = new Map((countries as unknown as { rows: Array<{ id: number; name: string }> }).rows.map((c) => [c.id, c.name] as const));
     
     const orgs = await db.execute(sql`SELECT id, name, country_id FROM organisations`);
-    const orgByCountry = new Map<number, any[]>();
-    for (const org of (orgs as any).rows) {
+    const orgByCountry = new Map<number, Array<{ id: number; name: string; country_id: number }>>();
+    for (const org of (orgs as unknown as { rows: Array<{ id: number; name: string; country_id: number }> }).rows) {
       if (!orgByCountry.has(org.country_id)) {
         orgByCountry.set(org.country_id, []);
       }
@@ -220,10 +220,10 @@ async function main() {
         WHERE o.id IS NULL
       `);
       
-      if ((invalidRows as any).rows.length > 0) {
-        log(`  Found ${(invalidRows as any).rows.length} invalid utility_ids in ${table}`);
+      if ((invalidRows as unknown as { rows: unknown[] }).rows.length > 0) {
+        log(`  Found ${(invalidRows as unknown as { rows: unknown[] }).rows.length} invalid utility_ids in ${table}`);
         
-        for (const row of (invalidRows as any).rows) {
+        for (const row of (invalidRows as unknown as { rows: Array<{ id: number; name: string; utility_id: number }> }).rows) {
           const countryName = countryById.get(row.utility_id);
           if (!countryName) {
             log(`  SKIP: ${table} id=${row.id} (utility_id=${row.utility_id}) - no country with this id`);
@@ -238,7 +238,7 @@ async function main() {
               VALUES (${countryName + ' Utility'}, ${countryName.substring(0, 3).toUpperCase() + 'U'}, ${row.utility_id}, true, true)
               RETURNING id
             `);
-            const orgId = (newOrg as any).rows[0].id;
+            const orgId = (newOrg as unknown as { rows: Array<{ id: number }> }).rows[0].id;
             orgByCountry.set(row.utility_id, [{ id: orgId, name: countryName + ' Utility', country_id: row.utility_id }]);
             orgs = orgByCountry.get(row.utility_id)!;
           }

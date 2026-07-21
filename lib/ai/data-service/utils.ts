@@ -161,7 +161,7 @@ export interface GuidedEntryData {
 }
 
 export const getGuidedEntry = async (
-  user: CurrentUser,
+  _user: CurrentUser,
   options: { kpi_name: string } = { kpi_name: "" },
 ): Promise<AiToolResult<GuidedEntryData>> => {
   const kpiName = options.kpi_name?.trim();

@@ -1973,22 +1973,44 @@ paths:
       responses:
         '200':
           description: Success
-  /api/migration/input-definitions:
+  /api/migration/inputRelevance:
     get:
       tags:
         - Migration
-      summary: Export input definitions for migration
+      summary: Export input relevance mappings for migration
+      security:
+        - migrationKeyAuth: []
+      x-auth: Requires x-migration-key header
+      responses:
+        '200':
+          description: Success
+  /api/migration/managed-lists:
+    get:
+      tags:
+        - Migration
+      summary: GET migration managed-lists
+      security:
+        - migrationKeyAuth: []
+      x-auth: Requires x-migration-key header
+      responses:
+        '200':
+          description: Success
+  /api/migration/measure-definitions:
+    get:
+      tags:
+        - Migration
+      summary: GET migration measure-definitions
       security:
         - migrationKeyAuth: []
       x-auth: Requires x-migration-key header
       responses:
         '500':
           description: Internal Server Error
-  /api/migration/inputRelevance:
+  /api/migration/measure-dimension-scope:
     get:
       tags:
         - Migration
-      summary: Export input relevance mappings for migration
+      summary: GET migration measure-dimension-scope
       security:
         - migrationKeyAuth: []
       x-auth: Requires x-migration-key header

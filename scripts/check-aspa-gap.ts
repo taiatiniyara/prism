@@ -1,7 +1,7 @@
 import { db } from "@/db/connection";
 import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
 import { energyResources, serviceAreas } from "@/db/schema/utility";
-import { sql, eq, and } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 
 async function main() {
   const rpId = 169;
@@ -48,8 +48,8 @@ async function main() {
     activeErs
       .filter((er) => {
         if (er.utility_id !== utilId) return false;
-        return ((er.period_entries as any[]) ?? []).some(
-          (p: any) => p.report_period_id === rpId && p.is_active,
+        return ((er.period_entries as Array<{ report_period_id: number; is_active: boolean }>) ?? []).some(
+          (p) => p.report_period_id === rpId && p.is_active,
         );
       })
       .map((e) => e.id),

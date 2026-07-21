@@ -2,7 +2,6 @@ import { db } from "@/db/connection";
 import {
   inputRelevance,
   measureDefinitions,
-  dataEntries,
 } from "@/db/schema/dataEntry";
 import { sql, eq, and } from "drizzle-orm";
 
@@ -33,10 +32,9 @@ async function main() {
     WHERE de.is_deleted = false AND de.is_relevant = true
       AND de.energy_resource_id IS NOT NULL
   `);
-  const combos = (actualCombos as any).rows as Array<{
-    measure_def_id: number;
-    energy_source_id: number;
-  }>;
+  const combos = (
+    actualCombos as unknown as { rows: Array<{ measure_def_id: number; energy_source_id: number }> }
+  ).rows;
   console.log(
     `Actual (input_def, energy_source) combos with data: ${combos.length}`,
   );
@@ -50,7 +48,9 @@ async function main() {
   const esResults = await db.execute(sql`
     SELECT DISTINCT energy_source_id FROM energy_resources
   `);
-  const esIds = (esResults as any).rows.map((r: any) => r.energy_source_id);
+  const esIds = (
+    esResults as unknown as { rows: Array<{ energy_source_id: number }> }
+  ).rows.map((r) => r.energy_source_id);
   console.log(`Unique energy_source_ids in all ERs: ${esIds.length}`);
 
   // 5. For each generation def, mark as relevant (is_relevant=false means counted as NOT relevant = EXCLUDED from Requested)

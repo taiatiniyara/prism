@@ -232,7 +232,7 @@ async function main() {
 
     const periodErs = allErs.filter((er) => {
       if (er.utility_id !== utilId) return false;
-      const pe = (er.period_entries as any[]) ?? [];
+      const pe = (er.period_entries as unknown[]) ?? [];
       return pe.some((p) => p.report_period_id === rpId && p.is_active);
     });
 

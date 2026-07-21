@@ -53,10 +53,10 @@
 <body>
 <div class="container">
 <h1>prism API Reference</h1>
-<p class="subtitle">Auto-generated from 121 route files &middot; 139 endpoints &middot; 17 tag groups</p>
+<p class="subtitle">Auto-generated from 123 route files &middot; 141 endpoints &middot; 17 tag groups</p>
 <div class="stats">
 <span class="stat"><strong>DELETE</strong> 3</span>
-<span class="stat"><strong>GET</strong> 102</span>
+<span class="stat"><strong>GET</strong> 104</span>
 <span class="stat"><strong>PATCH</strong> 3</span>
 <span class="stat"><strong>POST</strong> 22</span>
 <span class="stat"><strong>PUT</strong> 9</span>
@@ -2584,11 +2584,55 @@
 <div class="endpoint">
   <div class="ep-header" onclick="this.classList.toggle('open')">
     <span class="method" style="background:#22c55e">GET</span>
-    <span class="ep-path">/api/migration/input-definitions</span>
+    <span class="ep-path">/api/migration/inputRelevance</span>
     <span class="ep-arrow">&#9654;</span>
   </div>
   <div class="ep-body">
-    <p style="margin:0 0 8px">Export input definitions for migration</p>
+    <p style="margin:0 0 8px">Export input relevance mappings for migration</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> Migration Key (x-migration-key)</span>
+    </div>
+    
+    
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-2xx">200 OK</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#22c55e">GET</span>
+    <span class="ep-path">/api/migration/managed-lists</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">GET migration managed-lists</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> Migration Key (x-migration-key)</span>
+    </div>
+    
+    
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-2xx">200 OK</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#22c55e">GET</span>
+    <span class="ep-path">/api/migration/measure-definitions</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">GET migration measure-definitions</p>
     <div class="ep-meta">
       <span><strong>Auth:</strong> Migration Key (x-migration-key)</span>
     </div>
@@ -2606,11 +2650,11 @@
 <div class="endpoint">
   <div class="ep-header" onclick="this.classList.toggle('open')">
     <span class="method" style="background:#22c55e">GET</span>
-    <span class="ep-path">/api/migration/inputRelevance</span>
+    <span class="ep-path">/api/migration/measure-dimension-scope</span>
     <span class="ep-arrow">&#9654;</span>
   </div>
   <div class="ep-body">
-    <p style="margin:0 0 8px">Export input relevance mappings for migration</p>
+    <p style="margin:0 0 8px">GET migration measure-dimension-scope</p>
     <div class="ep-meta">
       <span><strong>Auth:</strong> Migration Key (x-migration-key)</span>
     </div>
