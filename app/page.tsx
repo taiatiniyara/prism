@@ -31,7 +31,7 @@ const features: {
   {
     title: "Secure and Confidential",
     description:
-      "Your data is protected with robust security measures, ensuring confidentiality and compliance with industry standards.",
+      "Your data is protected with robust security measures, ensuring confidentiality and compliance with industry standards",
     icon: <FaLock />,
   },
 ];
