@@ -4,14 +4,12 @@ import type {
   BscTemplateLevel,
   BscThemeStyles,
 } from "@/db/schema/bsc-builder";
-import type { KpiTrajectory } from "@/db/schema/kpi";
 
 export type {
   BscActivityKind,
   BscProjectStatus,
   BscTemplateLevel,
   BscThemeStyles,
-  KpiTrajectory,
 };
 
 export type ThemeResponse = {
@@ -43,11 +41,25 @@ export type TemplateTreeResponse = {
   nodes: TemplateNode[];
 };
 
-// KPI picker option (active + visible to the utility).
+// KPI picker option (active + visible to the utility). category/subcategory are
+// sourced from the KPI definitions table for the cascading picker.
 export type KpiOption = {
   kpiDefinitionId: number;
   name: string;
   unit: string | null;
+  category: string | null;
+  subcategory: string | null;
+};
+
+// Input picker option. category/subcategory/dataType are sourced from the Input
+// definitions table (distinct from the KPI table's values).
+export type InputOption = {
+  inputDefinitionId: number;
+  name: string;
+  unit: string | null;
+  category: string | null;
+  subcategory: string | null;
+  dataType: string | null;
 };
 
 // Tracking-frequency option, sourced from the "Report Type" managed list.
@@ -63,10 +75,10 @@ export type ReportTypeOption = {
 export type ScorecardKpiLink = {
   id: string;
   kpiDefinitionId: number | null;
+  inputDefinitionId: number | null;
   kpiName: string | null;
   unit: string | null;
   pendingCustomKpiRequestId: string | null;
-  trajectory: KpiTrajectory | null;
   ord: number;
 };
 
@@ -107,11 +119,12 @@ export type ScorecardResponse = {
 };
 
 // ---------------------------------------------------------------------------
-// Save payloads (per-perspective overlay replace + trajectory)
+// Save payloads (per-perspective overlay replace)
 // ---------------------------------------------------------------------------
 
 export type KpiLinkInput = {
   kpiDefinitionId: number | null;
+  inputDefinitionId: number | null;
   pendingCustomKpiRequestId: string | null;
   ord: number;
 };
@@ -145,11 +158,6 @@ export type OverlayNodeInput = {
 export type SavePerspectiveOverlayPayload = {
   perspectiveTemplateNodeId: string;
   node: OverlayNodeInput;
-};
-
-export type SetTrajectoryPayload = {
-  kpiDefinitionId: number;
-  trajectory: KpiTrajectory | null;
 };
 
 // Inline KPI targets (year + optional month), shared per-utility per-KPI.

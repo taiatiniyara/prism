@@ -145,8 +145,8 @@ async function main() {
     const periodGens = allErs.filter((er) => {
       if (er.utility_id !== aspa.id) return false;
       if (er.is_virtual) return false; // prism-training: non-virtual only
-      return ((er.period_entries as any[]) ?? []).some(
-        (p: any) => p.report_period_id === rpId && p.is_active,
+      return ((er.period_entries as unknown[]) ?? []).some(
+        (p: Record<string, unknown>) => p.report_period_id === rpId && p.is_active,
       );
     });
 

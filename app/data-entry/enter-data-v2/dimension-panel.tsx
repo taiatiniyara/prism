@@ -46,7 +46,7 @@ const DIMENSION_CONFIG: {
 export default function DimensionPanel({
   context,
   dimensions,
-  applicableDimensions,
+  applicableDimensions: _applicableDimensions,
 }: DimensionPanelProps) {
   const router = useRouter();
   const searchParams = useSearchParams();

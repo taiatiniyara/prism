@@ -4,13 +4,11 @@ import {
   measureDefinitions,
   inputRelevance,
 } from "@/db/schema/dataEntry";
-import { reportPeriods } from "@/db/schema/reportPeriods";
 import {
   energyResources,
   serviceAreas,
   organisations,
 } from "@/db/schema/utility";
-import { managedListItems } from "@/db/schema/managedLists";
 import { sql, eq, and, inArray } from "drizzle-orm";
 
 async function main() {
@@ -109,7 +107,7 @@ async function main() {
 
   const periodErs = ers.filter((er) => {
     if (er.utility_id !== tauId) return false;
-    const pe = (er.period_entries as any[]) ?? [];
+    const pe = (er.period_entries as unknown[]) ?? [];
     return pe.some((p) => p.report_period_id === rpId && p.is_active);
   });
   console.log(`Active ERs for RP ${rpId}: ${periodErs.length}`);

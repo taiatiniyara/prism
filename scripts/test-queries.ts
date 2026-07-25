@@ -65,7 +65,7 @@ async function main() {
   // 0. List all AI tables
   results.push(await test("list AI tables", async () => {
     const r = await db.execute(sql`SELECT table_name FROM information_schema.tables WHERE table_schema = 'public' AND table_name LIKE 'ai_%'`);
-    console.log("  AI tables:", r.rows.map((row: any) => row.table_name).join(", "));
+    console.log("  AI tables:", r.rows.map((row: Record<string, string>) => row.table_name).join(", "));
     return r;
   }));
 

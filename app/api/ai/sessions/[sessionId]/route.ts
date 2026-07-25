@@ -16,7 +16,10 @@ export async function GET(
   }
 
   if (!isValidOrigin(request)) {
-    return Response.json({ message: "Invalid request origin." }, { status: 403 });
+    return Response.json(
+      { message: "Invalid request origin." },
+      { status: 403 },
+    );
   }
 
   const { sessionId } = await params;
@@ -50,7 +53,8 @@ export async function GET(
 
   const turnIds = turns.map((t) => t.id);
 
-  const toolCallsByTurnId: Record<number, typeof aiToolCall.$inferSelect[]> = {};
+  const toolCallsByTurnId: Record<number, (typeof aiToolCall.$inferSelect)[]> =
+    {};
   if (turnIds.length > 0) {
     const allToolCalls = await db
       .select()
@@ -72,7 +76,7 @@ export async function GET(
 }
 
 export async function DELETE(
-  request: Request,
+  _request: Request,
   { params }: { params: Promise<{ sessionId: string }> },
 ) {
   let user;

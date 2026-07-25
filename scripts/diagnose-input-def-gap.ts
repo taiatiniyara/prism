@@ -1,11 +1,11 @@
-import { count } from "drizzle-orm";
+
 import { db } from "@/db/connection";
 import { measureDefinitions } from "@/db/schema/dataEntry";
 import { inputDlDefMappings } from "@/db/schema/dataEntry";
 
 const MIGRATION_URL = process.env.PRISM_TRAINING_MIGRATION_URL?.trim();
 const MIGRATION_KEY = process.env.PRISM_TRAINING_MIGRATION_KEY?.trim();
-const MIGRATION_API_KEY = process.env.PRISM_TRAINING_API_KEY?.trim();
+const _MIGRATION_API_KEY = process.env.PRISM_TRAINING_API_KEY?.trim();
 
 function normalizeBaseUrl(value: string): string {
   const trimmed = value.trim();

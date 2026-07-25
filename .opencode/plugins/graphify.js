@@ -9,6 +9,7 @@ export const GraphifyPlugin = async ({ directory }) => {
   return {
     "tool.execute.before": async (input, output) => {
       if (reminded) return;
+      // eslint-disable-next-line security/detect-non-literal-fs-filename
       if (!existsSync(join(directory, "graphify-out", "graph.json"))) return;
 
       if (input.tool === "bash") {

@@ -15,6 +15,7 @@ import {
   getThemeStyles,
   getUtilityScorecard,
   listBuilderKpiOptions,
+  listBuilderInputOptions,
   listKpiTargets,
   listReportTypeOptions,
   listTemplateTree,
@@ -23,7 +24,6 @@ import {
   saveKpiTargets,
   saveKpiTargetPlan,
   saveThemeStyles,
-  setKpiTrajectory,
   setTemplateNodeLinks,
   updateTemplateNode,
 } from "./repository";
@@ -32,13 +32,13 @@ import type {
   BscThemeStyles,
   CreateTemplateNodePayload,
   KpiOption,
+  InputOption,
   KpiTargetRow,
   ReportTypeOption,
   SaveKpiTargetsPayload,
   TargetPlanSummary,
   ScorecardResponse,
   SavePerspectiveOverlayPayload,
-  SetTrajectoryPayload,
   TemplateTreeResponse,
   ThemeResponse,
   UpdateTemplateNodePayload,
@@ -130,6 +130,14 @@ export const getKpiOptions = async (
   return listBuilderKpiOptions(utilityId);
 };
 
+export const getInputOptions = async (
+  user: CurrentUser,
+): Promise<InputOption[]> => {
+  assertNewBscReadAccess(user);
+  requireUtilityId(user);
+  return listBuilderInputOptions();
+};
+
 export const getReportTypeOptions = async (
   user: CurrentUser,
 ): Promise<ReportTypeOption[]> => {
@@ -144,20 +152,6 @@ export const savePerspective = async (
   assertNewBscBuildAccess(user);
   const utilityId = requireUtilityId(user);
   await replacePerspectiveOverlay(utilityId, payload);
-};
-
-export const saveTrajectory = async (
-  user: CurrentUser,
-  payload: SetTrajectoryPayload,
-) => {
-  assertNewBscBuildAccess(user);
-  const utilityId = requireUtilityId(user);
-  await setKpiTrajectory(
-    utilityId,
-    user.id,
-    payload.kpiDefinitionId,
-    payload.trajectory,
-  );
 };
 
 export const getKpiTargets = async (

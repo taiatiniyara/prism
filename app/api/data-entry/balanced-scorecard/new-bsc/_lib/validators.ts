@@ -5,12 +5,10 @@ import type {
   CreateTemplateNodePayload,
   KpiLinkInput,
   KpiTargetRow,
-  KpiTrajectory,
   InitiativeInput,
   OverlayNodeInput,
   SaveKpiTargetsPayload,
   SavePerspectiveOverlayPayload,
-  SetTrajectoryPayload,
   SpecificObjectiveInput,
   UpdateTemplateNodePayload,
 } from "@/app/data-entry/balanced-scorecard/new-bsc/types";
@@ -25,8 +23,6 @@ const LEVELS: BscTemplateLevel[] = [
   "strategic_objective",
   "strategic_lever",
 ];
-
-const TRAJECTORIES: KpiTrajectory[] = ["increase", "decrease", "same"];
 
 const PROJECT_STATUSES: BscProjectStatus[] = [
   "planned",
@@ -84,14 +80,20 @@ const parseKpiLink = (raw: unknown, path: string): KpiLinkInput => {
     throw new Error(`VALIDATION:${path} must be an object.`);
   }
   const kpiDefinitionId = asPositiveIntOrNull(raw.kpiDefinitionId);
+  const inputDefinitionId = asPositiveIntOrNull(raw.inputDefinitionId);
   const pendingCustomKpiRequestId = asUuidOrNull(raw.pendingCustomKpiRequestId);
-  if (kpiDefinitionId == null && pendingCustomKpiRequestId == null) {
+  if (
+    kpiDefinitionId == null &&
+    inputDefinitionId == null &&
+    pendingCustomKpiRequestId == null
+  ) {
     throw new Error(
-      `VALIDATION:${path} requires kpiDefinitionId or pendingCustomKpiRequestId.`,
+      `VALIDATION:${path} requires kpiDefinitionId, inputDefinitionId or pendingCustomKpiRequestId.`,
     );
   }
   return {
     kpiDefinitionId,
+    inputDefinitionId,
     pendingCustomKpiRequestId,
     ord: asOrd(raw.ord),
   };
@@ -200,31 +202,6 @@ export const parseSavePerspectiveOverlayPayload = (
     throw new Error("VALIDATION:node must be a perspective root.");
   }
   return { perspectiveTemplateNodeId, node };
-};
-
-export const parseSetTrajectoryPayload = (
-  body: unknown,
-): SetTrajectoryPayload => {
-  if (!isPlainObject(body)) {
-    throw new Error("VALIDATION:Request body must be an object.");
-  }
-  const kpiDefinitionId = asPositiveIntOrNull(body.kpiDefinitionId);
-  if (kpiDefinitionId == null) {
-    throw new Error("VALIDATION:kpiDefinitionId must be a positive integer.");
-  }
-  let trajectory: KpiTrajectory | null = null;
-  if (body.trajectory != null && body.trajectory !== "") {
-    if (
-      typeof body.trajectory !== "string" ||
-      !TRAJECTORIES.includes(body.trajectory as KpiTrajectory)
-    ) {
-      throw new Error(
-        "VALIDATION:trajectory must be increase, decrease, same, or null.",
-      );
-    }
-    trajectory = body.trajectory as KpiTrajectory;
-  }
-  return { kpiDefinitionId, trajectory };
 };
 
 export const parseSaveKpiTargetsPayload = (

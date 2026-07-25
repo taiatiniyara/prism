@@ -1,7 +1,7 @@
 import { db } from "@/db/connection";
 import { measureDefinitions } from "@/db/schema/dataEntry";
-import { managedListItems, managedLists } from "@/db/schema/managedLists";
-import { sql, eq, and } from "drizzle-orm";
+import { managedListItems } from "@/db/schema/managedLists";
+import { sql } from "drizzle-orm";
 
 async function main() {
   // Get managed list names for context

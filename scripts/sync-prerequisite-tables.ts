@@ -3,7 +3,7 @@ import { organisations, serviceAreas, energyResources } from "@/db/schema/utilit
 import { managedListItems } from "@/db/schema/managedLists";
 import { sql } from "drizzle-orm";
 
-const MIGRATION_KEY = process.env.PRISM_TRAINING_MIGRATION_KEY?.trim()!;
+const MIGRATION_KEY = process.env.PRISM_TRAINING_MIGRATION_KEY?.trim() ?? "";
 
 function log(msg: string) { console.log(msg); }
 
@@ -21,7 +21,7 @@ async function fetchSource(path: string) {
     clearTimeout(timeout);
     if (!res.ok) throw new Error(`${res.status} ${res.statusText}`);
     return res.json();
-  } catch (e: any) {
+  } catch (e: unknown) {
     clearTimeout(timeout);
     throw e;
   }
@@ -36,8 +36,8 @@ async function main() {
   // ── 1. Sync organisations + service_areas ──
   log("\n[1/2] Fetching /organisation...");
   const orgData = await fetchSource("/organisation");
-  const saList: any[] = orgData.serviceAreas ?? [];
-  const orgList: any[] = orgData.organisations ?? [];
+  const saList: unknown[] = orgData.serviceAreas ?? [];
+  const orgList: unknown[] = orgData.organisations ?? [];
   log(`  Got ${orgList.length} orgs, ${saList.length} SAs`);
 
   const existingOrgIds = new Set((await db.select({ id: organisations.id }).from(organisations)).map(o => o.id));
@@ -62,7 +62,7 @@ async function main() {
         financial_year_end: o.financial_year_end,
       });
       orgIns++;
-    } catch (e) { /* dup */ }
+    } catch { /* dup */ }
   }
   log(`  Inserted ${orgIns} orgs`);
 
@@ -81,13 +81,13 @@ async function main() {
         agg_level_id: mliIds.has(sa.agg_level_id) ? sa.agg_level_id : 1,
       });
       saIns++;
-    } catch (e) { /* dup */ }
+    } catch { /* dup */ }
   }
   log(`  Inserted ${saIns} SAs`);
 
   // ── 2. Sync energy_resources ──
   log("\n[2/2] Fetching /generators...");
-  const erList: any[] = await fetchSource("/generators");
+  const erList: unknown[] = await fetchSource("/generators");
   log(`  Got ${erList.length} ERs from API`);
 
   const existingErIds = new Set((await db.select({ id: energyResources.id }).from(energyResources)).map(e => e.id));
@@ -119,14 +119,14 @@ async function main() {
         is_virtual: er.is_virtual ?? false,
         agg_level_id: mliIds.has(er.agg_level_id) ? er.agg_level_id : 1,
         updated_at: er.updated_at ? new Date(er.updated_at) : new Date(),
-        updated_by_id: null as any,
+        updated_by_id: null,
       });
       inserted++;
     } catch (e) {
       errors++;
       if (errors === 1) {
         log(`  RAW ERROR: ${JSON.stringify(e, Object.getOwnPropertyNames(e), 2)}`);
-        if ((e as any)?.cause) log(`  CAUSE: ${JSON.stringify((e as any).cause, Object.getOwnPropertyNames((e as any).cause), 2)}`);
+        if ((e as { cause?: unknown })?.cause) log(`  CAUSE: ${JSON.stringify((e as { cause?: unknown }).cause, Object.getOwnPropertyNames((e as { cause?: unknown }).cause), 2)}`);
       }
     }
 

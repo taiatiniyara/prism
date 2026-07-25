@@ -9,9 +9,9 @@ import { reportPeriods } from "@/db/schema/reportPeriods";
 import { energyResources, serviceAreas } from "@/db/schema/utility";
 import { managedListItems } from "@/db/schema/managedLists";
 import { migrationLogs } from "@/db/schema/migration-log";
-import { sql, eq, and, isNull, inArray } from "drizzle-orm";
+import { sql, eq } from "drizzle-orm";
 
-const MIGRATION_KEY = process.env.PRISM_TRAINING_MIGRATION_KEY?.trim()!;
+const MIGRATION_KEY = process.env.PRISM_TRAINING_MIGRATION_KEY?.trim() ?? "";
 
 function log(msg: string) {
   console.log(msg);
@@ -60,20 +60,20 @@ function nk(v: number | null) {
   return v == null ? "n" : String(v);
 }
 
-const mapStatus = (row: any): DataEntryStatusId => {
+const mapStatus = (row: Record<string, unknown>): DataEntryStatusId => {
   if (row.not_available) return 7;
   if (row.status_legacy_id != null) {
     switch (row.status_legacy_id) {
       case 5:
-        return 4; // Reviewed
+        return 4;
       case 6:
-        return 5; // Approved
+        return 5;
       case 7:
-        return 3; // Uploaded → Entered (data was submitted)
+        return 3;
     }
   }
-  if ((row.value ?? "").trim().length > 0) return 3; // Entered
-  return 2; // Pending
+  if ((String(row.value ?? "")).trim().length > 0) return 3;
+  return 2;
 };
 
 function esc(v: string): string {
@@ -144,7 +144,7 @@ async function main() {
       `  [page ${pageNum}] fetch cursor=${cursor ?? "null"}...`,
     );
     const page = await fetchSource(`/dataEntry?${params.toString()}`);
-    const entries: any[] = page.dataEntry ?? [];
+    const entries: Record<string, unknown>[] = page.dataEntry ?? [];
     if (entries.length === 0) break;
     process.stderr.write(` got ${entries.length}\n`);
 
@@ -274,7 +274,7 @@ async function main() {
           `),
           );
           // Track new ids
-          const returned = (result as any)?.rows ?? [];
+          const returned = (result as { rows?: Record<string, unknown>[] })?.rows ?? [];
           for (const inserted of returned) {
             const k = [
               inserted.report_period_id,
@@ -302,7 +302,7 @@ async function main() {
               .update(dataEntries)
               .set({
                 value: r.value,
-                status_id: r.status_id as any,
+                status_id: r.status_id as unknown as DataEntryStatusId,
                 is_relevant: r.is_relevant,
                 is_deleted: r.is_deleted,
                 update_medium_id: r.update_medium_id,

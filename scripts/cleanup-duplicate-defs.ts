@@ -3,7 +3,6 @@ import {
   measureDefinitions,
   inputDlDefMappings,
   dataEntries,
-  dataEntryLogs,
 } from "@/db/schema/dataEntry";
 import { eq, and, inArray, sql, notInArray } from "drizzle-orm";
 
