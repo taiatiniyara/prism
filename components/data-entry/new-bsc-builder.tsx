@@ -2,15 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  ArrowRight,
   ChevronDown,
   ChevronRight,
   Lock,
   Palette,
   Plus,
   Trash2,
-  TrendingDown,
-  TrendingUp,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -26,7 +23,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { SearchableSelect } from "@/components/ui/searchable-select";
+import BscKpiPickerModal from "@/components/data-entry/bsc-kpi-picker-modal";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -41,13 +38,13 @@ import BscStrategyMap from "@/components/data-entry/bsc-strategy-map";
 
 import {
   fetchKpiOptions,
+  fetchInputOptions,
   fetchScorecard,
   fetchTargetPlans,
   fetchTemplate,
   fetchTheme,
   savePerspectiveOverlay,
   saveTheme,
-  saveTrajectory,
 } from "@/app/data-entry/balanced-scorecard/new-bsc/client";
 import {
   generateThemeCss,
@@ -60,7 +57,7 @@ import type {
   BscTemplateLevel,
   BscThemeStyles,
   KpiOption,
-  KpiTrajectory,
+  InputOption,
   OverlayNodeInput,
   ScorecardNode,
   TargetPlanSummary,
@@ -75,10 +72,10 @@ import type { BscElementStyle } from "@/db/schema/bsc-builder";
 type WorkingKpi = {
   key: string;
   kpiDefinitionId: number | null;
+  inputDefinitionId: number | null;
   kpiName: string | null;
   unit: string | null;
   pendingCustomKpiRequestId: string | null;
-  trajectory: KpiTrajectory | null;
 };
 
 type WorkingInitiative = {
@@ -142,29 +139,6 @@ const LEVEL_PILL_EL: Record<BscTemplateLevel, string> = {
   strategic_lever: "pillStrategicLever",
 };
 
-const TRAJECTORY_LABEL: Record<KpiTrajectory, string> = {
-  increase: "Increase",
-  decrease: "Decrease",
-  same: "Maintain",
-};
-
-const TRAJECTORY_ICON: Record<KpiTrajectory, typeof TrendingUp> = {
-  increase: TrendingUp,
-  decrease: TrendingDown,
-  same: ArrowRight,
-};
-
-function TrajectoryIcon({
-  kind,
-  className = "size-3.5",
-}: {
-  kind: KpiTrajectory;
-  className?: string;
-}) {
-  const Icon = TRAJECTORY_ICON[kind];
-  return <Icon className={className} aria-label={TRAJECTORY_LABEL[kind]} />;
-}
-
 const genKey = () =>
   typeof crypto !== "undefined" && "randomUUID" in crypto
     ? crypto.randomUUID()
@@ -189,10 +163,10 @@ const mapObjectives = (
       kpis: initiative.kpis.map((kpi) => ({
         key: genKey(),
         kpiDefinitionId: kpi.kpiDefinitionId,
+        inputDefinitionId: kpi.inputDefinitionId,
         kpiName: kpi.kpiName,
         unit: kpi.unit,
         pendingCustomKpiRequestId: kpi.pendingCustomKpiRequestId,
-        trajectory: kpi.trajectory,
       })),
     })),
   }));
@@ -275,10 +249,12 @@ const serializeNode = (node: WorkingNode, ord: number): OverlayNodeInput => ({
               .filter(
                 (kpi) =>
                   kpi.kpiDefinitionId != null ||
+                  kpi.inputDefinitionId != null ||
                   kpi.pendingCustomKpiRequestId != null,
               )
               .map((kpi, ki) => ({
                 kpiDefinitionId: kpi.kpiDefinitionId,
+                inputDefinitionId: kpi.inputDefinitionId,
                 pendingCustomKpiRequestId: kpi.pendingCustomKpiRequestId,
                 ord: ki,
               })),
@@ -344,6 +320,7 @@ export default function NewBscBuilder({
 }) {
   const [perspectives, setPerspectives] = useState<WorkingNode[] | null>(null);
   const [kpiOptions, setKpiOptions] = useState<KpiOption[]>([]);
+  const [inputOptions, setInputOptions] = useState<InputOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [view, setView] = useState<"build" | "preview" | "map">("build");
@@ -354,6 +331,13 @@ export default function NewBscBuilder({
   const [targetsOpen, setTargetsOpen] = useState<Set<string>>(new Set());
   const [pendingDeselect, setPendingDeselect] =
     useState<PendingDeselect | null>(null);
+  // The initiative currently targeted by the "+ Add KPI" picker modal.
+  const [addTarget, setAddTarget] = useState<{
+    perspectiveKey: string;
+    leverKey: string;
+    objectiveKey: string;
+    initiativeKey: string;
+  } | null>(null);
 
   // DEV-only styling theme.
   const [themeStyles, setThemeStyles] = useState<BscThemeStyles>({});
@@ -382,15 +366,18 @@ export default function NewBscBuilder({
     let active = true;
     (async () => {
       try {
-        const [template, scorecard, options, theme] = await Promise.all([
-          fetchTemplate(),
-          fetchScorecard(),
-          fetchKpiOptions().catch(() => [] as KpiOption[]),
-          fetchTheme().catch(() => ({ styles: {}, canEdit: false })),
-        ]);
+        const [template, scorecard, options, inputs, theme] =
+          await Promise.all([
+            fetchTemplate(),
+            fetchScorecard(),
+            fetchKpiOptions().catch(() => [] as KpiOption[]),
+            fetchInputOptions().catch(() => [] as InputOption[]),
+            fetchTheme().catch(() => ({ styles: {}, canEdit: false })),
+          ]);
         if (!active) return;
         setPerspectives(mergeChildren(template.nodes, scorecard.perspectives));
         setKpiOptions(options);
+        setInputOptions(inputs);
         setThemeStyles(theme.styles);
         setCanEditTheme(theme.canEdit);
       } catch (err) {
@@ -461,14 +448,6 @@ export default function NewBscBuilder({
     [scheduleThemeSave],
   );
 
-  const kpiSelectOptions = useMemo(
-    () =>
-      kpiOptions.map((option) => ({
-        value: String(option.kpiDefinitionId),
-        label: option.name,
-      })),
-    [kpiOptions],
-  );
 
   const scheduleSave = useCallback((perspectiveKey: string) => {
     const timers = saveTimers.current;
@@ -649,36 +628,6 @@ export default function NewBscBuilder({
           : item,
       ),
     );
-
-  const setTrajectoryEverywhere = (
-    kpiDefinitionId: number,
-    trajectory: KpiTrajectory | null,
-  ) => {
-    setPerspectives((prev) => {
-      if (!prev) return prev;
-      const patchKpi = (node: WorkingNode): WorkingNode => ({
-        ...node,
-        children: node.children.map(patchKpi),
-        specificObjectives: node.specificObjectives.map((objective) => ({
-          ...objective,
-          initiatives: objective.initiatives.map((initiative) => ({
-            ...initiative,
-            kpis: initiative.kpis.map((kpi) =>
-              kpi.kpiDefinitionId === kpiDefinitionId
-                ? { ...kpi, trajectory }
-                : kpi,
-            ),
-          })),
-        })),
-      });
-      return prev.map(patchKpi);
-    });
-    void saveTrajectory({ kpiDefinitionId, trajectory }).catch((err) =>
-      toast.error(
-        err instanceof Error ? err.message : "Failed to save trajectory.",
-      ),
-    );
-  };
 
   const toggleCollapsed = (key: string) =>
     setCollapsed((prev) => {
@@ -901,41 +850,6 @@ export default function NewBscBuilder({
                             </span>
                           ) : null}
                         </span>
-                        <Select
-                          value={kpi.trajectory ?? "none"}
-                          disabled={!canBuild || kpi.kpiDefinitionId == null}
-                          onValueChange={(value) =>
-                            kpi.kpiDefinitionId != null &&
-                            setTrajectoryEverywhere(
-                              kpi.kpiDefinitionId,
-                              value === "none"
-                                ? null
-                                : (value as KpiTrajectory),
-                            )
-                          }
-                        >
-                          <SelectTrigger className="h-7 w-32 bg-white text-xs">
-                            <SelectValue placeholder="Trajectory" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="none">No trajectory</SelectItem>
-                            <SelectItem value="increase">
-                              <span className="flex items-center gap-1.5">
-                                <TrendingUp className="size-3.5" /> Increase
-                              </span>
-                            </SelectItem>
-                            <SelectItem value="decrease">
-                              <span className="flex items-center gap-1.5">
-                                <TrendingDown className="size-3.5" /> Decrease
-                              </span>
-                            </SelectItem>
-                            <SelectItem value="same">
-                              <span className="flex items-center gap-1.5">
-                                <ArrowRight className="size-3.5" /> Maintain
-                              </span>
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
                         {kpi.kpiDefinitionId != null ? (
                           <Button
                             type="button"
@@ -993,50 +907,22 @@ export default function NewBscBuilder({
 
                   {/* KPI picker */}
                   {canBuild ? (
-                    <SearchableSelect
-                      options={kpiSelectOptions}
-                      placeholder="+ Add KPI"
-                      searchPlaceholder="Search KPIs…"
-                      emptyLabel="No KPIs found"
-                      triggerClassName="h-7 text-xs bg-white"
-                      onValueChange={(value) => {
-                        const option = kpiOptions.find(
-                          (o) => String(o.kpiDefinitionId) === value,
-                        );
-                        if (!option) return;
-                        updateLever(
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="h-7 bg-white text-xs"
+                      onClick={() =>
+                        setAddTarget({
                           perspectiveKey,
-                          lever.key,
-                          (objectives) =>
-                            objectives.map((item) =>
-                              item.key === objective.key
-                                ? {
-                                    ...item,
-                                    initiatives: item.initiatives.map((ini) =>
-                                      ini.key === initiative.key
-                                        ? {
-                                            ...ini,
-                                            kpis: [
-                                              ...ini.kpis,
-                                              {
-                                                key: genKey(),
-                                                kpiDefinitionId:
-                                                  option.kpiDefinitionId,
-                                                kpiName: option.name,
-                                                unit: option.unit,
-                                                pendingCustomKpiRequestId: null,
-                                                trajectory: null,
-                                              },
-                                            ],
-                                          }
-                                        : ini,
-                                    ),
-                                  }
-                                : item,
-                            ),
-                        );
-                      }}
-                    />
+                          leverKey: lever.key,
+                          objectiveKey: objective.key,
+                          initiativeKey: initiative.key,
+                        })
+                      }
+                    >
+                      + Add KPI
+                    </Button>
                   ) : null}
                 </div>
               </div>
@@ -1236,11 +1122,7 @@ export default function NewBscBuilder({
 
   const targetStatusFor = (
     kpiDefinitionId: number | null,
-    trajectory: KpiTrajectory | null,
-  ): {
-    status: { label: string; cls: string; el: string };
-    trajectory: { label: string; cls: string; el: string } | null;
-  } => {
+  ): { label: string; cls: string; el: string } => {
     const notSet = `${PILL_BASE} border-red-200 bg-red-50 text-red-700`;
     const partial = `${PILL_BASE} border-amber-200 bg-amber-50 text-amber-700`;
     const full = `${PILL_BASE} border-emerald-200 bg-emerald-50 text-emerald-700`;
@@ -1248,57 +1130,16 @@ export default function NewBscBuilder({
     const plan =
       kpiDefinitionId == null ? undefined : targetPlans[kpiDefinitionId];
     if (!plan || plan.total === 0 || plan.filled === 0) {
-      return {
-        status: {
-          label: "Targets Not Set",
-          cls: notSet,
-          el: "targetStatusNotSet",
-        },
-        trajectory: null,
-      };
+      return { label: "Targets Not Set", cls: notSet, el: "targetStatusNotSet" };
     }
     if (plan.filled < plan.total) {
       return {
-        status: {
-          label: "Targets Partially Set",
-          cls: partial,
-          el: "targetStatusPartial",
-        },
-        trajectory: null,
+        label: "Targets Partially Set",
+        cls: partial,
+        el: "targetStatusPartial",
       };
     }
-
-    let trajPill: { label: string; cls: string; el: string } | null = null;
-    const nums = plan.values.filter((v): v is number => v != null);
-    if (trajectory && nums.length >= 2) {
-      const first = nums[0];
-      const last = nums[nums.length - 1];
-      const matched =
-        trajectory === "increase"
-          ? last > first
-          : trajectory === "decrease"
-            ? last < first
-            : last === first;
-      trajPill = matched
-        ? {
-            label: "Matched Trajectory Status",
-            cls: full,
-            el: "trajectoryMatched",
-          }
-        : {
-            label: "Mismatched Trajectory Status",
-            cls: notSet,
-            el: "trajectoryMismatched",
-          };
-    }
-    return {
-      status: {
-        label: "Targets Fully Set",
-        cls: full,
-        el: "targetStatusFull",
-      },
-      trajectory: trajPill,
-    };
+    return { label: "Targets Fully Set", cls: full, el: "targetStatusFull" };
   };
 
   const renderPreviewInitiative = (
@@ -1346,7 +1187,7 @@ export default function NewBscBuilder({
         ) : null}
       </div>
       {initiative.kpis.map((kpi) => {
-        const st = targetStatusFor(kpi.kpiDefinitionId, kpi.trajectory);
+        const st = targetStatusFor(kpi.kpiDefinitionId);
         return (
           <div
             key={kpi.key}
@@ -1359,16 +1200,10 @@ export default function NewBscBuilder({
                 {kpi.kpiName ?? "KPI"}
                 {kpi.unit ? ` (${kpi.unit})` : ""}
               </span>
-              {kpi.trajectory ? <TrajectoryIcon kind={kpi.trajectory} /> : null}
             </span>
-            <span data-bsc-el={st.status.el} className={st.status.cls}>
-              {st.status.label}
+            <span data-bsc-el={st.el} className={st.cls}>
+              {st.label}
             </span>
-            {st.trajectory ? (
-              <span data-bsc-el={st.trajectory.el} className={st.trajectory.cls}>
-                {st.trajectory.label}
-              </span>
-            ) : null}
           </div>
         );
       })}
@@ -1676,6 +1511,47 @@ export default function NewBscBuilder({
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <BscKpiPickerModal
+        open={addTarget != null}
+        onOpenChange={(o) => {
+          if (!o) setAddTarget(null);
+        }}
+        kpiOptions={kpiOptions}
+        inputOptions={inputOptions}
+        onSelect={(picked) => {
+          const target = addTarget;
+          if (!target) return;
+          updateLever(target.perspectiveKey, target.leverKey, (objectives) =>
+            objectives.map((item) =>
+              item.key === target.objectiveKey
+                ? {
+                    ...item,
+                    initiatives: item.initiatives.map((ini) =>
+                      ini.key === target.initiativeKey
+                        ? {
+                            ...ini,
+                            kpis: [
+                              ...ini.kpis,
+                              {
+                                key: genKey(),
+                                kpiDefinitionId: picked.kpiDefinitionId,
+                                inputDefinitionId: picked.inputDefinitionId,
+                                kpiName: picked.name,
+                                unit: picked.unit,
+                                pendingCustomKpiRequestId: null,
+                              },
+                            ],
+                          }
+                        : ini,
+                    ),
+                  }
+                : item,
+            ),
+          );
+          setAddTarget(null);
+        }}
+      />
     </div>
   );
 }

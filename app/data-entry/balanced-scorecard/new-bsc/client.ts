@@ -2,13 +2,13 @@ import type {
   BscThemeStyles,
   CreateTemplateNodePayload,
   KpiOption,
+  InputOption,
   KpiTargetRow,
   ReportTypeOption,
   SaveKpiTargetsPayload,
   TargetPlanSummary,
   ScorecardResponse,
   SavePerspectiveOverlayPayload,
-  SetTrajectoryPayload,
   TemplateTreeResponse,
   ThemeResponse,
   UpdateTemplateNodePayload,
@@ -47,6 +47,15 @@ export const fetchKpiOptions = async (): Promise<KpiOption[]> => {
   return data.options;
 };
 
+export const fetchInputOptions = async (): Promise<InputOption[]> => {
+  const response = await fetch(`${BASE}/input-options`, { cache: "no-store" });
+  const data = await asJson<{ options: InputOption[] }>(
+    response,
+    "Unable to load input options.",
+  );
+  return data.options;
+};
+
 export const savePerspectiveOverlay = async (
   payload: SavePerspectiveOverlayPayload,
 ): Promise<void> => {
@@ -56,17 +65,6 @@ export const savePerspectiveOverlay = async (
     body: JSON.stringify(payload),
   });
   await asJson<{ message: string }>(response, "Unable to save scorecard.");
-};
-
-export const saveTrajectory = async (
-  payload: SetTrajectoryPayload,
-): Promise<void> => {
-  const response = await fetch(`${BASE}/trajectory`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  await asJson<{ message: string }>(response, "Unable to save trajectory.");
 };
 
 export const fetchTheme = async (): Promise<ThemeResponse> => {
