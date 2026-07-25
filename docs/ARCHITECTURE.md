@@ -24,6 +24,7 @@ Decisions recorded here, with rationale. Superseded decisions go in `docs/adr/`.
 | Database | PostgreSQL (pg + Drizzle ORM) | Relational integrity for 47-table domain model; Drizzle for type-safe queries + schema-as-code |
 | Migrations | `drizzle-kit push` (safe wrapper via `db-push-safe`) | Push-based schema sync with UUID timestamp fix pre-flight |
 | Connection pooling | Single pool on `globalThis.__prismPool` (PG with 30s timeouts) | Survives Next.js hot-reload dev loop |
+| Data architecture | Medallion: Bronze (typed `data_entries`, 10-dimension address, All-member convention) → Silver (`silver.data_entries_enriched`) → Gold (`gold.fact_kpi`, `fact_kpi_rollup`, `v_reporting_status`, `v_bsc_alignment`, `ext_*`) | One semantic source; gold owns all aggregation; AI/dashboards/reports read silver/gold only. Spec: `docs/schema-redesign-medallion.md`; builder guides: `docs/database-build-spec.md`, `docs/data-entries-configuration-guide.md` |
 
 ## Auth
 

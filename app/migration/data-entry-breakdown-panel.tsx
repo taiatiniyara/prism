@@ -346,7 +346,7 @@ export default function DataEntryBreakdownPanel({
           </label>
 
           <label className="space-y-1 text-sm">
-            <span className="font-medium">Input Category</span>
+            <span className="font-medium">Measures Category</span>
             <select
               className="w-full rounded-md border border-slate-300 bg-white px-2 py-2"
               value={category}
@@ -368,7 +368,7 @@ export default function DataEntryBreakdownPanel({
           </label>
 
           <label className="space-y-1 text-sm">
-            <span className="font-medium">Input Subcategory</span>
+            <span className="font-medium">Measures Subcategory</span>
             <select
               className="w-full rounded-md border border-slate-300 bg-white px-2 py-2"
               value={subcategory}

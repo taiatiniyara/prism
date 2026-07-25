@@ -310,13 +310,13 @@ const getMeasureDefinitionsForContext = async (
 
   if (context.inputCategoryId != null) {
     conditions.push(
-      eq(measureDefinitions.category_id, context.inputCategoryId),
+      eq(measureDefinitions.measures_group_id, context.inputCategoryId),
     );
   }
 
   if (context.inputSubcategoryId != null) {
     conditions.push(
-      eq(measureDefinitions.subcategory_id, context.inputSubcategoryId),
+      eq(measureDefinitions.measures_subgroup_id, context.inputSubcategoryId),
     );
   }
 
@@ -325,13 +325,13 @@ const getMeasureDefinitionsForContext = async (
       id: measureDefinitions.id,
       name: measureDefinitions.name,
       alternativeNames: measureDefinitions.alternative_names,
-      categoryId: measureDefinitions.category_id,
-      subcategoryId: measureDefinitions.subcategory_id,
+      categoryId: measureDefinitions.measures_group_id,
+      subcategoryId: measureDefinitions.measures_subgroup_id,
       isMandatory: measureDefinitions.is_mandatory,
       subcategoryName: sql<string | null>`(
         select mli.name
         from managed_list_items mli
-        where mli.id = ${measureDefinitions.subcategory_id}
+        where mli.id = ${measureDefinitions.measures_subgroup_id}
         limit 1
       )`,
       dataTypeId: measureDefinitions.data_type_id,
@@ -373,8 +373,8 @@ const getMeasureDefinitionsForContext = async (
       dataTypeName: row.dataTypeName,
       dataTypeId: row.dataTypeId,
       isMandatory: row.isMandatory,
-      validRangeMin: row.validRangeMin,
-      validRangeMax: row.validRangeMax,
+      validRangeMin: row.validRangeMin == null ? null : Number(row.validRangeMin),
+      validRangeMax: row.validRangeMax == null ? null : Number(row.validRangeMax),
       validPolarityId: row.validPolarityId,
       validPolarityName: row.validPolarityName,
       unitName: row.unitName,
@@ -408,13 +408,13 @@ const getServiceAreaScopedMeasureDefinitionIds = async (
       categoryName: sql<string | null>`(
         select mli.name
         from managed_list_items mli
-        where mli.id = ${measureDefinitions.category_id}
+        where mli.id = ${measureDefinitions.measures_group_id}
         limit 1
       )`,
       subcategoryName: sql<string | null>`(
         select mli.name
         from managed_list_items mli
-        where mli.id = ${measureDefinitions.subcategory_id}
+        where mli.id = ${measureDefinitions.measures_subgroup_id}
         limit 1
       )`,
     })
@@ -934,7 +934,7 @@ const getOverallProgressForContext = async (
       categoryName: sql<string | null>`(
         select mli.name
         from managed_list_items mli
-        where mli.id = ${measureDefinitions.category_id}
+        where mli.id = ${measureDefinitions.measures_group_id}
         limit 1
       )`,
       subcategoryName: managedListItems.name,
@@ -942,7 +942,7 @@ const getOverallProgressForContext = async (
     .from(measureDefinitions)
     .leftJoin(
       managedListItems,
-      eq(measureDefinitions.subcategory_id, managedListItems.id),
+      eq(measureDefinitions.measures_subgroup_id, managedListItems.id),
     )
     .where(
       and(
@@ -1244,13 +1244,13 @@ export const getInputSubcategoryOptions = async (
   ];
 
   if (categoryId != null) {
-    relevanceConditions.push(eq(measureDefinitions.category_id, categoryId));
+    relevanceConditions.push(eq(measureDefinitions.measures_group_id, categoryId));
   }
 
   const subcategoryDefinitionRows = await db
     .select({
       inputDefId: measureDefinitions.id,
-      subcategoryId: measureDefinitions.subcategory_id,
+      subcategoryId: measureDefinitions.measures_subgroup_id,
     })
     .from(measureDefinitions)
     .where(
@@ -1259,11 +1259,11 @@ export const getInputSubcategoryOptions = async (
         eq(measureDefinitions.is_aggregated, false),
         eq(measureDefinitions.is_system_generated, false),
         inArray(
-          measureDefinitions.subcategory_id,
+          measureDefinitions.measures_subgroup_id,
           baseSubcategories.map((subcategory) => subcategory.id),
         ),
         ...(categoryId != null
-          ? [eq(measureDefinitions.category_id, categoryId)]
+          ? [eq(measureDefinitions.measures_group_id, categoryId)]
           : []),
       ),
     );
@@ -1275,7 +1275,7 @@ export const getInputSubcategoryOptions = async (
   const relevanceRows = await db
     .select({
       inputDefId: measureDefinitions.id,
-      subcategoryId: measureDefinitions.subcategory_id,
+      subcategoryId: measureDefinitions.measures_subgroup_id,
       isRelevant: dataEntries.is_relevant,
     })
     .from(dataEntries)
@@ -1695,7 +1695,14 @@ const getDataEntryValidationMetadata = async (
     .where(eq(measureDefinitions.id, inputDefId))
     .limit(1);
 
-  return definition ?? null;
+  if (!definition) return null;
+  return {
+    ...definition,
+    validRangeMin:
+      definition.validRangeMin == null ? null : Number(definition.validRangeMin),
+    validRangeMax:
+      definition.validRangeMax == null ? null : Number(definition.validRangeMax),
+  };
 };
 
 const getDevValidationBuilderConfig = async (

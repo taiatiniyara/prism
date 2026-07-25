@@ -15,15 +15,62 @@ A glossary of domain terms, not a spec. No stack choices or implementation detai
 - **Power Station** — a physical generating facility in a service area.
 - **Energy Resource** — a generating unit or aggregation within a power station (provider, type, source, capacity MW).
 
-## Data Entry
+## Data Entry (medallion redesign, 2026-07)
 
-- **Input Definition** — the atomic data-entry field: name, variable name, formula, category, unit, validation rules, aggregation level. Feeds KPIs via Formula Inputs.
-- **Data Entry** — a single submitted value for an Input Definition, scoped to a report period, service area, energy resource, provider, source, customer type, payment mode.
-- **Data Entry Status** — workflow stage: Requested → Pending → Entered → Reviewed → Approved → Endorsed (or Not Available).
-- **Input Relevance** — whether an Input Definition applies to a given dimension (utility type, service type, etc.).
-- **Generation Relevance** — per-energy-resource scoping of which inputs apply.
-- **Formula Input** — a variable mapping an Input Definition to a name used in a KPI formula (scoped by energy provider/type/source).
-- **DL Definition** — legacy training platform dimension; mapped via `input_dl_def_mappings` for backward compatibility.
+- **Measure Definition** (formerly Input Definition) — a pure measure: what is being
+  measured, never where it applies. Name, auto-derived variable name (slug + unit suffix;
+  Units N/A → no suffix), dictionary definition + synonyms, category/subcategory
+  (function-neutral nature themes), unit, data type, collection level. Option-typed measures
+  (data type = managedLists) carry an explicit `option_list_id` naming the source list
+  (e.g. Gender of CEO → the Gender list), not the old measure-name==list-name convention.
+  ~60 measures replace 515 legacy definitions at the catalogue collapse.
+- **Dimension** — a "which one" axis on the entry row, never in a measure's name. Ten:
+  provider, energy type, source, resource type, customer type, payment mode, consumption
+  band, division, gender, utility function. Each has an explicit **All member**; dimension
+  columns are never NULL (no NULL-as-All).
+- **Measure Dimension Scope** — per measure × dimension, how the dimension behaves:
+  `not_applicable` (auto-All) · `all_members` (expand for everyone) · `by_context` (expand
+  per the utility's context). A measure is *Contextual* iff any dimension is by_context —
+  a computed label, not stored.
+- **Data Entry** — one fact at one full address: period + hierarchy (utility/area/station/
+  equipment) + measure + all ten dimensions. Value stored typed (numeric/boolean/option/
+  text; ratios for %) with the legacy raw string retained in `value`. Generation/storage
+  measures are collected at **equipment level**; all higher levels are derived, never
+  entered (totals = coalesce entered-All-row else sum of detail).
+- **Data Entry Status** — Requested → Pending → Entered → Reviewed → **Approved**
+  (publication event; Endorsed retired) · Not Available.
+- **Relevance Shell** — a pre-created empty entry row (address only, status Requested)
+  generated per utility-period from measure scope + utility context; unfilled shells ARE
+  the gap report.
+- **Measure Dimension Applicability** — catalogue-level, BMO-maintained table (measure ×
+  dimension × valid members) declaring WHICH members are valid for a by_context dimension
+  (e.g. Fuel Oil applies only to Diesel/Heavy Fuel sources). Complements Measure Dimension
+  Scope (which dimensions) with which members. No rows = all members valid.
+- **Context Profile** — per-utility, per-period snapshot of the facts that drive relevance:
+  the energy_resources registry (generators/storage by provider/type/source), **per-period
+  resource state** (active/inactive + rated capacity per unit — units are added/decommissioned
+  and can be derated per period), service areas, tariff structure (per customer_type ×
+  payment_mode: rate count, fixed charge), and flags (transmission network, buys-from-IPP).
+  Cloned forward each period; the BLO confirms/edits it.
+- **Generation energy-balance check** — a per-generator, per-period validation: equivalent
+  full-load hours (Electricity Generated ÷ Rated Capacity) + planned + unplanned downtime must
+  not exceed hours in the period; catches impossible generation/downtime combinations.
+- **Expected inputs (computed)** — for each active measure, its by_context dimensions expanded
+  across (applicability members ∩ context). The required-input count is this set's size —
+  computed, never a stored/curated list. Replaces the retired input/tariff/transmission
+  relevance tables.
+- **Tariff structure** — a block tariff has N rates and N−1 block limits (the final rate is
+  unbounded). Block limits are cumulative from zero; rates/charges are stored tax-exclusive
+  (VAT/GST is a separate measure).
+- **Scoped Operand** (formula engine v2) — a KPI formula token bound to a measure + a
+  dimension scope, with an auto-generated alias; one measure may appear under several
+  scopes in one formula (e.g. `gen_ipp / gen_total`).
+- **Medallion layers** — Bronze: raw entry tables · Silver: `data_entries_enriched`
+  (ids resolved to names, derived labels) · Gold: business-ready views (`fact_kpi`,
+  rollups, reporting status, BSC alignment, external slices). Gold owns ALL aggregation;
+  read-only, derived; the AI/dashboards/reports read silver/gold only.
+- **DL Definition** — legacy training platform dimension; mapped via
+  `input_dl_def_mappings` for backward compatibility.
 
 ## KPIs & Benchmarks
 
@@ -84,7 +131,7 @@ A glossary of domain terms, not a spec. No stack choices or implementation detai
 ## Roles & Access
 
 - **User** — authenticated person with email, role, organisation, status (active/pending/deactivated).
-- **Roles** — DEV (full), BMO (benchmarking manager), BLO (utility liaison), CEO, EXE, DAOF/DAOH/DAOO (data entry officers), MGR (manager), EXT (external).
+- **Roles** — DEV (full), BMO (benchmarking manager), BLO (**Utility Liaison** — the utility's single contact point for all benchmarking-dataset matters; manages its own org's users and bulk-uploads datasets via PRISM's Excel templates), CEO, EXE, DAOF/DAOH/DAOO (data-entry officers — **also** bulk-upload datasets via the Excel templates), MGR (manager), EXT (external). *(Note: `scripts/seed.ts` describes BLO as "Bulk Load Officer" — a misnomer; the role is Utility Liaison. Bulk-load is a capability BLO shares with the DAOs, not its definition.)*
 - **Proxy** — Next.js middleware protecting /dashboard/*, /data-entry/*, /settings/*, /profile/*, /docs/*, /prism-ai/* via session check + role-based route gating.
 - **Utility Context Scope** — DEV feature to scope the view to a specific utility.
 - **External Registration** — registration for non-utility users (consultants, donors, researchers).

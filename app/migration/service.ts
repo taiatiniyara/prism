@@ -2360,8 +2360,8 @@ async function backfillUtilityContextDataEntriesFromPreviousPeriods(options?: {
   const inputRows = await db
     .select({
       id: measureDefinitions.id,
-      categoryId: measureDefinitions.category_id,
-      subcategoryId: measureDefinitions.subcategory_id,
+      categoryId: measureDefinitions.measures_group_id,
+      subcategoryId: measureDefinitions.measures_subgroup_id,
     })
     .from(measureDefinitions);
 
@@ -2530,8 +2530,8 @@ async function backfillCountryContextDataEntriesFromPreviousPeriods(options?: {
   const inputRows = await db
     .select({
       id: measureDefinitions.id,
-      categoryId: measureDefinitions.category_id,
-      subcategoryId: measureDefinitions.subcategory_id,
+      categoryId: measureDefinitions.measures_group_id,
+      subcategoryId: measureDefinitions.measures_subgroup_id,
     })
     .from(measureDefinitions);
 
@@ -3996,8 +3996,8 @@ export async function getDataEntryComparisonFilterOptions(): Promise<DataEntryCo
 
   const inputDefList = await db
     .select({
-      categoryId: measureDefinitions.category_id,
-      subcategoryId: measureDefinitions.subcategory_id,
+      categoryId: measureDefinitions.measures_group_id,
+      subcategoryId: measureDefinitions.measures_subgroup_id,
     })
     .from(measureDefinitions);
 
@@ -4103,11 +4103,11 @@ export async function compareDataEntries(
   if (categoryId != null || subcategoryId != null) {
     const inputDefConditions = [];
     if (categoryId != null) {
-      inputDefConditions.push(eq(measureDefinitions.category_id, categoryId));
+      inputDefConditions.push(eq(measureDefinitions.measures_group_id, categoryId));
     }
     if (subcategoryId != null) {
       inputDefConditions.push(
-        eq(measureDefinitions.subcategory_id, subcategoryId),
+        eq(measureDefinitions.measures_subgroup_id, subcategoryId),
       );
     }
 
@@ -4479,8 +4479,8 @@ export async function compareDataEntries(
           .select({
             id: measureDefinitions.id,
             name: measureDefinitions.name,
-            categoryId: measureDefinitions.category_id,
-            subcategoryId: measureDefinitions.subcategory_id,
+            categoryId: measureDefinitions.measures_group_id,
+            subcategoryId: measureDefinitions.measures_subgroup_id,
           })
           .from(measureDefinitions)
           .where(inArray(measureDefinitions.id, inputDefIds));
@@ -4692,8 +4692,8 @@ export async function getDataEntryBreakdownFilterOptions(): Promise<DataEntryBre
       .where(eq(organisations.is_utility, true)),
     db
       .select({
-        categoryId: measureDefinitions.category_id,
-        subcategoryId: measureDefinitions.subcategory_id,
+        categoryId: measureDefinitions.measures_group_id,
+        subcategoryId: measureDefinitions.measures_subgroup_id,
       })
       .from(measureDefinitions),
   ]);
@@ -4809,9 +4809,9 @@ export async function getInputBreakdown(
 
   const defConditions = [eq(measureDefinitions.is_active, true)];
   if (categoryId != null)
-    defConditions.push(eq(measureDefinitions.category_id, categoryId));
+    defConditions.push(eq(measureDefinitions.measures_group_id, categoryId));
   if (subcategoryId != null)
-    defConditions.push(eq(measureDefinitions.subcategory_id, subcategoryId));
+    defConditions.push(eq(measureDefinitions.measures_subgroup_id, subcategoryId));
 
   const defs = await db
     .select({
@@ -4821,8 +4821,8 @@ export async function getInputBreakdown(
       subcategoryName: subAlias.name,
     })
     .from(measureDefinitions)
-    .innerJoin(catAlias, eq(measureDefinitions.category_id, catAlias.id))
-    .innerJoin(subAlias, eq(measureDefinitions.subcategory_id, subAlias.id))
+    .innerJoin(catAlias, eq(measureDefinitions.measures_group_id, catAlias.id))
+    .innerJoin(subAlias, eq(measureDefinitions.measures_subgroup_id, subAlias.id))
     .where(and(...defConditions))
     .orderBy(measureDefinitions.name);
 
@@ -4869,10 +4869,10 @@ export async function getInputBreakdown(
         inArray(dataEntries.report_period_id, rpIds),
         eq(dataEntries.is_deleted, false),
         categoryId > 0
-          ? eq(measureDefinitions.category_id, categoryId)
+          ? eq(measureDefinitions.measures_group_id, categoryId)
           : undefined,
         subcategoryId > 0
-          ? eq(measureDefinitions.subcategory_id, subcategoryId)
+          ? eq(measureDefinitions.measures_subgroup_id, subcategoryId)
           : undefined,
       ),
     )
@@ -4990,22 +4990,22 @@ export async function getDataEntryBreakdown(
 
   const catLookup = await db
     .selectDistinct({
-      id: measureDefinitions.category_id,
+      id: measureDefinitions.measures_group_id,
       name: catAlias.name,
     })
     .from(measureDefinitions)
-    .innerJoin(catAlias, eq(measureDefinitions.category_id, catAlias.id))
+    .innerJoin(catAlias, eq(measureDefinitions.measures_group_id, catAlias.id))
     .where(
       sql`LOWER(${catAlias.name}) IN ('operational', 'tariff structure', 'generation', 'country & utility context', 'hr & safety', 'governance', 'financial')`,
     );
 
   const subLookup = await db
     .selectDistinct({
-      id: measureDefinitions.subcategory_id,
+      id: measureDefinitions.measures_subgroup_id,
       name: subAlias.name,
     })
     .from(measureDefinitions)
-    .innerJoin(subAlias, eq(measureDefinitions.subcategory_id, subAlias.id))
+    .innerJoin(subAlias, eq(measureDefinitions.measures_subgroup_id, subAlias.id))
     .where(
       sql`LOWER(${subAlias.name}) IN ('operational', 'tariff structure', 'generation', 'country context', 'utility context')`,
     );
@@ -5046,23 +5046,23 @@ export async function getDataEntryBreakdown(
   // 2. Get all relevant input definitions
   const inputDefConditions = [eq(measureDefinitions.is_active, true)];
   if (categoryId != null)
-    inputDefConditions.push(eq(measureDefinitions.category_id, categoryId));
+    inputDefConditions.push(eq(measureDefinitions.measures_group_id, categoryId));
   if (subcategoryId != null)
     inputDefConditions.push(
-      eq(measureDefinitions.subcategory_id, subcategoryId),
+      eq(measureDefinitions.measures_subgroup_id, subcategoryId),
     );
 
   const allInputDefs = await db
     .select({
       id: measureDefinitions.id,
-      categoryId: measureDefinitions.category_id,
+      categoryId: measureDefinitions.measures_group_id,
       categoryName: catAlias.name,
-      subcategoryId: measureDefinitions.subcategory_id,
+      subcategoryId: measureDefinitions.measures_subgroup_id,
       subcategoryName: subAlias.name,
     })
     .from(measureDefinitions)
-    .innerJoin(catAlias, eq(measureDefinitions.category_id, catAlias.id))
-    .innerJoin(subAlias, eq(measureDefinitions.subcategory_id, subAlias.id))
+    .innerJoin(catAlias, eq(measureDefinitions.measures_group_id, catAlias.id))
+    .innerJoin(subAlias, eq(measureDefinitions.measures_subgroup_id, subAlias.id))
     .where(and(...inputDefConditions));
 
   // 3. Get relevant report periods with utility info
@@ -5134,11 +5134,11 @@ export async function getDataEntryBreakdown(
           eq(dataEntries.is_deleted, false),
           sql`${dataEntries.service_area_id} IS NOT NULL`,
           sql`(
-            ${measureDefinitions.category_id} = ${operationalCatId ?? -1}
-            OR ${measureDefinitions.subcategory_id} = ${tariffStructureSubId ?? -1}
-            OR ${measureDefinitions.category_id} = ${hrSafetyCatId ?? -1}
-            OR ${measureDefinitions.category_id} = ${governanceCatId ?? -1}
-            OR ${measureDefinitions.category_id} = ${financialCatId ?? -1}
+            ${measureDefinitions.measures_group_id} = ${operationalCatId ?? -1}
+            OR ${measureDefinitions.measures_subgroup_id} = ${tariffStructureSubId ?? -1}
+            OR ${measureDefinitions.measures_group_id} = ${hrSafetyCatId ?? -1}
+            OR ${measureDefinitions.measures_group_id} = ${governanceCatId ?? -1}
+            OR ${measureDefinitions.measures_group_id} = ${financialCatId ?? -1}
           )`,
         ),
       );
@@ -5172,7 +5172,7 @@ export async function getDataEntryBreakdown(
             inArray(dataEntries.report_period_id, rpIds),
             eq(dataEntries.is_deleted, false),
             sql`${dataEntries.service_area_id} IS NOT NULL`,
-            sql`${measureDefinitions.category_id} = ${hrSafetyCatId}`,
+            sql`${measureDefinitions.measures_group_id} = ${hrSafetyCatId}`,
           ),
         );
       for (const r of rows)
@@ -5203,7 +5203,7 @@ export async function getDataEntryBreakdown(
             inArray(dataEntries.report_period_id, rpIds),
             eq(dataEntries.is_deleted, false),
             sql`${dataEntries.service_area_id} IS NOT NULL`,
-            sql`${measureDefinitions.category_id} = ${governanceCatId}`,
+            sql`${measureDefinitions.measures_group_id} = ${governanceCatId}`,
           ),
         );
       for (const r of rows)
@@ -5234,7 +5234,7 @@ export async function getDataEntryBreakdown(
             inArray(dataEntries.report_period_id, rpIds),
             eq(dataEntries.is_deleted, false),
             sql`${dataEntries.service_area_id} IS NOT NULL`,
-            sql`${measureDefinitions.category_id} = ${financialCatId}`,
+            sql`${measureDefinitions.measures_group_id} = ${financialCatId}`,
           ),
         );
       for (const r of rows)
@@ -5267,9 +5267,9 @@ export async function getDataEntryBreakdown(
           eq(dataEntries.is_deleted, false),
           sql`${dataEntries.service_area_id} IS NOT NULL`,
           sql`(
-            ${measureDefinitions.category_id} = ${countryUtilCatId ?? -1}
-            OR ${measureDefinitions.subcategory_id} = ${countryContextSubId ?? -1}
-            OR ${measureDefinitions.subcategory_id} = ${utilityContextSubId ?? -1}
+            ${measureDefinitions.measures_group_id} = ${countryUtilCatId ?? -1}
+            OR ${measureDefinitions.measures_subgroup_id} = ${countryContextSubId ?? -1}
+            OR ${measureDefinitions.measures_subgroup_id} = ${utilityContextSubId ?? -1}
           )`,
         ),
       );
@@ -5302,7 +5302,7 @@ export async function getDataEntryBreakdown(
           inArray(dataEntries.report_period_id, rpIds),
           eq(dataEntries.is_deleted, false),
           sql`${dataEntries.energy_resource_id} IS NOT NULL`,
-          sql`${measureDefinitions.subcategory_id} = ${generationSubId ?? -1}`,
+          sql`${measureDefinitions.measures_subgroup_id} = ${generationSubId ?? -1}`,
         ),
       );
     for (const r of genPairRows) {
@@ -5481,9 +5481,9 @@ export async function getDataEntryBreakdown(
     deConditions.push(inArray(dataEntries.report_period_id, rpIds));
   }
   if (categoryId != null)
-    deConditions.push(eq(measureDefinitions.category_id, categoryId));
+    deConditions.push(eq(measureDefinitions.measures_group_id, categoryId));
   if (subcategoryId != null)
-    deConditions.push(eq(measureDefinitions.subcategory_id, subcategoryId));
+    deConditions.push(eq(measureDefinitions.measures_subgroup_id, subcategoryId));
 
   const v2Map = new Map<string, number>();
   if (rpIds.length > 0) {
@@ -5506,8 +5506,8 @@ export async function getDataEntryBreakdown(
         measureDefinitions,
         eq(dataEntries.measure_def_id, measureDefinitions.id),
       )
-      .innerJoin(catAlias, eq(measureDefinitions.category_id, catAlias.id))
-      .innerJoin(subAlias, eq(measureDefinitions.subcategory_id, subAlias.id))
+      .innerJoin(catAlias, eq(measureDefinitions.measures_group_id, catAlias.id))
+      .innerJoin(subAlias, eq(measureDefinitions.measures_subgroup_id, subAlias.id))
       .where(and(...deConditions))
       .groupBy(
         organisations.name,

@@ -18,17 +18,17 @@ async function main() {
       inputDefId: measureDefinitions.id,
       subcategoryName: sql<
         string | null
-      >`(select mli.name from managed_list_items mli where mli.id = ${measureDefinitions.subcategory_id} limit 1)`,
+      >`(select mli.name from managed_list_items mli where mli.id = ${measureDefinitions.measures_subgroup_id} limit 1)`,
       categoryName: sql<
         string | null
-      >`(select mli.name from managed_list_items mli where mli.id = ${measureDefinitions.category_id} limit 1)`,
+      >`(select mli.name from managed_list_items mli where mli.id = ${measureDefinitions.measures_group_id} limit 1)`,
     })
     .from(measureDefinitions)
     .where(
       and(
         eq(measureDefinitions.is_active, true),
         eq(measureDefinitions.is_system_generated, false),
-        sql`lower(coalesce((select mli.name from managed_list_items mli where mli.id = ${measureDefinitions.subcategory_id}), '')) <> 'country context'`,
+        sql`lower(coalesce((select mli.name from managed_list_items mli where mli.id = ${measureDefinitions.measures_subgroup_id}), '')) <> 'country context'`,
       ),
     );
 

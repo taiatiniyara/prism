@@ -171,11 +171,11 @@ export async function getMeasureEntryFilterViewModel(): Promise<MeasureEntryPage
     conditions.push(eq(dataEntries.report_period_id, ctx.reportPeriodId));
   }
   if (ctx.measureCategoryId) {
-    conditions.push(eq(measureDefinitions.category_id, ctx.measureCategoryId));
+    conditions.push(eq(measureDefinitions.measures_group_id, ctx.measureCategoryId));
   }
   if (ctx.measureSubcategoryId) {
     conditions.push(
-      eq(measureDefinitions.subcategory_id, ctx.measureSubcategoryId),
+      eq(measureDefinitions.measures_subgroup_id, ctx.measureSubcategoryId),
     );
   }
   if (ctx.dataEntryStatusId) {
@@ -214,8 +214,8 @@ export async function getMeasureEntryFilterViewModel(): Promise<MeasureEntryPage
       measureId: measureDefinitions.id,
       measureName: measureDefinitions.name,
       unitName: managedListItems.name,
-      categoryId: measureDefinitions.category_id,
-      subcategoryId: measureDefinitions.subcategory_id,
+      categoryId: measureDefinitions.measures_group_id,
+      subcategoryId: measureDefinitions.measures_subgroup_id,
       dataTypeId: measureDefinitions.data_type_id,
       valueNumeric: dataEntries.value_numeric,
       valueBoolean: dataEntries.value_boolean,

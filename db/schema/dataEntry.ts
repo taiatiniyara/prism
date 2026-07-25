@@ -11,10 +11,13 @@ import {
   jsonb,
   index,
   uniqueIndex,
+  unique,
+  check,
   timestamp,
   numeric,
 } from "drizzle-orm/pg-core";
-import { managedListItems } from "./managedLists";
+import { sql } from "drizzle-orm";
+import { managedListItems, managedLists } from "./managedLists";
 import { reportPeriods } from "./reportPeriods";
 import {
   energyResources,
@@ -45,33 +48,28 @@ export const measureDefinitions = pgTable("measure_definitions", {
   variable_name: varchar("variable_name", { length: 255 }),
   formula: text("formula"),
   formula_inputs: json("formula_inputs").$type<FormulaInput[]>(),
-  category_id: integer("category_id")
+  measures_group_id: integer("measures_group_id")
     .notNull()
     .references(() => managedListItems.id),
-  subcategory_id: integer("subcategory_id")
+  measures_subgroup_id: integer("measures_subgroup_id")
     .notNull()
     .references(() => managedListItems.id),
-  service_relevance_group_id: integer("service_group_id").references(
-    () => managedListItems.id,
-  ),
   unit_id: integer("unit_id")
     .notNull()
     .references(() => managedListItems.id),
   data_type_id: integer("data_type_id")
     .notNull()
     .references(() => managedListItems.id),
+  // Source list for option-typed (managedLists) measures — explicit, not name-matched.
+  option_list_id: integer("option_list_id").references(() => managedLists.id),
   valid_polarity_id: integer("valid_polarity_id").references(
     () => managedListItems.id,
   ),
   valid_trend_id: integer("valid_trend_id").references(
     () => managedListItems.id,
   ),
-  valid_range_min: integer("valid_range_min"),
-  valid_range_max: integer("valid_range_max"),
-  is_descriptive: boolean("is_descriptive").default(false).notNull(),
-  utility_service_id: integer("utility_service_id").references(
-    () => managedListItems.id,
-  ),
+  valid_range_min: numeric("valid_range_min"),
+  valid_range_max: numeric("valid_range_max"),
   is_currency: boolean("is_currency").default(false).notNull(),
   is_aggregated: boolean("is_aggregated").default(false).notNull(),
   agg_level_id: integer("agg_level_id").references(() => managedListItems.id),
@@ -125,11 +123,11 @@ export const inputDefinitionRelations = relations(
   measureDefinitions,
   ({ one }) => ({
     category: one(managedListItems, {
-      fields: [measureDefinitions.category_id],
+      fields: [measureDefinitions.measures_group_id],
       references: [managedListItems.id],
     }),
     subcategory: one(managedListItems, {
-      fields: [measureDefinitions.subcategory_id],
+      fields: [measureDefinitions.measures_subgroup_id],
       references: [managedListItems.id],
     }),
     unit: one(managedListItems, {
@@ -202,9 +200,9 @@ export const dataEntries = pgTable(
     energy_resource_id: integer("energy_resource_id").references(
       () => energyResources.id,
     ),
-    energy_resource_type_id: integer("energy_resource_type_id").references(
-      () => managedListItems.id,
-    ),
+    energy_resource_type_id: integer("energy_resource_type_id")
+      .notNull()
+      .references(() => managedListItems.id),
     power_station_id: integer("power_station_id").references(
       () => powerStations.id,
     ),
@@ -229,29 +227,35 @@ export const dataEntries = pgTable(
     status_id: integer("status_id").$type<DataEntryStatusId>(),
     is_relevant: boolean("is_relevant").default(true).notNull(),
     is_deleted: boolean("is_deleted").default(false).notNull(),
-    energy_provider_id: integer("energy_provider_id").references(
-      () => managedListItems.id,
-    ),
-    energy_type_id: integer("energy_type_id").references(
-      () => managedListItems.id,
-    ),
-    energy_source_id: integer("energy_source_id").references(
-      () => managedListItems.id,
-    ),
-    customer_type_id: integer("customer_type_id").references(
-      () => managedListItems.id,
-    ),
-    payment_mode_id: integer("payment_mode_id").references(
-      () => managedListItems.id,
-    ),
-    consumption_band_id: integer("consumption_band_id").references(
-      () => managedListItems.id,
-    ),
-    division_id: integer("division_id").references(() => managedListItems.id),
-    gender_id: integer("gender_id").references(() => managedListItems.id),
-    utility_function_id: integer("utility_function_id").references(
-      () => managedListItems.id,
-    ),
+    // The ten canonical dimensions — NOT NULL, always the explicit "All" member
+    // (no NULL-as-All). Enforced on the empty table before the RAW-ONLY reload.
+    energy_provider_id: integer("energy_provider_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    energy_type_id: integer("energy_type_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    energy_source_id: integer("energy_source_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    customer_type_id: integer("customer_type_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    payment_mode_id: integer("payment_mode_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    consumption_band_id: integer("consumption_band_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    division_id: integer("division_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    gender_id: integer("gender_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    utility_function_id: integer("utility_function_id")
+      .notNull()
+      .references(() => managedListItems.id),
     value_option_id: integer("value_option_id").references(
       () => managedListItems.id,
     ),
@@ -259,16 +263,44 @@ export const dataEntries = pgTable(
     updatedById: text("updated_by_id").references(() => user.id),
   },
   (table) => [
-    index("uniq_entry").on(
-      table.report_period_id,
-      table.measure_def_id,
-      table.service_area_id,
-      table.energy_source_id,
-      table.energy_provider_id,
-      table.energy_resource_id,
-      table.customer_type_id,
-      table.payment_mode_id,
+    // At most one typed value column is non-null (all null = awaiting entry;
+    // status_id carries the reason). The measure's data_type dictates WHICH one,
+    // enforced by lib/data-entry/value-router.ts on every write path.
+    check(
+      "chk_one_value",
+      sql`(
+        (case when ${table.value_numeric} is not null then 1 else 0 end)
+      + (case when ${table.value_boolean} is not null then 1 else 0 end)
+      + (case when ${table.value_text} is not null then 1 else 0 end)
+      + (case when ${table.value_option_id} is not null then 1 else 0 end)
+      ) <= 1`,
     ),
+    // True unique physical address: period + measure + full grain + all ten
+    // dimensions. NULLS NOT DISTINCT so higher-grain rows (NULL service_area /
+    // resource / station) still deduplicate. Grain columns (utility, country,
+    // service_area, station, resource) are included because a NULL "area" alone
+    // cannot distinguish two utilities or a utility- vs country-level row.
+    unique("uniq_entry_address")
+      .on(
+        table.report_period_id,
+        table.measure_def_id,
+        table.utility_id,
+        table.country_id,
+        table.service_area_id,
+        table.power_station_id,
+        table.energy_resource_id,
+        table.energy_provider_id,
+        table.energy_type_id,
+        table.energy_source_id,
+        table.energy_resource_type_id,
+        table.customer_type_id,
+        table.payment_mode_id,
+        table.consumption_band_id,
+        table.division_id,
+        table.gender_id,
+        table.utility_function_id,
+      )
+      .nullsNotDistinct(),
   ],
 );
 

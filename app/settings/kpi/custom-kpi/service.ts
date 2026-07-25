@@ -236,8 +236,8 @@ export const listCustomKpiInputOptions = async (): Promise<
       name: measureDefinitions.name,
       variableName: measureDefinitions.variable_name,
       unitId: measureDefinitions.unit_id,
-      categoryId: measureDefinitions.category_id,
-      subcategoryId: measureDefinitions.subcategory_id,
+      categoryId: measureDefinitions.measures_group_id,
+      subcategoryId: measureDefinitions.measures_subgroup_id,
     })
     .from(measureDefinitions)
     .where(eq(measureDefinitions.is_active, true))

@@ -84,14 +84,14 @@ export async function GetReportPeriods(
   const definitionRows = await db
     .select({
       inputDefId: measureDefinitions.id,
-      subcategoryId: measureDefinitions.subcategory_id,
-      categoryId: measureDefinitions.category_id,
+      subcategoryId: measureDefinitions.measures_subgroup_id,
+      categoryId: measureDefinitions.measures_group_id,
       aggLevelId: measureDefinitions.agg_level_id,
       subcategoryName: sql<string | null>`(
-        select mli.name from managed_list_items mli where mli.id = ${measureDefinitions.subcategory_id} limit 1
+        select mli.name from managed_list_items mli where mli.id = ${measureDefinitions.measures_subgroup_id} limit 1
       )`,
       categoryName: sql<string | null>`(
-        select mli.name from managed_list_items mli where mli.id = ${measureDefinitions.category_id} limit 1
+        select mli.name from managed_list_items mli where mli.id = ${measureDefinitions.measures_group_id} limit 1
       )`,
     })
     .from(measureDefinitions)
@@ -100,7 +100,7 @@ export async function GetReportPeriods(
         eq(measureDefinitions.is_active, true),
         eq(measureDefinitions.is_system_generated, false),
         sql`lower(coalesce(
-          (select mli.name from managed_list_items mli where mli.id = ${measureDefinitions.subcategory_id}), ''
+          (select mli.name from managed_list_items mli where mli.id = ${measureDefinitions.measures_subgroup_id}), ''
         )) <> 'country context'`,
       ),
     );

@@ -29,7 +29,7 @@ export async function GET(req: Request) {
     dlDefs.map((dl) => ({
       "Governance Indicator ID": dl.id,
       "Governance Indicator": dl.name,
-      "Governance Indicator Category": findItem(dl.subcategory_id)?.name,
+      "Governance Indicator Category": findItem(dl.measures_subgroup_id)?.name,
       "Good Governance": "Yes",
       "Poor Governance": "No",
     })),

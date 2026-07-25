@@ -49,7 +49,7 @@ export function createPowerBiTools(user: CurrentUser, _abortSignal?: AbortSignal
 
     pbi_query: tool({
       description:
-        "Run a pre-built, tested Power BI query. Much faster than writing custom DAX. Use pbi_query_catalog for full list. Use pbi_match to find the right query from natural language. Key queries: saidi_by_utility, saifi_by_utility, reliability_summary, installed_capacity, installed_capacity_by_utility, generation_output, generation_by_source, peak_demand, system_losses, distribution_overview, financial_summary, cost_recovery, customer_overview, metering_summary, workforce_summary, safety_summary, utility_profile, peer_comparison, composite_score, whatif_sensitivity, saidi_trend, generation_trend, losses_trend, recovery_trend, electrification_trend.",
+        "Run a pre-built, tested Power BI query. Much faster than writing custom DAX. Use pbi_query_catalog for full list. Use pbi_match to find the right query from natural language. Key queries: saidi_by_utility, saifi_by_utility, reliability_summary, rated_capacity, rated_capacity_by_utility, generation_output, generation_by_source, peak_demand, system_losses, distribution_overview, financial_summary, cost_recovery, customer_overview, metering_summary, workforce_summary, safety_summary, utility_profile, peer_comparison, composite_score, whatif_sensitivity, saidi_trend, generation_trend, losses_trend, recovery_trend, electrification_trend.",
       inputSchema: z.object({
         query: z.string().describe("Query template name. Use pbi_query_catalog for full list or pbi_match for NL matching."),
         params: z.record(z.string()).optional().describe("Query parameters. Context defaults (utility, fy) from pbi_context are auto-applied if set."),
