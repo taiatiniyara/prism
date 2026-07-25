@@ -4,14 +4,12 @@ import type {
   BscTemplateLevel,
   BscThemeStyles,
 } from "@/db/schema/bsc-builder";
-import type { KpiTrajectory } from "@/db/schema/kpi";
 
 export type {
   BscActivityKind,
   BscProjectStatus,
   BscTemplateLevel,
   BscThemeStyles,
-  KpiTrajectory,
 };
 
 export type ThemeResponse = {
@@ -81,7 +79,6 @@ export type ScorecardKpiLink = {
   kpiName: string | null;
   unit: string | null;
   pendingCustomKpiRequestId: string | null;
-  trajectory: KpiTrajectory | null;
   ord: number;
 };
 
@@ -122,7 +119,7 @@ export type ScorecardResponse = {
 };
 
 // ---------------------------------------------------------------------------
-// Save payloads (per-perspective overlay replace + trajectory)
+// Save payloads (per-perspective overlay replace)
 // ---------------------------------------------------------------------------
 
 export type KpiLinkInput = {
@@ -161,11 +158,6 @@ export type OverlayNodeInput = {
 export type SavePerspectiveOverlayPayload = {
   perspectiveTemplateNodeId: string;
   node: OverlayNodeInput;
-};
-
-export type SetTrajectoryPayload = {
-  kpiDefinitionId: number;
-  trajectory: KpiTrajectory | null;
 };
 
 // Inline KPI targets (year + optional month), shared per-utility per-KPI.

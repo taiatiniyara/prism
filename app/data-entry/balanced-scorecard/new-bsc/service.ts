@@ -24,7 +24,6 @@ import {
   saveKpiTargets,
   saveKpiTargetPlan,
   saveThemeStyles,
-  setKpiTrajectory,
   setTemplateNodeLinks,
   updateTemplateNode,
 } from "./repository";
@@ -40,7 +39,6 @@ import type {
   TargetPlanSummary,
   ScorecardResponse,
   SavePerspectiveOverlayPayload,
-  SetTrajectoryPayload,
   TemplateTreeResponse,
   ThemeResponse,
   UpdateTemplateNodePayload,
@@ -154,20 +152,6 @@ export const savePerspective = async (
   assertNewBscBuildAccess(user);
   const utilityId = requireUtilityId(user);
   await replacePerspectiveOverlay(utilityId, payload);
-};
-
-export const saveTrajectory = async (
-  user: CurrentUser,
-  payload: SetTrajectoryPayload,
-) => {
-  assertNewBscBuildAccess(user);
-  const utilityId = requireUtilityId(user);
-  await setKpiTrajectory(
-    utilityId,
-    user.id,
-    payload.kpiDefinitionId,
-    payload.trajectory,
-  );
 };
 
 export const getKpiTargets = async (

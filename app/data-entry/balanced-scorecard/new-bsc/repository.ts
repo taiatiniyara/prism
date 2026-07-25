@@ -13,7 +13,7 @@ import {
   bscTheme,
   bscUtilityNodes,
 } from "@/db/schema/bsc-builder";
-import { kpiDefinitions, kpiTargetTrajectory } from "@/db/schema/kpi";
+import { kpiDefinitions } from "@/db/schema/kpi";
 import { inputDefinitions } from "@/db/schema/dataEntry";
 import { managedListItems, managedLists } from "@/db/schema/managedLists";
 
@@ -25,7 +25,6 @@ import type {
   ReportTypeOption,
   TargetPlanInput,
   TargetPlanSummary,
-  KpiTrajectory,
   OverlayNodeInput,
   ScorecardInitiative,
   ScorecardNode,
@@ -346,7 +345,7 @@ export const getUtilityScorecard = async (
   // the Strategy Map all reflect the same scorecard.
   await ensureMandatoryMaterialized(utilityId);
 
-  const [nodes, objectives, initiatives, links, trajectories, templateRows] =
+  const [nodes, objectives, initiatives, links, templateRows] =
     await Promise.all([
       db
         .select()
@@ -398,13 +397,6 @@ export const getUtilityScorecard = async (
       })(),
       db
         .select({
-          kpi_def_id: kpiTargetTrajectory.kpi_def_id,
-          trajectory: kpiTargetTrajectory.trajectory,
-        })
-        .from(kpiTargetTrajectory)
-        .where(eq(kpiTargetTrajectory.utility_id, utilityId)),
-      db
-        .select({
           id: bscTemplateNodes.id,
           is_mandatory: bscTemplateNodes.is_mandatory,
           label: bscTemplateNodes.label,
@@ -413,10 +405,6 @@ export const getUtilityScorecard = async (
     ]);
 
   const templateById = new Map(templateRows.map((t) => [t.id, t]));
-  const trajectoryByKpi = new Map<number, KpiTrajectory>();
-  for (const t of trajectories) {
-    trajectoryByKpi.set(t.kpi_def_id, t.trajectory as KpiTrajectory);
-  }
 
   // KPI links grouped by initiative.
   const linksByInitiative = new Map<string, ScorecardInitiative["kpis"]>();
@@ -431,10 +419,6 @@ export const getUtilityScorecard = async (
       kpiName: link.kpi_name ?? link.input_name,
       unit: link.unit ?? link.input_unit,
       pendingCustomKpiRequestId: link.pending_custom_kpi_request_id,
-      trajectory:
-        link.kpi_def_id != null
-          ? (trajectoryByKpi.get(link.kpi_def_id) ?? null)
-          : null,
       ord: link.ord,
     });
     linksByInitiative.set(link.initiative_id, list);
@@ -748,42 +732,3 @@ export const listTargetPlans = async (
   });
 };
 
-// ---------------------------------------------------------------------------
-// Trajectory (shared per-utility, per-KPI)
-// ---------------------------------------------------------------------------
-
-export const setKpiTrajectory = async (
-  utilityId: number,
-  userId: string,
-  kpiDefinitionId: number,
-  trajectory: KpiTrajectory | null,
-): Promise<void> => {
-  if (trajectory == null) {
-    await db
-      .delete(kpiTargetTrajectory)
-      .where(
-        and(
-          eq(kpiTargetTrajectory.utility_id, utilityId),
-          eq(kpiTargetTrajectory.kpi_def_id, kpiDefinitionId),
-        ),
-      );
-    return;
-  }
-
-  await db
-    .insert(kpiTargetTrajectory)
-    .values({
-      utility_id: utilityId,
-      kpi_def_id: kpiDefinitionId,
-      trajectory,
-      updated_by_id: userId,
-    })
-    .onConflictDoUpdate({
-      target: [kpiTargetTrajectory.utility_id, kpiTargetTrajectory.kpi_def_id],
-      set: {
-        trajectory,
-        updated_by_id: userId,
-        updated_at: new Date(),
-      },
-    });
-};

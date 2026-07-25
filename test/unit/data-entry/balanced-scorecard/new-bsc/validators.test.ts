@@ -3,7 +3,6 @@ import {
   parseCreateTemplateNodePayload,
   parseSaveKpiTargetsPayload,
   parseSavePerspectiveOverlayPayload,
-  parseSetTrajectoryPayload,
 } from "@/app/api/data-entry/balanced-scorecard/new-bsc/_lib/validators";
 
 // The inner node/objective/initiative/kpi parsers aren't exported; they're
@@ -168,30 +167,6 @@ describe("initiative vs project discriminator (spec §3a)", () => {
       { description: "x", initiatives: [{ title: "  ", kpis: [kpiLink] }] },
     ]);
     expect(() => parseSavePerspectiveOverlayPayload(payload)).toThrow(/title is required/);
-  });
-});
-
-describe("parseSetTrajectoryPayload (spec §5)", () => {
-  it.each(["increase", "decrease", "same"])("accepts %s", (t) => {
-    expect(parseSetTrajectoryPayload({ kpiDefinitionId: 7, trajectory: t }).trajectory).toBe(t);
-  });
-
-  it("treats empty/absent trajectory as null (clear)", () => {
-    expect(parseSetTrajectoryPayload({ kpiDefinitionId: 7 }).trajectory).toBeNull();
-    expect(parseSetTrajectoryPayload({ kpiDefinitionId: 7, trajectory: "" }).trajectory).toBeNull();
-  });
-
-  it("rejects an unknown trajectory", () => {
-    expect(() => parseSetTrajectoryPayload({ kpiDefinitionId: 7, trajectory: "up" })).toThrow(
-      /trajectory must be/,
-    );
-  });
-
-  it("requires a positive KPI definition id", () => {
-    expect(() => parseSetTrajectoryPayload({ kpiDefinitionId: 0 })).toThrow(/positive integer/);
-    expect(() => parseSetTrajectoryPayload({})).toThrow(
-      /kpiDefinitionId must be a positive integer/,
-    );
   });
 });
 

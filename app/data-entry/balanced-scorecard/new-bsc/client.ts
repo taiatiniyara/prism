@@ -9,7 +9,6 @@ import type {
   TargetPlanSummary,
   ScorecardResponse,
   SavePerspectiveOverlayPayload,
-  SetTrajectoryPayload,
   TemplateTreeResponse,
   ThemeResponse,
   UpdateTemplateNodePayload,
@@ -66,17 +65,6 @@ export const savePerspectiveOverlay = async (
     body: JSON.stringify(payload),
   });
   await asJson<{ message: string }>(response, "Unable to save scorecard.");
-};
-
-export const saveTrajectory = async (
-  payload: SetTrajectoryPayload,
-): Promise<void> => {
-  const response = await fetch(`${BASE}/trajectory`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(payload),
-  });
-  await asJson<{ message: string }>(response, "Unable to save trajectory.");
 };
 
 export const fetchTheme = async (): Promise<ThemeResponse> => {
