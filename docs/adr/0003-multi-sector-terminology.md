@@ -1,8 +1,8 @@
 # ADR 0003 — Sector-driven terminology (keep generic storage; label by sector)
 
-- Status: **Proposed** (initiated by Eugene 2026-07-26; needs ratification by #8 / #10 / #11 before implementation)
-- Date: 2026-07-26
-- **Open questions worked → proposed resolutions (2026-07-27, stream #13): [docs/multi-sector-terminology-resolutions.md](../multi-sector-terminology-resolutions.md) — awaiting ratification.**
+- Status: **Accepted** (initiated by Eugene 2026-07-26; all open questions ratified 2026-07-27 by #8 / #10 / #11 + Eugene — see resolutions doc)
+- Date: 2026-07-26 (accepted 2026-07-27)
+- **Open questions worked → resolutions (2026-07-27, stream #13): [docs/multi-sector-terminology-resolutions.md](../multi-sector-terminology-resolutions.md) — ✅ all five ratified.** Q1 labels = Grid / Supply Zone / Catchment (Eugene); Q2 sector-specific areas (#8); Q3 `sector_terminology` table + shared resolver (#11); Q4 sector orthogonal, `organisation_sector` M:N (#10); Q5 Phase-5a go (Eugene).
 - Related: [docs/schema-redesign-medallion.md](../schema-redesign-medallion.md) §0.2 ("IDs in the tables, names in the views"), [docs/WORKSTREAMS.md](../WORKSTREAMS.md) streams #8 (multi-level hierarchy), #10 (two-axis org model), #11 (UI)
 
 ## Context

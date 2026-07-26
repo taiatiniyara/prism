@@ -1,7 +1,7 @@
 # Multi-sector terminology — proposed resolutions to ADR 0003's open questions
 
 **Stream:** #13 Multi-sector (water/sanitation) · **Owner:** `PRISM 2 #13 multi-sector`
-**Status:** 🟢 **all three streams ratified (2026-07-27): #8 (Q2), #10 (Q4), #11 (Q3).** · ⏳ only Eugene/domain remains — Q1 label strings & Phase-5a go.
+**Status:** ✅ **RATIFIED — all five questions closed (2026-07-27).** Q1 ✅ Eugene · Q2 ✅ #8 · Q3 ✅ #11 · Q4 ✅ #10 · Q5 ✅ Eugene (Phase-5a go). ADR 0003 → **Accepted**. Implementation: #13 builds the label-layer foundation + app-config interim behind the resolver now; #2 folds the additive DDL when convenient; #11 swaps app-config→`sector_terminology` table + owns ongoing UI surfacing when the table lands.
 **Parent decision:** [adr/0003-multi-sector-terminology.md](adr/0003-multi-sector-terminology.md) (Proposed 2026-07-26, merged PR #55).
 **Purpose:** turn ADR 0003's five open questions into concrete, ratifiable answers so the cheap **label layer** can proceed without blocking the electricity migration (#2), and the **full water/sanitation modelling** is scoped as a separate, sequenced initiative.
 
@@ -34,7 +34,9 @@ Recommended seed for the first concept (`service_area`):
 | Water | **Supply Zone** | DMA (District Metered Area), Distribution Zone | "DMA" is the technical term; "Supply Zone" reads to non-engineers. |
 | Sanitation | **Catchment** | Sewershed, Collection Zone | "Catchment" is widely understood; "Sewershed" is the precise term. |
 
-**Ratifies:** Eugene / domain expert (content only). **Not blocking** the architecture.
+> ✅ **SETTLED by Eugene (2026-07-27):** **Electricity = "Grid"** · **Water = "Supply Zone"** · **Sanitation = "Catchment"**. Rationale: the audience is CEOs + regulators — exactly who say "grid"; the physical-network-vs-territory imprecision is accepted, and because the label is editable data it can flip to "Network" if a regulator ever objects.
+
+**Ratifies:** Eugene / domain expert (content only). **Not blocking** the architecture. ✅ **Ratified.**
 
 ---
 
@@ -137,11 +139,11 @@ plus a **code-level neutral default** per `concept_key` (the guaranteed fallback
 
 | # | Question | Proposed answer | Ratifier(s) | Blocking? |
 |---|---|---|---|---|
-| Q1 | Exact per-sector labels | Seed set (Grid / Supply Zone / Catchment), BMO-editable as data | Eugene / domain | No (content) |
+| Q1 | Exact per-sector labels | **Grid / Supply Zone / Catchment** (BMO-editable as data) | **Eugene ✅ ratified 2026-07-27** | No (content) |
 | Q2 | Shared vs sector-specific areas | **(B)** `service_areas.sector_id`, backfill Electricity; **retire `provides_*` booleans** in same change | **#8 ✅ ratified 2026-07-27** + #2 (DDL) | No (additive) |
 | Q3 | Where the map lives | Dedicated `sector_terminology` table (+`label_plural`, code neutral-default) + `sectors` ref/enum; one resolver for Silver+UI | **#11 ✅ ratified 2026-07-27** + #2 (DDL) + BMO | No (additive) |
 | Q4 | Sector vs org axes | Third orthogonal concept; `organisation_sector` M:N junction; org axes untouched | **#10 ✅ ratified 2026-07-27** | No (additive) |
-| Q5 | Timing | Phase 5a (relabel now) → 5b (sector first-class) → 5c (full modelling, deferred, gated on #2 done) | All + Eugene | No (off #2's path) |
+| Q5 | Timing | **Phase 5a GO** (relabel now) → 5b (sector first-class) → 5c (full modelling, deferred, gated on #2 done) | **Eugene ✅ go 2026-07-27** | No (off #2's path) |
 
 **None of the proposed changes block #2.** All schema touches are additive lookups/columns/junctions with Electricity backfill; the full water/sanitation modelling (5c) is deliberately deferred.
 
