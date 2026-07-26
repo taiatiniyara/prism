@@ -2,6 +2,7 @@
 
 - Status: **Proposed** (initiated by Eugene 2026-07-26; needs ratification by #8 / #10 / #11 before implementation)
 - Date: 2026-07-26
+- **Open questions worked → proposed resolutions (2026-07-27, stream #13): [docs/multi-sector-terminology-resolutions.md](../multi-sector-terminology-resolutions.md) — awaiting ratification.**
 - Related: [docs/schema-redesign-medallion.md](../schema-redesign-medallion.md) §0.2 ("IDs in the tables, names in the views"), [docs/WORKSTREAMS.md](../WORKSTREAMS.md) streams #8 (multi-level hierarchy), #10 (two-axis org model), #11 (UI)
 
 ## Context
@@ -41,6 +42,8 @@ Adopt **sector-driven terminology**. Concretely:
 - **Risk if ignored:** renaming to "grid" now would re-bias the schema to electricity and force a re-migration when water/sanitation land — the opposite of the goal.
 
 ## Open questions (for the owning streams / domain experts)
+
+> **Worked into proposed answers by stream #13 (2026-07-27) — see [docs/multi-sector-terminology-resolutions.md](../multi-sector-terminology-resolutions.md).** Summary: labels are BMO-editable data (not a blocker); `service_area` gets a `sector_id` (sector-specific rows, backfill Electricity); a dedicated `sector_terminology` table + `sectors` reference resolve labels at Silver/UI; `sector` is a third orthogonal concept (`organisation_sector` M:N junction, org axes untouched); ship the relabel now, defer full water/sanitation modelling off #2's path. **Awaiting ratification by #8 / #10 / #11 + Eugene.**
 
 - **Exact per-sector labels** — e.g. is the electricity term "Grid", "Network", or "Service Territory"? ("Grid" strictly means the physical network, not the served *territory*.) Water: "Supply Zone" vs "DMA" vs "Service Area"? Sanitation: "Catchment" vs "Sewershed" vs "Collection Zone"?
 - **Is a `service_area` shared geography across sectors, or sector-specific rows?** (One physical territory tagged with a sector, vs separate area rows per sector for the same geography.)
