@@ -4,6 +4,7 @@ import { energyResources, serviceAreas } from "@/db/schema/utility";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { managedListItems } from "@/db/schema/managedLists";
 import { eq, and, isNotNull, inArray } from "drizzle-orm";
+import { authorizeApiKey } from "../service";
 import {
   resolveDlIds,
   dlValue,
@@ -15,7 +16,12 @@ const trainingIds = {
   TotalUnplannedInterruptionCustomerMinutes: 3213040305,
 };
 
-export async function GET() {
+export async function GET(req: Request) {
+  const authorize = await authorizeApiKey(req);
+  if (authorize.success === false) {
+    return Response.json({ message: authorize.message }, { status: 401 });
+  }
+
   const idMap = await resolveDlIds(Object.values(trainingIds));
   const prismIds = Array.from(idMap.values()).filter(
     (id): id is number => id != null,

@@ -37,6 +37,8 @@ export const user = pgTable("user", {
   name: text("name").notNull(),
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").default(false).notNull(),
+  // Whether the user has completed TOTP enrolment (better-auth two-factor plugin).
+  twoFactorEnabled: boolean("two_factor_enabled").default(false).notNull(),
   image: text("image"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at")
@@ -108,6 +110,10 @@ export const session = pgTable(
       .notNull(),
     ipAddress: text("ip_address"),
     userAgent: text("user_agent"),
+    // App-layer MFA marker (PRISM-owned, not a better-auth field): timestamp at
+    // which THIS session passed the admin TOTP challenge. Null = not yet passed,
+    // so the proxy will send admins to /two-factor. Reset per session (per login).
+    twoFactorVerifiedAt: timestamp("two_factor_verified_at"),
     userId: text("user_id")
       .notNull()
       .references(() => user.id, { onDelete: "cascade" }),
@@ -154,6 +160,30 @@ export const verification = pgTable(
   },
   (table) => [index("verification_identifier_idx").on(table.identifier)],
 );
+
+// TOTP secrets + backup codes for the better-auth two-factor plugin. Field
+// (property) names MUST match the plugin's schema — secret, backupCodes, userId,
+// verified, failedVerificationCount, lockedUntil — so the drizzleAdapter maps
+// them; the DB column names are free-form. Secrets/backup codes are stored
+// encrypted by the plugin and are never returned to the client.
+export const twoFactor = pgTable(
+  "two_factor",
+  {
+    id: text("id").primaryKey(),
+    secret: text("secret").notNull(),
+    backupCodes: text("backup_codes").notNull(),
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    verified: boolean("verified").default(true).notNull(),
+    failedVerificationCount: integer("failed_verification_count")
+      .default(0)
+      .notNull(),
+    lockedUntil: timestamp("locked_until"),
+  },
+  (table) => [index("two_factor_user_id_idx").on(table.userId)],
+);
+export type TwoFactor = typeof twoFactor.$inferSelect;
 
 export const externalRegistrations = pgTable("external_registrations", {
   id: serial("id").primaryKey().notNull(),

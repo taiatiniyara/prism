@@ -1,7 +1,7 @@
 # PRISM 2 — Tiered Access, Subscriptions & Registration (spec)
 
 **Status:** 🚧 design in progress (grilled with Eugene 2026-07-26; several decisions locked, a few parked — see §9). Not built.
-**Owner stream:** new — "Tiered access / tenancy" (add to WORKSTREAMS board).
+**Owner stream:** board #10 "Tiered access / tenancy" — **now owned/driven end-to-end by the "PRISM 2 access & registration" session** (Eugene, 2026-07-26): registration & routing (§5) *and* the full tiered-access model (§2 orgs, §3 seats/subscriptions, §4 plans, §6 payment, §7 expiry/admin, §8 RBAC). Overlaps #8 on the `organisations` model — coordinate before any org DDL.
 **Source:** `…/DHI/PPA/Phase 2/5 Requirements/Tiered Access/Tiered Access Plans - 20260707.docx`.
 
 > **Why this exists.** PRISM 2 sells three **dashboard subscription plans** to *consumers* (donors, consultants), layered on top of the existing *provider* (utility) data-collection model. The current schema can't express subscriptions, seats, time-boxed access, or multi-org membership. This spec defines the target model.
@@ -54,6 +54,8 @@ All three include the PDF reports + full dashboards (Benchmarking KPI, Regional,
 **Axis 2 — `entity_type_id` (drives *persona / reporting*).** **Already exists** — FK `organisations.entity_type_id → managed_list_items`. This is the "what kind of org" axis (utility / donor-DFI / consultancy / government / researcher …). No change needed beyond ensuring the vocab covers the consumer types. It stays independent of `relationship` — e.g. a *government* body (entity_type) may be a *ppa_member* or a *subscriber* (relationship); a *donor* and a *consultancy* differ in type but are both *subscribers*.
 
 > Plain-language: **Axis 1 = "how do you relate to PRISM (and do you pay)?"** · **Axis 2 = "what kind of organisation are you?"** They don't move together, so they can't be one field.
+
+> **Sector is NOT a third axis (coordinated w/ #13 multi-sector, 2026-07-26).** Which sector(s) an org operates in — Electricity / Water / Sanitation — is a third, fully orthogonal concept owned by stream #13. It lives **off** `organisations` as an additive M:N junction `organisation_sector(organisation_id, sector_id)` (a utility can run electricity *and* water), and does **not** touch `relationship` or `entity_type_id`. Confirmed compatible with this model. Do **not** add a sector column to `organisations`. Downstream note for later (not a blocker): if plans are ever sold per-sector, `plan_entitlement` (§3.2) would gain a sector qualifier — additive, revisited when a real multi-sector subscription appears.
 
 ---
 
@@ -110,6 +112,7 @@ A consultant with a **Premium** seat (WB) and a **Basic** seat (ADB) must not si
 
 - The user session has an **active seat / org context**. Effective entitlements = `active seat → subscription → plan → plan_entitlement`.
 - A **context switcher** ("Working as: World Bank ▾") lets them flip between their active seats. Download is enabled only when the active seat's plan grants `view_download`.
+  - **Enforcement point (added 2026-07-26, registration session):** `view` vs `view_download` must be denied at the **export endpoint** (the server route that streams the CSV/Excel, or — while Power BI is still embedded — at embed-token issuance, with "export data" disabled in the embed config). Hiding the download button is a UX affordance, **not** a control: a `view`-only seat that reaches the export URL directly must get a 403. Same principle already applied to the data boundary (external gold views, not dashboard filters) — the control lives in the server, never the page.
 - Data shown is the same regional benchmarking either way, so act-as is *feature/entitlement* scoping, not data scoping — the switcher is light.
 - Store the active context on the session (or `user.active_seat_id`, nullable FK), defaulting to the user's most recently used / only seat.
 
@@ -142,7 +145,7 @@ Reuses what already exists (the pending-approval state machine + the **two-way c
 1. **Email-domain match** (`@worldbank.org` → World Bank exists) → route to *request a seat / join* that org.
 2. **Fuzzy name match** — live search *before* any "create new org" is offered.
 3. **AI entity resolution** where 1–2 miss ("World Bank Group / IBRD / WB Pacific" = same) → ranked candidates + rationale, **human confirms**.
-4. **BMO backstop + merge tool** for dupes that slip through.
+4. **BMO backstop + merge tool** for dupes that slip through — including the **simultaneous-net-new collision** (two people from the same not-yet-registered org both register before either org exists, so steps 1–3 match nothing): the BMO console groups pending `access_request`s by fuzzy `proposed_org_name` so they're resolved into one org with one admin, not two duplicate orgs. First approved of the group becomes `is_admin`; the rest are added as seats.
 
 ### 5.3 Join-existing routing (locked)
 
@@ -156,10 +159,16 @@ When dedup matches an existing org:
 `access_request` captures the intake so provisioning is clean (rather than overloading `user.status=pending`):
 ```
 id, requester_name, requester_email, matched_org_id (nullable), proposed_org_name (nullable),
-suggested_plan_id, purpose_text, dedup_candidates (jsonb), routing_target ('org_admin'|'bmo'),
+suggested_plan_id, dedup_candidates (jsonb), routing_target ('org_admin'|'bmo'),
+-- structured "quiz" (added 2026-07-26, registration session — see note below):
+purpose_category ('benchmarking'|'regulation'|'research'|'donor_reporting'|'consulting'|'other'),
+engagement ('one_off'|'ongoing'),                     -- one-off ⇒ suggest Pay-per-project
+declared_org_relationship ('utility'|'ppa_member'|'subscriber'|'unsure'),  -- self-declared; BMO confirms
+datasets_of_interest (jsonb), purpose_text (free-text supplement),
 status: 'submitted'|'info_requested'|'with_org_admin'|'approved'|'declined'|'reverted_to_default'|'withdrawn',
 created_at, decided_by, decided_at
 ```
+> **Why structured, not one free-text box (the originating complaint):** the reason registrants were "not quizzed enough" and standalone accounts drifted from their real org is that the old form asked *who/why* as loose prose (or not at all) and let the org be free text. Structured `purpose_category` + `engagement` + `declared_org_relationship` (a) feed the AI plan recommendation and dedup ranking deterministically, (b) give the BMO a triage-ready request instead of prose to interpret, and (c) pair with the §5.2 live org search so "choose from the existing list or propose a new one" is the *only* way to name an org. `purpose_text` stays as an optional supplement, no longer the primary signal.
 Clarification messages link to the `access_request`; on approval it provisions `user` + `seat` (+ `subscription` for a net-new org).
 
 **Where AI helps (intake + dedup, never authorization):** conversational intake → a complete structured request first time (fewer BMO round-trips); plan recommendation from answers; dedup ranking; a BMO copilot that summarizes + pre-fills. Grant/deny, cap, expiry, domain trust stay deterministic/human.
@@ -244,3 +253,4 @@ failure_reason
 - **[RESOLVED 2026-07-26] Unify migration** — full unify now, provider side included, sequenced first (§3.4).
 - **[RESOLVED 2026-07-26] Manual checkout** — subscriber **self-initiates** the payment request (no card entry in PRISM); Finance completes it (§6.3).
 - Payment gateway provider (Stripe / Pacific PSP) — deferred until PPA banking allows.
+- **[ADDED 2026-07-26, registration session]** Reconciled the two design sessions into this one spec: folded in (a) export-endpoint enforcement of `view` vs `view_download` (§3.3), (b) structured intake "quiz" replacing free-text-org/why (§5.4), (c) simultaneous-net-new org collision handling (§5.2.4). All other ideas from that session were already covered here and were discarded as redundant. **The entire stream (registration §5 + tiered access §2–§8) is now driven by the "PRISM 2 access & registration" session going forward.**

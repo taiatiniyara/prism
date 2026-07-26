@@ -11,7 +11,6 @@ export async function GET(request: Request): Promise<Response> {
 
   const { searchParams } = new URL(request.url);
   const days = Math.min(90, Math.max(1, parseInt(searchParams.get("days") ?? "30", 10) || 30));
-  const interval = `${days} days`;
   const type = searchParams.get("type") ?? "overview";
 
   try {
@@ -29,7 +28,7 @@ export async function GET(request: Request): Promise<Response> {
           sum(m.error_count)::int AS "errors"
         FROM "ai_usage_metrics" m
         INNER JOIN "user" u ON m.user_id = u.id
-        WHERE m.date >= now() - interval '${interval}'
+        WHERE m.date >= now() - make_interval(days => ${days})
         GROUP BY m.user_id, u.name, u.email
         ORDER BY sum(m.estimated_cost_cents) DESC
       `);
@@ -54,7 +53,7 @@ export async function GET(request: Request): Promise<Response> {
           round(avg(tc.latency_ms))::int AS "avgLatencyMs"
         FROM "ai_tool_call" tc
         INNER JOIN ""ai_chat_turn"" ct ON tc.turn_id = ct.id
-        WHERE ct.created_at >= now() - interval '${interval}'
+        WHERE ct.created_at >= now() - make_interval(days => ${days})
         GROUP BY tc.tool_name
         ORDER BY count(*) DESC
       `);
@@ -69,7 +68,7 @@ export async function GET(request: Request): Promise<Response> {
           count(CASE WHEN ct.model_was_fallback = true THEN 1 END)::int AS "haikuCount",
           round(avg(ct.latency_ms))::int AS "avgLatencyMs"
         FROM "ai_chat_turn" ct
-        WHERE ct.created_at >= now() - interval '${interval}'
+        WHERE ct.created_at >= now() - make_interval(days => ${days})
       `);
 
       const row = result.rows[0] as Record<string, unknown> | undefined;
@@ -97,7 +96,7 @@ export async function GET(request: Request): Promise<Response> {
         sum(tool_call_count)::int AS "toolCalls",
         sum(error_count)::int AS "errors"
       FROM "ai_usage_metrics"
-      WHERE date >= now() - interval '${interval}'
+      WHERE date >= now() - make_interval(days => ${days})
       GROUP BY date
       ORDER BY date
     `);

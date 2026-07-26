@@ -185,7 +185,7 @@ measures_group_id`, `subcategory_id → measures_subgroup_id`; Drizzle fields li
 references; and the managed lists **12 → "Measures Group"**, **13 → "Measures Subgroup"**. Full
 rename (field + column + refs), verified by `tsc`. Backup `backup.measure_definitions_pre_grouprename`.
 
-### 1.3 `measure_dimension_scope` (unifies today's relevance tables) — **BUILT, table empty**
+### 1.3 `measure_dimension_scope` (unifies today's relevance tables) — ~~**BUILT, table empty**~~ **BUILT + POPULATED (1,170 rows; DB-verified 2026-07-26)**
 
 Declares how each dimension behaves for each measure — drives the entry UI and shell
 generation. **Restructured 2026-07-09:** `is_applicable` (yes/no) was too coarse — whether a

@@ -30,7 +30,7 @@ empty calculated shells; this engine fills them.
 3. **Complete, explicit, and linked.** Every input records all applicable dimensions; each is a
    specific member, an explicit **All**, or an explicit **inherit** — never "absent = guess". And
    it is a real link (foreign key), so it can't silently point at something deleted. (§5, §6)
-4. **Goals are not computation.** A KPI's target / limit / trajectory describe what the value
+4. **Goals are not computation.** A KPI's target and limit describe what the value
    *should be*, not how it's derived. They live in the targets/limits/BSC editors, never in the
    formula builder. (§7)
 5. **Compute once, reference many.** A value is computed in exactly one place; anything that also
@@ -65,7 +65,7 @@ Findings from inspecting the live database and code, 2026-07-23. These shape wha
   `is_calculated` (2 rows: Total Costs, Profit), **`is_kpi` (0 rows — the flag is inert/unused)**,
   `is_kpi_input` (6 rows, stale).
 - `kpi_definitions` is a **separate** table (145 rows / 144 active) with its *own* formula, plus
-  targets / limits / trajectory / BSC linkage / benchmarking. KPIs are computed here, written to
+  targets / limits / BSC linkage / benchmarking. KPIs are computed here, written to
   the `kpi` values table by the `kpi-worker`. **`measure_definitions.is_kpi` plays no part** in
   KPI computation.
 - There is **no foreign key** linking the two tables. A measure being "also a KPI" is not
@@ -99,7 +99,7 @@ list to rebuild from, not data to migrate. This spec is the model they'll be reb
 ## 3. One node type: computed measures (KPI is a label)
 
 The calculator produces **computed measures**. There is no separate "KPI calculator": once goal
-fields (target/limit/trajectory) are set aside as *not computation* (§7), a KPI and a calculated
+fields (target/limit) are set aside as *not computation* (§7), a KPI and a calculated
 input are the **same thing to the calculator** — a formula that produces a value at a scope. So
 "KPI" is a **publishing tag** on some computed outputs, deciding where the value is surfaced
 (dashboards / BSC) and whether goals are attached — not a different calculation.
@@ -407,6 +407,27 @@ kpi_limit_dimension              -- which slice the band applies to (reuses §5.
 Ownership: the **targets/BSC stream (#5/#9)** owns `kpi_limit`; it just reuses this section's
 tag-card model. Replaces the `kpi_definitions.limits` JSON.
 
+### 5.7 Naming — the token lives on the binding, not the measure (§11.11 resolved 2026-07-24)
+
+The formula token (`renewable_gen`, `total_gen`) is a property of the **binding**
+(`formula_binding.variable_name`) — one per use, unique within a formula. The model forces this:
+the same measure appears more than once in one formula at different slices (§5.4), so a single
+global token per measure can't tell them apart. The builder **auto-suggests** each token from the
+input measure + its key pinned tag (Electricity Generated + Renewable → `renewable_gen`), editable,
+and unique-within-formula. (Names enter the calculator *per input*, at the binding.)
+
+Consequently the measure-level **`measure_definitions.variable_name` is no longer the formula
+mechanism** — but it is **kept and re-purposed** as the measure's stable, human-readable machine
+handle: the slug the **AI data-service** (`lib/ai/data-service/explain.ts`, `utils.ts`), other
+services, `lib/formatters.ts`, and the exported artifacts reference instead of a numeric id or a
+mutable display name. For an AI-optimised system a stable per-measure handle is worth keeping.
+Deleting the column is a **separate cross-cutting decision** (it touches the AI layer), not the
+calculator's to make — the calculator simply stops depending on it for tokens.
+
+*(If formulas ever move from human-readable text to a structured form where each operand points
+directly at a binding id, even the binding token becomes an optional display label. Not planned;
+readable text formulas are retained.)*
+
 ---
 
 ## 6. Referential integrity & failure behavior
@@ -450,10 +471,13 @@ tools.
 - **"Track as KPI" facet** — flipping it surfaces where the value is published (and lets goals be
   attached elsewhere); it does **not** add a second formula. For a promoted measure it just sets the
   reference (§3).
-- **Target & Trajectory are absent** from the builder — they're goals, authored in
-  `targetsEditor` / `limitsEditor` / BSC.
-- **"Result level"** — shown as a derived, read-only chip ("computes at: utility"); **OPEN (§11)**
-  whether needed at all.
+- **Targets & limits are absent** from the builder — they're goals, authored in
+  `targetsEditor` / `limitsEditor` / BSC. (Trajectory was removed project-wide, 2026-07-26.)
+- **No "result level" field (DECIDED 2026-07-24, §11.9).** A computed measure/KPI has no single
+  result level — it computes at *every* applicable address (§4.6). The set of levels/slices comes
+  from **applicability**, not a builder field. Optional: a derived, read-only **"reported at"**
+  summary ("unit → country · by technology/category/asset") for author clarity — informational,
+  plural, never an input. (A raw measure's native/finest grain stays — it's an input-side property.)
 - **Live dependency preview** — "depends on… / feeds…", so the user sees the node's place in the
   cascade.
 - **Referential warnings inline** (§6) — an input whose measure is deactivated/missing shows a ⚠
@@ -511,15 +535,15 @@ Definition tables (`measure_definitions`, `kpi_definitions`) otherwise stay sepa
 | 11.6 | Delete/deactivate behavior | block delete + warn on deactivate + never silent-compute | **Adopted** (§6) |
 | 11.7 | KPI rebuild approach | manual rebuild after measure migration · mechanical re-point | **Manual rebuild** (locked §2) |
 | 11.8 | Persist + auto-re-run test cases | yes · author-time-only | Yes (§8) |
-| 11.9 | "Result level" field | derive + display · editable · drop | Derive + display; confirm if needed |
+| 11.9 | "Result level" field | derive + display · editable · drop | **DECIDED 2026-07-24: drop** — no single result level; levels come from applicability (§4.6, §7) |
 | 11.10 | Missing-input policy | keep zero-fill-if-additive · revise | Keep (§9) |
-| 11.11 | `variable_name` | keep the formula-text token · identify inputs another way | Keep while formulas are text strings |
+| 11.11 | `variable_name` | token on binding · token on measure · structured (no token) | **DECIDED 2026-07-24: token on the binding** (§5.7); measure `variable_name` kept, re-purposed as a stable AI/machine handle |
 | 11.12 | Cross-scope aggregation depth | same-scope only · aggregate across dims/grain | **DECIDED 2026-07-24: common & deep, two-axis** (§4.6) |
 
 The two biggest forks (11.1 engine topology, 11.2 compute home) are now **decided** (§4.4–4.5).
 Everything in §5/§6 (the binding + integrity model) is the direction the design converged on.
-The only remaining fork is minor: **11.9** (is "result level" needed at all). **11.12** is now
-decided (§4.6).
+**All open forks are now resolved** — 11.9 (drop "result level"), 11.11 (token on the binding), and
+11.12 (cross-scope) all decided 2026-07-24. The design register carries no remaining open decisions.
 
 ---
 

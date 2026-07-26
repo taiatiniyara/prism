@@ -1,0 +1,411 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PRISM 2 — Calculator / Formula Builder mockup</title>
+<style>
+  :root{
+    --bg:#f6f7f9; --panel:#ffffff; --ink:#1c2430; --muted:#66707c; --line:#e3e7ec;
+    --accent:#2f6df6; --accent-soft:#e8f0ff; --pin:#0d7d5a; --pin-soft:#e0f4ec;
+    --all:#8a6d00; --all-soft:#fbf1d3; --inherit:#5b6472; --inherit-soft:#eef1f4;
+    --warn:#b4361d; --warn-soft:#fbe6e1; --ok:#0d7d5a; --chip:#eef1f5;
+    --shadow:0 1px 2px rgba(20,30,45,.06),0 4px 16px rgba(20,30,45,.06);
+  }
+  @media (prefers-color-scheme:dark){
+    :root{
+      --bg:#0f1319; --panel:#161c24; --ink:#e7ecf2; --muted:#9aa5b1; --line:#26303b;
+      --accent:#5b8bff; --accent-soft:#18263f; --pin:#4cd1a0; --pin-soft:#123027;
+      --all:#e0be5a; --all-soft:#332a12; --inherit:#9aa5b1; --inherit-soft:#1d2530;
+      --warn:#ff8f75; --warn-soft:#3a1c16; --ok:#4cd1a0; --chip:#1d2530;
+      --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.35);
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:24px}
+  .wrap{max-width:960px;margin:0 auto}
+  h1{font-size:15px;margin:0;font-weight:650}
+  .sub{color:var(--muted);font-size:12.5px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+    box-shadow:var(--shadow);margin-bottom:16px}
+  .card-pad{padding:16px 18px}
+  .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+  .between{justify-content:space-between}
+  .divide{border-top:1px solid var(--line)}
+  label.fld{display:block;font-size:11px;letter-spacing:.03em;text-transform:uppercase;
+    color:var(--muted);margin-bottom:5px;font-weight:600}
+  .input{background:var(--bg);border:1px solid var(--line);border-radius:8px;
+    padding:8px 10px;color:var(--ink);font-size:13.5px;min-width:120px}
+  .formula{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14.5px;
+    background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+  .tok{background:var(--accent-soft);color:var(--accent);border-radius:6px;padding:1px 6px;
+    font-weight:600;cursor:pointer}
+  .op{color:var(--muted);padding:0 3px}
+  /* toggle */
+  .toggle{display:inline-flex;align-items:center;gap:9px;font-size:13px}
+  .sw{width:38px;height:22px;border-radius:99px;background:var(--accent);position:relative;flex:0 0 auto}
+  .sw::after{content:"";position:absolute;top:2px;left:18px;width:18px;height:18px;border-radius:50%;
+    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3)}
+  .pill{display:inline-flex;align-items:center;gap:6px;background:var(--chip);border-radius:99px;
+    padding:3px 10px;font-size:12px;color:var(--muted)}
+  /* tag card */
+  .tagcard{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:12px}
+  .tagcard.warnb{border-color:var(--warn)}
+  .tc-head{display:flex;justify-content:space-between;align-items:center;gap:10px;
+    padding:10px 14px;background:var(--bg)}
+  .tc-split{display:flex;align-items:stretch}
+  .tc-left{flex:0 0 30%;max-width:30%;padding:14px;display:flex;flex-direction:column;
+    gap:6px;align-items:flex-start}
+  .tc-right{flex:0 0 70%;max-width:70%;border-left:1px solid var(--line)}
+  .var{font-family:ui-monospace,monospace;font-weight:700;color:var(--accent);font-size:13.5px}
+  .reads{color:var(--muted);font-size:12.5px}
+  .reads b{color:var(--ink);font-weight:600}
+  .tags{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:12px 14px 8px}
+  .tag{border:1px solid var(--line);border-radius:8px;padding:6px 9px;background:var(--panel)}
+  .tag .k{font-size:10.5px;letter-spacing:.02em;text-transform:uppercase;color:var(--muted)}
+  .tag .v{font-size:12.5px;font-weight:600;margin-top:1px;display:flex;align-items:center;gap:6px}
+  .dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+  .t-pin{background:var(--pin-soft)} .t-pin .v{color:var(--pin)} .t-pin .dot{background:var(--pin)}
+  .t-all{background:var(--all-soft)} .t-all .v{color:var(--all)} .t-all .dot{background:var(--all)}
+  .t-inh{background:var(--inherit-soft)} .t-inh .v{color:var(--inherit)} .t-inh .dot{background:var(--inherit)}
+  .grainctl{display:flex;align-items:center;gap:12px;padding:10px 14px 12px;border-top:1px dashed var(--line);margin:0 14px}
+  .glabel{font-size:10.5px;text-transform:uppercase;letter-spacing:.02em;color:var(--muted);font-weight:600;flex:0 0 auto}
+  .gval{font-size:13px;font-weight:600;color:var(--inherit);display:flex;align-items:center;gap:7px}
+  .gval .dot{width:7px;height:7px;border-radius:50%}
+  .tc-body{display:flex;align-items:stretch}
+  .dimcol{flex:1 1 auto;min-width:0}
+  .graincol{flex:0 0 150px;max-width:150px;border-left:1px solid var(--line);padding:12px 14px;display:flex;align-items:flex-start}
+  .warn{background:var(--warn-soft);color:var(--warn);border-radius:8px;padding:8px 12px;
+    font-size:12.5px;margin:0 14px 12px;display:flex;gap:8px;align-items:flex-start}
+  .legend{display:flex;gap:16px;flex-wrap:wrap;font-size:12px;color:var(--muted)}
+  .legend .dot{display:inline-block;margin-right:5px;vertical-align:middle}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line)}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);font-weight:600}
+  td.num{font-family:ui-monospace,monospace}
+  .tick{color:var(--ok);font-weight:700}
+  .mut{color:var(--muted)}
+  .sec{font-weight:650;font-size:13px;margin:0 0 2px}
+  .flag{display:inline-flex;gap:6px;align-items:center;font-size:12.5px;color:var(--ok)}
+  .grow{flex:1}
+  .note{font-size:12px;color:var(--muted);margin-top:8px}
+  .kpiband{background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);
+    border-radius:8px;padding:8px 12px;font-size:12.5px;color:var(--ink);margin-top:10px}
+  .authhdr{margin:28px 0 2px;font-weight:700;font-size:15px}
+  .cap{font-size:12.5px;color:var(--muted);margin:0 0 10px}
+  .pickbtn{display:inline-flex;align-items:center;gap:7px;background:var(--accent);color:#fff;border:0;
+    border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600;cursor:pointer}
+  .ghost{border:1px dashed var(--line);border-radius:8px;padding:14px;color:var(--muted);font-size:12.5px;
+    background:repeating-linear-gradient(45deg,transparent,transparent 7px,var(--bg) 7px,var(--bg) 14px)}
+  .picker{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel)}
+  .pk-search{padding:11px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
+  .pk-search input{flex:1;background:var(--bg);border:1px solid var(--accent);border-radius:8px;padding:8px 10px;
+    color:var(--ink);font-size:13.5px}
+  .pk-body{display:flex}
+  .pk-groups{flex:0 0 240px;border-right:1px solid var(--line);padding:8px;max-height:300px;overflow:auto}
+  .pk-results{flex:1;padding:8px;max-height:300px;overflow:auto}
+  .grp{padding:6px 10px;border-radius:6px;font-size:13px;cursor:pointer;display:flex;justify-content:space-between}
+  .grp.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+  .grp .c{color:var(--muted);font-weight:400;font-size:12px}
+  .subg{padding:4px 10px 4px 24px;font-size:12.5px;color:var(--muted);cursor:pointer;border-radius:6px}
+  .subg.on{color:var(--accent);font-weight:600;background:var(--accent-soft)}
+  .res{padding:8px 10px;border-radius:8px;cursor:pointer;display:flex;justify-content:space-between;gap:10px;align-items:center}
+  .res.on,.res:hover{background:var(--bg)}
+  .res .nm{font-size:13.5px;font-weight:600}
+  .res .path{font-size:11.5px;color:var(--muted);margin-top:1px}
+  .hl{background:var(--all-soft);color:var(--all);border-radius:3px;padding:0 1px;font-weight:700}
+  .pop{border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);background:var(--panel);padding:8px;width:260px}
+  .opt{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:7px;font-size:13px;cursor:pointer}
+  .opt.on{background:var(--accent-soft)}
+  .radio{width:14px;height:14px;border-radius:50%;border:2px solid var(--muted);flex:0 0 auto}
+  .opt.on .radio{border-color:var(--accent);background:radial-gradient(circle,var(--accent) 38%,transparent 42%)}
+  .mini-select{margin:2px 0 6px 23px;border:1px solid var(--line);border-radius:6px;padding:6px 9px;
+    font-size:12.5px;background:var(--bg);display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .caret{display:inline-block;width:2px;height:19px;background:var(--accent);margin-left:1px;vertical-align:middle}
+  .oprow{display:flex;align-items:center;gap:6px;margin-top:10px;flex-wrap:wrap}
+  .opbtn{min-width:32px;height:30px;border:1px solid var(--line);background:var(--panel);border-radius:7px;
+    font-size:15px;color:var(--ink);cursor:pointer;padding:0 8px}
+  .acbox{border:1px solid var(--line);border-radius:8px;overflow:hidden;box-shadow:var(--shadow);background:var(--panel);max-width:440px}
+  .achdr{font-size:12px;color:var(--muted);padding:7px 10px;border-bottom:1px solid var(--line)}
+  .acitem{padding:8px 10px;font-size:13px;cursor:pointer;border-top:1px solid var(--line)}
+  .acitem:hover{background:var(--bg)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div style="margin-bottom:14px">
+    <h1>Measure Builder <span class="mut">›</span> Renewable Generation Share</h1>
+    <div class="sub">One builder for every computed value — a KPI is just a measure you also publish.</div>
+  </div>
+
+  <!-- Definition -->
+  <div class="card card-pad">
+    <div style="display:flex;gap:20px;align-items:flex-start">
+      <div style="flex:1 1 auto;min-width:0">
+        <div class="row">
+          <div><label class="fld">Name</label><input class="input" value="Renewable Generation Share" style="width:240px"></div>
+          <div><label class="fld">Unit</label><input class="input" value="%" style="width:70px"></div>
+          <div><label class="fld">Reported at (derived)</label>
+            <span class="pill">unit → country · by technology / category / asset</span></div>
+        </div>
+        <div style="margin-top:14px">
+          <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
+            <label class="fld" style="margin-bottom:0">Formula</label>
+            <span class="note" style="margin:0">Each formula variable has its own context described in the inputs section below</span>
+          </div>
+          <div class="formula" style="margin-top:5px">
+            <span class="tok">renewable_gen</span><span class="op">&divide;</span><span class="tok">total_gen</span>
+          </div>
+        </div>
+      </div>
+      <aside style="flex:0 0 26%;max-width:26%">
+        <div style="display:flex;justify-content:flex-end">
+          <div class="toggle"><span>Track as KPI</span><span class="sw"></span></div>
+        </div>
+        <div class="kpiband" style="margin-top:69px;padding-top:4px;padding-bottom:4px">
+          <b>Published as KPI.</b> This value feeds the KPI dashboard &amp; benchmarking.
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <!-- Inputs = tag cards -->
+  <div class="card card-pad">
+    <div class="row between">
+      <p class="sec" style="margin:0">Inputs — a tag card per variable</p>
+      <div class="row" style="gap:18px">
+        <span class="sub"><b>Pin</b> a slice, aggregate with <b>All</b>, or <b>Inherit</b> its scope</span>
+        <div class="legend">
+          <span><span class="dot" style="background:var(--pin)"></span>Pinned</span>
+          <span><span class="dot" style="background:var(--all)"></span>All</span>
+          <span><span class="dot" style="background:var(--inherit)"></span>Inherit</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- card 1 -->
+    <div class="tagcard">
+      <div class="tc-split">
+        <div class="tc-left">
+          <span class="var">renewable_gen</span>
+          <span class="reads">reads <b>Electricity Generated</b> (MWh)</span>
+        </div>
+        <div class="tc-right">
+          <div class="tc-body">
+            <div class="dimcol">
+              <div class="tags">
+                <div class="tag t-all"><div class="k">Provider</div><div class="v"><span class="dot"></span>All</div></div>
+                <div class="tag t-pin"><div class="k">Category</div><div class="v"><span class="dot"></span>Renewable</div></div>
+                <div class="tag t-all"><div class="k">Technology</div><div class="v"><span class="dot"></span>All</div></div>
+                <div class="tag t-pin"><div class="k">Asset</div><div class="v"><span class="dot"></span>Generation</div></div>
+              </div>
+            </div>
+            <div class="graincol">
+              <div class="tag t-inh" style="width:100%"><div class="k">Grain / level</div><div class="v"><span class="dot"></span>inherit</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- card 2 -->
+    <div class="tagcard">
+      <div class="tc-split">
+        <div class="tc-left">
+          <span class="var">total_gen</span>
+          <span class="reads">reads <b>Electricity Generated</b> (MWh)</span>
+        </div>
+        <div class="tc-right">
+          <div class="tc-body">
+            <div class="dimcol">
+              <div class="tags">
+                <div class="tag t-all"><div class="k">Provider</div><div class="v"><span class="dot"></span>All</div></div>
+                <div class="tag t-all"><div class="k">Category</div><div class="v"><span class="dot"></span>All</div></div>
+                <div class="tag t-all"><div class="k">Technology</div><div class="v"><span class="dot"></span>All</div></div>
+                <div class="tag t-pin"><div class="k">Asset</div><div class="v"><span class="dot"></span>Generation</div></div>
+              </div>
+            </div>
+            <div class="graincol">
+              <div class="tag t-inh" style="width:100%"><div class="k">Grain / level</div><div class="v"><span class="dot"></span>inherit</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- card 3: warning state -->
+    <div class="tagcard warnb">
+      <div class="tc-split">
+        <div class="tc-left">
+          <span class="var">solar_gen <span class="mut" style="font-weight:400">(illustrating the warning state)</span></span>
+          <span class="reads">reads <b>Solar Electricity Generated</b></span>
+        </div>
+        <div class="tc-right">
+          <div class="warn" style="margin:12px 14px"><span>⚠</span><span><b>"Solar Electricity Generated" is deactivated.</b>
+            This KPI won't compute until it's reactivated or you point this input at another measure. The input is
+            never silently dropped.</span></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="sub" style="margin-top:16px;margin-bottom:2px"><b>Another measure — a different tag set</b> (customer-sliced example; not part of this KPI)</div>
+    <div class="tagcard">
+      <div class="tc-split">
+        <div class="tc-left">
+          <span class="var">res_prepaid_sold <span class="mut" style="font-weight:400">(example)</span></span>
+          <span class="reads">reads <b>Electricity Sold to Customers</b> (MWh)</span>
+        </div>
+        <div class="tc-right">
+          <div class="tc-body">
+            <div class="dimcol">
+              <div class="tags">
+                <div class="tag t-pin"><div class="k">Customer type</div><div class="v"><span class="dot"></span>Residential</div></div>
+                <div class="tag t-pin"><div class="k">Payment mode</div><div class="v"><span class="dot"></span>Prepaid</div></div>
+                <div class="tag t-all"><div class="k">Band</div><div class="v"><span class="dot"></span>All</div></div>
+              </div>
+            </div>
+            <div class="graincol">
+              <div class="tag t-inh" style="width:100%"><div class="k">Grain / level</div><div class="v"><span class="dot"></span>inherit</div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Dependency preview -->
+  <div class="card card-pad">
+    <p class="sec">Dependency preview</p>
+    <div class="row" style="gap:24px">
+      <div><label class="fld">Depends on</label>
+        <div class="row"><span class="pill">Electricity Generated</span></div></div>
+      <div><label class="fld">Feeds</label>
+        <div class="row"><span class="pill">BSC · Sustainability perspective</span>
+          <span class="pill">Country renewable rollup</span></div></div>
+    </div>
+    <div class="note">Cycle-safe: no circular references detected.</div>
+  </div>
+
+  <!-- Test harness -->
+  <div class="card card-pad">
+    <div class="row between"><p class="sec">Test harness — saved regression cases</p>
+      <span class="flag">re-runs on every formula change</span></div>
+    <table>
+      <thead><tr><th>Case</th><th>renewable_gen</th><th>total_gen</th><th>Expected</th><th>Got</th><th></th></tr></thead>
+      <tbody>
+        <tr><td>Typical utility</td><td class="num">40</td><td class="num">100</td><td class="num">40%</td><td class="num">40%</td><td class="tick">✓</td></tr>
+        <tr><td>All renewable</td><td class="num">80</td><td class="num">80</td><td class="num">100%</td><td class="num">100%</td><td class="tick">✓</td></tr>
+        <tr><td>Zero generation</td><td class="num">0</td><td class="num">0</td><td class="mut">n/a (÷0)</td><td class="mut">n/a</td><td class="tick">✓</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Validation footer -->
+  <div class="card card-pad">
+    <div class="row" style="gap:20px">
+      <span class="flag">✓ Cycle check</span>
+      <span class="flag">✓ Units consistent (MWh ÷ MWh → %)</span>
+      <span class="flag">✓ All bindings resolve</span>
+      <span class="flag">✓ 3/3 test cases pass</span>
+    </div>
+  </div>
+
+  <!-- ===== Authoring states ===== -->
+  <div class="authhdr">How you build a card — the authoring moments</div>
+  <p class="cap">In order: write the formula → a variable's card appears → pick its measure → set its dimensions.</p>
+
+  <!-- State 0 · formula entry -->
+  <div class="card card-pad">
+    <p class="sec">1 · Write the formula — type variables and operators</p>
+    <div class="formula" style="margin-top:10px">
+      <span class="tok">renewable_gen</span><span class="op">&divide;</span><span class="tok">total_gen</span><span class="caret"></span>
+    </div>
+    <div class="oprow">
+      <button class="opbtn">+</button><button class="opbtn">&minus;</button><button class="opbtn">&times;</button><button class="opbtn">&divide;</button><button class="opbtn">(</button><button class="opbtn">)</button>
+      <span class="mut" style="font-size:12px;margin-left:6px">insert an operator</span>
+    </div>
+    <div style="margin-top:12px">
+      <div class="acbox">
+        <div class="achdr">typing <code>sol</code>…</div>
+        <div class="acitem"><b>＋ Create new input</b> "sol…" <span class="mut">— adds a card below</span></div>
+        <div class="acitem"><span class="var" style="font-weight:600">solar_gen</span> <span class="mut">— existing input, links to its card</span></div>
+      </div>
+    </div>
+    <p class="cap" style="margin-top:8px">Type a name to reference an input: a <b>new</b> name creates its input card below; an <b>existing</b> one links to it. Operators &amp; parentheses build the expression.</p>
+  </div>
+
+  <!-- State 1 -->
+  <div class="card card-pad">
+    <p class="sec">2 · A new variable appears → an empty input card</p>
+    <div class="tagcard" style="margin-top:10px">
+      <div class="tc-split">
+        <div class="tc-left">
+          <span class="var">renewable_gen</span>
+          <span class="reads" style="color:var(--muted)">no measure selected yet</span>
+          <button class="pickbtn" style="margin-top:8px">＋ Pick a measure</button>
+        </div>
+        <div class="tc-right">
+          <div class="ghost" style="margin:12px 14px">Dimension tags appear here once a measure is chosen — only the ones that measure is scoped on.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- State 2 -->
+  <div class="card card-pad">
+    <p class="sec">3 · Pick the measure — browse by group / subgroup, or search (narrows as you type)</p>
+    <div class="picker" style="margin-top:10px">
+      <div class="pk-search"><span>🔎</span><input value="gen"><span class="mut" style="font-size:12px;white-space:nowrap">narrows live · 2 matches</span></div>
+      <div class="pk-body">
+        <div class="pk-groups">
+          <div class="grp on">Operational <span class="c">35</span></div>
+          <div class="subg">Downtime <span class="c" style="color:inherit">6</span></div>
+          <div class="subg on">Electricity Generated</div>
+          <div class="subg">Electricity Consumed</div>
+          <div class="subg">Interruptions</div>
+          <div class="subg">Solar Environment</div>
+          <div class="grp" style="margin-top:4px">Financial <span class="c">34</span></div>
+          <div class="grp">Country &amp; Utility Context <span class="c">21</span></div>
+          <div class="grp">Governance <span class="c">14</span></div>
+          <div class="grp">HR &amp; Safety <span class="c">8</span></div>
+          <div class="grp">Cost Breakdown <span class="c">3</span></div>
+        </div>
+        <div class="pk-results">
+          <div class="res on">
+            <div><div class="nm">Electricity <span class="hl">Gen</span>erated</div>
+              <div class="path">Operational › Electricity Generated · MWh</div></div>
+            <span class="pill" style="font-size:11px">select</span>
+          </div>
+          <div class="res">
+            <div><div class="nm">Solar Electricity <span class="hl">Gen</span>erated Theoretical</div>
+              <div class="path">Operational › Solar Environment · kWh</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <p class="cap" style="margin-top:8px">Groups/subgroups come from <code>measures_group</code> / <code>measures_subgroup</code> to jump to the right area; the search filters on every keystroke and highlights the match.</p>
+  </div>
+
+  <!-- State 3 -->
+  <div class="card card-pad">
+    <p class="sec">4 · Set each dimension — click a tag to choose Pin / All / Inherit</p>
+    <div style="display:flex;gap:24px;align-items:flex-start;margin-top:10px;flex-wrap:wrap">
+      <div class="tag t-pin" style="width:150px"><div class="k">Category</div><div class="v"><span class="dot"></span>Renewable ▾</div></div>
+      <div class="pop">
+        <div class="opt on"><span class="radio"></span><span>Pin a member</span></div>
+        <div class="mini-select"><span>Renewable</span><span class="mut">▾</span></div>
+        <div class="opt"><span class="radio"></span><span><b>All</b> — aggregate across category</span></div>
+        <div class="opt"><span class="radio"></span><span><b>Inherit</b> — match the level being computed</span></div>
+      </div>
+    </div>
+    <p class="cap" style="margin-top:10px">Only the dimensions this measure is scoped on appear as tags. Grain uses the same picker in its own column — Inherit / Roll up from finer / Pin a level.</p>
+  </div>
+
+  <p class="sub" style="text-align:center;margin-top:18px">
+    Mockup · PRISM 2 Calculator spec §5–§7 · the tag card is the same address model used by inputs, computed values, and limits.
+  </p>
+</div>
+</body>
+</html>
