@@ -1,7 +1,7 @@
 # Multi-sector terminology — proposed resolutions to ADR 0003's open questions
 
 **Stream:** #13 Multi-sector (water/sanitation) · **Owner:** `PRISM 2 #13 multi-sector`
-**Status:** 🟢 **#8 + #10 ratified (2026-07-27)** · ⏳ awaiting #11 (Q3 label resolution/UI) + Eugene/domain on the Q1 label strings & Phase-5a go.
+**Status:** 🟢 **all three streams ratified (2026-07-27): #8 (Q2), #10 (Q4), #11 (Q3).** · ⏳ only Eugene/domain remains — Q1 label strings & Phase-5a go.
 **Parent decision:** [adr/0003-multi-sector-terminology.md](adr/0003-multi-sector-terminology.md) (Proposed 2026-07-26, merged PR #55).
 **Purpose:** turn ADR 0003's five open questions into concrete, ratifiable answers so the cheap **label layer** can proceed without blocking the electricity migration (#2), and the **full water/sanitation modelling** is scoped as a separate, sequenced initiative.
 
@@ -81,6 +81,22 @@ Recommended seed for the first concept (`service_area`):
 
 **Ratifies:** **#11** (UI — owns label resolution at the presentation layer) + **#2** (creates the lookup + `sectors` reference table; both are pure additive lookups, non-blocking) + BMO (maintains the content).
 
+> ✅ **RATIFIED by #11 (2026-07-27)**, with five UI-side contract conditions (all additive; #11 owns the UI surfacing):
+>
+> 1. **One resolver, one source.** The same terminology map feeds **both** the Silver display-string views (AI dictionary / exports) **and** the client UI — no duplicate map in two layers, or they drift.
+> 2. **Single filter-context provider for `active_sector`.** UI reads labels via a `t(concept_key)` / `useTerm()` hook — never hardcoded strings in components.
+> 3. **Guaranteed neutral fallback.** Resolution chain: `(active_sector, concept_key)` → **neutral default kept in CODE** (always present, even against an empty table) → raw key only as an absolute last resort. The UI must never render a blank or snake_case key. ⇒ **seed a neutral/default label per `concept_key` in code.**
+> 4. **Add `label_plural`** (nullable; fallback = `label`). List headers/counts need plurals — don't string-concat "s" (won't generalize to later concepts).
+> 5. **`concept_key` is a registered constant set** on the UI side, so a typo is a compile/lint error, not a silent fall-through to the raw key.
+>
+> **Phase 5a app-config interim is fine day-one — PROVIDED it sits behind the resolver indirection now**, so the later config→table swap is zero component churn. **Scope:** sector-scoped only, no per-org relabel. **Perf:** map is small → load once per session + cache, invalidate on BMO edit; never a per-render fetch.
+
+**Revised table shape (with #11's conditions):**
+```
+sector_terminology(sector_id → sectors, concept_key, label, label_plural NULL, updated_by, updated_at)
+```
+plus a **code-level neutral default** per `concept_key` (the guaranteed fallback, not stored) and a **registered `concept_key` constant set** shared by UI and Silver. Resolver is a single shared function consumed by both the Silver views and the `useTerm()` hook.
+
 ---
 
 ## Q4 — How does `sector` interact with #10's `entity_type` / `relationship` axes?
@@ -123,7 +139,7 @@ Recommended seed for the first concept (`service_area`):
 |---|---|---|---|---|
 | Q1 | Exact per-sector labels | Seed set (Grid / Supply Zone / Catchment), BMO-editable as data | Eugene / domain | No (content) |
 | Q2 | Shared vs sector-specific areas | **(B)** `service_areas.sector_id`, backfill Electricity; **retire `provides_*` booleans** in same change | **#8 ✅ ratified 2026-07-27** + #2 (DDL) | No (additive) |
-| Q3 | Where the map lives | Dedicated `sector_terminology` table + `sectors` ref/enum; resolve at Silver/UI | **#11** + #2 (DDL) + BMO | No (additive) |
+| Q3 | Where the map lives | Dedicated `sector_terminology` table (+`label_plural`, code neutral-default) + `sectors` ref/enum; one resolver for Silver+UI | **#11 ✅ ratified 2026-07-27** + #2 (DDL) + BMO | No (additive) |
 | Q4 | Sector vs org axes | Third orthogonal concept; `organisation_sector` M:N junction; org axes untouched | **#10 ✅ ratified 2026-07-27** | No (additive) |
 | Q5 | Timing | Phase 5a (relabel now) → 5b (sector first-class) → 5c (full modelling, deferred, gated on #2 done) | All + Eugene | No (off #2's path) |
 
@@ -135,6 +151,7 @@ Recommended seed for the first concept (`service_area`):
 
 - **#8** — ✅ **ratified 2026-07-27** (`sector_id` on the level; retire `provides_*`; flags a/b/c folded in above).
 - **#10** — ✅ **ratified 2026-07-27** (sector off the org axes; `organisation_sector` M:N compatible).
-- **#11** — ⏳ confirm the presentation-layer label-resolution approach and the `sector_terminology` table shape (Q3); own the UI surfacing.
-- **#2** — note (do not action yet): if ratified, the additive DDL (`sectors`, `sector_terminology`, `service_areas.sector_id` + **drop/derive the `provides_electricity/water/sanitation` booleans**, `organisation_sector`) is small and Electricity-safe; fold in when convenient, no urgency, non-blocking. Verify no `provides_water`/`provides_sanitation = true` rows before the 1:1 backfill (per #8 flag a).
+- **#11** — ✅ **ratified 2026-07-27** (five UI-side conditions folded into Q3 above; #11 owns the resolver + `useTerm()` hook, to wire once the table lands).
+- **#2** — note (do not action yet): if ratified, the additive DDL (`sectors`, `sector_terminology` [incl. `label_plural`], `service_areas.sector_id` + **drop/derive the `provides_electricity/water/sanitation` booleans**, `organisation_sector`) is small and Electricity-safe; fold in when convenient, no urgency, non-blocking. Verify no `provides_water`/`provides_sanitation = true` rows before the 1:1 backfill (per #8 flag a).
+- **Eugene / domain** — the only remaining gate: Q1 label strings (esp. "Grid" vs "Network Area" for electricity) + Phase-5a go/no-go. All three streams have ratified.
 - **Eugene / domain** — the Q1 label strings (esp. "Grid" vs "Network Area" for electricity) and the Phase 5a go/no-go.
