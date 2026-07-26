@@ -1,8 +1,9 @@
-import { and, desc, eq, inArray, isNull, or } from "drizzle-orm";
+import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 
 import { db } from "@/db/connection";
 import type { FormulaInput } from "@/db/schema/dataEntry";
 import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
+import { ALL_MEMBER } from "@/lib/data-entry/dimensions";
 import { managedListItems } from "@/db/schema/managedLists";
 
 import { normalizeFormulaInput } from "./normalizeFormulaInput";
@@ -15,6 +16,13 @@ export interface RollupCandidate {
   energyProviderId: number | null;
   energyTypeId: number | null;
   energySourceId: number | null;
+  energyResourceTypeId: number | null;
+  customerTypeId: number | null;
+  paymentModeId: number | null;
+  consumptionBandId: number | null;
+  divisionId: number | null;
+  genderId: number | null;
+  utilityFunctionId: number | null;
 }
 
 export interface ResolveInputsRequest {
@@ -28,15 +36,32 @@ export interface ResolvedFormulaInputs {
   missingVariables: string[];
 }
 
-const matchesNullableDimension = (
+/**
+ * Medallion dimension match (doc §0.4). A binding is authoritative and exact,
+ * except that an All-member binding also matches legacy NULL-tagged rows during
+ * the transition. An unbound dimension falls back to the evaluation scope (for
+ * the dims the scope carries) and otherwise to the All member.
+ *
+ * `actual === allMember || actual == null` is a strict superset of the old
+ * "require NULL" rule: All-member ids don't exist on un-migrated rows, so this
+ * returns identical candidates on today's NULL-tagged data and resolves
+ * correctly once rows carry explicit All-member ids.
+ */
+const matchDimension = (
   actual: number | null,
-  expected: number | null,
+  bound: number | null,
+  scopeValue: number | null,
+  allMember: number,
 ): boolean => {
-  if (expected == null) {
-    return actual == null;
+  if (bound != null) {
+    return bound === allMember
+      ? actual === allMember || actual == null
+      : actual === bound;
   }
-
-  return actual === expected;
+  if (scopeValue != null) {
+    return actual === scopeValue || actual === allMember || actual == null;
+  }
+  return actual === allMember || actual == null;
 };
 
 const asNumber = (value: string | null): number | null => {
@@ -141,36 +166,29 @@ export const resolveFormulaInputValues = async (
     );
   }
 
-  if (request.scope.customerTypeId == null) {
-    scopeConditions.push(isNull(dataEntries.customer_type_id));
-  } else {
-    scopeConditions.push(
-      or(
-        eq(dataEntries.customer_type_id, request.scope.customerTypeId),
-        isNull(dataEntries.customer_type_id),
-      )!,
-    );
-  }
-
-  if (request.scope.paymentModeId == null) {
-    scopeConditions.push(isNull(dataEntries.payment_mode_id));
-  } else {
-    scopeConditions.push(
-      or(
-        eq(dataEntries.payment_mode_id, request.scope.paymentModeId),
-        isNull(dataEntries.payment_mode_id),
-      )!,
-    );
-  }
+  // customer_type / payment_mode (and the other dimensions) are matched
+  // per-input below against the formula_input binding — falling back to the
+  // evaluation scope — so they are no longer pre-filtered in SQL here.
 
   const rows = await db
     .select({
       inputDefId: dataEntries.measure_def_id,
-      value: dataEntries.value,
+      // Prefer the typed numeric column; fall back to the legacy `value`
+      // varchar for rows not yet migrated to value_numeric (§4.8).
+      value: sql<
+        string | null
+      >`coalesce(${dataEntries.value_numeric}::text, ${dataEntries.value})`,
       isDeleted: dataEntries.is_deleted,
       isRelevant: dataEntries.is_relevant,
       energyProviderId: dataEntries.energy_provider_id,
       energySourceId: dataEntries.energy_source_id,
+      energyResourceTypeId: dataEntries.energy_resource_type_id,
+      customerTypeId: dataEntries.customer_type_id,
+      paymentModeId: dataEntries.payment_mode_id,
+      consumptionBandId: dataEntries.consumption_band_id,
+      divisionId: dataEntries.division_id,
+      genderId: dataEntries.gender_id,
+      utilityFunctionId: dataEntries.utility_function_id,
     })
     .from(dataEntries)
     .where(and(...scopeConditions))
@@ -219,23 +237,24 @@ export const resolveFormulaInputValues = async (
 
   for (const formulaInput of formulaInputs) {
     const sourceRows = byInputDef.get(formulaInput.measure_def_id) ?? [];
-    const effectiveEnergyProviderId = formulaInput.energy_provider_id ?? null;
-    const effectiveEnergyTypeId = formulaInput.energy_type_id ?? null;
-    const effectiveEnergySourceId = formulaInput.energy_source_id ?? null;
+    const m = (
+      actual: number | null,
+      bound: number | null | undefined,
+      allMember: number,
+      scopeValue: number | null = null,
+    ) => matchDimension(actual, bound ?? null, scopeValue, allMember);
     const candidates = sourceRows.filter(
-      (candidate) =>
-        matchesNullableDimension(
-          candidate.energyProviderId,
-          effectiveEnergyProviderId,
-        ) &&
-        matchesNullableDimension(
-          candidate.energyTypeId,
-          effectiveEnergyTypeId,
-        ) &&
-        matchesNullableDimension(
-          candidate.energySourceId,
-          effectiveEnergySourceId,
-        ),
+      (c) =>
+        m(c.energyProviderId, formulaInput.energy_provider_id, ALL_MEMBER.energy_provider_id) &&
+        m(c.energyTypeId, formulaInput.energy_type_id, ALL_MEMBER.energy_type_id) &&
+        m(c.energySourceId, formulaInput.energy_source_id, ALL_MEMBER.energy_source_id) &&
+        m(c.energyResourceTypeId, formulaInput.energy_resource_type_id, ALL_MEMBER.energy_resource_type_id) &&
+        m(c.customerTypeId, formulaInput.customer_type_id, ALL_MEMBER.customer_type_id, request.scope.customerTypeId ?? null) &&
+        m(c.paymentModeId, formulaInput.payment_mode_id, ALL_MEMBER.payment_mode_id, request.scope.paymentModeId ?? null) &&
+        m(c.consumptionBandId, formulaInput.consumption_band_id, ALL_MEMBER.consumption_band_id) &&
+        m(c.divisionId, formulaInput.division_id, ALL_MEMBER.division_id) &&
+        m(c.genderId, formulaInput.gender_id, ALL_MEMBER.gender_id) &&
+        m(c.utilityFunctionId, formulaInput.utility_function_id, ALL_MEMBER.utility_function_id),
     );
     const inputAggLevelId =
       aggLevelMap.get(formulaInput.measure_def_id) ?? null;

@@ -1,4 +1,4 @@
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 
 import type { AggregatedWorkerScope } from "@/app/data-entry/enter-data/services/aggregated-worker/source-reader";
 import { db } from "@/db/connection";
@@ -47,7 +47,13 @@ export const writeCalculatedTargetValue = async ({
     }
 
     const [existing] = await tx
-      .select({ id: dataEntries.id, value: dataEntries.value })
+      .select({
+        id: dataEntries.id,
+        // Prefer the typed numeric column; fall back to legacy `value` (§4.8).
+        value: sql<
+          string | null
+        >`coalesce(${dataEntries.value_numeric}::text, ${dataEntries.value})`,
+      })
       .from(dataEntries)
       .where(and(...existingConditions))
       .limit(1);
@@ -61,6 +67,9 @@ export const writeCalculatedTargetValue = async ({
       measure_def_id: inputDefId,
       service_area_id: scope.serviceAreaId ?? null,
       energy_resource_id: scope.energyResourceId ?? null,
+      // Calculated targets are numeric → write the typed column (§4.8); legacy
+      // `value` kept transitionally so un-migrated readers don't regress.
+      value_numeric: value,
       value,
       status_id: DataEntryStatusId.Entered,
       is_deleted: false,
