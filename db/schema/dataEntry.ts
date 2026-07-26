@@ -32,9 +32,20 @@ import { countries, Region, subRegions } from "./country";
 export interface FormulaInput {
   measure_def_id: number;
   variable_name: string;
+  // Dimension filters the formula binds against. Absent/null means "not
+  // constrained on this dimension" — the re-point (§4.7) makes the intended
+  // slice explicit (an All-member id where the input spans the whole
+  // dimension, or a specific member where it is sliced).
   energy_provider_id?: number | null;
   energy_type_id?: number | null;
   energy_source_id?: number | null;
+  energy_resource_type_id?: number | null;
+  customer_type_id?: number | null;
+  payment_mode_id?: number | null;
+  consumption_band_id?: number | null;
+  division_id?: number | null;
+  gender_id?: number | null;
+  utility_function_id?: number | null;
 }
 
 export type MeasureDefinitionAlternativeNames = Record<string, string>;
@@ -433,6 +444,8 @@ export const inputDlDefMappings = pgTable(
 
 export type InputDlDefMapping = typeof inputDlDefMappings.$inferSelect;
 export type NewInputDlDefMapping = typeof inputDlDefMappings.$inferInsert;
+
+export const inputDefinitions = measureDefinitions;
 
 export const dataEntryLogs = pgTable("data_entry_logs", {
   id: uuid("id").primaryKey().notNull().defaultRandom(),

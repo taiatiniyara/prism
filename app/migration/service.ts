@@ -82,6 +82,7 @@ import {
 } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { migrationLogs } from "@/db/schema/migration-log";
+import { getDimensionDefaults } from "@/lib/data-entry/dimension-defaults";
 
 export type MigrationStepResult = {
   ok: boolean;
@@ -703,15 +704,23 @@ export async function retrieveUtilityContextData(options?: {
           ? new Date((row.updated_at ?? row.updated_date) as string | Date)
           : new Date();
 
+      const dims = await getDimensionDefaults();
+
       const payload = {
         report_period_id: reportPeriodId,
         measure_def_id: inputDefId,
         service_area_id: null,
         energy_resource_id: null,
-        energy_provider_id: energyProviderId,
-        energy_source_id: energySourceId,
-        customer_type_id: customerTypeId,
-        payment_mode_id: paymentModeId,
+        energy_provider_id: energyProviderId ?? dims.energyProvider,
+        energy_source_id: energySourceId ?? dims.energySource,
+        energy_type_id: dims.energyType,
+        energy_resource_type_id: dims.energyResourceType,
+        customer_type_id: customerTypeId ?? dims.customerType,
+        payment_mode_id: paymentModeId ?? dims.paymentMode,
+        consumption_band_id: dims.consumptionBand,
+        division_id: dims.division,
+        gender_id: dims.gender,
+        utility_function_id: dims.utilityFunction,
         value: row.dl_value ?? row.value ?? null,
         comments: toStructuredComments(row.comments ?? null, updatedAt),
         update_medium_id: null,
@@ -734,18 +743,10 @@ export async function retrieveUtilityContextData(options?: {
             eq(dataEntries.measure_def_id, inputDefId),
             isNull(dataEntries.service_area_id),
             isNull(dataEntries.energy_resource_id),
-            energyProviderId == null
-              ? isNull(dataEntries.energy_provider_id)
-              : eq(dataEntries.energy_provider_id, energyProviderId),
-            energySourceId == null
-              ? isNull(dataEntries.energy_source_id)
-              : eq(dataEntries.energy_source_id, energySourceId),
-            customerTypeId == null
-              ? isNull(dataEntries.customer_type_id)
-              : eq(dataEntries.customer_type_id, customerTypeId),
-            paymentModeId == null
-              ? isNull(dataEntries.payment_mode_id)
-              : eq(dataEntries.payment_mode_id, paymentModeId),
+            eq(dataEntries.energy_provider_id, energyProviderId ?? dims.energyProvider),
+            eq(dataEntries.energy_source_id, energySourceId ?? dims.energySource),
+            eq(dataEntries.customer_type_id, customerTypeId ?? dims.customerType),
+            eq(dataEntries.payment_mode_id, paymentModeId ?? dims.paymentMode),
           ),
         )
         .limit(1);
@@ -870,15 +871,23 @@ export async function retrieveCountryContextData(options?: {
           ? new Date((row.updated_at ?? row.updated_date) as string | Date)
           : new Date();
 
+      const dims2 = await getDimensionDefaults();
+
       const payload = {
         report_period_id: reportPeriodId,
         measure_def_id: inputDefId,
         service_area_id: null,
         energy_resource_id: null,
-        energy_provider_id: null,
-        energy_source_id: null,
-        customer_type_id: null,
-        payment_mode_id: null,
+        energy_provider_id: dims2.energyProvider,
+        energy_source_id: dims2.energySource,
+        energy_type_id: dims2.energyType,
+        energy_resource_type_id: dims2.energyResourceType,
+        customer_type_id: dims2.customerType,
+        payment_mode_id: dims2.paymentMode,
+        consumption_band_id: dims2.consumptionBand,
+        division_id: dims2.division,
+        gender_id: dims2.gender,
+        utility_function_id: dims2.utilityFunction,
         value: row.dl_value ?? row.value ?? null,
         comments: toStructuredComments(row.comments ?? null, updatedAt),
         update_medium_id: null,
@@ -901,10 +910,16 @@ export async function retrieveCountryContextData(options?: {
             eq(dataEntries.measure_def_id, inputDefId),
             isNull(dataEntries.service_area_id),
             isNull(dataEntries.energy_resource_id),
-            isNull(dataEntries.energy_provider_id),
-            isNull(dataEntries.energy_source_id),
-            isNull(dataEntries.customer_type_id),
-            isNull(dataEntries.payment_mode_id),
+            eq(dataEntries.energy_provider_id, dims2.energyProvider),
+            eq(dataEntries.energy_source_id, dims2.energySource),
+            eq(dataEntries.energy_type_id, dims2.energyType),
+            eq(dataEntries.energy_resource_type_id, dims2.energyResourceType),
+            eq(dataEntries.customer_type_id, dims2.customerType),
+            eq(dataEntries.payment_mode_id, dims2.paymentMode),
+            eq(dataEntries.consumption_band_id, dims2.consumptionBand),
+            eq(dataEntries.division_id, dims2.division),
+            eq(dataEntries.gender_id, dims2.gender),
+            eq(dataEntries.utility_function_id, dims2.utilityFunction),
           ),
         )
         .limit(1);
@@ -2409,8 +2424,14 @@ async function backfillUtilityContextDataEntriesFromPreviousPeriods(options?: {
       energy_resource_id: dataEntries.energy_resource_id,
       energy_provider_id: dataEntries.energy_provider_id,
       energy_source_id: dataEntries.energy_source_id,
+      energy_type_id: dataEntries.energy_type_id,
+      energy_resource_type_id: dataEntries.energy_resource_type_id,
       customer_type_id: dataEntries.customer_type_id,
       payment_mode_id: dataEntries.payment_mode_id,
+      consumption_band_id: dataEntries.consumption_band_id,
+      division_id: dataEntries.division_id,
+      gender_id: dataEntries.gender_id,
+      utility_function_id: dataEntries.utility_function_id,
       value: dataEntries.value,
       comments: dataEntries.comments,
       update_medium_id: dataEntries.update_medium_id,
@@ -2494,8 +2515,14 @@ async function backfillUtilityContextDataEntriesFromPreviousPeriods(options?: {
         energy_resource_id: sourceEntry.energy_resource_id,
         energy_provider_id: sourceEntry.energy_provider_id,
         energy_source_id: sourceEntry.energy_source_id,
+        energy_type_id: sourceEntry.energy_type_id,
+        energy_resource_type_id: sourceEntry.energy_resource_type_id,
         customer_type_id: sourceEntry.customer_type_id,
         payment_mode_id: sourceEntry.payment_mode_id,
+        consumption_band_id: sourceEntry.consumption_band_id,
+        division_id: sourceEntry.division_id,
+        gender_id: sourceEntry.gender_id,
+        utility_function_id: sourceEntry.utility_function_id,
         value: sourceEntry.value,
         comments: sourceEntry.comments,
         update_medium_id: sourceEntry.update_medium_id,
@@ -2579,8 +2606,14 @@ async function backfillCountryContextDataEntriesFromPreviousPeriods(options?: {
       energy_resource_id: dataEntries.energy_resource_id,
       energy_provider_id: dataEntries.energy_provider_id,
       energy_source_id: dataEntries.energy_source_id,
+      energy_type_id: dataEntries.energy_type_id,
+      energy_resource_type_id: dataEntries.energy_resource_type_id,
       customer_type_id: dataEntries.customer_type_id,
       payment_mode_id: dataEntries.payment_mode_id,
+      consumption_band_id: dataEntries.consumption_band_id,
+      division_id: dataEntries.division_id,
+      gender_id: dataEntries.gender_id,
+      utility_function_id: dataEntries.utility_function_id,
       value: dataEntries.value,
       comments: dataEntries.comments,
       update_medium_id: dataEntries.update_medium_id,
@@ -2664,8 +2697,14 @@ async function backfillCountryContextDataEntriesFromPreviousPeriods(options?: {
         energy_resource_id: sourceEntry.energy_resource_id,
         energy_provider_id: sourceEntry.energy_provider_id,
         energy_source_id: sourceEntry.energy_source_id,
+        energy_type_id: sourceEntry.energy_type_id,
+        energy_resource_type_id: sourceEntry.energy_resource_type_id,
         customer_type_id: sourceEntry.customer_type_id,
         payment_mode_id: sourceEntry.payment_mode_id,
+        consumption_band_id: sourceEntry.consumption_band_id,
+        division_id: sourceEntry.division_id,
+        gender_id: sourceEntry.gender_id,
+        utility_function_id: sourceEntry.utility_function_id,
         value: sourceEntry.value,
         comments: sourceEntry.comments,
         update_medium_id: sourceEntry.update_medium_id,
@@ -3109,15 +3148,23 @@ export async function retrieveDataEntries(options?: {
           : new Date();
         const comments = toStructuredComments(row.comments, updatedAt);
 
+        const dims3 = await getDimensionDefaults();
+
         const payload = {
           report_period_id: reportPeriodId,
           measure_def_id: inputDefId,
           service_area_id: serviceAreaId,
           energy_resource_id: energyResourceId,
-          energy_provider_id: energyProviderId,
-          energy_source_id: energySourceId,
-          customer_type_id: customerTypeId,
-          payment_mode_id: paymentModeId,
+          energy_provider_id: energyProviderId ?? dims3.energyProvider,
+          energy_source_id: energySourceId ?? dims3.energySource,
+          energy_type_id: dims3.energyType,
+          energy_resource_type_id: dims3.energyResourceType,
+          customer_type_id: customerTypeId ?? dims3.customerType,
+          payment_mode_id: paymentModeId ?? dims3.paymentMode,
+          consumption_band_id: dims3.consumptionBand,
+          division_id: dims3.division,
+          gender_id: dims3.gender,
+          utility_function_id: dims3.utilityFunction,
           value: row.value,
           comments,
           update_medium_id: updateMediumId,

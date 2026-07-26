@@ -443,6 +443,17 @@ paths:
       responses:
         '404':
           description: Not Found
+  /api/data-entry/balanced-scorecard/new-bsc/input-options:
+    get:
+      tags:
+        - Data Entry
+      summary: GET input-options
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '200':
+          description: Success
   /api/data-entry/balanced-scorecard/new-bsc/kpi-options:
     get:
       tags:
@@ -735,23 +746,6 @@ paths:
       x-auth: Requires valid Better Auth session (getCurrentUser)
       requestBody:
         description: JSON body — validated by parseSaveThemePayload()
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        '200':
-          description: Success
-  /api/data-entry/balanced-scorecard/new-bsc/trajectory:
-    put:
-      tags:
-        - Data Entry
-      summary: Set BSC KPI trajectory
-      security:
-        - sessionAuth: []
-      x-auth: Requires valid Better Auth session (getCurrentUser)
-      requestBody:
-        description: JSON body — validated by parseSetTrajectoryPayload()
         content:
           application/json:
             schema:

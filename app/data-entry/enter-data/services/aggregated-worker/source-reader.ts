@@ -1,4 +1,4 @@
-import { and, eq, inArray, isNull, or } from "drizzle-orm";
+import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
 
 import { db } from "@/db/connection";
 import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
@@ -100,7 +100,11 @@ export const readSourceSnapshot = async (
   const rows = await db
     .select({
       inputDefId: dataEntries.measure_def_id,
-      value: dataEntries.value,
+      // Prefer the typed numeric column; fall back to the legacy `value`
+      // varchar for rows not yet migrated to value_numeric (§4.8).
+      value: sql<
+        string | null
+      >`coalesce(${dataEntries.value_numeric}::text, ${dataEntries.value})`,
     })
     .from(dataEntries)
     .where(and(...conditions));

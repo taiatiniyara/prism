@@ -2051,6 +2051,8 @@ const saveDataEntryValueInternal = async (
 
     const previousValue = existing?.value ?? null;
 
+    const allMemberIds = await getAllMemberIdsMap();
+
     const values = {
       report_period_id: reportPeriodId,
       measure_def_id: payload.inputDefId,
@@ -2058,11 +2060,16 @@ const saveDataEntryValueInternal = async (
       energy_resource_id: energyResourceId,
       value: normalizedValue,
       status_id: DataEntryStatusId.Entered,
-      energy_source_id: energyMetadata?.energySourceId,
-      energy_type_id: energyMetadata?.energyTypeId,
-      energy_provider_id: energyMetadata?.energyProviderId,
-      customer_type_id: payload.customerTypeId,
-      payment_mode_id: payload.paymentModeId,
+      energy_source_id: energyMetadata?.energySourceId ?? allMemberIds.energySource,
+      energy_type_id: energyMetadata?.energyTypeId ?? allMemberIds.energyType,
+      energy_provider_id: energyMetadata?.energyProviderId ?? allMemberIds.energyProvider,
+      energy_resource_type_id: allMemberIds.energyResourceType,
+      customer_type_id: payload.customerTypeId ?? allMemberIds.customerType,
+      payment_mode_id: payload.paymentModeId ?? allMemberIds.paymentMode,
+      consumption_band_id: allMemberIds.consumptionBand,
+      division_id: allMemberIds.division,
+      gender_id: allMemberIds.gender,
+      utility_function_id: allMemberIds.utilityFunction,
       is_deleted: false,
       updatedAt: now,
       updatedById: user.id,
@@ -2217,6 +2224,7 @@ export const updateDataEntryCommentAction = async (
       })
       .where(eq(dataEntries.id, existing.id));
   } else {
+    const allMemberIds = await getAllMemberIdsMap();
     await db.insert(dataEntries).values({
       report_period_id: reportPeriodId,
       measure_def_id: payload.inputDefId,
@@ -2225,10 +2233,16 @@ export const updateDataEntryCommentAction = async (
       value: null,
       comments: nextComments,
       status_id: DataEntryStatusId.Entered,
-      energy_source_id: energyMetadata?.energySourceId,
-      energy_provider_id: energyMetadata?.energyProviderId,
-      customer_type_id: payload.customerTypeId,
-      payment_mode_id: payload.paymentModeId,
+      energy_source_id: energyMetadata?.energySourceId ?? allMemberIds.energySource,
+      energy_provider_id: energyMetadata?.energyProviderId ?? allMemberIds.energyProvider,
+      energy_type_id: energyMetadata?.energyTypeId ?? allMemberIds.energyType,
+      energy_resource_type_id: allMemberIds.energyResourceType,
+      customer_type_id: payload.customerTypeId ?? allMemberIds.customerType,
+      payment_mode_id: payload.paymentModeId ?? allMemberIds.paymentMode,
+      consumption_band_id: allMemberIds.consumptionBand,
+      division_id: allMemberIds.division,
+      gender_id: allMemberIds.gender,
+      utility_function_id: allMemberIds.utilityFunction,
       is_deleted: false,
       updatedAt: new Date(),
       updatedById: user.id,
@@ -2285,14 +2299,13 @@ export const updateDataEntryAvailabilityAction = async (
       .set({
         status_id: nextStatusId,
         value: payload.isDataNotAvailable ? null : undefined,
-        customer_type_id: payload.customerTypeId,
-        payment_mode_id: payload.paymentModeId,
         is_deleted: false,
         updatedAt: new Date(),
         updatedById: user.id,
       })
       .where(eq(dataEntries.id, existing.id));
   } else {
+    const allMemberIds = await getAllMemberIdsMap();
     const [inserted] = await db
       .insert(dataEntries)
       .values({
@@ -2303,10 +2316,16 @@ export const updateDataEntryAvailabilityAction = async (
         value: null,
         comments: null,
         status_id: nextStatusId,
-        energy_source_id: energyMetadata?.energySourceId,
-        energy_provider_id: energyMetadata?.energyProviderId,
-        customer_type_id: payload.customerTypeId,
-        payment_mode_id: payload.paymentModeId,
+        energy_source_id: energyMetadata?.energySourceId ?? allMemberIds.energySource,
+        energy_provider_id: energyMetadata?.energyProviderId ?? allMemberIds.energyProvider,
+        energy_type_id: energyMetadata?.energyTypeId ?? allMemberIds.energyType,
+        energy_resource_type_id: allMemberIds.energyResourceType,
+        customer_type_id: payload.customerTypeId ?? allMemberIds.customerType,
+        payment_mode_id: payload.paymentModeId ?? allMemberIds.paymentMode,
+        consumption_band_id: allMemberIds.consumptionBand,
+        division_id: allMemberIds.division,
+        gender_id: allMemberIds.gender,
+        utility_function_id: allMemberIds.utilityFunction,
         is_deleted: false,
         updatedAt: new Date(),
         updatedById: user.id,
@@ -2457,3 +2476,57 @@ export const uploadDataEntryTemplateAction = async (
     skipped,
   };
 };
+
+async function getAllMemberId(listName: string): Promise<number> {
+  const [item] = await db
+    .select({ id: managedListItems.id })
+    .from(managedListItems)
+    .innerJoin(managedLists, eq(managedListItems.list_id, managedLists.id))
+    .where(
+      and(
+        eq(managedLists.name, listName),
+        eq(managedListItems.name, "All"),
+      ),
+    )
+    .limit(1);
+  if (!item) throw new Error(`"All" member not found for list: ${listName}`);
+  return item.id;
+}
+
+async function getAllMemberIdsMap() {
+  const [
+    energySource,
+    energyType,
+    energyProvider,
+    energyResourceType,
+    customerType,
+    paymentMode,
+    consumptionBand,
+    division,
+    gender,
+    utilityFunction,
+  ] = await Promise.all([
+    getAllMemberId("Energy Source"),
+    getAllMemberId("Energy Type"),
+    getAllMemberId("Energy Provider"),
+    getAllMemberId("Energy Resource Type"),
+    getAllMemberId("Customer Type"),
+    getAllMemberId("Payment Mode"),
+    getAllMemberId("Consumption Band"),
+    getAllMemberId("Division"),
+    getAllMemberId("Gender"),
+    getAllMemberId("Utility Function"),
+  ]);
+  return {
+    energySource,
+    energyType,
+    energyProvider,
+    energyResourceType,
+    customerType,
+    paymentMode,
+    consumptionBand,
+    division,
+    gender,
+    utilityFunction,
+  };
+}
