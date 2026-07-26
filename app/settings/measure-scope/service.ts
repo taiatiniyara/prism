@@ -32,7 +32,7 @@ export async function getMeasureScopeViewModel(): Promise<{
       id: measureDefinitions.id,
       name: measureDefinitions.name,
       variableName: measureDefinitions.variable_name,
-      categoryId: measureDefinitions.category_id,
+      categoryId: measureDefinitions.measures_group_id,
       dataTypeId: measureDefinitions.data_type_id,
     })
     .from(measureDefinitions)
@@ -50,6 +50,7 @@ export async function getMeasureScopeViewModel(): Promise<{
 
   const scopeMap = new Map<number, MeasureDimension[]>();
   for (const s of scopes) {
+    if (s.expansion_mode === "not_applicable") continue;
     const dims = scopeMap.get(s.measure_id) ?? [];
     dims.push(s.dimension);
     scopeMap.set(s.measure_id, dims);
@@ -90,16 +91,17 @@ export async function saveMeasureDimensionScope(
     )
     .limit(1);
 
+  const mode = isApplicable ? "by_context" : "not_applicable";
   if (existing.length > 0) {
     await db
       .update(measureDimensionScope)
-      .set({ is_applicable: isApplicable })
+      .set({ expansion_mode: mode })
       .where(eq(measureDimensionScope.id, existing[0].id));
   } else {
     await db.insert(measureDimensionScope).values({
       measure_id: measureId,
       dimension: dimension as MeasureDimension,
-      is_applicable: isApplicable,
+      expansion_mode: mode,
     });
   }
 

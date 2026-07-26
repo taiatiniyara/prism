@@ -56,10 +56,10 @@
 <p class="subtitle">Auto-generated from 123 route files &middot; 141 endpoints &middot; 17 tag groups</p>
 <div class="stats">
 <span class="stat"><strong>DELETE</strong> 3</span>
-<span class="stat"><strong>GET</strong> 104</span>
+<span class="stat"><strong>GET</strong> 105</span>
 <span class="stat"><strong>PATCH</strong> 3</span>
 <span class="stat"><strong>POST</strong> 22</span>
-<span class="stat"><strong>PUT</strong> 9</span>
+<span class="stat"><strong>PUT</strong> 8</span>
 </div>
 <div class="filter"><input type="text" id="filter" placeholder="Filter endpoints..." oninput="filterEndpoints(this.value)"></div>
 
@@ -384,6 +384,28 @@
       <strong>Responses:</strong>
       <div class="status-list" style="margin-top:4px">
         <span class="status-code status-4xx">404 Not Found</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#22c55e">GET</span>
+    <span class="ep-path">/api/data-entry/balanced-scorecard/new-bsc/input-options</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">GET input-options</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> Session (Better Auth)</span>
+    </div>
+    
+    
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-2xx">200 OK</span>
       </div>
     </div>
   </div>
@@ -798,28 +820,6 @@
     </div>
     
     <div class="ep-meta"><span><strong>Body:</strong> JSON body — validated by parseSaveThemePayload()</span></div>
-    <div style="margin-top:8px">
-      <strong>Responses:</strong>
-      <div class="status-list" style="margin-top:4px">
-        <span class="status-code status-2xx">200 OK</span>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="endpoint">
-  <div class="ep-header" onclick="this.classList.toggle('open')">
-    <span class="method" style="background:#f59e0b">PUT</span>
-    <span class="ep-path">/api/data-entry/balanced-scorecard/new-bsc/trajectory</span>
-    <span class="ep-arrow">&#9654;</span>
-  </div>
-  <div class="ep-body">
-    <p style="margin:0 0 8px">Set BSC KPI trajectory</p>
-    <div class="ep-meta">
-      <span><strong>Auth:</strong> Session (Better Auth)</span>
-    </div>
-    
-    <div class="ep-meta"><span><strong>Body:</strong> JSON body — validated by parseSetTrajectoryPayload()</span></div>
     <div style="margin-top:8px">
       <strong>Responses:</strong>
       <div class="status-list" style="margin-top:4px">

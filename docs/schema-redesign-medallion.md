@@ -18,10 +18,20 @@
 > exactly `measure_definitions` (verified; 505 rows / 104 active / 101 draft definitions
 > intact).
 >
-> **PENDING** — `measure_dimension_scope` is built but **empty** (population = part of the
-> catalogue collapse); **no constraints on `data_entries` yet** (NOT NULLs, at-most-one-value
-> CHECK, true 10-dimension UNIQUE — `uniq_entry` remains a NON-unique 8-column index) — these
-> go on the empty table during the **flush-and-reload migration (§4)**.
+> **~~PENDING~~ CONSTRAINTS BUILT 2026-07-22** — `data_entries` was flushed (57,391 rows
+> snapshotted to `backup.data_entries_backup_20260722`) and all three constraints applied to
+> the empty table, encoded in the Drizzle model so `db push` no longer reverts them:
+> (1) `chk_one_value` CHECK — at most one of the four typed value columns non-null;
+> (2) NOT NULL on all ten dimension columns (All-member, never NULL); (3) `uniq_entry_address`
+> UNIQUE **NULLS NOT DISTINCT** over the **full 17-column physical address** —
+> period + measure + grain (utility, country, service_area, power_station, energy_resource) +
+> the ten dimensions. This **extends the literal spec** below (period + area + measure + 10 dims):
+> grain columns are included because a NULL "area" alone cannot distinguish two utilities, or a
+> utility- vs country-level row; `NULLS NOT DISTINCT` makes NULL grains deduplicate. The old
+> non-unique 8-column `uniq_entry` index was dropped. `measure_dimension_scope` /
+> `measure_dimension_applicability` are populated. (Catalogue has since evolved through the
+> 2026-07-23 curation passes — see `docs/measure-catalogue-changelog.md`; current: **117 measures /
+> 115 active, 1,170 scope, 75 applicability**.)
 > Vocabulary finalised 2026-07-09: "Every" members deleted; resource-type Nill → All (983);
 > list-name typo fixed (`scripts/fix-dimension-lists.ts` — **run on prod too**).
 **Scope:** the data-entry storage model and everything derived from it, bottom-up in medallion order (Bronze → Silver → Gold). Designed to land **with** the legacy data migration (currently in design), so data is migrated once, into the final shape.
@@ -73,7 +83,7 @@ The collapsed catalogue. One row per measure, ~55–65 rows.
 | definition | text | plain-English dictionary definition (AI-drafted → BMO-curated) |
 | synonyms | json string[] | industry alternate names |
 | definition_status | varchar | `draft` \| `curated` |
-| unit_id | FK managed_list | MWh, Hours, %, Currency, … |
+| unit_id | FK managed_list | MWh, Hours, %, Currency, … — NOT NULL always; measures with no unit point at the explicit **Units N/A** member (90), never NULL. Hygiene rule for the collapse: Units N/A is legitimate only for boolean/option/text data types — a **number** measure must carry a real unit (flag number+N/A combos in the sign-off workbook; e.g. audit found Depreciation Expense mis-united as "Number" instead of Currency). Display rule: Silver/UI render nothing for Units N/A |
 | data_type_id | FK managed_list | `number` \| `boolean` \| `option` \| `text` — decides which value column rows use |
 | category_id / subcategory_id | FK managed_list | **re-based at the collapse to classify the measure's NATURE, function-neutrally** (e.g. Costs, Network Performance, Workforce, Reliability). Old function-flavoured subcats (Generation/Transmission/Distribution/Energy Storage) dissolve into the utility_function / resource-type dimensions; "browse by function" becomes a dimension query, and Silver derives a combined display label (function · theme). Categories keep driving entry navigation and DAO role routing (§1.3 user-journey note) |
 | agg_level_id | FK managed_list | finest grain the measure is entered at |
@@ -94,11 +104,11 @@ table (62 lists: id, name, description, is_active) with `managed_list_items` now
 | List (id) | Members (id = name) |
 |---|---|
 | Energy Provider (2) | **20 = All** · 21 = Utility · 22 = IPP · **23 = Customer** (grid-connect prosumers — §5 Q6 resolved; re-id'd from 1234 on 2026-07-09, taking the id freed by the deleted "Every" member). All is always used |
-| Energy Type (3) | **30 = All** · 31 = Conventional · 32 = Renewable. "Every Energy Type" deleted 2026-07-09 |
-| Energy Source (4) | **40 = All GEN** · 41 = All Conventional · 42 = All Renewable · **58 = All ESS** · fuels 43–57 (Battery 43, Biomass 44, Coal 45, Diesel 46, Geothermal 47, Heavy Fuel 48, Hydro Dams 49, Hydro RoR 50, Hydro Pumped 51, Hydrogen Cells 52, Natural Gas 53, Solar 54, Wind 55, Other Conv. 56, Other Renew. 57) |
-| Energy Resource Type (55; list-name typo fixed 2026-07-09) | **983 = All** (was "Nill" — renamed 2026-07-09; the canonical un-sliced default) · 984 = Generator · 985 = Energy Storage · 988 = Generator + Storage (facts genuinely about combined systems) · 1035 = Virtual (legacy workaround, unreferenced — slated for deletion post-reload, §5 Q9) |
-| Customer Type (9) | **690 = All Customers** · 691 = Residential · 692 = Commercial · 693 = Industrial · 694 = Government · 695 = Streetlights · 696 = Recreational Facilities · 697 = Others |
-| Payment Mode (36) | **720 = All Payment Modes** · 721 = Prepaid · 722 = Postpaid |
+| **Category (3)** *(was "Energy Type")* | **30 = All** · 31 = Conventional · 32 = Renewable · **99717 = Storage** (added 2026-07-23). Parents → asset: Conventional/Renewable → Generation (984), Storage → Storage (985), All → All (983) |
+| **Technology (4)** *(was "Energy Source")* | **40 = All** *(was "All GEN")* · leaves parent-linked to category: [Renewable] Solar 54, Wind 55, Hydro Dams 49, Hydro RoR 50, Geothermal 47, Biomass 44; [Conventional] Diesel 46, Coal 45, Heavy Fuel 48, Natural Gas 53; [Storage] Battery 43, Hydro Pumped Storage 51, Hydrogen Cells 52. **Deleted 2026-07-23:** All Conventional (41), All Renewable (42), All ESS (58), Other Conventional (56), Other Renewable (57) — fake aggregates + unused catch-alls |
+| **Asset (55)** *(was "Energy Resource Type")* | **983 = All** · 984 = **Generation** *(was Generator)* · 985 = **Storage** *(was Energy Storage)* · 988 = Generator + Storage (inactive) · 1035 = Virtual (legacy, slated for deletion §5 Q9) |
+| Customer Type (9) | **690 = All** · 691 = Residential · 692 = Commercial · 693 = Industrial · 694 = Government · 695 = Streetlights · 696 = Recreational Facilities · 697 = Others |
+| Payment Mode (36) | **720 = All** · 721 = Prepaid · 722 = Postpaid |
 | Gender (52) | **1022 = All** · 930 = Male · 931 = Female |
 | Division (59) | **1011 = All** · 1012 = Executive · 1013 = Technical · 1014 = Finance · 1015 = Human Resources · 1016 = Procurement · 1017 = ICT · 1018 = PR & Marketing · 1019 = Customer Services · 1020 = Administrative · 1021 = Other |
 | Consumption Band (60) | **1005 = All** · 1006–1010 = Block 1–5 — positional labels; per-utility boundaries are data (a boundary measure per block), not list metadata (§5 Q8) |
@@ -112,6 +122,68 @@ Bold ids = the canonical **All member** each dimension column defaults to. The h
 (20/30/40/690/720) survived the rebuild unchanged, so legacy workbook tags still map 1:1.
 The old NULL-as-All rows become irrelevant under the flush-and-reload strategy (§4) — the
 reload writes All ids explicitly from the first row.
+
+### 1.2a Energy dimension taxonomy — settled + APPLIED 2026-07-23
+
+> **Data pass done 2026-07-23** — Storage category created (id **99717**); ESS technologies
+> reparented to Storage; All GEN → All; Generator → Generation, Energy Storage → Storage; lists
+> relabelled Category / Technology / Asset; `category → asset` parents set; members 41/42/56/57/58
+> deleted; relevance orphans cleaned. Backups in `backup.*_pre_taxonomy`. External p1→p2 map fixed
+> in the same pass (ESS rows filled `category = Storage`; the unused Other Conv/Renew references
+> scrubbed and unmapped). Labels/columns rule below held — DB columns + dimension keys unchanged.
+
+The three energy dimensions form a **technology hierarchy** (`asset → category → technology`),
+with the physical instance as a fourth, registry-level concept. **Renamed labels only — DB columns
+and the internal dimension string keys (`resource_type` / `type` / `source`) stay unchanged**, so
+scope/applicability data, `MEASURE_DIMENSIONS`, the migration code, and the formula builder are
+untouched. Only managed-list names, UI labels, the AI dictionary, and these docs change.
+
+| new label | old label | column (unchanged) | key (unchanged) | values |
+|---|---|---|---|---|
+| **asset** | resource_type | `energy_resource_type_id` | `resource_type` | Generation, Storage |
+| **category** | energy type | `energy_type_id` | `type` | Renewable, Conventional, **Storage** |
+| **technology** | energy source | `energy_source_id` | `source` | Solar, Diesel, Battery, … |
+| **unit** | (energy) resource | `energy_resource_id` | — (grain) | the specific generator/battery instance |
+
+`asset` is the coarse rollup of `category` (Renewable/Conventional → Generation; Storage → Storage);
+`category` is the parent of `technology` via `managed_list_items.parent_id`. So picking a technology
+derives its category (Solar → Renewable), and picking `category = Renewable, technology = All` means
+"all renewable technologies" — a **computed** rollup of the leaves, never a stored aggregate member.
+
+**Storage is its own category.** ESS technologies (Battery, Hydro Pumped Storage, Hydrogen Cells)
+reparent from Renewable → Storage. Storage is not sub-classified (only three technologies; extend
+later via new parent categories if a reporting need appears). This deliberately does **not** classify
+the renewability of *stored* energy — that's a round-trip accounting question, not a technology attribute.
+
+**Member cleanup (the structural data pass — DONE 2026-07-23):**
+- **Delete** the fake aggregate members — All Renewable (42), All Conventional (41), All ESS (58) —
+  and the catch-alls Other Renewable (57), Other Conventional (56). They looked like sums but never
+  computed one; "all X" is now expressed as a category filter + `technology = All`.
+- **Rename** All GEN (40) → **All** (the single generic un-sliced technology member).
+- **Rename** members: Generator → Generation, Energy Storage → Storage (the `asset` values).
+- **Reparent** Battery/Hydro Pumped Storage/Hydrogen Cells → Storage category.
+- **Clean** orphaned `energy_resource_type_relevance` rows; re-point `energy_resources` off removed
+  members (the 92 on All GEN are the virtual units already slated for deletion, §5 Q9).
+- **Pre-req:** confirm the external p1→p2 map pins none of the deleted source ids (41/42/56/57/58);
+  any that do must be re-pointed to `category = <Renewable|Conventional>, technology = All` first.
+
+**Handling `All` in the hierarchy.** Each list keeps exactly **one** genuine `All` member —
+asset 983, category 30, technology 40 — chained by `parent_id` (technology All → category All →
+asset All). `All` means "not sliced at this level" and is stored on a row only where the measure's
+scope makes that dimension `not_applicable`. When a measure IS sliced, rows store the specific leaf
+plus its **denormalized parents** (a Coal row = technology Coal, category Conventional, asset
+Generation — never `All`). Every "all of category X" is expressed as the **combination**
+`category = X, technology = All` and summed from the leaves in Gold — there is **no** stored
+per-category aggregate member (that is exactly what the deleted All Renewable / All Conventional /
+All ESS were). The single retained `technology = All` carries "don't pin a technology"; the category
+dimension does the renewable/conventional/storage scoping.
+
+**Measure "category" → "group" (renamed 2026-07-23, to avoid clashing with the energy `category`
+dimension).** Because `category` now names the energy dimension (was `type`), the *measure's*
+grouping was renamed everywhere: physical columns `measure_definitions.category_id →
+measures_group_id`, `subcategory_id → measures_subgroup_id`; Drizzle fields likewise; the ~104 code
+references; and the managed lists **12 → "Measures Group"**, **13 → "Measures Subgroup"**. Full
+rename (field + column + refs), verified by `tsc`. Backup `backup.measure_definitions_pre_grouprename`.
 
 ### 1.3 `measure_dimension_scope` (unifies today's relevance tables) — **BUILT, table empty**
 
@@ -188,14 +260,19 @@ All 32 physical columns below are **BUILT** on the dev DB (column names verbatim
 | comments | json | as today |
 | update_medium_id · is_relevant · is_deleted · updated_at · updated_by_id | | as today |
 
-**Constraints — all still PENDING (none exist on the built table yet)**
+**Constraints — BUILT 2026-07-22 (applied to the empty table, encoded in the Drizzle model)**
 
-- `CHECK`: at most **one** of the four typed value columns is non-null (all null = awaiting
-  entry; the status column carries the why).
-- **Unique address**: today `uniq_entry` is a NON-unique index over the old 8-column address
-  (period, measure, area, source, provider, resource, customer, paymode). Target: a true
-  UNIQUE constraint over period + area + measure + **all ten** dimension columns
-  (+ energy_resource_id where used) — after the All-member backfill (NULLs break uniqueness).
+- ✅ `chk_one_value` `CHECK`: at most **one** of the four typed value columns is non-null
+  (all null = awaiting entry; the status column carries the why).
+- ✅ **Unique address** — `uniq_entry_address` `UNIQUE NULLS NOT DISTINCT` over the full
+  17-column physical address: period + measure + grain (utility_id, country_id, service_area_id,
+  power_station_id, energy_resource_id) + **all ten** dimension columns. Fuller than the original
+  target (period + area + measure + 10 dims) because a NULL "area" cannot by itself distinguish
+  two utilities or a utility- vs country-level row; `NULLS NOT DISTINCT` (PG 15+) makes NULL
+  grains deduplicate instead of the default "every NULL is unique" (which would let duplicates
+  through). The old non-unique 8-column `uniq_entry` index was dropped.
+- ✅ **NOT NULL** on all ten dimension columns — every entry carries the explicit **All** member,
+  never NULL (no NULL-as-All). The RAW-ONLY reload must COALESCE legacy NULL dims → All-member.
 - Which value column a measure uses is dictated by `data_type_id`, enforced by **one shared
   routing function** (`lib/data-entry/value-router.ts` — exists) used by every write path.
 
@@ -316,6 +393,80 @@ and the AI's PRISM-native tools read silver/gold.*
 
 ---
 
+## 3B. RELEVANCE & SHELL GENERATION — context is truth, expected inputs are computed (decided 2026-07-22)
+
+Replaces the three legacy relevance tables (`input_relevance`, `tariff_relevance`,
+`transmission_relevance`) — which stored a hand-curated "which measures apply" list that drifted
+and made the required-input count unreliable. **The count is now computed, not stored.**
+
+### 3B.1 The principle
+> **expected inputs (utility, period) = for each active measure, expand its `by_context`
+> dimensions across the intersection of (catalogue applicability members ∩ the utility's context).**
+
+The count is `|that set|` — deterministic, cannot drift, fully explainable (every shell traces to
+a measure × a context fact). Fixed measures generate a constant shell set; Contextual measures
+expand only what the utility's context activates.
+
+### 3B.2 Three ingredients (clean separation of rules vs facts)
+
+| Ingredient | Level | Holds | Status |
+|---|---|---|---|
+| `measure_dimension_scope` | catalogue | WHICH dimensions slice a measure (not_applicable / all_members / by_context) | ✅ built |
+| **`measure_dimension_applicability`** (NEW — keystone) | catalogue, BMO-maintained | WHICH members are valid per by_context dimension | ⏳ to build |
+| **Context profile** | per-utility, per-period | WHAT the utility has — registry, areas, tariff structure, flags | mostly exists |
+
+`measure_dimension_applicability` (measure_id, dimension, member_id) is the missing structure that
+answers "which measures apply to which member". No rows for a (measure, dimension) = all members
+valid. Examples: Fuel Oil→source∈{Diesel,Heavy Fuel,Natural Gas,Coal}; Solar Irradiance→source∈{Solar};
+Fuel & Oil Expenditure→source∈{Diesel,Heavy Fuel}; Direct Costs Staffing/O&M + FTE Employees→
+utility_function∈{Generation,Transmission,Distribution}; Electricity Purchased→provider∈{IPP,Customer}.
+
+### 3B.3 Context facts, per driver
+- **Other providers (IPP/Customer):** derived from `energy_resources` (each resource is classified by
+  provider). A non-utility provider in the registry activates purchase measures, expanded by
+  provider × source.
+- **Transmission network:** a yes/no flag. Activating it generates shells for every measure whose
+  applicability includes `utility_function = Transmission` — the list comes from the CATALOGUE, never
+  from a previous period (so a brand-new utility gets the correct set). NB: transmission activation
+  also adds Direct Costs: Staffing, Direct Costs: O&M, and FTE Employees at the Transmission function.
+- **Generators/storage:** the `energy_resources` registry (source/provider/type/resource_type per unit)
+  drives generation/storage shells; applicability restricts which measures apply to which source.
+  **Per-period resource state already exists** as `energy_resources.period_entries` (jsonb array of
+  `{is_active, capacity_mw, report_period_id}`): units are added/decommissioned over time and can be
+  derated within a period. Only active-this-period units get shells; Rated Capacity comes from
+  `period_entries.capacity_mw` (editable per period) and feeds the generation energy-balance
+  validation (`docs/data-entry-ux-requirements.md` §6–7). NB: `capacity_mw` is currently often NULL
+  — must be populated for the balance check.
+- **Tariffs:** see 3B.5.
+
+### 3B.4 The BLO journey — confirm CONTEXT, not measures
+On a new period: clone last period's context profile as the baseline → notify BLO → modal walks
+context categories (service areas, generators, storage, tariffs, transmission) asking "same as last
+period, or changed?". Changes edit the context profile (registry add/retire, tariff structure, flags).
+On completion, shells regenerate from confirmed context and land in `data_entries` as Requested.
+The BLO never picks measures from a list — which is why the count was previously wrong.
+
+### 3B.5 Tariff structure & entry (fool-proofed)
+The BLO declares, per (customer_type × payment_mode) offered: **the number of RATES N** (+ whether a
+fixed monthly charge applies). Shell generation then produces: **N** Tariff Rate shells (Block 1..N),
+**N−1** Tariff Block Limit shells (Block 1..N−1 — the final rate is unbounded), 1 Fixed Charge (All),
+1 VAT/GST Rate (utility-level). BLOs never select tariff measures individually (they skipped Block
+Limits), and blocks present themselves at entry from the declared rate count.
+
+Two entry rules that must be enforced in the UI (see `docs/data-entry-ux-requirements.md`):
+- **Block limits are CUMULATIVE from zero**, not incremental. Entry shows the lower bound auto-filled
+  (0, then the previous limit) read-only; only the cumulative upper bound is keyed; strictly-increasing
+  validation.
+- **Rates/charges are entered TAX-EXCLUSIVE** (VAT/GST is a separate measure). Entry shows the
+  tax-inclusive figure live (rate × (1 + tax rate)) for verification against the published rate;
+  tax rate is collected before rates in the journey.
+
+### 3B.6 Consequence for migration
+The three legacy relevance tables are **decommissioned, not migrated** — replaced by scope +
+applicability + context profile + the generation function. Clearing them at flush time is correct.
+
+---
+
 ## 4. Migration approach — FLUSH AND RELOAD (decided 2026-07-09)
 
 `data_entries` is flushed and re-migrated from source into the final shape. Consequences:
@@ -327,28 +478,163 @@ database enforces the rules from the first inserted row (loader bugs are rejecte
    def → (measure, dimension tuple) — extends the existing `input_dl_def_mappings` pattern.
 2. Create the new managed-list members (Consumption Band, Division, Gender, Utility Function;
    `Customer` provider; resource-type All decision).
-3. **Flush `data_entries`, then apply all constraints to the empty table**: NOT NULL on every
-   dimension column, the at-most-one-value CHECK, and the true UNIQUE address over
-   period + area + measure + all ten dimensions.
+3. **Flush `data_entries`, then apply all constraints to the empty table** — ✅ **DONE
+   2026-07-22**: 57,391 rows snapshotted to `backup.data_entries_backup_20260722`; NOT NULL on
+   all ten dimension columns, `chk_one_value` CHECK, and `uniq_entry_address` UNIQUE NULLS NOT
+   DISTINCT (full 17-column address) applied and encoded in the Drizzle model (see §1.4).
 4. **Pass 1 — relevance shells** (addresses only, status Requested), then
    **Pass 2 — values**: raw string into legacy `value`, typed copy routed by data type into
    value_numeric / value_boolean / value_option_id / value_text. Parse failures (audit found
-   ~90 rows: 84 "Infinity" + placeholders) are **logged, not dropped**. The sample workbook
+   ~90 rows: 84 "Infinity" + placeholders) and any constraint rejection are **recorded in the
+   rejection ledger, never dropped** (§4.1). The sample workbook
    (`new_data_entries_sample_v2.xlsx`) is the acceptance example for both passes.
    The stale in-place router `scripts/medallion-migrate-values.sql` is superseded — retire it.
-5. **Un-costume the virtual-generator rows**: the 39,905 legacy entries hung on the 92
-   "virtual generator" resources reload at their true address (the owning service area,
-   `energy_resource_id` NULL); virtual generators do not reload into the equipment registry
-   (§5 Q9).
+   **RAW-ONLY (decided 2026-07-22): migrate only ENTERED (raw) values. Calculated measures**
+   (is_calculated=true — Total Costs, Profit, and any calculated inputs) **are NOT migrated;
+   the new formula engine + gold rollups recompute them.** This also removes migrated computed
+   aggregates as a source of total-vs-detail conflict.
+5. **Un-costume the virtual-generator rows** (§5 Q9): the ~39,905 raw entries on the 92 virtual
+   generators re-home at their true LEVEL, deterministically by the virtual generator's
+   `agg_level_id` — 66 ServiceArea-level → `service_area_id` + `energy_resource_id` NULL; 26
+   Utility-level → the utility's "All areas" area + resource NULL. Virtual generators do NOT
+   reload into the equipment registry. **Flag total-vs-detail collisions** (§1.6): recent
+   periods where a re-homed aggregate coexists with real equipment-level entries for the same
+   measure → surface for BMO reconciliation (small set; historical periods usually have only
+   the aggregate).
 6. **Every data repair must be a repeatable script in the reload pipeline** — the 2026-07-08
    fixes (customers-served dedup → input 1501, SAIFI/SAIDI re-pointing, duration-input
    activation) must be replayed by the pipeline, or the flush re-imports the original broken
    state.
 7. Re-point KPI `formula_inputs` at measures + dimension filters (systematically — the SAIFI
-   re-pointing exercise of 2026-07-08 is the per-KPI template for this).
+   re-pointing exercise of 2026-07-08 is the per-KPI template for this). **Do the "formula
+   engine v2: scoped operands" upgrade in the same pass** (decided 2026-07-09): formula
+   tokens become per-OPERAND aliases (auto-generated from variable_name + scope), because one
+   measure can appear multiple times with different dimension scopes (audit finding 5's
+   `electricity_generated / electricity_generated` is the proof). Bindings extend from
+   provider/type/source to all ten dimensions; the formula builder gains a measure+scope
+   operand picker validated against `measure_dimension_scope`; aggregation stays with the
+   platform (worker at finest scope, gold rollups re-apply formulas over summed inputs) —
+   never in the builder. `variable_name` remains the readable token base / default alias and
+   the dictionary‑AI handle; it is no longer the whole formula contract.
 8. Ripples: KPI worker reads `value_numeric` directly (deletes casting code); Excel templates
    gain dimension columns instead of dimension-suffixed rows; legacy `/api/fact*` routes keep
    parity via the mapping table.
+
+### 4.1 Rejection ledger — iterate until clean (added 2026-07-22)
+
+Migration is **iterative**: the load runs, some data points are rejected, we diagnose and fix
+(source data, mappings, or loader), and re-run — repeating until zero (or only knowingly-accepted)
+rejections remain. Every rejected data point is recorded so nothing is silently lost.
+
+- **Table:** `migration_rejections` (model `db/schema/migrationRejections.ts`). **One row per
+  rejected source data point**, capturing: the full attempted record (`source_payload` jsonb) and
+  a pointer back to it (`source_system` + `source_ref`); readable target context (measure, period,
+  utility); and the diagnosis — `failure_category`, **`failure_columns` (which column[s])**,
+  `failure_reason` (why), `failure_rule` (the constraint/validation id), and **`remediation`
+  (what to do to fix it)**. It has **no FKs / CHECKs / NOT NULLs** by design — an error log must
+  accept anything, or a bad row could be rejected twice and vanish.
+- **Load run identity:** each run is a row in **`migration_loads`** (model `migrationLoads.ts`)
+  whose serial `id` is the auto-incrementing **`load_id`** stamped on every rejection and
+  scorecard row. `startLoad()` (`lib/migration/loads.ts`) mints it and resets the per-run
+  ledgers (`TRUNCATE migration_rejections`; clear this load's scorecard rows); `finishLoad()`
+  closes it with status + roll-up counts. load_id keeps climbing across runs even though the
+  rejection table is truncated each run.
+- **How the loader records:** validate-then-insert; on a caught Postgres error, `classifyPgError()`
+  maps the error code → category + implicated column(s) (23502 not_null, 23514 check, 23505
+  unique, 23503 fk, 22P02/22003 type_cast), and `recordRejection({ loadId, p1ReportPeriodId,
+  stage, intendedValueType, attemptedNumeric, … })` writes the row. `stage` ("shell" | "value"),
+  `p1_report_period_id`, `intended_value_type` and `attempted_numeric` are what let the scorecard
+  (§4.2) attribute failures per period / stage / value type and balance the numeric sum.
+- **Between iterations:** query the ledger grouped by `failure_category` / `measure_name` /
+  `failure_columns` to see the failure classes, fix the largest first, re-run.
+
+### 4.2 Scorecard — balance the books, per report_period (added 2026-07-23)
+
+The **`migration_scorecard`** (model `migrationScorecard.ts`) is the control-total reconciliation,
+keyed **per (load_id × report_period)** so every period balances on its own (no offsetting errors
+hiding in a grand total). Grain confirmed with the customer: report_period.
+
+**Source of the numbers.** The migration is p1 → p2. The customer produces, independently in p1,
+a **control-totals sheet** (one row per report_period; template
+`Migration/Decisions/migration_control_totals - template.xlsx`, generator
+`scripts/gen-control-totals-template.ts`): relevance count, value counts by type, Σ value_numeric,
+the **unfiltered** non-calc count, and the calculated count. Because relevance is applied as the
+p1 **extraction filter**, orphan values (no relevance record) are dropped before we see them — the
+`values_noncalc_unfiltered` column is the only way they surface, so it is required.
+
+**Two stages, reconciled per period** (`reconcilePeriod(loadId, controlTotals)` reads the migrated
+side from `data_entries` and the failed side from `migration_rejections`, so the scorecard reflects
+reality, not the loader's self-report):
+
+| recon_line | identity (balance_expected) |
+|---|---|
+| `shell` | relevance_records = shells_created + shells_failed |
+| `value` (× numeric/boolean/text/option/total) | values_in = migrated + failed |
+| `value_sum` (numeric) | Σvalue_numeric_in = Σmigrated + Σfailed — **independent failed sum catches a silently corrupted migrated value** |
+| `leak` | variance = unfiltered − relevance-matched = **orphans** (flag if > 0) |
+| `fill` *(informational)* | RAW shells only — variance = empty shells **awaiting entry** (someone must key a value) |
+| `calc_shell` *(informational)* | calculated shells — variance = shells **awaiting computation** (p2 calculator fills them) |
+| `excluded` *(informational)* | calculated-value count from the control sheet (computed in p2, not migrated) |
+
+Calculated measures get a shell (so `shell` balances) but never a migrated value, so their empty
+shells are split OUT of `fill` (awaiting *entry*) into `calc_shell` (awaiting *computation*) via
+`measure_definitions.is_calculated` — the two "empty" reasons are then distinguishable.
+`variance` (= source − migrated − failed), `is_balanced` and `balance_expected` are **generated
+columns**. **Anomaly report = `balance_expected AND NOT is_balanced`** (`getAnomalies(loadId)`) —
+so fill/calc_shell/excluded never false-flag. `getScorecardSummary(loadId)` rolls up across periods.
+Merges are **upstream** (the p1 extract is already merged into p2 measures), so no merge line is
+needed. Orphans are **flagged, not hard-stopped**: the customer decides fix (→ another load run)
+or accept. End-to-end verified 2026-07-23 (balanced shell/value/value_sum; leak correctly the sole
+flagged anomaly; fill/excluded correctly informational).
+
+### 4.3 Loader (added 2026-07-23)
+
+The extract is **pre-resolved to p2 ids** (customer decision 2026-07-23): each row carries
+`report_period_id` (unchanged p1↔p2), `measure_id`, the 10 dimension member ids, and the physical
+grain — all resolved during extraction via the p1→p2 map. So the loader does **no map / period /
+grain resolution**; relevance + values arrive in **one file** (a row with a value = filled shell,
+without = empty shell). Input contract: `ExtractRow` in `lib/migration/types.ts`.
+
+- **`lib/migration/load.ts` — `loadExtract(loadId, rows)`**: per row, two steps — insert the SHELL
+  (address only), then fill the VALUE if present. Splitting the steps keeps the scorecard's two
+  stages clean (shell failure = address problem; value failure = typing problem). Value column comes
+  from the measure's `data_type`; a mismatch vs the extract's `valueType` is a `value_router` rejection.
+- **Calculated measures get a SHELL, not a value.** They are part of the relevance/expected set
+  (so `relevance_records` includes them and the per-utility shell balance holds), but their value is
+  **computed in p2 by a calculator, never migrated** — so Pass 2 leaves the shell empty; a value
+  present on a calculated row is logged stage-less and dropped. **Inactive** measures are skipped
+  entirely (no shell — not collected). All exclusion logging is **stage-less** so it never distorts
+  the shell/value identities. (Reporting note: calculated shells count as "empty" on the `fill`
+  line — awaiting *computation*, distinct from raw measures awaiting *entry*; separable via
+  `is_calculated` / the control sheet's `values_calculated` if we want the split.)
+- **`lib/migration/rejections.ts` — `classifyPgError`** unwraps Drizzle's wrapped error (`.cause`)
+  to read the real pg `code` (23502 not_null, 23514 check, 23505 unique, 23503 fk, 22P02/22003
+  type_cast) → category + columns + rule.
+- **`lib/migration/map.ts`** loads/validates the p1→p2 map (dl_def → measure + dims). Used to
+  regenerate `input_dl_def_mappings` for the legacy fact API — NOT in the load path.
+- End-to-end proven 2026-07-23 (synthetic): shells, value fills, every rejection class, scorecard
+  reconciliation, clean teardown.
+- **Remaining:** the `xlsx → ExtractRow[]` parser + `scripts/migrate.ts` CLI (pending a sample
+  extract to fix the column layout); `input_dl_def_mappings` regeneration from the map.
+
+### 4.4 Calculator — designed in a SEPARATE session
+
+The calculator (computes calculated inputs + KPIs) is being designed in its own session, not here.
+It **depends on** decisions made in this thread:
+- **Calculated measures get empty shells** at migration (§4.3); the calculator fills them post-load
+  — that is the `calc_shell` scorecard line (§4.2).
+- **Energy taxonomy** (§1.2 / §1.2a): the `asset → category → technology` hierarchy, the single-`All`
+  semantics, denormalized parents per row, and the `parent_id` chains — formula-input **context
+  filters** resolve against exactly this structure.
+- **Context filters are the scope-alignment mechanism**: `FormulaInput` generalizes to pin any of the
+  10 dimensions; an unpinned dimension resolves to its `All` member.
+- Reuse-and-refactor base: the existing `aggregated-worker` (multi-pass fixpoint over calculated
+  inputs) + `kpi-worker` (`filterAffectedKpiTargets` reactive recompute), unified into one engine.
+
+Direction (from the design discussion, for that session to carry forward): one **reactive engine**
+over a single dependency DAG with two node kinds (`calculated_input` → `data_entries`; `kpi` →
+`kpi` table, terminal); targets/trajectory live in the KPI benchmark/BSC setup, **not** the formula
+builder; persisted formula **test cases** re-run on every formula change.
 
 ---
 
@@ -422,6 +708,20 @@ database enforces the rules from the first inserted row (loader bugs are rejecte
     managed list 62 serving as the label vocabulary.
 11. **"Not Available" status vs. value** — status 7 (Not_Available) continues to mean
    "no value exists"; confirm nothing should ever write a sentinel into the value columns.
+12. **Downtime split — equipment vs network grain (2026-07-22)** — the 4 Downtime measures
+   (Planned/Unplanned × Events/Hours) each carried two incompatible grains: a generating-unit
+   outage (equipment) and a T&D-network outage (function). One measure cannot be both `agg_level 1`
+   (per generator, sliced by provider/type/source) and `agg_level 3` (per utility_function). Each was
+   **split into two measures**: **Generator …** (reuses the original id; `agg_level 1`; scope drops
+   utility_function, keeps provider/type/source/resource_type `by_context`; applicability
+   resource_type=Generator) and **Network …** (new ids 1911–1914; `agg_level 3`; scope only
+   utility_function `by_context`; applicability utility_function∈{Transmission, Distribution}).
+   Catalogue count **114 → 118 measures**; scope 1,180 rows (118×10); applicability 72 rows.
+   *(Superseded 2026-07-23: Generator→Equipment rename + storage broadening, Network ids
+   1911–1914 renumbered to 340–343, and other curation — see `docs/measure-catalogue-changelog.md`.
+   Current catalogue: 117 measures / 115 active.)*
+   The DB is now the source of truth — `scripts/rebuild-enriched-from-db.ts` +
+   `scripts/workbooks-from-json.ts` regenerate the JSONs/workbooks from it (never re-derive).
 
 ---
 

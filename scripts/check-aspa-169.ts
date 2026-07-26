@@ -13,7 +13,7 @@ async function main() {
       .where(
         and(
           eq(measureDefinitions.is_active, true),
-          eq(measureDefinitions.subcategory_id, 273),
+          eq(measureDefinitions.measures_subgroup_id, 273),
         ),
       )
   ).map((d) => d.id);

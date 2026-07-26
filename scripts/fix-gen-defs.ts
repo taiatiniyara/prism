@@ -36,7 +36,7 @@ async function main() {
       .from(measureDefinitions)
       .where(
         and(
-          eq(measureDefinitions.subcategory_id, 273),
+          eq(measureDefinitions.measures_subgroup_id, 273),
           eq(measureDefinitions.sort_order, 0),
         ),
       );
@@ -74,7 +74,7 @@ async function main() {
         eq(measureDefinitions.is_active, true),
         eq(measureDefinitions.is_aggregated, false),
         eq(measureDefinitions.is_system_generated, false),
-        eq(measureDefinitions.subcategory_id, 273),
+        eq(measureDefinitions.measures_subgroup_id, 273),
       ),
     );
   console.log(`  Of which generation (subcat 273): ${activeNonAggGen[0].cnt}`);

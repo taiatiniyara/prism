@@ -15,7 +15,7 @@ async function main() {
         .where(
           and(
             eq(measureDefinitions.is_active, true),
-            eq(measureDefinitions.subcategory_id, 273),
+            eq(measureDefinitions.measures_subgroup_id, 273),
           ),
         )
     ).map((d) => d.id),
@@ -24,7 +24,7 @@ async function main() {
     await db
       .select({
         id: measureDefinitions.id,
-        subcat: measureDefinitions.subcategory_id,
+        subcat: measureDefinitions.measures_subgroup_id,
       })
       .from(measureDefinitions)
       .where(

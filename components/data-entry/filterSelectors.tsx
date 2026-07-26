@@ -99,7 +99,7 @@ export const InputCategorySelect = (
 ) => (
   <FilterSelect
     id="input-category-select"
-    label="Input Category"
+    label="Measures Category"
     placeholder="Select input category"
     includeAllOption={false}
     {...props}
@@ -111,7 +111,7 @@ export const InputSubcategorySelect = (
 ) => (
   <FilterSelect
     id="input-subcategory-select"
-    label="Input Subcategory"
+    label="Measures Subcategory"
     placeholder="Select input subcategory"
     includeAllOption={false}
     {...props}

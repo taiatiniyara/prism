@@ -391,7 +391,7 @@ export const DONOR_REPORT_TEMPLATES: Record<string, DonorReportTemplate> = {
     typical_requirements: ["SAIDI/SAIFI", "System losses", "Electrification rate", "Tariff recovery", "Renewable share"],
     relevant_kpis: ["SAIDI", "SAIFI", "System Losses %", "Electrification %", "Cost Recovery %", "Renewable MW / Total MW"],
     suggested_query: "vulnerability_dashboard",
-    narrative_template: "In {fy}, {utility} served {customers} customers across {islands} islands. Reliability (SAIDI: {saidi} min) is {saidi_trend}. System losses are {losses}%, with a cost recovery rate of {recovery}%. Renewable energy accounts for {renewable}% of installed capacity.",
+    narrative_template: "In {fy}, {utility} served {customers} customers across {islands} islands. Reliability (SAIDI: {saidi} min) is {saidi_trend}. System losses are {losses}%, with a cost recovery rate of {recovery}%. Renewable energy accounts for {renewable}% of rated capacity.",
   },
   adb: {
     donor: "Asian Development Bank (ADB)",

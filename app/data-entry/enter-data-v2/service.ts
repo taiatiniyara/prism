@@ -171,11 +171,11 @@ export async function getMeasureEntryFilterViewModel(): Promise<MeasureEntryPage
     conditions.push(eq(dataEntries.report_period_id, ctx.reportPeriodId));
   }
   if (ctx.measureCategoryId) {
-    conditions.push(eq(measureDefinitions.category_id, ctx.measureCategoryId));
+    conditions.push(eq(measureDefinitions.measures_group_id, ctx.measureCategoryId));
   }
   if (ctx.measureSubcategoryId) {
     conditions.push(
-      eq(measureDefinitions.subcategory_id, ctx.measureSubcategoryId),
+      eq(measureDefinitions.measures_subgroup_id, ctx.measureSubcategoryId),
     );
   }
   if (ctx.dataEntryStatusId) {
@@ -214,8 +214,8 @@ export async function getMeasureEntryFilterViewModel(): Promise<MeasureEntryPage
       measureId: measureDefinitions.id,
       measureName: measureDefinitions.name,
       unitName: managedListItems.name,
-      categoryId: measureDefinitions.category_id,
-      subcategoryId: measureDefinitions.subcategory_id,
+      categoryId: measureDefinitions.measures_group_id,
+      subcategoryId: measureDefinitions.measures_subgroup_id,
       dataTypeId: measureDefinitions.data_type_id,
       valueNumeric: dataEntries.value_numeric,
       valueBoolean: dataEntries.value_boolean,
@@ -492,11 +492,13 @@ export async function updateMeasureEntryValueAction(
       energy_provider_id: payload.energyProviderId,
       energy_type_id: payload.energyTypeId,
       energy_source_id: payload.energySourceId,
+      energy_resource_type_id: await getAllMemberId("Energy Resource Type"),
       customer_type_id: payload.customerTypeId,
       payment_mode_id: payload.paymentModeId,
       consumption_band_id: payload.consumptionBandId,
       division_id: payload.divisionId,
       gender_id: payload.genderId,
+      utility_function_id: await getAllMemberId("Utility Function"),
       energy_resource_id: payload.energyResourceId ?? null,
       status_id: DataEntryStatusId.Entered,
       is_relevant: true,
@@ -547,11 +549,13 @@ export async function updateMeasureEntryAvailabilityAction(
       energy_provider_id: payload.energyProviderId,
       energy_type_id: payload.energyTypeId,
       energy_source_id: payload.energySourceId,
+      energy_resource_type_id: await getAllMemberId("Energy Resource Type"),
       customer_type_id: payload.customerTypeId,
       payment_mode_id: payload.paymentModeId,
       consumption_band_id: payload.consumptionBandId,
       division_id: payload.divisionId,
       gender_id: payload.genderId,
+      utility_function_id: await getAllMemberId("Utility Function"),
       energy_resource_id: payload.energyResourceId ?? null,
       status_id: DataEntryStatusId.Not_Available,
       is_relevant: true,
@@ -606,11 +610,13 @@ export async function updateMeasureEntryCommentAction(
       energy_provider_id: payload.energyProviderId,
       energy_type_id: payload.energyTypeId,
       energy_source_id: payload.energySourceId,
+      energy_resource_type_id: await getAllMemberId("Energy Resource Type"),
       customer_type_id: payload.customerTypeId,
       payment_mode_id: payload.paymentModeId,
       consumption_band_id: payload.consumptionBandId,
       division_id: payload.divisionId,
       gender_id: payload.genderId,
+      utility_function_id: await getAllMemberId("Utility Function"),
       energy_resource_id: payload.energyResourceId ?? null,
       status_id: DataEntryStatusId.Pending,
       comments: [newComment] as unknown as DataEntryComment[],
@@ -627,4 +633,20 @@ export async function updateMeasureEntryCommentAction(
 async function getReportPeriodIdFromContext(): Promise<number> {
   const ctx = await getFilterContextFromCookies();
   return ctx.reportPeriodId ?? 0;
+}
+
+async function getAllMemberId(listName: string): Promise<number> {
+  const [item] = await db
+    .select({ id: managedListItems.id })
+    .from(managedListItems)
+    .innerJoin(managedLists, eq(managedListItems.list_id, managedLists.id))
+    .where(
+      and(
+        eq(managedLists.name, listName),
+        eq(managedListItems.name, "All"),
+      ),
+    )
+    .limit(1);
+  if (!item) throw new Error(`"All" member not found for list: ${listName}`);
+  return item.id;
 }

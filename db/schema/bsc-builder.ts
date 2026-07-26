@@ -17,6 +17,7 @@ import { sql } from "drizzle-orm";
 
 import { user } from "./auth-schema";
 import { kpiDefinitions } from "./kpi";
+import { inputDefinitions } from "./dataEntry";
 import { customKpiRequests } from "./custom-kpi-requests";
 import { organisations } from "./utility";
 
@@ -225,6 +226,12 @@ export const bscKpiLinks = pgTable(
       .notNull()
       .references(() => bscInitiatives.id, { onDelete: "cascade" }),
     kpi_def_id: integer("kpi_def_id").references(() => kpiDefinitions.id),
+    // A tracked item may instead reference an Input definition (BLO can track
+    // either a KPI or an Input). Mutually exclusive with kpi_def_id /
+    // pending_custom_kpi_request_id.
+    input_definition_id: integer("input_definition_id").references(
+      () => inputDefinitions.id,
+    ),
     pending_custom_kpi_request_id: uuid(
       "pending_custom_kpi_request_id",
     ).references(() => customKpiRequests.id),
@@ -236,6 +243,7 @@ export const bscKpiLinks = pgTable(
     index("bsc_kpi_link_utility_idx").on(table.utility_id),
     index("bsc_kpi_link_initiative_idx").on(table.initiative_id),
     index("bsc_kpi_link_kpi_def_idx").on(table.kpi_def_id),
+    index("bsc_kpi_link_input_def_idx").on(table.input_definition_id),
   ],
 );
 

@@ -409,8 +409,8 @@ const getMeasureDefinitionsForStructure = async (
         eq(measureDefinitions.is_active, true),
         eq(measureDefinitions.is_aggregated, false),
         or(
-          eq(measureDefinitions.subcategory_id, structureManagedListItem.id),
-          eq(measureDefinitions.category_id, structureManagedListItem.id),
+          eq(measureDefinitions.measures_subgroup_id, structureManagedListItem.id),
+          eq(measureDefinitions.measures_group_id, structureManagedListItem.id),
         ),
       ),
     )

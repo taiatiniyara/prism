@@ -26,8 +26,6 @@ export const STYLEABLE_ELEMENTS: ReadonlyArray<{ id: string; label: string }> = 
   { id: "targetStatusNotSet", label: "Pills — target: not set" },
   { id: "targetStatusPartial", label: "Pills — target: partially set" },
   { id: "targetStatusFull", label: "Pills — target: fully set" },
-  { id: "trajectoryMatched", label: "Pills — trajectory: matched" },
-  { id: "trajectoryMismatched", label: "Pills — trajectory: mismatched" },
 ];
 
 const STYLEABLE_IDS = new Set(STYLEABLE_ELEMENTS.map((element) => element.id));

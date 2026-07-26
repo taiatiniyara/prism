@@ -82,14 +82,14 @@ export default async function InputsSettingsPage(props: {
                     required: false,
                   },
                   {
-                    key: "category_id",
+                    key: "measures_group_id",
                     type: "managed-list",
-                    managedListName: "Input Category",
+                    managedListName: "Measures Group",
                   },
                   {
-                    key: "subcategory_id",
+                    key: "measures_subgroup_id",
                     type: "managed-list",
-                    managedListName: "Input Subcategory",
+                    managedListName: "Measures Subgroup",
                   },
                   {
                     key: "data_type_id",
@@ -126,14 +126,14 @@ export default async function InputsSettingsPage(props: {
                     required: false,
                   },
                   {
-                    key: "category_id",
+                    key: "measures_group_id",
                     type: "managed-list",
-                    managedListName: "Input Category",
+                    managedListName: "Measures Group",
                   },
                   {
-                    key: "subcategory_id",
+                    key: "measures_subgroup_id",
                     type: "managed-list",
-                    managedListName: "Input Subcategory",
+                    managedListName: "Measures Subgroup",
                   },
                   {
                     key: "data_type_id",

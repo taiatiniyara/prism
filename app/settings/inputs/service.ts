@@ -10,7 +10,10 @@ import {
   measureDefinitions,
 } from "@/db/schema/dataEntry";
 import { managedListItems, managedLists } from "@/db/schema/managedLists";
-import { createVariableName } from "@/lib/formatters";
+import {
+  createVariableName,
+  deriveMeasureVariableName,
+} from "@/lib/formatters";
 import { and, asc, eq, ilike, inArray, or } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { GetAllManagedListItems } from "../managed-lists/service";
@@ -55,10 +58,9 @@ interface CreateMeasureDefinitionPayload {
   description?: string | null;
   alternative_names?: MeasureDefinitionAlternativeNames | string | null;
   data_type_id: string | number;
-  category_id: string | number;
-  subcategory_id: string | number;
+  measures_group_id: string | number;
+  measures_subgroup_id: string | number;
   unit_id: string | number;
-  utility_service_id: number | null;
 }
 
 interface UpdateMeasureDefinitionPayload {
@@ -68,10 +70,9 @@ interface UpdateMeasureDefinitionPayload {
   description?: string | null;
   alternative_names?: MeasureDefinitionAlternativeNames | string | null;
   data_type_id?: string | number;
-  category_id?: string | number;
-  subcategory_id?: string | number;
+  measures_group_id?: string | number;
+  measures_subgroup_id?: string | number;
   unit_id?: string | number;
-  utility_service_id?: number | null;
   is_active?: boolean;
 }
 
@@ -157,13 +158,13 @@ export async function GetAllMeasureDefinitions(): Promise<MeasureDefinition[]> {
   const returnList: MeasureDefinition[] = list.map((item) => ({
     ...item,
     category:
-      resolveManagedListName(managedListNamesById, item.category_id, null) ||
+      resolveManagedListName(managedListNamesById, item.measures_group_id, null) ||
       "Unknown",
     data_type:
       resolveManagedListName(managedListNamesById, item.data_type_id, null) ||
       "Unknown",
     subcategory:
-      resolveManagedListName(managedListNamesById, item.subcategory_id, null) ||
+      resolveManagedListName(managedListNamesById, item.measures_subgroup_id, null) ||
       "Unknown",
     unit:
       resolveManagedListName(managedListNamesById, item.unit_id, null) ||
@@ -195,6 +196,15 @@ export async function CreateMeasureDefinition(
     };
   }
 
+  const unitId = toNumber(data.unit_id);
+  const [unitRow] = Number.isNaN(unitId)
+    ? []
+    : await db
+        .select({ name: managedListItems.name })
+        .from(managedListItems)
+        .where(eq(managedListItems.id, unitId))
+        .limit(1);
+
   const payload = {
     name,
     sort_order:
@@ -202,21 +212,20 @@ export async function CreateMeasureDefinition(
         ? 0
         : Number(data.sort_order),
     description: data.description?.trim() || null,
-    variable_name: createVariableName(name),
+    variable_name: deriveMeasureVariableName(name, unitRow?.name ?? null),
     alternative_names: alternativeNames,
     data_type_id: toNumber(data.data_type_id),
-    category_id: toNumber(data.category_id),
-    subcategory_id: toNumber(data.subcategory_id),
+    measures_group_id: toNumber(data.measures_group_id),
+    measures_subgroup_id: toNumber(data.measures_subgroup_id),
     unit_id: toNumber(data.unit_id),
-    utility_service_id: null,
     is_active: true,
   };
 
   const hasInvalidId = [
     payload.sort_order,
     payload.data_type_id,
-    payload.category_id,
-    payload.subcategory_id,
+    payload.measures_group_id,
+    payload.measures_subgroup_id,
     payload.unit_id,
   ].some((id) => Number.isNaN(id));
 
@@ -289,7 +298,8 @@ export async function UpdateMeasureDefinition(
     }
 
     patch.name = trimmedName;
-    patch.variable_name = createVariableName(trimmedName);
+    // variable_name is deliberately NOT re-derived on rename: formulas reference
+    // the token, so it is derived once at creation and then frozen.
   }
 
   if (typeof data.description === "string") {
@@ -311,10 +321,9 @@ export async function UpdateMeasureDefinition(
     key: keyof Pick<
       UpdateMeasureDefinitionPayload,
       | "data_type_id"
-      | "category_id"
-      | "subcategory_id"
+      | "measures_group_id"
+      | "measures_subgroup_id"
       | "unit_id"
-      | "utility_service_id"
       | "sort_order"
     >,
   ) => {
@@ -331,10 +340,9 @@ export async function UpdateMeasureDefinition(
   try {
     assignNumericField("sort_order");
     assignNumericField("data_type_id");
-    assignNumericField("category_id");
-    assignNumericField("subcategory_id");
+    assignNumericField("measures_group_id");
+    assignNumericField("measures_subgroup_id");
     assignNumericField("unit_id");
-    assignNumericField("utility_service_id");
   } catch (error) {
     return {
       success: false,
@@ -379,15 +387,12 @@ export interface ExcelMeasureDefinition {
   is_aggregated: boolean;
   is_calculated: boolean;
   is_currency: boolean;
-  is_descriptive: boolean;
   is_kpi: boolean;
   is_kpi_input: boolean;
   is_mandatory: boolean;
   is_system_generated: boolean;
   name: string;
-  service_relevance_group_id: number;
   unit_id: number;
-  utility_service_id: number;
   valid_polarity_id: number;
   valid_range_max: number;
   valid_range_min: number;
@@ -416,25 +421,25 @@ export async function UpdateMeasureDefinitionFromExcel(
     definition: null,
     synonyms: null,
     definition_status: null,
+    option_list_id: null,
     data_type_id: item.data_type_id,
-    category_id: item.input_category_id,
-    subcategory_id: item.input_subcategory_id,
+    measures_group_id: item.input_category_id,
+    measures_subgroup_id: item.input_subcategory_id,
     agg_level_id: item.agg_level_id,
     is_active: item.is_active,
     is_aggregated: item.is_aggregated,
     is_calculated: item.is_calculated,
     is_currency: item.is_currency,
-    is_descriptive: item.is_descriptive,
     is_kpi: item.is_kpi,
     is_kpi_input: item.is_kpi_input,
     is_mandatory: item.is_mandatory,
     is_system_generated: item.is_system_generated,
-    service_relevance_group_id: item.service_relevance_group_id,
     unit_id: item.unit_id,
-    utility_service_id: item.utility_service_id,
     valid_polarity_id: item.valid_polarity_id,
-    valid_range_max: item.valid_range_max,
-    valid_range_min: item.valid_range_min,
+    valid_range_max:
+      item.valid_range_max == null ? null : String(item.valid_range_max),
+    valid_range_min:
+      item.valid_range_min == null ? null : String(item.valid_range_min),
     valid_trend_id: item.valid_trend_id,
     variable_name: createVariableName(item.name),
     formula: null,
@@ -594,7 +599,7 @@ export async function getInputsBySubcategory(
   const inputs = await db
     .select()
     .from(measureDefinitions)
-    .where(eq(measureDefinitions.subcategory_id, subcategoryId));
+    .where(eq(measureDefinitions.measures_subgroup_id, subcategoryId));
   return inputs;
 }
 
@@ -752,11 +757,11 @@ function scoreMapping(
     }
   }
 
-  if (input.category_id === training.category_id) {
+  if (input.measures_group_id === training.category_id) {
     score += 10;
     reasons.push("category match");
   }
-  if (input.subcategory_id === training.subcategory_id) {
+  if (input.measures_subgroup_id === training.subcategory_id) {
     score += 10;
     reasons.push("subcategory match");
   }

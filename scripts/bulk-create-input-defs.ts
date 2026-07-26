@@ -43,7 +43,7 @@ function slugify(name: string): string {
 
 function guessUnitId(name: string): number {
   const n = name.toLowerCase();
-  if (n.includes("installed capacity")) return 107; // MW
+  if (n.includes("rated capacity")) return 107; // MW
   if (
     n.includes("electricity generated") ||
     n.includes("energy stored") ||
@@ -122,7 +122,7 @@ function guessCategorySubcategory(
 
   if (
     n.includes("gen") ||
-    n.includes("installed capacity") ||
+    n.includes("rated capacity") ||
     n.includes("electricity generated") ||
     n.includes("energy stored") ||
     n.includes("electricity discharged") ||

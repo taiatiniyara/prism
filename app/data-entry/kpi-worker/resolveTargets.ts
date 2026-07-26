@@ -5,6 +5,7 @@ import type { FormulaInput } from "@/db/schema/dataEntry";
 import { kpiDefinitions } from "@/db/schema/kpi";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 
+import { normalizeFormulaInput } from "./normalizeFormulaInput";
 import type { KpiWorkerScope } from "./types";
 
 import { createFormulaVersionSnapshot } from "./snapshot";
@@ -68,39 +69,6 @@ const resolveTargetValueForContext = (
 
   const yearlyTarget = utilityTargets.find((item) => item.month == null);
   return yearlyTarget?.target_value ?? null;
-};
-
-const toNullableNumber = (value: unknown): number | null => {
-  if (value == null) {
-    return null;
-  }
-
-  const numeric = Number(value);
-  return Number.isFinite(numeric) ? numeric : null;
-};
-
-const normalizeFormulaInput = (input: FormulaInput): FormulaInput | null => {
-  const inputDefId = toNullableNumber(
-    (input as FormulaInput & { measure_def_id?: unknown }).measure_def_id,
-  );
-
-  if (inputDefId == null) {
-    return null;
-  }
-
-  const energyProviderId = toNullableNumber(input.energy_provider_id);
-  const energyTypeId = toNullableNumber(input.energy_type_id);
-  const energySourceId = toNullableNumber(input.energy_source_id);
-
-  return {
-    ...input,
-    measure_def_id: inputDefId,
-    ...(energyProviderId != null
-      ? { energy_provider_id: energyProviderId }
-      : {}),
-    ...(energyTypeId != null ? { energy_type_id: energyTypeId } : {}),
-    ...(energySourceId != null ? { energy_source_id: energySourceId } : {}),
-  };
 };
 
 export const filterAffectedKpiTargets = (

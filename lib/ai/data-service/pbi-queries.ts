@@ -97,28 +97,28 @@ export const PBI_QUERIES: Record<string, PbiQueryTemplate> = {
   // ═══════════════════════════════════════════
   // GENERATION & CAPACITY
   // ═══════════════════════════════════════════
-  installed_capacity: {
-    name: "installed_capacity",
-    description: "Total installed capacity (MW) by utility and energy source",
-    returns: "Utility, Energy Source, Total MW installed",
+  rated_capacity: {
+    name: "rated_capacity",
+    description: "Total rated capacity (MW) by utility and energy source",
+    returns: "Utility, Energy Source, Total rated MW",
     result_type: "breakdown",
     recommended_chart: "bar-chart",
-    aliases: ["capacity by source", "installed capacity breakdown", "MW by fuel", "generation capacity", "power plant capacity"],
+    aliases: ["capacity by source", "rated capacity breakdown", "MW by fuel", "generation capacity", "power plant capacity"],
     params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
     dax: (p) =>
-      `EVALUATE SUMMARIZECOLUMNS('Fact GeneratorsData'[Utility], 'Fact GeneratorsData'[Energy Source], "Installed MW", SUM('Fact GeneratorsData'[Installed Capacity (MW)])) FILTER('Fact GeneratorsData'[FY] = "${escapeDax(p.fy)}") ORDER BY 'Fact GeneratorsData'[Utility] ASC, 'Fact GeneratorsData'[Energy Source] ASC`,
+      `EVALUATE SUMMARIZECOLUMNS('Fact GeneratorsData'[Utility], 'Fact GeneratorsData'[Energy Source], "Rated MW", SUM('Fact GeneratorsData'[Rated Capacity (MW)])) FILTER('Fact GeneratorsData'[FY] = "${escapeDax(p.fy)}") ORDER BY 'Fact GeneratorsData'[Utility] ASC, 'Fact GeneratorsData'[Energy Source] ASC`,
   },
 
-  installed_capacity_by_utility: {
-    name: "installed_capacity_by_utility",
-    description: "Total installed capacity per utility (aggregated across all sources)",
+  rated_capacity_by_utility: {
+    name: "rated_capacity_by_utility",
+    description: "Total rated capacity per utility (aggregated across all sources)",
     returns: "Utility, Total MW",
     result_type: "ranking",
     recommended_chart: "leaderboard",
     aliases: ["total capacity", "capacity ranking", "who has most capacity", "largest utility", "MW ranking"],
     params: { fy: { type: "string", description: "Fiscal year (e.g., FY2023)", required: true } },
     dax: (p) =>
-      `EVALUATE SUMMARIZECOLUMNS('Fact GeneratorsData'[Utility], "Total MW", SUM('Fact GeneratorsData'[Installed Capacity (MW)])) FILTER('Fact GeneratorsData'[FY] = "${escapeDax(p.fy)}") ORDER BY 'Fact GeneratorsData'[Utility] ASC`,
+      `EVALUATE SUMMARIZECOLUMNS('Fact GeneratorsData'[Utility], "Total MW", SUM('Fact GeneratorsData'[Rated Capacity (MW)])) FILTER('Fact GeneratorsData'[FY] = "${escapeDax(p.fy)}") ORDER BY 'Fact GeneratorsData'[Utility] ASC`,
   },
 
   generation_output: {
@@ -338,7 +338,7 @@ export const PBI_QUERIES: Record<string, PbiQueryTemplate> = {
     dax: (p) => {
       const u = escapeDax(p.utility);
       const fy = escapeDax(p.fy);
-      return `EVALUATE VAR _Capacity = CALCULATE(SUM('Fact GeneratorsData'[Installed Capacity (MW)]), 'Fact GeneratorsData'[Utility] = "${u}", 'Fact GeneratorsData'[FY] = "${fy}") VAR _Generation = CALCULATE(SUM('Fact Generation'[GEN Electricity Generated (MWh)]), 'Fact Generation'[Utility] = "${u}", 'Fact Generation'[FY] = "${fy}") VAR _PeakLoad = CALCULATE(MAX('Fact Generation'[Electricity Demand Peak Load]), 'Fact Generation'[Utility] = "${u}", 'Fact Generation'[FY] = "${fy}") VAR _Losses = CALCULATE(AVERAGE('Fact Distribution'[System Losses (%)]), 'Fact Distribution'[Utility] = "${u}", 'Fact Distribution'[FY] = "${fy}") VAR _Revenue = CALCULATE(SUM('Fact FinancialAccounts'[Total Revenue]), 'Fact FinancialAccounts'[Utility] = "${u}", 'Fact FinancialAccounts'[FY] = "${fy}") VAR _Recovery = CALCULATE(AVERAGE('Fact FinancialAccounts'[Tariff Recovery Rate (%)]), 'Fact FinancialAccounts'[Utility] = "${u}", 'Fact FinancialAccounts'[FY] = "${fy}") VAR _Connections = CALCULATE(SUM('Fact Customer'[Total Connections]), 'Fact Customer'[Utility] = "${u}", 'Fact Customer'[FY] = "${fy}") VAR _Electrification = CALCULATE(AVERAGE('Fact Customer'[Electrification Rate (%)]), 'Fact Customer'[Utility] = "${u}", 'Fact Customer'[FY] = "${fy}") RETURN ROW("Utility", "${u}", "FY", "${fy}", "Installed Capacity MW", _Capacity, "Generation MWh", _Generation, "Peak Demand MW", _PeakLoad, "System Losses %", _Losses, "Revenue", _Revenue, "Cost Recovery %", _Recovery, "Customers", _Connections, "Electrification %", _Electrification)`;
+      return `EVALUATE VAR _Capacity = CALCULATE(SUM('Fact GeneratorsData'[Rated Capacity (MW)]), 'Fact GeneratorsData'[Utility] = "${u}", 'Fact GeneratorsData'[FY] = "${fy}") VAR _Generation = CALCULATE(SUM('Fact Generation'[GEN Electricity Generated (MWh)]), 'Fact Generation'[Utility] = "${u}", 'Fact Generation'[FY] = "${fy}") VAR _PeakLoad = CALCULATE(MAX('Fact Generation'[Electricity Demand Peak Load]), 'Fact Generation'[Utility] = "${u}", 'Fact Generation'[FY] = "${fy}") VAR _Losses = CALCULATE(AVERAGE('Fact Distribution'[System Losses (%)]), 'Fact Distribution'[Utility] = "${u}", 'Fact Distribution'[FY] = "${fy}") VAR _Revenue = CALCULATE(SUM('Fact FinancialAccounts'[Total Revenue]), 'Fact FinancialAccounts'[Utility] = "${u}", 'Fact FinancialAccounts'[FY] = "${fy}") VAR _Recovery = CALCULATE(AVERAGE('Fact FinancialAccounts'[Tariff Recovery Rate (%)]), 'Fact FinancialAccounts'[Utility] = "${u}", 'Fact FinancialAccounts'[FY] = "${fy}") VAR _Connections = CALCULATE(SUM('Fact Customer'[Total Connections]), 'Fact Customer'[Utility] = "${u}", 'Fact Customer'[FY] = "${fy}") VAR _Electrification = CALCULATE(AVERAGE('Fact Customer'[Electrification Rate (%)]), 'Fact Customer'[Utility] = "${u}", 'Fact Customer'[FY] = "${fy}") RETURN ROW("Utility", "${u}", "FY", "${fy}", "Rated Capacity MW", _Capacity, "Generation MWh", _Generation, "Peak Demand MW", _PeakLoad, "System Losses %", _Losses, "Revenue", _Revenue, "Cost Recovery %", _Recovery, "Customers", _Connections, "Electrification %", _Electrification)`;
     },
   },
 
@@ -356,7 +356,7 @@ export const PBI_QUERIES: Record<string, PbiQueryTemplate> = {
     dax: (p) => {
       const fy = escapeDax(p.fy);
       switch (p.metric) {
-        case "capacity": return `EVALUATE SUMMARIZECOLUMNS('Fact GeneratorsData'[Utility], "Value", SUM('Fact GeneratorsData'[Installed Capacity (MW)])) FILTER('Fact GeneratorsData'[FY] = "${fy}") ORDER BY 'Fact GeneratorsData'[Installed Capacity (MW)] DESC`;
+        case "capacity": return `EVALUATE SUMMARIZECOLUMNS('Fact GeneratorsData'[Utility], "Value", SUM('Fact GeneratorsData'[Rated Capacity (MW)])) FILTER('Fact GeneratorsData'[FY] = "${fy}") ORDER BY 'Fact GeneratorsData'[Rated Capacity (MW)] DESC`;
         case "generation": return `EVALUATE SUMMARIZECOLUMNS('Fact Generation'[Utility], "MWh", SUM('Fact Generation'[GEN Electricity Generated (MWh)])) FILTER('Fact Generation'[FY] = "${fy}") ORDER BY 'Fact Generation'[GEN Electricity Generated (MWh)] DESC`;
         case "losses": return `EVALUATE SUMMARIZECOLUMNS('Fact Distribution'[Utility], "Losses %", AVERAGE('Fact Distribution'[System Losses (%)])) FILTER('Fact Distribution'[FY] = "${fy}") ORDER BY 'Fact Distribution'[System Losses (%)] ASC`;
         case "saidi": return `EVALUATE SUMMARIZECOLUMNS('Fact SAIDI and SAIFI'[Utility], "SAIDI", SUM('Fact SAIDI and SAIFI'[SAIDI Value])) FILTER('Fact SAIDI and SAIFI'[FY] = "${fy}") ORDER BY 'Fact SAIDI and SAIFI'[SAIDI Value] ASC`;
@@ -466,8 +466,8 @@ export const PBI_QUERIES: Record<string, PbiQueryTemplate> = {
   // ═══════════════════════════════════════════════════════
   capacity_factor: {
     name: "capacity_factor",
-    description: "Generation capacity factor: actual MWh output / (installed MW x 8760 hours). Measures how efficiently each utility uses its installed capacity.",
-    returns: "Utility, Installed MW, Total MWh, Capacity Factor (%), Peak MW",
+    description: "Generation capacity factor: actual MWh output / (rated MW x 8760 hours). Measures how efficiently each utility uses its rated capacity.",
+    returns: "Utility, Rated MW, Total MWh, Capacity Factor (%), Peak MW",
     result_type: "ranking",
     recommended_chart: "scatter",
     aliases: ["capacity factor", "utilization rate", "plant efficiency", "capacity utilization", "how much capacity is used"],
@@ -476,7 +476,7 @@ export const PBI_QUERIES: Record<string, PbiQueryTemplate> = {
       const fy = escapeDax(p.fy);
       return `EVALUATE SUMMARIZECOLUMNS(
         'Fact GeneratorsData'[Utility],
-        "Installed MW", SUM('Fact GeneratorsData'[Installed Capacity (MW)]),
+        "Rated MW", SUM('Fact GeneratorsData'[Rated Capacity (MW)]),
         "Total MWh", CALCULATE(SUM('Fact Generation'[GEN Electricity Generated (MWh)]), TREATAS(VALUES('Fact GeneratorsData'[Utility]), 'Fact Generation'[Utility]), 'Fact Generation'[FY] = "${fy}")
       ) FILTER('Fact GeneratorsData'[FY] = "${fy}") ORDER BY 'Fact GeneratorsData'[Utility] ASC`;
     },
@@ -501,7 +501,7 @@ export const PBI_QUERIES: Record<string, PbiQueryTemplate> = {
   // ═══════════════════════════════════════════════════════
   carbon_emissions: {
     name: "carbon_emissions",
-    description: "Estimated CO2 emissions from diesel generation. Uses diesel MW installed capacity and standard emission factors to estimate annual CO2 output.",
+    description: "Estimated CO2 emissions from diesel generation. Uses diesel MW rated capacity and standard emission factors to estimate annual CO2 output.",
     returns: "Utility, Diesel MW, Diesel %, Estimated Annual CO2 (tCO2), Renewable MW",
     result_type: "ranking",
     recommended_chart: "bar-chart",
@@ -511,9 +511,9 @@ export const PBI_QUERIES: Record<string, PbiQueryTemplate> = {
       const fy = escapeDax(p.fy);
       return `EVALUATE SUMMARIZECOLUMNS(
         'Fact GeneratorsData'[Utility],
-        "Diesel MW", CALCULATE(SUM('Fact GeneratorsData'[Installed Capacity (MW)]), 'Fact GeneratorsData'[Energy Source] = "Diesel"),
-        "Total MW", SUM('Fact GeneratorsData'[Installed Capacity (MW)]),
-        "Renewable MW", CALCULATE(SUM('Fact GeneratorsData'[Installed Capacity (MW)]), 'Fact GeneratorsData'[Energy Source] IN {"Solar", "Wind", "Hydro", "Biomass", "Geothermal"} || 'Fact GeneratorsData'[Energy Type] = "Renewable")
+        "Diesel MW", CALCULATE(SUM('Fact GeneratorsData'[Rated Capacity (MW)]), 'Fact GeneratorsData'[Energy Source] = "Diesel"),
+        "Total MW", SUM('Fact GeneratorsData'[Rated Capacity (MW)]),
+        "Renewable MW", CALCULATE(SUM('Fact GeneratorsData'[Rated Capacity (MW)]), 'Fact GeneratorsData'[Energy Source] IN {"Solar", "Wind", "Hydro", "Biomass", "Geothermal"} || 'Fact GeneratorsData'[Energy Type] = "Renewable")
       ) FILTER('Fact GeneratorsData'[FY] = "${fy}") ORDER BY 'Fact GeneratorsData'[Utility] ASC`;
     },
   },
@@ -754,9 +754,9 @@ export const PBI_QUERIES: Record<string, PbiQueryTemplate> = {
       const fy = escapeDax(p.fy);
       return `EVALUATE SUMMARIZECOLUMNS(
         'Fact GeneratorsData'[Utility],
-        "Diesel MW", CALCULATE(SUM('Fact GeneratorsData'[Installed Capacity (MW)]), 'Fact GeneratorsData'[Energy Source] = "Diesel"),
-        "Total MW", SUM('Fact GeneratorsData'[Installed Capacity (MW)]),
-        "Renewable MW", CALCULATE(SUM('Fact GeneratorsData'[Installed Capacity (MW)]), 'Fact GeneratorsData'[Energy Source] IN {"Solar", "Wind", "Hydro", "Biomass", "Geothermal"} || 'Fact GeneratorsData'[Energy Type] = "Renewable")
+        "Diesel MW", CALCULATE(SUM('Fact GeneratorsData'[Rated Capacity (MW)]), 'Fact GeneratorsData'[Energy Source] = "Diesel"),
+        "Total MW", SUM('Fact GeneratorsData'[Rated Capacity (MW)]),
+        "Renewable MW", CALCULATE(SUM('Fact GeneratorsData'[Rated Capacity (MW)]), 'Fact GeneratorsData'[Energy Source] IN {"Solar", "Wind", "Hydro", "Biomass", "Geothermal"} || 'Fact GeneratorsData'[Energy Type] = "Renewable")
       ) FILTER('Fact GeneratorsData'[FY] = "${fy}") ORDER BY 'Fact GeneratorsData'[Utility] ASC`;
     },
   },
@@ -773,15 +773,15 @@ export const PBI_QUERIES: Record<string, PbiQueryTemplate> = {
       const fy = escapeDax(p.fy);
       return `EVALUATE SUMMARIZECOLUMNS(
         'Fact GeneratorsData'[Utility],
-        "Renewable MW", CALCULATE(SUM('Fact GeneratorsData'[Installed Capacity (MW)]), 'Fact GeneratorsData'[Energy Source] IN {"Solar", "Wind", "Hydro", "Biomass", "Geothermal"} || 'Fact GeneratorsData'[Energy Type] = "Renewable"),
-        "Total MW", SUM('Fact GeneratorsData'[Installed Capacity (MW)])
+        "Renewable MW", CALCULATE(SUM('Fact GeneratorsData'[Rated Capacity (MW)]), 'Fact GeneratorsData'[Energy Source] IN {"Solar", "Wind", "Hydro", "Biomass", "Geothermal"} || 'Fact GeneratorsData'[Energy Type] = "Renewable"),
+        "Total MW", SUM('Fact GeneratorsData'[Rated Capacity (MW)])
       ) FILTER('Fact GeneratorsData'[FY] = "${fy}") ORDER BY 'Fact GeneratorsData'[Utility] ASC`;
     },
   },
 
   fuel_efficiency: {
     name: "fuel_efficiency",
-    description: "Generation output per unit of installed capacity — proxy for fuel efficiency and plant utilization",
+    description: "Generation output per unit of rated capacity — proxy for fuel efficiency and plant utilization",
     returns: "Utility, Total MWh, Total MW, MWh per MW (capacity factor proxy), Peak MW",
     result_type: "ranking",
     recommended_chart: "scatter",
@@ -791,7 +791,7 @@ export const PBI_QUERIES: Record<string, PbiQueryTemplate> = {
       const fy = escapeDax(p.fy);
       return `EVALUATE SUMMARIZECOLUMNS(
         'Fact GeneratorsData'[Utility],
-        "Total MW", SUM('Fact GeneratorsData'[Installed Capacity (MW)]),
+        "Total MW", SUM('Fact GeneratorsData'[Rated Capacity (MW)]),
         "Total MWh", CALCULATE(SUM('Fact Generation'[GEN Electricity Generated (MWh)]), TREATAS(VALUES('Fact GeneratorsData'[Utility]), 'Fact Generation'[Utility]), 'Fact Generation'[FY] = "${fy}"),
         "Peak MW", CALCULATE(MAX('Fact Generation'[Electricity Demand Peak Load]), TREATAS(VALUES('Fact GeneratorsData'[Utility]), 'Fact Generation'[Utility]), 'Fact Generation'[FY] = "${fy}")
       ) FILTER('Fact GeneratorsData'[FY] = "${fy}") ORDER BY 'Fact GeneratorsData'[Utility] ASC`;
@@ -812,8 +812,8 @@ export const PBI_QUERIES: Record<string, PbiQueryTemplate> = {
       return `EVALUATE SUMMARIZECOLUMNS(
         'Fact SAIDI and SAIFI'[Utility],
         "SAIDI", SUM('Fact SAIDI and SAIFI'[SAIDI Value]),
-        "Diesel MW", CALCULATE(SUM('Fact GeneratorsData'[Installed Capacity (MW)]), 'Fact GeneratorsData'[Energy Source] = "Diesel", 'Fact GeneratorsData'[FY] = "${fy}"),
-        "Total MW", CALCULATE(SUM('Fact GeneratorsData'[Installed Capacity (MW)]), 'Fact GeneratorsData'[FY] = "${fy}"),
+        "Diesel MW", CALCULATE(SUM('Fact GeneratorsData'[Rated Capacity (MW)]), 'Fact GeneratorsData'[Energy Source] = "Diesel", 'Fact GeneratorsData'[FY] = "${fy}"),
+        "Total MW", CALCULATE(SUM('Fact GeneratorsData'[Rated Capacity (MW)]), 'Fact GeneratorsData'[FY] = "${fy}"),
         "Islands", CALCULATE(MAX('Fact UtilityContextData'[Number of Islands Served]), TREATAS(VALUES('Fact SAIDI and SAIFI'[Utility]), 'Fact UtilityContextData'[Utility]), 'Fact UtilityContextData'[FY] = "${fy}")
       ) FILTER('Fact SAIDI and SAIFI'[FY] = "${fy}") ORDER BY 'Fact SAIDI and SAIFI'[SAIDI Value] DESC`;
     },
@@ -967,8 +967,8 @@ export const PBI_QUERIES: Record<string, PbiQueryTemplate> = {
       const fy = escapeDax(p.fy);
       return `EVALUATE SUMMARIZECOLUMNS(
         'Fact GeneratorsData'[Utility],
-        "Renewable MW", CALCULATE(SUM('Fact GeneratorsData'[Installed Capacity (MW)]), 'Fact GeneratorsData'[Energy Source] IN {"Solar", "Wind", "Hydro", "Biomass", "Geothermal"} || 'Fact GeneratorsData'[Energy Type] = "Renewable"),
-        "Total MW", SUM('Fact GeneratorsData'[Installed Capacity (MW)])
+        "Renewable MW", CALCULATE(SUM('Fact GeneratorsData'[Rated Capacity (MW)]), 'Fact GeneratorsData'[Energy Source] IN {"Solar", "Wind", "Hydro", "Biomass", "Geothermal"} || 'Fact GeneratorsData'[Energy Type] = "Renewable"),
+        "Total MW", SUM('Fact GeneratorsData'[Rated Capacity (MW)])
       ) FILTER('Fact GeneratorsData'[FY] = "${fy}") ORDER BY 'Fact GeneratorsData'[Utility] ASC`;
     },
   },
@@ -985,8 +985,8 @@ export const PBI_QUERIES: Record<string, PbiQueryTemplate> = {
       const fy = escapeDax(p.fy);
       return `EVALUATE SUMMARIZECOLUMNS(
         'Fact GeneratorsData'[Utility],
-        "Solar MW", CALCULATE(SUM('Fact GeneratorsData'[Installed Capacity (MW)]), 'Fact GeneratorsData'[Energy Source] = "Solar"),
-        "Total MW", SUM('Fact GeneratorsData'[Installed Capacity (MW)])
+        "Solar MW", CALCULATE(SUM('Fact GeneratorsData'[Rated Capacity (MW)]), 'Fact GeneratorsData'[Energy Source] = "Solar"),
+        "Total MW", SUM('Fact GeneratorsData'[Rated Capacity (MW)])
       ) FILTER('Fact GeneratorsData'[FY] = "${fy}") ORDER BY 'Fact GeneratorsData'[Utility] ASC`;
     },
   },
@@ -1005,8 +1005,8 @@ export const PBI_QUERIES: Record<string, PbiQueryTemplate> = {
       return `EVALUATE SUMMARIZECOLUMNS(
         'Fact SAIDI and SAIFI'[Utility],
         "SAIDI", SUM('Fact SAIDI and SAIFI'[SAIDI Value]),
-        "Diesel MW", CALCULATE(SUM('Fact GeneratorsData'[Installed Capacity (MW)]), 'Fact GeneratorsData'[Energy Source] = "Diesel", 'Fact GeneratorsData'[FY] = "${fy}"),
-        "Total MW", CALCULATE(SUM('Fact GeneratorsData'[Installed Capacity (MW)]), 'Fact GeneratorsData'[FY] = "${fy}"),
+        "Diesel MW", CALCULATE(SUM('Fact GeneratorsData'[Rated Capacity (MW)]), 'Fact GeneratorsData'[Energy Source] = "Diesel", 'Fact GeneratorsData'[FY] = "${fy}"),
+        "Total MW", CALCULATE(SUM('Fact GeneratorsData'[Rated Capacity (MW)]), 'Fact GeneratorsData'[FY] = "${fy}"),
         "Recovery %", CALCULATE(AVERAGE('Fact FinancialAccounts'[Tariff Recovery Rate (%)]), TREATAS(VALUES('Fact SAIDI and SAIFI'[Utility]), 'Fact FinancialAccounts'[Utility]), 'Fact FinancialAccounts'[FY] = "${fy}"),
         "Electrification %", CALCULATE(AVERAGE('Fact Customer'[Electrification Rate (%)]), TREATAS(VALUES('Fact SAIDI and SAIFI'[Utility]), 'Fact Customer'[Utility]), 'Fact Customer'[FY] = "${fy}")
       ) FILTER('Fact SAIDI and SAIFI'[FY] = "${fy}") ORDER BY 'Fact SAIDI and SAIFI'[Utility] ASC`;
@@ -1091,7 +1091,7 @@ export function getQueryCatalogByCategory(): string {
 
   const catMap: Record<string, string> = {
     saidi_by_utility: "Reliability", saifi_by_utility: "Reliability", reliability_summary: "Reliability", saidi_trend: "Reliability", outage_trend_by_source: "Reliability",
-    installed_capacity: "Generation & Capacity", installed_capacity_by_utility: "Generation & Capacity", generation_output: "Generation & Capacity", generation_by_source: "Generation & Capacity", peak_demand: "Generation & Capacity", generation_trend: "Generation & Capacity",
+    rated_capacity: "Generation & Capacity", rated_capacity_by_utility: "Generation & Capacity", generation_output: "Generation & Capacity", generation_by_source: "Generation & Capacity", peak_demand: "Generation & Capacity", generation_trend: "Generation & Capacity",
     system_losses: "Distribution", distribution_overview: "Distribution", losses_trend: "Distribution",
     financial_summary: "Financials", cost_recovery: "Financials", recovery_trend: "Financials",
     customer_overview: "Customers", metering_summary: "Customers", electrification_trend: "Customers",

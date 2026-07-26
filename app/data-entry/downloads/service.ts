@@ -67,8 +67,8 @@ export async function GetDownloadData(): Promise<DownloadRow[]> {
     .select({
       id: measureDefinitions.id,
       name: measureDefinitions.name,
-      category_id: measureDefinitions.category_id,
-      subcategory_id: measureDefinitions.subcategory_id,
+      category_id: measureDefinitions.measures_group_id,
+      subcategory_id: measureDefinitions.measures_subgroup_id,
       unit_id: measureDefinitions.unit_id,
     })
     .from(measureDefinitions)

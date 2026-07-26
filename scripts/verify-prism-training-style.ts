@@ -40,8 +40,8 @@ async function main() {
     .select({
       inputDefId: measureDefinitions.id,
       name: measureDefinitions.name,
-      subcategoryId: measureDefinitions.subcategory_id,
-      categoryId: measureDefinitions.category_id,
+      subcategoryId: measureDefinitions.measures_subgroup_id,
+      categoryId: measureDefinitions.measures_group_id,
       aggLevelId: measureDefinitions.agg_level_id,
       formulaInputs: measureDefinitions.formula_inputs,
     })
@@ -51,7 +51,7 @@ async function main() {
         eq(measureDefinitions.is_active, true),
         eq(measureDefinitions.is_system_generated, false),
         eq(measureDefinitions.is_aggregated, false),
-        sql`lower(coalesce((select mli.name from managed_list_items mli where mli.id = ${measureDefinitions.subcategory_id}), '')) <> 'country context'`,
+        sql`lower(coalesce((select mli.name from managed_list_items mli where mli.id = ${measureDefinitions.measures_subgroup_id}), '')) <> 'country context'`,
       ),
     );
 

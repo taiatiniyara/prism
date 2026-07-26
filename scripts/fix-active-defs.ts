@@ -6,12 +6,12 @@ async function main() {
   // Check subcategory distribution
   const bySubcat = await db
     .select({
-      subcat: measureDefinitions.subcategory_id,
+      subcat: measureDefinitions.measures_subgroup_id,
       cnt: sql<number>`count(*)`,
     })
     .from(measureDefinitions)
     .where(eq(measureDefinitions.is_active, true))
-    .groupBy(measureDefinitions.subcategory_id);
+    .groupBy(measureDefinitions.measures_subgroup_id);
 
   console.log("Active defs by subcategory:");
   for (const s of bySubcat) {
@@ -43,7 +43,7 @@ async function main() {
     .where(
       and(
         eq(measureDefinitions.is_active, true),
-        eq(measureDefinitions.subcategory_id, 273),
+        eq(measureDefinitions.measures_subgroup_id, 273),
       ),
     );
   console.log(`Active generation (subcat 273) defs: ${genWithData[0].cnt}`);

@@ -23,8 +23,8 @@ async function main() {
     .select({
       id: measureDefinitions.id,
       name: measureDefinitions.name,
-      cat: measureDefinitions.category_id,
-      subcat: measureDefinitions.subcategory_id,
+      cat: measureDefinitions.measures_group_id,
+      subcat: measureDefinitions.measures_subgroup_id,
       unit: measureDefinitions.unit_id,
       dtype: measureDefinitions.data_type_id,
       vn: measureDefinitions.variable_name,
@@ -42,9 +42,9 @@ async function main() {
 
   // Show total distribution
   const allDefs = await db
-    .select({ cat: measureDefinitions.category_id, cnt: sql<number>`count(*)` })
+    .select({ cat: measureDefinitions.measures_group_id, cnt: sql<number>`count(*)` })
     .from(measureDefinitions)
-    .groupBy(measureDefinitions.category_id);
+    .groupBy(measureDefinitions.measures_group_id);
   console.log("\nCategory distribution:");
   for (const d of allDefs) {
     console.log(`  cat ${d.cat} (${mlNames.get(d.cat) ?? "?"}): ${d.cnt}`);
@@ -52,11 +52,11 @@ async function main() {
 
   const allSubcats = await db
     .select({
-      subcat: measureDefinitions.subcategory_id,
+      subcat: measureDefinitions.measures_subgroup_id,
       cnt: sql<number>`count(*)`,
     })
     .from(measureDefinitions)
-    .groupBy(measureDefinitions.subcategory_id);
+    .groupBy(measureDefinitions.measures_subgroup_id);
   console.log("\nSubcategory distribution:");
   for (const d of allSubcats) {
     console.log(

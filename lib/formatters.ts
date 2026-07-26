@@ -20,7 +20,36 @@ export function createVariableName(str: string): string {
   return str
     .toLowerCase()
     .replace(/\s+/g, "_")
-    .replace(/[^a-z0-9_]/g, "");
+    .replace(/[^a-z0-9_]/g, "")
+    .replace(/_+/g, "_")
+    .replace(/^_|_$/g, "");
+}
+
+// Unit names whose slug would be misleading as a variable suffix.
+const UNIT_SUFFIX_OVERRIDES: Record<string, string> = {
+  "%": "pct",
+  "units n/a": "", // no unit -> no suffix (never "_na")
+};
+
+/**
+ * Derives a measure's variable_name: slugified name + unit suffix.
+ * Rules: Units N/A produces NO suffix; "%" becomes "pct"; the suffix is skipped
+ * when the name already ends with it. Derived ONCE at measure creation and then
+ * frozen — renames must not re-derive it (formulas reference the token).
+ */
+export function deriveMeasureVariableName(
+  name: string,
+  unitName?: string | null,
+): string {
+  const base = createVariableName(name);
+  const unitKey = (unitName ?? "").trim().toLowerCase();
+  if (!unitKey) return base;
+  const suffix =
+    UNIT_SUFFIX_OVERRIDES[unitKey] !== undefined
+      ? UNIT_SUFFIX_OVERRIDES[unitKey]
+      : createVariableName(unitKey);
+  if (!suffix || base === suffix || base.endsWith(`_${suffix}`)) return base;
+  return `${base}_${suffix}`;
 }
 
 export function formatReportPeriodDisplay(

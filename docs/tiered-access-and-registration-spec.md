@@ -1,0 +1,246 @@
+# PRISM 2 — Tiered Access, Subscriptions & Registration (spec)
+
+**Status:** 🚧 design in progress (grilled with Eugene 2026-07-26; several decisions locked, a few parked — see §9). Not built.
+**Owner stream:** new — "Tiered access / tenancy" (add to WORKSTREAMS board).
+**Source:** `…/DHI/PPA/Phase 2/5 Requirements/Tiered Access/Tiered Access Plans - 20260707.docx`.
+
+> **Why this exists.** PRISM 2 sells three **dashboard subscription plans** to *consumers* (donors, consultants), layered on top of the existing *provider* (utility) data-collection model. The current schema can't express subscriptions, seats, time-boxed access, or multi-org membership. This spec defines the target model.
+
+---
+
+## 0. The three plans (from the requirements doc)
+
+| Plan | Price | Seat cap | Datasets | Term |
+|---|---|---|---|---|
+| **Basic** | US$2,200 | 5 | — (view only) | annual |
+| **Premium** | US$3,500 | 10 | downloadable (KPI results) | annual |
+| **Pay-per-project** | US$500 | 3 | downloadable | **60 days** |
+
+All three include the PDF reports + full dashboards (Benchmarking KPI, Regional, Country) + KPI database.
+
+---
+
+## 1. Decisions locked (grilling 2026-07-26)
+
+1. **Two-axis org model** replaces the `is_utility` boolean (§2).
+2. **Seat junction** — one identity can hold **concurrent** seats across orgs (WB *and* ADB *and* DFAT); each seat counts toward *that* org's cap (§3).
+3. **Unify** — an individual subscriber is an **org-of-one** ("workspace"); no separate code path.
+4. **Tiers are consumer-only.** Utilities and PPA members are **free**; PPA-member entitlements TBD (§4).
+5. **Multi-org effective access = act-as** — entitlements are per-seat; the user works "as" one org at a time; features (esp. download) follow the active seat (§3.3).
+6. **Entitlement table**, keyed by `(plan, dashboard, access_level ∈ {view, view_download})` (§4).
+7. **Uniform access** within a subscriber org — "admin" is a management flag on a seat, not a higher tier.
+8. **Payment inside PRISM**: **manual now** — PPA Finance charges the card in **PPA's bank virtual terminal** (out-of-band); **PRISM never touches the PAN/CVV**, it only records the result. **DEV-toggled gateway switch** + config strings for later (§6).
+9. **48h reminder → admin + consultant**, lead time **BMO-configurable**, on both seat-expiry and subscription-renewal (§7).
+10. **Join-existing routing** → org admin first (recommend adding to their quota), **cc BMO**; if org admin rejects, **BMO can revert the user to the Default plan** (§5).
+
+---
+
+## 2. Organisation model — two axes (replaces `is_utility`)
+
+`is_utility` is a single yes/no switch; it can't distinguish the new org classes (utility vs PPA-member vs paying subscriber — all `is_utility=false` today except utilities). Split into **two independent fields**:
+
+**Axis 1 — `relationship` (drives the *access model*).** New column on `organisations`:
+
+| value | meaning | pays? | access |
+|---|---|---|---|
+| `utility` | data provider (submits benchmarking data) | no | provider role model (BLO/DAOs) |
+| `ppa_member` | PPA member, non-utility | no | free entitlement set (TBD) |
+| `subscriber` | buys a consumer plan (donor, consultant, gov, …) | yes | plan entitlements |
+
+- Modeled as a typed enum column (`OrgRelationship`), **not** a managed list — code branches on it, so it's structural, not user-editable vocab. Pattern: same as `user.status`'s `UserStatus`.
+- **Migration:** `is_utility = true → relationship = 'utility'`; all others → `subscriber` or `ppa_member` (BMO reviews the non-utility set once). Deprecate `is_utility` after backfill.
+- Edge case (org is *both* utility and subscriber) is out of scope now — single-valued; revisit only if a real case appears.
+
+**Axis 2 — `entity_type_id` (drives *persona / reporting*).** **Already exists** — FK `organisations.entity_type_id → managed_list_items`. This is the "what kind of org" axis (utility / donor-DFI / consultancy / government / researcher …). No change needed beyond ensuring the vocab covers the consumer types. It stays independent of `relationship` — e.g. a *government* body (entity_type) may be a *ppa_member* or a *subscriber* (relationship); a *donor* and a *consultancy* differ in type but are both *subscribers*.
+
+> Plain-language: **Axis 1 = "how do you relate to PRISM (and do you pay)?"** · **Axis 2 = "what kind of organisation are you?"** They don't move together, so they can't be one field.
+
+---
+
+## 3. Identity, seats & subscriptions
+
+Today access = `user.organisation_id` + `user.role_id` (one org, one role, no time-box). The subscription world needs a **seat** as the unit of access.
+
+### 3.1 Tables (new)
+
+**`subscription`** — an org's purchased (or granted) plan instance.
+```
+id, org_id → organisations, plan_id → plan,
+seat_cap (int; from plan, override allowed),
+term_start (date), term_end (date; PPP = start + 60d; annual = start + 1y; free = null/rolling),
+status: 'quoted' | 'awaiting_payment' | 'active' | 'expiring' | 'lapsed' | 'cancelled',
+created_by, created_at, updated_at
+```
+
+**`seat`** — the assignment of one person to one subscription; **this is what grants access** and carries expiry. Replaces the single `user.organisation_id/role_id` as the source of truth (those become a transitional cache of the user's "home" seat — see §3.4).
+```
+id, subscription_id → subscription, org_id → organisations (denormalized for query),
+user_id → user, role_id → roles (provider RBAC; subscriber seats use a generic viewer role + plan entitlements),
+is_admin (bool — can manage this org's seats),
+status: 'invited' | 'active' | 'expiring' | 'expired' | 'revoked',
+valid_from (date), valid_until (date; ≤ subscription.term_end),
+invited_by → user, assigned_at
+```
+
+- **Cap enforcement (deterministic, not AI):** count `seat` where `subscription_id = X` and `status in (invited, active, expiring)` must be ≤ `subscription.seat_cap`.
+- **Multi-org:** the same `user_id` appears in many `seat` rows across subscriptions/orgs → each counts toward its own subscription's cap. This is the junction that answers "the consultant engaged by WB *and* ADB."
+- **Expired ≠ deleted:** identity is retained; a freed seat returns capacity to the pool and can be reassigned or the same person re-activated without re-registration.
+
+### 3.2 Plans & entitlements
+
+**`plan`**
+```
+id, code ('basic'|'premium'|'pay_per_project'|'default'|'ppa_member'|'utility'),
+name, tier_group ('paid'|'free'),
+price_usd (null for free), seat_cap, term_days (365 | 60 | null for rolling),
+is_active
+```
+
+**`plan_entitlement`** — the axes you asked for: dashboard name **and** view vs downloadable.
+```
+id, plan_id → plan,
+dashboard: 'benchmarking_kpi' | 'regional' | 'country' | 'reports' | 'kpi_database' | …,
+access_level: 'view' | 'view_download'
+```
+- Everything is a plan — the 3 paid tiers **plus** `default` (BMO-revert target, §5), `ppa_member` (free, entitlements TBD), and `utility` (provider access set). One uniform entitlement mechanism.
+
+### 3.3 Act-as (multi-org effective access)
+
+A consultant with a **Premium** seat (WB) and a **Basic** seat (ADB) must not silently get Premium everywhere — that would gut the tiers. So:
+
+- The user session has an **active seat / org context**. Effective entitlements = `active seat → subscription → plan → plan_entitlement`.
+- A **context switcher** ("Working as: World Bank ▾") lets them flip between their active seats. Download is enabled only when the active seat's plan grants `view_download`.
+- Data shown is the same regional benchmarking either way, so act-as is *feature/entitlement* scoping, not data scoping — the switcher is light.
+- Store the active context on the session (or `user.active_seat_id`, nullable FK), defaulting to the user's most recently used / only seat.
+
+### 3.4 Migration / unify note
+
+**Decision (Eugene 2026-07-26): full unify now** — *all* access is via seats, including the provider side, done in this stream (not a hybrid). Utilities get an auto-provisioned free `utility` subscription per org; utility staff become seats (BLO = `is_admin`). `user.organisation_id` / `user.role_id` are retained transitionally as a cache of the user's home seat, then removed once all reads move to `seat`. **This is the largest single refactor** (every current read of `user.organisation_id`/`role_id`) → its own build phase, sequenced first so nothing has to be reworked twice.
+
+---
+
+## 4. Plans coverage & PPA members
+
+- Paid: Basic / Premium / Pay-per-project per §0.
+- `default` (free): view-only, minimal dashboards — **contents parked pending Eugene's associate** (§9). Used as the BMO-revert landing plan.
+- `ppa_member` (free): entitlements **TBD** — modeled now as a named plan with an empty/placeholder entitlement set so it slots in when decided.
+- `utility` (free): the provider access set (existing dashboards + data-entry), expressed as a plan for uniformity.
+
+---
+
+## 5. Registration & routing workflow
+
+Reuses what already exists (the pending-approval state machine + the **two-way clarification thread** `user_registration_clarification_message`) and adds intake, dedup, and split routing.
+
+### 5.1 Split the routing (unloads the BMO)
+
+- **Seat-fill by an existing org admin** (WB admin adds a consultant; utility BLO adds staff) → **instant, no BMO**. The subscription is already vetted.
+- **Net-new external org / individual** → BMO vetting (existing pending + clarification flow).
+
+### 5.2 Duplicate-org dedup ladder (cheap → AI → human)
+
+1. **Email-domain match** (`@worldbank.org` → World Bank exists) → route to *request a seat / join* that org.
+2. **Fuzzy name match** — live search *before* any "create new org" is offered.
+3. **AI entity resolution** where 1–2 miss ("World Bank Group / IBRD / WB Pacific" = same) → ranked candidates + rationale, **human confirms**.
+4. **BMO backstop + merge tool** for dupes that slip through.
+
+### 5.3 Join-existing routing (locked)
+
+When dedup matches an existing org:
+1. Request goes to **that org's admin** first: "Add this person to your quota?" — **BMO is cc'd** on the thread.
+2. Org admin **accepts** → seat assigned under that org (counts to its cap).
+3. Org admin **rejects** → BMO is already in the loop and can **revert the user to the `default` plan** (so the requester isn't stranded — they land on free view-only access).
+
+### 5.4 New intake object
+
+`access_request` captures the intake so provisioning is clean (rather than overloading `user.status=pending`):
+```
+id, requester_name, requester_email, matched_org_id (nullable), proposed_org_name (nullable),
+suggested_plan_id, purpose_text, dedup_candidates (jsonb), routing_target ('org_admin'|'bmo'),
+status: 'submitted'|'info_requested'|'with_org_admin'|'approved'|'declined'|'reverted_to_default'|'withdrawn',
+created_at, decided_by, decided_at
+```
+Clarification messages link to the `access_request`; on approval it provisions `user` + `seat` (+ `subscription` for a net-new org).
+
+**Where AI helps (intake + dedup, never authorization):** conversational intake → a complete structured request first time (fewer BMO round-trips); plan recommendation from answers; dedup ranking; a BMO copilot that summarizes + pre-fills. Grant/deny, cap, expiry, domain trust stay deterministic/human.
+
+---
+
+## 6. Payment (manual now, gateway later)
+
+### 6.1 Mode switch (DEV)
+
+`payment_settings` (DEV-configurable): `mode: 'manual' | 'gateway'`, plus **encrypted** gateway config strings (`gateway_provider`, keys). Flip to `gateway` when PPA has an internet-payment-capable bank.
+- `manual` → the PPA-Finance queue flow (§6.3).
+- `gateway` → self-serve checkout hits the gateway; no Finance queue.
+
+### 6.2 New role — **PPA Finance (`PPA_FIN`)**
+
+Processes card payments manually and updates PRISM. Gets a **Payments queue** sidebar item (add `PPA_FIN` to `roles` seed + `sidebar_access`). Acts as "the gateway" in manual mode.
+
+### 6.3 Manual flow — PRISM never touches the card number
+
+PRISM is **out of the card-data path**. The PAN/CVV are entered by the customer **directly into PPA's bank virtual terminal** (the bank's own secure channel), never into PRISM.
+
+1. Subscriber **self-initiates a payment request** for a plan: amount + currency + cardholder name (+ optionally card **expiry MM/YY** — never the PAN or CVV) → a `payment` row `status='queued_for_finance'` → routed to the **`PPA_FIN`** queue.
+2. **Pre-validation at entry** (advisory, non-sensitive fields only): flag an obviously-lapsed expiry, missing name, amount mismatch — before it reaches Finance. *(No PAN in PRISM, so no Luhn/brand check here; the bank terminal is the real authorization.)*
+3. PPA Finance takes the card from the customer via the **bank virtual terminal** and charges it there.
+4. Finance updates the `payment` row from the terminal receipt: **transaction/auth reference, status, amount, card brand + last-4** → `succeeded` / `failed (reason)`, stamped `processed_by` + `processed_at`.
+5. `succeeded` → subscription `active`. `failed` → notify subscriber with reason; they can retry.
+
+When the DEV switch flips to `gateway`, steps 1–4 collapse into a hosted-checkout / tokenized flow; PRISM still stores only the result fields (§6.4).
+
+### 6.4 Payment record — logged "as if the gateway processed it"
+
+**`payment`** — what any gateway would log, and what you can reference at any time. **Yes — transaction reference, status, amount, and date/time stamps are all captured here** (a request stamp *and* a processed stamp):
+```
+id, subscription_id → subscription,
+amount, currency ('USD'),                       -- amount
+status: 'pending_validation'|'queued_for_finance'|'processing'
+       |'succeeded'|'failed'|'refunded',        -- status (full lifecycle)
+transaction_reference,   -- the bank terminal's / gateway's approval/receipt code (Finance enters)
+method: 'card_virtual_terminal' | 'gateway' | 'bank_transfer',
+card_brand, card_last4, cardholder_name,        -- from the terminal receipt / request (no PAN, no CVV)
+requested_by → user, created_at,                -- when the request was raised  (timestamp 1)
+processed_by → user (PPA_FIN), processed_at,    -- when Finance charged it       (timestamp 2)
+failure_reason
+```
+- `created_at` = request raised; `processed_at` = charge completed → you always have both the "when asked" and "when paid" timestamps, plus the reference, status, and amount.
+- **Never persisted:** full PAN, CVV, card expiry-with-PAN. (Card capture happens in the bank virtual terminal — §6.5.)
+- Every status change also writes a `payment_event` audit row (from/to status, actor, timestamp) for a full paper trail.
+
+### 6.5 PCI-DSS posture — **decided: no PAN in PRISM**
+
+- **PRISM never stores or transmits the PAN or CVV.** Card capture + authorization happen entirely in **PPA's bank virtual terminal** (or a tokenizing gateway once the DEV switch is flipped). PRISM stays **out of the cardholder-data environment**.
+- Effect: **dramatically smaller PCI-DSS scope** (roughly SAQ-A territory) — no encrypted-PAN store, no KMS key, no purge job.
+- PRISM persists only **non-sensitive result data** (§6.4): amount, currency, status, transaction reference, timestamps, card **brand + last-4**, cardholder name, actors. Brand + last-4 without the PAN are safe to store.
+- The earlier "encrypted transient PAN handoff" table is **dropped** (Eugene, 2026-07-26).
+
+---
+
+## 7. Expiry, reminders & admin
+
+- **`access_settings`** (BMO-configurable): `reminder_lead_hours` (default 48) — applies to **both** seat-expiry and subscription-renewal reminders.
+- **Nightly job** (PM2 — `ecosystem.config.js` already present, add a cron): (a) flip seats past `valid_until` → `expired`, subscriptions past `term_end` → `lapsed`; (b) send reminders to **org admin *and* consultant** for seats/subscriptions inside `reminder_lead_hours`, with extend/renew deep-links. Extend = admin sets a new `valid_until ≤ term_end`.
+- **Org admin capability** (generalizes today's BLO screen, which can only create+list): invite/assign a seat, set/extend/revoke `valid_until`, resend magic-link, see seat usage vs cap. First approved user of a net-new subscriber org **becomes admin**; multiple admins allowed.
+- Audit: reuse the `user_status_event` pattern as `seat_event`.
+
+---
+
+## 8. Roles / RBAC deltas
+
+- **New role `PPA_FIN`** (PPA Finance) — payments queue only.
+- **Org-admin** = a `seat.is_admin` flag (not a new global role) — because access is uniform; admin is a management capability within an org.
+- **BLO** stays the utility's admin (`is_admin` on utility seats) and Utility-Liaison; glossary updated (`CONTEXT.md`).
+- Existing route-prefix / `sidebar_access` gating extends to the new surfaces (Payments, Subscriptions, Seats).
+
+---
+
+## 9. Pending follow-ups & open questions
+
+- **[FOLLOW-UP] Default plan contents** — awaiting Eugene's associate (which dashboards, view-only assumed).
+- **[FOLLOW-UP] PPA-member entitlements** — TBD; placeholder plan modeled.
+- **[RESOLVED 2026-07-26] PCI-DSS** — no PAN in PRISM; bank virtual terminal, PRISM records result only (§6.5).
+- **[RESOLVED 2026-07-26] Unify migration** — full unify now, provider side included, sequenced first (§3.4).
+- **[RESOLVED 2026-07-26] Manual checkout** — subscriber **self-initiates** the payment request (no card entry in PRISM); Finance completes it (§6.3).
+- Payment gateway provider (Stripe / Pacific PSP) — deferred until PPA banking allows.

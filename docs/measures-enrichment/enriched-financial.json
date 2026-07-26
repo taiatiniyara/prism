@@ -1,0 +1,298 @@
+[
+ {
+  "id": 141,
+  "name": "Direct Costs: Electricity Staff",
+  "definition": "Salaries, wages and related employment costs of staff directly engaged in electricity generation, transmission and distribution, entered in the utility's local currency. Includes remuneration, overtime, allowances, superannuation and other on-costs for operational and technical personnel attributable to the electricity function; excludes corporate, administrative and support-staff costs, which belong in apportioned or other-staff lines. Where staff split time across functions, only the electricity-attributable share is captured here.",
+  "synonyms": ["direct labour cost", "electricity staff costs", "operational staff cost", "direct employee costs"],
+  "alternative_names": {"Electricity Staff Costs": "Direct Costs: Electricity Staff", "Direct Labour - Electricity": "Direct Costs: Electricity Staff"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 142,
+  "name": "Direct Costs: Electricity O&M",
+  "definition": "Direct operations and maintenance costs of the electricity network and generation assets, other than staff and fuel, entered in the utility's local currency. Includes spare parts, consumables, contracted maintenance, repairs and servicing directly attributable to generating and delivering electricity; excludes staff costs (captured separately), fuel and oil, and general corporate overheads. Capitalised asset renewals are excluded, as they are recognised through depreciation rather than as an operating expense.",
+  "synonyms": ["operations and maintenance cost", "direct o&m", "maintenance expense", "network o&m cost"],
+  "alternative_names": {"Direct O&M - Electricity": "Direct Costs: Electricity O&M", "Electricity Operations & Maintenance": "Direct Costs: Electricity O&M"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 143,
+  "name": "Direct Costs: Electricity Purchases",
+  "definition": "Cost of electricity bought from third-party generators or interconnected providers for resale to customers, entered in the utility's local currency. Includes payments under power purchase agreements, independent power producer settlements and grid-import charges directly attributable to the electricity supplied; excludes the utility's own generation fuel, staff and O&M. Enter the purchased-power cost gross, before any netting of on-sold or wheeling revenue.",
+  "synonyms": ["purchased power cost", "power purchase cost", "electricity purchases", "bulk supply cost"],
+  "alternative_names": {"Purchased Power": "Direct Costs: Electricity Purchases", "Power Purchase Costs": "Direct Costs: Electricity Purchases"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 145,
+  "name": "Apportioned Cost: Fuel & Oil Expenditure",
+  "definition": "The share of total fuel and lubricating-oil expenditure apportioned to the electricity function, entered in the utility's local currency. Covers diesel, heavy fuel oil, petrol and lubricants consumed in generation, valued at delivered cost including freight; for multi-utility organisations only the electricity-attributable portion is entered here. Enter fuel cost net of any recoverable duty rebate only where that rebate is not already reported under the duty-and-taxes lines, to avoid double counting.",
+  "synonyms": ["fuel and oil cost", "apportioned fuel cost", "generation fuel expenditure", "fuel & lubricants cost"],
+  "alternative_names": {"Fuel & Oil Expenditure": "Apportioned Cost: Fuel & Oil Expenditure", "Apportioned Fuel Cost": "Apportioned Cost: Fuel & Oil Expenditure"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 146,
+  "name": "Apportioned Cost: Other Staff",
+  "definition": "The share of non-direct staff costs (administrative, corporate, finance, commercial and support personnel) apportioned to the electricity function, entered in the utility's local currency. Includes salaries, allowances and employment on-costs for staff not directly engaged in generation or network operations; excludes direct electricity staff, which are reported separately. The apportionment basis (for example headcount, cost or revenue share) should follow the utility's standard costing method and be applied consistently year to year.",
+  "synonyms": ["overhead staff cost", "administrative staff cost", "apportioned labour", "support staff cost"],
+  "alternative_names": {"Other Staff Costs": "Apportioned Cost: Other Staff", "Apportioned Overhead Staff": "Apportioned Cost: Other Staff"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 147,
+  "name": "Apportioned Cost: Other O&M",
+  "definition": "The share of general operations and maintenance and administrative overhead, other than staff and fuel, apportioned to the electricity function, entered in the utility's local currency. Includes office costs, insurance, IT, professional fees, vehicles and other corporate overheads not directly attributable to the network; excludes direct electricity O&M, fuel and staff costs. Apportion on the utility's standard basis and apply it consistently to keep the split between direct and apportioned costs comparable over time.",
+  "synonyms": ["overhead cost", "apportioned overhead", "administrative expense", "general o&m"],
+  "alternative_names": {"Other O&M": "Apportioned Cost: Other O&M", "Apportioned Overhead": "Apportioned Cost: Other O&M"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 148,
+  "name": "Apportioned Cost: Duty and Taxes - Fuel & Oil",
+  "definition": "The share of import duties, excise and other non-income taxes levied on fuel and lubricating oil, apportioned to the electricity function, entered in the utility's local currency. Includes customs duty, excise and fuel levies borne on generation fuel; excludes income tax and duties on non-fuel purchases. Enter the duty and tax component only once: if fuel cost is already reported gross of duty, avoid also including that duty here.",
+  "synonyms": ["fuel duty", "fuel excise", "fuel taxes", "import duty on fuel"],
+  "alternative_names": {"Duty & Taxes - Fuel": "Apportioned Cost: Duty and Taxes - Fuel & Oil", "Fuel Duty and Taxes": "Apportioned Cost: Duty and Taxes - Fuel & Oil"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 149,
+  "name": "Apportioned Cost: Duty and Taxes - Others",
+  "definition": "The share of duties and non-income taxes on goods and services other than fuel and oil, apportioned to the electricity function, entered in the utility's local currency. Includes import duties on plant, equipment and materials, and other indirect taxes or levies borne on non-fuel purchases; excludes income tax and fuel-related duties, which are reported separately. Recoverable input VAT or GST should be excluded, as it is not a cost to the utility.",
+  "synonyms": ["other duties and taxes", "import duty on materials", "non-fuel taxes", "indirect taxes"],
+  "alternative_names": {"Duty & Taxes - Others": "Apportioned Cost: Duty and Taxes - Others", "Other Duties and Taxes": "Apportioned Cost: Duty and Taxes - Others"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 200,
+  "name": "Revenue",
+  "definition": "Operating revenue earned by the utility from its electricity business over the reporting period, entered in the utility's local currency. Includes electricity sales to all customer classes, connection and reconnection fees, and other charges arising directly from supplying electricity; excludes non-operating income, government subsidies, financing income and foreign-exchange gains, which are reported on their own lines. Revenue is recognised on an accruals basis (energy billed or delivered), not on cash received.",
+  "synonyms": ["operating revenue", "electricity sales revenue", "turnover", "sales revenue"],
+  "alternative_names": {"Operating Revenue": "Revenue", "Electricity Sales": "Revenue", "Turnover": "Revenue"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 201,
+  "name": "Other Income",
+  "definition": "Income earned outside the core electricity supply business, entered in the utility's local currency. Includes rental income, gains on asset disposals, sundry recoveries, contract work for third parties and other miscellaneous operating income not classified as electricity revenue; excludes electricity sales, financing income, foreign-exchange gains and government subsidies, which have dedicated lines. Enter as gross income received, before netting against any related costs.",
+  "synonyms": ["miscellaneous income", "sundry income", "non-operating income", "other operating income"],
+  "alternative_names": {"Sundry Income": "Other Income", "Miscellaneous Income": "Other Income"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 210,
+  "name": "Cost of Sales",
+  "definition": "The direct cost of generating and delivering electricity sold during the period, entered in the utility's local currency. Includes fuel and lubricating oil, purchased power, direct generation and network operations and maintenance, and direct operating staff costs; excludes administrative and corporate overheads, which belong in Other Operating Expenses, and excludes depreciation, interest and tax. This is the electricity equivalent of cost of goods sold and should reconcile with the sum of the direct and apportioned cost lines.",
+  "synonyms": ["cost of goods sold", "cost of electricity sold", "direct costs", "cogs"],
+  "alternative_names": {"Cost of Goods Sold": "Cost of Sales", "COGS": "Cost of Sales", "Cost of Electricity Sold": "Cost of Sales"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 211,
+  "name": "Other Operating Expenses",
+  "definition": "Administrative, corporate and overhead operating expenses that are not part of the direct cost of sales, entered in the utility's local currency. Includes head-office costs, administrative salaries, insurance, professional fees, IT, office and general running costs; excludes cost of sales, bad debt expense, depreciation, amortisation, interest and income tax, each of which is reported separately. Do not include capital expenditure, which is recognised through depreciation rather than as an operating expense.",
+  "synonyms": ["administrative expenses", "overhead expenses", "operating expenses", "opex"],
+  "alternative_names": {"Administrative Expenses": "Other Operating Expenses", "Overheads": "Other Operating Expenses", "OPEX": "Other Operating Expenses"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 212,
+  "name": "Bad Debt Expense",
+  "definition": "The charge recognised in the period for trade receivables judged unlikely to be collected, entered in the utility's local currency. Comprises the movement in the provision (allowance) for doubtful debts plus any receivables written off directly during the period; it is a non-cash expense reflecting expected credit losses on customer accounts. Enter the expense for the period only, not the cumulative provision balance, which sits within the receivables and balance-sheet figures.",
+  "synonyms": ["doubtful debts expense", "provision for bad debts", "impairment of receivables", "credit loss expense"],
+  "alternative_names": {"Doubtful Debts": "Bad Debt Expense", "Provision for Bad Debts": "Bad Debt Expense", "Impairment of Receivables": "Bad Debt Expense"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 213,
+  "name": "Depreciation Expense",
+  "definition": "The systematic charge recognising the consumption of tangible fixed assets over the period, entered in the utility's local currency. Covers generation plant, network infrastructure, buildings, vehicles and equipment written down over their useful lives; it is a non-cash expense and excludes amortisation of intangible assets, which is reported separately. Depreciation applies to physical assets whereas amortisation applies to intangibles; keep the two distinct.",
+  "synonyms": ["depreciation", "depreciation charge", "asset depreciation"],
+  "alternative_names": {"Depreciation": "Depreciation Expense", "Depreciation Charge": "Depreciation Expense"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 214,
+  "name": "Amortization Expenses",
+  "definition": "The systematic charge recognising the consumption of intangible assets over the period, entered in the utility's local currency. Covers software, licences, capitalised development costs, goodwill where amortised, and similar intangibles written down over their useful lives; it is a non-cash expense and excludes depreciation of tangible assets, which is reported separately. Amortisation applies to intangibles whereas depreciation applies to physical assets; do not combine the two.",
+  "synonyms": ["amortisation", "amortisation charge", "intangible amortisation"],
+  "alternative_names": {"Amortisation": "Amortization Expenses", "Amortisation Expense": "Amortization Expenses"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 215,
+  "name": "Interest Expense",
+  "definition": "The cost of borrowing recognised during the period, entered in the utility's local currency. Includes interest on loans, bonds, overdrafts, leases and other debt instruments, together with the finance-charge element of borrowings; excludes principal repayments, which are balance-sheet movements, and other financing costs such as arrangement or guarantee fees where these are captured separately. Report interest gross, before offsetting any financing or interest income.",
+  "synonyms": ["interest cost", "finance cost", "borrowing cost", "interest on debt"],
+  "alternative_names": {"Finance Costs": "Interest Expense", "Interest on Borrowings": "Interest Expense"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 216,
+  "name": "Foreign Exchange Gains",
+  "definition": "Gains arising from movements in foreign-currency exchange rates during the period, entered in the utility's local currency. Includes realised gains on settling foreign-currency transactions and unrealised gains on retranslating foreign-currency assets and liabilities (such as fuel payables or foreign-denominated loans) at period end; it is reported as income. Enter foreign-exchange gains and losses on their separate lines rather than as a single net figure.",
+  "synonyms": ["fx gains", "forex gains", "exchange gains", "foreign currency gains"],
+  "alternative_names": {"FX Gains": "Foreign Exchange Gains", "Forex Gains": "Foreign Exchange Gains"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 217,
+  "name": "Foreign Exchange Losses",
+  "definition": "Losses arising from movements in foreign-currency exchange rates during the period, entered in the utility's local currency. Includes realised losses on settling foreign-currency transactions and unrealised losses on retranslating foreign-currency assets and liabilities (such as fuel payables or foreign-denominated loans) at period end; it is reported as a cost. Enter foreign-exchange gains and losses separately rather than netting them into one figure.",
+  "synonyms": ["fx losses", "forex losses", "exchange losses", "foreign currency losses"],
+  "alternative_names": {"FX Losses": "Foreign Exchange Losses", "Forex Losses": "Foreign Exchange Losses"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 218,
+  "name": "Financing Income",
+  "definition": "Income earned from financial assets and cash management during the period, entered in the utility's local currency. Includes interest on bank deposits and short-term investments, dividends received and other returns on financial instruments; excludes operating revenue and foreign-exchange gains, which are reported separately. Report financing income gross, without offsetting it against interest or other financing costs.",
+  "synonyms": ["interest income", "investment income", "finance income"],
+  "alternative_names": {"Interest Income": "Financing Income", "Investment Income": "Financing Income"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 219,
+  "name": "Other Financing Costs",
+  "definition": "Financing-related charges other than interest expense, entered in the utility's local currency. Includes loan arrangement and commitment fees, guarantee fees, bank charges on borrowings, and the unwinding of discounts on provisions; excludes interest expense itself and principal repayments. Report these costs separately from interest so that the interest burden and ancillary financing costs can each be analysed.",
+  "synonyms": ["finance charges", "bank charges", "loan fees", "other finance costs"],
+  "alternative_names": {"Other Finance Costs": "Other Financing Costs", "Financing Charges": "Other Financing Costs"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 220,
+  "name": "Income Tax",
+  "definition": "The income tax expense attributable to the period's profit, entered in the utility's local currency. Includes current tax payable on taxable profit and, where applicable, the deferred-tax charge or credit; excludes indirect taxes such as VAT, GST, import duty and fuel excise, which are captured elsewhere. State-owned utilities that are tax-exempt or pay a dividend in lieu of tax should enter zero here and record any such payment under the appropriate line.",
+  "synonyms": ["income tax expense", "corporate tax", "tax expense", "company tax"],
+  "alternative_names": {"Income Tax Expense": "Income Tax", "Corporate Tax": "Income Tax", "Tax Expense": "Income Tax"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 221,
+  "name": "Other Extraordinary Income",
+  "definition": "One-off or non-recurring income falling outside the normal course of business, entered in the utility's local currency. Includes items such as insurance settlements, one-time grants, reversals of prior provisions and gains from unusual events not expected to recur; excludes routine operating revenue, other income and government subsidies, which are reported separately. Isolating extraordinary items keeps recurring operating results comparable across utilities and years.",
+  "synonyms": ["extraordinary income", "exceptional income", "non-recurring income", "one-off income"],
+  "alternative_names": {"Extraordinary Income": "Other Extraordinary Income", "Exceptional Income": "Other Extraordinary Income"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 222,
+  "name": "Trade Receivables",
+  "definition": "The amount owed to the utility by customers for electricity billed but not yet paid at the reporting date, entered in the utility's local currency. This is a balance-sheet figure normally reported net of the provision for doubtful debts; it includes amounts due from all customer classes for energy and related charges and excludes non-trade receivables such as loans, staff advances and prepayments. State whether the figure is gross or net of provision consistently, as this affects receivable-days and collection ratios computed downstream.",
+  "synonyms": ["accounts receivable", "trade debtors", "receivables", "debtors"],
+  "alternative_names": {"Accounts Receivable": "Trade Receivables", "Trade Debtors": "Trade Receivables", "Debtors": "Trade Receivables"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 223,
+  "name": "Government Subsidies",
+  "definition": "Financial support received from government to support electricity operations or tariffs during the period, entered in the utility's local currency. Includes operating subsidies, tariff or fuel subsidies, community-service-obligation payments and similar transfers received or receivable; it is distinct from capital grants for asset funding. Subsidies may be booked as income or netted against costs in different utilities' accounts, so enter the amount as received income here to keep treatment consistent across the benchmark.",
+  "synonyms": ["government subsidy", "operating subsidy", "government grant", "community service obligation payment"],
+  "alternative_names": {"Government Grant": "Government Subsidies", "Operating Subsidy": "Government Subsidies", "CSO Payment": "Government Subsidies"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 224,
+  "name": "Total Current Assets",
+  "definition": "The total of assets expected to be realised, sold or consumed within twelve months of the reporting date, entered in the utility's local currency. Includes cash and cash equivalents, trade and other receivables, inventories (including fuel and spares stock) and short-term investments and prepayments; excludes property, plant, equipment and other non-current assets. This is a balance-sheet total measured at the period-end date, not a flow over the period.",
+  "synonyms": ["current assets", "short-term assets"],
+  "alternative_names": {"Current Assets": "Total Current Assets"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 225,
+  "name": "Total Assets",
+  "definition": "The total value of all assets controlled by the utility at the reporting date, entered in the utility's local currency. It is the sum of current assets and non-current assets, the latter including property, plant and equipment (generation, network and buildings), intangibles and long-term investments, stated net of accumulated depreciation and amortisation. This balance-sheet total should equal total equity plus total liabilities.",
+  "synonyms": ["total assets", "balance sheet total"],
+  "alternative_names": {"Balance Sheet Total": "Total Assets"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 226,
+  "name": "Total Equity",
+  "definition": "The residual interest in the utility's assets after deducting all liabilities, entered in the utility's local currency at the reporting date. Includes share or contributed capital, retained earnings or accumulated losses, government capital contributions and reserves such as revaluation and other reserves. Equity equals total assets minus total liabilities; a negative figure indicates accumulated losses exceed contributed capital.",
+  "synonyms": ["shareholders equity", "net assets", "owners equity", "capital and reserves"],
+  "alternative_names": {"Shareholders' Equity": "Total Equity", "Net Assets": "Total Equity", "Capital and Reserves": "Total Equity"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 227,
+  "name": "Total Current Liabilities",
+  "definition": "The total of obligations due to be settled within twelve months of the reporting date, entered in the utility's local currency. Includes trade and other payables, accrued expenses, the current portion of borrowings and leases, short-term provisions, and customer deposits repayable within the year; excludes long-term debt and other non-current liabilities. This is a balance-sheet total measured at period end, used with current assets to assess short-term liquidity.",
+  "synonyms": ["current liabilities", "short-term liabilities"],
+  "alternative_names": {"Current Liabilities": "Total Current Liabilities"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 228,
+  "name": "Total Liabilities",
+  "definition": "The total of all obligations owed by the utility at the reporting date, entered in the utility's local currency. It is the sum of current liabilities and non-current liabilities, the latter including long-term borrowings, lease liabilities, deferred tax and long-term provisions and deferred income; it excludes equity. This balance-sheet total equals total assets minus total equity.",
+  "synonyms": ["total liabilities", "total debt and obligations"],
+  "alternative_names": {"Total Obligations": "Total Liabilities"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 229,
+  "name": "Other Extraordinary Costs",
+  "definition": "One-off or non-recurring costs falling outside the normal course of business, entered in the utility's local currency. Includes items such as disaster and storm damage, asset write-offs, restructuring and redundancy costs, litigation settlements and losses from unusual events not expected to recur; excludes routine operating expenses, cost of sales, interest and tax. Isolating extraordinary items keeps recurring operating results comparable across utilities and years.",
+  "synonyms": ["extraordinary costs", "exceptional costs", "non-recurring costs", "one-off costs"],
+  "alternative_names": {"Extraordinary Costs": "Other Extraordinary Costs", "Exceptional Costs": "Other Extraordinary Costs"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 230,
+  "name": "Total Costs",
+  "definition": "The aggregate of all cost and expense lines for the period, entered in the utility's local currency. It is the sum of cost of sales, other operating expenses, bad debt expense, depreciation, amortisation, interest expense, foreign-exchange losses, other financing costs, income tax and other extraordinary costs. This measure is calculated by PRISM from the underlying cost lines and is not entered directly, so it should not be keyed in during data entry.",
+  "synonyms": ["total expenses", "total expenditure", "total operating and non-operating costs"],
+  "alternative_names": {"Total Expenses": "Total Costs", "Total Expenditure": "Total Costs"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 231,
+  "name": "Profit",
+  "definition": "The net financial result for the period, entered in the utility's local currency. It is calculated as total income (revenue, other income, foreign-exchange gains, financing income, other extraordinary income and government subsidies) minus Total Costs. This measure is computed by PRISM from the underlying income and cost lines and is not entered directly; a negative value represents a loss for the period.",
+  "synonyms": ["net profit", "net income", "profit or loss", "surplus or deficit", "bottom line"],
+  "alternative_names": {"Net Profit": "Profit", "Net Income": "Profit", "Profit/(Loss)": "Profit"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 140,
+  "name": "USD Exchange Rate",
+  "definition": "The exchange rate between the utility's local currency and the US dollar for the reporting period, expressed as the number of local currency units per 1 USD. For example, if 1 USD buys 2.20 local units, enter 2.20. This rate lets PRISM convert locally reported currency figures into a common USD basis for cross-utility comparison; use a consistent period-average or period-end convention as specified by the benchmark.",
+  "synonyms": ["exchange rate", "usd rate", "fx rate", "local currency per usd"],
+  "alternative_names": {"Exchange Rate (USD)": "USD Exchange Rate", "FX Rate": "USD Exchange Rate", "USD Rate": "USD Exchange Rate"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 500,
+  "name": "Tariff VAT or GST Rate",
+  "definition": "The rate of value-added tax or goods-and-services tax applied to electricity charges under the utility's tariff schedule, expressed as a percentage. It is the indirect-tax rate added to the customer's bill on top of energy and fixed charges; the customer class, block or payment mode to which it applies is handled by dimensions, so define it generically as the applicable VAT or GST rate. Enter the statutory rate as a proportion (for example 0.15 for 15 per cent), not the tax amount collected.",
+  "synonyms": ["vat rate", "gst rate", "sales tax rate", "consumption tax rate"],
+  "alternative_names": {"VAT Rate": "Tariff VAT or GST Rate", "GST Rate": "Tariff VAT or GST Rate"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 501,
+  "name": "Tariff Fixed Monthly Charge",
+  "definition": "The fixed periodic charge levied on a customer under the tariff schedule regardless of consumption, entered in the utility's local currency per month. It represents the standing or service charge applied independently of the kWh used; the customer class or payment mode to which it applies is handled by dimensions, so define it generically as the fixed monthly amount for the applicable tariff. Enter the scheduled tariff charge, exclusive of VAT or GST, not an average billed amount.",
+  "synonyms": ["fixed charge", "standing charge", "service charge", "monthly fixed fee"],
+  "alternative_names": {"Fixed Charge": "Tariff Fixed Monthly Charge", "Standing Charge": "Tariff Fixed Monthly Charge", "Service Charge": "Tariff Fixed Monthly Charge"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 502,
+  "name": "Tariff Rate per kwh within the Block",
+  "definition": "The per-kilowatt-hour energy charge that applies to consumption falling within a given tariff block, entered in the utility's local currency per kWh. Under a block or stepped tariff, each consumption band carries its own rate; this measure captures that within-block unit price, with the specific block, customer class and payment mode handled by dimensions, so define it generically. Enter the scheduled tariff rate exclusive of VAT or GST, not an average revenue-per-kWh figure.",
+  "synonyms": ["energy charge", "unit rate", "volumetric rate", "price per kwh", "tariff rate"],
+  "alternative_names": {"Rate per kWh": "Tariff Rate per kwh within the Block", "Energy Charge": "Tariff Rate per kwh within the Block", "Unit Rate": "Tariff Rate per kwh within the Block"},
+  "definition_status": "draft"
+ },
+ {
+  "id": 503,
+  "name": "Tariff Block Limit",
+  "definition": "The upper consumption boundary of a tariff block, expressed in kWh, beyond which the next block's rate applies. Under a block or stepped tariff this defines the size of a consumption band (for example the first 100 kWh per month); the specific block, customer class and payment mode are handled by dimensions, so define it generically as the block's kWh threshold. Enter the block's limit in kilowatt-hours, not a monetary value.",
+  "synonyms": ["block threshold", "consumption block limit", "tariff band limit", "step limit"],
+  "alternative_names": {"Block Limit": "Tariff Block Limit", "Block Threshold": "Tariff Block Limit", "Consumption Band Limit": "Tariff Block Limit"},
+  "definition_status": "draft"
+ }
+]

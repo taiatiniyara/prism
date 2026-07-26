@@ -1,4 +1,5 @@
 import { and, asc, eq, or, sql } from "drizzle-orm";
+import { alias } from "drizzle-orm/pg-core";
 
 import { db } from "@/db/connection";
 import {
@@ -12,17 +13,18 @@ import {
   bscTheme,
   bscUtilityNodes,
 } from "@/db/schema/bsc-builder";
-import { kpiDefinitions, kpiTargetTrajectory } from "@/db/schema/kpi";
+import { kpiDefinitions } from "@/db/schema/kpi";
+import { inputDefinitions } from "@/db/schema/dataEntry";
 import { managedListItems, managedLists } from "@/db/schema/managedLists";
 
 import type {
   CreateTemplateNodePayload,
   KpiOption,
+  InputOption,
   KpiTargetRow,
   ReportTypeOption,
   TargetPlanInput,
   TargetPlanSummary,
-  KpiTrajectory,
   OverlayNodeInput,
   ScorecardInitiative,
   ScorecardNode,
@@ -220,17 +222,21 @@ export const listReportTypeOptions = async (): Promise<ReportTypeOption[]> => {
 export const listBuilderKpiOptions = async (
   utilityId: number,
 ): Promise<KpiOption[]> => {
+  const unit = alias(managedListItems, "kpi_unit");
+  const category = alias(managedListItems, "kpi_category");
+  const subcategory = alias(managedListItems, "kpi_subcategory");
   const rows = await db
     .select({
       kpiDefinitionId: kpiDefinitions.id,
       name: kpiDefinitions.name,
-      unit: managedListItems.name,
+      unit: unit.name,
+      category: category.name,
+      subcategory: subcategory.name,
     })
     .from(kpiDefinitions)
-    .leftJoin(
-      managedListItems,
-      eq(kpiDefinitions.unit_id, managedListItems.id),
-    )
+    .leftJoin(unit, eq(kpiDefinitions.unit_id, unit.id))
+    .leftJoin(category, eq(kpiDefinitions.category_id, category.id))
+    .leftJoin(subcategory, eq(kpiDefinitions.subcategory_id, subcategory.id))
     .where(
       and(
         eq(kpiDefinitions.is_active, true),
@@ -241,6 +247,36 @@ export const listBuilderKpiOptions = async (
       ),
     )
     .orderBy(asc(kpiDefinitions.name));
+
+  return rows;
+};
+
+// Input picker options — sourced from the Input definitions table (its own
+// categories/subcategories/data types, distinct from the KPI table's values).
+export const listBuilderInputOptions = async (): Promise<InputOption[]> => {
+  const unit = alias(managedListItems, "input_unit");
+  const category = alias(managedListItems, "input_category");
+  const subcategory = alias(managedListItems, "input_subcategory");
+  const dataType = alias(managedListItems, "input_data_type");
+  const rows = await db
+    .select({
+      inputDefinitionId: inputDefinitions.id,
+      name: inputDefinitions.name,
+      unit: unit.name,
+      category: category.name,
+      subcategory: subcategory.name,
+      dataType: dataType.name,
+    })
+    .from(inputDefinitions)
+    .leftJoin(unit, eq(inputDefinitions.unit_id, unit.id))
+    .leftJoin(category, eq(inputDefinitions.measures_group_id, category.id))
+    .leftJoin(
+      subcategory,
+      eq(inputDefinitions.measures_subgroup_id, subcategory.id),
+    )
+    .leftJoin(dataType, eq(inputDefinitions.data_type_id, dataType.id))
+    .where(eq(inputDefinitions.is_active, true))
+    .orderBy(asc(inputDefinitions.name));
 
   return rows;
 };
@@ -309,7 +345,7 @@ export const getUtilityScorecard = async (
   // the Strategy Map all reflect the same scorecard.
   await ensureMandatoryMaterialized(utilityId);
 
-  const [nodes, objectives, initiatives, links, trajectories, templateRows] =
+  const [nodes, objectives, initiatives, links, templateRows] =
     await Promise.all([
       db
         .select()
@@ -326,35 +362,39 @@ export const getUtilityScorecard = async (
         .from(bscInitiatives)
         .where(eq(bscInitiatives.utility_id, utilityId))
         .orderBy(asc(bscInitiatives.ord)),
-      db
-        .select({
-          id: bscKpiLinks.id,
-          initiative_id: bscKpiLinks.initiative_id,
-          kpi_def_id: bscKpiLinks.kpi_def_id,
-          pending_custom_kpi_request_id:
-            bscKpiLinks.pending_custom_kpi_request_id,
-          ord: bscKpiLinks.ord,
-          kpi_name: kpiDefinitions.name,
-          unit: managedListItems.name,
-        })
-        .from(bscKpiLinks)
-        .leftJoin(
-          kpiDefinitions,
-          eq(bscKpiLinks.kpi_def_id, kpiDefinitions.id),
-        )
-        .leftJoin(
-          managedListItems,
-          eq(kpiDefinitions.unit_id, managedListItems.id),
-        )
-        .where(eq(bscKpiLinks.utility_id, utilityId))
-        .orderBy(asc(bscKpiLinks.ord)),
-      db
-        .select({
-          kpi_def_id: kpiTargetTrajectory.kpi_def_id,
-          trajectory: kpiTargetTrajectory.trajectory,
-        })
-        .from(kpiTargetTrajectory)
-        .where(eq(kpiTargetTrajectory.utility_id, utilityId)),
+      (() => {
+        const inputUnit = alias(managedListItems, "link_input_unit");
+        return db
+          .select({
+            id: bscKpiLinks.id,
+            initiative_id: bscKpiLinks.initiative_id,
+            kpi_def_id: bscKpiLinks.kpi_def_id,
+            input_definition_id: bscKpiLinks.input_definition_id,
+            pending_custom_kpi_request_id:
+              bscKpiLinks.pending_custom_kpi_request_id,
+            ord: bscKpiLinks.ord,
+            kpi_name: kpiDefinitions.name,
+            unit: managedListItems.name,
+            input_name: inputDefinitions.name,
+            input_unit: inputUnit.name,
+          })
+          .from(bscKpiLinks)
+          .leftJoin(
+            kpiDefinitions,
+            eq(bscKpiLinks.kpi_def_id, kpiDefinitions.id),
+          )
+          .leftJoin(
+            managedListItems,
+            eq(kpiDefinitions.unit_id, managedListItems.id),
+          )
+          .leftJoin(
+            inputDefinitions,
+            eq(bscKpiLinks.input_definition_id, inputDefinitions.id),
+          )
+          .leftJoin(inputUnit, eq(inputDefinitions.unit_id, inputUnit.id))
+          .where(eq(bscKpiLinks.utility_id, utilityId))
+          .orderBy(asc(bscKpiLinks.ord));
+      })(),
       db
         .select({
           id: bscTemplateNodes.id,
@@ -365,10 +405,6 @@ export const getUtilityScorecard = async (
     ]);
 
   const templateById = new Map(templateRows.map((t) => [t.id, t]));
-  const trajectoryByKpi = new Map<number, KpiTrajectory>();
-  for (const t of trajectories) {
-    trajectoryByKpi.set(t.kpi_def_id, t.trajectory as KpiTrajectory);
-  }
 
   // KPI links grouped by initiative.
   const linksByInitiative = new Map<string, ScorecardInitiative["kpis"]>();
@@ -377,13 +413,12 @@ export const getUtilityScorecard = async (
     list.push({
       id: link.id,
       kpiDefinitionId: link.kpi_def_id,
-      kpiName: link.kpi_name,
-      unit: link.unit,
+      inputDefinitionId: link.input_definition_id,
+      // Name/unit come from the KPI definition, or the Input definition when
+      // this link tracks an Input instead.
+      kpiName: link.kpi_name ?? link.input_name,
+      unit: link.unit ?? link.input_unit,
       pendingCustomKpiRequestId: link.pending_custom_kpi_request_id,
-      trajectory:
-        link.kpi_def_id != null
-          ? (trajectoryByKpi.get(link.kpi_def_id) ?? null)
-          : null,
       ord: link.ord,
     });
     linksByInitiative.set(link.initiative_id, list);
@@ -553,6 +588,7 @@ export const replacePerspectiveOverlay = async (
               utility_id: utilityId,
               initiative_id: iniRow.id,
               kpi_def_id: kpi.kpiDefinitionId,
+              input_definition_id: kpi.inputDefinitionId,
               pending_custom_kpi_request_id: kpi.pendingCustomKpiRequestId,
               ord: kpi.ord,
             });
@@ -696,42 +732,3 @@ export const listTargetPlans = async (
   });
 };
 
-// ---------------------------------------------------------------------------
-// Trajectory (shared per-utility, per-KPI)
-// ---------------------------------------------------------------------------
-
-export const setKpiTrajectory = async (
-  utilityId: number,
-  userId: string,
-  kpiDefinitionId: number,
-  trajectory: KpiTrajectory | null,
-): Promise<void> => {
-  if (trajectory == null) {
-    await db
-      .delete(kpiTargetTrajectory)
-      .where(
-        and(
-          eq(kpiTargetTrajectory.utility_id, utilityId),
-          eq(kpiTargetTrajectory.kpi_def_id, kpiDefinitionId),
-        ),
-      );
-    return;
-  }
-
-  await db
-    .insert(kpiTargetTrajectory)
-    .values({
-      utility_id: utilityId,
-      kpi_def_id: kpiDefinitionId,
-      trajectory,
-      updated_by_id: userId,
-    })
-    .onConflictDoUpdate({
-      target: [kpiTargetTrajectory.utility_id, kpiTargetTrajectory.kpi_def_id],
-      set: {
-        trajectory,
-        updated_by_id: userId,
-        updated_at: new Date(),
-      },
-    });
-};
