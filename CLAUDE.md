@@ -2,6 +2,8 @@
 
 ## Multi-session coordination (READ FIRST)
 
+**Project session tag: `PRISM 2`** — every session working on this repo is titled `PRISM 2 #<n> <name>`. This tag is the authoritative grouping key: to reach this project's other streams (e.g. the auto merge/DB-change alert), call `list_sessions` and message every other session whose title starts with `PRISM 2`. Do NOT group by folder — sessions run from `C:\Users\eugen`, worktrees, etc., so `cwd` is unreliable.
+
 Multiple Claude Code sessions work on PRISM concurrently (the "PRISM 2" sidebar group). They do **not** see each other's conversations — the shared board is the only channel between them.
 
 - **On start:** read `C:\Users\eugen\prism\docs\WORKSTREAMS.md` (absolute path — sessions run from different folders, including git worktrees) to learn the current state of every stream.
