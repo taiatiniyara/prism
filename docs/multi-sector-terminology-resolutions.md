@@ -1,7 +1,7 @@
 # Multi-sector terminology — proposed resolutions to ADR 0003's open questions
 
 **Stream:** #13 Multi-sector (water/sanitation) · **Owner:** `PRISM 2 #13 multi-sector`
-**Status:** 🟡 **proposed — awaiting ratification** by #8 (hierarchy/levels), #10 (org model), #11 (UI), + Eugene/domain on the label content.
+**Status:** 🟢 **#8 + #10 ratified (2026-07-27)** · ⏳ awaiting #11 (Q3 label resolution/UI) + Eugene/domain on the Q1 label strings & Phase-5a go.
 **Parent decision:** [adr/0003-multi-sector-terminology.md](adr/0003-multi-sector-terminology.md) (Proposed 2026-07-26, merged PR #55).
 **Purpose:** turn ADR 0003's five open questions into concrete, ratifiable answers so the cheap **label layer** can proceed without blocking the electricity migration (#2), and the **full water/sanitation modelling** is scoped as a separate, sequenced initiative.
 
@@ -55,6 +55,12 @@ Recommended seed for the first concept (`service_area`):
 **Edge case:** a utility that genuinely runs one combined area for all sectors would carry duplicate area rows (one per sector). This is rare, the duplication is cheap, and per-sector rows are needed for benchmarking anyway.
 
 **Ratifies:** **#8** (owns the `service_area` hierarchy level) confirms a `sector_id` attribute on the level is acceptable; **#2** writes the additive column when it folds hierarchy DDL in. Additive + Electricity-backfill ⇒ non-blocking to the #2 migration.
+
+> ✅ **RATIFIED by #8 (2026-07-27).** `service_areas.sector_id` (NOT NULL, backfill → Electricity) is an attribute on an anchored entity with **no interaction** with exactly-one-anchor / `entry_level` / the unique address; sector derives via the anchor join at levels 1–3 and must **not** become a 6th anchor or an address column. Three flags from #8, folded in below:
+>
+> - **(a) Retire the existing `provides_electricity/water/sanitation` booleans in the same change.** `service_areas` today carries three `provides_*` booleans (`db/schema/utility.ts` — `provides_electricity` default `true`, water/sanitation `false`) — a coarse denormalized "which sectors this area touches" flag, effectively a proto-Option-A. Under one-sector-per-row they become a **second, conflicting source of truth**, so `sector_id` **supersedes** them: **drop** the three booleans (or derive them from `sector_id`) as part of the same additive migration. **Verify-first caveat:** confirm no live rows have `provides_water`/`provides_sanitation = true` before assuming a clean 1:1 backfill; any true multi-sector area row must **split** into one row per sector (none expected today — PRISM is electricity-only — but check, don't assume).
+> - **(b) Levels 4–5 (org / country) span sectors.** Sector is on the area (levels 1–3); an org- or country-anchored row is inherently cross-sector. Sector-*sliced* org/country-level data, if ever needed, is a **dimension** question for Phase 5c — **not** an anchor change and not part of this additive step.
+> - **(c) No ordering constraint vs. #8's virtual-area retirement.** Virtual `service_area` rows getting the Electricity `sector_id` backfill before they're soft-deleted is harmless; the two changes don't need sequencing.
 
 ---
 
@@ -116,7 +122,7 @@ Recommended seed for the first concept (`service_area`):
 | # | Question | Proposed answer | Ratifier(s) | Blocking? |
 |---|---|---|---|---|
 | Q1 | Exact per-sector labels | Seed set (Grid / Supply Zone / Catchment), BMO-editable as data | Eugene / domain | No (content) |
-| Q2 | Shared vs sector-specific areas | **(B)** `service_areas.sector_id`, backfill Electricity | **#8** + #2 (DDL) | No (additive) |
+| Q2 | Shared vs sector-specific areas | **(B)** `service_areas.sector_id`, backfill Electricity; **retire `provides_*` booleans** in same change | **#8 ✅ ratified 2026-07-27** + #2 (DDL) | No (additive) |
 | Q3 | Where the map lives | Dedicated `sector_terminology` table + `sectors` ref/enum; resolve at Silver/UI | **#11** + #2 (DDL) + BMO | No (additive) |
 | Q4 | Sector vs org axes | Third orthogonal concept; `organisation_sector` M:N junction; org axes untouched | **#10 ✅ ratified 2026-07-27** | No (additive) |
 | Q5 | Timing | Phase 5a (relabel now) → 5b (sector first-class) → 5c (full modelling, deferred, gated on #2 done) | All + Eugene | No (off #2's path) |
@@ -127,8 +133,8 @@ Recommended seed for the first concept (`service_area`):
 
 ## Requested action from each stream
 
-- **#8** — confirm `sector_id` as an attribute on the `service_area` level (Q2). Anything about how it interacts with the exactly-one-anchor / `entry_level` design?
-- **#10** — confirm `sector` stays off the org axes and `organisation_sector` (M:N) is compatible (Q4).
-- **#11** — confirm the presentation-layer label-resolution approach and the `sector_terminology` table shape (Q3); own the UI surfacing.
-- **#2** — note (do not action yet): if ratified, the additive DDL (`sectors`, `sector_terminology`, `service_areas.sector_id`, `organisation_sector`) is small and Electricity-safe; fold in when convenient, no urgency, non-blocking.
+- **#8** — ✅ **ratified 2026-07-27** (`sector_id` on the level; retire `provides_*`; flags a/b/c folded in above).
+- **#10** — ✅ **ratified 2026-07-27** (sector off the org axes; `organisation_sector` M:N compatible).
+- **#11** — ⏳ confirm the presentation-layer label-resolution approach and the `sector_terminology` table shape (Q3); own the UI surfacing.
+- **#2** — note (do not action yet): if ratified, the additive DDL (`sectors`, `sector_terminology`, `service_areas.sector_id` + **drop/derive the `provides_electricity/water/sanitation` booleans**, `organisation_sector`) is small and Electricity-safe; fold in when convenient, no urgency, non-blocking. Verify no `provides_water`/`provides_sanitation = true` rows before the 1:1 backfill (per #8 flag a).
 - **Eugene / domain** — the Q1 label strings (esp. "Grid" vs "Network Area" for electricity) and the Phase 5a go/no-go.
