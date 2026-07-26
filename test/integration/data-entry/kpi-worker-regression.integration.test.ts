@@ -14,6 +14,13 @@ describe("kpi worker regression coverage", () => {
         energyProviderId: null,
         energyTypeId: null,
         energySourceId: null,
+        energyResourceTypeId: null,
+        customerTypeId: null,
+        paymentModeId: null,
+        consumptionBandId: null,
+        divisionId: null,
+        genderId: null,
+        utilityFunctionId: null,
       },
       {
         value: "3",
@@ -22,6 +29,13 @@ describe("kpi worker regression coverage", () => {
         energyProviderId: null,
         energyTypeId: null,
         energySourceId: null,
+        energyResourceTypeId: null,
+        customerTypeId: null,
+        paymentModeId: null,
+        consumptionBandId: null,
+        divisionId: null,
+        genderId: null,
+        utilityFunctionId: null,
       },
     ]);
     expect(rollup.sum).toBe(5);
