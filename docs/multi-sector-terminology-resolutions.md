@@ -90,6 +90,8 @@ Recommended seed for the first concept (`service_area`):
 
 **Ratifies:** **#10** confirms sector stays off the org axes and the additive `organisation_sector` junction is compatible with their model. Zero change to their two-axis design.
 
+> ✅ **RATIFIED by #10 (2026-07-27).** Confirmed the M:N `organisation_sector(organisation_id, sector_id)` shape, kept OFF `organisations`, is correct — a scalar sector column would be wrong for a utility running both electricity and water; `relationship`/`entity_type_id` untouched. Recorded in [tiered-access-and-registration-spec.md](tiered-access-and-registration-spec.md) §2 with an explicit "do NOT add a sector column to `organisations`" guard. **Non-blocking downstream heads-up from #10 (no action now):** if PPA ever sells dashboard plans *per sector*, their `plan_entitlement` (§3.2) gains a sector qualifier — purely additive, revisited only if a real multi-sector subscription appears; does not affect this junction.
+
 ---
 
 ## Q5 — Timing: when is the label layer worth shipping, independent of water/sanitation modelling?
@@ -116,7 +118,7 @@ Recommended seed for the first concept (`service_area`):
 | Q1 | Exact per-sector labels | Seed set (Grid / Supply Zone / Catchment), BMO-editable as data | Eugene / domain | No (content) |
 | Q2 | Shared vs sector-specific areas | **(B)** `service_areas.sector_id`, backfill Electricity | **#8** + #2 (DDL) | No (additive) |
 | Q3 | Where the map lives | Dedicated `sector_terminology` table + `sectors` ref/enum; resolve at Silver/UI | **#11** + #2 (DDL) + BMO | No (additive) |
-| Q4 | Sector vs org axes | Third orthogonal concept; `organisation_sector` M:N junction; org axes untouched | **#10** | No (additive) |
+| Q4 | Sector vs org axes | Third orthogonal concept; `organisation_sector` M:N junction; org axes untouched | **#10 ✅ ratified 2026-07-27** | No (additive) |
 | Q5 | Timing | Phase 5a (relabel now) → 5b (sector first-class) → 5c (full modelling, deferred, gated on #2 done) | All + Eugene | No (off #2's path) |
 
 **None of the proposed changes block #2.** All schema touches are additive lookups/columns/junctions with Electricity backfill; the full water/sanitation modelling (5c) is deliberately deferred.
