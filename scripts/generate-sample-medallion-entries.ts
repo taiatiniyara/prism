@@ -35,7 +35,7 @@ const STATUS_NAMES: Record<number, string> = {
 
 async function main() {
   const src = await db.execute(sql`
-    SELECT de.id, de.input_def_id, d.name AS def_name, d.variable_name,
+    SELECT de.id, de.measure_def_id, d.name AS def_name, d.variable_name,
            dt.name AS data_type, sc.name AS subcategory,
            de.service_area_id, sa.name AS service_area,
            de.energy_resource_id, er.name AS energy_resource,
@@ -48,14 +48,14 @@ async function main() {
            de.value, de.status_id
     FROM (
       SELECT *, ROW_NUMBER() OVER (
-        PARTITION BY input_def_id
+        PARTITION BY measure_def_id
         ORDER BY (value IS NULL OR value = '') ASC, value DESC
       ) AS rn
       FROM data_entries WHERE report_period_id = ${PERIOD_ID} AND is_deleted = false
     ) de
-    JOIN input_definitions d ON d.id = de.input_def_id
+    JOIN measure_definitions d ON d.id = de.measure_def_id
     LEFT JOIN managed_list_items dt ON dt.id = d.data_type_id
-    LEFT JOIN managed_list_items sc ON sc.id = d.subcategory_id
+    LEFT JOIN managed_list_items sc ON sc.id = d.measures_subgroup_id
     LEFT JOIN service_areas sa ON sa.id = de.service_area_id
     LEFT JOIN energy_resources er ON er.id = de.energy_resource_id
     LEFT JOIN power_stations ps ON ps.id = er.power_station_id
@@ -68,7 +68,7 @@ async function main() {
     ORDER BY dt.name, sc.name, d.name
   `);
   type Src = {
-    id: string; input_def_id: number; def_name: string; variable_name: string | null;
+    id: string; measure_def_id: number; def_name: string; variable_name: string | null;
     data_type: string | null; subcategory: string | null;
     service_area_id: number | null; service_area: string | null;
     energy_resource_id: number | null; energy_resource: string | null;
@@ -170,7 +170,7 @@ async function main() {
   // ---------- Sheet 1: exact physical columns, ids only ----------
   const s1 = wb.addWorksheet("1 data_entries (ids)");
   s1.columns = [
-    "id", "report_period_id", "energy_resource_id", "service_area_id", "input_def_id",
+    "id", "report_period_id", "energy_resource_id", "service_area_id", "measure_def_id",
     "value", "comments", "update_medium_id", "status_id", "is_relevant", "is_deleted",
     "energy_provider_id", "energy_source_id", "customer_type_id", "payment_mode_id",
     "updated_at", "updated_by_id", "power_station_id", "utility_id", "country_id",
@@ -180,7 +180,7 @@ async function main() {
   ].map((h) => ({ header: h }));
   for (const x of records) {
     s1.addRow([
-      x.r.id, p.id, x.r.energy_resource_id ?? null, x.r.service_area_id ?? null, x.r.input_def_id,
+      x.r.id, p.id, x.r.energy_resource_id ?? null, x.r.service_area_id ?? null, x.r.measure_def_id,
       null, null, null, 1, "TRUE", "FALSE",
       x.provider.id, x.source.id, x.customer.id, x.paymode.id,
       "2026-07-09", "migration", x.r.power_station_id ?? null, p.utility_id, p.country_id,
@@ -196,7 +196,7 @@ async function main() {
     "id", "report_period_id", "period", "utility_id", "utility", "country_id", "country",
     "subregion_id", "subregion", "region", "power_station_id", "power_station",
     "service_area_id", "service_area", "energy_resource_id", "energy_resource",
-    "input_def_id", "measure (variable_name)", "measure name", "data_type",
+    "measure_def_id", "measure (variable_name)", "measure name", "data_type",
     "energy_provider_id", "provider", "energy_type_id", "type", "energy_source_id", "source",
     "energy_resource_type_id", "resource_type", "customer_type_id", "customer_type",
     "payment_mode_id", "payment_mode", "consumption_band_id", "band",
@@ -208,7 +208,7 @@ async function main() {
     x.r.id, p.id, `FY${p.fy}`, p.utility_id, p.acronym, p.country_id, p.country,
     p.subregion_id ?? null, p.subregion ?? "", "Pacific", x.r.power_station_id ?? null, x.r.power_station ?? "",
     x.r.service_area_id ?? null, x.r.service_area ?? "", x.r.energy_resource_id ?? null, x.r.energy_resource ?? "",
-    x.r.input_def_id, x.vn, x.r.def_name, x.r.data_type ?? "",
+    x.r.measure_def_id, x.vn, x.r.def_name, x.r.data_type ?? "",
     x.provider.id, x.provider.label, x.etype.id, x.etype.label, x.source.id, x.source.label,
     x.resType.id, x.resType.label, x.customer.id, x.customer.label,
     x.paymode.id, x.paymode.label, "(new)", "All",

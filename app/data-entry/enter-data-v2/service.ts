@@ -473,13 +473,13 @@ export async function updateMeasureEntryValueAction(
       updateData.value_numeric = String(payload.valueNumeric);
     }
     if (payload.valueBoolean !== undefined) {
-      updateData.boolean_value = payload.valueBoolean;
+      updateData.value_boolean = payload.valueBoolean;
     }
     if (payload.valueOptionId !== undefined) {
       updateData.value_option_id = payload.valueOptionId;
     }
     if (payload.valueString !== undefined) {
-      updateData.value_string = payload.valueString;
+      updateData.value_text = payload.valueString;
     }
     await db
       .update(dataEntries)
@@ -509,13 +509,13 @@ export async function updateMeasureEntryValueAction(
         ? { value_numeric: String(payload.valueNumeric) }
         : {}),
       ...(payload.valueBoolean !== undefined
-        ? { boolean_value: payload.valueBoolean }
+        ? { value_boolean: payload.valueBoolean }
         : {}),
       ...(payload.valueOptionId !== undefined
         ? { value_option_id: payload.valueOptionId }
         : {}),
       ...(payload.valueString !== undefined
-        ? { value_string: payload.valueString }
+        ? { value_text: payload.valueString }
         : {}),
     });
   }
