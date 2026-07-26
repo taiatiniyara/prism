@@ -17,7 +17,7 @@ import { sql } from "drizzle-orm";
 
 import { user } from "./auth-schema";
 import { kpiDefinitions } from "./kpi";
-import { inputDefinitions } from "./dataEntry";
+import { measureDefinitions } from "./dataEntry";
 import { customKpiRequests } from "./custom-kpi-requests";
 import { organisations } from "./utility";
 
@@ -230,7 +230,7 @@ export const bscKpiLinks = pgTable(
     // either a KPI or an Input). Mutually exclusive with kpi_def_id /
     // pending_custom_kpi_request_id.
     input_definition_id: integer("input_definition_id").references(
-      () => inputDefinitions.id,
+      () => measureDefinitions.id,
     ),
     pending_custom_kpi_request_id: uuid(
       "pending_custom_kpi_request_id",

@@ -14,7 +14,7 @@ import {
   bscUtilityNodes,
 } from "@/db/schema/bsc-builder";
 import { kpiDefinitions } from "@/db/schema/kpi";
-import { inputDefinitions } from "@/db/schema/dataEntry";
+import { measureDefinitions } from "@/db/schema/dataEntry";
 import { managedListItems, managedLists } from "@/db/schema/managedLists";
 
 import type {
@@ -260,23 +260,23 @@ export const listBuilderInputOptions = async (): Promise<InputOption[]> => {
   const dataType = alias(managedListItems, "input_data_type");
   const rows = await db
     .select({
-      inputDefinitionId: inputDefinitions.id,
-      name: inputDefinitions.name,
+      inputDefinitionId: measureDefinitions.id,
+      name: measureDefinitions.name,
       unit: unit.name,
       category: category.name,
       subcategory: subcategory.name,
       dataType: dataType.name,
     })
-    .from(inputDefinitions)
-    .leftJoin(unit, eq(inputDefinitions.unit_id, unit.id))
-    .leftJoin(category, eq(inputDefinitions.measures_group_id, category.id))
+    .from(measureDefinitions)
+    .leftJoin(unit, eq(measureDefinitions.unit_id, unit.id))
+    .leftJoin(category, eq(measureDefinitions.measures_group_id, category.id))
     .leftJoin(
       subcategory,
-      eq(inputDefinitions.measures_subgroup_id, subcategory.id),
+      eq(measureDefinitions.measures_subgroup_id, subcategory.id),
     )
-    .leftJoin(dataType, eq(inputDefinitions.data_type_id, dataType.id))
-    .where(eq(inputDefinitions.is_active, true))
-    .orderBy(asc(inputDefinitions.name));
+    .leftJoin(dataType, eq(measureDefinitions.data_type_id, dataType.id))
+    .where(eq(measureDefinitions.is_active, true))
+    .orderBy(asc(measureDefinitions.name));
 
   return rows;
 };
@@ -375,7 +375,7 @@ export const getUtilityScorecard = async (
             ord: bscKpiLinks.ord,
             kpi_name: kpiDefinitions.name,
             unit: managedListItems.name,
-            input_name: inputDefinitions.name,
+            input_name: measureDefinitions.name,
             input_unit: inputUnit.name,
           })
           .from(bscKpiLinks)
@@ -388,10 +388,10 @@ export const getUtilityScorecard = async (
             eq(kpiDefinitions.unit_id, managedListItems.id),
           )
           .leftJoin(
-            inputDefinitions,
-            eq(bscKpiLinks.input_definition_id, inputDefinitions.id),
+            measureDefinitions,
+            eq(bscKpiLinks.input_definition_id, measureDefinitions.id),
           )
-          .leftJoin(inputUnit, eq(inputDefinitions.unit_id, inputUnit.id))
+          .leftJoin(inputUnit, eq(measureDefinitions.unit_id, inputUnit.id))
           .where(eq(bscKpiLinks.utility_id, utilityId))
           .orderBy(asc(bscKpiLinks.ord));
       })(),
