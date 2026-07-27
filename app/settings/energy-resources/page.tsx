@@ -88,7 +88,7 @@ export default async function UnitsSettingsPage() {
             label: "Is Aggregated Resource",
           },
           {
-            key: "resource_qty",
+            key: "unit_qty",
             type: "number",
             label: "Resource Quantity",
           },
@@ -151,7 +151,7 @@ export default async function UnitsSettingsPage() {
             label: "Is Aggregated Resource",
           },
           {
-            key: "resource_qty",
+            key: "unit_qty",
             type: "number",
             label: "Resource Quantity",
           },
