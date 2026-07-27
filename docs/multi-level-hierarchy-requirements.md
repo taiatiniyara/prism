@@ -1,109 +1,111 @@
-# Multi-level data hierarchy — requirements handoff to #2 (medallion migration)
+# Multi-level data hierarchy — agreed grain convention + requirements (RULED)
 
-**From:** stream #8 (PRISM multi-level data hier) · **To:** stream #2, owner of all shared-table DDL (Eugene, 2026-07-26)
-**Status:** design locked with Eugene 2026-07-24/26; this doc is the written form of it.
-**Context:** replaces PRISM 1's *virtual generator / virtual service area* pattern with explicit
-per-level anchoring ("Option A"; a reporting-entity supertype was considered and set aside).
-Confirmed compatible with #3's `kpi_actual` proposal (calculator-engine-spec §4.4) on 2026-07-26.
-**Terminology updated 2026-07-27** to the physicalised energy-dim names (PR #68): the level-1 anchor
-is `unit_id` → `units` (formerly `energy_resource_id` → `energy_resources`).
+**From:** stream #8 (PRISM multi-level data hier) · **To:** #2 (owner of all shared-table DDL), #3 (`kpi_actual`), #12 (RLS), #14 (data updates)
+**Status:** **RULED by Eugene 2026-07-27** — the "hybrid" convention below is the agreed
+`data_entries` grain model, endorsed independently by #8 and #4 (schema-for-AI assessment).
+**Supersedes:** this doc's earlier "Option A" exactly-one-anchor design (ratified 2026-07-26,
+superseded before any DDL), AND the medallion spec §1.4 *target* of making grain columns NOT NULL
+via "All areas"-type sentinel members (rejected — see §2.4). #2: please amend
+`schema-redesign-medallion.md` §1.4/§1.5 target notes accordingly.
+**History:** replaces PRISM 1's virtual-generator pattern. Terminology per PR #68
+(`unit_id`/`units`; dims provider/category/technology/asset).
 
 ---
 
-## 1. The requirement in one paragraph
+## 1. The ruled convention in one paragraph
 
-Every `data_entries` row must belong to **exactly one** real entity at **exactly one** of the five
-collection levels — equipment/unit, power station, service area, organisation, country — via a real
-FK, instead of everything hanging off `units` (the PRISM 1 generator table) with `is_virtual` rows
-standing in for the upper levels. Which anchor column is populated *is* the row's level. `kpi_actual` reuses the same
-anchor set (already agreed with #3).
+`data_entries` keeps its **as-built nullable grain chain** — `unit_id`, `power_station_id`,
+`service_area_id`, `utility_id`, `country_id` — filled **from the row's collection level up to the
+coarsest applicable level, and NULL below it** (finer levels empty). **A row's level = its deepest
+(finest) non-NULL grain column.** Nothing pretend ever holds data: no sentinel rows, no "All
+areas"-type members in grain columns — an empty finer column truthfully means "this fact lives
+above that level". Aggregates ("all countries", cohort benchmarks) are computed rollups, never
+stored addresses. `kpi_actual` uses this address model **literally** (per #3's spec §4.4).
 
-## 2. Anchor columns on `data_entries`
+Examples (grain columns only):
 
-| Level | Column | References |
-|---|---|---|
-| 1 Equipment / unit | `unit_id` (exists) | `units` |
-| 2 Power station | `power_station_id` (new) | `power_stations` |
-| 3 Service area / grid | `service_area_id` (exists) | `service_areas` |
-| 4 Organisation | `organisation_id` (new) | `organisations` |
-| 5 Country | `country_id` (new) | `countries` |
+| Fact | unit | station | area | utility | country |
+|---|---|---|---|---|---|
+| Genset #2 generation | ✔ | ✔ | ✔ | ✔ | ✔ |
+| Kinoya station auxiliaries | — | ✔ | ✔ | ✔ | ✔ |
+| Viti Levu grid losses | — | — | ✔ | ✔ | ✔ |
+| EFL total revenue | — | — | — | ✔ | ✔ |
+| Fiji GDP | — | — | — | — | ✔ |
 
-Constraints:
+Dims vs grain — the split philosophy is deliberate (per #4): the 10 dimension columns **classify**
+(NOT NULL, explicit **All** member — a real bucket), grain columns **locate** in a physical
+hierarchy (NULL above… means truthfully absent). Do not "unify" them.
 
-1. **Exactly-one-anchor:** `CHECK (num_nonnulls(unit_id, power_station_id,
-   service_area_id, organisation_id, country_id) = 1)`.
-2. **Derived level (recommended):** generated stored column `entry_level int` (1–5 by which anchor
-   is set) so queries/AI can filter by level without a CASE.
-3. **Level must match the measure:** each input/measure definition declares its collection level
-   (`agg_level`); an entry's anchor level must equal it. Cross-table, so: trigger or app-layer at
-   the choke point — #2's choice; #8 has a trigger sketch if wanted.
-4. **Unique address must be `NULLS NOT DISTINCT`:** 4 of 5 anchors are NULL on every row; a default
-   unique index treats NULLs as distinct and would dedupe nothing. #2's 10 NOT-NULL dims (All
-   members) are fine as-is; the anchors are the reason for the flag. Same applies to `kpi_actual`.
-   (PG 15+; else coalesce-expression index.)
-5. **The old `uniq_entry` was never unique** (declared `index()`, not `uniqueIndex()`), so expect —
-   and dedupe — pre-existing duplicate addresses during backfill *before* adding the real constraint.
+## 2. Requirements on the grain columns
 
-The 10 medallion dimension columns are #2's spec and are untouched by this — anchors are the
-"where", dims are the "what kind". The two axes compose; neither replaces the other.
-
-6. **Anchors must point at real entities only — never sentinel/aggregate rows.** Post-PR #60,
-   `countries`/`sub_regions` are UN M49-keyed and carry non-M49 **sentinel rows** ("All Countries",
-   "Others") for UI/aggregation. A `data_entries` row anchored to a sentinel would reintroduce the
-   virtual-generator problem at level 5 (a pretend entity holding real data). Enforcement mechanism
-   is #2's choice (id-range check, `is_aggregate` flag, or app rule at the write path) — the
-   requirement is that no entry/`kpi_actual` row may anchor to a sentinel. "All countries"
-   aggregates are *computed* rollups, not stored addresses. Confirmed with #13 (2026-07-27): real
-   entities are M49-keyed (codes ≤ 999) and sentinels use a disjoint id range (e.g. "All
-   Countries" = 100000), so a simple `country_id < 1000` CHECK on the anchor would suffice.
-
-7. **`country_context` fold-or-keep (flag, not blocker):** country-level explanatory data already
-   lives in the `country_context` side-table. Once `country_id` anchoring exists, decide whether
-   those data points migrate into `data_entries` (country-anchored, giving them the same
-   status/workflow machinery) or `country_context` stays as a deliberate side-channel for
-   sourced/reference values. #8 will bring a recommendation; #2 need not act on this in the first
-   DDL pass.
+1. **Chain-consistency validation** (replaces the old exactly-one CHECK): a row's filled grain
+   columns must match **real parentage** — a unit row's station/area/utility/country must equal
+   that unit's actual FK chain; an area row's utility/country must equal the area's owner.
+   Enforced at the write path (trigger or the shared writer) — the denormalized chain must never
+   contradict the entity tables.
+2. **Derived `grain_level`** (`'unit'|'station'|'area'|'utility'|'country'`): a **generated**
+   column (or Silver-view field, #2's choice) computed from which columns are filled. Generated ≠
+   the "dual-encoding disease" §1.5 forbids — it cannot disagree with the address. Purpose:
+   humans/AI write `WHERE grain_level='utility'` instead of NULL-pattern logic they will get wrong.
+   `kpi_actual` carries the same.
+3. **One grain per measure per period:** within a report period, a measure's rows sit at exactly
+   one grain level (the measure's declared `agg_level`, writer-validated per medallion §1.5) —
+   otherwise `WHERE country_id=X` double-counts. **Per period**, not global: §1.6 mixed-grain
+   measures (e.g. lump-sum→split revenue) legitimately change grain across periods.
+4. **No sentinel/aggregate rows as grain values — ever** (the clause that rejects the old spec
+   target): no "All areas" member, no "All Countries" (id 100000) or "Others" sub-region anchors,
+   no benchmarking-group addressing. M49 note: real countries are codes ≤999, sentinels ≥100000 —
+   a `country_id < 1000` CHECK suffices at level 5.
+5. **Unique address:** as built — `uniq_entry_address` UNIQUE **NULLS NOT DISTINCT** over
+   period + measure + 5 grain columns + 10 dims. Keep it; it is what makes NULL-above-level rows
+   deduplicate.
+6. **Drop `subregion_id` and `region` from `data_entries`** (small subtractive DDL): both are
+   determined by `country_id`, are excluded from the unique address, and are "never entry levels"
+   (spec §1.5) — keeping them writable is drift risk. Derive them in Silver/gold from `country_id`.
+7. **`country_context` fold-or-keep (flag, not blocker):** unchanged — #8 will bring a
+   recommendation once country-grain entry is live; not first-DDL-pass.
 
 ## 3. Backfill: promoting entries off the virtual entities
 
-The virtual rows themselves say where each entry really belongs
-(`units.power_station_id` / `.service_area_id`; `service_areas.utility_id`;
-`organisations.country_id`):
+Unchanged in intent; the promotion now writes **the chain**, not a single anchor. The virtual rows
+say where each entry belongs (`units.power_station_id` / `.service_area_id`;
+`service_areas.utility_id`; `organisations.country_id`):
 
-| Today's anchor | Promote to | Rule |
+| Today's anchor | Becomes (chain filled) | Rule |
 |---|---|---|
-| virtual `unit` **with** `power_station_id` | `power_station_id` | station-level data parked on a station virtual |
-| virtual `unit` without station | `service_area_id` | grid-level data parked on a grid virtual |
-| virtual `service_area` | `organisation_id` (= `service_areas.utility_id`) | org-level data parked on a virtual area |
-| org-anchored rows whose measure's `agg_level` = country | `country_id` (= `organisations.country_id`) | country-level data |
+| virtual `unit` **with** `power_station_id` | station+area+utility+country; unit NULL | station-level data parked on a station virtual |
+| virtual `unit` without station | area+utility+country | grid-level data parked on a grid virtual |
+| virtual `service_area` | utility+country; area NULL | org-level data parked on a virtual area |
+| org-level rows whose measure's `agg_level` = country | country only; utility NULL | country-level data (see §4 ownership note) |
 
-⚠ The virtual→level convention above is #8's read of the PRISM 1 data; **verify against the actual
-rows** (e.g. `SELECT ... WHERE is_virtual GROUP BY agg_level_id`) before trusting it. Run in one
-transaction with per-level row counts before/after; nothing may be dropped.
+⚠ Verify the virtual→level convention against actual rows before trusting it (e.g.
+`SELECT … WHERE is_virtual GROUP BY agg_level_id`); one transaction; per-level row counts
+before/after; nothing dropped. Expect and dedupe legacy duplicate addresses first (the old
+`uniq_entry` was never unique). After no entries reference them: soft-delete virtual
+`units`/`service_areas`; drop `is_virtual` only once onboarding/import paths stop creating them.
 
-After no entries reference them: soft-delete virtual `units`/`service_areas` rows; drop
-the `is_virtual` columns only once onboarding scripts / p1-import paths no longer create them.
-`generation_relevance` / `generation_toggle_relevance` stay service-area-anchored — untouched.
+## 4. RLS (#12) — native but with one sharp edge
 
-## 4. RLS tenant column (#12's requirement — restated so it isn't lost)
-
-The `organisation_id` **anchor** is not a tenant column (only populated on org-level rows). Carry an
-explicit owning-org column suitable for a Postgres RLS policy on **both** `data_entries` and
-`kpi_actual`: derivable at write time for equipment/station/area rows; NULL or a sentinel for
-country-level (cross-utility) rows, with the policy deciding their visibility. Coordinate the
-policy shape with #12 before finalizing.
+`utility_id` on every owned row **is** the tenant column — no extra column needed (improves on the
+old Option A §4). Two obligations:
+- **Policy shape:** country-level facts are shared (`utility_id IS NULL`), so the policy is
+  `utility_id = current_setting(…) OR utility_id IS NULL` (or a separate read policy for shared
+  rows). #12 owns the final shape.
+- **Leak guarantee:** no utility-owned fact may ever be written with NULL `utility_id` — that's a
+  cross-tenant leak. The §2.1 chain-consistency validation is also the enforcement point here:
+  every sub-country row must carry its real `utility_id`.
 
 ## 5. Interaction with the submissions rename
 
-Per the reconciled time-series design (board note, Eugene 2026-07-24): `report_periods` →
-`submissions` (+ `period_id` FK to the canonical `period` dim; `report_type`/`report_date` fold
-into `period`). #8 was to implement this rename; since #2 now owns the DDL it should land in the
-same rework — the anchor work is orthogonal (WHERE vs WHEN) but touches the same table and the same
-migration-extract contract, so land them as one coordinated change, not two migrations.
+Unchanged: `report_periods` → `submissions` + `period_id` FK to the canonical `period` dim
+(reconciled time-series design, Eugene 2026-07-24); lands with #2's rework as one coordinated
+change. Grain (WHERE) and period (WHEN) stay orthogonal.
 
 ## 6. Out of scope for #2 (stays with other streams)
 
-- `kpi_actual` column-set merge and its writer — #3 (pending #2's confirmation of the dim columns).
-- App-layer query changes (entry screens querying by the right anchor per measure level; removal of
-  `is_virtual` filters in reports) — #8/#11 after the schema lands.
-- `kpi_target` / `kpi_limit` — #5 / #3 per existing board notes.
+- `kpi_actual` build — #3; **uses this address model verbatim** (incl. `grain_level`); its rollup
+  rows are the one place coarse-grain computed values live.
+- App-layer query changes (entry screens per declared grain; removing `is_virtual` filters) —
+  #8/#11 after schema lands.
+- RLS policy DDL — #12 (per §4).
+- `kpi_target` / `kpi_limit` — #5 / #3 per board notes.
