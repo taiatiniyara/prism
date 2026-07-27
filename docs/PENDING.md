@@ -73,7 +73,7 @@ Legend: ✅ nothing pending · 📝 uncommitted · ⬆️ committed-not-pushed �
 | 1 | Project mgt | — | — | — | ✅ |
 | 2 | Medallion migration | — (DDL done; PR #75 merged; `units` col DROP applied ✅) | data **reload** via `migrate.ts` + `input_dl_def_mappings` regen | ⏳ Eugene: sample extract; **+ parked `asset_id→asset_class_id`/`agg_level_id→strata_id` col renames** (~7 cols/~50 files) awaiting Eugene's go + a quiet window | ⏳ paused |
 | 3 | Calculator engine | — (design + mockup approved) | schema tracer-bullets deferred | ⏳ #2 landing | ⏳ gated |
-| 4 | Schema for AI | — (authored energy-dim rename, PR #68 merged+applied) | — | — | ✅ |
+| 4 | Schema for AI | — (authored energy-dim rename, PR #68 merged+applied) | — | ⚠ **CONTESTED-HOLD** — #4's claimed spec-half ratification set aside by Eugene; deliberation pending | ⏳ |
 | 5 | BSC Builder | — (PR #35 merged; worktree clean) | — | ⏳ #2 `kpi_target` for Input-tracked targets (deferred) | ✅ / ⏳ deferred |
 | 7 | KPI calculator | — (not started/unconfirmed) | — | ⏳ #3 | ⚪ |
 | 8 | Multi-level hierarchy | — (requirements doc committed in `6cda722`) | — (no DDL of its own; #2 owns) | ✅ **RESOLVED** — Eugene ruled hybrid freeze-as-built (`7c01627`); remaining = app-layer query pass (w/ #11) gated on #2's DDL amendments | ⏳ #2 |
@@ -112,6 +112,7 @@ Direct DML/DDL on the shared **dev** DB with no commit/PR (or applied ahead of a
 |--------|-----------------|--------|
 | #2 | provide the real **sample data extract** | the medallion data reload (last step of the migration) |
 | #10 | **default-plan contents** + **member entitlements** (the free `member` plan's sector-scoped dashboard set; `member` is now association-agnostic — PPA→electricity, PWWA→water/sanitation) | tiered-access schema (no code until settled) |
+| #4 | **deliberate the CONTESTED-HOLD** — Eugene set aside #4's claimed spec-half ratification | #4's spec half (paused pending Eugene) |
 | — | review/merge the **10 held Dependabot majors** individually (esp. #47 TypeScript 7, #45 @types/node 26) — one at a time, not a blocker | dependency currency |
 
 *Cleared since refresh 1:* **#8** schema-convention (Eugene ruled hybrid freeze-as-built, `7c01627`). **#12 D1** — RLS tenant column decided (`utility_id`); #12 writes the policy DDL (handles `utility_id IS NULL` shared rows). **#12 D2** — API_KEY split now in PR #73 (no longer a decision). **Dependabot triage** — safe subset merged (#37/#41/#72), 10 majors held per Eugene's individual-review call.
