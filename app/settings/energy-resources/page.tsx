@@ -9,6 +9,7 @@ import {
 import { AllPowerStations } from "../power-stations/service";
 import { AllServiceAreas } from "../service-areas/service";
 import { resolveTerm } from "@/lib/terminology/resolver";
+import { getActiveSector } from "@/lib/terminology/active-sector";
 
 const ENERGY_SOURCE_MANAGED_LIST_ALIASES = [
   "Energy Source",
@@ -26,8 +27,12 @@ export default async function EnergyResourcesSettingsPage() {
       GetAllReportPeriods(),
     ]);
 
-  const serviceAreaLabel = resolveTerm("service_area");
-  const serviceAreaLabelPlural = resolveTerm("service_area", { plural: true });
+  const activeSector = await getActiveSector();
+  const serviceAreaLabel = resolveTerm("service_area", { sector: activeSector });
+  const serviceAreaLabelPlural = resolveTerm("service_area", {
+    sector: activeSector,
+    plural: true,
+  });
 
   return (
     <DataTable<EnergyResourcePeriodTableRow>

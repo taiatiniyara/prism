@@ -3,6 +3,7 @@ import { describe, it, expect } from "vitest";
 import { resolveTerm } from "@/lib/terminology/resolver";
 import { NEUTRAL_DEFAULTS } from "@/lib/terminology/concepts";
 import { DEFAULT_SECTOR } from "@/lib/terminology/sectors";
+import { getActiveSector } from "@/lib/terminology/active-sector";
 
 describe("terminology resolver (ADR 0003 label layer)", () => {
   it("resolves the active-sector default (electricity) to 'Grid'", () => {
@@ -32,6 +33,16 @@ describe("terminology resolver (ADR 0003 label layer)", () => {
     // whose neutral default carries a distinct plural instead.
     expect(resolveTerm("service_area", { sector: "water", plural: true })).toBe(
       "Supply Zones",
+    );
+  });
+
+  it("active-sector seam is behaviour-neutral in Phase 5a (resolves to electricity)", async () => {
+    // Pre-staged seam: getActiveSector() must equal DEFAULT_SECTOR today, so
+    // threading call sites through it does not change any rendered label until
+    // Phase 5b swaps the seam body. This test guards that neutrality.
+    expect(await getActiveSector()).toBe(DEFAULT_SECTOR);
+    expect(resolveTerm("service_area", { sector: await getActiveSector() })).toBe(
+      resolveTerm("service_area"),
     );
   });
 
