@@ -189,34 +189,35 @@ KPI values to **`kpi_actual`** — the *same* table the KPI-time-series streams 
 `kpi_actual`, **not** a separate `fact_kpi`. There is exactly one computed-KPI table, the calculator
 is its **sole writer**, and the BSC/target streams read it (targets live separately in `kpi_target`).
 
-To avoid inventing a parallel keying, **`kpi_actual` reuses the `data_entries` address model** — it
-holds *computed* values where `data_entries` holds *entered* ones:
+`kpi_actual` holds *computed* values where `data_entries` holds *entered* ones, keyed on the **same
+grain convention** — so an input cell's address and the output cell's address share one scheme.
 
-`kpi_actual = (kpi_def_id, period_id, grain anchor, 10 dimension slices, value, computed_at, formula_version)`
+**Grain convention DECIDED (Eugene ruled 2026-07-27): the hybrid nullable chain.** `data_entries`
+grain is the as-built **nullable hierarchy chain** — `utility_id + country_id + subregion_id + region
++ service_area_id + power_station_id + unit_id`, filled *down to the row's level* with NULL below;
+**level = the deepest non-NULL column**, surfaced as a generated **`grain_level`**
+(`'unit' | 'station' | 'area' | 'utility' | 'country'`) so humans/AI filter by level without
+NULL-pattern logic. **No sentinel grain values, ever.** (The earlier exactly-one-anchor "Option A" is
+**superseded** — do not use it.)
 
-- **grain anchor** — from stream #8's level-anchored model (**#8 CONFIRMED `kpi_actual` reuses this
-  exact anchor set, 2026-07-26**, see `multi-level-hierarchy-requirements.md`);
-- **dimension slices** — the 10 dimension member columns from stream #2's medallion `data_entries`;
-- **`period_id`** — the canonical `period` time axis from the KPI-time-series spec.
+**`kpi_actual` reuses this model verbatim** (incl. `grain_level`):
 
-This gives the level+scope keying the rollup needs (the current `kpi` table stores one value per
-(period, kpi_def) with no level/scope column, so rolled-up and finest values would overwrite).
+`kpi_actual = (kpi_def_id, period_id, ⟨nullable grain chain⟩, grain_level, 10 dimension slices, value, computed_at, formula_version)`
 
-**Anchor rules the write path must honour (confirmed with #8):**
-1. **Exactly-one-anchor** — `CHECK(num_nonnulls(equipment_id, power_station_id, service_area_id,
-   organisation_id, country_id) = 1)`; the populated anchor *is* the row's level.
-2. **`entry_level`** — a derived (1–5) column so queries/AI filter by level without a CASE.
-3. **`NULLS NOT DISTINCT`** on the unique address — 4 of 5 anchors are NULL per row, so a plain unique
-   index would dedupe nothing (#8 flags this applies to `kpi_actual` too; PG 15+).
-4. **No sentinel anchoring** — a rolled-up row anchors to the *real* parent entity (e.g. the real
-   `country_id`); "All Countries"/"Others" sentinels are **computed** aggregates, never a stored
-   address. (This is §0.4 — never store an aggregate as a member — applied to output rows.)
-5. **RLS owning-org column** (from #12) on `kpi_actual`, derivable at write time, so tenant isolation
-   can move to Postgres RLS without a second migration.
+- **`NULLS NOT DISTINCT`** unique address (grain columns are nullable).
+- **Never a sentinel** — a rolled-up row addresses the *real* parent entity; "All Countries" is a
+  **computed** aggregate, never a stored address (§0.4).
+- **RLS owning-org column** (#12), derivable at write time.
+- **`period_id`** = the canonical `period` dim (a per-utility submission row can't key a country rollup).
 
-**DDL ownership (Eugene 2026-07-26): #2 writes and runs the `kpi_actual` DDL.** #3 owns the
-**column-set merge spec + the write path**; we hand requirements to #2, not DDL. The dimension
-columns / merged set still await **#2's** confirmation — see WORKSTREAMS.md cross-stream note.
+**Two-axis rollup — works unchanged (§4.6):** a **grain rollup** writes the *coarser* address (finer
+grain columns NULL, `grain_level` = the coarser level); a **dimension rollup** pins the **All** member
+on that dimension. `kpi_actual` is the **one place coarse-grain computed values live** — `data_entries`
+stays finest-per-measure-per-period.
+
+**HOLD lifted** (grain convention ruled). **DDL ownership: #2 writes the `kpi_actual` DDL**; #3 owns
+the column-set-merge spec + write path. Still pending: #2's confirmation of the dimension
+columns / merged set — see WORKSTREAMS.md cross-stream note.
 
 ### 4.5 Gold refresh model (DECIDED 2026-07-24)
 

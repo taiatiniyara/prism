@@ -41,8 +41,15 @@ hierarchy (NULL above… means truthfully absent). Do not "unify" them.
 1. **Chain-consistency validation** (replaces the old exactly-one CHECK): a row's filled grain
    columns must match **real parentage** — a unit row's station/area/utility/country must equal
    that unit's actual FK chain; an area row's utility/country must equal the area's owner.
-   Enforced at the write path (trigger or the shared writer) — the denormalized chain must never
-   contradict the entity tables.
+   Enforced at the write path — the denormalized chain must never contradict the entity tables.
+   **Ownership DECIDED (Eugene, 2026-07-27): #2 builds the enforcement** as shared write-path
+   machinery (the `lib/data-entry/value-router.ts` pattern: one shared function every write path
+   calls; trigger as optional belt-and-braces). #8 specs/verifies the semantics; #11 routes all
+   entry surfaces through it; no stream hand-rolls chain writes.
+   *Scoping note (#11, 2026-07-27):* `value-router.ts` is currently wired into the **v2** entry path
+   only (`enter-data-v2/service.ts`) — the older `enter-data` path still hand-rolls writes. The
+   grain-writer must cover BOTH paths; #11 will flag v1 write sites lacking a clean seam so #2 can
+   shape the writer's signature to fit them.
 2. **Derived `grain_level`** (`'unit'|'station'|'area'|'utility'|'country'`): a **generated**
    column (or Silver-view field, #2's choice) computed from which columns are filled. Generated ≠
    the "dual-encoding disease" §1.5 forbids — it cannot disagree with the address. Purpose:
@@ -62,6 +69,9 @@ hierarchy (NULL above… means truthfully absent). Do not "unify" them.
 6. **Drop `subregion_id` and `region` from `data_entries`** (small subtractive DDL): both are
    determined by `country_id`, are excluded from the unique address, and are "never entry levels"
    (spec §1.5) — keeping them writable is drift risk. Derive them in Silver/gold from `country_id`.
+   *Post-drop note (#13, 2026-07-27):* the spent one-off `scripts/cleanup-m49-country-duplicates.ts`
+   safety-checks `data_entries.subregion_id` — already applied on dev, don't re-run it against a
+   post-drop DB (it will error on the missing column, by design not by accident).
 7. **`country_context` fold-or-keep (flag, not blocker):** unchanged — #8 will bring a
    recommendation once country-grain entry is live; not first-DDL-pass.
 
