@@ -19,9 +19,9 @@ type Props = {
 
 export default function PowerStationDnD({
   powerStations: initialPowerStations,
-  units: initialEnergyResources,
+  units: initialUnits,
 }: Props) {
-  const [units, setEnergyResources] = useState(initialEnergyResources);
+  const [units, setUnits] = useState(initialUnits);
   const [dragOverStationId, setDragOverStationId] = useState<
     number | "unassigned" | null
   >(null);
@@ -43,7 +43,7 @@ export default function PowerStationDnD({
       if (draggedResourceId === null) return;
 
       const prev = [...units];
-      setEnergyResources((current) =>
+      setUnits((current) =>
         current.map((r) =>
           r.id === draggedResourceId
             ? {
@@ -65,7 +65,7 @@ export default function PowerStationDnD({
           );
         }
       } catch {
-        setEnergyResources(prev);
+        setUnits(prev);
       }
 
       setDraggedResourceId(null);
@@ -77,7 +77,7 @@ export default function PowerStationDnD({
   const handleRemove = useCallback(
     async (resourceId: number) => {
       const prev = [...units];
-      setEnergyResources((current) =>
+      setUnits((current) =>
         current.map((r) =>
           r.id === resourceId ? { ...r, power_station_id: null } : r,
         ),
@@ -86,7 +86,7 @@ export default function PowerStationDnD({
       try {
         await RemoveEnergyResourceFromPowerStation(resourceId);
       } catch {
-        setEnergyResources(prev);
+        setUnits(prev);
       }
     },
     [units],
