@@ -276,7 +276,7 @@ export async function CreateEnergyResource(
   const [result] = await query.returning();
   return {
     success: true,
-    message: "Energy Resource created successfully",
+    message: "Unit created successfully",
     data: result,
   };
 }
@@ -362,7 +362,7 @@ export async function UpdateEnergyResource(
   if (!existing) {
     return {
       success: false,
-      message: "Energy Resource not found in the active utility scope.",
+      message: "Unit not found in the active utility scope.",
     };
   }
 
@@ -397,7 +397,7 @@ export async function UpdateEnergyResource(
   revalidatePath("/settings/energy-resources");
   return {
     success: true,
-    message: "Energy Resource updated successfully",
+    message: "Unit updated successfully",
     data: result,
   };
 }
@@ -437,7 +437,7 @@ export async function UpdateEnergyResourceFromPeriodRow(
   if (!existing) {
     return {
       success: false,
-      message: "Energy Resource not found in the active utility scope.",
+      message: "Unit not found in the active utility scope.",
     };
   }
 

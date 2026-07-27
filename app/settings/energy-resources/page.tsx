@@ -72,7 +72,7 @@ export default async function EnergyResourcesSettingsPage() {
         "technology",
         "is_active",
       ]}
-      title="Energy Resources"
+      title="Units"
       data={units}
       createFormProps={{
         formAction: CreateEnergyResourceFromPeriodRow,
