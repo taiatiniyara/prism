@@ -16,13 +16,15 @@ const arg = (n: string) => {
 const OUT = arg("out") ?? "./p2_migration_extract_template.xlsx";
 
 // col, required?, All-member default (dims), meaning
+// Dimension headers use the PHYSICALISED names (post-#68 rename) — they must match
+// EXTRACT_COLUMNS in lib/migration/parse.ts and the data_entries schema columns.
 const COLS: { key: string; req: string; all: string; note: string }[] = [
   { key: "report_period_id", req: "REQUIRED", all: "", note: "report_periods.id — unchanged p1↔p2" },
-  { key: "measure_id", req: "REQUIRED", all: "", note: "measure_definitions.id (the measure)" },
-  { key: "energy_provider_id", req: "REQUIRED", all: "20", note: "dim: Energy Provider member id (All=20)" },
-  { key: "energy_type_id", req: "REQUIRED", all: "30", note: "dim: Energy Type member id (All=30)" },
-  { key: "energy_source_id", req: "REQUIRED", all: "40", note: "dim: Energy Source member id (All GEN=40)" },
-  { key: "energy_resource_type_id", req: "REQUIRED", all: "983", note: "dim: Energy Resource Type member id (All=983)" },
+  { key: "measure_id", req: "REQUIRED", all: "", note: "measure_definitions.id (the measure) → maps to measure_def_id" },
+  { key: "provider_id", req: "REQUIRED", all: "20", note: "dim: Provider member id (All=20)" },
+  { key: "category_id", req: "REQUIRED", all: "30", note: "dim: Category member id (All=30)" },
+  { key: "technology_id", req: "REQUIRED", all: "40", note: "dim: Technology member id (All GEN=40)" },
+  { key: "asset_id", req: "REQUIRED", all: "983", note: "dim: Asset member id (All=983)" },
   { key: "customer_type_id", req: "REQUIRED", all: "690", note: "dim: Customer Type member id (All=690)" },
   { key: "payment_mode_id", req: "REQUIRED", all: "720", note: "dim: Payment Mode member id (All=720)" },
   { key: "consumption_band_id", req: "REQUIRED", all: "1005", note: "dim: Consumption Band member id (All=1005)" },
@@ -32,7 +34,7 @@ const COLS: { key: string; req: string; all: string; note: string }[] = [
   { key: "utility_id", req: "optional", all: "", note: "grain: organisations.id (null at finer/other grains)" },
   { key: "service_area_id", req: "optional", all: "", note: "grain: service_areas.id (null at higher levels)" },
   { key: "power_station_id", req: "optional", all: "", note: "grain: power_stations.id" },
-  { key: "energy_resource_id", req: "optional", all: "", note: "grain: energy_resources.id (equipment)" },
+  { key: "unit_id", req: "optional", all: "", note: "grain: units.id (equipment/unit — formerly energy_resources)" },
   { key: "country_id", req: "optional", all: "", note: "grain: countries.id" },
   { key: "value_type", req: "if value", all: "", note: "one of: numeric | boolean | text | option" },
   { key: "value", req: "optional", all: "", note: "the value (option → managed_list_items id). Present=filled shell, blank=empty shell" },
@@ -44,22 +46,22 @@ const headers = COLS.map((c) => c.key);
 // Example rows (address uses All-member dims; grain varies)
 const EX_FILLED: Record<string, string | number> = {
   report_period_id: 175, measure_id: 1501,
-  energy_provider_id: 20, energy_type_id: 30, energy_source_id: 40, energy_resource_type_id: 983,
+  provider_id: 20, category_id: 30, technology_id: 40, asset_id: 983,
   customer_type_id: 690, payment_mode_id: 720, consumption_band_id: 1005, division_id: 1011,
   gender_id: 1022, utility_function_id: 1023,
   service_area_id: 5, value_type: "numeric", value: 123456, status_id: 3,
 };
 const EX_EMPTY: Record<string, string | number> = {
   report_period_id: 175, measure_id: 200,
-  energy_provider_id: 20, energy_type_id: 30, energy_source_id: 40, energy_resource_type_id: 983,
+  provider_id: 20, category_id: 30, technology_id: 40, asset_id: 983,
   customer_type_id: 690, payment_mode_id: 720, consumption_band_id: 1005, division_id: 1011,
   gender_id: 1022, utility_function_id: 1023, service_area_id: 5,
 };
 const EX_SLICED: Record<string, string | number> = {
   report_period_id: 175, measure_id: 300,
-  energy_provider_id: 21, energy_type_id: 32, energy_source_id: 54, energy_resource_type_id: 984,
+  provider_id: 21, category_id: 32, technology_id: 54, asset_id: 984,
   customer_type_id: 690, payment_mode_id: 720, consumption_band_id: 1005, division_id: 1011,
-  gender_id: 1022, utility_function_id: 1024, energy_resource_id: 88,
+  gender_id: 1022, utility_function_id: 1024, unit_id: 88,
   value_type: "numeric", value: 42.5, status_id: 3,
 };
 
