@@ -64,16 +64,21 @@ All three include the PDF reports + full dashboards (Benchmarking KPI, Regional,
 **Decided 2026-07-27 (Eugene).** Association membership is a **cohort, not geography, and is sector-specific** (PPA → electricity; PWWA → water/sanitation). It generalises the electricity-only `organisations.ppa_membership_type_id` into a first-class M:N:
 
 ```
-benchmarking_group (id, name, code, sector_id → #13 sectors [ADR 0003], geo_scope? )
+benchmarking_group (id, name, code,
+                    geo_scope? → sub_regions / regions (M49-typed, optional) )
+benchmarking_group_sector (group_id → benchmarking_group, sector_id → sectors [#2 Phase 5b / ADR 0003])
+                    -- a group spans 1+ sectors: PPA→{electricity}, PWWA→{water, sanitation}
 benchmarking_group_member (group_id → benchmarking_group, organisation_id → organisations
                            -- (country_id variant per #13's advisory if country cohorts are needed),
                            joined_at)
 ```
 
 - **Two distinct axes, kept apart:** UN M49 (§2, on the org's country) = *where a utility is*; benchmarking group = *which cohort it benchmarks against*. Neither is the other.
-- **Drives two things:** (1) benchmarking cohorts for `ai_benchmark` / `benchmarking_request` (within group+sector, and between groups of the same sector); (2) **free access in this spec** — an org's free "member" entitlements (§4) apply to the **sector(s) of the groups it belongs to**. A PPA member sees electricity dashboards free; a PWWA member sees water/sanitation; a utility gets both provider access and free member dashboards for its sector(s).
+- **Sector is a group→sectors M:N (adjustment from #13, 2026-07-27):** a group carries **no scalar `sector_id`**; its sectors come from `benchmarking_group_sector` (PWWA = water + sanitation). A member's free-access sector set is therefore the **union of sectors across all groups the org belongs to** (group→sectors ∪ per membership).
+- **Drives two things:** (1) benchmarking cohorts for `ai_benchmark` / `benchmarking_request` (within group+sector, and between groups sharing a sector); (2) **free access in this spec** — an org's free "member" entitlements (§4) apply to that union of sectors. A PPA member sees electricity dashboards free; a PWWA member sees water + sanitation; a utility gets both provider access and free member dashboards for its sector(s).
 - **Never a data address (guardrail from #8, 2026-07-27):** a benchmarking group is a **membership/entitlement** structure only — no `data_entries` / `kpi_actual` row may ever anchor to a group. Cohort benchmarks are **read-time rollups over org-anchored (and finer) data**, grouped via this M:N at query time. Under #8's Option-A anchor model the FKs only reference the five entity tables, so the schema already enforces this — the group DDL must not weaken it.
-- **Ownership:** advisory raised by **Eugene via the #2 migration wrap-up** (not #8 — corrected 2026-07-27), for #10 + #13 to pick up. The `benchmarking_group` concept is co-owned with **#13** (sector tag) — this stream (#10) owns the org-membership + access-derivation side; #13 owns the sector dimension. DDL is a new shared table touching `organisations`, so it lands via **#2** (shared-table DDL owner); #8 reviewed §2.1 and confirmed no conflict with the data-hierarchy anchor model. Retire `ppa_membership_type_id` once membership is migrated into `benchmarking_group_member`.
+- **Ownership:** advisory raised by **Eugene via the #2 migration wrap-up** (not #8 — corrected 2026-07-27), for #10 + #13 to pick up. The `benchmarking_group` concept is co-owned with **#13** (sector tag + cohort semantics) — this stream (#10) owns the org-membership + access-derivation side. #8 reviewed §2.1 and confirmed no conflict with the data-hierarchy anchor model.
+- **DDL sequencing (agreed with #13, 2026-07-27):** `benchmarking_group_sector.sector_id` FKs the `sectors` reference **table**, which is #2's Phase-5b DDL (ADR 0003) — today sectors are only a code-level union (`lib/terminology/sectors.ts`). So `benchmarking_group*` DDL lands **after/with the `sectors` table**, via **#2** (shared-table DDL owner). **#10 does not need it pulled forward** — the member free-access tier is downstream (member entitlements still TBD, §4), and nothing #10 is building now (registration/country picker) depends on it. Retire `ppa_membership_type_id` once membership is migrated into `benchmarking_group_member`.
 
 ---
 
