@@ -47,6 +47,14 @@ const nextConfig: NextConfig = {
             ].join("; "),
           },
           {
+            // HTTPS-only enforcement. 2 years; applies to subdomains
+            // (dev./prismdashboard.org). `preload` intentionally omitted for
+            // now — only add it once every subdomain is confirmed HTTPS-only,
+            // as preload is hard to reverse.
+            key: "Strict-Transport-Security",
+            value: "max-age=63072000; includeSubDomains",
+          },
+          {
             key: "X-Content-Type-Options",
             value: "nosniff",
           },

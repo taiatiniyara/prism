@@ -4,6 +4,7 @@ import { testPowerBiConnection, isPbiHealthy } from "@/lib/powerbi";
 import { getCircuitState } from "@/lib/ai/service";
 import { AI_MODELS } from "@/lib/ai/types";
 import { logger } from "@/lib/logging/logger";
+import { getCurrentUser } from "@/lib/user.service";
 
 interface CheckResult {
   ok: boolean;
@@ -217,6 +218,19 @@ export async function GET(_request: Request): Promise<Response> {
       worldbank,
     },
   };
+
+  // Liveness (status + uptime) is public so external monitors keep working,
+  // but the per-component diagnostics (DB latency, SMTP/PowerBI/Azure
+  // connectivity, AI circuit state, raw error strings) are internal detail —
+  // expose them only to authenticated DEV/BMO to avoid information disclosure.
+  const currentUser = await getCurrentUser().catch(() => null);
+  const isAdmin = currentUser?.role === "DEV" || currentUser?.role === "BMO";
+  if (!isAdmin) {
+    return Response.json({
+      status: body.status,
+      uptime_seconds: body.uptime_seconds,
+    });
+  }
 
   return Response.json(body);
 }
