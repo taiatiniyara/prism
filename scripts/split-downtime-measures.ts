@@ -1,7 +1,7 @@
 /**
  * Splits the 4 Downtime measures into Generator (equipment) + Network (T&D function) variants.
- * Existing id -> Generator variant (renamed, agg_level 1, resource_type=Generator, drop
- * utility_function). New id -> Network variant (agg_level 3, utility_function by_context {Trans,Dist}).
+ * Existing id -> Generator variant (renamed, strata 1, resource_type=Generator, drop
+ * utility_function). New id -> Network variant (strata 3, utility_function by_context {Trans,Dist}).
  * Updates DB (measure_definitions, scope, applicability), then rebuilds the JSONs + workbooks.
  */
 import { readFileSync, writeFileSync } from "node:fs";
@@ -26,15 +26,15 @@ async function main() {
   for (const s of SPLITS) {
     // clone source row for the network variant, then mutate generator variant
     const src = ((await db.execute(sql`SELECT * FROM measure_definitions WHERE id=${s.gen}`)).rows ?? [])[0] as any;
-    // 1a. Generator variant: rename + agg_level 1 + definition
+    // 1a. Generator variant: rename + strata 1 + definition
     const gName = `Generator ${s.base}`;
-    await db.execute(sql`UPDATE measure_definitions SET name=${gName}, variable_name=${slug(gName)}, agg_level_id=1, definition=${DEF("Generator", s.base)}, updated_at=now() WHERE id=${s.gen}`);
+    await db.execute(sql`UPDATE measure_definitions SET name=${gName}, variable_name=${slug(gName)}, strata_id=1, definition=${DEF("Generator", s.base)}, updated_at=now() WHERE id=${s.gen}`);
     // 1b. Network variant: new row
     const nName = `Network ${s.base}`;
     await db.execute(sql`
-      INSERT INTO measure_definitions (id, name, variable_name, definition, definition_status, category_id, subcategory_id, unit_id, data_type_id, agg_level_id, sort_order, is_currency, is_calculated, is_active, updated_at)
+      INSERT INTO measure_definitions (id, name, variable_name, definition, definition_status, category_id, subcategory_id, unit_id, data_type_id, strata_id, sort_order, is_currency, is_calculated, is_active, updated_at)
       VALUES (${s.net}, ${nName}, ${slug(nName)}, ${DEF("Network", s.base)}, 'draft', ${src.category_id}, ${src.subcategory_id}, ${src.unit_id}, ${src.data_type_id}, 3, ${src.sort_order ?? 0}, false, false, true, now())
-      ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, variable_name=EXCLUDED.variable_name, definition=EXCLUDED.definition, agg_level_id=3, is_active=true, updated_at=now()`);
+      ON CONFLICT (id) DO UPDATE SET name=EXCLUDED.name, variable_name=EXCLUDED.variable_name, definition=EXCLUDED.definition, strata_id=3, is_active=true, updated_at=now()`);
 
     // 2. scope
     // generator: drop utility_function (already provider/type/source/resource_type by_context)

@@ -58,7 +58,7 @@ async function seedManagedLists() {
     { name: "Gender", description: "Gender dimension" },
     { name: "Division", description: "Organisational division dimension" },
     { name: "Consumption Band", description: "Customer consumption band dimension" },
-    { name: "Aggregation Level", description: "Aggregation levels" },
+    { name: "Strata", description: "Aggregation levels" },
     { name: "Status", description: "Workflow statuses" },
   ];
 

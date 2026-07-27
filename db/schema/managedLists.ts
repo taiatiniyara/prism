@@ -24,7 +24,7 @@ export const managedListItems = pgTable("managed_list_items", {
     .notNull()
     .references(() => managedLists.id),
   parent_id: integer("parent_id"),
-  asset_id: integer("asset_id"),
+  asset_class_id: integer("asset_class_id"),
   name: varchar("name", { length: 255 }).notNull(),
   description: varchar("description", { length: 255 }),
   is_active: boolean("is_active").default(true).notNull(),
@@ -41,7 +41,7 @@ export const unitTypeRelevance = pgTable(
   "energy_resource_type_relevance",
   {
     id: serial("id").primaryKey().notNull(),
-    asset_id: integer("asset_id")
+    asset_class_id: integer("asset_class_id")
       .notNull()
       .references(() => managedListItems.id, { onDelete: "restrict" }),
     category_id: integer("category_id")
@@ -53,7 +53,7 @@ export const unitTypeRelevance = pgTable(
   },
   (table) => [
     index("energy_resource_type_relevance_type_idx").on(
-      table.asset_id,
+      table.asset_class_id,
       table.category_id,
       table.technology_id,
     ),

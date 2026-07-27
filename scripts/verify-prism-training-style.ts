@@ -42,7 +42,7 @@ async function main() {
       name: measureDefinitions.name,
       subcategoryId: measureDefinitions.measures_subgroup_id,
       categoryId: measureDefinitions.measures_group_id,
-      aggLevelId: measureDefinitions.agg_level_id,
+      strataId: measureDefinitions.strata_id,
       formulaInputs: measureDefinitions.formula_inputs,
     })
     .from(measureDefinitions)
@@ -159,7 +159,7 @@ async function main() {
       const isGen = def.subcategoryId === DL_SUBCAT_GENERATION;
       const formulaInputs =
         (def.formulaInputs as FormulaInput[] | undefined) ?? [];
-      const aggLevel = def.aggLevelId ?? 1;
+      const strata = def.strataId ?? 1;
 
       if (isGen) {
         const epId = formulaInputs[0]?.energy_provider_id ?? null;
@@ -186,8 +186,8 @@ async function main() {
             }
           }
         }
-      } else if (def.categoryId === 205 && aggLevel === 3) {
-        // Operational at agg_level 3: count per SA
+      } else if (def.categoryId === 205 && strata === 3) {
+        // Operational at strata 3: count per SA
         for (const saId of saIds) {
           const irrelSA = irrelBySA.get(String(saId)) ?? new Set<number>();
           if (!irrelSA.has(def.inputDefId)) requested++;

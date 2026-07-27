@@ -43,9 +43,9 @@ async function main() {
   console.table(rows.rows);
 
   const agg = await pool.query(
-    `select 'kpi 106' as what, agg_level_id from kpi_definitions where id = 106
+    `select 'kpi 106' as what, strata_id from kpi_definitions where id = 106
      union all
-     select 'input ' || id::text, agg_level_id from measure_definitions  where id in (1652, 1659)`,
+     select 'input ' || id::text, strata_id from measure_definitions  where id in (1652, 1659)`,
   );
   console.table(agg.rows);
 }

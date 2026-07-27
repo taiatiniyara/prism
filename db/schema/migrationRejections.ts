@@ -32,7 +32,7 @@ export const FAILURE_CATEGORIES = [
   "type_cast", // value could not be coerced to the typed column
   "unresolved_ref", // a source label could not be resolved to an id (measure, dim member, period, utility)
   "value_router", // value did not match the measure's data_type routing
-  "grain_mismatch", // address grain contradicts the measure's declared agg_level
+  "grain_mismatch", // address grain contradicts the measure's declared strata
   "other",
 ] as const;
 export type FailureCategory = (typeof FAILURE_CATEGORIES)[number];

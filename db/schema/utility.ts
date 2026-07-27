@@ -98,13 +98,13 @@ export const serviceAreas = pgTable("service_areas", {
     .notNull(),
   is_virtual: boolean("is_virtual").notNull().default(false),
   is_active: boolean("is_active").notNull().default(true),
-  agg_level_id: integer("agg_level_id")
+  strata_id: integer("strata_id")
     .notNull()
     .references(() => managedListItems.id),
 });
 export type ServiceArea = typeof serviceAreas.$inferSelect & {
   utility?: string | null;
-  agg_level?: string | null;
+  strata?: string | null;
 };
 export type NewServiceArea = typeof serviceAreas.$inferInsert;
 
@@ -163,7 +163,7 @@ export const units = pgTable(
       .notNull()
       .references(() => managedListItems.id),
     is_virtual: boolean("is_virtual").default(false).notNull(),
-    agg_level_id: integer("agg_level_id")
+    strata_id: integer("strata_id")
       .notNull()
       .references(() => managedListItems.id),
     updated_at: timestamp("updated_at").notNull().defaultNow(),
@@ -182,7 +182,7 @@ export type Unit = typeof units.$inferSelect & {
   provider?: string | null;
   category?: string | null;
   technology?: string | null;
-  agg_level?: string | null;
+  strata?: string | null;
   asset?: string | null;
 };
 export type NewUnit = typeof units.$inferInsert;

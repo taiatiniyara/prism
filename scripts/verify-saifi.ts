@@ -29,7 +29,7 @@ async function main() {
   for (const check of CHECKS) {
     const [def] = (
       await pool.query(
-        `select id, name, formula, formula_inputs, agg_level_id
+        `select id, name, formula, formula_inputs, strata_id
          from kpi_definitions where id = $1`,
         [check.kpiId],
       )
@@ -72,7 +72,7 @@ async function main() {
 
     const resolved = await resolveFormulaInputValues({
       formulaInputs: def.formula_inputs as FormulaInput[],
-      kpiAggLevelId: def.agg_level_id,
+      kpiAggLevelId: def.strata_id,
       scope: {
         reportPeriodId: scope.report_period_id,
         serviceAreaId: scope.service_area_id,

@@ -145,7 +145,7 @@ export async function upsertHoursInPeriod(reportPeriodId: number): Promise<void>
       technology_id: dims.energySource,
       category_id: dims.energyType,
       provider_id: dims.energyProvider,
-      asset_id: dims.unitType,
+      asset_class_id: dims.unitType,
       customer_type_id: dims.customerType,
       payment_mode_id: dims.paymentMode,
       consumption_band_id: dims.consumptionBand,

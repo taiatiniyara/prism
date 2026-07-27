@@ -21,7 +21,7 @@ async function main() {
   const mrows = (((await db.execute(sql`
     SELECT m.id, m.name, m.variable_name, m.definition, m.synonyms, m.alternative_names, m.definition_status,
            m.category_id, c.name AS category, m.subcategory_id, sc.name AS subcategory,
-           m.unit_id, u.name AS unit, m.data_type_id, dt.name AS data_type, m.agg_level_id, m.sort_order,
+           m.unit_id, u.name AS unit, m.data_type_id, dt.name AS data_type, m.strata_id, m.sort_order,
            m.valid_polarity_id, m.valid_trend_id, m.valid_range_min, m.valid_range_max,
            m.is_currency, m.is_calculated, m.is_active, m.formula, m.formula_inputs
     FROM measure_definitions m
@@ -66,7 +66,7 @@ async function main() {
   // enriched
   const wbM = new ExcelJS.Workbook();
   const ws = wbM.addWorksheet("measure_definitions");
-  const H = ["id", "name", "variable_name", "definition", "synonyms", "alternative_names", "definition_status", "category_id", "category", "subcategory_id", "subcategory", "unit_id", "unit", "data_type_id", "data_type", "agg_level_id", "sort_order", "valid_polarity_id", "valid_trend_id", "valid_range_min", "valid_range_max", "is_currency", "is_calculated", "is_active", "formula", "formula_inputs"];
+  const H = ["id", "name", "variable_name", "definition", "synonyms", "alternative_names", "definition_status", "category_id", "category", "subcategory_id", "subcategory", "unit_id", "unit", "data_type_id", "data_type", "strata_id", "sort_order", "valid_polarity_id", "valid_trend_id", "valid_range_min", "valid_range_max", "is_currency", "is_calculated", "is_active", "formula", "formula_inputs"];
   ws.addRow(H); ws.getRow(1).font = { bold: true }; ws.getRow(1).fill = HEAD;
   for (const m of measures) { const row = ws.addRow(H.map((h) => (m as any)[h] ?? null)); if (!m.is_active) row.font = { color: { argb: "FF999999" } }; }
   ws.views = [{ state: "frozen", ySplit: 1, xSplit: 2 }];

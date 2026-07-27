@@ -93,7 +93,7 @@ export default async function ManagedListSettingsPage() {
               })),
             },
             {
-              key: "asset_id",
+              key: "asset_class_id",
               type: "managed-list",
               managedListName: "Asset Class",
               label: "Asset Class",
@@ -125,7 +125,7 @@ export default async function ManagedListSettingsPage() {
               })),
             },
             {
-              key: "asset_id",
+              key: "asset_class_id",
               type: "managed-list",
               managedListName: "Asset Class",
               label: "Asset Class",

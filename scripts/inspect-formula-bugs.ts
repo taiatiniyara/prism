@@ -8,10 +8,10 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 async function main() {
   const kpis = await pool.query(`
-    select k.id, k.name, k.formula, k.formula_inputs, u.name as unit, al.name as agg_level, k.is_active
+    select k.id, k.name, k.formula, k.formula_inputs, u.name as unit, al.name as strata, k.is_active
     from kpi_definitions k
     left join managed_list_items u on u.id = k.unit_id
-    left join managed_list_items al on al.id = k.agg_level_id
+    left join managed_list_items al on al.id = k.strata_id
     where k.name in (
       'Total Employees Male', 'Total Employees Female',
       'Planned SAIDI', 'Planned SAIFI', 'Unplanned SAIDI', 'Unplanned SAIFI',
@@ -22,7 +22,7 @@ async function main() {
   `);
   for (const r of kpis.rows) {
     console.log(
-      `\n[${r.id}] ${r.name} | unit=${r.unit} | level=${r.agg_level} | active=${r.is_active}`,
+      `\n[${r.id}] ${r.name} | unit=${r.unit} | level=${r.strata} | active=${r.is_active}`,
     );
     console.log(`  formula: ${r.formula}`);
     console.log(`  inputs:  ${JSON.stringify(r.formula_inputs)}`);

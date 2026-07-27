@@ -78,7 +78,7 @@ async function main() {
         operations_only: sa.operations_only ?? false,
         report_periods: sa.report_periods ?? [],
         is_virtual: sa.is_virtual ?? false, is_active: sa.is_active ?? true,
-        agg_level_id: mliIds.has(sa.agg_level_id) ? sa.agg_level_id : 1,
+        strata_id: mliIds.has(sa.strata_id) ? sa.strata_id : 1,
       });
       saIns++;
     } catch { /* dup */ }
@@ -117,7 +117,7 @@ async function main() {
         energy_source_id: mliIds.has(er.energy_source_id) ? er.energy_source_id : 41,
         type_id: mliIds.has(er.type_id) ? er.type_id : 1,
         is_virtual: er.is_virtual ?? false,
-        agg_level_id: mliIds.has(er.agg_level_id) ? er.agg_level_id : 1,
+        strata_id: mliIds.has(er.strata_id) ? er.strata_id : 1,
         updated_at: er.updated_at ? new Date(er.updated_at) : new Date(),
         updated_by_id: null,
       });

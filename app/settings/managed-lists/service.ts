@@ -64,7 +64,7 @@ export async function CreateManagedListItem(
   const query = db.insert(managedListItems).values({
     ...data,
     parent_id: toOptionalNumber(data.parent_id),
-    asset_id: toOptionalNumber(data.asset_id),
+    asset_class_id: toOptionalNumber(data.asset_class_id),
     is_active: true,
     id: generateRandomNumber(5),
   });
@@ -113,7 +113,7 @@ export async function GetAllManagedListItems(options?: {
       const unitType = list.find(
         (l) =>
           l.managed_list_items.id ===
-          item.managed_list_items.asset_id,
+          item.managed_list_items.asset_class_id,
       )?.managed_list_items;
       return {
         ...item.managed_list_items,
@@ -168,9 +168,9 @@ export async function UpdateManagedListItem(
     updateData.parent_id = toOptionalNumber(data.parent_id);
   }
 
-  if ("asset_id" in data) {
-    updateData.asset_id = toOptionalNumber(
-      data.asset_id,
+  if ("asset_class_id" in data) {
+    updateData.asset_class_id = toOptionalNumber(
+      data.asset_class_id,
     );
   }
 

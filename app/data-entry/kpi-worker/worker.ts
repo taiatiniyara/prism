@@ -156,7 +156,7 @@ export async function runKpiWorker(
 
       const resolvedInputs = await resolveFormulaInputValues({
         formulaInputs: target.formulaInputs,
-        kpiAggLevelId: target.aggLevelId,
+        kpiAggLevelId: target.strataId,
         scope: trigger.scope,
       });
 

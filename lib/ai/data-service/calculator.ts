@@ -113,7 +113,7 @@ export const calculateKpis = async (
       name: kpiDefinitions.name,
       formula: kpiDefinitions.formula,
       formulaInputs: kpiDefinitions.formula_inputs,
-      aggLevelId: kpiDefinitions.agg_level_id,
+      strataId: kpiDefinitions.strata_id,
       targetValue: kpiDefinitions.targets,
       limits: kpiDefinitions.limits,
     })
@@ -154,7 +154,7 @@ export const calculateKpis = async (
       try {
         const resolved = await resolveFormulaInputValues({
           formulaInputs,
-          kpiAggLevelId: def.aggLevelId,
+          kpiAggLevelId: def.strataId,
           scope,
         });
         variables = resolved.variables;

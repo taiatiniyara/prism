@@ -369,7 +369,7 @@ export async function UpdateMeasureDefinition(
 }
 
 export interface ExcelMeasureDefinition {
-  agg_level_id: number;
+  strata_id: number;
   data_type_id: number;
   input_category_id: number;
   input_id: number;
@@ -415,7 +415,7 @@ export async function UpdateMeasureDefinitionFromExcel(
     data_type_id: item.data_type_id,
     measures_group_id: item.input_category_id,
     measures_subgroup_id: item.input_subcategory_id,
-    agg_level_id: item.agg_level_id,
+    strata_id: item.strata_id,
     is_active: item.is_active,
     is_aggregated: item.is_aggregated,
     is_calculated: item.is_calculated,
@@ -601,7 +601,7 @@ export interface TrainingDataLabelDefinition {
   subcategory_name: string | null;
   unit_id: number;
   data_type_id: number;
-  agg_level_id: number;
+  strata_id: number;
 }
 
 export interface InputDlMapCandidate {
@@ -763,12 +763,12 @@ function scoreMapping(
   }
 
   if (
-    input.agg_level_id != null &&
-    training.agg_level_id != null &&
-    input.agg_level_id === training.agg_level_id
+    input.strata_id != null &&
+    training.strata_id != null &&
+    input.strata_id === training.strata_id
   ) {
     score += 5;
-    reasons.push("agg_level match");
+    reasons.push("strata match");
   }
 
   return {
@@ -830,7 +830,7 @@ async function fetchTrainingDataLabelDefinitions() {
       subcategory_id: Number(r[10]) || 0,
       unit_id: Number(r[18]) || 0,
       data_type_id: Number(r[19]) || 0,
-      agg_level_id: Number(r[27]) || 0,
+      strata_id: Number(r[27]) || 0,
       category_name: r[41] != null ? String(r[41]) : null,
       subcategory_name: r[42] != null ? String(r[42]) : null,
     }));

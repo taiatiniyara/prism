@@ -12,7 +12,7 @@ import { createFormulaVersionSnapshot } from "./snapshot";
 
 export interface ResolvedKpiTarget {
   kpiDefId: number;
-  aggLevelId: number | null;
+  strataId: number | null;
   formula: string;
   formulaInputs: FormulaInput[];
   formulaVersion: string;
@@ -21,7 +21,7 @@ export interface ResolvedKpiTarget {
 
 interface KpiDefinitionLike {
   id: number;
-  agg_level_id: number | null;
+  strata_id: number | null;
   is_active: boolean;
   formula: string | null;
   formula_inputs: FormulaInput[] | null;
@@ -98,7 +98,7 @@ export const filterAffectedKpiTargets = (
 
       return {
         kpiDefId: definition.id,
-        aggLevelId: definition.agg_level_id,
+        strataId: definition.strata_id,
         formula: definition.formula!,
         formulaInputs,
         formulaVersion: createFormulaVersionSnapshot({
@@ -137,7 +137,7 @@ export const resolveAffectedKpiTargets = async (
   const rows = await db
     .select({
       id: kpiDefinitions.id,
-      agg_level_id: kpiDefinitions.agg_level_id,
+      strata_id: kpiDefinitions.strata_id,
       is_active: kpiDefinitions.is_active,
       formula: kpiDefinitions.formula,
       formula_inputs: kpiDefinitions.formula_inputs,

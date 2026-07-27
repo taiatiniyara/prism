@@ -59,7 +59,7 @@ export async function AddServiceArea(
       is_active: true,
       is_virtual: false,
       operations_only: false,
-      agg_level_id: 3,
+      strata_id: 3,
     })
     .returning();
   revalidatePath("/settings/service-areas");
