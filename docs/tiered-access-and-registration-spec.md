@@ -2,21 +2,39 @@
 
 **Status:** 🚧 design in progress (grilled with Eugene 2026-07-26; several decisions locked, a few parked — see §9). Not built.
 **Owner stream:** board #10 "Tiered access / tenancy" — **now owned/driven end-to-end by the "PRISM 2 access & registration" session** (Eugene, 2026-07-26): registration & routing (§5) *and* the full tiered-access model (§2 orgs, §3 seats/subscriptions, §4 plans, §6 payment, §7 expiry/admin, §8 RBAC). Overlaps #8 on the `organisations` model — coordinate before any org DDL.
-**Source:** `…/DHI/PPA/Phase 2/5 Requirements/Tiered Access/Tiered Access Plans - 20260707.docx`.
+**Source:** `…/DHI/PPA/Phase 2/10 Implementation/Tiered Access/Tiered Access Plans - 20260728.xlsx` (supersedes the 20260707 docx — now **6 user-groups** with **per-dashboard view / download-charts / download-tables** rights).
 
-> **Why this exists.** PRISM 2 sells three **dashboard subscription plans** to *consumers* (donors, consultants), layered on top of the existing *provider* (utility) data-collection model. The current schema can't express subscriptions, seats, time-boxed access, or multi-org membership. This spec defines the target model.
+> **Why this exists.** PRISM 2 has **six access plans** — three free (Public, Utility, Allied Member) and three paid consumer tiers (Per Project, Basic, Premium) — layered on the existing *provider* (utility) data-collection model. The current schema can't express subscriptions, seats, time-boxed access, per-dashboard rights, or multi-org membership. This spec defines the target model.
 
 ---
 
-## 0. The three plans (from the requirements doc)
+## 0. The six user-groups / plans (from `Tiered Access Plans - 20260728.xlsx`)
 
-| Plan | Price | Seat cap | Datasets | Term |
+Six plans, one per expected user-group — **three free** (Public, Utility, Allied Member), **three paid** consumer tiers. (Supersedes the earlier 3-plan sheet; Pay-per-project seat cap changed 3→1.)
+
+| Plan | Price | Seats | Term | Relationship (§2) |
 |---|---|---|---|---|
-| **Basic** | US$2,200 | 5 | — (view only) | annual |
-| **Premium** | US$3,500 | 10 | downloadable (KPI results) | annual |
-| **Pay-per-project** | US$500 | 3 | downloadable | **60 days** |
+| **Public** | free | unlimited | rolling | subscriber (the default plan) |
+| **Utility** | free | unlimited | unlimited | utility |
+| **Allied Member** | free | unlimited | unlimited | member |
+| **Per Project** | US$500 | **1** | 60 days | subscriber |
+| **Basic** | US$2,200 | 5 | 365 days | subscriber |
+| **Premium** | US$3,500 | 10 | 365 days | subscriber |
 
-All three include the PDF reports + full dashboards (Benchmarking KPI, Regional, Country) + KPI database.
+**Entitlement matrix — three independent rights per dashboard: View / Download-Charts / Download-Tables** (✓ = granted). This is the authoritative source for §3.2 and resolves the previously-parked Public (default) + Allied-Member contents (§9).
+
+| Dashboard / report | right | Public | Utility | Allied | PerProj | Basic | Premium |
+|---|---|:-:|:-:|:-:|:-:|:-:|:-:|
+| Annual Benchmarking Reports (PDF) | view | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Public KPI | view | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| Utility-Specific KPIs | view | | ✓ | | | | |
+| | dl-charts | | ✓ | | | | |
+| | dl-tables | | ✓ | | | | |
+| Benchmarking / Country / Sub-regional / Regional KPIs | view | | ✓ | ✓ | ✓ | ✓ | ✓ |
+| | dl-charts | | ✓ | ✓ | ✓ | | ✓ |
+| | dl-tables | | ✓ | ✓ | ✓ | | ✓ |
+
+Key reads: **Public** = PDF + Public-KPI only. **Basic** = benchmarking **view but no downloads**. **Per Project / Premium / Allied / Utility** = benchmarking view **+ both downloads**. **Utility-Specific KPIs** = only the utility, for its own data (the four benchmarking-family dashboards share one row — identical rights). Sector scoping (which sector's data an Allied member / utility sees) is orthogonal, via `benchmarking_group_member` (§2.1).
 
 ---
 
@@ -27,11 +45,11 @@ All three include the PDF reports + full dashboards (Benchmarking KPI, Regional,
 3. **Unify** — an individual subscriber is an **org-of-one** ("workspace"); no separate code path.
 4. **Tiers are consumer-only.** Utilities and association **members** (PPA/PWWA/…) are **free**; member access is sector-scoped via the `benchmarking_group` M:N (§2.1); member entitlements TBD (§4).
 5. **Multi-org effective access = act-as** — entitlements are per-seat; the user works "as" one org at a time; features (esp. download) follow the active seat (§3.3).
-6. **Entitlement table**, keyed by `(plan_version, dashboard, access_level ∈ {view, view_download})` — plans are **effective-dated** (`plan` identity + immutable `plan_version` snapshots; a subscription locks to the version it was sold at, so price changes never reprice existing subs), decided 2026-07-27 via #11 (§3.2).
+6. **Entitlement model (two clean halves, §3.2):** (a) `plan_entitlement` keyed by `(plan, dashboard)` with **three independent rights** — view / download-charts / download-tables (§0 matrix); **entitlement changes forward-apply to all users on the plan** (Eugene 2026-07-28). (b) **Commercial terms** (price / seat_cap / term) live in effective-dated **`plan_version`** snapshots that a subscription **locks** to, so a repricing never touches existing subs (decided 2026-07-27 via #11).
 7. **Uniform access** within a subscriber org — "admin" is a management flag on a seat, not a higher tier.
 8. **Payment inside PRISM**: **manual now** — PPA Finance charges the card in **PPA's bank virtual terminal** (out-of-band); **PRISM never touches the PAN/CVV**, it only records the result. **DEV-toggled gateway switch** + config strings for later (§6).
 9. **48h reminder → admin + consultant**, lead time **BMO-configurable**, on both seat-expiry and subscription-renewal (§7).
-10. **Join-existing routing** → org admin first (recommend adding to their quota), **cc BMO**; if org admin rejects, **BMO can revert the user to the Default plan** (§5).
+10. **Join-existing routing** → org admin first (recommend adding to their quota), **cc BMO**; if org admin rejects, **BMO can revert the user to the `public` (default) plan** (§5).
 
 ---
 
@@ -117,38 +135,40 @@ invited_by → user, assigned_at
 
 **Prices/terms change over time; existing subscriptions keep what they were sold (decided 2026-07-27, Eugene, via #11).** Split the plan into a **stable identity** + **effective-dated version snapshots** — never a single mutable row (mutating `price_usd` would retroactively reprice every live subscription).
 
-**`plan`** — stable identity, never mutated for pricing:
+**`plan`** — stable identity (the 6 user-groups, §0):
 ```
-id, code ('basic'|'premium'|'pay_per_project'|'default'|'member'|'utility'),
+id, code ('public'|'utility'|'allied_member'|'per_project'|'basic'|'premium'),
 name, tier_group ('paid'|'free'), is_active
 ```
 
-**`plan_version`** — the effective-dated snapshot; price/seat/term live here:
+**`plan_version`** — effective-dated **commercial terms only** (price/seat/term); these **lock** to the subscription:
 ```
 id, plan_id → plan,
-price_usd (null for free), seat_cap, term_days (365 | 60 | null for rolling),
+price_usd (null/0 for free), seat_cap (null = unlimited), term_days (365 | 60 | null for rolling/unlimited),
 valid_from (date), valid_to (date, null = current),
 created_by, created_at
 ```
-- Exactly **one current version** per plan (`valid_to IS NULL`). A DEV/BMO edit = **close** the current version (set `valid_to`) + **insert** a new one — versions are **immutable, never updated in place**, so change history falls out for free (the version list). A `subscription` locks to its `plan_version_id` (§3.1), so old subs keep their sold price/seat/term.
+- Exactly **one current version** per plan (`valid_to IS NULL`). A DEV/BMO price/seat/term edit = **close** the current version (set `valid_to`) + **insert** a new one — versions are **immutable**, so the change history is the version list. A `subscription` locks its `plan_version_id` (§3.1), so old subs keep the price/seat/term they were sold.
 
-**`plan_entitlement`** — dashboard × view/download, keyed to the **version** (so a version fully captures what the plan offered):
+**`plan_entitlement`** — dashboard × the **three rights** (§0 matrix), keyed to the **plan identity** (not the version) because **entitlement changes forward-apply to every user on the plan** (Eugene 2026-07-28):
 ```
-id, plan_version_id → plan_version,
-dashboard: 'benchmarking_kpi' | 'regional' | 'country' | 'reports' | 'kpi_database' | …,
-access_level: 'view' | 'view_download'
+id, plan_id → plan,
+dashboard: 'annual_reports_pdf'|'public_kpi'|'utility_specific_kpi'
+         | 'benchmarking_kpi'|'country_kpi'|'subregional_kpi'|'regional_kpi',
+can_view (bool), can_download_charts (bool), can_download_tables (bool)
 ```
-- **One open nuance (for #11's prototype to settle):** should an entitlement change **forward-apply** to existing subs (common SaaS — add a dashboard for everyone, keep their old *price*) or **lock** with the sold version? **Billing terms (price/seat/term) definitely lock**; I lean **forward-apply for entitlements** (access reads the plan's *current* version's entitlements; billing reads the *sold* version's price). Prototype will validate.
-- Everything is a plan — the 3 paid tiers **plus** `default` (BMO-revert target, §5), `member` (free; applied per the sector(s) of the org's `benchmarking_group_member` rows, §2.1), and `utility` (provider access set). One uniform entitlement mechanism.
-- **UX in flight:** #11 is building a throwaway mock-backed **prototype** (view/edit plans + version-history) to drive these decisions (incl. still-open default-plan contents + member entitlements); the `plan`/`plan_version`/`plan_entitlement` **DDL formalizes with #2** — ping #11 to rebind the prototype to real tables when it lands.
+- **View is prerequisite** for either download (enforce: a download right implies `can_view`). Editing a plan's entitlements takes effect immediately for **all** its subscribers — no per-subscription locking. History is an **audit trail** (`plan_entitlement_event`: from/to, actor, timestamp), not version-locking — so "see historical changes" is satisfied without freezing anyone.
+- **Why the split:** commercial terms (what you *paid*) lock to the sold `plan_version`; feature entitlements (what the plan *grants*) forward-apply from the live `plan_entitlement`. A repricing never changes access; a dashboard added to Premium reaches every Premium subscriber at once.
+- Everything is a plan — the 3 paid tiers **plus** `public` (free default / BMO-revert target, §5), `allied_member` (free; scoped per the org's `benchmarking_group_member` sector(s), §2.1), and `utility` (provider set). One uniform mechanism.
+- **UX in flight:** #11 builds a throwaway mock-backed **prototype** (view/edit plans + version-history) → rebind to the real `plan`/`plan_version`/`plan_entitlement` tables (**DDL with #2**) once it lands.
 
 ### 3.3 Act-as (multi-org effective access)
 
 A consultant with a **Premium** seat (WB) and a **Basic** seat (ADB) must not silently get Premium everywhere — that would gut the tiers. So:
 
 - The user session has an **active seat / org context**. Effective entitlements = `active seat → subscription → plan → plan_entitlement`.
-- A **context switcher** ("Working as: World Bank ▾") lets them flip between their active seats. Download is enabled only when the active seat's plan grants `view_download`.
-  - **Enforcement point (added 2026-07-26, registration session):** `view` vs `view_download` must be denied at the **export endpoint** (the server route that streams the CSV/Excel, or — while Power BI is still embedded — at embed-token issuance, with "export data" disabled in the embed config). Hiding the download button is a UX affordance, **not** a control: a `view`-only seat that reaches the export URL directly must get a 403. Same principle already applied to the data boundary (external gold views, not dashboard filters) — the control lives in the server, never the page.
+- A **context switcher** ("Working as: World Bank ▾") lets them flip between their active seats. Each of the **three rights** — view, download-charts, download-tables — is enabled only when the active seat's plan grants it (`can_view` / `can_download_charts` / `can_download_tables` for that dashboard).
+  - **Enforcement point (server-side, not the button):** each right is denied at the **server** — the export route that streams the chart image / CSV-Excel (or, while Power BI is embedded, at embed-token issuance with the matching export capability disabled). Hiding a control is a UX affordance, **not** a control: a seat lacking `can_download_tables` that reaches the table-export URL must get a **403**. Charts and tables are **gated separately** (e.g. Basic can *view* benchmarking but download neither; Premium downloads both). Same principle as the data boundary (external gold views, not dashboard filters) — the control lives in the server, never the page.
 - Data shown is the same regional benchmarking either way, so act-as is *feature/entitlement* scoping, not data scoping — the switcher is light.
 - Store the active context on the session (or `user.active_seat_id`, nullable FK), defaulting to the user's most recently used / only seat.
 
@@ -158,12 +178,12 @@ A consultant with a **Premium** seat (WB) and a **Basic** seat (ADB) must not si
 
 ---
 
-## 4. Plans coverage & PPA members
+## 4. Plans coverage — all six resolved by the 2026-07-28 matrix (§0)
 
-- Paid: Basic / Premium / Pay-per-project per §0.
-- `default` (free): view-only, minimal dashboards — **contents parked pending Eugene's associate** (§9). Used as the BMO-revert landing plan.
-- `member` (free): the association-member entitlement set — entitlements **TBD**, but **sector-scoped**: applied only for the sector(s) of the `benchmarking_group`(s) the org belongs to (§2.1). Modeled now as a named plan with a placeholder entitlement set so it slots in when decided. (PPA→electricity, PWWA→water/sanitation.)
-- `utility` (free): the provider access set (existing dashboards + data-entry), expressed as a plan for uniformity.
+- **Paid:** Per Project (US$500 / 1 seat / 60d) · Basic (US$2,200 / 5 / 365d) · Premium (US$3,500 / 10 / 365d). Commercial ladder: **Basic** trades downloads for seats+duration (benchmarking **view-only**); **Per Project** trades seats+duration for downloads; **Premium** = both.
+- **`public`** (free, the **default** / BMO-revert plan): Annual Reports PDF + Public-KPI, **view only** — no benchmarking, no downloads. ✅ *Resolves the former "default-plan contents" open item.*
+- **`allied_member`** (free): PDF + Public-KPI + the full benchmarking family (Benchmarking / Country / Sub-regional / Regional) with **view + both downloads**; **not** Utility-Specific KPIs. **Sector-scoped** to the org's `benchmarking_group_member` sector(s), §2.1 (PPA→electricity, PWWA→water/sanitation). ✅ *Resolves the former "member entitlements" open item.*
+- **`utility`** (free): everything — its own Utility-Specific KPIs (view + downloads) **and** the full benchmarking family (view + downloads), scoped to its own data / sector.
 
 ---
 
@@ -188,7 +208,7 @@ Reuses what already exists (the pending-approval state machine + the **two-way c
 When dedup matches an existing org:
 1. Request goes to **that org's admin** first: "Add this person to your quota?" — **BMO is cc'd** on the thread.
 2. Org admin **accepts** → seat assigned under that org (counts to its cap).
-3. Org admin **rejects** → BMO is already in the loop and can **revert the user to the `default` plan** (so the requester isn't stranded — they land on free view-only access).
+3. Org admin **rejects** → BMO is already in the loop and can **revert the user to the `public` (default) plan** (so the requester isn't stranded — they land on free view-only access).
 
 ### 5.4 New intake object
 
@@ -286,11 +306,12 @@ failure_reason
 
 ## 9. Pending follow-ups & open questions
 
-- **[FOLLOW-UP] Default plan contents** — awaiting Eugene's associate (which dashboards, view-only assumed).
-- **[FOLLOW-UP] PPA-member entitlements** — TBD; placeholder plan modeled.
+- **[RESOLVED 2026-07-28] Default plan contents** — the **`public`** plan = Annual Reports PDF + Public-KPI, view only (§0/§4 matrix, `Tiered Access Plans - 20260728.xlsx`).
+- **[RESOLVED 2026-07-28] Member entitlements** — the **`allied_member`** plan = PDF + Public-KPI + full benchmarking family (view + both downloads), sector-scoped (§0/§4).
+- **[RESOLVED 2026-07-28] Entitlement change semantics** — entitlement edits **forward-apply to all users on the plan** (Eugene); commercial terms (price/seat/term) still lock to the sold `plan_version` (§3.2).
 - **[RESOLVED 2026-07-26] PCI-DSS** — no PAN in PRISM; bank virtual terminal, PRISM records result only (§6.5).
 - **[RESOLVED 2026-07-26] Unify migration** — full unify now, provider side included, sequenced first (§3.4).
 - **[RESOLVED 2026-07-26] Manual checkout** — subscriber **self-initiates** the payment request (no card entry in PRISM); Finance completes it (§6.3).
 - Payment gateway provider (Stripe / Pacific PSP) — deferred until PPA banking allows.
 - **[RESOLVED 2026-07-27, Eugene] Membership is sector-tagged, not a `relationship` value.** Generalised `ppa_membership_type_id` into the sector-tagged `benchmarking_group` + `benchmarking_group_member` M:N (§2.1). `relationship`'s old `ppa_member` value is renamed to `member` (association-agnostic, free-access shape); *which* association/sector — and therefore what a member sees free — is derived from the M:N. Applied to §1.4, §2, §2.1, §3.2, §4. Advisory raised by Eugene via the #2 migration wrap-up (not #8). **DDL lands via #2** (shared-table DDL owner), co-designed with #13 (sector); #8 reviewed and cleared it (guardrail: a group is never a data anchor — §2.1). Retire `ppa_membership_type_id` on migration.
-- **[ADDED 2026-07-26, registration session]** Reconciled the two design sessions into this one spec: folded in (a) export-endpoint enforcement of `view` vs `view_download` (§3.3), (b) structured intake "quiz" replacing free-text-org/why (§5.4), (c) simultaneous-net-new org collision handling (§5.2.4). All other ideas from that session were already covered here and were discarded as redundant. **The entire stream (registration §5 + tiered access §2–§8) is now driven by the "PRISM 2 access & registration" session going forward.**
+- **[ADDED 2026-07-26, registration session]** Reconciled the two design sessions into this one spec: folded in (a) export-endpoint enforcement of view/download rights (§3.3), (b) structured intake "quiz" replacing free-text-org/why (§5.4), (c) simultaneous-net-new org collision handling (§5.2.4). All other ideas from that session were already covered here and were discarded as redundant. **The entire stream (registration §5 + tiered access §2–§8) is now driven by the "PRISM 2 access & registration" session going forward.**
