@@ -3,9 +3,11 @@
 // on it (which dimensions/measures/labels apply), the same call #10 made for
 // `relationship` (enum) vs `entity_type` (managed list).
 //
-// PHASE 5B: this union is promoted to a `sectors` reference table
-// (docs/multi-sector-terminology-resolutions.md Q3). Keep the string keys stable
-// so the promotion is data-only.
+// PHASE 5B (done): this set is now also a DB reference table `sectors`
+// (db/schema/sector.ts) whose `code` column MUST match these string keys — keep
+// them in sync. The table exists so FKs can reference sectors (#10's
+// benchmarking_group_sector, the future sector_terminology table); this union
+// stays the type-level source of truth the resolver/config branch on.
 export const SECTORS = ["electricity", "water", "sanitation"] as const;
 
 export type Sector = (typeof SECTORS)[number];
