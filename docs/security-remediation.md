@@ -38,7 +38,7 @@ PRISM has active architectural churn concentrated in the `data_entries` redesign
 
 **Deferred — coupled to `data_entries` redesign (do NOT retrofit; fold into design):**
 - D1 — Postgres Row-Level Security (tenant isolation as defence-in-depth). Requirement handed to streams #2/#8 so the new schema carries `org_id` + RLS policies from day one.
-- D2 — Power BI ingestion / shared `API_KEY` re-architecture (single key currently unlocks cross-utility data, all-user PII, and a live Azure token). Quick wins possible now; full redesign sequences with the data-model work.
+- D2 — Power BI ingestion / shared `API_KEY` re-architecture (single key currently unlocks cross-utility data, all-user PII, and a live Azure token). **Phase 1 shipped 2026-07-27 → [PR #73](https://github.com/taiatiniyara/prism/pull/73)** — see the D2 entry in the detailed log below. Phase 2 (operator reconfig + rotation) still pending Eugene.
 
 **Needs a product/policy decision from Eugene before code:**
 - ~~P1 — MFA/2FA for admins.~~ **RESOLVED 2026-07-26** — Eugene chose admins-only, then approach **A (app-layer enforcement)**. Implemented; see the S-log entry for P1. Remaining: apply the DB migration + browser-test.
@@ -70,7 +70,7 @@ PRISM has active architectural churn concentrated in the `data_entries` redesign
 - **UX note:** enrolment shows a manual secret key, not a QR image (a QR would need a new `qrcode` dependency = `npm install` on the shared tree). QR is a nice-to-have follow-up.
 - **No QR / no password:** consistent with PRISM's passwordless model.
 - **Standard:** ASVS 2.2 / 2.8; OWASP A07.
-- P2 — Full `API_KEY` split/scoping strategy (see D2).
+- P2 — Full `API_KEY` split/scoping strategy (see D2). **Phase 1 (code) done — [PR #73](https://github.com/taiatiniyara/prism/pull/73).** Remaining operator steps: set `API_KEY_SENSITIVE`, repoint Power BI for the 3 sensitive endpoints, rotate `API_KEY`.
 - ~~P3 — `/api/health` information disclosure.~~ **RESOLVED 2026-07-26** — Eugene confirmed nothing depends on the detail; gate applied (see S-log entry for P3).
 
 ---
@@ -167,3 +167,14 @@ _Each entry: what changed, why, standard, how verified._
 - **Latent trap flagged (recommend delete or add access check):** `resolveUserUtility(user, requested_utility_id)` in `lib/ai/data-service/common.ts` returns *any* requested utility with **no access check**. It is currently **dead code** (no caller in the app), so not a live vuln — but if a future tool wires it up it would be an IDOR. Delete it, or make it enforce `isPeriodIdAccessible`/org scoping before it is ever used.
 - **Recommended follow-up (not blocking):** the inherently cross-utility tools (`get_benchmarking_data`, `compare_kpis_across_utilities`, `get_peer_group_analysis`, `get_kpi_correlation`) scope via the same session predicates; a per-tool integration test confirming a non-admin sees only aggregate/own-row data (not other utilities' identifiable actuals) would harden them further. This is partly a product-intent question (how much peer detail non-admins should see).
 - **Standard:** ASVS 4.2 (operation-level authorization / IDOR); OWASP A01.
+
+### D2 — `API_KEY` tiering (blast-radius reduction) · ✅ phase 1 code 2026-07-27 ([PR #73](https://github.com/taiatiniyara/prism/pull/73))
+- **Problem:** one static `API_KEY` guarded ~90 cross-utility `dim*`/`fact*` ingestion routes **and** two all-user-PII dumps (`/api/users`, `/api/pbiRls`) **and** a live Azure AD token (`/api/getAzureAccessToken`). One leaked key = whole dataset + every user's email + an Azure token.
+- **Investigation:** these endpoints have **no internal app consumers** (verified by grep) — Power BI Service pulls them externally with the key in the `Authorization` header. The app uses `getAzureToken()` directly server-side, so the *endpoint* is external-only. ⇒ rotating/replacing the scheme needs Power BI-side reconfiguration (operator-only), so a full swap can't be done in code alone.
+- **Phase 1 (this PR — safe, zero-breakage):**
+  - `authorizeSensitiveApiKey()` in `app/api/service.ts` guards the 3 identity/secret endpoints; uses `API_KEY_SENSITIVE` when set, else **falls back to `API_KEY`** (identical behaviour until the operator opts in).
+  - Constant-time compare (hash both sides → `timingSafeEqual`) replaces the length-mismatch early-return that leaked key length; consolidated the 2 inline duplicate checks into the shared helper.
+  - `.env.example` documents `API_KEY_SENSITIVE` + migration steps.
+  - `tsc` + `eslint` clean. Bulk-data routes unchanged.
+- **Phase 2 (operator — not code):** ① set `API_KEY_SENSITIVE` to a fresh distinct secret; ② reconfigure the Power BI data sources for `/api/users`, `/api/pbiRls`, `/api/getAzureAccessToken` to send it; ③ rotate `API_KEY`; ④ evaluate removing `/api/getAzureAccessToken` and the duplicate `/api/users` if no external consumer needs them.
+- **Standard:** ASVS 2.10 (service authentication) / 3.5 (token handling); OWASP A07 (Auth failures) / A02 (Cryptographic failures — the length leak).
