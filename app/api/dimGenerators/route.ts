@@ -1,5 +1,5 @@
 import { db } from "@/db/connection";
-import { energyResources } from "@/db/schema/utility";
+import { units } from "@/db/schema/utility";
 import { managedListItems } from "@/db/schema/managedLists";
 import { eq, asc } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
@@ -12,9 +12,9 @@ export async function GET(req: Request) {
 
   const resources = await db
     .select()
-    .from(energyResources)
-    .where(eq(energyResources.is_virtual, false))
-    .orderBy(asc(energyResources.id));
+    .from(units)
+    .where(eq(units.is_virtual, false))
+    .orderBy(asc(units.id));
 
   const allManagedItems = await db
     .select()
@@ -33,9 +33,9 @@ export async function GET(req: Request) {
       "Power Station ID": gen.power_station_id ?? null,
       "Generator ID": gen.id,
       "Generator Name": gen.name,
-      "Energy Provider": findItem(gen.energy_provider_id)?.name,
-      "Energy Type": findItem(gen.energy_type_id)?.name,
-      "Energy Source": findItem(gen.energy_source_id)?.name,
+      "Energy Provider": findItem(gen.provider_id)?.name,
+      "Energy Type": findItem(gen.category_id)?.name,
+      "Energy Source": findItem(gen.technology_id)?.name,
     })),
   );
 }

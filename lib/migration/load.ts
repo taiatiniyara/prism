@@ -89,9 +89,9 @@ export async function loadExtract(loadId: number, rows: ExtractRow[]): Promise<L
       const r = await db.execute(sql`
         INSERT INTO data_entries (
           report_period_id, measure_def_id,
-          energy_provider_id, energy_type_id, energy_source_id, energy_resource_type_id,
+          provider_id, category_id, technology_id, asset_id,
           customer_type_id, payment_mode_id, consumption_band_id, division_id, gender_id, utility_function_id,
-          utility_id, service_area_id, power_station_id, energy_resource_id, country_id,
+          utility_id, service_area_id, power_station_id, unit_id, country_id,
           status_id, is_relevant, is_deleted
         ) VALUES (
           ${row.reportPeriodId}, ${row.measureId},

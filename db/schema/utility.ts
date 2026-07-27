@@ -133,8 +133,8 @@ export interface EnergyResourcePeriodEntry {
   is_active: boolean;
 }
 
-export const energyResources = pgTable(
-  "energy_resources",
+export const units = pgTable(
+  "units",
   {
     id: serial("id").primaryKey().notNull(),
     period_entries: jsonb("period_entries")
@@ -153,13 +153,13 @@ export const energyResources = pgTable(
     utility_id: integer("utility_id")
       .notNull()
       .references(() => organisations.id),
-    energy_provider_id: integer("energy_provider_id")
+    provider_id: integer("provider_id")
       .notNull()
       .references(() => managedListItems.id),
-    energy_type_id: integer("energy_type_id")
+    category_id: integer("category_id")
       .notNull()
       .references(() => managedListItems.id),
-    energy_source_id: integer("energy_source_id")
+    technology_id: integer("technology_id")
       .notNull()
       .references(() => managedListItems.id),
     type_id: integer("type_id")
@@ -175,7 +175,7 @@ export const energyResources = pgTable(
   },
   (table) => [index("gen_idx").on(table.name, table.utility_id)],
 );
-export type EnergyResource = typeof energyResources.$inferSelect & {
+export type EnergyResource = typeof units.$inferSelect & {
   report_period?: string | null;
   report_period_type?: string | null;
   capacity?: string | null;
@@ -189,4 +189,4 @@ export type EnergyResource = typeof energyResources.$inferSelect & {
   agg_level?: string | null;
   type?: string | null;
 };
-export type NewEnergyResource = typeof energyResources.$inferInsert;
+export type NewEnergyResource = typeof units.$inferInsert;

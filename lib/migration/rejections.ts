@@ -44,7 +44,7 @@ export interface RejectionInput {
   columns: string[];
   /** Why, in plain language. */
   reason: string;
-  /** The constraint/validation id, e.g. "chk_one_value", "energy_source_id NOT NULL". */
+  /** The constraint/validation id, e.g. "chk_one_value", "technology_id NOT NULL". */
   rule?: string;
   /** What needs to be done to fix it. */
   remediation: string;

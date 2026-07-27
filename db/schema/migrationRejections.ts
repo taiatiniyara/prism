@@ -73,7 +73,7 @@ export const migrationRejections = pgTable(
     attempted_numeric: numeric("attempted_numeric"),
     failure_columns: text("failure_columns").array(), // which column(s) failed
     failure_reason: text("failure_reason"), // why, in plain language
-    failure_rule: varchar("failure_rule", { length: 128 }), // the constraint/validation id (e.g. chk_one_value, energy_source_id NOT NULL, uniq_entry_address)
+    failure_rule: varchar("failure_rule", { length: 128 }), // the constraint/validation id (e.g. chk_one_value, technology_id NOT NULL, uniq_entry_address)
     remediation: text("remediation"), // what needs to be done to fix it
     raw_error: text("raw_error"), // the DB/driver error text, if from a caught exception
     created_at: timestamp("created_at").notNull().defaultNow(),

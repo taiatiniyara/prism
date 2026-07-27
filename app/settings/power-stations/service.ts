@@ -3,7 +3,7 @@
 import { DataTableFormResponse } from "@/components/tables/data-table-create-form";
 import { db } from "@/db/connection";
 import {
-  energyResources,
+  units,
   NewPowerStation,
   organisations,
   PowerStation,
@@ -90,30 +90,30 @@ export async function GetEnergyResourceList(): Promise<
 
   const query = db
     .select({
-      id: energyResources.id,
-      name: energyResources.name,
-      energy_source_id: energyResources.energy_source_id,
-      energy_provider_id: energyResources.energy_provider_id,
-      energy_type_id: energyResources.energy_type_id,
-      service_area_id: energyResources.service_area_id,
-      period_entries: energyResources.period_entries,
-      power_station_id: energyResources.power_station_id,
-      resource_qty: energyResources.resource_qty,
+      id: units.id,
+      name: units.name,
+      technology_id: units.technology_id,
+      provider_id: units.provider_id,
+      category_id: units.category_id,
+      service_area_id: units.service_area_id,
+      period_entries: units.period_entries,
+      power_station_id: units.power_station_id,
+      resource_qty: units.resource_qty,
     })
-    .from(energyResources)
+    .from(units)
     .leftJoin(
       serviceAreas,
-      eq(energyResources.service_area_id, serviceAreas.id),
+      eq(units.service_area_id, serviceAreas.id),
     )
     .where(
       utilityScopeId != null
         ? and(
-            eq(energyResources.utility_id, utilityScopeId),
-            eq(energyResources.is_virtual, false),
+            eq(units.utility_id, utilityScopeId),
+            eq(units.is_virtual, false),
           )
-        : eq(energyResources.is_virtual, false),
+        : eq(units.is_virtual, false),
     )
-    .orderBy(energyResources.name);
+    .orderBy(units.name);
 
   const list = await query;
 
@@ -127,17 +127,17 @@ export async function GetEnergyResourceList(): Promise<
       name: item.name,
       energy_source: resolveManagedListName(
         managedListNamesById,
-        item.energy_source_id,
+        item.technology_id,
         null,
       ),
       energy_provider: resolveManagedListName(
         managedListNamesById,
-        item.energy_provider_id,
+        item.provider_id,
         null,
       ),
       energy_type: resolveManagedListName(
         managedListNamesById,
-        item.energy_type_id,
+        item.category_id,
         null,
       ),
       service_area: resolveManagedListName(
@@ -162,13 +162,13 @@ export async function AssignEnergyResourceToPowerStation(
   const where =
     utilityScopeId != null
       ? and(
-          eq(energyResources.id, energyResourceId),
-          eq(energyResources.utility_id, utilityScopeId),
+          eq(units.id, energyResourceId),
+          eq(units.utility_id, utilityScopeId),
         )
-      : eq(energyResources.id, energyResourceId);
+      : eq(units.id, energyResourceId);
 
   await db
-    .update(energyResources)
+    .update(units)
     .set({
       power_station_id: powerStationId,
       updated_by_id: user.id,
@@ -189,13 +189,13 @@ export async function RemoveEnergyResourceFromPowerStation(
   const where =
     utilityScopeId != null
       ? and(
-          eq(energyResources.id, energyResourceId),
-          eq(energyResources.utility_id, utilityScopeId),
+          eq(units.id, energyResourceId),
+          eq(units.utility_id, utilityScopeId),
         )
-      : eq(energyResources.id, energyResourceId);
+      : eq(units.id, energyResourceId);
 
   await db
-    .update(energyResources)
+    .update(units)
     .set({
       power_station_id: null,
       updated_by_id: user.id,

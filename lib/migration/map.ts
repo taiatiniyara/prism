@@ -11,10 +11,10 @@ import type { MapEntry, DimensionMembers } from "./types";
 
 // map-file column -> canonical dimension (customer_type was p1 "tariff_type", since renamed)
 const DIM_COLUMNS: Record<keyof DimensionMembers, string> = {
-  provider: "energy_provider_id",
-  type: "energy_type_id",
-  source: "energy_source_id",
-  resource_type: "energy_resource_type_id",
+  provider: "provider_id",
+  type: "category_id",
+  source: "technology_id",
+  resource_type: "asset_id",
   customer_type: "customer_type_id",
   payment_mode: "payment_mode_id",
   band: "consumption_band_id",

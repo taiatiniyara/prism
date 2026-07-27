@@ -3,7 +3,7 @@
 import { db } from "@/db/connection";
 import {
   EnergyResource,
-  energyResources,
+  units,
   EnergyResourcePeriodEntry,
   NewEnergyResource,
   organisations,
@@ -220,34 +220,34 @@ export async function GetAllEnergyResources(): Promise<
 
   const query = db
     .select()
-    .from(energyResources)
-    .leftJoin(organisations, eq(energyResources.utility_id, organisations.id))
+    .from(units)
+    .leftJoin(organisations, eq(units.utility_id, organisations.id))
     .leftJoin(
       serviceAreas,
-      eq(energyResources.service_area_id, serviceAreas.id),
+      eq(units.service_area_id, serviceAreas.id),
     )
     .leftJoin(
       powerStations,
-      eq(energyResources.power_station_id, powerStations.id),
+      eq(units.power_station_id, powerStations.id),
     );
 
   if (utilityScopeId != null) {
     query.where(
       and(
-        eq(energyResources.utility_id, utilityScopeId),
-        eq(energyResources.is_virtual, false),
+        eq(units.utility_id, utilityScopeId),
+        eq(units.is_virtual, false),
       ),
     );
   } else if (!hasGlobalUtilityAccess(user)) {
-    query.where(eq(energyResources.is_virtual, false));
+    query.where(eq(units.is_virtual, false));
   }
 
-  const list = await query.orderBy(energyResources.name);
+  const list = await query.orderBy(units.name);
 
   const utilityIds = Array.from(
     new Set(
       list
-        .map((item) => item.energy_resources.utility_id)
+        .map((item) => item.units.utility_id)
         .filter((id): id is number => typeof id === "number"),
     ),
   );
@@ -294,32 +294,32 @@ export async function GetAllEnergyResources(): Promise<
   return list.flatMap((item) =>
     toPeriodRows(
       {
-        ...item.energy_resources,
+        ...item.units,
         utility: item.organisations?.name,
         power_station: item.power_stations?.name,
         service_area: item.service_areas?.name,
         energy_provider: resolveManagedListName(
           managedListNamesById,
-          item.energy_resources.energy_provider_id,
+          item.units.provider_id,
           null,
         ),
         energy_type: resolveManagedListName(
           managedListNamesById,
-          item.energy_resources.energy_type_id,
+          item.units.category_id,
           null,
         ),
         energy_source: resolveManagedListName(
           managedListNamesById,
-          item.energy_resources.energy_source_id,
+          item.units.technology_id,
           null,
         ),
         type: resolveManagedListName(
           managedListNamesById,
-          item.energy_resources.type_id,
+          item.units.type_id,
           null,
         ),
       },
-      item.energy_resources.period_entries ?? [],
+      item.units.period_entries ?? [],
       periodLabelById,
       periodTypeById,
     ),
@@ -340,7 +340,7 @@ export async function CreateEnergyResource(
   }
 
   const typeId = resolveNumber(data.type_id);
-  const energySourceId = resolveNumber(data.energy_source_id);
+  const energySourceId = resolveNumber(data.technology_id);
 
   if (typeId == null || energySourceId == null) {
     return {
@@ -361,7 +361,7 @@ export async function CreateEnergyResource(
     };
   }
 
-  const query = db.insert(energyResources).values({
+  const query = db.insert(units).values({
     ...data,
     utility_id: utilityScopeId,
     period_entries: data.period_entries ?? [],
@@ -444,13 +444,13 @@ export async function UpdateEnergyResource(
 
   const existingQuery = db
     .select()
-    .from(energyResources)
+    .from(units)
     .where(
       utilityScopeId == null
-        ? eq(energyResources.id, data.id!)
+        ? eq(units.id, data.id!)
         : and(
-            eq(energyResources.id, data.id!),
-            eq(energyResources.utility_id, utilityScopeId),
+            eq(units.id, data.id!),
+            eq(units.utility_id, utilityScopeId),
           ),
     )
     .limit(1);
@@ -466,7 +466,7 @@ export async function UpdateEnergyResource(
 
   const typeId = resolveNumber(data.type_id ?? existing.type_id);
   const energySourceId = resolveNumber(
-    data.energy_source_id ?? existing.energy_source_id,
+    data.technology_id ?? existing.technology_id,
   );
 
   if (typeId == null || energySourceId == null) {
@@ -489,7 +489,7 @@ export async function UpdateEnergyResource(
   }
 
   const query = db
-    .update(energyResources)
+    .update(units)
     .set({
       ...data,
       updated_by_id: user.id,
@@ -497,10 +497,10 @@ export async function UpdateEnergyResource(
     })
     .where(
       utilityScopeId == null
-        ? eq(energyResources.id, data.id!)
+        ? eq(units.id, data.id!)
         : and(
-            eq(energyResources.id, data.id!),
-            eq(energyResources.utility_id, utilityScopeId),
+            eq(units.id, data.id!),
+            eq(units.utility_id, utilityScopeId),
           ),
     );
   const [result] = await query.returning();
@@ -532,13 +532,13 @@ export async function UpdateEnergyResourceFromPeriodRow(
 
   const existingQuery = db
     .select()
-    .from(energyResources)
+    .from(units)
     .where(
       utilityScopeId == null
-        ? eq(energyResources.id, resourceId)
+        ? eq(units.id, resourceId)
         : and(
-            eq(energyResources.id, resourceId),
-            eq(energyResources.utility_id, utilityScopeId),
+            eq(units.id, resourceId),
+            eq(units.utility_id, utilityScopeId),
           ),
     )
     .limit(1);

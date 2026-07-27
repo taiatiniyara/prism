@@ -24,7 +24,7 @@ export const managedListItems = pgTable("managed_list_items", {
     .notNull()
     .references(() => managedLists.id),
   parent_id: integer("parent_id"),
-  energy_resource_type_id: integer("energy_resource_type_id"),
+  asset_id: integer("asset_id"),
   name: varchar("name", { length: 255 }).notNull(),
   description: varchar("description", { length: 255 }),
   is_active: boolean("is_active").default(true).notNull(),
@@ -41,21 +41,21 @@ export const energyResourceTypeRelevance = pgTable(
   "energy_resource_type_relevance",
   {
     id: serial("id").primaryKey().notNull(),
-    energy_resource_type_id: integer("energy_resource_type_id")
+    asset_id: integer("asset_id")
       .notNull()
       .references(() => managedListItems.id, { onDelete: "restrict" }),
-    energy_type_id: integer("energy_type_id")
+    category_id: integer("category_id")
       .notNull()
       .references(() => managedListItems.id, { onDelete: "restrict" }),
-    energy_source_id: integer("energy_source_id")
+    technology_id: integer("technology_id")
       .notNull()
       .references(() => managedListItems.id, { onDelete: "restrict" }),
   },
   (table) => [
     index("energy_resource_type_relevance_type_idx").on(
-      table.energy_resource_type_id,
-      table.energy_type_id,
-      table.energy_source_id,
+      table.asset_id,
+      table.category_id,
+      table.technology_id,
     ),
   ],
 );

@@ -20,7 +20,7 @@ import { sql } from "drizzle-orm";
 import { managedListItems, managedLists } from "./managedLists";
 import { reportPeriods } from "./reportPeriods";
 import {
-  energyResources,
+  units,
   organisations,
   powerStations,
   serviceAreas,
@@ -36,10 +36,10 @@ export interface FormulaInput {
   // constrained on this dimension" — the re-point (§4.7) makes the intended
   // slice explicit (an All-member id where the input spans the whole
   // dimension, or a specific member where it is sliced).
-  energy_provider_id?: number | null;
-  energy_type_id?: number | null;
-  energy_source_id?: number | null;
-  energy_resource_type_id?: number | null;
+  provider_id?: number | null;
+  category_id?: number | null;
+  technology_id?: number | null;
+  asset_id?: number | null;
   customer_type_id?: number | null;
   payment_mode_id?: number | null;
   consumption_band_id?: number | null;
@@ -209,10 +209,10 @@ export const dataEntries = pgTable(
     report_period_id: integer("report_period_id")
       .notNull()
       .references(() => reportPeriods.id, { onDelete: "restrict" }),
-    energy_resource_id: integer("energy_resource_id").references(
-      () => energyResources.id,
+    unit_id: integer("unit_id").references(
+      () => units.id,
     ),
-    energy_resource_type_id: integer("energy_resource_type_id")
+    asset_id: integer("asset_id")
       .notNull()
       .references(() => managedListItems.id),
     power_station_id: integer("power_station_id").references(
@@ -241,13 +241,13 @@ export const dataEntries = pgTable(
     is_deleted: boolean("is_deleted").default(false).notNull(),
     // The ten canonical dimensions — NOT NULL, always the explicit "All" member
     // (no NULL-as-All). Enforced on the empty table before the RAW-ONLY reload.
-    energy_provider_id: integer("energy_provider_id")
+    provider_id: integer("provider_id")
       .notNull()
       .references(() => managedListItems.id),
-    energy_type_id: integer("energy_type_id")
+    category_id: integer("category_id")
       .notNull()
       .references(() => managedListItems.id),
-    energy_source_id: integer("energy_source_id")
+    technology_id: integer("technology_id")
       .notNull()
       .references(() => managedListItems.id),
     customer_type_id: integer("customer_type_id")
@@ -300,11 +300,11 @@ export const dataEntries = pgTable(
         table.country_id,
         table.service_area_id,
         table.power_station_id,
-        table.energy_resource_id,
-        table.energy_provider_id,
-        table.energy_type_id,
-        table.energy_source_id,
-        table.energy_resource_type_id,
+        table.unit_id,
+        table.provider_id,
+        table.category_id,
+        table.technology_id,
+        table.asset_id,
         table.customer_type_id,
         table.payment_mode_id,
         table.consumption_band_id,

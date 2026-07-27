@@ -1,6 +1,6 @@
 import { db } from "@/db/connection";
 import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
-import { energyResources, serviceAreas } from "@/db/schema/utility";
+import { units, serviceAreas } from "@/db/schema/utility";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { managedLists, managedListItems } from "@/db/schema/managedLists";
 import { eq, and, isNotNull, inArray } from "drizzle-orm";
@@ -57,8 +57,8 @@ export async function GET(req: Request) {
 
   const allResources = await db
     .select()
-    .from(energyResources)
-    .where(eq(energyResources.is_virtual, false));
+    .from(units)
+    .where(eq(units.is_virtual, false));
 
   const allManagedItems = await db
     .select()
@@ -112,7 +112,7 @@ export async function GET(req: Request) {
         .map((sa) => {
           const dataValues = inputDefs.reduce((acc, dl) => {
             const val = entries.find((l) => {
-              const gen = rpGens.find((g) => g.id === l.energy_resource_id);
+              const gen = rpGens.find((g) => g.id === l.unit_id);
               return (
                 l.measure_def_id === dl.id &&
                 l.report_period_id === urp.id &&
@@ -132,7 +132,7 @@ export async function GET(req: Request) {
               l.report_period_id === urp.id &&
               rpGens.some(
                 (g) =>
-                  g.id === l.energy_resource_id && g.service_area_id === sa.id,
+                  g.id === l.unit_id && g.service_area_id === sa.id,
               ),
           );
 
