@@ -1,10 +1,10 @@
 import { db } from "@/db/connection";
 import { user, roles } from "@/db/schema/auth-schema";
 import { organisations } from "@/db/schema/utility";
-import { authorizeApiKey } from "../service";
+import { authorizeSensitiveApiKey } from "../service";
 
 export async function GET(req: Request) {
-  const authorize = await authorizeApiKey(req);
+  const authorize = await authorizeSensitiveApiKey(req);
   if (authorize.success === false) {
     return Response.json({ message: authorize.message }, { status: 401 });
   }

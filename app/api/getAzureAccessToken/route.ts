@@ -1,14 +1,10 @@
-import { timingSafeEqual } from "node:crypto";
 import { getAzureToken } from "@/lib/powerbi";
+import { authorizeSensitiveApiKey } from "../service";
 
 export async function GET(req: Request) {
-  const apiKey = process.env.API_KEY ?? "";
-  const inputApiKey = req.headers.get("Authorization") ?? "";
-  if (
-    apiKey.length !== inputApiKey.length ||
-    !timingSafeEqual(Buffer.from(apiKey), Buffer.from(inputApiKey))
-  ) {
-    return Response.json({ message: "Unauthorized" }, { status: 401 });
+  const auth = await authorizeSensitiveApiKey(req);
+  if (!auth.success) {
+    return Response.json({ message: auth.message }, { status: 401 });
   }
 
   try {
