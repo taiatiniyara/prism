@@ -103,6 +103,10 @@ renamed columns/keys after it lands. Note: **`kpi_definitions.category_id/subcat
 renamed** (Eugene's call) — that's the KPI *grouping*, distinct from the energy `category` dimension
 (`data_entries.category_id`); same word, different table, no conflict with our `dimension_key`.
 
+**Landed:** this rename shipped as #68 (energy cols) and a follow-on **#78** (`asset_id→asset_class_id`,
+`agg_level_id→strata_id`, `agg_level→strata`) — both merged + DDL applied 2026-07-28; the resolver and
+`FormulaInput` are on the final names. §5.3 carries the authoritative physical names.
+
 **DECISION (locked this session):** KPIs will be **rebuilt manually after the measure migration
 is done**, not mechanically re-pointed. The current KPI definitions are treated as a reference
 list to rebuild from, not data to migrate. This spec is the model they'll be rebuilt onto.
@@ -260,7 +264,7 @@ Indicators** are each computed at **every combination of two hierarchies**:
 | Axis | Levels |
 |---|---|
 | **Grain** (physical "where") | unit → power station → service area → utility → country |
-| **Energy dimension** (the "what kind") | technology → category → asset (→ provider) |
+| **Energy dimension** (the "what kind") | technology → category → asset class (→ provider) |
 
 So one KPI resolves to many addresses — "AF for this diesel unit," "AF for all Renewable generation
 in a service area," "AF for the whole utility," etc. Consequences for the engine:
@@ -345,12 +349,13 @@ CREATE TABLE formula_binding_dimension (
 );
 ```
 
-**`dimension_key` uses the physical dimension names** that #2's PR #67 introduces —
-`provider · category · technology · asset · unit · customer_type · payment_mode · band · division ·
-gender · utility_function` — **not** the legacy `type / source / resource_type`. PR #67 physicalises
-the energy columns (`energy_provider_id→provider_id`, `energy_type_id→category_id`,
-`energy_source_id→technology_id`, `energy_resource_type_id→asset_id`, `energy_resource_id→unit_id`)
-and rewrites the matching `energy_*` JSON keys in the legacy `kpi_definitions.formula_inputs`. Naming
+**`dimension_key` uses the physical dimension names** #2 introduced —
+`provider · category · technology · asset_class · unit · customer_type · payment_mode · band ·
+division · gender · utility_function` — **not** the legacy `type / source / resource_type`. The
+physical columns are `provider_id / category_id / technology_id / asset_class_id / unit_id / …`
+(#68 physicalised the energy columns from `energy_*`; #78 then renamed `asset_id→asset_class_id`
+and `agg_level_id→strata_id` to match the live *Asset Class* / *Strata* managed lists), and the
+matching keys in the legacy `kpi_definitions.formula_inputs` were rewritten in step. Naming
 `dimension_key` to match keeps bindings aligned with the physical schema and the settled taxonomy.
 
 **Three states per tag — no ambiguity:**
@@ -592,7 +597,7 @@ Everything in §5/§6 (the binding + integrity model) is the direction the desig
 - **Energy taxonomy** — `asset → category → technology`, `unit` as the registry instance; one `All`
   per level; "all of category X" = `category = X, technology = All`. See
   `schema-redesign-medallion.md` §1.2a.
-- **10 canonical dimensions** — `provider · asset · category · technology · customer_type ·
+- **10 canonical dimensions** — `provider · asset_class · category · technology · customer_type ·
   payment_mode · band · division · gender · utility_function`.
 - **Calculated shells** — the loader creates empty shells for calculated measures (counted in the
   relevance balance) and never migrates their values; this engine fills them. Medallion doc §4.2/§4.3.
