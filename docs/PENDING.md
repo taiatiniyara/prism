@@ -71,7 +71,7 @@ Legend: ✅ nothing pending · 📝 uncommitted · ⬆️ committed-not-pushed �
 | # | Stream | Code pending | DB apply pending | Waiting on | Verdict |
 |---|--------|--------------|------------------|-----------|---------|
 | 1 | Project mgt | — | — | — | ✅ |
-| 2 | Medallion migration | — (DDL done; PR #75 merged; `units` col DROP applied ✅) | data **reload** via `migrate.ts` + `input_dl_def_mappings` regen | ⏳ Eugene: sample extract; **+ parked `asset_id→asset_class_id`/`agg_level_id→strata_id` col renames** (~7 cols/~50 files) awaiting Eugene's go + a quiet window | ⏳ paused |
+| 2 | Medallion migration | — (DDL done; PRs #75/#78 merged; `units` col DROP + `asset_class_id`/`strata_id` renames applied ✅) | data **reload** via `migrate.ts` + `input_dl_def_mappings` regen | ⏳ Eugene: sample extract (#2 reports no open items of its own) | ⏳ paused |
 | 3 | Calculator engine | — (design + mockup approved) | schema tracer-bullets deferred | ⏳ #2 landing | ⏳ gated |
 | 4 | Schema for AI | — (authored energy-dim rename, PR #68 merged+applied) | — | ⚠ **CONTESTED-HOLD** — #4's claimed spec-half ratification set aside by Eugene; deliberation pending | ⏳ |
 | 5 | BSC Builder | — (PR #35 merged; worktree clean) | — | ⏳ #2 `kpi_target` for Input-tracked targets (deferred) | ✅ / ⏳ deferred |
@@ -84,12 +84,13 @@ Legend: ✅ nothing pending · 📝 uncommitted · ⬆️ committed-not-pushed �
 | 14 | Data-entry / fixes | — (`powerStationDnD.tsx` nit fixed by #4, `f2f3cba`) | — (energy-dim rename PR #68 applied; country name fixes applied — see below) | — | ✅ |
 | 15 | Pending tracker | ✅ `PENDING.md` merged (PR #71); refresh 2 landed in `6cda722`; refresh 3 uncommitted in-place | — | — | ✅ |
 
-**Net pending right now:** **#3's `calculator-engine-spec.md`** WIP (uncommitted); **#2's parked `asset_id→asset_class_id`/`agg_level_id→strata_id` col renames** (~7 cols/~50 files, awaiting Eugene's go + quiet window); 10 held Dependabot majors; 2 Eugene decisions; #12's P2/D2 operator steps (env/Power BI/rotate). No unpushed commits, no unmerged human PRs, no un-applied DB changes. Tree clean and in sync (`npm install` after pull).
+**Net pending right now:** **#3's `calculator-engine-spec.md`** WIP (uncommitted); 10 held Dependabot majors; Eugene decisions (#2 extract, #10 plan/entitlements, #4 contested-hold); #12's P2/D2 operator steps (env/Power BI/rotate). #2 reports **no open items** of its own. No unpushed commits, no unmerged human PRs, no un-applied DB changes. Tree clean and in sync (`npm install` after pull).
 
 **Doc-debt (flagged by #8):** #2's medallion spec (`schema-redesign-medallion.md` §1.4/§1.5) still describes "All areas" NOT-NULL grain targets, now **contradicted** by the hybrid ruling. #2 asked to amend; tracked here until they do.
 
 ### Recently applied DB changes (done — do NOT re-run; informational)
 Direct DML/DDL on the shared **dev** DB with no commit/PR (or applied ahead of a PR). Recorded so no session re-runs them and everyone knows the DB state:
+- **2026-07-28 (#2/jolly) — `asset_id→asset_class_id` / `agg_level_id→strata_id` column renames** (PR #78 `f06e3d5`) — 7 columns across `data_entries`/`energy_resource_type_relevance`/`managed_list_items`/`measure_definitions`/`kpi_definitions`/`service_areas`/`units`. Metadata-only, no views; tsc + 384/384 tests green. DDL applied to dev DB.
 - **2026-07-28 (#2/jolly) — `units.category_id`/`type_id` columns DROPPED** (closes #4's `935847b` derive refactor; code was already merged, DB now matches). 501 rows intact, no view deps; backups `backup.units_dropped_cols_20260728` / `backup.units_pre_assetclass_20260728`.
 - **2026-07-28 (#14, w/ #4) — `managed_lists`/`managed_list_items` vocab rename** (energy-taxonomy → new names): list id1→Strata, id2→Provider, id3 Category, id4 Technology, id55→Asset Class; item mli id1→Unit. Code on main (`98cf4e0`; SQL `b7b8473`). Guarded txn, verified; backups `backup.managed_lists_pre_vocab_20260728` / `backup.managed_list_items_pre_vocab_20260728`. **Follow-on still pending → see #2 below:** the `units.category_id`/`type_id` column DROP (owned by #2/jolly) is not yet done.
 - **2026-07-27 (#14) — `measure_definitions.description` column DROPPED** — code on main (`4316624`, direct commit, **no PR** — see hygiene watch) + DB column dropped on dev (guarded txn, verified gone); backup `backup.measure_definitions_description_20260727` (9 rows).
