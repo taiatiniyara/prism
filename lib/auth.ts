@@ -2,11 +2,12 @@ import { db } from "@/db/connection";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
-import { magicLink } from "better-auth/plugins";
+import { magicLink, twoFactor as twoFactorPlugin } from "better-auth/plugins";
 import { buildMagicLinkEmail, sendEmail } from "./email/email.service";
 import {
   account,
   session,
+  twoFactor,
   user,
   verification,
 } from "@/db/schema/auth-schema";
@@ -46,10 +47,17 @@ if (!isProduction) {
   );
 }
 
-// Email verification is on by default; can be disabled for local/dev runs
-// via AUTH_REQUIRE_EMAIL_VERIFICATION=false (never set this in production).
-const requireEmailVerification =
-  process.env.AUTH_REQUIRE_EMAIL_VERIFICATION !== "false";
+// Email verification is on by default. The AUTH_REQUIRE_EMAIL_VERIFICATION=false
+// escape hatch is honoured ONLY outside production; in production it is always
+// enforced, so an accidental or hostile env override cannot silently disable it.
+const requireEmailVerification = isProduction
+  ? true
+  : process.env.AUTH_REQUIRE_EMAIL_VERIFICATION !== "false";
+if (isProduction && process.env.AUTH_REQUIRE_EMAIL_VERIFICATION === "false") {
+  console.warn(
+    "[auth] AUTH_REQUIRE_EMAIL_VERIFICATION=false is ignored in production; email verification stays enforced.",
+  );
+}
 
 export const auth = betterAuth({
   emailAndPassword: {
@@ -76,6 +84,7 @@ export const auth = betterAuth({
       verification,
       account,
       session,
+      twoFactor,
     },
   }),
   session: {
@@ -89,7 +98,6 @@ export const auth = betterAuth({
     prefix: "account_lock",
   },
   plugins: [
-    nextCookies(),
     magicLink({
       sendMagicLink: async ({ email, url }) => {
         const payload = buildMagicLinkEmail({ url });
@@ -101,5 +109,15 @@ export const auth = betterAuth({
         });
       },
     }),
+    // TOTP two-factor. `allowPasswordless` lets magic-link users (who have no
+    // password) enrol without one. NOTE: this plugin only challenges credential
+    // sign-in; PRISM's magic-link login is enforced separately in proxy.ts,
+    // which requires admins (BMO/DEV) to pass a TOTP challenge per session.
+    twoFactorPlugin({
+      issuer: "PRISM",
+      allowPasswordless: true,
+    }),
+    // nextCookies must be the LAST plugin so it can attach Set-Cookie headers.
+    nextCookies(),
   ],
 });

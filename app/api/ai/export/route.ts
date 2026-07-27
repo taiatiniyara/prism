@@ -55,7 +55,16 @@ export async function POST(request: Request) {
     }),
   );
 
-  const filename = body.filename || body.data.title || "export";
+  // Sanitize before putting it in the Content-Disposition header: allow only
+  // a safe filename charset (strips CR/LF, quotes, path separators, etc.),
+  // trim leading/trailing separators, and cap length. Prevents header
+  // injection and path-traversal-shaped filenames.
+  const rawFilename = body.filename || body.data.title || "export";
+  const filename =
+    rawFilename
+      .replace(/[^A-Za-z0-9._-]+/g, "_")
+      .replace(/^[._-]+|[._-]+$/g, "")
+      .slice(0, 100) || "export";
 
   if (body.format === "csv") {
     const csvRows = [

@@ -1,5 +1,5 @@
 import { createAuthClient } from "better-auth/client";
-import { magicLinkClient } from "better-auth/client/plugins";
+import { magicLinkClient, twoFactorClient } from "better-auth/client/plugins";
 
 const baseUrl = process.env.NEXT_PUBLIC_BETTER_AUTH_URL;
 
@@ -9,5 +9,5 @@ if (!baseUrl) {
 
 export const authClient = createAuthClient({
   baseURL: baseUrl,
-  plugins: [magicLinkClient()],
+  plugins: [magicLinkClient(), twoFactorClient()],
 });

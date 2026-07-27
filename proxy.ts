@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { headers } from "next/headers";
 import { auth } from "@/lib/auth";
 import { db } from "@/db/connection";
-import { roles, user } from "@/db/schema/auth-schema";
+import { roles, session as sessionTable, user } from "@/db/schema/auth-schema";
 import { eq } from "drizzle-orm";
 import { canAccessRoute, getDefaultPageForRole } from "@/lib/role-guard";
 
@@ -63,6 +63,33 @@ export async function proxy(request: NextRequest) {
       !isRscRequest
     ) {
       return NextResponse.redirect(new URL("/profile?verify=required", request.url));
+    }
+  }
+
+  // App-layer MFA enforcement for admin roles (BMO/DEV). PRISM authenticates via
+  // passwordless magic link, which better-auth's two-factor plugin does NOT
+  // challenge — so it is enforced here: an admin must (1) enrol in TOTP, then
+  // (2) pass a TOTP challenge once per session. Non-admins are unaffected.
+  // `/two-factor*` and `/api*` are exempt so the challenge/enrolment pages and
+  // the verification endpoints remain reachable. RSC sub-requests are skipped
+  // (the top-level navigation is what gets redirected).
+  const isAdmin = roleName === "DEV" || roleName === "BMO";
+  if (
+    isAdmin &&
+    !isRscRequest &&
+    !pathname.startsWith("/api") &&
+    !pathname.startsWith("/two-factor")
+  ) {
+    if (!currentUser.twoFactorEnabled) {
+      return NextResponse.redirect(new URL("/two-factor/setup", request.url));
+    }
+    const [sessionRow] = await db
+      .select({ twoFactorVerifiedAt: sessionTable.twoFactorVerifiedAt })
+      .from(sessionTable)
+      .where(eq(sessionTable.id, session.session.id))
+      .limit(1);
+    if (!sessionRow?.twoFactorVerifiedAt) {
+      return NextResponse.redirect(new URL("/two-factor", request.url));
     }
   }
 

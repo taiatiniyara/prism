@@ -55,6 +55,7 @@ export const PUBLIC_PREFIXES = [
   "/auth",
   "/api/auth",
   "/api/webhooks",
+  "/two-factor",
   "/_next",
   "/favicon.ico",
 ];

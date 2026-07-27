@@ -35,12 +35,22 @@ interface EmailOptions {
   html?: string;
 }
 
+// Strip CR/LF (and other control chars) from any value used in an email
+// header. Prevents SMTP header injection — a value containing "\r\n" could
+// otherwise inject extra headers (e.g. Bcc:) or split the message body.
+// nodemailer encodes headers, but we defend in depth at the boundary.
+const sanitizeHeaderValue = (value: string): string =>
+  value
+    .replace(/[\r\n]+/g, " ")
+    .replace(/[\x00-\x1F\x7F]/g, "")
+    .trim();
+
 export async function sendEmail(options: EmailOptions): Promise<void> {
   const { transporter, user } = getTransporter();
   const mailOptions = {
     from: `"PRISM - PPA Benchmarking Platform" <${user}>`,
-    to: options.to,
-    subject: options.subject,
+    to: sanitizeHeaderValue(options.to),
+    subject: sanitizeHeaderValue(options.subject),
     html: options.html || "",
   };
   await transporter.sendMail(mailOptions);
