@@ -21,6 +21,7 @@ import {
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { getCurrentUser, hasGlobalUtilityAccess } from "@/lib/user.service";
 import { formatReportPeriodDisplay } from "@/lib/formatters";
+import { deriveEnergyClassByTechnology } from "@/lib/energy-taxonomy";
 import { DataTableFormResponse } from "@/components/tables/data-table-create-form";
 import { toPositiveInteger } from "./energyResourceTypeRelevanceBuilder.shared";
 import { buildGenerationTypeSourcePairs } from "./generationRelevance.shared";
@@ -598,14 +599,24 @@ const getGenerationDimensionsFromResources = async (
     resourceConditions.push(eq(units.is_virtual, false));
   }
 
-  const resources = await db
+  const resourceRows = await db
     .select({
       energyProviderId: units.provider_id,
       energySourceId: units.technology_id,
-      energyResourceTypeId: units.type_id,
     })
     .from(units)
     .where(and(...resourceConditions));
+
+  // asset (energyResourceTypeId) is DERIVED from technology, not stored:
+  // asset = grandparent(technology) in the managed_list_items hierarchy.
+  const energyClassByTech = await deriveEnergyClassByTechnology(
+    resourceRows.map((row) => row.energySourceId),
+  );
+  const resources = resourceRows.map((row) => ({
+    ...row,
+    energyResourceTypeId:
+      energyClassByTech.get(row.energySourceId)?.assetId ?? null,
+  }));
 
   const providerIds = Array.from(
     new Set(resources.map((row) => row.energyProviderId)),
@@ -614,7 +625,11 @@ const getGenerationDimensionsFromResources = async (
     new Set(resources.map((row) => row.energySourceId)),
   );
   const typeIds = Array.from(
-    new Set(resources.map((row) => row.energyResourceTypeId)),
+    new Set(
+      resources
+        .map((row) => row.energyResourceTypeId)
+        .filter((id): id is number => id != null),
+    ),
   );
 
   const allIds = Array.from(

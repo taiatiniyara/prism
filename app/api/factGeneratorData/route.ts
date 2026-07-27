@@ -10,6 +10,7 @@ import {
   dlValue,
   formatReportPeriodIso,
 } from "@/lib/legacy/legacy-dl-resolver";
+import { buildParentMap, categoryFromTechnology } from "@/lib/energy-taxonomy";
 
 const trainingIds = {
   TotalHoursInPeriod: 4213040270,
@@ -50,6 +51,8 @@ export async function GET(req: Request) {
     .select()
     .from(managedListItems)
     .where(eq(managedListItems.is_active, true));
+
+  const parentById = buildParentMap(allItems);
 
   function findItem(id: number | null) {
     return id ? allItems.find((m) => m.id === id) : undefined;
@@ -99,7 +102,7 @@ export async function GET(req: Request) {
               GeneratorId: g.id,
               GeneratorName: g.name,
               EnergyProvider: findItem(g.provider_id)?.name,
-              EnergyType: findItem(g.category_id)?.name,
+              EnergyType: findItem(categoryFromTechnology(g.technology_id, parentById))?.name,
               EnergySource: findItem(g.technology_id)?.name,
               "Total Hours in Period": Number(totalHours?.value),
               ...genEntries.reduce(

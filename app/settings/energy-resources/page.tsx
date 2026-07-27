@@ -78,12 +78,6 @@ export default async function EnergyResourcesSettingsPage() {
         formAction: CreateEnergyResourceFromPeriodRow,
         fields: [
           {
-            key: "type_id",
-            type: "managed-list",
-            managedListName: "Energy Resource Type",
-            label: "Energy Resource Type",
-          },
-          {
             key: "name",
             type: "text",
             label: "Resource Name",
@@ -120,11 +114,6 @@ export default async function EnergyResourcesSettingsPage() {
             key: "provider_id",
             type: "managed-list",
             managedListName: "Energy Provider",
-          },
-          {
-            key: "category_id",
-            type: "managed-list",
-            managedListName: "Energy Type",
           },
           {
             key: "technology_id",
@@ -190,21 +179,10 @@ export default async function EnergyResourcesSettingsPage() {
             managedListName: "Energy Provider",
           },
           {
-            key: "category_id",
-            type: "managed-list",
-            managedListName: "Energy Type",
-          },
-          {
             key: "technology_id",
             type: "managed-list",
             managedListName: ENERGY_SOURCE_MANAGED_LIST_ALIASES,
             label: "Energy Source",
-          },
-          {
-            key: "type_id",
-            type: "managed-list",
-            managedListName: "Energy Resource Type",
-            label: "Resource Type",
           },
           {
             key: "report_period_id",

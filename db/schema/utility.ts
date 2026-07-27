@@ -156,16 +156,12 @@ export const units = pgTable(
     provider_id: integer("provider_id")
       .notNull()
       .references(() => managedListItems.id),
-    category_id: integer("category_id")
-      .notNull()
-      .references(() => managedListItems.id),
+    // category_id + type_id (asset) were DROPPED (derive-not-store, 2026-07-28):
+    // technology_id is the sole stored leaf; category = parent(technology),
+    // asset = grandparent(technology) — see lib/energy-taxonomy.ts.
     technology_id: integer("technology_id")
       .notNull()
       .references(() => managedListItems.id),
-    type_id: integer("type_id")
-      .notNull()
-      .references(() => managedListItems.id)
-      .default(1),
     is_virtual: boolean("is_virtual").default(false).notNull(),
     agg_level_id: integer("agg_level_id")
       .notNull()

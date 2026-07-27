@@ -75,6 +75,7 @@ import {
 } from "@/app/data-entry/kpi-worker";
 import { formatReportPeriodDisplay } from "@/lib/formatters";
 import { upsertHoursInPeriod } from "@/lib/period-hours";
+import { deriveEnergyClassByTechnology } from "@/lib/energy-taxonomy";
 import {
   DataEntryValidationMetadata,
   getDataTypeValidationMessage,
@@ -1745,7 +1746,6 @@ const resolveEnergyMetadata = async (
   const [resource] = await db
     .select({
       energySourceId: units.technology_id,
-      energyTypeId: units.category_id,
       energyProviderId: units.provider_id,
     })
     .from(units)
@@ -1756,7 +1756,21 @@ const resolveEnergyMetadata = async (
     throw new Error("Selected generator metadata could not be resolved.");
   }
 
-  return resource;
+  // category (energyTypeId) is DERIVED from the unit's technology, not stored:
+  // category = parent(technology) in the managed_list_items hierarchy.
+  const energyClass = await deriveEnergyClassByTechnology([
+    resource.energySourceId,
+  ]);
+  const energyTypeId = energyClass.get(resource.energySourceId)?.categoryId;
+  if (energyTypeId == null) {
+    throw new Error("Selected generator category could not be derived.");
+  }
+
+  return {
+    energySourceId: resource.energySourceId,
+    energyTypeId,
+    energyProviderId: resource.energyProviderId,
+  };
 };
 
 const buildExistingDataEntryConditions = (params: {

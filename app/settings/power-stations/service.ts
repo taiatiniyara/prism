@@ -20,6 +20,7 @@ import {
   resolveManagedListName,
 } from "@/lib/managed-list-utils";
 import { managedListItems } from "@/db/schema/managedLists";
+import { buildParentMap, categoryFromTechnology } from "@/lib/energy-taxonomy";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -87,6 +88,7 @@ export async function GetEnergyResourceList(): Promise<
 
   const ml = await db.select().from(managedListItems);
   const managedListNamesById = buildManagedListNameMap(ml);
+  const parentById = buildParentMap(ml);
 
   const query = db
     .select({
@@ -94,7 +96,6 @@ export async function GetEnergyResourceList(): Promise<
       name: units.name,
       technology_id: units.technology_id,
       provider_id: units.provider_id,
-      category_id: units.category_id,
       service_area_id: units.service_area_id,
       period_entries: units.period_entries,
       power_station_id: units.power_station_id,
@@ -137,7 +138,7 @@ export async function GetEnergyResourceList(): Promise<
       ),
       energy_type: resolveManagedListName(
         managedListNamesById,
-        item.category_id,
+        categoryFromTechnology(item.technology_id, parentById),
         null,
       ),
       service_area: resolveManagedListName(

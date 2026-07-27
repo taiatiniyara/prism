@@ -3,6 +3,7 @@ import { units } from "@/db/schema/utility";
 import { managedListItems } from "@/db/schema/managedLists";
 import { eq, asc } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
+import { buildParentMap, categoryFromTechnology } from "@/lib/energy-taxonomy";
 
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
@@ -21,6 +22,8 @@ export async function GET(req: Request) {
     .from(managedListItems)
     .where(eq(managedListItems.is_active, true));
 
+  const parentById = buildParentMap(allManagedItems);
+
   function findItem(id: number | null) {
     if (!id) return undefined;
     return allManagedItems.find((m) => m.id === id);
@@ -34,7 +37,7 @@ export async function GET(req: Request) {
       "Generator ID": gen.id,
       "Generator Name": gen.name,
       "Energy Provider": findItem(gen.provider_id)?.name,
-      "Energy Type": findItem(gen.category_id)?.name,
+      "Energy Type": findItem(categoryFromTechnology(gen.technology_id, parentById))?.name,
       "Energy Source": findItem(gen.technology_id)?.name,
     })),
   );

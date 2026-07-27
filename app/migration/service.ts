@@ -1843,7 +1843,6 @@ export async function retrieveEnergyResources() {
     const serviceAreaId = normalizeRequiredId(er.service_area_id);
     const utilityId = normalizeRequiredId(er.utility_id);
     const energyProviderId = normalizeRequiredId(er.provider_id);
-    const energyTypeId = normalizeRequiredId(er.category_id);
     const energySourceId = normalizeRequiredId(er.technology_id);
     const aggLevelId = normalizeRequiredId(er.agg_level_id);
 
@@ -1854,8 +1853,6 @@ export async function retrieveEnergyResources() {
       !validUtilityIds.has(utilityId) ||
       energyProviderId == null ||
       !validManagedItemIds.has(energyProviderId) ||
-      energyTypeId == null ||
-      !validManagedItemIds.has(energyTypeId) ||
       energySourceId == null ||
       !validManagedItemIds.has(energySourceId) ||
       aggLevelId == null ||
@@ -1871,7 +1868,6 @@ export async function retrieveEnergyResources() {
       service_area_id: serviceAreaId,
       utility_id: utilityId,
       provider_id: energyProviderId,
-      category_id: energyTypeId,
       technology_id: energySourceId,
       agg_level_id: aggLevelId,
       updated_at: er.updated_at ? new Date(er.updated_at) : new Date(),
