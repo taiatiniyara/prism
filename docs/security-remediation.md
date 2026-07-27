@@ -37,7 +37,7 @@ PRISM has active architectural churn concentrated in the `data_entries` redesign
 | S10 | Deploy pipeline: non-root + migrations (config drafted, **you apply**) | CIS 4 / ASVS 14.1 | ✅ drafted — [deploy-hardening.md](deploy-hardening.md) | 2026-07-26 |
 
 **Deferred — coupled to `data_entries` redesign (do NOT retrofit; fold into design):**
-- D1 — Postgres Row-Level Security (tenant isolation as defence-in-depth). Requirement handed to streams #2/#8 so the new schema carries `org_id` + RLS policies from day one.
+- D1 — Postgres Row-Level Security (tenant isolation as defence-in-depth). **Design LOCKED to Eugene's `data_entries` ruling 2026-07-27** ([multi-level-hierarchy-requirements.md](multi-level-hierarchy-requirements.md) §4): tenant column = the denormalized **`utility_id`** already on every owned row (no separate owning-org column — supersedes the old plan), applies to `data_entries` **and** `kpi_actual`. Implementation-only now — see the detailed D1 entry below. Awaits Eugene's greenlight to enable + #2's chain-consistency writer.
 - D2 — Power BI ingestion / shared `API_KEY` re-architecture (single key currently unlocks cross-utility data, all-user PII, and a live Azure token). **Phase 1 shipped 2026-07-27 → [PR #73](https://github.com/taiatiniyara/prism/pull/73)** — see the D2 entry in the detailed log below. Phase 2 (operator reconfig + rotation) still pending Eugene.
 
 **Needs a product/policy decision from Eugene before code:**
@@ -178,3 +178,24 @@ _Each entry: what changed, why, standard, how verified._
   - `tsc` + `eslint` clean. Bulk-data routes unchanged.
 - **Phase 2 (operator — not code):** ① set `API_KEY_SENSITIVE` to a fresh distinct secret; ② reconfigure the Power BI data sources for `/api/users`, `/api/pbiRls`, `/api/getAzureAccessToken` to send it; ③ rotate `API_KEY`; ④ evaluate removing `/api/getAzureAccessToken` and the duplicate `/api/users` if no external consumer needs them.
 - **Standard:** ASVS 2.10 (service authentication) / 3.5 (token handling); OWASP A07 (Auth failures) / A02 (Cryptographic failures — the length leak).
+
+### D1 — Postgres RLS · design locked to Eugene's ruling 2026-07-27 (implementation deferred)
+Aligned to the ruled `data_entries` grain convention ([multi-level-hierarchy-requirements.md](multi-level-hierarchy-requirements.md) §1, §2.4, §4). The four binding decisions and how #12's scope conforms:
+
+1. **Tenant column = denormalized `utility_id`** on every owned row — **no separate owning-org column** (supersedes #12's earlier extra-column request). Applies to `data_entries` **and** `kpi_actual`. ✅ recorded; my requirement is satisfied natively.
+2. **Shared rows:** country-level facts carry `utility_id IS NULL`. The policy must allow them, e.g. `USING (utility_id = current_setting('app.current_org')::int OR utility_id IS NULL)` (or a separate read policy for shared rows). **#12 owns the final shape.**
+3. **Leak guarantee** (no utility-owned fact ever written with `NULL utility_id`) is enforced by **#2's chain-consistency shared writer**, not by RLS. My policy relies on it; **my review must verify it is in place before RLS is enabled** — enabling RLS before chain-consistency ships would expose a mislabeled utility row as "shared" (cross-tenant leak).
+4. **No sentinel entities** (§2.4, extended to security by Eugene): **no security control may create sentinel org/entity rows** — no "system"/"all-utilities" org for service accounts or global access. This is binding on #12's design.
+
+**Design consequences for the eventual RLS work (bound by decision 4):**
+- **Global access (BMO/DEV)** must be expressed as the *absence* of the tenant filter, NOT a sentinel "all" org — via a session flag (e.g. `SET LOCAL app.is_global = 'true'`, policy `current_setting('app.is_global', true) = 'true' OR …`) or a dedicated **`BYPASSRLS`** Postgres role for admin queries. No sentinel row.
+- **Power BI ingestion + API_KEY service endpoints** (which legitimately need cross-utility data) run under a **`BYPASSRLS`** role / the global flag on their DB connection — again, no sentinel org. This mirrors the app-layer pattern already in use (`hasGlobalUtilityAccess` = role check + null-scope = no filter; never an "all" org row).
+
+**#12 RLS review checklist (to run when D1 is greenlit):**
+- [ ] `data_entries` + `kpi_actual` both carry `utility_id`; enable RLS + `FORCE ROW LEVEL SECURITY` on both.
+- [ ] Policy allows own-utility rows **and** `utility_id IS NULL` shared rows; write path for `current_setting('app.current_org')` per request.
+- [ ] Global (BMO/DEV) + ingestion paths use a session flag or `BYPASSRLS` role — **verify no sentinel org row exists or is created** (dev already has zero; `SELECT` proves it).
+- [ ] Confirm #2's chain-consistency writer is live and rejects utility-owned rows with `NULL utility_id` (the leak guarantee) **before** enabling.
+- [ ] Negative test: a session scoped to utility A cannot read utility B's rows; can read shared (`NULL`) rows; global session reads all.
+
+**Alignment status:** the security-remediation log (this entry) + the WORKSTREAMS #12 RLS cross-stream note are updated to these decisions. **No shipped #12 work introduces a sentinel entity** — MFA (`two_factor`/session marker/`user` flag), API_KEY tiering (env-only), and the AI scope helpers (`hasGlobalUtilityAccess` = role + null-scope) all avoid sentinel rows. **Standard:** ASVS 4.1 / 1.4 (access-control architecture); OWASP A01.
