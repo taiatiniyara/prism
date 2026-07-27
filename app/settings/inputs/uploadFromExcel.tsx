@@ -9,7 +9,6 @@ function parseExcelInputRow(row: Record<string, unknown>): ExcelMeasureDefinitio
   return {
     agg_level_id: Number(row.agg_level_id ?? 0),
     data_type_id: Number(row.data_type_id ?? 0),
-    description: String(row.description ?? ""),
     input_category_id: Number(row.input_category_id ?? 0),
     input_id: Number(row.input_id ?? 0),
     input_subcategory_id: Number(row.input_subcategory_id ?? 0),

@@ -68,10 +68,6 @@ export default async function InputsSettingsPage(props: {
                     type: "text",
                   },
                   {
-                    key: "description",
-                    type: "textarea",
-                  },
-                  {
                     key: "sort_order",
                     type: "number",
                     required: false,
@@ -109,11 +105,6 @@ export default async function InputsSettingsPage(props: {
                   {
                     key: "name",
                     type: "text",
-                  },
-                  {
-                    key: "description",
-                    type: "textarea",
-                    required: false,
                   },
                   {
                     key: "sort_order",

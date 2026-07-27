@@ -25,7 +25,6 @@ import {
 export interface InputFormulaOption {
   id: number;
   name: string;
-  description: string | null;
   variable_name: string | null;
   unit: string | null;
   formula: string | null;
@@ -55,7 +54,6 @@ export interface SaveInputFormulaPayload {
 interface CreateMeasureDefinitionPayload {
   name: string;
   sort_order?: string | number | null;
-  description?: string | null;
   alternative_names?: MeasureDefinitionAlternativeNames | string | null;
   data_type_id: string | number;
   measures_group_id: string | number;
@@ -67,7 +65,6 @@ interface UpdateMeasureDefinitionPayload {
   id: string | number;
   name?: string;
   sort_order?: string | number;
-  description?: string | null;
   alternative_names?: MeasureDefinitionAlternativeNames | string | null;
   data_type_id?: string | number;
   measures_group_id?: string | number;
@@ -211,7 +208,6 @@ export async function CreateMeasureDefinition(
       data.sort_order == null || data.sort_order === ""
         ? 0
         : Number(data.sort_order),
-    description: data.description?.trim() || null,
     variable_name: deriveMeasureVariableName(name, unitRow?.name ?? null),
     alternative_names: alternativeNames,
     data_type_id: toNumber(data.data_type_id),
@@ -302,10 +298,6 @@ export async function UpdateMeasureDefinition(
     // the token, so it is derived once at creation and then frozen.
   }
 
-  if (typeof data.description === "string") {
-    patch.description = data.description.trim() || null;
-  }
-
   if (data.alternative_names !== undefined) {
     try {
       patch.alternative_names = parseAlternativeNames(data.alternative_names);
@@ -379,7 +371,6 @@ export async function UpdateMeasureDefinition(
 export interface ExcelMeasureDefinition {
   agg_level_id: number;
   data_type_id: number;
-  description: string;
   input_category_id: number;
   input_id: number;
   input_subcategory_id: number;
@@ -416,7 +407,6 @@ export async function UpdateMeasureDefinitionFromExcel(
     id: item.input_id,
     name: item.name,
     sort_order: 0,
-    description: item.description,
     alternative_names: null,
     definition: null,
     synonyms: null,
@@ -466,7 +456,6 @@ export async function GetInputFormulaBuilderData(): Promise<InputFormulaBuilderD
     .select({
       id: measureDefinitions.id,
       name: measureDefinitions.name,
-      description: measureDefinitions.description,
       variable_name: measureDefinitions.variable_name,
       unitId: measureDefinitions.unit_id,
       formula: measureDefinitions.formula,
@@ -534,7 +523,6 @@ export async function GetInputFormulaBuilderData(): Promise<InputFormulaBuilderD
     inputs: inputs.map((item) => ({
       id: item.id,
       name: item.name,
-      description: item.description,
       variable_name: item.variable_name,
       unit: resolveManagedListName(managedListNamesById, item.unitId, null),
       formula: item.formula,

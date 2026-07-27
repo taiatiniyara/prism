@@ -55,7 +55,6 @@ export type DefinitionStatus = "draft" | "curated";
 export const measureDefinitions = pgTable("measure_definitions", {
   id: serial("id").primaryKey().notNull(),
   name: varchar("name", { length: 255 }).notNull(),
-  description: varchar("description", { length: 255 }),
   variable_name: varchar("variable_name", { length: 255 }),
   formula: text("formula"),
   formula_inputs: json("formula_inputs").$type<FormulaInput[]>(),

@@ -1354,7 +1354,6 @@ const resolveProposedMeasureDefinitionIds = async (input: {
       .insert(measureDefinitions)
       .values({
         name: proposedInput.name.trim(),
-        description: proposedInput.description,
         variable_name: variableName.length > 0 ? variableName : null,
         measures_group_id: input.categoryId,
         measures_subgroup_id: input.subcategoryId,

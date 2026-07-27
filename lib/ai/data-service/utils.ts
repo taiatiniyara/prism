@@ -220,7 +220,6 @@ export const getGuidedEntry = async (
             .select({
               id: measureDefinitions.id,
               name: measureDefinitions.name,
-              description: measureDefinitions.description,
               variable_name: measureDefinitions.variable_name,
             })
             .from(measureDefinitions)
@@ -234,9 +233,7 @@ export const getGuidedEntry = async (
         step: allSteps.length + 1,
         input_name: inp.name || `Input ${i + 1}`,
         measure_def_id: inp.id,
-        description:
-          inp.description ||
-          `Enter a value for ${inp.name || inp.variable_name || `input ${i + 1}`}`,
+        description: `Enter a value for ${inp.name || inp.variable_name || `input ${i + 1}`}`,
         current_value: null,
         required: true,
         formula_variable: inp.variable_name,
