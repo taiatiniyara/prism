@@ -27,7 +27,7 @@ All three include the PDF reports + full dashboards (Benchmarking KPI, Regional,
 3. **Unify** — an individual subscriber is an **org-of-one** ("workspace"); no separate code path.
 4. **Tiers are consumer-only.** Utilities and association **members** (PPA/PWWA/…) are **free**; member access is sector-scoped via the `benchmarking_group` M:N (§2.1); member entitlements TBD (§4).
 5. **Multi-org effective access = act-as** — entitlements are per-seat; the user works "as" one org at a time; features (esp. download) follow the active seat (§3.3).
-6. **Entitlement table**, keyed by `(plan, dashboard, access_level ∈ {view, view_download})` (§4).
+6. **Entitlement table**, keyed by `(plan_version, dashboard, access_level ∈ {view, view_download})` — plans are **effective-dated** (`plan` identity + immutable `plan_version` snapshots; a subscription locks to the version it was sold at, so price changes never reprice existing subs), decided 2026-07-27 via #11 (§3.2).
 7. **Uniform access** within a subscriber org — "admin" is a management flag on a seat, not a higher tier.
 8. **Payment inside PRISM**: **manual now** — PPA Finance charges the card in **PPA's bank virtual terminal** (out-of-band); **PRISM never touches the PAN/CVV**, it only records the result. **DEV-toggled gateway switch** + config strings for later (§6).
 9. **48h reminder → admin + consultant**, lead time **BMO-configurable**, on both seat-expiry and subscription-renewal (§7).
@@ -92,7 +92,8 @@ Today access = `user.organisation_id` + `user.role_id` (one org, one role, no ti
 **`subscription`** — an org's purchased (or granted) plan instance.
 ```
 id, org_id → organisations, plan_id → plan,
-seat_cap (int; from plan, override allowed),
+plan_version_id → plan_version (the version SOLD AT — locks price/seat/term so old subs keep their sold terms, §3.2),
+seat_cap (int; from the locked plan_version, override allowed),
 term_start (date), term_end (date; PPP = start + 60d; annual = start + 1y; free = null/rolling),
 status: 'quoted' | 'awaiting_payment' | 'active' | 'expiring' | 'lapsed' | 'cancelled',
 created_by, created_at, updated_at
@@ -112,23 +113,34 @@ invited_by → user, assigned_at
 - **Multi-org:** the same `user_id` appears in many `seat` rows across subscriptions/orgs → each counts toward its own subscription's cap. This is the junction that answers "the consultant engaged by WB *and* ADB."
 - **Expired ≠ deleted:** identity is retained; a freed seat returns capacity to the pool and can be reassigned or the same person re-activated without re-registration.
 
-### 3.2 Plans & entitlements
+### 3.2 Plans & entitlements — effective-dated versioning
 
-**`plan`**
+**Prices/terms change over time; existing subscriptions keep what they were sold (decided 2026-07-27, Eugene, via #11).** Split the plan into a **stable identity** + **effective-dated version snapshots** — never a single mutable row (mutating `price_usd` would retroactively reprice every live subscription).
+
+**`plan`** — stable identity, never mutated for pricing:
 ```
 id, code ('basic'|'premium'|'pay_per_project'|'default'|'member'|'utility'),
-name, tier_group ('paid'|'free'),
-price_usd (null for free), seat_cap, term_days (365 | 60 | null for rolling),
-is_active
+name, tier_group ('paid'|'free'), is_active
 ```
 
-**`plan_entitlement`** — the axes you asked for: dashboard name **and** view vs downloadable.
+**`plan_version`** — the effective-dated snapshot; price/seat/term live here:
 ```
 id, plan_id → plan,
+price_usd (null for free), seat_cap, term_days (365 | 60 | null for rolling),
+valid_from (date), valid_to (date, null = current),
+created_by, created_at
+```
+- Exactly **one current version** per plan (`valid_to IS NULL`). A DEV/BMO edit = **close** the current version (set `valid_to`) + **insert** a new one — versions are **immutable, never updated in place**, so change history falls out for free (the version list). A `subscription` locks to its `plan_version_id` (§3.1), so old subs keep their sold price/seat/term.
+
+**`plan_entitlement`** — dashboard × view/download, keyed to the **version** (so a version fully captures what the plan offered):
+```
+id, plan_version_id → plan_version,
 dashboard: 'benchmarking_kpi' | 'regional' | 'country' | 'reports' | 'kpi_database' | …,
 access_level: 'view' | 'view_download'
 ```
+- **One open nuance (for #11's prototype to settle):** should an entitlement change **forward-apply** to existing subs (common SaaS — add a dashboard for everyone, keep their old *price*) or **lock** with the sold version? **Billing terms (price/seat/term) definitely lock**; I lean **forward-apply for entitlements** (access reads the plan's *current* version's entitlements; billing reads the *sold* version's price). Prototype will validate.
 - Everything is a plan — the 3 paid tiers **plus** `default` (BMO-revert target, §5), `member` (free; applied per the sector(s) of the org's `benchmarking_group_member` rows, §2.1), and `utility` (provider access set). One uniform entitlement mechanism.
+- **UX in flight:** #11 is building a throwaway mock-backed **prototype** (view/edit plans + version-history) to drive these decisions (incl. still-open default-plan contents + member entitlements); the `plan`/`plan_version`/`plan_entitlement` **DDL formalizes with #2** — ping #11 to rebind the prototype to real tables when it lands.
 
 ### 3.3 Act-as (multi-org effective access)
 
