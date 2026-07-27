@@ -52,18 +52,28 @@ export async function ensureCountry(m49Code: number): Promise<Country> {
         .onConflictDoNothing({ target: subRegions.id });
     }
 
-    // 2. resolve the pre-seeded currency managed-list item
+    // 2. resolve the currency managed-list item, auto-ensuring it if absent.
+    // (scripts/seed-iso4217-currencies.ts pre-seeds all of them, so this is
+    // normally a plain lookup; the insert path makes ensureCountry self-sufficient
+    // even if the pre-seed hasn't run.)
     const list = await tx
       .select({ id: managedLists.id })
       .from(managedLists)
       .where(eq(managedLists.name, CURRENCY_LIST_NAME));
     if (list.length === 0) throw new Error(`Managed list "${CURRENCY_LIST_NAME}" not found`);
-    const currency = await tx
+    const existingCurrency = await tx
       .select({ id: managedListItems.id })
       .from(managedListItems)
       .where(and(eq(managedListItems.list_id, list[0].id), eq(managedListItems.name, ref.currencyCode)));
-    if (currency.length === 0) {
-      throw new Error(`Currency ${ref.currencyCode} is not seeded — run scripts/seed-iso4217-currencies.ts`);
+    let currencyId: number;
+    if (existingCurrency.length > 0) {
+      currencyId = existingCurrency[0].id;
+    } else {
+      const inserted = await tx
+        .insert(managedListItems)
+        .values({ list_id: list[0].id, name: ref.currencyCode, description: ref.currencyCode })
+        .returning({ id: managedListItems.id });
+      currencyId = inserted[0].id;
     }
 
     // 3. insert the country (PK = M49 code); ignore a concurrent insert then re-read
@@ -75,7 +85,7 @@ export async function ensureCountry(m49Code: number): Promise<Country> {
         dial_code: ref.dial,
         iso_code_alpha2: ref.iso2,
         iso_code_alpha3: ref.iso3,
-        currency_id: currency[0].id,
+        currency_id: currencyId,
         is_adb_member: false, // unknown for a lazy-inserted (non-Pacific) country
         sub_region_id: subRegionCode,
       })
