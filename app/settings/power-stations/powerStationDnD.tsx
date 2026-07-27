@@ -241,8 +241,8 @@ function EnergyResourceChip({
           {resource.name}
         </div>
         <div className="text-xs text-slate-400 flex gap-2">
-          {resource.energy_source && <span>{resource.energy_source}</span>}
-          {resource.energy_type && <span>{resource.energy_type}</span>}
+          {resource.technology && <span>{resource.technology}</span>}
+          {resource.category && <span>{resource.category}</span>}
           {resource.capacity_mw != null && (
             <span>{resource.capacity_mw} MW</span>
           )}

@@ -85,7 +85,7 @@ export default function InputAlternativeNamesEditor(props: {
     let isCancelled = false;
 
     GetAllManagedLists({
-      name: "Energy Source",
+      name: "Technology",
     })
       .then((res) => {
         if (isCancelled) {

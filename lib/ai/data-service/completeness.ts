@@ -10,9 +10,9 @@ export type CompletenessDimension =
   | "category"
   | "subcategory"
   | "service_area"
-  | "energy_source"
-  | "energy_provider"
-  | "energy_type"
+  | "technology"
+  | "provider"
+  | "category"
   | "energy_resource"
   | "aggregation_level"
   | "customer_type"
@@ -69,17 +69,17 @@ export const getCompletenessBreakdown = async (
     case "service_area":
       items = filterOptions.serviceAreas.map((i) => ({ id: i.id, name: i.name, count: 0, percentage: 0 }));
       break;
-    case "energy_source": {
+    case "technology": {
       const sources = await fetchManagedListItems(MANAGED_LIST_PARENT_IDS.ENERGY_SOURCE);
       items = sources.map((i) => ({ name: i.name, count: 0, percentage: 0 }));
       break;
     }
-    case "energy_provider": {
+    case "provider": {
       const providers = await fetchManagedListItems(MANAGED_LIST_PARENT_IDS.ENERGY_PROVIDER);
       items = providers.map((i) => ({ name: i.name, count: 0, percentage: 0 }));
       break;
     }
-    case "energy_type": {
+    case "category": {
       const types = await fetchManagedListItems(MANAGED_LIST_PARENT_IDS.ENERGY_TYPE);
       items = types.map((i) => ({ name: i.name, count: 0, percentage: 0 }));
       break;

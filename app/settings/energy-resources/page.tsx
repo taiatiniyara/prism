@@ -12,10 +12,10 @@ import { resolveTerm } from "@/lib/terminology/resolver";
 import { getActiveSector } from "@/lib/terminology/active-sector";
 
 const ENERGY_SOURCE_MANAGED_LIST_ALIASES = [
-  "Energy Source",
-  "Storage Energy Source",
+  "Technology",
+  "Storage Technology",
   "Energy Storage Source",
-  "Generator Energy Source",
+  "Generator Technology",
 ].join("|");
 
 export default async function EnergyResourcesSettingsPage() {
@@ -60,16 +60,16 @@ export default async function EnergyResourcesSettingsPage() {
       ]}
       columns={[
         {
-          name: "type",
-          display: "Resource Type",
+          name: "asset",
+          display: "Asset Class",
         },
         "name",
         {
           name: "capacity",
           display: "Capacity (MW)",
         },
-        "energy_provider",
-        "energy_source",
+        "provider",
+        "technology",
         "is_active",
       ]}
       title="Energy Resources"
@@ -113,13 +113,13 @@ export default async function EnergyResourcesSettingsPage() {
           {
             key: "provider_id",
             type: "managed-list",
-            managedListName: "Energy Provider",
+            managedListName: "Provider",
           },
           {
             key: "technology_id",
             type: "managed-list",
             managedListName: ENERGY_SOURCE_MANAGED_LIST_ALIASES,
-            label: "Energy Source",
+            label: "Technology",
           },
           {
             key: "report_period_id",
@@ -176,13 +176,13 @@ export default async function EnergyResourcesSettingsPage() {
           {
             key: "provider_id",
             type: "managed-list",
-            managedListName: "Energy Provider",
+            managedListName: "Provider",
           },
           {
             key: "technology_id",
             type: "managed-list",
             managedListName: ENERGY_SOURCE_MANAGED_LIST_ALIASES,
-            label: "Energy Source",
+            label: "Technology",
           },
           {
             key: "report_period_id",

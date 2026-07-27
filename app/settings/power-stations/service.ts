@@ -71,9 +71,9 @@ export async function AddPowerStation(
 export type EnergyResourceSummary = {
   id: number;
   name: string;
-  energy_source: string | null;
-  energy_provider: string | null;
-  energy_type: string | null;
+  technology: string | null;
+  provider: string | null;
+  category: string | null;
   service_area: string | null;
   capacity_mw: number | null;
   power_station_id: number | null;
@@ -126,17 +126,17 @@ export async function GetEnergyResourceList(): Promise<
     return {
       id: item.id,
       name: item.name,
-      energy_source: resolveManagedListName(
+      technology: resolveManagedListName(
         managedListNamesById,
         item.technology_id,
         null,
       ),
-      energy_provider: resolveManagedListName(
+      provider: resolveManagedListName(
         managedListNamesById,
         item.provider_id,
         null,
       ),
-      energy_type: resolveManagedListName(
+      category: resolveManagedListName(
         managedListNamesById,
         categoryFromTechnology(item.technology_id, parentById),
         null,

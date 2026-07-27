@@ -28,7 +28,7 @@ export async function GET(req: Request) {
     return Response.json({ message: authorize.message }, { status: 401 });
   }
 
-  const energyTypes = (await getManagedListByName("Energy Type")) ?? [];
+  const energyTypes = (await getManagedListByName("Category")) ?? [];
   return Response.json(
     energyTypes.map((et) => ({ "Energy Type": et.name })),
   );

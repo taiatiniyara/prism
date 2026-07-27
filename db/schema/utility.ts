@@ -179,10 +179,10 @@ export type EnergyResource = typeof units.$inferSelect & {
   power_station?: string | null;
   service_area?: string | null;
   utility?: string | null;
-  energy_provider?: string | null;
-  energy_type?: string | null;
-  energy_source?: string | null;
+  provider?: string | null;
+  category?: string | null;
+  technology?: string | null;
   agg_level?: string | null;
-  type?: string | null;
+  asset?: string | null;
 };
 export type NewEnergyResource = typeof units.$inferInsert;

@@ -28,7 +28,7 @@ export async function GET(req: Request) {
     return Response.json({ message: authorize.message }, { status: 401 });
   }
 
-  const list = (await getManagedListByName("Energy Provider")) ?? [];
+  const list = (await getManagedListByName("Provider")) ?? [];
   return Response.json(
     list.map((item) => ({ "Energy Provider": item.name })),
   );

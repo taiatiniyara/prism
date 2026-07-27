@@ -115,16 +115,16 @@ export function createPrismNativeTools(
 
     get_completeness_breakdown: tool({
       description:
-        "Get completeness breakdown by a specific dimension (category, subcategory, service_area, energy_source, etc.). Returns items with counts and percentages.",
+        "Get completeness breakdown by a specific dimension (category, subcategory, service_area, technology, etc.). Returns items with counts and percentages.",
       inputSchema: z.object({
         dimension: z
           .enum([
             "category",
             "subcategory",
             "service_area",
-            "energy_source",
-            "energy_provider",
-            "energy_type",
+            "technology",
+            "provider",
+            "category",
             "energy_resource",
             "aggregation_level",
             "customer_type",

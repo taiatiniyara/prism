@@ -251,17 +251,17 @@ export interface DevEnergyResourceTypeRelevanceItem {
 }
 
 const ENERGY_RESOURCE_TYPE_LIST_ALIASES = [
-  "Energy Resource Type",
+  "Asset Class",
   "Energy Resouce Type",
 ];
 
-const ENERGY_TYPE_LIST_ALIASES = ["Energy Type", "Energy Types"];
+const ENERGY_TYPE_LIST_ALIASES = ["Category", "Energy Types"];
 
 const ENERGY_SOURCE_LIST_ALIASES = [
-  "Energy Source",
-  "Storage Energy Source",
+  "Technology",
+  "Storage Technology",
   "Energy Storage Source",
-  "Generator Energy Source",
+  "Generator Technology",
 ];
 
 const resolveSelectedId = (
@@ -1154,18 +1154,18 @@ export async function GetUtilityGenerationRelevance(
   } = await getUtilityRelevanceFilterContext(user.org_id!, user, filters);
 
   const inputList = await getGenerationMeasureDefinitions();
-  let energyProviders = await getManagedDimensionItems("Energy Provider");
+  let energyProviders = await getManagedDimensionItems("Provider");
   let energySources = await getManagedDimensionItemsMergedByAliases([
-    "Energy Source",
-    "Storage Energy Source",
+    "Technology",
+    "Storage Technology",
     "Energy Storage Source",
-    "Generator Energy Source",
+    "Generator Technology",
   ]);
   let energyResourceTypes = filterGenerationResourceTypes(
     await getManagedDimensionItemsByAliases([
-      "Energy Resource Type",
+      "Asset Class",
       "Energy Resouce Type",
-      "Energy Type",
+      "Category",
     ]),
   );
 
@@ -2513,7 +2513,7 @@ const validateEnergyResourceTypeRelevancePayload = async (payload: {
   if (!energyResourceTypeOptionIds.has(payload.energyResourceTypeId)) {
     return {
       success: false,
-      message: "Selected Energy Resource Type is invalid.",
+      message: "Selected Asset Class is invalid.",
     };
   }
 
@@ -2521,7 +2521,7 @@ const validateEnergyResourceTypeRelevancePayload = async (payload: {
   if (!energyTypeOptionIds.has(payload.energyTypeId)) {
     return {
       success: false,
-      message: "Selected Energy Type is invalid.",
+      message: "Selected Category is invalid.",
     };
   }
 
@@ -2531,7 +2531,7 @@ const validateEnergyResourceTypeRelevancePayload = async (payload: {
   if (!energySourceOptionIds.has(payload.energySourceId)) {
     return {
       success: false,
-      message: "Selected Energy Source is invalid.",
+      message: "Selected Technology is invalid.",
     };
   }
 
@@ -2591,7 +2591,7 @@ export async function CreateDevEnergyResourceTypeRelevance(
     return {
       success: false,
       message:
-        "Energy Resource Type, Energy Type, and Energy Source are required.",
+        "Asset Class, Category, and Technology are required.",
     };
   }
 
@@ -2700,7 +2700,7 @@ export async function UpdateDevEnergyResourceTypeRelevance(
     return {
       success: false,
       message:
-        "Energy Resource Type, Energy Type, and Energy Source are required.",
+        "Asset Class, Category, and Technology are required.",
     };
   }
 

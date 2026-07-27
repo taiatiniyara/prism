@@ -215,7 +215,7 @@ export default function GenerationRelevanceTable(props: {
           <thead>
             <tr className="bg-muted/30">
               <th className="sticky top-0 left-0 z-40 border bg-muted px-3 py-2 text-left text-xs font-semibold whitespace-nowrap min-w-48">
-                Energy Resource Type
+                Asset Class
               </th>
               {providers.map((provider) => (
                 <th

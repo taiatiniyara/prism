@@ -31,19 +31,19 @@ const DIMENSION_COLUMNS: {
     key: "energyProviderName",
     idKey: "energyProviderId",
     label: "Provider",
-    dimName: "energy_provider",
+    dimName: "provider",
   },
   {
     key: "energyTypeName",
     idKey: "energyTypeId",
     label: "Type",
-    dimName: "energy_type",
+    dimName: "category",
   },
   {
     key: "energySourceName",
     idKey: "energySourceId",
     label: "Source",
-    dimName: "energy_source",
+    dimName: "technology",
   },
   {
     key: "customerTypeName",

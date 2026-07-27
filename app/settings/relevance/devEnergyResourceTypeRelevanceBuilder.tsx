@@ -6,18 +6,18 @@ import {
 } from "./service";
 
 const ENERGY_RESOURCE_TYPE_MANAGED_LIST_ALIASES = [
-  "Energy Resource Type",
+  "Asset Class",
   "Energy Resouce Type",
 ].join("|");
 
 const ENERGY_SOURCE_MANAGED_LIST_ALIASES = [
-  "Energy Source",
-  "Storage Energy Source",
+  "Technology",
+  "Storage Technology",
   "Energy Storage Source",
-  "Generator Energy Source",
+  "Generator Technology",
 ].join("|");
 
-const ENERGY_TYPE_MANAGED_LIST_ALIASES = ["Energy Type", "Energy Types"].join(
+const ENERGY_TYPE_MANAGED_LIST_ALIASES = ["Category", "Energy Types"].join(
   "|",
 );
 
@@ -26,19 +26,19 @@ export default function DevEnergyResourceTypeRelevanceBuilder(props: {
 }) {
   return (
     <DataTable<DevEnergyResourceTypeRelevanceItem>
-      title="Energy Resource Type Relevance Builder"
+      title="Asset Class Relevance Builder"
       columns={[
         {
           name: "energyResourceType",
-          display: "Energy Resource Type",
+          display: "Asset Class",
         },
         {
           name: "energyType",
-          display: "Energy Type",
+          display: "Category",
         },
         {
           name: "energySource",
-          display: "Energy Source",
+          display: "Technology",
         },
       ]}
       data={props.items}
@@ -49,19 +49,19 @@ export default function DevEnergyResourceTypeRelevanceBuilder(props: {
             key: "energyResourceTypeId",
             type: "managed-list",
             managedListName: ENERGY_RESOURCE_TYPE_MANAGED_LIST_ALIASES,
-            label: "Energy Resource Type",
+            label: "Asset Class",
           },
           {
             key: "energyTypeId",
             type: "managed-list",
             managedListName: ENERGY_TYPE_MANAGED_LIST_ALIASES,
-            label: "Energy Type",
+            label: "Category",
           },
           {
             key: "energySourceId",
             type: "managed-list",
             managedListName: ENERGY_SOURCE_MANAGED_LIST_ALIASES,
-            label: "Energy Source",
+            label: "Technology",
           },
         ],
       }}
@@ -72,19 +72,19 @@ export default function DevEnergyResourceTypeRelevanceBuilder(props: {
             key: "energyResourceTypeId",
             type: "managed-list",
             managedListName: ENERGY_RESOURCE_TYPE_MANAGED_LIST_ALIASES,
-            label: "Energy Resource Type",
+            label: "Asset Class",
           },
           {
             key: "energyTypeId",
             type: "managed-list",
             managedListName: ENERGY_TYPE_MANAGED_LIST_ALIASES,
-            label: "Energy Type",
+            label: "Category",
           },
           {
             key: "energySourceId",
             type: "managed-list",
             managedListName: ENERGY_SOURCE_MANAGED_LIST_ALIASES,
-            label: "Energy Source",
+            label: "Technology",
           },
         ],
       }}

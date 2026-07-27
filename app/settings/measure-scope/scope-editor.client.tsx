@@ -15,9 +15,9 @@ interface MeasureDimensionScopeEditorProps {
 }
 
 const DIMENSION_LABELS: Record<string, string> = {
-  energy_provider: "Provider",
-  energy_type: "Type",
-  energy_source: "Source",
+  provider: "Provider",
+  category: "Type",
+  technology: "Source",
   customer_type: "Customer",
   payment_mode: "Payment",
   consumption_band: "Band",

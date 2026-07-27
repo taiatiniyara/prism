@@ -209,22 +209,22 @@ export async function GetAllEnergyResources(): Promise<
         utility: item.organisations?.name,
         power_station: item.power_stations?.name,
         service_area: item.service_areas?.name,
-        energy_provider: resolveManagedListName(
+        provider: resolveManagedListName(
           managedListNamesById,
           item.units.provider_id,
           null,
         ),
-        energy_type: resolveManagedListName(
+        category: resolveManagedListName(
           managedListNamesById,
           categoryFromTechnology(item.units.technology_id, parentById),
           null,
         ),
-        energy_source: resolveManagedListName(
+        technology: resolveManagedListName(
           managedListNamesById,
           item.units.technology_id,
           null,
         ),
-        type: resolveManagedListName(
+        asset: resolveManagedListName(
           managedListNamesById,
           assetFromTechnology(item.units.technology_id, parentById),
           null,
@@ -294,11 +294,11 @@ export async function CreateEnergyResourceFromPeriodRow(
     power_station: _powerStation,
     service_area: _serviceArea,
     utility: _utility,
-    energy_provider: _energyProvider,
-    energy_type: _energyType,
-    energy_source: _energySource,
+    provider: _energyProvider,
+    category: _energyType,
+    technology: _energySource,
     agg_level: _aggLevel,
-    type: _type,
+    asset: _asset,
     ...createData
   } = data;
 
@@ -505,11 +505,11 @@ export async function UpdateEnergyResourceFromPeriodRow(
     delete baseData.utility;
     delete baseData.service_area;
     delete baseData.power_station;
-    delete baseData.energy_provider;
-    delete baseData.energy_type;
-    delete baseData.energy_source;
+    delete baseData.provider;
+    delete baseData.category;
+    delete baseData.technology;
     delete baseData.agg_level;
-    delete baseData.type;
+    delete baseData.asset;
 
     const result = await UpdateEnergyResource({
       ...(baseData as Partial<EnergyResource>),

@@ -453,7 +453,7 @@ export default async function KpiSettingsPage() {
                     {
                       key: "agg_level_id",
                       type: "managed-list",
-                      managedListName: "Aggregation Level",
+                      managedListName: "Strata",
                     },
                     { key: "block", type: "number" },
                     {
