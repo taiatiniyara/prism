@@ -39,9 +39,9 @@ All three include the PDF reports + full dashboards (Benchmarking KPI, Regional,
 
 `is_utility` is a single yes/no switch; it can't distinguish the new org classes (utility vs PPA-member vs paying subscriber — all `is_utility=false` today except utilities). Split into **two independent fields**:
 
-**Axis 1 — `relationship` (drives the *access model*).** New column on `organisations`:
+**Axis 1 — `relationship` (drives the *access model*).** A new **reference table** `organisation_relationships` with a FK from `organisations.relationship_id`. Its rows (the stable `code` is what code branches on):
 
-| value | meaning | pays? | access |
+| `code` | meaning | pays? | access |
 |---|---|---|---|
 | `utility` | data provider (submits benchmarking data) | no | provider role model (BLO/DAOs) + free member dashboards for its sector(s) |
 | `member` | non-utility association member (e.g. PPA/PWWA associate) | no | free member entitlement set, **scoped to the sector(s) of the associations it belongs to** |
@@ -49,8 +49,9 @@ All three include the PDF reports + full dashboards (Benchmarking KPI, Regional,
 
 > **`member` replaces the old `ppa_member` value (decided 2026-07-27).** Which association(s) an org belongs to — and therefore which *sector* its free access covers — is **not** encoded here; it lives in the sector-tagged `benchmarking_group` M:N below. `relationship` says only *how* the org relates to PRISM (provider / free-member / paying); the cohort + sector detail is the M:N's job. An org is single-valued on this axis (a utility that is also a PPA member is `utility`; its PPA membership is a `benchmarking_group_member` row).
 
-- Modeled as a typed enum column (`OrgRelationship`), **not** a managed list — code branches on it, so it's structural, not user-editable vocab. Pattern: same as `user.status`'s `UserStatus`.
-- **Migration:** `is_utility = true → relationship = 'utility'`; all others → `subscriber` or `member` (BMO reviews the non-utility set once); existing `ppa_membership_type_id` values migrate into `benchmarking_group_member` rows (PPA group, electricity sector). Deprecate `is_utility` after backfill.
+- **Stored as a dedicated reference table + FK (decided 2026-07-27), mirroring `sectors` (PR #65).** `organisation_relationships { id (explicit, not serial), code varchar unique — 'utility'|'member'|'subscriber', name, is_active }`; `organisations.relationship_id → organisation_relationships.id`. Integrity comes from the **FK** — **no CHECK constraint** (same as every other org classifier). Code branches on the stable **`code`**, never `id` or the editable `name`.
+- **Why a dedicated ref table, not generic `managed_list_items`:** `managed_list_items` has no stable `code` (only a serial `id` that differs across environments and an editable `name`), so code branching on it would drift the day someone renames the row. A dedicated table carries a stable `code` — the exact pattern #13 used for `sectors` ("explicit ids… safe to reference"). It's still a table (so `name`/`is_active`/UI), still an FK (consistent with `entity_type_id` et al.) — just code-safe.
+- **Migration:** seed `organisation_relationships` (utility/member/subscriber); then `is_utility = true → relationship_id = (utility row)`; all others → `subscriber` or `member` (BMO reviews the non-utility set once); existing `ppa_membership_type_id` values migrate into `benchmarking_group_member` rows (PPA group, electricity sector). Deprecate `is_utility` after backfill.
 - Edge case (org is *both* utility and subscriber) is out of scope now — single-valued; revisit only if a real case appears.
 
 **Axis 2 — `entity_type_id` (drives *persona / reporting*).** **Already exists** — FK `organisations.entity_type_id → managed_list_items`. This is the "what kind of org" axis (utility / donor-DFI / consultancy / government / researcher …). No change needed beyond ensuring the vocab covers the consumer types. It stays independent of `relationship` — e.g. a *government* body (entity_type) may be a *member* or a *subscriber* (relationship); a *donor* and a *consultancy* differ in type but are both *subscribers*.
