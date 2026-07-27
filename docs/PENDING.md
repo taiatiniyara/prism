@@ -13,25 +13,32 @@ A row is *pending* if it has not cleared all the gates that apply to it. Docs-on
 
 ---
 
-## ⚡ TL;DR (snapshot 2026-07-27 20:33)
+## ⚡ TL;DR (snapshot 2026-07-27, refresh 2)
 
-- **No feature work is stuck unmerged or unpushed.** Every human PR to date is merged; the only open PRs are 13 Dependabot bumps (#37–#49) awaiting a human decision.
-- **`main` is in sync with `origin/main`** (PR #70 pulled).
-- **Uncommitted in the main tree:** the board (`WORKSTREAMS.md`, live multi-session notes), **#3's `calculator-engine-spec.md`** WIP, and this file (`PENDING.md`, being PR'd). The earlier `powerStationDnD.tsx` nit was **fixed by #4 on main** (`f2f3cba`) — no longer pending.
-- **The real backlog is *decisions*, not code**: several streams are parked waiting on Eugene (see "Awaiting Eugene" table).
+- **The main working tree is mid-reconcile.** Local `main` has **diverged from `origin/main` (ahead 1 / behind 3)**: one **unpushed commit** (`f043013`, #10 benchmarking_group guardrail) sits on local `main`, and origin has 3 newer commits not yet pulled → **someone needs to pull+merge+push** to converge. This is the single most actionable pending item right now.
+- **No feature PR is stuck.** All human PRs are merged; only 13 Dependabot bumps (#37–#49) are open.
+- **Uncommitted in the main tree (4 files):** the board `WORKSTREAMS.md`, **#3's `calculator-engine-spec.md`**, `docs/multi-level-hierarchy-requirements.md` (#8), `docs/security-remediation.md` (#12) — plus this file's in-place refresh.
+- **#8's schema-convention decision is RESOLVED** (Eugene ruled *hybrid freeze-as-built*, commit `7c01627`) → dropped from "Awaiting Eugene"; unblocks #2/#3/#14.
+- **The rest of the backlog is *decisions*, not code** (see "Awaiting Eugene").
 
 ---
 
 ## 1. Repo git-pipeline snapshot (objective — regenerate with §4)
 
 ### Main working tree (`C:\Users\eugen\prism`, branch `main`)
-- **Sync:** in sync with `origin/main` (PR #70 pulled).
-- **Uncommitted:**
+- **Sync:** ⚠ **diverged — ahead 1 / behind 3.**
+  - **Unpushed (ahead 1):** `f043013` `docs(#10): align §2.1 benchmarking_group guardrail with #8's hybrid ruling` — committed to local `main`, **not on origin**. → needs push.
+  - **Unpulled (behind 3):** origin advanced to `884a315` (`7c01627` #8 ruling, `e3f64a0`/`884a315` "more api routes", `825fd37` merge). → needs pull.
+  - **Action:** whoever next drives the tree: `git pull --no-rebase` (or fetch+merge) to fold origin's 3 in, then `git push` `f043013`. Until then local `main` ≠ origin.
+- **Uncommitted (4 files):**
   | File | Stream | What | Handling |
   |------|--------|------|----------|
   | `docs/calculator-engine-spec.md` | #3 | spec edits (active WIP) | left for #3 to commit |
-  | `docs/WORKSTREAMS.md` | board | multi-session notes incl. #15's own row | rides the normal board commit flow (do **not** yank onto a feature branch — would strip other sessions' in-place notes) |
-  | `docs/PENDING.md` | #15 | this tracker (new) | being PR'd via `docs/pending-tracker` |
+  | `docs/multi-level-hierarchy-requirements.md` | #8 | doc edits post-ruling | left for #8 |
+  | `docs/security-remediation.md` | #12 | log edits | left for #12 |
+  | `docs/WORKSTREAMS.md` | board | multi-session notes incl. #15's row | rides the normal board commit flow (do **not** yank onto a feature branch — would strip other sessions' in-place notes) |
+
+  *(This `PENDING.md` refresh is also uncommitted in-place; it rides the next tree reconcile/push rather than a separate PR, to avoid adding to the divergence above.)*
 
 ### Worktrees
 | Path | Branch | State |
@@ -62,15 +69,25 @@ Legend: ✅ nothing pending · 📝 uncommitted · ⬆️ committed-not-pushed �
 | 4 | Schema for AI | — (authored energy-dim rename, PR #68 merged+applied) | — | — | ✅ |
 | 5 | BSC Builder | — (PR #35 merged; worktree clean) | — | ⏳ #2 `kpi_target` for Input-tracked targets (deferred) | ✅ / ⏳ deferred |
 | 7 | KPI calculator | — (not started/unconfirmed) | — | ⏳ #3 | ⚪ |
-| 8 | Multi-level hierarchy | — (requirements doc committed) | — (no DDL of its own; #2 owns) | ⏳ **Eugene: schema-convention divergence** (hybrid freeze-as-built vs sentinel-member) | ⏳ |
-| 10 | Access / registration | — (no code yet) | — | ⏳ Eugene: default-plan contents + PPA-member entitlements | ⏳ paused |
+| 8 | Multi-level hierarchy | 📝 `multi-level-hierarchy-requirements.md` edits uncommitted | — (no DDL of its own; #2 owns) | ✅ **RESOLVED** — Eugene ruled hybrid freeze-as-built (`7c01627`); remaining = app-layer query pass (w/ #11) gated on #2's DDL amendments | 📝 → then ⏳ #2 |
+| 10 | Access / registration | ⬆️ `f043013` committed to local `main`, **unpushed** | — | ⏳ Eugene: default-plan contents + member entitlements | ⬆️ + ⏳ |
 | 11 | UI / frontend | — (Phase 5a merged, PR #58) | — | ⏳ #2 Phase-5b DDL (`sector_terminology` etc.) | ⏳ gated |
-| 12 | Security hardening | — (all merged; MFA applied to DB) | — | ⏳ Eugene: P2/D2 `API_KEY` split, D1 RLS into #2/#8 | ✅ / ⏳ |
+| 12 | Security hardening | 📝 `security-remediation.md` uncommitted | — (all merged; MFA applied to DB) | ⏳ Eugene: P2/D2 `API_KEY` split. **D1 RLS: column decided** (denormalized `utility_id` per #8's ruling) → remaining is #12 *writing the policy DDL*, not a Eugene call | 📝 / ⏳ |
 | 13 | Multi-sector | — (#55/#56/#58/#60/#61/#62/#64/#65 merged; DB changes applied) | — | ⏳ Phase-5b/5c deferred (with #2/#11) | ✅ / ⏳ deferred |
 | 14 | Data-entry / fixes | — (`powerStationDnD.tsx` nit fixed by #4, `f2f3cba`) | — (energy-dim rename PR #68 already applied) | — | ✅ |
-| 15 | Pending tracker | 🔀 `PENDING.md` in PR `docs/pending-tracker` | — | — | 🔀 |
+| 15 | Pending tracker | ✅ `PENDING.md` merged (PR #71, `01272c0`); refresh 2 uncommitted in-place | — | — | ✅ |
 
-**Net pending right now:** this tracker (in PR) + #3's spec WIP + the board's normal churn; everything else is either done or waiting on a decision.
+**Net pending right now:** the tree divergence (push `f043013` + pull origin's 3) is the one actionable git item; the rest is uncommitted doc WIP owned by #3/#8/#12 + decisions on Eugene. #8's convention ruling cleared the biggest blocker.
+
+**Doc-debt (flagged by #8):** #2's medallion spec (`schema-redesign-medallion.md` §1.4/§1.5) still describes "All areas" NOT-NULL grain targets, now **contradicted** by the hybrid ruling. #2 asked to amend; tracked here until they do.
+
+### Recently applied DB changes (done — do NOT re-run; informational)
+Direct DML/DDL on the shared **dev** DB with no commit/PR (or applied ahead of a PR). Recorded so no session re-runs them and everyone knows the DB state:
+- **2026-07-27 (#14):** `countries` name corrections to UN M49 canonical forms — 583→"Micronesia (Federated States of)", 612→"Pitcairn", 876→"Wallis and Futuna Islands". Name-only (ids unchanged/M49-correct), FK-safe, guarded txn; backup `backup.countries_names_20260727`.
+- **2026-07-27 (#14):** American Samoa `id 1→16` (M49 re-key of the last serial-id singleton).
+- **2026-07-27 (#12):** admin MFA migration (`user.two_factor_enabled`, `session.two_factor_verified_at`, `two_factor` table) applied to the `.env` DB — additive/idempotent, **do not re-run** `scripts/apply-mfa-migration.ts`.
+- **2026-07-27 (#4/#14):** energy-dim column physicalisation (PR #68) applied — `provider_id`/`category_id`/`technology_id`/`asset_id`/`unit_id`, table `units`, views rebuilt, `formula_inputs` JSON keys renamed 67 rows; backups `backup.*_20260727`.
+- **2026-07-27 (#13):** M49-as-PK dedupe on `countries`/`sub_regions` + dropped id sequences + ISO-4217 currency seed (PRs #60/#61/#62/#64/#65). Applied.
 
 ---
 
@@ -79,10 +96,11 @@ Legend: ✅ nothing pending · 📝 uncommitted · ⬆️ committed-not-pushed �
 | Stream | Decision needed | Blocks |
 |--------|-----------------|--------|
 | #2 | provide the real **sample data extract** | the medallion data reload (last step of the migration) |
-| #8 | pick the `data_entries` **schema convention**: hybrid "freeze as-built" (denormalized chain, no sentinel grain rows) **vs** sentinel "All"-member grain columns | any further #2/#8 shared-table DDL |
-| #10 | **default-plan contents** + **PPA-member entitlements** | tiered-access schema (no code until settled) |
-| #12 | **P2/D2** `API_KEY` split; **D1** fold RLS owning-org column into #2/#8 `data_entries` DDL | RLS defence-in-depth |
+| #10 | **default-plan contents** + **member entitlements** (the free `member` plan's sector-scoped dashboard set; `member` is now association-agnostic — PPA→electricity, PWWA→water/sanitation) | tiered-access schema (no code until settled) |
+| #12 | **P2/D2** `API_KEY` split | secret hygiene |
 | — | triage the **13 Dependabot PRs** (esp. #47 TypeScript 7 major, #45 @types/node 26) | dependency currency |
+
+*Cleared since refresh 1:* **#8** schema-convention (Eugene ruled hybrid freeze-as-built, `7c01627`). **#12 D1** is no longer a Eugene decision — the RLS tenant column is decided (`utility_id`); #12 now just writes the policy DDL (policy must handle `utility_id IS NULL` shared country-level rows).
 
 ---
 

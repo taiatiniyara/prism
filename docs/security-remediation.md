@@ -143,6 +143,11 @@ _Each entry: what changed, why, standard, how verified._
   1. `npm audit fix` (non-`--force`) to clear the safely-patchable transitive DoS advisories.
   2. Optionally pin patched `brace-expansion` via the existing `overrides` block if any residual remains — verify it doesn't break `minimatch@3` consumers.
   3. Treat the `exceljs` major bump as a separate, tested change — do **not** `--force`.
+- **Re-check 2026-07-27 (prompted by #8's Dependabot re-flag of `next`/`sharp`, 2 high):** investigated — **false positive, no runtime exposure.**
+  - The advisory is `sharp`/libvips (GHSA-f88m-g3jw-g9cj; CVE-2026-33327/33328/35590/35591), which affects `sharp <0.35.0`. Only **one** `sharp` is installed — **0.35.3** — which is **patched** (≥ 0.35.0). `npm ls` confirms a single deduped 0.35.3.
+  - `next` is flagged only **transitively** (its `via` is just `["sharp"]`) — **there is no direct Next.js advisory**, so the proxy/MFA middleware is unaffected by any framework CVE.
+  - Root cause of the noise: a benign version-range mismatch — `next@16.2.12` declares `sharp ^0.34.5` while the repo pins `^0.35.3`; npm audit/Dependabot evaluate against next's declared range, not the resolved-and-patched 0.35.3 (`npm ls` marks it `invalid` but it's the version actually used). Optional cleanup: add a `sharp` entry to the `overrides` block to silence the mismatch. Not a security action.
+  - Everything else in the totals (now 23: 18 high / 5 moderate) is the **same S7 chain** (ESLint dev-tooling + the exceljs/archiver + brace-expansion/minimatch paths) already triaged above — unchanged conclusion.
 - **Standard:** ASVS 14.2 (dependency management); OWASP A06 (Vulnerable & Outdated Components).
 
 ### P3 — `/api/health` information-disclosure gate · ✅ 2026-07-26
