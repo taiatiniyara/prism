@@ -5,22 +5,24 @@
 **Context:** replaces PRISM 1's *virtual generator / virtual service area* pattern with explicit
 per-level anchoring ("Option A"; a reporting-entity supertype was considered and set aside).
 Confirmed compatible with #3's `kpi_actual` proposal (calculator-engine-spec §4.4) on 2026-07-26.
+**Terminology updated 2026-07-27** to the physicalised energy-dim names (PR #68): the level-1 anchor
+is `unit_id` → `units` (formerly `energy_resource_id` → `energy_resources`).
 
 ---
 
 ## 1. The requirement in one paragraph
 
 Every `data_entries` row must belong to **exactly one** real entity at **exactly one** of the five
-collection levels — equipment, power station, service area, organisation, country — via a real FK,
-instead of everything hanging off `energy_resources` with `is_virtual` rows standing in for the
-upper levels. Which anchor column is populated *is* the row's level. `kpi_actual` reuses the same
+collection levels — equipment/unit, power station, service area, organisation, country — via a real
+FK, instead of everything hanging off `units` (the PRISM 1 generator table) with `is_virtual` rows
+standing in for the upper levels. Which anchor column is populated *is* the row's level. `kpi_actual` reuses the same
 anchor set (already agreed with #3).
 
 ## 2. Anchor columns on `data_entries`
 
 | Level | Column | References |
 |---|---|---|
-| 1 Equipment | `energy_resource_id` (exists) | `energy_resources` |
+| 1 Equipment / unit | `unit_id` (exists) | `units` |
 | 2 Power station | `power_station_id` (new) | `power_stations` |
 | 3 Service area / grid | `service_area_id` (exists) | `service_areas` |
 | 4 Organisation | `organisation_id` (new) | `organisations` |
@@ -28,7 +30,7 @@ anchor set (already agreed with #3).
 
 Constraints:
 
-1. **Exactly-one-anchor:** `CHECK (num_nonnulls(energy_resource_id, power_station_id,
+1. **Exactly-one-anchor:** `CHECK (num_nonnulls(unit_id, power_station_id,
    service_area_id, organisation_id, country_id) = 1)`.
 2. **Derived level (recommended):** generated stored column `entry_level int` (1–5 by which anchor
    is set) so queries/AI can filter by level without a CASE.
@@ -51,7 +53,9 @@ The 10 medallion dimension columns are #2's spec and are untouched by this — a
    virtual-generator problem at level 5 (a pretend entity holding real data). Enforcement mechanism
    is #2's choice (id-range check, `is_aggregate` flag, or app rule at the write path) — the
    requirement is that no entry/`kpi_actual` row may anchor to a sentinel. "All countries"
-   aggregates are *computed* rollups, not stored addresses.
+   aggregates are *computed* rollups, not stored addresses. Confirmed with #13 (2026-07-27): real
+   entities are M49-keyed (codes ≤ 999) and sentinels use a disjoint id range (e.g. "All
+   Countries" = 100000), so a simple `country_id < 1000` CHECK on the anchor would suffice.
 
 7. **`country_context` fold-or-keep (flag, not blocker):** country-level explanatory data already
    lives in the `country_context` side-table. Once `country_id` anchoring exists, decide whether
@@ -63,13 +67,13 @@ The 10 medallion dimension columns are #2's spec and are untouched by this — a
 ## 3. Backfill: promoting entries off the virtual entities
 
 The virtual rows themselves say where each entry really belongs
-(`energy_resources.power_station_id` / `.service_area_id`; `service_areas.utility_id`;
+(`units.power_station_id` / `.service_area_id`; `service_areas.utility_id`;
 `organisations.country_id`):
 
 | Today's anchor | Promote to | Rule |
 |---|---|---|
-| virtual `energy_resource` **with** `power_station_id` | `power_station_id` | station-level data parked on a station virtual |
-| virtual `energy_resource` without station | `service_area_id` | grid-level data parked on a grid virtual |
+| virtual `unit` **with** `power_station_id` | `power_station_id` | station-level data parked on a station virtual |
+| virtual `unit` without station | `service_area_id` | grid-level data parked on a grid virtual |
 | virtual `service_area` | `organisation_id` (= `service_areas.utility_id`) | org-level data parked on a virtual area |
 | org-anchored rows whose measure's `agg_level` = country | `country_id` (= `organisations.country_id`) | country-level data |
 
@@ -77,7 +81,7 @@ The virtual rows themselves say where each entry really belongs
 rows** (e.g. `SELECT ... WHERE is_virtual GROUP BY agg_level_id`) before trusting it. Run in one
 transaction with per-level row counts before/after; nothing may be dropped.
 
-After no entries reference them: soft-delete virtual `energy_resources`/`service_areas` rows; drop
+After no entries reference them: soft-delete virtual `units`/`service_areas` rows; drop
 the `is_virtual` columns only once onboarding scripts / p1-import paths no longer create them.
 `generation_relevance` / `generation_toggle_relevance` stay service-area-anchored — untouched.
 
