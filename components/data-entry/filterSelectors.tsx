@@ -6,6 +6,7 @@ import {
 } from "@/components/data-entry/dataEntrySelect";
 import { Label } from "@/components/ui/label";
 import { DataEntryFilterOption } from "@/app/data-entry/types";
+import { useTerm } from "@/lib/terminology/useTerm";
 
 interface FilterSelectProps {
   id: string;
@@ -142,14 +143,17 @@ export const KpiSubcategorySelect = (
 
 export const ServiceAreaSelect = (
   props: Omit<FilterSelectProps, "id" | "label" | "placeholder">,
-) => (
-  <FilterSelect
-    id="service-area-select"
-    label="Service Area"
-    placeholder="Select service area"
-    {...props}
-  />
-);
+) => {
+  const label = useTerm("service_area");
+  return (
+    <FilterSelect
+      id="service-area-select"
+      label={label}
+      placeholder={`Select ${label.toLowerCase()}`}
+      {...props}
+    />
+  );
+};
 
 export const DataEntryStatusSelect = (
   props: Omit<FilterSelectProps, "id" | "label" | "placeholder">,

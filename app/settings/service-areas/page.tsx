@@ -2,6 +2,7 @@ import DataTable from "@/components/tables/data-table";
 import { AddServiceArea, AllServiceAreas, UpdateServiceArea } from "./service";
 import { ServiceArea } from "@/db/schema/utility";
 import { getCurrentUser } from "@/lib/user.service";
+import { resolveTerm } from "@/lib/terminology/resolver";
 
 export default async function ServiceAreasSettingsPage() {
   const user = await getCurrentUser();
@@ -22,7 +23,7 @@ export default async function ServiceAreasSettingsPage() {
     <DataTable<ServiceArea>
       data={serviceAreas}
       columns={columns}
-      title="Service Areas"
+      title={resolveTerm("service_area", { plural: true })}
       createFormProps={{
         formAction: AddServiceArea,
         fields: [
