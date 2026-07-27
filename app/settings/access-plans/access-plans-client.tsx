@@ -54,7 +54,13 @@ const ENT_LABEL: Record<EntitlementLevel, string> = {
 
 const ENT_ORDER: EntitlementLevel[] = ["none", "view", "view_download"];
 
-const todayISO = (): string => new Date().toISOString().slice(0, 10);
+const todayISO = (): string => {
+  // Local date (not UTC) — a plan's effective-from should be the editor's today,
+  // and PRISM's users sit at UTC+12/13, where toISOString() lands a day early.
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+};
 
 const countIncluded = (e: Entitlements): number =>
   DASHBOARDS.filter((d) => e[d.key] !== "none").length;
