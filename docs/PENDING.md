@@ -13,32 +13,27 @@ A row is *pending* if it has not cleared all the gates that apply to it. Docs-on
 
 ---
 
-## ⚡ TL;DR (snapshot 2026-07-27, refresh 2)
+## ⚡ TL;DR (snapshot 2026-07-28, refresh 4)
 
-- **The main working tree is mid-reconcile.** Local `main` has **diverged from `origin/main` (ahead 1 / behind 3)**: one **unpushed commit** (`f043013`, #10 benchmarking_group guardrail) sits on local `main`, and origin has 3 newer commits not yet pulled → **someone needs to pull+merge+push** to converge. This is the single most actionable pending item right now.
-- **No feature PR is stuck.** All human PRs are merged; only 13 Dependabot bumps (#37–#49) are open.
-- **Uncommitted in the main tree (4 files):** the board `WORKSTREAMS.md`, **#3's `calculator-engine-spec.md`**, `docs/multi-level-hierarchy-requirements.md` (#8), `docs/security-remediation.md` (#12) — plus this file's in-place refresh.
-- **#8's schema-convention decision is RESOLVED** (Eugene ruled *hybrid freeze-as-built*, commit `7c01627`) → dropped from "Awaiting Eugene"; unblocks #2/#3/#14.
-- **The rest of the backlog is *decisions*, not code** (see "Awaiting Eugene").
+- **Tree clean and in sync with `origin/main`.** ⚠ deps changed → run `npm install` after your next pull.
+- **Only one uncommitted file:** **#3's `calculator-engine-spec.md`** (active WIP, left for #3).
+- **Open PRs: 10 — all held Dependabot majors** (Eugene reviews individually). No human PRs open: `#73` (API_KEY split) and `#75` (extract-template fix) both merged.
+- **Cleared this session:** #8 schema-convention ruling (`7c01627`); #12 D2 API_KEY split merged (`167f080`); both sentinel-deletion confirmations (#2 views, #10 access); safe Dependabot subset merged.
+- **Awaiting Eugene — down to 2:** #2 medallion sample extract, #10 default-plan + member entitlements.
+- **Applied DB changes today** (informational, all backed up): sentinel-chain deletion, `measure_definitions.description` drop, managed-lists vocab rename — plus the follow-on `units.category_id`/`type_id` DROP still owed by #2.
 
 ---
 
 ## 1. Repo git-pipeline snapshot (objective — regenerate with §4)
 
 ### Main working tree (`C:\Users\eugen\prism`, branch `main`)
-- **Sync:** ⚠ **diverged — ahead 1 / behind 3.**
-  - **Unpushed (ahead 1):** `f043013` `docs(#10): align §2.1 benchmarking_group guardrail with #8's hybrid ruling` — committed to local `main`, **not on origin**. → needs push.
-  - **Unpulled (behind 3):** origin advanced to `884a315` (`7c01627` #8 ruling, `e3f64a0`/`884a315` "more api routes", `825fd37` merge). → needs pull.
-  - **Action:** whoever next drives the tree: `git pull --no-rebase` (or fetch+merge) to fold origin's 3 in, then `git push` `f043013`. Until then local `main` ≠ origin.
-- **Uncommitted (4 files):**
+- **Sync:** ✅ in sync with `origin/main` (`6cda722`, #8's docs sweep). Prior ahead-1/behind-3 divergence resolved.
+- **Uncommitted (1 file):**
   | File | Stream | What | Handling |
   |------|--------|------|----------|
   | `docs/calculator-engine-spec.md` | #3 | spec edits (active WIP) | left for #3 to commit |
-  | `docs/multi-level-hierarchy-requirements.md` | #8 | doc edits post-ruling | left for #8 |
-  | `docs/security-remediation.md` | #12 | log edits | left for #12 |
-  | `docs/WORKSTREAMS.md` | board | multi-session notes incl. #15's row | rides the normal board commit flow (do **not** yank onto a feature branch — would strip other sessions' in-place notes) |
 
-  *(This `PENDING.md` refresh is also uncommitted in-place; it rides the next tree reconcile/push rather than a separate PR, to avoid adding to the divergence above.)*
+  *(This `PENDING.md` refresh 3 is uncommitted in-place; like refresh 2 it rides the next docs sweep rather than its own PR.)*
 
 ### Worktrees
 | Path | Branch | State |
@@ -46,9 +41,21 @@ A row is *pending* if it has not cleared all the gates that apply to it. Docs-on
 | `C:/Users/eugen/prism` | `main` | see above |
 | `C:/Users/eugen/prism-bsc` | `feat/bsc-input-kpi-picker` | **clean; fully merged** into `main` (PR #35). Nothing pending. Branch has no upstream but no unmerged commits either — safe to leave or delete. |
 
-### Open PRs (13 — all Dependabot, awaiting human triage)
-Not owned by any stream; a maintenance decision for Eugene. None blocking.
-`#49` read-excel-file 7→9.3.4 · `#48` eslint-plugin-security · `#47` **typescript 5.9→7.0.2 (major)** · `#46` jest-dom 6→7 · `#45` @types/node 20→26 · `#44` eslint 9→10 · `#43` lucide-react 0.5→1.27 · `#42` @ai-sdk/anthropic 3→4 · `#41` production-deps group (20) · `#40` dev-deps group (6) · `#39` codeql-action 3→4 · `#38` actions/checkout 4→7 · `#37` ssh-action.
+### Open PRs (10 — all held Dependabot majors)
+No human PRs open. `#73` (API_KEY split) and `#75` (extract-template header fix) both merged since refresh 3.
+**10 Dependabot majors — HELD** (Eugene's call: major bumps need individual review): `#49` read-excel-file 7→9 · `#48` eslint-plugin-security 3→4 · `#47` **typescript 5.9→7 (major)** · `#46` jest-dom 6→7 · `#45` @types/node 20→26 · `#44` eslint 9→10 · `#43` lucide-react 0.5→1 · `#42` @ai-sdk/anthropic 3→4 · `#39` codeql-action 3→4 · `#38` actions/checkout 4→7.
+
+**Recently merged (since refresh 3):** `#73` #12 API_KEY tiering (`167f080`) · `#75` #2 extract-template header fix (`77b2acf`) · `#74` #11 Phase-5b seam (`9b94edc`).
+**Dependabot safe-subset MERGED by #2 (verified `npm i` + `tsc` green):** `#37` ssh-action (`cafafba`) · `#41` production-deps, 19 bumps (`a20e117`) · `#72` dev-deps, 5 bumps (`4b4dd7f`).
+⚠ **main's deps changed → after `git pull`, run `npm install` to resync `node_modules`.**
+
+### Direct-to-main commits — hygiene watch (bypassed branch→PR per Protocol #6)
+Recorded because the board's commit-hygiene rule asks for branch→PR; these landed straight on `main`. Not necessarily wrong (some are DB-coordinated), but flagged for visibility / optional retroactive review:
+- `4316624` (**#14**) — drop `measure_definitions.description`. Retroactive-review PR offered to Eugene by #14.
+- `98cf4e0` / `b7b8473` (**#4**) — energy-taxonomy vocab rename code + SQL. Any hygiene follow-up (retro-review PR) routes to **#4**. (#14 ran only the DB-side list-name UPDATEs — pure DML, no commit.)
+- *(prior, already noted):* #12's MFA + S-series landed direct on `main` earlier → retroactive review PR #63.
+
+*Note: #14's DB-only changes (country fixes, sentinel deletion, vocab list renames) are pure DML with no commit — they live in "Recently applied DB changes", not here.*
 
 ### Local branches merged but not pruned (housekeeping, not pending work)
 All correspond to **merged** PRs (most via squash, so `git` ancestry can't see them — confirmed via `gh`). Safe to delete locally:
@@ -64,30 +71,38 @@ Legend: ✅ nothing pending · 📝 uncommitted · ⬆️ committed-not-pushed �
 | # | Stream | Code pending | DB apply pending | Waiting on | Verdict |
 |---|--------|--------------|------------------|-----------|---------|
 | 1 | Project mgt | — | — | — | ✅ |
-| 2 | Medallion migration | — (DDL done + verified on DB) | data **reload** via `migrate.ts` + `input_dl_def_mappings` regen (not DDL) | ⏳ Eugene's sample extract | ⏳ paused |
+| 2 | Medallion migration | — (DDL done; PR #75 merged; `units` col DROP applied ✅) | data **reload** via `migrate.ts` + `input_dl_def_mappings` regen | ⏳ Eugene: sample extract; **+ parked `asset_id→asset_class_id`/`agg_level_id→strata_id` col renames** (~7 cols/~50 files) awaiting Eugene's go + a quiet window | ⏳ paused |
 | 3 | Calculator engine | — (design + mockup approved) | schema tracer-bullets deferred | ⏳ #2 landing | ⏳ gated |
 | 4 | Schema for AI | — (authored energy-dim rename, PR #68 merged+applied) | — | — | ✅ |
 | 5 | BSC Builder | — (PR #35 merged; worktree clean) | — | ⏳ #2 `kpi_target` for Input-tracked targets (deferred) | ✅ / ⏳ deferred |
 | 7 | KPI calculator | — (not started/unconfirmed) | — | ⏳ #3 | ⚪ |
-| 8 | Multi-level hierarchy | 📝 `multi-level-hierarchy-requirements.md` edits uncommitted | — (no DDL of its own; #2 owns) | ✅ **RESOLVED** — Eugene ruled hybrid freeze-as-built (`7c01627`); remaining = app-layer query pass (w/ #11) gated on #2's DDL amendments | 📝 → then ⏳ #2 |
-| 10 | Access / registration | ⬆️ `f043013` committed to local `main`, **unpushed** | — | ⏳ Eugene: default-plan contents + member entitlements | ⬆️ + ⏳ |
-| 11 | UI / frontend | — (Phase 5a merged, PR #58) | — | ⏳ #2 Phase-5b DDL (`sector_terminology` etc.) | ⏳ gated |
-| 12 | Security hardening | 📝 `security-remediation.md` uncommitted | — (all merged; MFA applied to DB) | ⏳ Eugene: P2/D2 `API_KEY` split. **D1 RLS: column decided** (denormalized `utility_id` per #8's ruling) → remaining is #12 *writing the policy DDL*, not a Eugene call | 📝 / ⏳ |
+| 8 | Multi-level hierarchy | — (requirements doc committed in `6cda722`) | — (no DDL of its own; #2 owns) | ✅ **RESOLVED** — Eugene ruled hybrid freeze-as-built (`7c01627`); remaining = app-layer query pass (w/ #11) gated on #2's DDL amendments | ⏳ #2 |
+| 10 | Access / registration | — (guardrail change landed in `6cda722`) | — | ⏳ Eugene: default-plan contents + member entitlements | ⏳ |
+| 11 | UI / frontend | — (Phase 5a #58 + Phase-5b active-sector seam #74/`9b94edc` merged, behaviour-neutral) | — | ⏳ #2 Phase-5b DDL (`sector_terminology` etc.) for the remainder | ⏳ gated |
+| 12 | Security hardening | ✅ **PR #73 MERGED** (`167f080`, API_KEY tiering, no DB change) | — | **remaining P2/D2 = operator steps** (set `API_KEY_SENSITIVE`, repoint Power BI, rotate). **D1 RLS: column decided** (`utility_id`) → #12 writes the policy DDL | 🛠️ ops |
 | 13 | Multi-sector | — (#55/#56/#58/#60/#61/#62/#64/#65 merged; DB changes applied) | — | ⏳ Phase-5b/5c deferred (with #2/#11) | ✅ / ⏳ deferred |
-| 14 | Data-entry / fixes | — (`powerStationDnD.tsx` nit fixed by #4, `f2f3cba`) | — (energy-dim rename PR #68 already applied) | — | ✅ |
-| 15 | Pending tracker | ✅ `PENDING.md` merged (PR #71, `01272c0`); refresh 2 uncommitted in-place | — | — | ✅ |
+| 14 | Data-entry / fixes | — (`powerStationDnD.tsx` nit fixed by #4, `f2f3cba`) | — (energy-dim rename PR #68 applied; country name fixes applied — see below) | — | ✅ |
+| 15 | Pending tracker | ✅ `PENDING.md` merged (PR #71); refresh 2 landed in `6cda722`; refresh 3 uncommitted in-place | — | — | ✅ |
 
-**Net pending right now:** the tree divergence (push `f043013` + pull origin's 3) is the one actionable git item; the rest is uncommitted doc WIP owned by #3/#8/#12 + decisions on Eugene. #8's convention ruling cleared the biggest blocker.
+**Net pending right now:** **#3's `calculator-engine-spec.md`** WIP (uncommitted); **#2's parked `asset_id→asset_class_id`/`agg_level_id→strata_id` col renames** (~7 cols/~50 files, awaiting Eugene's go + quiet window); 10 held Dependabot majors; 2 Eugene decisions; #12's P2/D2 operator steps (env/Power BI/rotate). No unpushed commits, no unmerged human PRs, no un-applied DB changes. Tree clean and in sync (`npm install` after pull).
 
 **Doc-debt (flagged by #8):** #2's medallion spec (`schema-redesign-medallion.md` §1.4/§1.5) still describes "All areas" NOT-NULL grain targets, now **contradicted** by the hybrid ruling. #2 asked to amend; tracked here until they do.
 
 ### Recently applied DB changes (done — do NOT re-run; informational)
 Direct DML/DDL on the shared **dev** DB with no commit/PR (or applied ahead of a PR). Recorded so no session re-runs them and everyone knows the DB state:
+- **2026-07-28 (#2/jolly) — `units.category_id`/`type_id` columns DROPPED** (closes #4's `935847b` derive refactor; code was already merged, DB now matches). 501 rows intact, no view deps; backups `backup.units_dropped_cols_20260728` / `backup.units_pre_assetclass_20260728`.
+- **2026-07-28 (#14, w/ #4) — `managed_lists`/`managed_list_items` vocab rename** (energy-taxonomy → new names): list id1→Strata, id2→Provider, id3 Category, id4 Technology, id55→Asset Class; item mli id1→Unit. Code on main (`98cf4e0`; SQL `b7b8473`). Guarded txn, verified; backups `backup.managed_lists_pre_vocab_20260728` / `backup.managed_list_items_pre_vocab_20260728`. **Follow-on still pending → see #2 below:** the `units.category_id`/`type_id` column DROP (owned by #2/jolly) is not yet done.
+- **2026-07-27 (#14) — `measure_definitions.description` column DROPPED** — code on main (`4316624`, direct commit, **no PR** — see hygiene watch) + DB column dropped on dev (guarded txn, verified gone); backup `backup.measure_definitions_description_20260727` (9 rows).
+- **2026-07-27 (#14) — "All" sentinel chain DELETED** (guarded txn; real data re-homed by Eugene first; each row verified 0 inbound refs at delete time). Removed: `service_areas` 89 "All Service Areas", `organisations` 1 "All Utilities", `countries` 100000 "All Countries", `sub_regions` 10000 "All" / 1 "All SubRegions" / 5 "Others". Backups: `backup.sentinel_service_areas_20260727` / `_organisations_20260727` / `_countries_20260727` / `_sub_regions_20260727`. Aligns with #8's no-sentinel hybrid ruling. Endorsed by #8 + #13. ⚠ **Open confirmation:** #2/#10 asked to verify no Silver/gold **view** or **entitlement** key references the removed rows (see pending-confirmations below).
 - **2026-07-27 (#14):** `countries` name corrections to UN M49 canonical forms — 583→"Micronesia (Federated States of)", 612→"Pitcairn", 876→"Wallis and Futuna Islands". Name-only (ids unchanged/M49-correct), FK-safe, guarded txn; backup `backup.countries_names_20260727`.
 - **2026-07-27 (#14):** American Samoa `id 1→16` (M49 re-key of the last serial-id singleton).
 - **2026-07-27 (#12):** admin MFA migration (`user.two_factor_enabled`, `session.two_factor_verified_at`, `two_factor` table) applied to the `.env` DB — additive/idempotent, **do not re-run** `scripts/apply-mfa-migration.ts`.
 - **2026-07-27 (#4/#14):** energy-dim column physicalisation (PR #68) applied — `provider_id`/`category_id`/`technology_id`/`asset_id`/`unit_id`, table `units`, views rebuilt, `formula_inputs` JSON keys renamed 67 rows; backups `backup.*_20260727`.
 - **2026-07-27 (#13):** M49-as-PK dedupe on `countries`/`sub_regions` + dropped id sequences + ISO-4217 currency seed (PRs #60/#61/#62/#64/#65). Applied.
+
+**Open confirmations (post-change verification owed):** — ✅ **all cleared 2026-07-27.**
+- ~~**#2:** no Silver/gold view keys off the deleted "All" sentinel rows.~~ **✅ CLEARED** — jolly-murdock (author of the #68 silver/gold views) scanned all 11 live views/matviews via `pg_get_viewdef`; none keys off org 1 / country 100000 / sub_region 10000·1·5 / service_area 89 (only false-positive was `status_id >= 5`, an approval threshold). Views join by FK, so deleted rows just stop appearing. (Formal view-layer owner is #4/#2; jolly authored the 2 core views + scanned the full set — flag if #4 wants to co-sign.)
+- ~~**#10:** no entitlement/access key references those deleted sentinel rows.~~ **✅ CLEARED** — spec grep-clean; #10 has no built runtime access code (design-only); picker/`ensureCountry` key off real M49 codes only, structurally excluding the non-M49 "All Countries" (100000).
 
 ---
 
@@ -97,10 +112,9 @@ Direct DML/DDL on the shared **dev** DB with no commit/PR (or applied ahead of a
 |--------|-----------------|--------|
 | #2 | provide the real **sample data extract** | the medallion data reload (last step of the migration) |
 | #10 | **default-plan contents** + **member entitlements** (the free `member` plan's sector-scoped dashboard set; `member` is now association-agnostic — PPA→electricity, PWWA→water/sanitation) | tiered-access schema (no code until settled) |
-| #12 | **P2/D2** `API_KEY` split | secret hygiene |
-| — | triage the **13 Dependabot PRs** (esp. #47 TypeScript 7 major, #45 @types/node 26) | dependency currency |
+| — | review/merge the **10 held Dependabot majors** individually (esp. #47 TypeScript 7, #45 @types/node 26) — one at a time, not a blocker | dependency currency |
 
-*Cleared since refresh 1:* **#8** schema-convention (Eugene ruled hybrid freeze-as-built, `7c01627`). **#12 D1** is no longer a Eugene decision — the RLS tenant column is decided (`utility_id`); #12 now just writes the policy DDL (policy must handle `utility_id IS NULL` shared country-level rows).
+*Cleared since refresh 1:* **#8** schema-convention (Eugene ruled hybrid freeze-as-built, `7c01627`). **#12 D1** — RLS tenant column decided (`utility_id`); #12 writes the policy DDL (handles `utility_id IS NULL` shared rows). **#12 D2** — API_KEY split now in PR #73 (no longer a decision). **Dependabot triage** — safe subset merged (#37/#41/#72), 10 majors held per Eugene's individual-review call.
 
 ---
 
