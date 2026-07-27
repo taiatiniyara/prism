@@ -26,7 +26,7 @@ interface InputCellProps {
 const DRAFT_STORAGE_PREFIX = "prism:draft:";
 
 const getDraftKey = (row: DataEntryInputRowView): string =>
-  `${DRAFT_STORAGE_PREFIX}${row.inputDefId}:${row.energyResourceId ?? "na"}:${row.paymentModeId ?? "na"}:${row.customerTypeId ?? "na"}`;
+  `${DRAFT_STORAGE_PREFIX}${row.inputDefId}:${row.unitId ?? "na"}:${row.paymentModeId ?? "na"}:${row.customerTypeId ?? "na"}`;
 
 const readDraft = (key: string): string | null => {
   if (typeof window === "undefined") return null;
@@ -122,7 +122,7 @@ export default function InputCell({ row }: InputCellProps) {
 
       updateDataEntryValueAction({
         inputDefId: row.inputDefId,
-        energyResourceId: row.energyResourceId ?? null,
+        unitId: row.unitId ?? null,
         customerTypeId: row.customerTypeId ?? null,
         paymentModeId: row.paymentModeId ?? null,
         value: nextValue,
@@ -172,7 +172,7 @@ export default function InputCell({ row }: InputCellProps) {
 
     updateDataEntryAvailabilityAction({
       inputDefId: row.inputDefId,
-      energyResourceId: row.energyResourceId ?? null,
+      unitId: row.unitId ?? null,
       customerTypeId: row.customerTypeId ?? null,
       paymentModeId: row.paymentModeId ?? null,
       isDataNotAvailable: checked,
@@ -229,7 +229,7 @@ export default function InputCell({ row }: InputCellProps) {
 
       updateDataEntryCommentAction({
         inputDefId: row.inputDefId,
-        energyResourceId: row.energyResourceId ?? null,
+        unitId: row.unitId ?? null,
         customerTypeId: row.customerTypeId ?? null,
         paymentModeId: row.paymentModeId ?? null,
         comment: normalized,

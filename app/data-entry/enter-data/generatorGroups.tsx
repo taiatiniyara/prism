@@ -62,7 +62,7 @@ export default function GeneratorGroups({
           try {
             await updateDataEntryAvailabilityAction({
               inputDefId: row.inputDefId,
-              energyResourceId: row.energyResourceId ?? null,
+              unitId: row.unitId ?? null,
               customerTypeId: row.customerTypeId ?? null,
               paymentModeId: row.paymentModeId ?? null,
               isDataNotAvailable: true,

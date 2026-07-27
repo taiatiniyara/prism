@@ -50,7 +50,7 @@ export interface ExtractRow {
   utilityId?: number | null;
   serviceAreaId?: number | null;
   powerStationId?: number | null;
-  energyResourceId?: number | null;
+  unitId?: number | null;
   countryId?: number | null;
   // value — present = filled shell, absent = empty shell
   valueType?: ValueType | null;

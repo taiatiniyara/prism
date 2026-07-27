@@ -15,7 +15,7 @@ export interface KpiWorkerScope {
   reportPeriodId: number;
   organizationId?: number | null;
   serviceAreaId?: number | null;
-  energyResourceId?: number | null;
+  unitId?: number | null;
   energyProviderId?: number | null;
   energyTypeId?: number | null;
   energySourceId?: number | null;

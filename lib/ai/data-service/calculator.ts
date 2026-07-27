@@ -82,7 +82,7 @@ export const calculateKpis = async (
     reportPeriodId: period.id,
     organizationId: period.utilityId,
     serviceAreaId: null,
-    energyResourceId: null,
+    unitId: null,
     energyProviderId: null,
     energyTypeId: null,
     energySourceId: null,

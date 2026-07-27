@@ -127,7 +127,7 @@ export type PowerStation = typeof powerStations.$inferSelect & {
 };
 export type NewPowerStation = typeof powerStations.$inferInsert;
 
-export interface EnergyResourcePeriodEntry {
+export interface UnitPeriodEntry {
   report_period_id: number;
   capacity_mw: number | null;
   is_active: boolean;
@@ -138,7 +138,7 @@ export const units = pgTable(
   {
     id: serial("id").primaryKey().notNull(),
     period_entries: jsonb("period_entries")
-      .$type<EnergyResourcePeriodEntry[]>()
+      .$type<UnitPeriodEntry[]>()
       .notNull()
       .default(sql`'[]'::jsonb`),
     name: varchar("name", { length: 255 }).notNull(),
@@ -171,7 +171,7 @@ export const units = pgTable(
   },
   (table) => [index("gen_idx").on(table.name, table.utility_id)],
 );
-export type EnergyResource = typeof units.$inferSelect & {
+export type Unit = typeof units.$inferSelect & {
   report_period?: string | null;
   report_period_type?: string | null;
   capacity?: string | null;
@@ -185,4 +185,4 @@ export type EnergyResource = typeof units.$inferSelect & {
   agg_level?: string | null;
   asset?: string | null;
 };
-export type NewEnergyResource = typeof units.$inferInsert;
+export type NewUnit = typeof units.$inferInsert;

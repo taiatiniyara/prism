@@ -68,7 +68,7 @@ export async function AddPowerStation(
   };
 }
 
-export type EnergyResourceSummary = {
+export type UnitSummary = {
   id: number;
   name: string;
   technology: string | null;
@@ -80,8 +80,8 @@ export type EnergyResourceSummary = {
   resource_qty: number | null;
 };
 
-export async function GetEnergyResourceList(): Promise<
-  EnergyResourceSummary[]
+export async function GetUnitList(): Promise<
+  UnitSummary[]
 > {
   const user = await getCurrentUser();
   const utilityScopeId = resolveUtilityScopeId(user);
@@ -153,8 +153,8 @@ export async function GetEnergyResourceList(): Promise<
   });
 }
 
-export async function AssignEnergyResourceToPowerStation(
-  energyResourceId: number,
+export async function AssignUnitToPowerStation(
+  unitId: number,
   powerStationId: number,
 ): Promise<{ success: boolean; message: string }> {
   const user = await getCurrentUser();
@@ -163,10 +163,10 @@ export async function AssignEnergyResourceToPowerStation(
   const where =
     utilityScopeId != null
       ? and(
-          eq(units.id, energyResourceId),
+          eq(units.id, unitId),
           eq(units.utility_id, utilityScopeId),
         )
-      : eq(units.id, energyResourceId);
+      : eq(units.id, unitId);
 
   await db
     .update(units)
@@ -181,8 +181,8 @@ export async function AssignEnergyResourceToPowerStation(
   return { success: true, message: "Energy resource assigned" };
 }
 
-export async function RemoveEnergyResourceFromPowerStation(
-  energyResourceId: number,
+export async function RemoveUnitFromPowerStation(
+  unitId: number,
 ): Promise<{ success: boolean; message: string }> {
   const user = await getCurrentUser();
   const utilityScopeId = resolveUtilityScopeId(user);
@@ -190,10 +190,10 @@ export async function RemoveEnergyResourceFromPowerStation(
   const where =
     utilityScopeId != null
       ? and(
-          eq(units.id, energyResourceId),
+          eq(units.id, unitId),
           eq(units.utility_id, utilityScopeId),
         )
-      : eq(units.id, energyResourceId);
+      : eq(units.id, unitId);
 
   await db
     .update(units)

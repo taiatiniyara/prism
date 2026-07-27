@@ -49,7 +49,7 @@ describe("kpi worker status route", () => {
     expect(mocks.listKpiWorkerStatuses).toHaveBeenCalledWith({
       reportPeriodId: 12,
       serviceAreaId: 9,
-      energyResourceId: undefined,
+      unitId: undefined,
     });
   });
 

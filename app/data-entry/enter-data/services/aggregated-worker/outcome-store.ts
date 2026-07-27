@@ -73,8 +73,8 @@ export const listRunsForScope = (
       }
 
       if (
-        scope.energyResourceId !== undefined &&
-        run.scope.energyResourceId !== scope.energyResourceId
+        scope.unitId !== undefined &&
+        run.scope.unitId !== scope.unitId
       ) {
         return false;
       }

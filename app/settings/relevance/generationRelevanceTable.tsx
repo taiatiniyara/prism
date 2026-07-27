@@ -15,8 +15,8 @@ type RelevanceCell = {
 type RelevanceRow = {
   energySourceId: number;
   energySource: string;
-  energyResourceTypeId: number;
-  energyResourceType: string;
+  unitTypeId: number;
+  unitType: string;
   cells: RelevanceCell[];
 };
 
@@ -52,33 +52,33 @@ export default function GenerationRelevanceTable(props: {
       .sort((a, b) => b.energyProvider.localeCompare(a.energyProvider));
   }, [rows]);
 
-  const rowsByEnergyResourceType = useMemo(() => {
+  const rowsByUnitType = useMemo(() => {
     const grouped = new Map<
       number,
       {
-        energyResourceTypeId: number;
-        energyResourceType: string;
+        unitTypeId: number;
+        unitType: string;
         rows: RelevanceRow[];
       }
     >();
 
     for (const row of rows) {
-      const existing = grouped.get(row.energyResourceTypeId);
+      const existing = grouped.get(row.unitTypeId);
 
       if (existing) {
         existing.rows.push(row);
         continue;
       }
 
-      grouped.set(row.energyResourceTypeId, {
-        energyResourceTypeId: row.energyResourceTypeId,
-        energyResourceType: row.energyResourceType,
+      grouped.set(row.unitTypeId, {
+        unitTypeId: row.unitTypeId,
+        unitType: row.unitType,
         rows: [row],
       });
     }
 
     return Array.from(grouped.values())
-      .sort((a, b) => b.energyResourceType.localeCompare(a.energyResourceType))
+      .sort((a, b) => b.unitType.localeCompare(a.unitType))
       .map((group) => ({
         ...group,
         rows: [...group.rows].sort((a, b) =>
@@ -90,7 +90,7 @@ export default function GenerationRelevanceTable(props: {
   const onCellToggle = (
     energySourceId: number,
     energyProviderId: number,
-    energyResourceTypeId: number,
+    unitTypeId: number,
     checked: boolean,
   ) => {
     const previousRows = rows;
@@ -99,7 +99,7 @@ export default function GenerationRelevanceTable(props: {
       prev.map((row) => {
         if (
           row.energySourceId !== energySourceId ||
-          row.energyResourceTypeId !== energyResourceTypeId
+          row.unitTypeId !== unitTypeId
         ) {
           return row;
         }
@@ -145,7 +145,7 @@ export default function GenerationRelevanceTable(props: {
   const onBlockToggle = (
     energySourceIds: number[],
     energyProviderId: number,
-    energyResourceTypeId: number,
+    unitTypeId: number,
     checked: boolean,
   ) => {
     if (energySourceIds.length === 0) {
@@ -159,7 +159,7 @@ export default function GenerationRelevanceTable(props: {
       prev.map((row) => {
         if (
           !energySourceIdsSet.has(row.energySourceId) ||
-          row.energyResourceTypeId !== energyResourceTypeId
+          row.unitTypeId !== unitTypeId
         ) {
           return row;
         }
@@ -228,10 +228,10 @@ export default function GenerationRelevanceTable(props: {
             </tr>
           </thead>
           <tbody>
-            {rowsByEnergyResourceType.map((group) => (
-              <tr key={group.energyResourceTypeId}>
+            {rowsByUnitType.map((group) => (
+              <tr key={group.unitTypeId}>
                 <td className="sticky left-0 z-20 border bg-background px-3 py-2 font-medium whitespace-nowrap">
-                  {group.energyResourceType}
+                  {group.unitType}
                 </td>
                 {providers.map((provider) => {
                   const allChecked = group.rows.every((row) => {
@@ -245,7 +245,7 @@ export default function GenerationRelevanceTable(props: {
 
                   return (
                     <td
-                      key={`${group.energyResourceTypeId}-${provider.energyProviderId}`}
+                      key={`${group.unitTypeId}-${provider.energyProviderId}`}
                       className="border px-3 py-2 align-top"
                     >
                       <div className="mb-1.5">
@@ -259,7 +259,7 @@ export default function GenerationRelevanceTable(props: {
                             onBlockToggle(
                               group.rows.map((row) => row.energySourceId),
                               provider.energyProviderId,
-                              group.energyResourceTypeId,
+                              group.unitTypeId,
                               !allChecked,
                             )
                           }
@@ -277,7 +277,7 @@ export default function GenerationRelevanceTable(props: {
 
                           return (
                             <li
-                              key={`${row.energySourceId}-${row.energyResourceTypeId}-${provider.energyProviderId}`}
+                              key={`${row.energySourceId}-${row.unitTypeId}-${provider.energyProviderId}`}
                             >
                               <label className="flex items-center gap-1.5">
                                 <Checkbox
@@ -287,7 +287,7 @@ export default function GenerationRelevanceTable(props: {
                                     onCellToggle(
                                       row.energySourceId,
                                       provider.energyProviderId,
-                                      row.energyResourceTypeId,
+                                      row.unitTypeId,
                                       next === true,
                                     )
                                   }

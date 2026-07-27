@@ -232,7 +232,7 @@ export default function DataEntryComparisonPanel({ options }: Props) {
                         <td className="px-2 py-2">{row.categoryName}</td>
                         <td className="px-2 py-2">{row.subcategoryName}</td>
                         <td className="px-2 py-2">{row.serviceAreaName}</td>
-                        <td className="px-2 py-2">{row.energyResourceName}</td>
+                        <td className="px-2 py-2">{row.unitName}</td>
                         <td className="px-2 py-2">{row.energyProviderName}</td>
                         <td className="px-2 py-2">{row.energySourceName}</td>
                       </tr>

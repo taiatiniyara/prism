@@ -38,11 +38,11 @@ export const writeCalculatedTargetValue = async ({
       );
     }
 
-    if (scope.energyResourceId == null) {
+    if (scope.unitId == null) {
       existingConditions.push(isNull(dataEntries.unit_id));
     } else {
       existingConditions.push(
-        eq(dataEntries.unit_id, scope.energyResourceId),
+        eq(dataEntries.unit_id, scope.unitId),
       );
     }
 
@@ -66,7 +66,7 @@ export const writeCalculatedTargetValue = async ({
       report_period_id: scope.reportPeriodId,
       measure_def_id: inputDefId,
       service_area_id: scope.serviceAreaId ?? null,
-      unit_id: scope.energyResourceId ?? null,
+      unit_id: scope.unitId ?? null,
       // Calculated targets are numeric → write the typed column (§4.8); legacy
       // `value` kept transitionally so un-migrated readers don't regress.
       value_numeric: value,
@@ -78,7 +78,7 @@ export const writeCalculatedTargetValue = async ({
       technology_id: dims.energySource,
       category_id: dims.energyType,
       provider_id: dims.energyProvider,
-      asset_id: dims.energyResourceType,
+      asset_id: dims.unitType,
       customer_type_id: dims.customerType,
       payment_mode_id: dims.paymentMode,
       consumption_band_id: dims.consumptionBand,
@@ -104,7 +104,7 @@ export const writeCalculatedTargetValue = async ({
 
       if (!inserted?.id) {
         throw new Error(
-          `Unable to persist aggregated target value. inputDefId=${inputDefId}, reportPeriodId=${scope.reportPeriodId}, energyResourceId=${scope.energyResourceId ?? "null"}`,
+          `Unable to persist aggregated target value. inputDefId=${inputDefId}, reportPeriodId=${scope.reportPeriodId}, unitId=${scope.unitId ?? "null"}`,
         );
       }
 
@@ -144,7 +144,7 @@ async function getAllMemberIdsMap() {
     energySource,
     energyType,
     energyProvider,
-    energyResourceType,
+    unitType,
     customerType,
     paymentMode,
     consumptionBand,
@@ -167,7 +167,7 @@ async function getAllMemberIdsMap() {
     energySource,
     energyType,
     energyProvider,
-    energyResourceType,
+    unitType,
     customerType,
     paymentMode,
     consumptionBand,

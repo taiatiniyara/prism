@@ -14,7 +14,7 @@ import {
 } from "@/db/schema";
 import { kpiDefinitions } from "@/db/schema/kpi";
 import {
-  energyResourceTypeRelevance,
+  unitTypeRelevance,
   managedListItems,
   managedLists,
 } from "@/db/schema/managedLists";
@@ -23,7 +23,7 @@ import { getCurrentUser, hasGlobalUtilityAccess } from "@/lib/user.service";
 import { formatReportPeriodDisplay } from "@/lib/formatters";
 import { deriveEnergyClassByTechnology } from "@/lib/energy-taxonomy";
 import { DataTableFormResponse } from "@/components/tables/data-table-create-form";
-import { toPositiveInteger } from "./energyResourceTypeRelevanceBuilder.shared";
+import { toPositiveInteger } from "./unitTypeRelevanceBuilder.shared";
 import { buildGenerationTypeSourcePairs } from "./generationRelevance.shared";
 import {
   and,
@@ -39,7 +39,7 @@ import {
 } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { GetManagedListItemByName } from "../managed-lists/service";
-import { EnergyResourcePeriodEntry } from "@/db/schema/utility";
+import { UnitPeriodEntry } from "@/db/schema/utility";
 
 interface RelevanceFilterOption {
   id: number;
@@ -159,8 +159,8 @@ export interface UtilityGenerationRelevanceCell {
 export interface UtilityGenerationRelevanceRow {
   energySourceId: number;
   energySource: string;
-  energyResourceTypeId: number;
-  energyResourceType: string;
+  unitTypeId: number;
+  unitType: string;
   cells: UtilityGenerationRelevanceCell[];
 }
 
@@ -174,7 +174,7 @@ export interface UtilityGenerationRelevanceResult {
     serviceAreas: RelevanceFilterOption[];
   };
   energyProviders: string[];
-  energyResourceTypes: string[];
+  unitTypes: string[];
   rows: UtilityGenerationRelevanceRow[];
 }
 
@@ -240,10 +240,10 @@ export interface DevOrganisationRelevancePivotRow {
   }>;
 }
 
-export interface DevEnergyResourceTypeRelevanceItem {
+export interface DevUnitTypeRelevanceItem {
   id: number;
-  energyResourceTypeId: number;
-  energyResourceType: string;
+  unitTypeId: number;
+  unitType: string;
   energyTypeId: number;
   energyType: string;
   energySourceId: number;
@@ -588,7 +588,7 @@ const getGenerationDimensionsFromResources = async (
 ): Promise<{
   energyProviders: { id: number; name: string }[];
   energySources: { id: number; name: string }[];
-  energyResourceTypes: { id: number; name: string }[];
+  unitTypes: { id: number; name: string }[];
 }> => {
   const resourceConditions = [
     eq(units.utility_id, utilityId),
@@ -607,14 +607,14 @@ const getGenerationDimensionsFromResources = async (
     .from(units)
     .where(and(...resourceConditions));
 
-  // asset (energyResourceTypeId) is DERIVED from technology, not stored:
+  // asset (unitTypeId) is DERIVED from technology, not stored:
   // asset = grandparent(technology) in the managed_list_items hierarchy.
   const energyClassByTech = await deriveEnergyClassByTechnology(
     resourceRows.map((row) => row.energySourceId),
   );
   const resources = resourceRows.map((row) => ({
     ...row,
-    energyResourceTypeId:
+    unitTypeId:
       energyClassByTech.get(row.energySourceId)?.assetId ?? null,
   }));
 
@@ -627,7 +627,7 @@ const getGenerationDimensionsFromResources = async (
   const typeIds = Array.from(
     new Set(
       resources
-        .map((row) => row.energyResourceTypeId)
+        .map((row) => row.unitTypeId)
         .filter((id): id is number => id != null),
     ),
   );
@@ -640,7 +640,7 @@ const getGenerationDimensionsFromResources = async (
     return {
       energyProviders: [],
       energySources: [],
-      energyResourceTypes: [],
+      unitTypes: [],
     };
   }
 
@@ -669,7 +669,7 @@ const getGenerationDimensionsFromResources = async (
   return {
     energyProviders: mapIdsToOptions(providerIds),
     energySources: mapIdsToOptions(sourceIds),
-    energyResourceTypes: mapIdsToOptions(typeIds),
+    unitTypes: mapIdsToOptions(typeIds),
   };
 };
 
@@ -1161,7 +1161,7 @@ export async function GetUtilityGenerationRelevance(
     "Energy Storage Source",
     "Generator Technology",
   ]);
-  let energyResourceTypes = filterGenerationResourceTypes(
+  let unitTypes = filterGenerationResourceTypes(
     await getManagedDimensionItemsByAliases([
       "Asset Class",
       "Energy Resouce Type",
@@ -1173,7 +1173,7 @@ export async function GetUtilityGenerationRelevance(
     selectedServiceAreaId != null &&
     (energyProviders.length === 0 ||
       energySources.length === 0 ||
-      energyResourceTypes.length === 0)
+      unitTypes.length === 0)
   ) {
     const fromResources = await getGenerationDimensionsFromResources(
       user.org_id!,
@@ -1189,28 +1189,28 @@ export async function GetUtilityGenerationRelevance(
       energySources = fromResources.energySources;
     }
 
-    if (energyResourceTypes.length === 0) {
-      energyResourceTypes = filterGenerationResourceTypes(
-        fromResources.energyResourceTypes,
+    if (unitTypes.length === 0) {
+      unitTypes = filterGenerationResourceTypes(
+        fromResources.unitTypes,
       );
     }
   }
 
   const configuredTypeSourceMappings = await db
     .select({
-      energyResourceTypeId: energyResourceTypeRelevance.asset_id,
-      energySourceId: energyResourceTypeRelevance.technology_id,
+      unitTypeId: unitTypeRelevance.asset_id,
+      energySourceId: unitTypeRelevance.technology_id,
     })
-    .from(energyResourceTypeRelevance);
+    .from(unitTypeRelevance);
 
   const generationTypeSourcePairs = buildGenerationTypeSourcePairs({
-    energyResourceTypes,
+    unitTypes,
     energySources,
     mappings: configuredTypeSourceMappings,
   });
 
-  const visibleEnergyResourceTypes = Array.from(
-    new Set(generationTypeSourcePairs.map((pair) => pair.energyResourceType)),
+  const visibleUnitTypes = Array.from(
+    new Set(generationTypeSourcePairs.map((pair) => pair.unitType)),
   ).sort((a, b) => a.localeCompare(b));
 
   const inputDefIds = inputList.map((input) => input.id);
@@ -1230,17 +1230,17 @@ export async function GetUtilityGenerationRelevance(
         serviceAreas: serviceAreaOptions,
       },
       energyProviders: energyProviders.map((provider) => provider.name),
-      energyResourceTypes: visibleEnergyResourceTypes,
+      unitTypes: visibleUnitTypes,
       rows: generationTypeSourcePairs.map((pair) => ({
         energySourceId: pair.energySourceId,
         energySource: pair.energySource,
-        energyResourceTypeId: pair.energyResourceTypeId,
-        energyResourceType: pair.energyResourceType,
+        unitTypeId: pair.unitTypeId,
+        unitType: pair.unitType,
         cells: energyProviders.map((energyProvider) => ({
           energyProviderId: energyProvider.id,
           energyProvider: energyProvider.name,
-          energyResourceTypeId: pair.energyResourceTypeId,
-          energyResourceType: pair.energyResourceType,
+          unitTypeId: pair.unitTypeId,
+          unitType: pair.unitType,
           isRelevant: true,
           relatedInputCount: inputDefIds.length,
         })),
@@ -1248,7 +1248,7 @@ export async function GetUtilityGenerationRelevance(
     };
   }
 
-  const energyResourcesForScope =
+  const unitsForScope =
     selectedServiceAreaId != null
       ? await db
           .select({
@@ -1268,9 +1268,9 @@ export async function GetUtilityGenerationRelevance(
 
   const cellHasFalse = new Map<string, boolean>();
 
-  for (const resource of energyResourcesForScope) {
+  for (const resource of unitsForScope) {
     const entries =
-      (resource.periodEntries as EnergyResourcePeriodEntry[] | undefined) ?? [];
+      (resource.periodEntries as UnitPeriodEntry[] | undefined) ?? [];
     for (const pe of entries) {
       if (pe.report_period_id === selectedReportPeriodId && !pe.is_active) {
         const key = `${selectedReportPeriodId}:${resource.energySourceId}:${resource.energyProviderId}`;
@@ -1289,12 +1289,12 @@ export async function GetUtilityGenerationRelevance(
       serviceAreas: serviceAreaOptions,
     },
     energyProviders: energyProviders.map((provider) => provider.name),
-    energyResourceTypes: visibleEnergyResourceTypes,
+    unitTypes: visibleUnitTypes,
     rows: generationTypeSourcePairs.map((pair) => ({
       energySourceId: pair.energySourceId,
       energySource: pair.energySource,
-      energyResourceTypeId: pair.energyResourceTypeId,
-      energyResourceType: pair.energyResourceType,
+      unitTypeId: pair.unitTypeId,
+      unitType: pair.unitType,
       cells: energyProviders.map((energyProvider) => {
         const key = `${selectedReportPeriodId}:${pair.energySourceId}:${energyProvider.id}`;
 
@@ -1358,12 +1358,12 @@ export async function SetUtilityGenerationDataLabelRelevance(
 
   for (const resource of resources) {
     const periodEntries =
-      (resource.periodEntries as EnergyResourcePeriodEntry[] | undefined) ?? [];
+      (resource.periodEntries as UnitPeriodEntry[] | undefined) ?? [];
     const existingIdx = periodEntries.findIndex(
       (pe) => pe.report_period_id === payload.reportPeriodId,
     );
 
-    let updatedEntries: EnergyResourcePeriodEntry[];
+    let updatedEntries: UnitPeriodEntry[];
 
     if (existingIdx >= 0) {
       updatedEntries = periodEntries.map((pe, i) =>
@@ -2200,7 +2200,7 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
       }
 
       const entries =
-        (resource.periodEntries as EnergyResourcePeriodEntry[] | undefined) ??
+        (resource.periodEntries as UnitPeriodEntry[] | undefined) ??
         [];
       generationTotalByOrganisationId.set(
         resource.utilityId,
@@ -2393,12 +2393,12 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
   };
 }
 
-const getEnergyResourceTypeRelevanceBuilderOptions = async (): Promise<{
-  energyResourceTypeOptions: Array<{ id: number; name: string }>;
+const getUnitTypeRelevanceBuilderOptions = async (): Promise<{
+  unitTypeOptions: Array<{ id: number; name: string }>;
   energyTypeOptions: Array<{ id: number; name: string }>;
   energySourceOptions: Array<{ id: number; name: string }>;
 }> => {
-  const [energyResourceTypeOptions, energyTypeOptions, energySourceOptions] =
+  const [unitTypeOptions, energyTypeOptions, energySourceOptions] =
     await Promise.all([
       getManagedDimensionItemsMergedByAliases(
         ENERGY_RESOURCE_TYPE_LIST_ALIASES,
@@ -2408,20 +2408,20 @@ const getEnergyResourceTypeRelevanceBuilderOptions = async (): Promise<{
     ]);
 
   return {
-    energyResourceTypeOptions,
+    unitTypeOptions,
     energyTypeOptions,
     energySourceOptions,
   };
 };
 
-const mapEnergyResourceTypeRelevanceRows = async (
+const mapUnitTypeRelevanceRows = async (
   rows: Array<{
     id: number;
     asset_id: number;
     category_id: number;
     technology_id: number;
   }>,
-): Promise<DevEnergyResourceTypeRelevanceItem[]> => {
+): Promise<DevUnitTypeRelevanceItem[]> => {
   if (rows.length === 0) {
     return [];
   }
@@ -2454,8 +2454,8 @@ const mapEnergyResourceTypeRelevanceRows = async (
   return rows
     .map((row) => ({
       id: row.id,
-      energyResourceTypeId: row.asset_id,
-      energyResourceType:
+      unitTypeId: row.asset_id,
+      unitType:
         managedItemNameById.get(row.asset_id) ??
         `Unknown (${row.asset_id})`,
       energyTypeId: row.category_id,
@@ -2468,8 +2468,8 @@ const mapEnergyResourceTypeRelevanceRows = async (
         `Unknown (${row.technology_id})`,
     }))
     .sort((a, b) => {
-      const byResourceType = a.energyResourceType.localeCompare(
-        b.energyResourceType,
+      const byResourceType = a.unitType.localeCompare(
+        b.unitType,
       );
 
       if (byResourceType !== 0) {
@@ -2485,32 +2485,32 @@ const mapEnergyResourceTypeRelevanceRows = async (
     });
 };
 
-const resolveEnergyResourceTypeRelevancePayload = (
-  payload: Partial<DevEnergyResourceTypeRelevanceItem>,
+const resolveUnitTypeRelevancePayload = (
+  payload: Partial<DevUnitTypeRelevanceItem>,
 ): {
-  energyResourceTypeId: number | null;
+  unitTypeId: number | null;
   energyTypeId: number | null;
   energySourceId: number | null;
 } => {
   return {
-    energyResourceTypeId: toPositiveInteger(payload.energyResourceTypeId),
+    unitTypeId: toPositiveInteger(payload.unitTypeId),
     energyTypeId: toPositiveInteger(payload.energyTypeId),
     energySourceId: toPositiveInteger(payload.energySourceId),
   };
 };
 
-const validateEnergyResourceTypeRelevancePayload = async (payload: {
-  energyResourceTypeId: number;
+const validateUnitTypeRelevancePayload = async (payload: {
+  unitTypeId: number;
   energyTypeId: number;
   energySourceId: number;
 }): Promise<{ success: true } | { success: false; message: string }> => {
-  const { energyResourceTypeOptions, energyTypeOptions, energySourceOptions } =
-    await getEnergyResourceTypeRelevanceBuilderOptions();
+  const { unitTypeOptions, energyTypeOptions, energySourceOptions } =
+    await getUnitTypeRelevanceBuilderOptions();
 
-  const energyResourceTypeOptionIds = new Set(
-    energyResourceTypeOptions.map((item) => item.id),
+  const unitTypeOptionIds = new Set(
+    unitTypeOptions.map((item) => item.id),
   );
-  if (!energyResourceTypeOptionIds.has(payload.energyResourceTypeId)) {
+  if (!unitTypeOptionIds.has(payload.unitTypeId)) {
     return {
       success: false,
       message: "Selected Asset Class is invalid.",
@@ -2538,8 +2538,8 @@ const validateEnergyResourceTypeRelevancePayload = async (payload: {
   return { success: true };
 };
 
-export async function GetDevEnergyResourceTypeRelevance(): Promise<
-  DevEnergyResourceTypeRelevanceItem[]
+export async function GetDevUnitTypeRelevance(): Promise<
+  DevUnitTypeRelevanceItem[]
 > {
   const user = await getCurrentUser();
 
@@ -2555,15 +2555,15 @@ export async function GetDevEnergyResourceTypeRelevance(): Promise<
 
   const rows = await db
     .select()
-    .from(energyResourceTypeRelevance)
-    .orderBy(energyResourceTypeRelevance.id);
+    .from(unitTypeRelevance)
+    .orderBy(unitTypeRelevance.id);
 
-  return mapEnergyResourceTypeRelevanceRows(rows);
+  return mapUnitTypeRelevanceRows(rows);
 }
 
-export async function CreateDevEnergyResourceTypeRelevance(
-  payload: DevEnergyResourceTypeRelevanceItem,
-): Promise<DataTableFormResponse<DevEnergyResourceTypeRelevanceItem>> {
+export async function CreateDevUnitTypeRelevance(
+  payload: DevUnitTypeRelevanceItem,
+): Promise<DataTableFormResponse<DevUnitTypeRelevanceItem>> {
   const user = await getCurrentUser();
 
   if (!user) {
@@ -2580,11 +2580,11 @@ export async function CreateDevEnergyResourceTypeRelevance(
     };
   }
 
-  const { energyResourceTypeId, energyTypeId, energySourceId } =
-    resolveEnergyResourceTypeRelevancePayload(payload);
+  const { unitTypeId, energyTypeId, energySourceId } =
+    resolveUnitTypeRelevancePayload(payload);
 
   if (
-    energyResourceTypeId == null ||
+    unitTypeId == null ||
     energyTypeId == null ||
     energySourceId == null
   ) {
@@ -2595,8 +2595,8 @@ export async function CreateDevEnergyResourceTypeRelevance(
     };
   }
 
-  const validation = await validateEnergyResourceTypeRelevancePayload({
-    energyResourceTypeId,
+  const validation = await validateUnitTypeRelevancePayload({
+    unitTypeId,
     energyTypeId,
     energySourceId,
   });
@@ -2606,16 +2606,16 @@ export async function CreateDevEnergyResourceTypeRelevance(
   }
 
   const [duplicate] = await db
-    .select({ id: energyResourceTypeRelevance.id })
-    .from(energyResourceTypeRelevance)
+    .select({ id: unitTypeRelevance.id })
+    .from(unitTypeRelevance)
     .where(
       and(
         eq(
-          energyResourceTypeRelevance.asset_id,
-          energyResourceTypeId,
+          unitTypeRelevance.asset_id,
+          unitTypeId,
         ),
-        eq(energyResourceTypeRelevance.category_id, energyTypeId),
-        eq(energyResourceTypeRelevance.technology_id, energySourceId),
+        eq(unitTypeRelevance.category_id, energyTypeId),
+        eq(unitTypeRelevance.technology_id, energySourceId),
       ),
     )
     .limit(1);
@@ -2628,13 +2628,13 @@ export async function CreateDevEnergyResourceTypeRelevance(
   }
 
   const [created] = await db
-    .insert(energyResourceTypeRelevance)
+    .insert(unitTypeRelevance)
     .values({
-      asset_id: energyResourceTypeId,
+      asset_id: unitTypeId,
       category_id: energyTypeId,
       technology_id: energySourceId,
     })
-    .returning({ id: energyResourceTypeRelevance.id });
+    .returning({ id: unitTypeRelevance.id });
 
   if (!created) {
     return {
@@ -2645,12 +2645,12 @@ export async function CreateDevEnergyResourceTypeRelevance(
 
   const [createdRow] = await db
     .select()
-    .from(energyResourceTypeRelevance)
-    .where(eq(energyResourceTypeRelevance.id, created.id))
+    .from(unitTypeRelevance)
+    .where(eq(unitTypeRelevance.id, created.id))
     .limit(1);
 
   const [item] = createdRow
-    ? await mapEnergyResourceTypeRelevanceRows([createdRow])
+    ? await mapUnitTypeRelevanceRows([createdRow])
     : [];
 
   revalidateRelevanceAndDataEntry();
@@ -2662,9 +2662,9 @@ export async function CreateDevEnergyResourceTypeRelevance(
   };
 }
 
-export async function UpdateDevEnergyResourceTypeRelevance(
-  payload: Partial<DevEnergyResourceTypeRelevanceItem>,
-): Promise<DataTableFormResponse<DevEnergyResourceTypeRelevanceItem>> {
+export async function UpdateDevUnitTypeRelevance(
+  payload: Partial<DevUnitTypeRelevanceItem>,
+): Promise<DataTableFormResponse<DevUnitTypeRelevanceItem>> {
   const user = await getCurrentUser();
 
   if (!user) {
@@ -2682,8 +2682,8 @@ export async function UpdateDevEnergyResourceTypeRelevance(
   }
 
   const rowId = toPositiveInteger(payload.id);
-  const { energyResourceTypeId, energyTypeId, energySourceId } =
-    resolveEnergyResourceTypeRelevancePayload(payload);
+  const { unitTypeId, energyTypeId, energySourceId } =
+    resolveUnitTypeRelevancePayload(payload);
 
   if (rowId == null) {
     return {
@@ -2693,7 +2693,7 @@ export async function UpdateDevEnergyResourceTypeRelevance(
   }
 
   if (
-    energyResourceTypeId == null ||
+    unitTypeId == null ||
     energyTypeId == null ||
     energySourceId == null
   ) {
@@ -2705,9 +2705,9 @@ export async function UpdateDevEnergyResourceTypeRelevance(
   }
 
   const [existing] = await db
-    .select({ id: energyResourceTypeRelevance.id })
-    .from(energyResourceTypeRelevance)
-    .where(eq(energyResourceTypeRelevance.id, rowId))
+    .select({ id: unitTypeRelevance.id })
+    .from(unitTypeRelevance)
+    .where(eq(unitTypeRelevance.id, rowId))
     .limit(1);
 
   if (!existing) {
@@ -2717,8 +2717,8 @@ export async function UpdateDevEnergyResourceTypeRelevance(
     };
   }
 
-  const validation = await validateEnergyResourceTypeRelevancePayload({
-    energyResourceTypeId,
+  const validation = await validateUnitTypeRelevancePayload({
+    unitTypeId,
     energyTypeId,
     energySourceId,
   });
@@ -2728,16 +2728,16 @@ export async function UpdateDevEnergyResourceTypeRelevance(
   }
 
   const duplicateRows = await db
-    .select({ id: energyResourceTypeRelevance.id })
-    .from(energyResourceTypeRelevance)
+    .select({ id: unitTypeRelevance.id })
+    .from(unitTypeRelevance)
     .where(
       and(
         eq(
-          energyResourceTypeRelevance.asset_id,
-          energyResourceTypeId,
+          unitTypeRelevance.asset_id,
+          unitTypeId,
         ),
-        eq(energyResourceTypeRelevance.category_id, energyTypeId),
-        eq(energyResourceTypeRelevance.technology_id, energySourceId),
+        eq(unitTypeRelevance.category_id, energyTypeId),
+        eq(unitTypeRelevance.technology_id, energySourceId),
       ),
     )
     .limit(2);
@@ -2750,22 +2750,22 @@ export async function UpdateDevEnergyResourceTypeRelevance(
   }
 
   await db
-    .update(energyResourceTypeRelevance)
+    .update(unitTypeRelevance)
     .set({
-      asset_id: energyResourceTypeId,
+      asset_id: unitTypeId,
       category_id: energyTypeId,
       technology_id: energySourceId,
     })
-    .where(eq(energyResourceTypeRelevance.id, rowId));
+    .where(eq(unitTypeRelevance.id, rowId));
 
   const [updatedRow] = await db
     .select()
-    .from(energyResourceTypeRelevance)
-    .where(eq(energyResourceTypeRelevance.id, rowId))
+    .from(unitTypeRelevance)
+    .where(eq(unitTypeRelevance.id, rowId))
     .limit(1);
 
   const [item] = updatedRow
-    ? await mapEnergyResourceTypeRelevanceRows([updatedRow])
+    ? await mapUnitTypeRelevanceRows([updatedRow])
     : [];
 
   revalidateRelevanceAndDataEntry();

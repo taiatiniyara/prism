@@ -27,7 +27,7 @@ export type DataEntryControlType =
 export interface DataEntryInputRowView {
   dataEntryId?: string;
   inputDefId: number;
-  energyResourceId?: number | null;
+  unitId?: number | null;
   paymentModeId?: number | null;
   paymentModeName?: string | null;
   customerTypeId?: number | null;
@@ -114,7 +114,7 @@ export interface DataEntryPageViewModel {
 export interface AggregatedWorkerScope {
   reportPeriodId: number;
   serviceAreaId?: number | null;
-  energyResourceId?: number | null;
+  unitId?: number | null;
 }
 
 export type AggregatedWorkerOutcomeReason =

@@ -6,7 +6,7 @@ import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
 export interface AggregatedWorkerScope {
   reportPeriodId: number;
   serviceAreaId?: number | null;
-  energyResourceId?: number | null;
+  unitId?: number | null;
 }
 
 interface VariableMapping {
@@ -91,10 +91,10 @@ export const readSourceSnapshot = async (
     conditions.push(eq(dataEntries.service_area_id, scope.serviceAreaId));
   }
 
-  if (scope.energyResourceId == null) {
+  if (scope.unitId == null) {
     conditions.push(isNull(dataEntries.unit_id));
   } else {
-    conditions.push(eq(dataEntries.unit_id, scope.energyResourceId));
+    conditions.push(eq(dataEntries.unit_id, scope.unitId));
   }
 
   const rows = await db

@@ -16,7 +16,7 @@ export interface RollupCandidate {
   energyProviderId: number | null;
   energyTypeId: number | null;
   energySourceId: number | null;
-  energyResourceTypeId: number | null;
+  unitTypeId: number | null;
   customerTypeId: number | null;
   paymentModeId: number | null;
   consumptionBandId: number | null;
@@ -158,11 +158,11 @@ export const resolveFormulaInputValues = async (
     );
   }
 
-  if (request.scope.energyResourceId == null) {
+  if (request.scope.unitId == null) {
     scopeConditions.push(isNull(dataEntries.unit_id));
   } else {
     scopeConditions.push(
-      eq(dataEntries.unit_id, request.scope.energyResourceId),
+      eq(dataEntries.unit_id, request.scope.unitId),
     );
   }
 
@@ -182,7 +182,7 @@ export const resolveFormulaInputValues = async (
       isRelevant: dataEntries.is_relevant,
       energyProviderId: dataEntries.provider_id,
       energySourceId: dataEntries.technology_id,
-      energyResourceTypeId: dataEntries.asset_id,
+      unitTypeId: dataEntries.asset_id,
       customerTypeId: dataEntries.customer_type_id,
       paymentModeId: dataEntries.payment_mode_id,
       consumptionBandId: dataEntries.consumption_band_id,
@@ -248,7 +248,7 @@ export const resolveFormulaInputValues = async (
         m(c.energyProviderId, formulaInput.provider_id, ALL_MEMBER.provider_id) &&
         m(c.energyTypeId, formulaInput.category_id, ALL_MEMBER.category_id) &&
         m(c.energySourceId, formulaInput.technology_id, ALL_MEMBER.technology_id) &&
-        m(c.energyResourceTypeId, formulaInput.asset_id, ALL_MEMBER.asset_id) &&
+        m(c.unitTypeId, formulaInput.asset_id, ALL_MEMBER.asset_id) &&
         m(c.customerTypeId, formulaInput.customer_type_id, ALL_MEMBER.customer_type_id, request.scope.customerTypeId ?? null) &&
         m(c.paymentModeId, formulaInput.payment_mode_id, ALL_MEMBER.payment_mode_id, request.scope.paymentModeId ?? null) &&
         m(c.consumptionBandId, formulaInput.consumption_band_id, ALL_MEMBER.consumption_band_id) &&

@@ -1,9 +1,9 @@
 import DataTable from "@/components/tables/data-table";
 import {
-  CreateEnergyResourceFromPeriodRow,
-  GetAllEnergyResources,
-  EnergyResourcePeriodTableRow,
-  UpdateEnergyResourceFromPeriodRow,
+  CreateUnitFromPeriodRow,
+  GetAllUnits,
+  UnitPeriodTableRow,
+  UpdateUnitFromPeriodRow,
   GetAllReportPeriods,
 } from "./service";
 import { AllPowerStations } from "../power-stations/service";
@@ -18,10 +18,10 @@ const ENERGY_SOURCE_MANAGED_LIST_ALIASES = [
   "Generator Technology",
 ].join("|");
 
-export default async function EnergyResourcesSettingsPage() {
+export default async function UnitsSettingsPage() {
   const [units, powerStations, serviceAreas, reportPeriods] =
     await Promise.all([
-      GetAllEnergyResources(),
+      GetAllUnits(),
       AllPowerStations(),
       AllServiceAreas(),
       GetAllReportPeriods(),
@@ -35,7 +35,7 @@ export default async function EnergyResourcesSettingsPage() {
   });
 
   return (
-    <DataTable<EnergyResourcePeriodTableRow>
+    <DataTable<UnitPeriodTableRow>
       quickFilters={[
         {
           column: "report_period_type",
@@ -75,7 +75,7 @@ export default async function EnergyResourcesSettingsPage() {
       title="Units"
       data={units}
       createFormProps={{
-        formAction: CreateEnergyResourceFromPeriodRow,
+        formAction: CreateUnitFromPeriodRow,
         fields: [
           {
             key: "name",
@@ -138,7 +138,7 @@ export default async function EnergyResourcesSettingsPage() {
         ],
       }}
       updateFormProps={{
-        formAction: UpdateEnergyResourceFromPeriodRow,
+        formAction: UpdateUnitFromPeriodRow,
         fields: [
           {
             key: "name",

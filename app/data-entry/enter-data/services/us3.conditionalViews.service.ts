@@ -52,7 +52,7 @@ export interface GeneratorCandidate {
 export interface GeneratorEntryCandidate {
   id: string;
   inputDefId: number;
-  energyResourceId: number | null;
+  unitId: number | null;
   statusId: number | null;
   updatedByName: string | null;
   updatedByRole: string | null;
@@ -98,14 +98,14 @@ export const buildGenerationGroups = (
         .map((definition) => {
           const entry = entries.find(
             (candidate) =>
-              candidate.energyResourceId === generator.id &&
+              candidate.unitId === generator.id &&
               candidate.inputDefId === definition.inputDefId,
           );
 
           const row: DataEntryInputRowView = {
             ...definition,
             dataEntryId: entry?.id,
-            energyResourceId: generator.id,
+            unitId: generator.id,
             isDataNotAvailable:
               entry?.statusId === DataEntryStatusId.Not_Available,
             updatedByName: entry?.updatedByName ?? null,

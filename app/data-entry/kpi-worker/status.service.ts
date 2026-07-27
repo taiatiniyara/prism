@@ -8,7 +8,7 @@ import type { KpiWorkerStatusSummary } from "@/app/data-entry/types";
 export interface KpiStatusFilter {
   reportPeriodId: number;
   serviceAreaId?: number | null;
-  energyResourceId?: number | null;
+  unitId?: number | null;
 }
 
 interface AttemptTransitionInput {
@@ -85,8 +85,8 @@ export const listKpiWorkerStatuses = async (
       }
 
       if (
-        filter.energyResourceId != null &&
-        row.scope?.energyResourceId !== filter.energyResourceId
+        filter.unitId != null &&
+        row.scope?.unitId !== filter.unitId
       ) {
         return false;
       }

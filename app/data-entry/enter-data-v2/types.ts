@@ -63,7 +63,7 @@ export interface MeasureEntryRowView {
   dataEntryId?: string;
   measureId: number;
   measureName: string;
-  unitName: string | null;
+  uomName: string | null;
   categoryName: string | null;
   subcategoryName: string | null;
   dataTypeId: number;
@@ -90,8 +90,8 @@ export interface MeasureEntryRowView {
   divisionName: string | null;
   genderId: number;
   genderName: string | null;
-  energyResourceId: number | null;
-  energyResourceName: string | null;
+  unitId: number | null;
+  unitName: string | null;
   statusId: number | null;
   statusName: string | null;
   isDataNotAvailable: boolean;
@@ -138,7 +138,7 @@ export interface UpdateMeasureEntryValuePayload {
   consumptionBandId: number;
   divisionId: number;
   genderId: number;
-  energyResourceId?: number | null;
+  unitId?: number | null;
   valueNumeric?: number | null;
   valueBoolean?: boolean | null;
   valueOptionId?: number | null;
@@ -156,7 +156,7 @@ export interface UpdateMeasureEntryAvailabilityPayload {
   consumptionBandId: number;
   divisionId: number;
   genderId: number;
-  energyResourceId?: number | null;
+  unitId?: number | null;
   isDataNotAvailable: boolean;
 }
 
@@ -171,6 +171,6 @@ export interface UpdateMeasureEntryCommentPayload {
   consumptionBandId: number;
   divisionId: number;
   genderId: number;
-  energyResourceId?: number | null;
+  unitId?: number | null;
   comment: string;
 }

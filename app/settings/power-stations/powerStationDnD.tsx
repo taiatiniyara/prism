@@ -2,9 +2,9 @@
 
 import { useCallback, useState } from "react";
 import {
-  AssignEnergyResourceToPowerStation,
-  EnergyResourceSummary,
-  RemoveEnergyResourceFromPowerStation,
+  AssignUnitToPowerStation,
+  UnitSummary,
+  RemoveUnitFromPowerStation,
 } from "./service";
 
 type PowerStation = {
@@ -14,7 +14,7 @@ type PowerStation = {
 
 type Props = {
   powerStations: PowerStation[];
-  units: EnergyResourceSummary[];
+  units: UnitSummary[];
 };
 
 export default function PowerStationDnD({
@@ -57,9 +57,9 @@ export default function PowerStationDnD({
 
       try {
         if (targetStationId === "unassigned") {
-          await RemoveEnergyResourceFromPowerStation(draggedResourceId);
+          await RemoveUnitFromPowerStation(draggedResourceId);
         } else {
-          await AssignEnergyResourceToPowerStation(
+          await AssignUnitToPowerStation(
             draggedResourceId,
             targetStationId,
           );
@@ -84,7 +84,7 @@ export default function PowerStationDnD({
       );
 
       try {
-        await RemoveEnergyResourceFromPowerStation(resourceId);
+        await RemoveUnitFromPowerStation(resourceId);
       } catch {
         setUnits(prev);
       }
@@ -142,7 +142,7 @@ export default function PowerStationDnD({
                   </p>
                 ) : (
                   assigned.map((r) => (
-                    <EnergyResourceChip
+                    <UnitChip
                       key={r.id}
                       resource={r}
                       isDragging={draggedResourceId === r.id}
@@ -192,7 +192,7 @@ export default function PowerStationDnD({
               </p>
             ) : (
               unassignedResources.map((r) => (
-                <EnergyResourceChip
+                <UnitChip
                   key={r.id}
                   resource={r}
                   isDragging={draggedResourceId === r.id}
@@ -208,14 +208,14 @@ export default function PowerStationDnD({
   );
 }
 
-function EnergyResourceChip({
+function UnitChip({
   resource,
   isDragging,
   onDragStart,
   onDragEnd,
   onRemove,
 }: {
-  resource: EnergyResourceSummary;
+  resource: UnitSummary;
   isDragging: boolean;
   onDragStart: () => void;
   onDragEnd: () => void;

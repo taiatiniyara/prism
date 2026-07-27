@@ -3,11 +3,11 @@
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
-  backfillEnergyResourcePeriods,
+  backfillUnitPeriods,
   retrieveCountryContextData,
   retrieveCountries,
   retrieveDataEntries,
-  retrieveEnergyResources,
+  retrieveUnits,
   retrieveGenerationRelevance,
   retrieveInputRelevance,
   retrieveManagedLists,
@@ -48,8 +48,8 @@ const steps: Step[] = [
   { label: "Users", fn: retrieveUsers as () => Promise<MigrationStepResult> },
   { label: "Utility Data", fn: retrieveUtilityData as () => Promise<MigrationStepResult> },
   { label: "Report Periods", fn: retrieveReportPeriods as () => Promise<MigrationStepResult> },
-  { label: "Units", fn: retrieveEnergyResources as () => Promise<MigrationStepResult> },
-  { label: "Unit Periods", fn: backfillEnergyResourcePeriods as () => Promise<MigrationStepResult> },
+  { label: "Units", fn: retrieveUnits as () => Promise<MigrationStepResult> },
+  { label: "Unit Periods", fn: backfillUnitPeriods as () => Promise<MigrationStepResult> },
   { label: "Input DL Def Mappings", fn: retrieveInputDlDefMappings, heavy: true },
   { label: "Country Context", fn: retrieveCountryContextData as () => Promise<MigrationStepResult>, heavy: true },
   { label: "Utility Context", fn: retrieveUtilityContextData as () => Promise<MigrationStepResult>, heavy: true },

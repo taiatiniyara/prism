@@ -6,7 +6,7 @@ import PowerStationDnD from "./powerStationDnD";
 import {
   AddPowerStation,
   AllPowerStations,
-  GetEnergyResourceList,
+  GetUnitList,
   UpdatePowerStation,
 } from "./service";
 
@@ -16,7 +16,7 @@ export default async function PowerStationsSettingsPage() {
   const [powerStations, serviceAreas, units] = await Promise.all([
     AllPowerStations(),
     AllServiceAreas(),
-    GetEnergyResourceList(),
+    GetUnitList(),
   ]);
 
   const columns: (keyof PowerStation)[] =

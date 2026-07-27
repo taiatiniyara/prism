@@ -7,7 +7,7 @@ export const baseKpiWorkerScope: KpiWorkerScope = {
   reportPeriodId: 1,
   organizationId: 1,
   serviceAreaId: 10,
-  energyResourceId: 20,
+  unitId: 20,
 };
 
 export function makeKpiWorkerTrigger(

@@ -156,7 +156,7 @@ export const buildInputRowsFromDefinitions = (
     return {
       dataEntryId: entry?.id,
       inputDefId: definition.id,
-      energyResourceId: null,
+      unitId: null,
       inputName: definition.name,
       unitName: definition.unitName,
       dataTypeId: 0,

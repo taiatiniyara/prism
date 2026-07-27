@@ -97,7 +97,7 @@ export async function loadExtract(loadId: number, rows: ExtractRow[]): Promise<L
           ${row.reportPeriodId}, ${row.measureId},
           ${row.dims.provider}, ${row.dims.type}, ${row.dims.source}, ${row.dims.resource_type},
           ${row.dims.customer_type}, ${row.dims.payment_mode}, ${row.dims.band}, ${row.dims.division}, ${row.dims.gender}, ${row.dims.utility_function},
-          ${row.utilityId ?? null}, ${row.serviceAreaId ?? null}, ${row.powerStationId ?? null}, ${row.energyResourceId ?? null}, ${row.countryId ?? null},
+          ${row.utilityId ?? null}, ${row.serviceAreaId ?? null}, ${row.powerStationId ?? null}, ${row.unitId ?? null}, ${row.countryId ?? null},
           ${STATUS_REQUESTED}, true, false
         ) RETURNING id`);
       shellId = (r.rows[0] as any).id;

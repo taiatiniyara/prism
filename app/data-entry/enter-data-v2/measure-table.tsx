@@ -109,7 +109,7 @@ export default function MeasureTable({
             consumptionBandId: row.consumptionBandId || 0,
             divisionId: row.divisionId || 0,
             genderId: row.genderId || 0,
-            energyResourceId: row.energyResourceId,
+            unitId: row.unitId,
             valueNumeric:
               row.valueColumn === "value_numeric"
                 ? Number(value)
@@ -156,7 +156,7 @@ export default function MeasureTable({
             consumptionBandId: row.consumptionBandId || 0,
             divisionId: row.divisionId || 0,
             genderId: row.genderId || 0,
-            energyResourceId: row.energyResourceId,
+            unitId: row.unitId,
             isDataNotAvailable: checked,
           });
           router.refresh();
@@ -169,7 +169,7 @@ export default function MeasureTable({
   };
 
   const getRowKey = (row: MeasureEntryRowView): string =>
-    `${row.measureId}:${row.energyProviderId}:${row.energyTypeId}:${row.energySourceId}:${row.customerTypeId}:${row.paymentModeId}:${row.consumptionBandId}:${row.divisionId}:${row.genderId}:${row.energyResourceId ?? "na"}`;
+    `${row.measureId}:${row.energyProviderId}:${row.energyTypeId}:${row.energySourceId}:${row.customerTypeId}:${row.paymentModeId}:${row.consumptionBandId}:${row.divisionId}:${row.genderId}:${row.unitId ?? "na"}`;
 
   if (rows.length === 0) {
     return (
@@ -221,9 +221,9 @@ export default function MeasureTable({
                   <div className="font-medium truncate max-w-[200px]">
                     {row.measureName}
                   </div>
-                  {row.unitName ? (
+                  {row.uomName ? (
                     <div className="text-xs text-muted-foreground">
-                      {row.unitName}
+                      {row.uomName}
                     </div>
                   ) : null}
                 </td>

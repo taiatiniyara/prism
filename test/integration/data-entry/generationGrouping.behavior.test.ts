@@ -24,7 +24,7 @@ describe("generation grouping behavior", () => {
         {
           id: "entry-1",
           inputDefId: 1,
-          energyResourceId: 100,
+          unitId: 100,
           value: "24",
           comments: null,
           statusId: 1,

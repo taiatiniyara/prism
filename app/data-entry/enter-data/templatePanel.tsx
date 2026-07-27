@@ -425,7 +425,7 @@ const flattenTemplateRows = (
       measure_def_id: row.inputDefId,
       input_name: row.inputName,
       unit_name: row.unitName ?? "",
-      unit_id: row.energyResourceId ?? null,
+      unit_id: row.unitId ?? null,
       generator_name: "",
       payment_mode_id: row.paymentModeId ?? null,
       payment_mode_name: row.paymentModeName ?? "",
@@ -450,7 +450,7 @@ const flattenTemplateRows = (
         measure_def_id: row.inputDefId,
         input_name: row.inputName,
         unit_name: row.unitName ?? "",
-        unit_id: row.energyResourceId ?? group.generatorId,
+        unit_id: row.unitId ?? group.generatorId,
         generator_name: group.generatorName,
         payment_mode_id: row.paymentModeId ?? null,
         payment_mode_name: row.paymentModeName ?? "",
@@ -476,7 +476,7 @@ const flattenTemplateRows = (
         measure_def_id: row.inputDefId,
         input_name: row.inputName,
         unit_name: row.unitName ?? "",
-        unit_id: row.energyResourceId ?? null,
+        unit_id: row.unitId ?? null,
         generator_name: "",
         payment_mode_id: row.paymentModeId ?? paymentModeGroup.paymentModeId,
         payment_mode_name:
@@ -748,7 +748,7 @@ export default function EnterDataTemplatePanel({
 
       return {
         inputDefId,
-        energyResourceId: matchedTemplateRow.unit_id,
+        unitId: matchedTemplateRow.unit_id,
         paymentModeId: matchedTemplateRow.payment_mode_id,
         customerTypeId: matchedTemplateRow.customer_type_id,
         value: String(getCell(row, "value") ?? "").trim(),

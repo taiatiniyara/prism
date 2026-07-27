@@ -1,8 +1,8 @@
 import DataTable from "@/components/tables/data-table";
 import {
-  CreateDevEnergyResourceTypeRelevance,
-  DevEnergyResourceTypeRelevanceItem,
-  UpdateDevEnergyResourceTypeRelevance,
+  CreateDevUnitTypeRelevance,
+  DevUnitTypeRelevanceItem,
+  UpdateDevUnitTypeRelevance,
 } from "./service";
 
 const ENERGY_RESOURCE_TYPE_MANAGED_LIST_ALIASES = [
@@ -21,15 +21,15 @@ const ENERGY_TYPE_MANAGED_LIST_ALIASES = ["Category", "Energy Types"].join(
   "|",
 );
 
-export default function DevEnergyResourceTypeRelevanceBuilder(props: {
-  items: DevEnergyResourceTypeRelevanceItem[];
+export default function DevUnitTypeRelevanceBuilder(props: {
+  items: DevUnitTypeRelevanceItem[];
 }) {
   return (
-    <DataTable<DevEnergyResourceTypeRelevanceItem>
+    <DataTable<DevUnitTypeRelevanceItem>
       title="Asset Class Relevance Builder"
       columns={[
         {
-          name: "energyResourceType",
+          name: "unitType",
           display: "Asset Class",
         },
         {
@@ -43,10 +43,10 @@ export default function DevEnergyResourceTypeRelevanceBuilder(props: {
       ]}
       data={props.items}
       createFormProps={{
-        formAction: CreateDevEnergyResourceTypeRelevance,
+        formAction: CreateDevUnitTypeRelevance,
         fields: [
           {
-            key: "energyResourceTypeId",
+            key: "unitTypeId",
             type: "managed-list",
             managedListName: ENERGY_RESOURCE_TYPE_MANAGED_LIST_ALIASES,
             label: "Asset Class",
@@ -66,10 +66,10 @@ export default function DevEnergyResourceTypeRelevanceBuilder(props: {
         ],
       }}
       updateFormProps={{
-        formAction: UpdateDevEnergyResourceTypeRelevance,
+        formAction: UpdateDevUnitTypeRelevance,
         fields: [
           {
-            key: "energyResourceTypeId",
+            key: "unitTypeId",
             type: "managed-list",
             managedListName: ENERGY_RESOURCE_TYPE_MANAGED_LIST_ALIASES,
             label: "Asset Class",

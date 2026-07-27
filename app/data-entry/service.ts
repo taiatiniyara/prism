@@ -12,7 +12,7 @@ import { managedListItems } from "@/db/schema/managedLists";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import {
   units,
-  EnergyResourcePeriodEntry,
+  UnitPeriodEntry,
   organisations,
   serviceAreas,
 } from "@/db/schema/utility";
@@ -214,7 +214,7 @@ export async function GetReportPeriods(
       if (er.utility_id !== utilId) return false;
       if (er.is_virtual) return false;
       const pe =
-        (er.period_entries as EnergyResourcePeriodEntry[] | undefined) ?? [];
+        (er.period_entries as UnitPeriodEntry[] | undefined) ?? [];
       return pe.some((p) => p.report_period_id === rpId && p.is_active);
     });
 

@@ -13,7 +13,7 @@ export const buildScopeLockKey = (scope: KpiWorkerScope): string => {
     reportPeriodId: scope.reportPeriodId,
     organizationId: normalizeScopeValue(scope.organizationId),
     serviceAreaId: normalizeScopeValue(scope.serviceAreaId),
-    energyResourceId: normalizeScopeValue(scope.energyResourceId),
+    unitId: normalizeScopeValue(scope.unitId),
     energyProviderId: normalizeScopeValue(scope.energyProviderId),
     energyTypeId: normalizeScopeValue(scope.energyTypeId),
     energySourceId: normalizeScopeValue(scope.energySourceId),

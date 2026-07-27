@@ -4,24 +4,24 @@ type NamedDimension = {
 };
 
 type TypeSourceMapping = {
-  energyResourceTypeId: number;
+  unitTypeId: number;
   energySourceId: number;
 };
 
 export type GenerationTypeSourcePair = {
-  energyResourceTypeId: number;
-  energyResourceType: string;
+  unitTypeId: number;
+  unitType: string;
   energySourceId: number;
   energySource: string;
 };
 
 export const buildGenerationTypeSourcePairs = (params: {
-  energyResourceTypes: NamedDimension[];
+  unitTypes: NamedDimension[];
   energySources: NamedDimension[];
   mappings: TypeSourceMapping[];
 }): GenerationTypeSourcePair[] => {
   const typeById = new Map(
-    params.energyResourceTypes.map((item) => [item.id, item.name]),
+    params.unitTypes.map((item) => [item.id, item.name]),
   );
   const sourceById = new Map(
     params.energySources.map((item) => [item.id, item.name]),
@@ -35,22 +35,22 @@ export const buildGenerationTypeSourcePairs = (params: {
   const pairKeys = new Set<string>();
 
   for (const mapping of params.mappings) {
-    const energyResourceType = typeById.get(mapping.energyResourceTypeId);
+    const unitType = typeById.get(mapping.unitTypeId);
     const energySource = sourceById.get(mapping.energySourceId);
 
-    if (!energyResourceType || !energySource) {
+    if (!unitType || !energySource) {
       continue;
     }
 
-    const key = `${mapping.energyResourceTypeId}:${mapping.energySourceId}`;
+    const key = `${mapping.unitTypeId}:${mapping.energySourceId}`;
     if (pairKeys.has(key)) {
       continue;
     }
 
     pairKeys.add(key);
     pairsFromMapping.push({
-      energyResourceTypeId: mapping.energyResourceTypeId,
-      energyResourceType,
+      unitTypeId: mapping.unitTypeId,
+      unitType,
       energySourceId: mapping.energySourceId,
       energySource,
     });
@@ -59,17 +59,17 @@ export const buildGenerationTypeSourcePairs = (params: {
   const pairs =
     params.mappings.length > 0
       ? pairsFromMapping
-      : params.energyResourceTypes.flatMap((energyResourceType) =>
+      : params.unitTypes.flatMap((unitType) =>
           params.energySources.map((energySource) => ({
-            energyResourceTypeId: energyResourceType.id,
-            energyResourceType: energyResourceType.name,
+            unitTypeId: unitType.id,
+            unitType: unitType.name,
             energySourceId: energySource.id,
             energySource: energySource.name,
           })),
         );
 
   return pairs.sort((a, b) => {
-    const byType = a.energyResourceType.localeCompare(b.energyResourceType);
+    const byType = a.unitType.localeCompare(b.unitType);
     if (byType !== 0) {
       return byType;
     }

@@ -10,7 +10,7 @@ describe("kpi worker corrected-input recalculation", () => {
     const scope = {
       reportPeriodId: 22,
       serviceAreaId: 5,
-      energyResourceId: null,
+      unitId: null,
     };
 
     markDeferredFollowUp(scope);

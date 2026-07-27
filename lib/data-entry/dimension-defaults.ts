@@ -20,7 +20,7 @@ export interface DimensionDefaults {
   energySource: number;
   energyType: number;
   energyProvider: number;
-  energyResourceType: number;
+  unitType: number;
   customerType: number;
   paymentMode: number;
   consumptionBand: number;
@@ -38,7 +38,7 @@ export async function getDimensionDefaults(): Promise<DimensionDefaults> {
     energySource,
     energyType,
     energyProvider,
-    energyResourceType,
+    unitType,
     customerType,
     paymentMode,
     consumptionBand,
@@ -62,7 +62,7 @@ export async function getDimensionDefaults(): Promise<DimensionDefaults> {
     energySource,
     energyType,
     energyProvider,
-    energyResourceType,
+    unitType,
     customerType,
     paymentMode,
     consumptionBand,

@@ -110,7 +110,7 @@ export async function GetAllManagedListItems(options?: {
       const parent = list.find(
         (l) => l.managed_list_items.id === item.managed_list_items.parent_id,
       )?.managed_list_items;
-      const energyResourceType = list.find(
+      const unitType = list.find(
         (l) =>
           l.managed_list_items.id ===
           item.managed_list_items.asset_id,
@@ -119,7 +119,7 @@ export async function GetAllManagedListItems(options?: {
         ...item.managed_list_items,
         list: item.managed_lists?.name,
         parent: parent?.name ?? null,
-        energy_resource_type: energyResourceType?.name ?? null,
+        energy_resource_type: unitType?.name ?? null,
       };
     });
 }

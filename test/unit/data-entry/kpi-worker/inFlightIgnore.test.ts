@@ -26,7 +26,7 @@ describe("kpi worker in-flight suppression", () => {
       reportPeriodId: 1,
       organizationId: 2,
       serviceAreaId: 3,
-      energyResourceId: 4,
+      unitId: 4,
     };
 
     expect(await acquireScopeLock(scope)).toBe(true);

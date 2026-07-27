@@ -20,7 +20,7 @@ export interface KpiCalculationScopeSnapshot {
   reportPeriodId: number;
   organizationId?: number | null;
   serviceAreaId?: number | null;
-  energyResourceId?: number | null;
+  unitId?: number | null;
   energyProviderId?: number | null;
   energySourceId?: number | null;
   customerTypeId?: number | null;

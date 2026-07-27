@@ -2,10 +2,10 @@
 
 import { db } from "@/db/connection";
 import {
-  EnergyResource,
+  Unit,
   units,
-  EnergyResourcePeriodEntry,
-  NewEnergyResource,
+  UnitPeriodEntry,
+  NewUnit,
   organisations,
   powerStations,
   serviceAreas,
@@ -31,7 +31,7 @@ import {
   categoryFromTechnology,
 } from "@/lib/energy-taxonomy";
 
-export type EnergyResourcePeriodTableRow = Omit<EnergyResource, "id"> & {
+export type UnitPeriodTableRow = Omit<Unit, "id"> & {
   id: string;
   report_period_id?: number | null;
 };
@@ -84,11 +84,11 @@ export async function GetAllReportPeriods(): Promise<
 }
 
 function toPeriodRows(
-  resource: EnergyResource,
-  periodEntries: EnergyResourcePeriodEntry[],
+  resource: Unit,
+  periodEntries: UnitPeriodEntry[],
   periodLabelById: Map<number, string>,
   periodTypeById: Map<number, string>,
-): EnergyResourcePeriodTableRow[] {
+): UnitPeriodTableRow[] {
   const sortedEntries = [...periodEntries].sort(
     (a, b) => a.report_period_id - b.report_period_id,
   );
@@ -120,8 +120,8 @@ function toPeriodRows(
   }));
 }
 
-export async function GetAllEnergyResources(): Promise<
-  EnergyResourcePeriodTableRow[]
+export async function GetAllUnits(): Promise<
+  UnitPeriodTableRow[]
 > {
   const user = await getCurrentUser();
   const ml = await db.select().from(managedListItems);
@@ -237,9 +237,9 @@ export async function GetAllEnergyResources(): Promise<
   );
 }
 
-export async function CreateEnergyResource(
-  data: NewEnergyResource,
-): Promise<DataTableFormResponse<EnergyResource>> {
+export async function CreateUnit(
+  data: NewUnit,
+): Promise<DataTableFormResponse<Unit>> {
   const user = await getCurrentUser();
   const utilityScopeId = resolveUtilityScopeId(user);
 
@@ -281,9 +281,9 @@ export async function CreateEnergyResource(
   };
 }
 
-export async function CreateEnergyResourceFromPeriodRow(
-  data: EnergyResourcePeriodTableRow,
-): Promise<DataTableFormResponse<EnergyResourcePeriodTableRow>> {
+export async function CreateUnitFromPeriodRow(
+  data: UnitPeriodTableRow,
+): Promise<DataTableFormResponse<UnitPeriodTableRow>> {
   const {
     id: _id,
     report_period_id,
@@ -315,8 +315,8 @@ export async function CreateEnergyResourceFromPeriodRow(
       ? null
       : resolveNumber(capacity);
 
-  const result = await CreateEnergyResource({
-    ...(createData as NewEnergyResource),
+  const result = await CreateUnit({
+    ...(createData as NewUnit),
     period_entries: [
       {
         report_period_id: reportPeriodId,
@@ -338,9 +338,9 @@ export async function CreateEnergyResourceFromPeriodRow(
   };
 }
 
-export async function UpdateEnergyResource(
-  data: Partial<EnergyResource>,
-): Promise<DataTableFormResponse<EnergyResource>> {
+export async function UpdateUnit(
+  data: Partial<Unit>,
+): Promise<DataTableFormResponse<Unit>> {
   const user = await getCurrentUser();
   const utilityScopeId = resolveUtilityScopeId(user);
 
@@ -402,9 +402,9 @@ export async function UpdateEnergyResource(
   };
 }
 
-export async function UpdateEnergyResourceFromPeriodRow(
-  data: Partial<EnergyResourcePeriodTableRow>,
-): Promise<DataTableFormResponse<EnergyResourcePeriodTableRow>> {
+export async function UpdateUnitFromPeriodRow(
+  data: Partial<UnitPeriodTableRow>,
+): Promise<DataTableFormResponse<UnitPeriodTableRow>> {
   const rowId = String(data.id ?? "");
   const [resourceIdPart, reportPeriodIdPart] = rowId.split("-");
   const resourceId = Number(resourceIdPart);
@@ -511,8 +511,8 @@ export async function UpdateEnergyResourceFromPeriodRow(
     delete baseData.agg_level;
     delete baseData.asset;
 
-    const result = await UpdateEnergyResource({
-      ...(baseData as Partial<EnergyResource>),
+    const result = await UpdateUnit({
+      ...(baseData as Partial<Unit>),
       id: resourceId,
       period_entries: nextPeriodEntries,
     });
@@ -523,8 +523,8 @@ export async function UpdateEnergyResourceFromPeriodRow(
     };
   }
 
-  const result = await UpdateEnergyResource({
-    ...(data as Partial<EnergyResource>),
+  const result = await UpdateUnit({
+    ...(data as Partial<Unit>),
     id: resourceId,
   });
 

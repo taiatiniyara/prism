@@ -51,7 +51,7 @@ import {
   kpiDefinitions,
 } from "@/db/schema/kpi";
 import {
-  energyResourceTypeRelevance,
+  unitTypeRelevance,
   ManagedList,
   ManagedListItem,
   managedListItems,
@@ -59,8 +59,8 @@ import {
 } from "@/db/schema/managedLists";
 import { ReportPeriod, reportPeriods } from "@/db/schema/reportPeriods";
 import {
-  EnergyResource,
-  EnergyResourcePeriodEntry,
+  Unit,
+  UnitPeriodEntry,
   units,
   Organisation,
   organisations,
@@ -714,7 +714,7 @@ export async function retrieveUtilityContextData(options?: {
         provider_id: energyProviderId ?? dims.energyProvider,
         technology_id: energySourceId ?? dims.energySource,
         category_id: dims.energyType,
-        asset_id: dims.energyResourceType,
+        asset_id: dims.unitType,
         customer_type_id: customerTypeId ?? dims.customerType,
         payment_mode_id: paymentModeId ?? dims.paymentMode,
         consumption_band_id: dims.consumptionBand,
@@ -881,7 +881,7 @@ export async function retrieveCountryContextData(options?: {
         provider_id: dims2.energyProvider,
         technology_id: dims2.energySource,
         category_id: dims2.energyType,
-        asset_id: dims2.energyResourceType,
+        asset_id: dims2.unitType,
         customer_type_id: dims2.customerType,
         payment_mode_id: dims2.paymentMode,
         consumption_band_id: dims2.consumptionBand,
@@ -913,7 +913,7 @@ export async function retrieveCountryContextData(options?: {
             eq(dataEntries.provider_id, dims2.energyProvider),
             eq(dataEntries.technology_id, dims2.energySource),
             eq(dataEntries.category_id, dims2.energyType),
-            eq(dataEntries.asset_id, dims2.energyResourceType),
+            eq(dataEntries.asset_id, dims2.unitType),
             eq(dataEntries.customer_type_id, dims2.customerType),
             eq(dataEntries.payment_mode_id, dims2.paymentMode),
             eq(dataEntries.consumption_band_id, dims2.consumptionBand),
@@ -1254,12 +1254,12 @@ export async function retrieveUtilityData() {
       );
       if (!prevRp) continue;
 
-      const energyResourcesList = await db
+      const unitsList = await db
         .select()
         .from(units)
         .where(eq(units.utility_id, newRp.utility_id));
 
-      const resourcesToUpdate = energyResourcesList.filter((er) =>
+      const resourcesToUpdate = unitsList.filter((er) =>
         er.period_entries.some((pe) => pe.report_period_id === prevRp.id),
       );
 
@@ -1650,12 +1650,12 @@ export async function retrieveReportPeriods() {
       );
       if (!prevRp) continue;
 
-      const energyResourcesList = await db
+      const unitsList = await db
         .select()
         .from(units)
         .where(eq(units.utility_id, newRp.utility_id));
 
-      const resourcesToUpdate = energyResourcesList.filter((er) =>
+      const resourcesToUpdate = unitsList.filter((er) =>
         er.period_entries.some((pe) => pe.report_period_id === prevRp.id),
       );
 
@@ -1694,25 +1694,25 @@ export async function retrieveReportPeriods() {
   return { ok: true, inserted, updated, total: inserted + updated };
 }
 
-export async function retrieveEnergyResources() {
+export async function retrieveUnits() {
   await assertDevMigrationAccess();
   let inserted = 0;
   const updated = 0;
   let skippedInvalidForeignKeys = 0;
   const call = await fetchMigrationEndpoint("/generators");
   const list = await call.json();
-  type SourceEnergyResource = Omit<EnergyResource, "period_entries"> & {
-    period_entries?: EnergyResourcePeriodEntry[] | null;
+  type SourceUnit = Omit<Unit, "period_entries"> & {
+    period_entries?: UnitPeriodEntry[] | null;
     report_period_id?: number | null;
     capacity_mw?: number | string | null;
     is_active?: boolean | null;
   };
 
-  const energyResourcesList: SourceEnergyResource[] = list;
-  const groupedEnergyResources = new Map<number, EnergyResource>();
+  const unitsList: SourceUnit[] = list;
+  const groupedUnits = new Map<number, Unit>();
 
-  for (const resource of energyResourcesList) {
-    const normalizedPeriodEntries: EnergyResourcePeriodEntry[] = Array.isArray(
+  for (const resource of unitsList) {
+    const normalizedPeriodEntries: UnitPeriodEntry[] = Array.isArray(
       resource.period_entries,
     )
       ? resource.period_entries
@@ -1730,7 +1730,7 @@ export async function retrieveEnergyResources() {
               is_active: entry.is_active ?? true,
             };
           })
-          .filter((entry): entry is EnergyResourcePeriodEntry => entry != null)
+          .filter((entry): entry is UnitPeriodEntry => entry != null)
       : [];
 
     const reportPeriodId =
@@ -1746,17 +1746,17 @@ export async function retrieveEnergyResources() {
       });
     }
 
-    const existing = groupedEnergyResources.get(resource.id);
+    const existing = groupedUnits.get(resource.id);
     if (!existing) {
       const baseResource = { ...resource };
       delete baseResource.report_period_id;
       delete baseResource.capacity_mw;
       delete baseResource.is_active;
 
-      groupedEnergyResources.set(resource.id, {
+      groupedUnits.set(resource.id, {
         ...baseResource,
         period_entries: normalizedPeriodEntries,
-      } as EnergyResource);
+      } as Unit);
       continue;
     }
 
@@ -1785,7 +1785,7 @@ export async function retrieveEnergyResources() {
     }
   }
 
-  const dedupedEnergyResources = Array.from(groupedEnergyResources.values());
+  const dedupedUnits = Array.from(groupedUnits.values());
 
   const reportPeriodRows = await db
     .select({ id: reportPeriods.id, utilityId: reportPeriods.utility_id })
@@ -1798,7 +1798,7 @@ export async function retrieveEnergyResources() {
     utilityReportPeriodIds.set(rp.utilityId, existing);
   }
 
-  for (const resource of dedupedEnergyResources) {
+  for (const resource of dedupedUnits) {
     const utilityPeriodIds =
       utilityReportPeriodIds.get(resource.utility_id) ?? [];
     const existingPeriodIds = new Set(
@@ -1820,9 +1820,9 @@ export async function retrieveEnergyResources() {
     );
   }
 
-  const existingEnergyResources = await db.select().from(units);
-  const existingIds = new Set(existingEnergyResources.map((er) => er.id));
-  const nonExistingEnergyResources = dedupedEnergyResources.filter(
+  const existingUnits = await db.select().from(units);
+  const existingIds = new Set(existingUnits.map((er) => er.id));
+  const nonExistingUnits = dedupedUnits.filter(
     (er) => !existingIds.has(er.id),
   );
 
@@ -1836,10 +1836,10 @@ export async function retrieveEnergyResources() {
   const validUtilityIds = new Set(utilityRows.map((row) => row.id));
   const validManagedItemIds = new Set(managedItemRows.map((row) => row.id));
 
-  const validatedEnergyResources: Array<typeof units.$inferInsert> =
+  const validatedUnits: Array<typeof units.$inferInsert> =
     [];
 
-  for (const er of nonExistingEnergyResources) {
+  for (const er of nonExistingUnits) {
     const serviceAreaId = normalizeRequiredId(er.service_area_id);
     const utilityId = normalizeRequiredId(er.utility_id);
     const energyProviderId = normalizeRequiredId(er.provider_id);
@@ -1863,7 +1863,7 @@ export async function retrieveEnergyResources() {
       continue;
     }
 
-    validatedEnergyResources.push({
+    validatedUnits.push({
       ...er,
       service_area_id: serviceAreaId,
       utility_id: utilityId,
@@ -1876,14 +1876,14 @@ export async function retrieveEnergyResources() {
   }
 
   try {
-    if (validatedEnergyResources.length > 0) {
-      await db.insert(units).values(validatedEnergyResources);
-      inserted += validatedEnergyResources.length;
+    if (validatedUnits.length > 0) {
+      await db.insert(units).values(validatedUnits);
+      inserted += validatedUnits.length;
     }
 
     if (skippedInvalidForeignKeys > 0) {
       logger.warn(
-        `[migration] retrieveEnergyResources skipped ${skippedInvalidForeignKeys} rows with invalid foreign keys`,
+        `[migration] retrieveUnits skipped ${skippedInvalidForeignKeys} rows with invalid foreign keys`,
       );
     }
   } catch (error: unknown) {
@@ -1895,7 +1895,7 @@ export async function retrieveEnergyResources() {
   return { ok: true, inserted, updated, total: inserted + updated };
 }
 
-export async function backfillEnergyResourcePeriods() {
+export async function backfillUnitPeriods() {
   await assertDevMigrationAccess();
   const inserted = 0;
   const updated = 0;
@@ -1935,7 +1935,7 @@ export async function backfillEnergyResourcePeriods() {
 
       const entriesByReportPeriod = new Map<
         number,
-        EnergyResourcePeriodEntry
+        UnitPeriodEntry
       >();
       for (const entry of existingEntries) {
         const previous = entriesByReportPeriod.get(entry.report_period_id);
@@ -2087,8 +2087,8 @@ export type DataEntryComparisonRow = {
   subcategoryName: string;
   serviceAreaId: number | null;
   serviceAreaName: string;
-  energyResourceId: number | null;
-  energyResourceName: string;
+  unitId: number | null;
+  unitName: string;
   energyProviderId: number | null;
   energyProviderName: string;
   energySourceId: number | null;
@@ -2834,14 +2834,14 @@ export async function retrieveDataEntries(options?: {
     targetReportPeriods.map((r) => r.id),
   );
 
-  const targetEnergyResources = await db
+  const targetUnits = await db
     .select({
       id: units.id,
       periodEntries: units.period_entries,
     })
     .from(units);
-  const targetEnergyResourceIds = new Set<number>(
-    targetEnergyResources.map((r) => r.id),
+  const targetUnitIds = new Set<number>(
+    targetUnits.map((r) => r.id),
   );
 
   const targetServiceAreas = await db
@@ -2891,7 +2891,7 @@ export async function retrieveDataEntries(options?: {
         reportPeriodId: number;
         inputDefId: number;
         serviceAreaId: number | null;
-        energyResourceId: number | null;
+        unitId: number | null;
         energyProviderId: number | null;
         energySourceId: number | null;
         customerTypeId: number | null;
@@ -2904,7 +2904,7 @@ export async function retrieveDataEntries(options?: {
         inputDefId: number;
         sourceTrainingDlDefId: number | null;
         serviceAreaId: number | null;
-        energyResourceId: number | null;
+        unitId: number | null;
         energyProviderId: number | null;
         energySourceId: number | null;
         customerTypeId: number | null;
@@ -3007,7 +3007,7 @@ export async function retrieveDataEntries(options?: {
         }
 
         const rawServiceAreaId = normalizeOptionalId(row.service_area_id);
-        const rawEnergyResourceId = normalizeOptionalId(row.unit_id);
+        const rawUnitId = normalizeOptionalId(row.unit_id);
         const rawEnergyProviderId = normalizeOptionalId(row.provider_id);
         const rawEnergySourceId = normalizeOptionalId(row.technology_id);
         const rawCustomerTypeId = normalizeOptionalId(row.customer_type_id);
@@ -3018,9 +3018,9 @@ export async function retrieveDataEntries(options?: {
           rawServiceAreaId,
           targetServiceAreaIds,
         );
-        const energyResourceId = normalizeOptionalFkId(
-          rawEnergyResourceId,
-          targetEnergyResourceIds,
+        const unitId = normalizeOptionalFkId(
+          rawUnitId,
+          targetUnitIds,
         );
         const energyProviderId = normalizeOptionalFkId(
           rawEnergyProviderId,
@@ -3043,7 +3043,7 @@ export async function retrieveDataEntries(options?: {
           reportPeriodId,
           inputDefId,
           serviceAreaId,
-          energyResourceId: energyResourceId,
+          unitId: unitId,
           energyProviderId,
           energySourceId,
           customerTypeId,
@@ -3055,7 +3055,7 @@ export async function retrieveDataEntries(options?: {
           inputDefId,
           sourceTrainingDlDefId,
           serviceAreaId,
-          energyResourceId: energyResourceId,
+          unitId: unitId,
           energyProviderId,
           energySourceId,
           customerTypeId,
@@ -3131,7 +3131,7 @@ export async function retrieveDataEntries(options?: {
       // Phase 3: Process each normalized row with pre-computed map
       for (const pr of preRows) {
         const { row, reportPeriodId, inputDefId } = pr;
-        const energyResourceId = pr.energyResourceId;
+        const unitId = pr.unitId;
         const serviceAreaId = pr.serviceAreaId;
         const energyProviderId = pr.energyProviderId;
         const energySourceId = pr.energySourceId;
@@ -3150,11 +3150,11 @@ export async function retrieveDataEntries(options?: {
           report_period_id: reportPeriodId,
           measure_def_id: inputDefId,
           service_area_id: serviceAreaId,
-          unit_id: energyResourceId,
+          unit_id: unitId,
           provider_id: energyProviderId ?? dims3.energyProvider,
           technology_id: energySourceId ?? dims3.energySource,
           category_id: dims3.energyType,
-          asset_id: dims3.energyResourceType,
+          asset_id: dims3.unitType,
           customer_type_id: customerTypeId ?? dims3.customerType,
           payment_mode_id: paymentModeId ?? dims3.paymentMode,
           consumption_band_id: dims3.consumptionBand,
@@ -3175,7 +3175,7 @@ export async function retrieveDataEntries(options?: {
           reportPeriodId,
           inputDefId,
           nullableKeyPart(serviceAreaId),
-          nullableKeyPart(energyResourceId),
+          nullableKeyPart(unitId),
           nullableKeyPart(energyProviderId),
           nullableKeyPart(energySourceId),
           nullableKeyPart(customerTypeId),
@@ -3204,9 +3204,9 @@ export async function retrieveDataEntries(options?: {
               serviceAreaId == null
                 ? isNull(dataEntries.service_area_id)
                 : eq(dataEntries.service_area_id, serviceAreaId),
-              energyResourceId == null
+              unitId == null
                 ? isNull(dataEntries.unit_id)
-                : eq(dataEntries.unit_id, energyResourceId),
+                : eq(dataEntries.unit_id, unitId),
               energyProviderId == null
                 ? isNull(dataEntries.provider_id)
                 : eq(dataEntries.provider_id, energyProviderId),
@@ -3891,12 +3891,12 @@ export async function retrieveGenerationRelevance(options?: {
       const page: SourceGenerationRelevancePage = await call.json();
 
       for (const row of page.generationRelevance) {
-        const energyResourceTypeId = toNumberOrNull(row.provider_id);
+        const unitTypeId = toNumberOrNull(row.provider_id);
         const energyTypeId = toNumberOrNull(row.category_id);
         const energySourceId = toNumberOrNull(row.technology_id);
 
         if (
-          energyResourceTypeId == null ||
+          unitTypeId == null ||
           energyTypeId == null ||
           energySourceId == null
         ) {
@@ -3904,16 +3904,16 @@ export async function retrieveGenerationRelevance(options?: {
         }
 
         const [existing] = await db
-          .select({ id: energyResourceTypeRelevance.id })
-          .from(energyResourceTypeRelevance)
+          .select({ id: unitTypeRelevance.id })
+          .from(unitTypeRelevance)
           .where(
             and(
               eq(
-                energyResourceTypeRelevance.asset_id,
-                energyResourceTypeId,
+                unitTypeRelevance.asset_id,
+                unitTypeId,
               ),
-              eq(energyResourceTypeRelevance.category_id, energyTypeId),
-              eq(energyResourceTypeRelevance.technology_id, energySourceId),
+              eq(unitTypeRelevance.category_id, energyTypeId),
+              eq(unitTypeRelevance.technology_id, energySourceId),
             ),
           )
           .limit(1);
@@ -3923,8 +3923,8 @@ export async function retrieveGenerationRelevance(options?: {
           continue;
         }
 
-        await db.insert(energyResourceTypeRelevance).values({
-          asset_id: energyResourceTypeId,
+        await db.insert(unitTypeRelevance).values({
+          asset_id: unitTypeId,
           category_id: energyTypeId,
           technology_id: energySourceId,
         });
@@ -3992,7 +3992,7 @@ const parseDataEntryComparisonKey = (key: string) => {
     reportPeriod,
     inputDef,
     serviceArea,
-    energyResource,
+    unit,
     energyProvider,
     energySource,
     customerType,
@@ -4003,7 +4003,7 @@ const parseDataEntryComparisonKey = (key: string) => {
     report_period_id: Number(reportPeriod),
     measure_def_id: Number(inputDef),
     service_area_id: parseNullableId(serviceArea),
-    unit_id: parseNullableId(energyResource),
+    unit_id: parseNullableId(unit),
     provider_id: parseNullableId(energyProvider),
     technology_id: parseNullableId(energySource),
     customer_type_id: parseNullableId(customerType),
@@ -4301,14 +4301,14 @@ export async function compareDataEntries(
     ),
   );
 
-  const targetEnergyResources = await db
+  const targetUnits = await db
     .select({
       id: units.id,
       periodEntries: units.period_entries,
     })
     .from(units);
-  const targetEnergyResourceIds = new Set<number>(
-    targetEnergyResources.map((r) => r.id),
+  const targetUnitIds = new Set<number>(
+    targetUnits.map((r) => r.id),
   );
 
   const targetManagedListItemIds = new Set<number>(
@@ -4385,7 +4385,7 @@ export async function compareDataEntries(
     }
 
     const rawServiceAreaId = normalizeOptionalId(row.service_area_id);
-    const rawEnergyResourceId = normalizeOptionalId(row.unit_id);
+    const rawUnitId = normalizeOptionalId(row.unit_id);
     const rawEnergyProviderId = normalizeOptionalId(row.provider_id);
     const rawEnergySourceId = normalizeOptionalId(row.technology_id);
     const rawCustomerTypeId = normalizeOptionalId(row.customer_type_id);
@@ -4395,9 +4395,9 @@ export async function compareDataEntries(
       rawServiceAreaId,
       targetServiceAreaIds,
     );
-    const energyResourceId = normalizeOptionalFkId(
-      rawEnergyResourceId,
-      targetEnergyResourceIds,
+    const unitId = normalizeOptionalFkId(
+      rawUnitId,
+      targetUnitIds,
     );
     const energyProviderId = normalizeOptionalFkId(
       rawEnergyProviderId,
@@ -4420,7 +4420,7 @@ export async function compareDataEntries(
       report_period_id: normalizedReportPeriodId,
       measure_def_id: normalizedInputDefId,
       service_area_id: serviceAreaId,
-      unit_id: energyResourceId,
+      unit_id: unitId,
       provider_id: energyProviderId,
       technology_id: energySourceId,
       customer_type_id: customerTypeId,
@@ -4476,7 +4476,7 @@ export async function compareDataEntries(
         .filter((id): id is number => id != null),
     ),
   );
-  const energyResourceIds = Array.from(
+  const unitIds = Array.from(
     new Set(
       Array.from(unionKeys)
         .map((key) => parseDataEntryComparisonKey(key).unit_id)
@@ -4536,13 +4536,13 @@ export async function compareDataEntries(
           .from(serviceAreas)
           .where(inArray(serviceAreas.id, serviceAreaIds));
 
-  const energyResourceList =
-    energyResourceIds.length === 0
+  const unitList =
+    unitIds.length === 0
       ? []
       : await db
           .select({ id: units.id, name: units.name })
           .from(units)
-          .where(inArray(units.id, energyResourceIds));
+          .where(inArray(units.id, unitIds));
 
   const managedListItemList =
     managedListIds.length === 0
@@ -4589,8 +4589,8 @@ export async function compareDataEntries(
   const serviceAreaNameById = new Map(
     serviceAreaList.map((d) => [d.id, d.name]),
   );
-  const energyResourceNameById = new Map(
-    energyResourceList.map((d) => [d.id, d.name]),
+  const unitNameById = new Map(
+    unitList.map((d) => [d.id, d.name]),
   );
   const managedListNameById = new Map(
     managedListItemList.map((d) => [d.id, d.name]),
@@ -4646,10 +4646,10 @@ export async function compareDataEntries(
           ? (serviceAreaNameById.get(parsed.service_area_id) ??
             String(parsed.service_area_id))
           : "-",
-      energyResourceId: parsed.unit_id,
-      energyResourceName:
+      unitId: parsed.unit_id,
+      unitName:
         parsed.unit_id != null
-          ? (energyResourceNameById.get(parsed.unit_id) ??
+          ? (unitNameById.get(parsed.unit_id) ??
             String(parsed.unit_id))
           : "-",
       energyProviderId: parsed.provider_id,

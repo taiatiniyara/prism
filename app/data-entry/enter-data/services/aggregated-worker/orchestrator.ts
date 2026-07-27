@@ -181,7 +181,7 @@ export const runAggregatedWorker = async (
     runId,
     reportPeriodId: scope.reportPeriodId,
     serviceAreaId: scope.serviceAreaId ?? null,
-    energyResourceId: scope.energyResourceId ?? null,
+    unitId: scope.unitId ?? null,
   });
 
   storeRunStart({
@@ -300,7 +300,7 @@ export const runAggregatedWorker = async (
           reportPeriodId: scope.reportPeriodId,
           organizationId: user.org_id,
           serviceAreaId: scope.serviceAreaId,
-          energyResourceId: scope.energyResourceId,
+          unitId: scope.unitId,
         },
       },
       user,
@@ -352,7 +352,7 @@ export const runAggregatedWorkerAsync = (
       console.error("[Aggregated worker] run failed", {
         reportPeriodId: scope.reportPeriodId,
         serviceAreaId: scope.serviceAreaId ?? null,
-        energyResourceId: scope.energyResourceId ?? null,
+        unitId: scope.unitId ?? null,
         error: errorMessage,
       });
       storeRunFailure(runId, errorMessage);

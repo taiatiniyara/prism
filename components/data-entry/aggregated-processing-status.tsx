@@ -28,14 +28,14 @@ interface KpiRunSummary {
 interface AggregatedProcessingStatusProps {
   reportPeriodId: number | null;
   serviceAreaId: number | null;
-  energyResourceId?: number | null;
+  unitId?: number | null;
   mode?: "aggregated" | "kpi";
 }
 
 export function AggregatedProcessingStatus({
   reportPeriodId,
   serviceAreaId,
-  energyResourceId,
+  unitId,
   mode = "aggregated",
 }: AggregatedProcessingStatusProps) {
   const [isLoading, setIsLoading] = useState(false);
@@ -57,12 +57,12 @@ export function AggregatedProcessingStatus({
       params.set("serviceAreaId", String(serviceAreaId));
     }
 
-    if (energyResourceId != null) {
-      params.set("energyResourceId", String(energyResourceId));
+    if (unitId != null) {
+      params.set("unitId", String(unitId));
     }
 
     return params.toString();
-  }, [reportPeriodId, serviceAreaId, energyResourceId]);
+  }, [reportPeriodId, serviceAreaId, unitId]);
 
   useEffect(() => {
     if (!query) {

@@ -39,14 +39,14 @@ export async function GET(request: Request) {
     const serviceAreaId = parseOptionalNumber(
       searchParams.get("serviceAreaId"),
     );
-    const energyResourceId = parseOptionalNumber(
-      searchParams.get("energyResourceId"),
+    const unitId = parseOptionalNumber(
+      searchParams.get("unitId"),
     );
 
     const attempts = await listKpiWorkerStatuses({
       reportPeriodId,
       serviceAreaId,
-      energyResourceId,
+      unitId,
     });
 
     return Response.json(attempts);

@@ -101,7 +101,7 @@ export async function runKpiWorker(
     inputDefId: trigger.inputDefId,
     reportPeriodId: trigger.scope.reportPeriodId,
     serviceAreaId: trigger.scope.serviceAreaId ?? null,
-    energyResourceId: trigger.scope.energyResourceId ?? null,
+    unitId: trigger.scope.unitId ?? null,
   });
 
   if (user) {
@@ -119,7 +119,7 @@ export async function runKpiWorker(
       runId,
       reportPeriodId: trigger.scope.reportPeriodId,
       serviceAreaId: trigger.scope.serviceAreaId ?? null,
-      energyResourceId: trigger.scope.energyResourceId ?? null,
+      unitId: trigger.scope.unitId ?? null,
     });
 
     return {
@@ -335,7 +335,7 @@ export function runKpiWorkerAsync(
     inputDefId: trigger.inputDefId,
     reportPeriodId: trigger.scope.reportPeriodId,
     serviceAreaId: trigger.scope.serviceAreaId ?? null,
-    energyResourceId: trigger.scope.energyResourceId ?? null,
+    unitId: trigger.scope.unitId ?? null,
   });
 
   queueMicrotask(() => {

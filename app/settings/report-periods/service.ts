@@ -48,12 +48,12 @@ export async function CreateReportPeriod(
     .limit(1);
 
   if (prevRp) {
-    const energyResourcesList = await db
+    const unitsList = await db
       .select()
       .from(units)
       .where(eq(units.utility_id, rp.utility_id));
 
-    for (const resource of energyResourcesList) {
+    for (const resource of unitsList) {
       const prevEntry = resource.period_entries.find(
         (pe) => pe.report_period_id === prevRp.id,
       );

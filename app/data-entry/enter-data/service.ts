@@ -89,7 +89,7 @@ import {
   ValidationCode,
 } from "@/app/data-entry/enter-data/services/validation-builder/types";
 
-const hasActiveEnergyResourcePeriod = (reportPeriodId: number) =>
+const hasActiveUnitPeriod = (reportPeriodId: number) =>
   sql<boolean>`exists (
     select 1
     from jsonb_array_elements(${units.period_entries}) as period_entry
@@ -615,7 +615,7 @@ const getGenerationGroupsForContext = async (
   const generatorConditions = [
     eq(units.is_virtual, false),
     eq(units.service_area_id, context.serviceAreaId),
-    hasActiveEnergyResourcePeriod(context.reportPeriodId),
+    hasActiveUnitPeriod(context.reportPeriodId),
   ];
 
   if (!hasGlobalUtilityAccess(user) && user.org_id != null) {
@@ -693,7 +693,7 @@ const getGenerationGroupsForContext = async (
     .select({
       id: dataEntries.id,
       inputDefId: dataEntries.measure_def_id,
-      energyResourceId: dataEntries.unit_id,
+      unitId: dataEntries.unit_id,
       statusId: dataEntries.status_id,
       updatedByName: authUser.name,
       updatedByRole: roles.name,
@@ -890,7 +890,7 @@ const getTariffGroupsForContext = async (
           return {
             dataEntryId: entry?.id,
             inputDefId: definition.id,
-            energyResourceId: null,
+            unitId: null,
             paymentModeId: paymentMode.id,
             paymentModeName: paymentMode.name,
             customerTypeId: customerType.id,
@@ -1009,7 +1009,7 @@ const getOverallProgressForContext = async (
 
   const generatorConditions = [
     eq(units.is_virtual, false),
-    hasActiveEnergyResourcePeriod(context.reportPeriodId),
+    hasActiveUnitPeriod(context.reportPeriodId),
   ];
 
   if (!hasGlobalUtilityAccess(user) && user.org_id != null) {
@@ -1091,7 +1091,7 @@ const getOverallProgressForContext = async (
     .select({
       inputDefId: dataEntries.measure_def_id,
       serviceAreaId: dataEntries.service_area_id,
-      energyResourceId: dataEntries.unit_id,
+      unitId: dataEntries.unit_id,
     })
     .from(dataEntries)
     .where(and(...entryConditions));
@@ -1099,7 +1099,7 @@ const getOverallProgressForContext = async (
   const completedKeys = new Set<string>();
 
   completedEntries.forEach((entry) => {
-    const key = `${entry.inputDefId}:${entry.serviceAreaId ?? "null"}:${entry.energyResourceId ?? "null"}`;
+    const key = `${entry.inputDefId}:${entry.serviceAreaId ?? "null"}:${entry.unitId ?? "null"}`;
 
     if (expectedKeys.has(key)) {
       completedKeys.add(key);
@@ -1477,7 +1477,7 @@ const getLatestKpiFailureForContext = async (
     const attempts = await listKpiWorkerStatuses({
       reportPeriodId: context.reportPeriodId,
       serviceAreaId: context.serviceAreaId,
-      energyResourceId: null,
+      unitId: null,
     });
 
     const latestFailure = attempts.find(
@@ -1624,7 +1624,7 @@ export const updateFilterContextAction = async (
 interface UpdateDataEntryValuePayload {
   inputDefId: number;
   value: string | null;
-  energyResourceId?: number | null;
+  unitId?: number | null;
   customerTypeId?: number | null;
   paymentModeId?: number | null;
 }
@@ -1632,7 +1632,7 @@ interface UpdateDataEntryValuePayload {
 interface UpdateDataEntryCommentPayload {
   inputDefId: number;
   comment: string;
-  energyResourceId?: number | null;
+  unitId?: number | null;
   customerTypeId?: number | null;
   paymentModeId?: number | null;
 }
@@ -1640,7 +1640,7 @@ interface UpdateDataEntryCommentPayload {
 interface UpdateDataEntryAvailabilityPayload {
   inputDefId: number;
   isDataNotAvailable: boolean;
-  energyResourceId?: number | null;
+  unitId?: number | null;
   customerTypeId?: number | null;
   paymentModeId?: number | null;
 }
@@ -1650,7 +1650,7 @@ export interface DataEntryTemplateUploadRowPayload {
   value: string | null;
   isDataNotAvailable: boolean;
   comments: string;
-  energyResourceId?: number | null;
+  unitId?: number | null;
   customerTypeId?: number | null;
   paymentModeId?: number | null;
 }
@@ -1725,7 +1725,7 @@ const resolveBuilderValidationMessage = (params: {
 
 type DataEntryScopedPayload = {
   inputDefId: number;
-  energyResourceId?: number | null;
+  unitId?: number | null;
   customerTypeId?: number | null;
   paymentModeId?: number | null;
 };
@@ -1737,9 +1737,9 @@ type EnergyMetadata = {
 };
 
 const resolveEnergyMetadata = async (
-  energyResourceId: number | null,
+  unitId: number | null,
 ): Promise<EnergyMetadata | null> => {
-  if (energyResourceId == null) {
+  if (unitId == null) {
     return null;
   }
 
@@ -1749,7 +1749,7 @@ const resolveEnergyMetadata = async (
       energyProviderId: units.provider_id,
     })
     .from(units)
-    .where(eq(units.id, energyResourceId))
+    .where(eq(units.id, unitId))
     .limit(1);
 
   if (!resource) {
@@ -1777,7 +1777,7 @@ const buildExistingDataEntryConditions = (params: {
   reportPeriodId: number;
   inputDefId: number;
   serviceAreaId: number | null;
-  energyResourceId: number | null;
+  unitId: number | null;
   customerTypeId: number | null;
   paymentModeId: number | null;
 }) => {
@@ -1792,11 +1792,11 @@ const buildExistingDataEntryConditions = (params: {
     conditions.push(eq(dataEntries.service_area_id, params.serviceAreaId));
   }
 
-  if (params.energyResourceId == null) {
+  if (params.unitId == null) {
     conditions.push(isNull(dataEntries.unit_id));
   } else {
     conditions.push(
-      eq(dataEntries.unit_id, params.energyResourceId),
+      eq(dataEntries.unit_id, params.unitId),
     );
   }
 
@@ -1825,7 +1825,7 @@ const resolveDataEntryActionScope = async (
   user: CurrentUser;
   context: DataEntryFilterContext;
   scopedServiceAreaId: number | null;
-  energyResourceId: number | null;
+  unitId: number | null;
   energyMetadata: EnergyMetadata | null;
 }> => {
   const user = await getCurrentUser();
@@ -1859,21 +1859,21 @@ const resolveDataEntryActionScope = async (
     context,
     options.inputSubcategories,
   );
-  const energyResourceId = generationMode
-    ? (payload.energyResourceId ?? null)
+  const unitId = generationMode
+    ? (payload.unitId ?? null)
     : null;
 
-  if (generationMode && energyResourceId == null) {
+  if (generationMode && unitId == null) {
     throw new Error(errors.missingGenerationResource);
   }
 
-  const energyMetadata = await resolveEnergyMetadata(energyResourceId);
+  const energyMetadata = await resolveEnergyMetadata(unitId);
 
   return {
     user,
     context,
     scopedServiceAreaId,
-    energyResourceId,
+    unitId,
     energyMetadata,
   };
 };
@@ -1885,7 +1885,7 @@ const revalidateEnterData = () => {
 interface SaveDataEntryValueResult {
   sourceDataEntryId: string | null;
   scopedServiceAreaId: number | null;
-  energyResourceId: number | null;
+  unitId: number | null;
   reportPeriodId: number;
 }
 
@@ -1896,7 +1896,7 @@ const saveDataEntryValueInternal = async (
     user,
     context,
     scopedServiceAreaId,
-    energyResourceId,
+    unitId,
     energyMetadata,
   } = await resolveDataEntryActionScope(payload, {
     missingReportPeriod:
@@ -2050,7 +2050,7 @@ const saveDataEntryValueInternal = async (
     reportPeriodId,
     inputDefId: payload.inputDefId,
     serviceAreaId: scopedServiceAreaId,
-    energyResourceId,
+    unitId,
     customerTypeId: payload.customerTypeId ?? null,
     paymentModeId: payload.paymentModeId ?? null,
   });
@@ -2072,13 +2072,13 @@ const saveDataEntryValueInternal = async (
       report_period_id: reportPeriodId,
       measure_def_id: payload.inputDefId,
       service_area_id: scopedServiceAreaId,
-      unit_id: energyResourceId,
+      unit_id: unitId,
       value: normalizedValue,
       status_id: DataEntryStatusId.Entered,
       technology_id: energyMetadata?.energySourceId ?? allMemberIds.energySource,
       category_id: energyMetadata?.energyTypeId ?? allMemberIds.energyType,
       provider_id: energyMetadata?.energyProviderId ?? allMemberIds.energyProvider,
-      asset_id: allMemberIds.energyResourceType,
+      asset_id: allMemberIds.unitType,
       customer_type_id: payload.customerTypeId ?? allMemberIds.customerType,
       payment_mode_id: payload.paymentModeId ?? allMemberIds.paymentMode,
       consumption_band_id: allMemberIds.consumptionBand,
@@ -2127,7 +2127,7 @@ const saveDataEntryValueInternal = async (
   return {
     sourceDataEntryId: writeResult.sourceDataEntryId,
     scopedServiceAreaId,
-    energyResourceId,
+    unitId,
     reportPeriodId,
   };
 };
@@ -2140,7 +2140,7 @@ export const updateDataEntryValueAction = async (
   runAggregatedWorkerAsync(await getCurrentUser(), {
     reportPeriodId: result.reportPeriodId,
     serviceAreaId: result.scopedServiceAreaId,
-    energyResourceId: result.energyResourceId,
+    unitId: result.unitId,
   });
 
   let kpiRunResult: KpiWorkerRunResult | null = null;
@@ -2155,7 +2155,7 @@ export const updateDataEntryValueAction = async (
           reportPeriodId: result.reportPeriodId,
           organizationId: (await getCurrentUser()).org_id,
           serviceAreaId: result.scopedServiceAreaId,
-          energyResourceId: result.energyResourceId,
+          unitId: result.unitId,
           energyProviderId: null,
           energyTypeId: null,
           energySourceId: null,
@@ -2181,7 +2181,7 @@ export const updateDataEntryCommentAction = async (
     user,
     context,
     scopedServiceAreaId,
-    energyResourceId,
+    unitId,
     energyMetadata,
   } = await resolveDataEntryActionScope(payload, {
     missingReportPeriod: "A report period is required before saving comments.",
@@ -2209,7 +2209,7 @@ export const updateDataEntryCommentAction = async (
     reportPeriodId,
     inputDefId: payload.inputDefId,
     serviceAreaId: scopedServiceAreaId,
-    energyResourceId,
+    unitId,
     customerTypeId: payload.customerTypeId ?? null,
     paymentModeId: payload.paymentModeId ?? null,
   });
@@ -2250,14 +2250,14 @@ export const updateDataEntryCommentAction = async (
       report_period_id: reportPeriodId,
       measure_def_id: payload.inputDefId,
       service_area_id: scopedServiceAreaId,
-      unit_id: energyResourceId,
+      unit_id: unitId,
       value: null,
       comments: nextComments,
       status_id: DataEntryStatusId.Entered,
       technology_id: energyMetadata?.energySourceId ?? allMemberIds.energySource,
       provider_id: energyMetadata?.energyProviderId ?? allMemberIds.energyProvider,
       category_id: energyMetadata?.energyTypeId ?? allMemberIds.energyType,
-      asset_id: allMemberIds.energyResourceType,
+      asset_id: allMemberIds.unitType,
       customer_type_id: payload.customerTypeId ?? allMemberIds.customerType,
       payment_mode_id: payload.paymentModeId ?? allMemberIds.paymentMode,
       consumption_band_id: allMemberIds.consumptionBand,
@@ -2280,7 +2280,7 @@ export const updateDataEntryAvailabilityAction = async (
     user,
     context,
     scopedServiceAreaId,
-    energyResourceId,
+    unitId,
     energyMetadata,
   } = await resolveDataEntryActionScope(payload, {
     missingReportPeriod: "A report period is required before updating status.",
@@ -2297,7 +2297,7 @@ export const updateDataEntryAvailabilityAction = async (
     reportPeriodId,
     inputDefId: payload.inputDefId,
     serviceAreaId: scopedServiceAreaId,
-    energyResourceId,
+    unitId,
     customerTypeId: payload.customerTypeId ?? null,
     paymentModeId: payload.paymentModeId ?? null,
   });
@@ -2333,14 +2333,14 @@ export const updateDataEntryAvailabilityAction = async (
         report_period_id: reportPeriodId,
         measure_def_id: payload.inputDefId,
         service_area_id: scopedServiceAreaId,
-        unit_id: energyResourceId,
+        unit_id: unitId,
         value: null,
         comments: null,
         status_id: nextStatusId,
         technology_id: energyMetadata?.energySourceId ?? allMemberIds.energySource,
         provider_id: energyMetadata?.energyProviderId ?? allMemberIds.energyProvider,
         category_id: energyMetadata?.energyTypeId ?? allMemberIds.energyType,
-        asset_id: allMemberIds.energyResourceType,
+        asset_id: allMemberIds.unitType,
         customer_type_id: payload.customerTypeId ?? allMemberIds.customerType,
         payment_mode_id: payload.paymentModeId ?? allMemberIds.paymentMode,
         consumption_band_id: allMemberIds.consumptionBand,
@@ -2359,7 +2359,7 @@ export const updateDataEntryAvailabilityAction = async (
   runAggregatedWorkerAsync(user, {
     reportPeriodId,
     serviceAreaId: scopedServiceAreaId,
-    energyResourceId,
+    unitId,
   });
 
   void upsertHoursInPeriod(reportPeriodId).catch((err) =>
@@ -2378,7 +2378,7 @@ export const updateDataEntryAvailabilityAction = async (
           reportPeriodId,
           organizationId: user.org_id,
           serviceAreaId: scopedServiceAreaId,
-          energyResourceId,
+          unitId,
           energyProviderId: energyMetadata?.energyProviderId ?? null,
           energyTypeId: energyMetadata?.energyTypeId ?? null,
           energySourceId: energyMetadata?.energySourceId ?? null,
@@ -2444,7 +2444,7 @@ export const uploadDataEntryTemplateAction = async (
     if (row.isDataNotAvailable) {
       const result = await saveDataEntryValueInternal({
         inputDefId: row.inputDefId,
-        energyResourceId: row.energyResourceId ?? null,
+        unitId: row.unitId ?? null,
         customerTypeId: row.customerTypeId ?? null,
         paymentModeId: row.paymentModeId ?? null,
         value: null,
@@ -2455,20 +2455,20 @@ export const uploadDataEntryTemplateAction = async (
         .where(eq(dataEntries.id, result.sourceDataEntryId!));
 
       workerScopes.add(
-        `${result.reportPeriodId}:${result.scopedServiceAreaId ?? "null"}:${result.energyResourceId ?? "null"}`,
+        `${result.reportPeriodId}:${result.scopedServiceAreaId ?? "null"}:${result.unitId ?? "null"}`,
       );
       processed += 1;
     } else if (hasValue) {
       const result = await saveDataEntryValueInternal({
         inputDefId: row.inputDefId,
-        energyResourceId: row.energyResourceId ?? null,
+        unitId: row.unitId ?? null,
         customerTypeId: row.customerTypeId ?? null,
         paymentModeId: row.paymentModeId ?? null,
         value: row.value,
       });
 
       workerScopes.add(
-        `${result.reportPeriodId}:${result.scopedServiceAreaId ?? "null"}:${result.energyResourceId ?? "null"}`,
+        `${result.reportPeriodId}:${result.scopedServiceAreaId ?? "null"}:${result.unitId ?? "null"}`,
       );
       processed += 1;
     }
@@ -2477,7 +2477,7 @@ export const uploadDataEntryTemplateAction = async (
       await updateDataEntryCommentAction({
         inputDefId: row.inputDefId,
         comment: row.comments.trim(),
-        energyResourceId: row.energyResourceId ?? null,
+        unitId: row.unitId ?? null,
         customerTypeId: row.customerTypeId ?? null,
         paymentModeId: row.paymentModeId ?? null,
       });
@@ -2490,7 +2490,7 @@ export const uploadDataEntryTemplateAction = async (
     runAggregatedWorkerAsync(user, {
       reportPeriodId: Number(parts[0]),
       serviceAreaId: parts[1] === "null" ? null : Number(parts[1]),
-      energyResourceId: parts[2] === "null" ? null : Number(parts[2]),
+      unitId: parts[2] === "null" ? null : Number(parts[2]),
     });
   }
 
@@ -2523,7 +2523,7 @@ async function getAllMemberIdsMap() {
     energySource,
     energyType,
     energyProvider,
-    energyResourceType,
+    unitType,
     customerType,
     paymentMode,
     consumptionBand,
@@ -2546,7 +2546,7 @@ async function getAllMemberIdsMap() {
     energySource,
     energyType,
     energyProvider,
-    energyResourceType,
+    unitType,
     customerType,
     paymentMode,
     consumptionBand,
