@@ -16,6 +16,7 @@ import { managedLists } from "@/db/schema/managedLists";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { organisations } from "@/db/schema/utility";
 import { resolveValueColumn } from "@/lib/data-entry/value-router";
+import { upsertHoursInPeriod } from "@/lib/period-hours";
 import {
   MeasureEntryFilterContext,
   MeasureEntryPageViewModel,
@@ -520,6 +521,13 @@ export async function updateMeasureEntryValueAction(
     });
   }
 
+  const reportPeriodId = await getReportPeriodIdFromContext();
+  if (reportPeriodId > 0) {
+    void upsertHoursInPeriod(reportPeriodId).catch((err) =>
+      console.error("Failed to auto-calculate hours in period:", err),
+    );
+  }
+
   revalidatePath("/data-entry/enter-data");
 }
 
@@ -563,6 +571,13 @@ export async function updateMeasureEntryAvailabilityAction(
       updatedAt: new Date(),
       updatedById: user.id,
     });
+  }
+
+  const availPeriodId = await getReportPeriodIdFromContext();
+  if (availPeriodId > 0) {
+    void upsertHoursInPeriod(availPeriodId).catch((err) =>
+      console.error("Failed to auto-calculate hours in period:", err),
+    );
   }
 
   revalidatePath("/data-entry/enter-data");

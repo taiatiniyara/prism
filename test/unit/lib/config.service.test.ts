@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from "vitest";
+import { describe, it, expect, beforeEach, vi } from "vitest";
 import { getConfig } from "@/lib/config.service";
 
 describe("config service", () => {
@@ -30,6 +30,7 @@ describe("config service", () => {
 
   it("does not redact non-secret values", () => {
     process.env.POWERBI_WORKSPACE_NAME = "My Workspace";
+    vi.stubEnv("NODE_ENV", "test");
     const result = getConfig();
     const ws = result.vars.find((v) => v.key === "POWERBI_WORKSPACE_NAME");
     expect(ws!.preview).toBe("My Workspace");

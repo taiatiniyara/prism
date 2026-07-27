@@ -74,6 +74,7 @@ import {
   type KpiWorkerRunResult,
 } from "@/app/data-entry/kpi-worker";
 import { formatReportPeriodDisplay } from "@/lib/formatters";
+import { upsertHoursInPeriod } from "@/lib/period-hours";
 import {
   DataEntryValidationMetadata,
   getDataTypeValidationMessage,
@@ -2103,6 +2104,12 @@ const saveDataEntryValueInternal = async (
     return { sourceDataEntryId };
   });
 
+  try {
+    await upsertHoursInPeriod(reportPeriodId);
+  } catch (err) {
+    console.error("Failed to auto-calculate hours in period:", err);
+  }
+
   return {
     sourceDataEntryId: writeResult.sourceDataEntryId,
     scopedServiceAreaId,
@@ -2340,6 +2347,10 @@ export const updateDataEntryAvailabilityAction = async (
     serviceAreaId: scopedServiceAreaId,
     energyResourceId,
   });
+
+  void upsertHoursInPeriod(reportPeriodId).catch((err) =>
+    console.error("Failed to auto-calculate hours in period:", err),
+  );
 
   let kpiRunResult: KpiWorkerRunResult | null = null;
 

@@ -34,7 +34,7 @@ describe("AI_DEFAULTS", () => {
 
 describe("AI_PROMPT_VERSION", () => {
   it("is a date string", () => {
-    expect(AI_PROMPT_VERSION).toMatch(/^\d{4}-\d{2}-\d{2}(-v\d+)?$/);
+    expect(AI_PROMPT_VERSION).toMatch(/^\d{4}-\d{2}-\d{2}(-[a-z]+-v\d+)?$/);
   });
 });
 
