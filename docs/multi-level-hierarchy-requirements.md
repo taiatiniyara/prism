@@ -45,6 +45,21 @@ Constraints:
 The 10 medallion dimension columns are #2's spec and are untouched by this — anchors are the
 "where", dims are the "what kind". The two axes compose; neither replaces the other.
 
+6. **Anchors must point at real entities only — never sentinel/aggregate rows.** Post-PR #60,
+   `countries`/`sub_regions` are UN M49-keyed and carry non-M49 **sentinel rows** ("All Countries",
+   "Others") for UI/aggregation. A `data_entries` row anchored to a sentinel would reintroduce the
+   virtual-generator problem at level 5 (a pretend entity holding real data). Enforcement mechanism
+   is #2's choice (id-range check, `is_aggregate` flag, or app rule at the write path) — the
+   requirement is that no entry/`kpi_actual` row may anchor to a sentinel. "All countries"
+   aggregates are *computed* rollups, not stored addresses.
+
+7. **`country_context` fold-or-keep (flag, not blocker):** country-level explanatory data already
+   lives in the `country_context` side-table. Once `country_id` anchoring exists, decide whether
+   those data points migrate into `data_entries` (country-anchored, giving them the same
+   status/workflow machinery) or `country_context` stays as a deliberate side-channel for
+   sourced/reference values. #8 will bring a recommendation; #2 need not act on this in the first
+   DDL pass.
+
 ## 3. Backfill: promoting entries off the virtual entities
 
 The virtual rows themselves say where each entry really belongs
