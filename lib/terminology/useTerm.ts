@@ -2,17 +2,24 @@
 
 import { resolveTerm, type ResolveOptions } from "./resolver";
 import type { ConceptKey } from "./concepts";
+import { useActiveSector } from "./sector-context";
 
 // Client hook for sector-aware terminology (resolutions doc Q3, #11 condition 2).
 // UI components read display terms through this (or the server-side `resolveTerm`)
 // and NEVER hardcode strings — so the Phase-5b table swap is zero component churn.
 //
-// PHASE 5A SEAM: electricity is the only live sector, so the active sector
-// defaults inside `resolveTerm` (DEFAULT_SECTOR). When multiple sectors go live
-// (Phase 5b) thread the real active sector in from the single filter-context
-// source (follow the cookie-scope pattern of lib/utility-context.ts) — either
-// here, or by passing `{ sector }`. No call site changes.
+// Threads the active sector from context (`useActiveSector`) into the resolver,
+// so every client call site renders sector-correct labels WITHOUT changes. An
+// explicit `options.sector` still wins (a component pinning a sector). In Phase
+// 5a both resolve to electricity, so this is behaviour-neutral; when Phase 5b
+// mounts a real <SectorProvider>, these call sites follow automatically.
 export const useTerm = (
   concept: ConceptKey,
   options: ResolveOptions = {},
-): string => resolveTerm(concept, options);
+): string => {
+  const activeSector = useActiveSector();
+  return resolveTerm(concept, {
+    ...options,
+    sector: options.sector ?? activeSector,
+  });
+};

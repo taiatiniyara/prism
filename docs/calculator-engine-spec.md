@@ -209,6 +209,9 @@ NULL-pattern logic. **No sentinel grain values, ever.** (The earlier exactly-one
   **computed** aggregate, never a stored address (§0.4).
 - **RLS owning-org column** (#12), derivable at write time.
 - **`period_id`** = the canonical `period` dim (a per-utility submission row can't key a country rollup).
+- **Chain-consistent grain** — the nullable chain is filled from the row's level *up to the root*
+  (finer levels NULL below it); **#2 enforces chain-consistency** (Eugene-confirmed 2026-07-27), so
+  our write path must emit the **full up-chain** for each computed row, not just the level column.
 
 **Two-axis rollup — works unchanged (§4.6):** a **grain rollup** writes the *coarser* address (finer
 grain columns NULL, `grain_level` = the coarser level); a **dimension rollup** pins the **All** member

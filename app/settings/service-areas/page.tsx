@@ -3,10 +3,12 @@ import { AddServiceArea, AllServiceAreas, UpdateServiceArea } from "./service";
 import { ServiceArea } from "@/db/schema/utility";
 import { getCurrentUser } from "@/lib/user.service";
 import { resolveTerm } from "@/lib/terminology/resolver";
+import { getActiveSector } from "@/lib/terminology/active-sector";
 
 export default async function ServiceAreasSettingsPage() {
   const user = await getCurrentUser();
   const serviceAreas = await AllServiceAreas();
+  const activeSector = await getActiveSector();
   const columns: (keyof ServiceArea)[] = [
     "name",
     "provides_electricity",
@@ -23,7 +25,7 @@ export default async function ServiceAreasSettingsPage() {
     <DataTable<ServiceArea>
       data={serviceAreas}
       columns={columns}
-      title={resolveTerm("service_area", { plural: true })}
+      title={resolveTerm("service_area", { sector: activeSector, plural: true })}
       createFormProps={{
         formAction: AddServiceArea,
         fields: [
