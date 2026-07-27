@@ -38,7 +38,7 @@ export type ManagedListItem = typeof managedListItems.$inferSelect & {
 export type NewManagedListItem = typeof managedListItems.$inferInsert;
 
 export const assetClassRelevance = pgTable(
-  "energy_resource_type_relevance",
+  "asset_class_relevance",
   {
     id: serial("id").primaryKey().notNull(),
     asset_class_id: integer("asset_class_id")
@@ -52,7 +52,7 @@ export const assetClassRelevance = pgTable(
       .references(() => managedListItems.id, { onDelete: "restrict" }),
   },
   (table) => [
-    index("energy_resource_type_relevance_type_idx").on(
+    index("asset_class_relevance_type_idx").on(
       table.asset_class_id,
       table.category_id,
       table.technology_id,
