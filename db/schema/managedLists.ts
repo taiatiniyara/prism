@@ -37,7 +37,7 @@ export type ManagedListItem = typeof managedListItems.$inferSelect & {
 };
 export type NewManagedListItem = typeof managedListItems.$inferInsert;
 
-export const unitTypeRelevance = pgTable(
+export const assetClassRelevance = pgTable(
   "energy_resource_type_relevance",
   {
     id: serial("id").primaryKey().notNull(),
@@ -59,7 +59,7 @@ export const unitTypeRelevance = pgTable(
     ),
   ],
 );
-export type UnitTypeRelevance =
-  typeof unitTypeRelevance.$inferSelect;
-export type NewUnitTypeRelevance =
-  typeof unitTypeRelevance.$inferInsert;
+export type AssetClassRelevance =
+  typeof assetClassRelevance.$inferSelect;
+export type NewAssetClassRelevance =
+  typeof assetClassRelevance.$inferInsert;

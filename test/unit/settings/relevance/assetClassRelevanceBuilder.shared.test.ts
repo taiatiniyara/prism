@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { toPositiveInteger } from "@/app/settings/relevance/unitTypeRelevanceBuilder.shared";
+import { toPositiveInteger } from "@/app/settings/relevance/assetClassRelevanceBuilder.shared";
 
 describe("energy resource type relevance builder helpers", () => {
   it("returns positive integers from valid numbers and numeric strings", () => {

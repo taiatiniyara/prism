@@ -14,7 +14,7 @@ import {
 } from "@/db/schema";
 import { kpiDefinitions } from "@/db/schema/kpi";
 import {
-  unitTypeRelevance,
+  assetClassRelevance,
   managedListItems,
   managedLists,
 } from "@/db/schema/managedLists";
@@ -23,7 +23,7 @@ import { getCurrentUser, hasGlobalUtilityAccess } from "@/lib/user.service";
 import { formatReportPeriodDisplay } from "@/lib/formatters";
 import { deriveEnergyClassByTechnology } from "@/lib/energy-taxonomy";
 import { DataTableFormResponse } from "@/components/tables/data-table-create-form";
-import { toPositiveInteger } from "./unitTypeRelevanceBuilder.shared";
+import { toPositiveInteger } from "./assetClassRelevanceBuilder.shared";
 import { buildGenerationTypeSourcePairs } from "./generationRelevance.shared";
 import {
   and,
@@ -240,7 +240,7 @@ export interface DevOrganisationRelevancePivotRow {
   }>;
 }
 
-export interface DevUnitTypeRelevanceItem {
+export interface DevAssetClassRelevanceItem {
   id: number;
   unitTypeId: number;
   unitType: string;
@@ -1198,10 +1198,10 @@ export async function GetUtilityGenerationRelevance(
 
   const configuredTypeSourceMappings = await db
     .select({
-      unitTypeId: unitTypeRelevance.asset_class_id,
-      energySourceId: unitTypeRelevance.technology_id,
+      unitTypeId: assetClassRelevance.asset_class_id,
+      energySourceId: assetClassRelevance.technology_id,
     })
-    .from(unitTypeRelevance);
+    .from(assetClassRelevance);
 
   const generationTypeSourcePairs = buildGenerationTypeSourcePairs({
     unitTypes,
@@ -2393,7 +2393,7 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
   };
 }
 
-const getUnitTypeRelevanceBuilderOptions = async (): Promise<{
+const getAssetClassRelevanceBuilderOptions = async (): Promise<{
   unitTypeOptions: Array<{ id: number; name: string }>;
   energyTypeOptions: Array<{ id: number; name: string }>;
   energySourceOptions: Array<{ id: number; name: string }>;
@@ -2414,14 +2414,14 @@ const getUnitTypeRelevanceBuilderOptions = async (): Promise<{
   };
 };
 
-const mapUnitTypeRelevanceRows = async (
+const mapAssetClassRelevanceRows = async (
   rows: Array<{
     id: number;
     asset_class_id: number;
     category_id: number;
     technology_id: number;
   }>,
-): Promise<DevUnitTypeRelevanceItem[]> => {
+): Promise<DevAssetClassRelevanceItem[]> => {
   if (rows.length === 0) {
     return [];
   }
@@ -2485,8 +2485,8 @@ const mapUnitTypeRelevanceRows = async (
     });
 };
 
-const resolveUnitTypeRelevancePayload = (
-  payload: Partial<DevUnitTypeRelevanceItem>,
+const resolveAssetClassRelevancePayload = (
+  payload: Partial<DevAssetClassRelevanceItem>,
 ): {
   unitTypeId: number | null;
   energyTypeId: number | null;
@@ -2499,13 +2499,13 @@ const resolveUnitTypeRelevancePayload = (
   };
 };
 
-const validateUnitTypeRelevancePayload = async (payload: {
+const validateAssetClassRelevancePayload = async (payload: {
   unitTypeId: number;
   energyTypeId: number;
   energySourceId: number;
 }): Promise<{ success: true } | { success: false; message: string }> => {
   const { unitTypeOptions, energyTypeOptions, energySourceOptions } =
-    await getUnitTypeRelevanceBuilderOptions();
+    await getAssetClassRelevanceBuilderOptions();
 
   const unitTypeOptionIds = new Set(
     unitTypeOptions.map((item) => item.id),
@@ -2538,8 +2538,8 @@ const validateUnitTypeRelevancePayload = async (payload: {
   return { success: true };
 };
 
-export async function GetDevUnitTypeRelevance(): Promise<
-  DevUnitTypeRelevanceItem[]
+export async function GetDevAssetClassRelevance(): Promise<
+  DevAssetClassRelevanceItem[]
 > {
   const user = await getCurrentUser();
 
@@ -2555,15 +2555,15 @@ export async function GetDevUnitTypeRelevance(): Promise<
 
   const rows = await db
     .select()
-    .from(unitTypeRelevance)
-    .orderBy(unitTypeRelevance.id);
+    .from(assetClassRelevance)
+    .orderBy(assetClassRelevance.id);
 
-  return mapUnitTypeRelevanceRows(rows);
+  return mapAssetClassRelevanceRows(rows);
 }
 
-export async function CreateDevUnitTypeRelevance(
-  payload: DevUnitTypeRelevanceItem,
-): Promise<DataTableFormResponse<DevUnitTypeRelevanceItem>> {
+export async function CreateDevAssetClassRelevance(
+  payload: DevAssetClassRelevanceItem,
+): Promise<DataTableFormResponse<DevAssetClassRelevanceItem>> {
   const user = await getCurrentUser();
 
   if (!user) {
@@ -2581,7 +2581,7 @@ export async function CreateDevUnitTypeRelevance(
   }
 
   const { unitTypeId, energyTypeId, energySourceId } =
-    resolveUnitTypeRelevancePayload(payload);
+    resolveAssetClassRelevancePayload(payload);
 
   if (
     unitTypeId == null ||
@@ -2595,7 +2595,7 @@ export async function CreateDevUnitTypeRelevance(
     };
   }
 
-  const validation = await validateUnitTypeRelevancePayload({
+  const validation = await validateAssetClassRelevancePayload({
     unitTypeId,
     energyTypeId,
     energySourceId,
@@ -2606,16 +2606,16 @@ export async function CreateDevUnitTypeRelevance(
   }
 
   const [duplicate] = await db
-    .select({ id: unitTypeRelevance.id })
-    .from(unitTypeRelevance)
+    .select({ id: assetClassRelevance.id })
+    .from(assetClassRelevance)
     .where(
       and(
         eq(
-          unitTypeRelevance.asset_class_id,
+          assetClassRelevance.asset_class_id,
           unitTypeId,
         ),
-        eq(unitTypeRelevance.category_id, energyTypeId),
-        eq(unitTypeRelevance.technology_id, energySourceId),
+        eq(assetClassRelevance.category_id, energyTypeId),
+        eq(assetClassRelevance.technology_id, energySourceId),
       ),
     )
     .limit(1);
@@ -2628,13 +2628,13 @@ export async function CreateDevUnitTypeRelevance(
   }
 
   const [created] = await db
-    .insert(unitTypeRelevance)
+    .insert(assetClassRelevance)
     .values({
       asset_class_id: unitTypeId,
       category_id: energyTypeId,
       technology_id: energySourceId,
     })
-    .returning({ id: unitTypeRelevance.id });
+    .returning({ id: assetClassRelevance.id });
 
   if (!created) {
     return {
@@ -2645,12 +2645,12 @@ export async function CreateDevUnitTypeRelevance(
 
   const [createdRow] = await db
     .select()
-    .from(unitTypeRelevance)
-    .where(eq(unitTypeRelevance.id, created.id))
+    .from(assetClassRelevance)
+    .where(eq(assetClassRelevance.id, created.id))
     .limit(1);
 
   const [item] = createdRow
-    ? await mapUnitTypeRelevanceRows([createdRow])
+    ? await mapAssetClassRelevanceRows([createdRow])
     : [];
 
   revalidateRelevanceAndDataEntry();
@@ -2662,9 +2662,9 @@ export async function CreateDevUnitTypeRelevance(
   };
 }
 
-export async function UpdateDevUnitTypeRelevance(
-  payload: Partial<DevUnitTypeRelevanceItem>,
-): Promise<DataTableFormResponse<DevUnitTypeRelevanceItem>> {
+export async function UpdateDevAssetClassRelevance(
+  payload: Partial<DevAssetClassRelevanceItem>,
+): Promise<DataTableFormResponse<DevAssetClassRelevanceItem>> {
   const user = await getCurrentUser();
 
   if (!user) {
@@ -2683,7 +2683,7 @@ export async function UpdateDevUnitTypeRelevance(
 
   const rowId = toPositiveInteger(payload.id);
   const { unitTypeId, energyTypeId, energySourceId } =
-    resolveUnitTypeRelevancePayload(payload);
+    resolveAssetClassRelevancePayload(payload);
 
   if (rowId == null) {
     return {
@@ -2705,9 +2705,9 @@ export async function UpdateDevUnitTypeRelevance(
   }
 
   const [existing] = await db
-    .select({ id: unitTypeRelevance.id })
-    .from(unitTypeRelevance)
-    .where(eq(unitTypeRelevance.id, rowId))
+    .select({ id: assetClassRelevance.id })
+    .from(assetClassRelevance)
+    .where(eq(assetClassRelevance.id, rowId))
     .limit(1);
 
   if (!existing) {
@@ -2717,7 +2717,7 @@ export async function UpdateDevUnitTypeRelevance(
     };
   }
 
-  const validation = await validateUnitTypeRelevancePayload({
+  const validation = await validateAssetClassRelevancePayload({
     unitTypeId,
     energyTypeId,
     energySourceId,
@@ -2728,16 +2728,16 @@ export async function UpdateDevUnitTypeRelevance(
   }
 
   const duplicateRows = await db
-    .select({ id: unitTypeRelevance.id })
-    .from(unitTypeRelevance)
+    .select({ id: assetClassRelevance.id })
+    .from(assetClassRelevance)
     .where(
       and(
         eq(
-          unitTypeRelevance.asset_class_id,
+          assetClassRelevance.asset_class_id,
           unitTypeId,
         ),
-        eq(unitTypeRelevance.category_id, energyTypeId),
-        eq(unitTypeRelevance.technology_id, energySourceId),
+        eq(assetClassRelevance.category_id, energyTypeId),
+        eq(assetClassRelevance.technology_id, energySourceId),
       ),
     )
     .limit(2);
@@ -2750,22 +2750,22 @@ export async function UpdateDevUnitTypeRelevance(
   }
 
   await db
-    .update(unitTypeRelevance)
+    .update(assetClassRelevance)
     .set({
       asset_class_id: unitTypeId,
       category_id: energyTypeId,
       technology_id: energySourceId,
     })
-    .where(eq(unitTypeRelevance.id, rowId));
+    .where(eq(assetClassRelevance.id, rowId));
 
   const [updatedRow] = await db
     .select()
-    .from(unitTypeRelevance)
-    .where(eq(unitTypeRelevance.id, rowId))
+    .from(assetClassRelevance)
+    .where(eq(assetClassRelevance.id, rowId))
     .limit(1);
 
   const [item] = updatedRow
-    ? await mapUnitTypeRelevanceRows([updatedRow])
+    ? await mapAssetClassRelevanceRows([updatedRow])
     : [];
 
   revalidateRelevanceAndDataEntry();

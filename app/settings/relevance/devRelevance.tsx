@@ -1,11 +1,11 @@
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import DevInputRelevanceTable from "./devInputRelevanceTable";
 import DevOrganisationRelevancePivotTable from "./devOrganisationRelevancePivotTable";
-import DevUnitTypeRelevanceBuilder from "./devUnitTypeRelevanceBuilder";
+import DevAssetClassRelevanceBuilder from "./devAssetClassRelevanceBuilder";
 import {
   AddDevInputRelevance,
   GetDevOrganisationRelevancePivot,
-  GetDevUnitTypeRelevance,
+  GetDevAssetClassRelevance,
   GetDevInputRelevance,
   GetDevInputRelevanceOptions,
   UpdateDevInputRelevance,
@@ -17,7 +17,7 @@ export default async function DevRelevanceSection(props: { isDevUser: boolean })
       GetDevInputRelevance(),
       GetDevInputRelevanceOptions(),
       GetDevOrganisationRelevancePivot(),
-      props.isDevUser ? GetDevUnitTypeRelevance() : Promise.resolve([]),
+      props.isDevUser ? GetDevAssetClassRelevance() : Promise.resolve([]),
     ]);
 
   return (
@@ -58,7 +58,7 @@ export default async function DevRelevanceSection(props: { isDevUser: boolean })
         {props.isDevUser ? (
           <TabsContent value="energy-resource-type-relevance-builder">
             <div className="space-y-5 rounded-lg border p-5 sm:p-6">
-              <DevUnitTypeRelevanceBuilder items={relevanceItems} />
+              <DevAssetClassRelevanceBuilder items={relevanceItems} />
             </div>
           </TabsContent>
         ) : null}

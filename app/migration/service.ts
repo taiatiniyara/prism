@@ -51,7 +51,7 @@ import {
   kpiDefinitions,
 } from "@/db/schema/kpi";
 import {
-  unitTypeRelevance,
+  assetClassRelevance,
   ManagedList,
   ManagedListItem,
   managedListItems,
@@ -3904,16 +3904,16 @@ export async function retrieveGenerationRelevance(options?: {
         }
 
         const [existing] = await db
-          .select({ id: unitTypeRelevance.id })
-          .from(unitTypeRelevance)
+          .select({ id: assetClassRelevance.id })
+          .from(assetClassRelevance)
           .where(
             and(
               eq(
-                unitTypeRelevance.asset_class_id,
+                assetClassRelevance.asset_class_id,
                 unitTypeId,
               ),
-              eq(unitTypeRelevance.category_id, energyTypeId),
-              eq(unitTypeRelevance.technology_id, energySourceId),
+              eq(assetClassRelevance.category_id, energyTypeId),
+              eq(assetClassRelevance.technology_id, energySourceId),
             ),
           )
           .limit(1);
@@ -3923,7 +3923,7 @@ export async function retrieveGenerationRelevance(options?: {
           continue;
         }
 
-        await db.insert(unitTypeRelevance).values({
+        await db.insert(assetClassRelevance).values({
           asset_class_id: unitTypeId,
           category_id: energyTypeId,
           technology_id: energySourceId,

@@ -1,8 +1,8 @@
 import DataTable from "@/components/tables/data-table";
 import {
-  CreateDevUnitTypeRelevance,
-  DevUnitTypeRelevanceItem,
-  UpdateDevUnitTypeRelevance,
+  CreateDevAssetClassRelevance,
+  DevAssetClassRelevanceItem,
+  UpdateDevAssetClassRelevance,
 } from "./service";
 
 const ENERGY_RESOURCE_TYPE_MANAGED_LIST_ALIASES = [
@@ -21,11 +21,11 @@ const ENERGY_TYPE_MANAGED_LIST_ALIASES = ["Category", "Energy Types"].join(
   "|",
 );
 
-export default function DevUnitTypeRelevanceBuilder(props: {
-  items: DevUnitTypeRelevanceItem[];
+export default function DevAssetClassRelevanceBuilder(props: {
+  items: DevAssetClassRelevanceItem[];
 }) {
   return (
-    <DataTable<DevUnitTypeRelevanceItem>
+    <DataTable<DevAssetClassRelevanceItem>
       title="Asset Class Relevance Builder"
       columns={[
         {
@@ -43,7 +43,7 @@ export default function DevUnitTypeRelevanceBuilder(props: {
       ]}
       data={props.items}
       createFormProps={{
-        formAction: CreateDevUnitTypeRelevance,
+        formAction: CreateDevAssetClassRelevance,
         fields: [
           {
             key: "unitTypeId",
@@ -66,7 +66,7 @@ export default function DevUnitTypeRelevanceBuilder(props: {
         ],
       }}
       updateFormProps={{
-        formAction: UpdateDevUnitTypeRelevance,
+        formAction: UpdateDevAssetClassRelevance,
         fields: [
           {
             key: "unitTypeId",
