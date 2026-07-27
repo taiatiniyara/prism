@@ -269,7 +269,7 @@ export async function CreateUnit(
     period_entries: data.period_entries ?? [],
     updated_by_id: user.id,
     is_virtual: false,
-    agg_level_id: 1,
+    strata_id: 1,
     updated_at: new Date(),
   });
   revalidatePath("/settings/energy-resources");
@@ -297,7 +297,7 @@ export async function CreateUnitFromPeriodRow(
     provider: _energyProvider,
     category: _energyType,
     technology: _energySource,
-    agg_level: _aggLevel,
+    strata: _strata,
     asset: _asset,
     ...createData
   } = data;
@@ -508,7 +508,7 @@ export async function UpdateUnitFromPeriodRow(
     delete baseData.provider;
     delete baseData.category;
     delete baseData.technology;
-    delete baseData.agg_level;
+    delete baseData.strata;
     delete baseData.asset;
 
     const result = await UpdateUnit({

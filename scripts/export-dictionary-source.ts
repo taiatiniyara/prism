@@ -13,7 +13,7 @@ async function main() {
            nullif(trim(i.formula), '') AS formula,
            i.is_calculated, i.is_aggregated, i.is_mandatory, i.is_currency, i.is_descriptive,
            c.name AS category, s.name AS subcategory,
-           u.name AS unit, dt.name AS data_type, al.name AS agg_level,
+           u.name AS unit, dt.name AS data_type, al.name AS strata,
            i.valid_range_min, i.valid_range_max,
            i.alternative_names
     FROM measure_definitions  i
@@ -21,7 +21,7 @@ async function main() {
     LEFT JOIN managed_list_items s  ON s.id  = i.subcategory_id
     LEFT JOIN managed_list_items u  ON u.id  = i.unit_id
     LEFT JOIN managed_list_items dt ON dt.id = i.data_type_id
-    LEFT JOIN managed_list_items al ON al.id = i.agg_level_id
+    LEFT JOIN managed_list_items al ON al.id = i.strata_id
     WHERE i.is_active
     ORDER BY c.name, s.name, i.name
   `);
@@ -32,7 +32,7 @@ async function main() {
            nullif(trim(k.formula), '') AS formula,
            k.formula_inputs, k.type, k.is_aggregated, k.is_currency,
            c.name AS category, s.name AS subcategory,
-           u.name AS unit, al.name AS agg_level,
+           u.name AS unit, al.name AS strata,
            b.description AS benchmark_description, b.direction,
            b.developing_nation_benchmark, b.developed_nation_benchmark,
            b.pacific_regional_average, b.ppa_target, b.unit AS benchmark_unit
@@ -40,7 +40,7 @@ async function main() {
     LEFT JOIN managed_list_items c  ON c.id  = k.category_id
     LEFT JOIN managed_list_items s  ON s.id  = k.subcategory_id
     LEFT JOIN managed_list_items u  ON u.id  = k.unit_id
-    LEFT JOIN managed_list_items al ON al.id = k.agg_level_id
+    LEFT JOIN managed_list_items al ON al.id = k.strata_id
     LEFT JOIN ai_benchmark b ON lower(b.kpi_name) = lower(k.name)
     WHERE k.is_active
     ORDER BY c.name, s.name, k.name

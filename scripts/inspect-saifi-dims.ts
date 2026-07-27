@@ -51,14 +51,14 @@ async function main() {
   );
   console.table(align.rows);
 
-  const aggLevels = await pool.query(`
-    select i.id, i.variable_name, al.id as agg_level_id, al.name as agg_level
+  const stratas = await pool.query(`
+    select i.id, i.variable_name, al.id as strata_id, al.name as strata
     from measure_definitions  i
-    left join managed_list_items al on al.id = i.agg_level_id
+    left join managed_list_items al on al.id = i.strata_id
     where i.id in (1501, 1800, 1803)
   `);
   console.log("Agg levels:");
-  console.table(aggLevels.rows);
+  console.table(stratas.rows);
 }
 
 main()

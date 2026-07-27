@@ -86,7 +86,7 @@ export async function GetReportPeriods(
       inputDefId: measureDefinitions.id,
       subcategoryId: measureDefinitions.measures_subgroup_id,
       categoryId: measureDefinitions.measures_group_id,
-      aggLevelId: measureDefinitions.agg_level_id,
+      strataId: measureDefinitions.strata_id,
       subcategoryName: sql<string | null>`(
         select mli.name from managed_list_items mli where mli.id = ${measureDefinitions.measures_subgroup_id} limit 1
       )`,

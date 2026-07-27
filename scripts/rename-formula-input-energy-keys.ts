@@ -8,7 +8,7 @@
  *   energy_provider_id      -> provider_id
  *   energy_type_id          -> category_id
  *   energy_source_id        -> technology_id
- *   energy_resource_type_id -> asset_id
+ *   energy_resource_type_id -> asset_class_id
  * (energy_resource_id is a grain anchor, not a formula_input dim key — not renamed.)
  *
  * Read-only by default; --apply writes (in a txn, after backing up). Idempotent:
@@ -27,7 +27,7 @@ const KEY_MAP: Record<string, string> = {
   energy_provider_id: "provider_id",
   energy_type_id: "category_id",
   energy_source_id: "technology_id",
-  energy_resource_type_id: "asset_id",
+  energy_resource_type_id: "asset_class_id",
 };
 
 async function main() {

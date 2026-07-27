@@ -14,7 +14,7 @@ const DIM_COLUMNS: Record<keyof DimensionMembers, string> = {
   provider: "provider_id",
   type: "category_id",
   source: "technology_id",
-  resource_type: "asset_id",
+  resource_type: "asset_class_id",
   customer_type: "customer_type_id",
   payment_mode: "payment_mode_id",
   band: "consumption_band_id",

@@ -67,7 +67,7 @@ type KpiDefinitionWritePayload = Partial<KpiDefinition> & {
   category_id?: string | number | null;
   subcategory_id?: string | number | null;
   unit_id?: string | number | null;
-  agg_level_id?: string | number | null;
+  strata_id?: string | number | null;
   block?: string | number | null;
   limit_lower?: string | number | null;
   limit_upper?: string | number | null;
@@ -266,9 +266,9 @@ export async function GetAllKpiDefinitions(): Promise<KpiDefinition[]> {
   return list.map((item) => {
     const i: KpiDefinition = {
       ...item,
-      agg_level: resolveManagedListName(
+      strata: resolveManagedListName(
         managedListNamesById,
-        item.agg_level_id,
+        item.strata_id,
         null,
       ),
       category: resolveManagedListName(
@@ -310,14 +310,14 @@ export async function CreateKpiDefinition(
   const unitId = toOptionalNumber(data.unit_id);
   const categoryId = toOptionalNumber(data.category_id);
   const subcategoryId = toOptionalNumber(data.subcategory_id);
-  const aggLevelId = toOptionalNumber(data.agg_level_id);
+  const strataId = toOptionalNumber(data.strata_id);
   const block = toOptionalNumber(data.block);
 
   const hasInvalidManagedListValue =
     Number.isNaN(unitId) ||
     Number.isNaN(categoryId) ||
     Number.isNaN(subcategoryId) ||
-    Number.isNaN(aggLevelId);
+    Number.isNaN(strataId);
 
   if (hasInvalidManagedListValue) {
     return {
@@ -330,7 +330,7 @@ export async function CreateKpiDefinition(
     typeof unitId === "undefined" ||
     typeof categoryId === "undefined" ||
     typeof subcategoryId === "undefined" ||
-    typeof aggLevelId === "undefined"
+    typeof strataId === "undefined"
   ) {
     return {
       success: false,
@@ -389,7 +389,7 @@ export async function CreateKpiDefinition(
     }
   }
 
-  const managedListIds = [unitId, categoryId, subcategoryId, aggLevelId];
+  const managedListIds = [unitId, categoryId, subcategoryId, strataId];
   const existingManagedListIds = await db
     .select({ id: managedListItems.id })
     .from(managedListItems)
@@ -431,7 +431,7 @@ export async function CreateKpiDefinition(
     unit_id: unitId,
     category_id: categoryId,
     subcategory_id: subcategoryId,
-    agg_level_id: aggLevelId,
+    strata_id: strataId,
     block: block ?? undefined,
     type: resolveCreateKpiType(currentUser, data.type),
     is_kpi_input: false,
@@ -524,7 +524,7 @@ export async function CreateKpiDefinition(
         unitId,
         categoryId,
         subcategoryId,
-        aggLevelId,
+        strataId,
         block,
         type: resolveCreateKpiType(currentUser, data.type),
       },
@@ -560,14 +560,14 @@ export async function UpdateKpiDefinition(
   const unitId = toOptionalNumber(data.unit_id);
   const categoryId = toOptionalNumber(data.category_id);
   const subcategoryId = toOptionalNumber(data.subcategory_id);
-  const aggLevelId = toOptionalNumber(data.agg_level_id);
+  const strataId = toOptionalNumber(data.strata_id);
   const block = toOptionalNumber(data.block);
 
   const hasInvalidManagedListValue =
     Number.isNaN(unitId) ||
     Number.isNaN(categoryId) ||
     Number.isNaN(subcategoryId) ||
-    Number.isNaN(aggLevelId);
+    Number.isNaN(strataId);
 
   if (hasInvalidManagedListValue) {
     return {
@@ -612,7 +612,7 @@ export async function UpdateKpiDefinition(
         unit_id: unitId,
         category_id: categoryId,
         subcategory_id: subcategoryId,
-        agg_level_id: aggLevelId,
+        strata_id: strataId,
         block,
         type: typePatch,
         limits: !canSetKpiLimits(currentUser.role)
@@ -671,7 +671,7 @@ export async function UpdateKpiDefinition(
         unitId,
         categoryId,
         subcategoryId,
-        aggLevelId,
+        strataId,
         block,
         type: typePatch,
       },
@@ -714,9 +714,9 @@ export async function GetKpiFormulaBuilderData(): Promise<KpiFormulaBuilderData>
   const kpis = kpiRows.map((i) => {
     const kpi: KpiDefinition = {
       ...i,
-      agg_level: resolveManagedListName(
+      strata: resolveManagedListName(
         managedListNamesById,
-        i.agg_level_id,
+        i.strata_id,
         null,
       ),
       category: resolveManagedListName(
@@ -1226,7 +1226,7 @@ export async function UpdateKpiDefinitionFromExcel(
           name: item.kpi_name,
           description: item.kpi_name,
           unit_id: item.kpi_unit_id,
-          agg_level_id: item.kpi_agglevel_id,
+          strata_id: item.kpi_agglevel_id,
           is_kpi_input: item.is_kpi_input,
           type: mapLegacyKpiTypeId(item.kpi_type_id),
           is_currency: item.is_currency,

@@ -26,7 +26,7 @@ async function main() {
       await tx.execute(sql`
         INSERT INTO measure_definitions
           (id, name, variable_name, definition, synonyms, alternative_names, definition_status,
-           category_id, subcategory_id, unit_id, data_type_id, agg_level_id, sort_order,
+           category_id, subcategory_id, unit_id, data_type_id, strata_id, sort_order,
            valid_polarity_id, valid_trend_id, valid_range_min, valid_range_max,
            is_currency, is_calculated, is_active, formula, formula_inputs, updated_at)
         VALUES
@@ -34,7 +34,7 @@ async function main() {
            ${m.synonyms ? sql`${m.synonyms}::json` : null},
            ${m.alternative_names ? sql`${m.alternative_names}::json` : null},
            ${jnull(m.definition_status)},
-           ${m.category_id}, ${m.subcategory_id}, ${m.unit_id}, ${m.data_type_id}, ${jnull(m.agg_level_id)},
+           ${m.category_id}, ${m.subcategory_id}, ${m.unit_id}, ${m.data_type_id}, ${jnull(m.strata_id)},
            ${m.sort_order == null ? 0 : Number(m.sort_order)},
            ${fkNull(m.valid_polarity_id)}, ${fkNull(m.valid_trend_id)}, ${num(m.valid_range_min)}, ${num(m.valid_range_max)},
            ${m.is_currency === true}, ${m.is_calculated === true}, ${m.is_active !== false},
@@ -44,7 +44,7 @@ async function main() {
           definition = EXCLUDED.definition, synonyms = EXCLUDED.synonyms,
           alternative_names = EXCLUDED.alternative_names, definition_status = EXCLUDED.definition_status,
           category_id = EXCLUDED.category_id, subcategory_id = EXCLUDED.subcategory_id,
-          unit_id = EXCLUDED.unit_id, data_type_id = EXCLUDED.data_type_id, agg_level_id = EXCLUDED.agg_level_id,
+          unit_id = EXCLUDED.unit_id, data_type_id = EXCLUDED.data_type_id, strata_id = EXCLUDED.strata_id,
           sort_order = EXCLUDED.sort_order, valid_polarity_id = EXCLUDED.valid_polarity_id,
           valid_trend_id = EXCLUDED.valid_trend_id, valid_range_min = EXCLUDED.valid_range_min,
           valid_range_max = EXCLUDED.valid_range_max, is_currency = EXCLUDED.is_currency,

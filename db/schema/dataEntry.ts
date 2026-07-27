@@ -39,7 +39,7 @@ export interface FormulaInput {
   provider_id?: number | null;
   category_id?: number | null;
   technology_id?: number | null;
-  asset_id?: number | null;
+  asset_class_id?: number | null;
   customer_type_id?: number | null;
   payment_mode_id?: number | null;
   consumption_band_id?: number | null;
@@ -82,7 +82,7 @@ export const measureDefinitions = pgTable("measure_definitions", {
   valid_range_max: numeric("valid_range_max"),
   is_currency: boolean("is_currency").default(false).notNull(),
   is_aggregated: boolean("is_aggregated").default(false).notNull(),
-  agg_level_id: integer("agg_level_id").references(() => managedListItems.id),
+  strata_id: integer("strata_id").references(() => managedListItems.id),
   is_active: boolean("is_active").default(true).notNull(),
   is_mandatory: boolean("is_mandatory").default(false).notNull(),
   is_system_generated: boolean("is_system_generated").default(false).notNull(),
@@ -110,7 +110,7 @@ export type MeasureDefinition = typeof measureDefinitions.$inferSelect & {
   payment_mode?: string | null;
   unit?: string | null;
   data_type?: string | null;
-  agg_level?: string | null;
+  strata?: string | null;
 };
 export type NewMeasureDefinition = typeof measureDefinitions.$inferInsert;
 
@@ -149,8 +149,8 @@ export const inputDefinitionRelations = relations(
       fields: [measureDefinitions.data_type_id],
       references: [managedListItems.id],
     }),
-    agg_level: one(managedListItems, {
-      fields: [measureDefinitions.agg_level_id],
+    strata: one(managedListItems, {
+      fields: [measureDefinitions.strata_id],
       references: [managedListItems.id],
     }),
   }),
@@ -211,7 +211,7 @@ export const dataEntries = pgTable(
     unit_id: integer("unit_id").references(
       () => units.id,
     ),
-    asset_id: integer("asset_id")
+    asset_class_id: integer("asset_class_id")
       .notNull()
       .references(() => managedListItems.id),
     power_station_id: integer("power_station_id").references(
@@ -303,7 +303,7 @@ export const dataEntries = pgTable(
         table.provider_id,
         table.category_id,
         table.technology_id,
-        table.asset_id,
+        table.asset_class_id,
         table.customer_type_id,
         table.payment_mode_id,
         table.consumption_band_id,

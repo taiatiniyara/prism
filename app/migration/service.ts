@@ -714,7 +714,7 @@ export async function retrieveUtilityContextData(options?: {
         provider_id: energyProviderId ?? dims.energyProvider,
         technology_id: energySourceId ?? dims.energySource,
         category_id: dims.energyType,
-        asset_id: dims.unitType,
+        asset_class_id: dims.unitType,
         customer_type_id: customerTypeId ?? dims.customerType,
         payment_mode_id: paymentModeId ?? dims.paymentMode,
         consumption_band_id: dims.consumptionBand,
@@ -881,7 +881,7 @@ export async function retrieveCountryContextData(options?: {
         provider_id: dims2.energyProvider,
         technology_id: dims2.energySource,
         category_id: dims2.energyType,
-        asset_id: dims2.unitType,
+        asset_class_id: dims2.unitType,
         customer_type_id: dims2.customerType,
         payment_mode_id: dims2.paymentMode,
         consumption_band_id: dims2.consumptionBand,
@@ -913,7 +913,7 @@ export async function retrieveCountryContextData(options?: {
             eq(dataEntries.provider_id, dims2.energyProvider),
             eq(dataEntries.technology_id, dims2.energySource),
             eq(dataEntries.category_id, dims2.energyType),
-            eq(dataEntries.asset_id, dims2.unitType),
+            eq(dataEntries.asset_class_id, dims2.unitType),
             eq(dataEntries.customer_type_id, dims2.customerType),
             eq(dataEntries.payment_mode_id, dims2.paymentMode),
             eq(dataEntries.consumption_band_id, dims2.consumptionBand),
@@ -1191,9 +1191,9 @@ export async function retrieveUtilityData() {
           : "is_vitual" in sa
             ? (sa as { is_vitual?: boolean }).is_vitual
             : false,
-      agg_level_id:
-        managedListItemIds.has(sa.agg_level_id) && sa.agg_level_id != null
-          ? sa.agg_level_id
+      strata_id:
+        managedListItemIds.has(sa.strata_id) && sa.strata_id != null
+          ? sa.strata_id
           : 1,
     }));
 
@@ -1844,7 +1844,7 @@ export async function retrieveUnits() {
     const utilityId = normalizeRequiredId(er.utility_id);
     const energyProviderId = normalizeRequiredId(er.provider_id);
     const energySourceId = normalizeRequiredId(er.technology_id);
-    const aggLevelId = normalizeRequiredId(er.agg_level_id);
+    const strataId = normalizeRequiredId(er.strata_id);
 
     const hasInvalidForeignKey =
       serviceAreaId == null ||
@@ -1855,8 +1855,8 @@ export async function retrieveUnits() {
       !validManagedItemIds.has(energyProviderId) ||
       energySourceId == null ||
       !validManagedItemIds.has(energySourceId) ||
-      aggLevelId == null ||
-      !validManagedItemIds.has(aggLevelId);
+      strataId == null ||
+      !validManagedItemIds.has(strataId);
 
     if (hasInvalidForeignKey) {
       skippedInvalidForeignKeys += 1;
@@ -1869,7 +1869,7 @@ export async function retrieveUnits() {
       utility_id: utilityId,
       provider_id: energyProviderId,
       technology_id: energySourceId,
-      agg_level_id: aggLevelId,
+      strata_id: strataId,
       updated_at: er.updated_at ? new Date(er.updated_at) : new Date(),
       updated_by_id: null,
     });
@@ -2421,7 +2421,7 @@ async function backfillUtilityContextDataEntriesFromPreviousPeriods(options?: {
       provider_id: dataEntries.provider_id,
       technology_id: dataEntries.technology_id,
       category_id: dataEntries.category_id,
-      asset_id: dataEntries.asset_id,
+      asset_class_id: dataEntries.asset_class_id,
       customer_type_id: dataEntries.customer_type_id,
       payment_mode_id: dataEntries.payment_mode_id,
       consumption_band_id: dataEntries.consumption_band_id,
@@ -2512,7 +2512,7 @@ async function backfillUtilityContextDataEntriesFromPreviousPeriods(options?: {
         provider_id: sourceEntry.provider_id,
         technology_id: sourceEntry.technology_id,
         category_id: sourceEntry.category_id,
-        asset_id: sourceEntry.asset_id,
+        asset_class_id: sourceEntry.asset_class_id,
         customer_type_id: sourceEntry.customer_type_id,
         payment_mode_id: sourceEntry.payment_mode_id,
         consumption_band_id: sourceEntry.consumption_band_id,
@@ -2603,7 +2603,7 @@ async function backfillCountryContextDataEntriesFromPreviousPeriods(options?: {
       provider_id: dataEntries.provider_id,
       technology_id: dataEntries.technology_id,
       category_id: dataEntries.category_id,
-      asset_id: dataEntries.asset_id,
+      asset_class_id: dataEntries.asset_class_id,
       customer_type_id: dataEntries.customer_type_id,
       payment_mode_id: dataEntries.payment_mode_id,
       consumption_band_id: dataEntries.consumption_band_id,
@@ -2694,7 +2694,7 @@ async function backfillCountryContextDataEntriesFromPreviousPeriods(options?: {
         provider_id: sourceEntry.provider_id,
         technology_id: sourceEntry.technology_id,
         category_id: sourceEntry.category_id,
-        asset_id: sourceEntry.asset_id,
+        asset_class_id: sourceEntry.asset_class_id,
         customer_type_id: sourceEntry.customer_type_id,
         payment_mode_id: sourceEntry.payment_mode_id,
         consumption_band_id: sourceEntry.consumption_band_id,
@@ -3154,7 +3154,7 @@ export async function retrieveDataEntries(options?: {
           provider_id: energyProviderId ?? dims3.energyProvider,
           technology_id: energySourceId ?? dims3.energySource,
           category_id: dims3.energyType,
-          asset_id: dims3.unitType,
+          asset_class_id: dims3.unitType,
           customer_type_id: customerTypeId ?? dims3.customerType,
           payment_mode_id: paymentModeId ?? dims3.paymentMode,
           consumption_band_id: dims3.consumptionBand,
@@ -3909,7 +3909,7 @@ export async function retrieveGenerationRelevance(options?: {
           .where(
             and(
               eq(
-                unitTypeRelevance.asset_id,
+                unitTypeRelevance.asset_class_id,
                 unitTypeId,
               ),
               eq(unitTypeRelevance.category_id, energyTypeId),
@@ -3924,7 +3924,7 @@ export async function retrieveGenerationRelevance(options?: {
         }
 
         await db.insert(unitTypeRelevance).values({
-          asset_id: unitTypeId,
+          asset_class_id: unitTypeId,
           category_id: energyTypeId,
           technology_id: energySourceId,
         });

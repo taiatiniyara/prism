@@ -7,7 +7,7 @@ import ExcelUploadForm from "@/components/settings/excel-upload-form";
 
 function parseExcelInputRow(row: Record<string, unknown>): ExcelMeasureDefinition {
   return {
-    agg_level_id: Number(row.agg_level_id ?? 0),
+    strata_id: Number(row.strata_id ?? 0),
     data_type_id: Number(row.data_type_id ?? 0),
     input_category_id: Number(row.input_category_id ?? 0),
     input_id: Number(row.input_id ?? 0),

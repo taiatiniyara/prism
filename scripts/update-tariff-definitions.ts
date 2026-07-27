@@ -21,7 +21,7 @@ writeFileSync("docs/measures-enrichment/measures-enriched-final.json", JSON.stri
 async function main() {
   const wb = new ExcelJS.Workbook();
   const ws = wb.addWorksheet("measure_definitions");
-  const H = ["id", "name", "variable_name", "definition", "synonyms", "alternative_names", "definition_status", "category_id", "category", "subcategory_id", "subcategory", "unit_id", "unit", "data_type_id", "data_type", "agg_level_id", "sort_order", "valid_polarity_id", "valid_trend_id", "valid_range_min", "valid_range_max", "is_currency", "is_calculated", "is_active", "formula", "formula_inputs", "updated_at"];
+  const H = ["id", "name", "variable_name", "definition", "synonyms", "alternative_names", "definition_status", "category_id", "category", "subcategory_id", "subcategory", "unit_id", "unit", "data_type_id", "data_type", "strata_id", "sort_order", "valid_polarity_id", "valid_trend_id", "valid_range_min", "valid_range_max", "is_currency", "is_calculated", "is_active", "formula", "formula_inputs", "updated_at"];
   ws.addRow(H); ws.getRow(1).font = { bold: true }; ws.getRow(1).fill = { type: "pattern", pattern: "solid", fgColor: { argb: "FFDCE6F1" } };
   for (const r of rows) ws.addRow(H.map((h) => r[h] ?? null));
   ws.views = [{ state: "frozen", ySplit: 1, xSplit: 2 }];

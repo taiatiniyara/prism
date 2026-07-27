@@ -127,7 +127,7 @@ const EXTRACT_COLUMNS = {
   provider: ["provider_id", "provider_id", "provider"],
   type: ["category_id", "type_id", "type"],
   source: ["technology_id", "source_id", "source"],
-  resource_type: ["asset_id", "resource_type_id", "resource_type"],
+  resource_type: ["asset_class_id", "resource_type_id", "resource_type"],
   customer_type: ["customer_type_id", "customer_id", "customer_type"],
   payment_mode: ["payment_mode_id", "paymode_id", "payment_mode"],
   band: ["consumption_band_id", "band_id", "band"],

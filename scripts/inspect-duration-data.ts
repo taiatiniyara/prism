@@ -9,10 +9,10 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 async function main() {
   const defs = await pool.query(`
     select i.id, i.name, i.variable_name, i.is_active, u.name as unit,
-           al.name as agg_level
+           al.name as strata
     from measure_definitions  i
     left join managed_list_items u on u.id = i.unit_id
-    left join managed_list_items al on al.id = i.agg_level_id
+    left join managed_list_items al on al.id = i.strata_id
     where i.id in (1802, 1805, 1808)
        or i.name ilike '%duration%' or i.name ilike '%customer minutes%'
        or i.name ilike '%interruption%duration%'

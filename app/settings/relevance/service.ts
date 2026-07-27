@@ -615,7 +615,7 @@ const getGenerationDimensionsFromResources = async (
   const resources = resourceRows.map((row) => ({
     ...row,
     unitTypeId:
-      energyClassByTech.get(row.energySourceId)?.assetId ?? null,
+      energyClassByTech.get(row.energySourceId)?.assetClassId ?? null,
   }));
 
   const providerIds = Array.from(
@@ -1198,7 +1198,7 @@ export async function GetUtilityGenerationRelevance(
 
   const configuredTypeSourceMappings = await db
     .select({
-      unitTypeId: unitTypeRelevance.asset_id,
+      unitTypeId: unitTypeRelevance.asset_class_id,
       energySourceId: unitTypeRelevance.technology_id,
     })
     .from(unitTypeRelevance);
@@ -2417,7 +2417,7 @@ const getUnitTypeRelevanceBuilderOptions = async (): Promise<{
 const mapUnitTypeRelevanceRows = async (
   rows: Array<{
     id: number;
-    asset_id: number;
+    asset_class_id: number;
     category_id: number;
     technology_id: number;
   }>,
@@ -2429,7 +2429,7 @@ const mapUnitTypeRelevanceRows = async (
   const managedItemIds = Array.from(
     new Set(
       rows.flatMap((row) => [
-        row.asset_id,
+        row.asset_class_id,
         row.category_id,
         row.technology_id,
       ]),
@@ -2454,10 +2454,10 @@ const mapUnitTypeRelevanceRows = async (
   return rows
     .map((row) => ({
       id: row.id,
-      unitTypeId: row.asset_id,
+      unitTypeId: row.asset_class_id,
       unitType:
-        managedItemNameById.get(row.asset_id) ??
-        `Unknown (${row.asset_id})`,
+        managedItemNameById.get(row.asset_class_id) ??
+        `Unknown (${row.asset_class_id})`,
       energyTypeId: row.category_id,
       energyType:
         managedItemNameById.get(row.category_id) ??
@@ -2611,7 +2611,7 @@ export async function CreateDevUnitTypeRelevance(
     .where(
       and(
         eq(
-          unitTypeRelevance.asset_id,
+          unitTypeRelevance.asset_class_id,
           unitTypeId,
         ),
         eq(unitTypeRelevance.category_id, energyTypeId),
@@ -2630,7 +2630,7 @@ export async function CreateDevUnitTypeRelevance(
   const [created] = await db
     .insert(unitTypeRelevance)
     .values({
-      asset_id: unitTypeId,
+      asset_class_id: unitTypeId,
       category_id: energyTypeId,
       technology_id: energySourceId,
     })
@@ -2733,7 +2733,7 @@ export async function UpdateDevUnitTypeRelevance(
     .where(
       and(
         eq(
-          unitTypeRelevance.asset_id,
+          unitTypeRelevance.asset_class_id,
           unitTypeId,
         ),
         eq(unitTypeRelevance.category_id, energyTypeId),
@@ -2752,7 +2752,7 @@ export async function UpdateDevUnitTypeRelevance(
   await db
     .update(unitTypeRelevance)
     .set({
-      asset_id: unitTypeId,
+      asset_class_id: unitTypeId,
       category_id: energyTypeId,
       technology_id: energySourceId,
     })

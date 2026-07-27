@@ -24,7 +24,7 @@ const COLS: { key: string; req: string; all: string; note: string }[] = [
   { key: "provider_id", req: "REQUIRED", all: "20", note: "dim: Provider member id (All=20)" },
   { key: "category_id", req: "REQUIRED", all: "30", note: "dim: Category member id (All=30)" },
   { key: "technology_id", req: "REQUIRED", all: "40", note: "dim: Technology member id (All GEN=40)" },
-  { key: "asset_id", req: "REQUIRED", all: "983", note: "dim: Asset member id (All=983)" },
+  { key: "asset_class_id", req: "REQUIRED", all: "983", note: "dim: Asset member id (All=983)" },
   { key: "customer_type_id", req: "REQUIRED", all: "690", note: "dim: Customer Type member id (All=690)" },
   { key: "payment_mode_id", req: "REQUIRED", all: "720", note: "dim: Payment Mode member id (All=720)" },
   { key: "consumption_band_id", req: "REQUIRED", all: "1005", note: "dim: Consumption Band member id (All=1005)" },
@@ -46,20 +46,20 @@ const headers = COLS.map((c) => c.key);
 // Example rows (address uses All-member dims; grain varies)
 const EX_FILLED: Record<string, string | number> = {
   report_period_id: 175, measure_id: 1501,
-  provider_id: 20, category_id: 30, technology_id: 40, asset_id: 983,
+  provider_id: 20, category_id: 30, technology_id: 40, asset_class_id: 983,
   customer_type_id: 690, payment_mode_id: 720, consumption_band_id: 1005, division_id: 1011,
   gender_id: 1022, utility_function_id: 1023,
   service_area_id: 5, value_type: "numeric", value: 123456, status_id: 3,
 };
 const EX_EMPTY: Record<string, string | number> = {
   report_period_id: 175, measure_id: 200,
-  provider_id: 20, category_id: 30, technology_id: 40, asset_id: 983,
+  provider_id: 20, category_id: 30, technology_id: 40, asset_class_id: 983,
   customer_type_id: 690, payment_mode_id: 720, consumption_band_id: 1005, division_id: 1011,
   gender_id: 1022, utility_function_id: 1023, service_area_id: 5,
 };
 const EX_SLICED: Record<string, string | number> = {
   report_period_id: 175, measure_id: 300,
-  provider_id: 21, category_id: 32, technology_id: 54, asset_id: 984,
+  provider_id: 21, category_id: 32, technology_id: 54, asset_class_id: 984,
   customer_type_id: 690, payment_mode_id: 720, consumption_band_id: 1005, division_id: 1011,
   gender_id: 1022, utility_function_id: 1024, unit_id: 88,
   value_type: "numeric", value: 42.5, status_id: 3,

@@ -19,7 +19,7 @@ export interface KpiDefinition {
   category: string;
   subcategory: string;
   unit: string;
-  agg_level: string;
+  strata: string;
   category_description: string;
   benchmarking_type: string;
   limits: { min: number; max: number; unit: string } | null;
@@ -65,7 +65,7 @@ export const explainKpi = async (
       categoryId: kpiDefinitions.category_id,
       subcategoryId: kpiDefinitions.subcategory_id,
       unitId: kpiDefinitions.unit_id,
-      aggLevelId: kpiDefinitions.agg_level_id,
+      strataId: kpiDefinitions.strata_id,
       targets: kpiDefinitions.targets,
       limits: kpiDefinitions.limits,
       type: kpiDefinitions.type,
@@ -84,7 +84,7 @@ export const explainKpi = async (
 
   const ids = [
     ...new Set(
-      [def.categoryId, def.subcategoryId, def.unitId, def.aggLevelId].filter(
+      [def.categoryId, def.subcategoryId, def.unitId, def.strataId].filter(
         (id): id is number => id != null,
       ),
     ),
@@ -120,7 +120,7 @@ export const explainKpi = async (
       category: nameMap.get(def.categoryId ?? -1) ?? "Unknown",
       subcategory: nameMap.get(def.subcategoryId ?? -1) ?? "Unknown",
       unit: nameMap.get(def.unitId ?? -1) ?? "",
-      agg_level: nameMap.get(def.aggLevelId ?? -1) ?? "Unknown",
+      strata: nameMap.get(def.strataId ?? -1) ?? "Unknown",
       category_description: `Part of the ${nameMap.get(def.categoryId ?? -1) ?? "Unknown"} category`,
       benchmarking_type: def.type ?? "benchmarking",
       limits: limits

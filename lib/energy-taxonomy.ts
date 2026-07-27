@@ -46,11 +46,11 @@ export function assetFromTechnology(
 
 export type EnergyClass = {
   categoryId: number | null;
-  assetId: number | null;
+  assetClassId: number | null;
 };
 
 /**
- * DB batch: derive { categoryId, assetId } for a set of `technology_id`s by
+ * DB batch: derive { categoryId, assetClassId } for a set of `technology_id`s by
  * walking `managed_list_items.parent_id` up two levels. Two queries total,
  * regardless of input size (no N+1). Use this where the caller has NOT already
  * loaded the full `managed_list_items` table; otherwise prefer the in-memory
@@ -91,9 +91,9 @@ export async function deriveEnergyClassByTechnology(
 
   for (const techId of techIds) {
     const categoryId = categoryByTech.get(techId) ?? null;
-    const assetId =
+    const assetClassId =
       categoryId != null ? (assetByCategory.get(categoryId) ?? null) : null;
-    out.set(techId, { categoryId, assetId });
+    out.set(techId, { categoryId, assetClassId });
   }
   return out;
 }

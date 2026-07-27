@@ -11,7 +11,7 @@ export const ALL_MEMBER = {
   provider_id: 20,
   category_id: 30,
   technology_id: 40,
-  asset_id: 983,
+  asset_class_id: 983,
   customer_type_id: 690,
   payment_mode_id: 720,
   consumption_band_id: 1005,
@@ -24,7 +24,7 @@ export interface DimensionMembers {
   provider_id: number;
   category_id: number;
   technology_id: number;
-  asset_id: number;
+  asset_class_id: number;
   customer_type_id: number;
   payment_mode_id: number;
   consumption_band_id: number;
@@ -65,9 +65,9 @@ export function buildDimensionMembers(
       slice.technology_id,
       ALL_MEMBER.technology_id,
     ),
-    asset_id: orAll(
-      slice.asset_id,
-      ALL_MEMBER.asset_id,
+    asset_class_id: orAll(
+      slice.asset_class_id,
+      ALL_MEMBER.asset_class_id,
     ),
     customer_type_id: orAll(
       slice.customer_type_id,

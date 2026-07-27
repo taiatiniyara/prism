@@ -54,7 +54,7 @@ export const kpiDefinitions = pgTable("kpi_definitions", {
   subcategory_id: integer("subcategory_id")
     .references(() => managedListItems.id)
     .default(600),
-  agg_level_id: integer("agg_level_id")
+  strata_id: integer("strata_id")
     .notNull()
     .references(() => managedListItems.id)
     .default(1),
@@ -93,7 +93,7 @@ export const kpiDefinitions = pgTable("kpi_definitions", {
 });
 export type KpiDefinition = typeof kpiDefinitions.$inferSelect & {
   type?: string | null;
-  agg_level?: string | null;
+  strata?: string | null;
   category?: string | null;
   subcategory?: string | null;
   unit?: string | null;

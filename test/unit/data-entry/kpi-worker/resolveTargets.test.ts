@@ -9,7 +9,7 @@ describe("resolveAffectedKpiTargets", () => {
       [
         {
           id: 10,
-          agg_level_id: 3,
+          strata_id: 3,
           is_active: true,
           formula: "A + B",
           formula_inputs: [
@@ -27,7 +27,7 @@ describe("resolveAffectedKpiTargets", () => {
         },
         {
           id: 11,
-          agg_level_id: 2,
+          strata_id: 2,
           is_active: false,
           formula: "A * 2",
           formula_inputs: [{ measure_def_id: 100, variable_name: "A" }],
@@ -35,7 +35,7 @@ describe("resolveAffectedKpiTargets", () => {
         },
         {
           id: 12,
-          agg_level_id: 1,
+          strata_id: 1,
           is_active: true,
           formula: null,
           formula_inputs: [{ measure_def_id: 100, variable_name: "A" }],
@@ -72,7 +72,7 @@ describe("resolveAffectedKpiTargets", () => {
       [
         {
           id: 20,
-          agg_level_id: 3,
+          strata_id: 3,
           is_active: true,
           formula: "A + B",
           formula_inputs: legacyInputs,

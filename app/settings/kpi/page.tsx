@@ -451,7 +451,7 @@ export default async function KpiSettingsPage() {
                       managedListName: "Unit",
                     },
                     {
-                      key: "agg_level_id",
+                      key: "strata_id",
                       type: "managed-list",
                       managedListName: "Strata",
                     },

@@ -18,9 +18,9 @@ const INPUTS = {
 async function main() {
   const def = await pool.query(
     `select i.id, i.name, i.variable_name, i.is_active, i.is_aggregated,
-            al.name as agg_level, u.name as unit, c.name as category, sc.name as subcategory
+            al.name as strata, u.name as unit, c.name as category, sc.name as subcategory
      from measure_definitions  i
-     left join managed_list_items al on al.id = i.agg_level_id
+     left join managed_list_items al on al.id = i.strata_id
      left join managed_list_items u on u.id = i.unit_id
      left join managed_list_items c on c.id = i.category_id
      left join managed_list_items sc on sc.id = i.subcategory_id
@@ -31,7 +31,7 @@ async function main() {
   console.log("Definitions:");
   for (const r of def.rows) {
     console.log(
-      `  [${r.id}] ${r.variable_name} | active=${r.is_active} | level=${r.agg_level} | unit=${r.unit} | ${r.category}/${r.subcategory}`,
+      `  [${r.id}] ${r.variable_name} | active=${r.is_active} | level=${r.strata} | unit=${r.unit} | ${r.category}/${r.subcategory}`,
     );
   }
 

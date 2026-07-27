@@ -7,14 +7,14 @@ const pool = new Pool({ connectionString: process.env.DATABASE_URL });
 
 async function main() {
   const rows = await pool.query(`
-    select i.id, i.variable_name, i.name, i.is_active, al.name as agg_level,
+    select i.id, i.variable_name, i.name, i.is_active, al.name as strata,
            u.name as unit,
            count(de.id) filter (where de.is_deleted = false
              and de.value is not null and trim(de.value) <> '')::int as rows_with_value,
            max(rp.report_date)::date as latest
     from measure_definitions  i
     left join managed_list_items u on u.id = i.unit_id
-    left join managed_list_items al on al.id = i.agg_level_id
+    left join managed_list_items al on al.id = i.strata_id
     left join data_entries de on de.measure_def_id = i.id
     left join report_periods rp on rp.id = de.report_period_id
     where u.name in ('Customers', 'Connections', 'Consumers', 'Accounts', 'Number')
@@ -28,7 +28,7 @@ async function main() {
   console.log("Customer-ish inputs that HAVE data:");
   for (const r of rows.rows) {
     console.log(
-      `  [${r.id}] ${r.variable_name} (${r.name}) | active=${r.is_active} | level=${r.agg_level} | unit=${r.unit} | rows=${r.rows_with_value} | latest=${r.latest?.toISOString?.().slice(0, 10) ?? r.latest}`,
+      `  [${r.id}] ${r.variable_name} (${r.name}) | active=${r.is_active} | level=${r.strata} | unit=${r.unit} | rows=${r.rows_with_value} | latest=${r.latest?.toISOString?.().slice(0, 10) ?? r.latest}`,
     );
   }
   if (rows.rowCount === 0) console.log("  (none)");
