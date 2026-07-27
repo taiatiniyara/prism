@@ -22,6 +22,40 @@ areas"-type members in grain columns — an empty finer column truthfully means 
 above that level". Aggregates ("all countries", cohort benchmarks) are computed rollups, never
 stored addresses. `kpi_actual` uses this address model **literally** (per #3's spec §4.4).
 
+### 1.1 The rulebook (plain-language, Eugene-agreed 2026-07-27/28)
+
+**Address (grain) columns LOCATE; dimension columns CLASSIFY. The two axes deliberately follow
+opposite "All" conventions:**
+
+| | Grain (unit/station/area/utility/country) | The 10 dimensions |
+|---|---|---|
+| "Everything" is | **computed** (a rollup, never stored) | **stored** (the explicit **All** member) |
+| Empty means | "this fact lives above that level" (truthful) | never empty — NOT NULL by design |
+| Sentinel rows/members | **banned** — and deleted from the DB 2026-07-27 | **required** — All is a real bucket ("not split by this") |
+
+The seven rules, in one list:
+1. Grain columns hold **real entities or nothing**; filled from the row's level up; level = deepest
+   filled; zero sentinel rows exist to violate this.
+2. The 10 dims are **never blank** — explicit member always; **All = "not split by this dimension"**.
+3. **One value** per row (numeric/boolean/text/option — the measure's type decides which).
+4. **One address, one row** (unique over period + measure + grain + all 10 dims, NULLS NOT DISTINCT).
+5. **One grain per measure per period** (mixed grain across periods allowed, §1.6 medallion).
+6. **Chain consistency** — filled grain columns must match the real hierarchy (#2's shared writer).
+7. **Aggregates across grain are computed** in gold/`kpi_actual` — never stored entries.
+
+**Unit-row dimension consistency (rule 6's dimension twin):** on a **unit-anchored row**, the four
+energy dims (provider / category / technology / asset) must equal that unit's *real* taxonomy — a
+diesel genset's generation row says Diesel, never All. "All" on those four is legitimate only at
+coarser grain, or where the dimension doesn't apply. Enforce in the same shared writer as rule 6.
+*Source-of-truth status (live-DB verified by #2, 2026-07-28):* provider/category/technology exist
+as real columns on `units` — the writer validates those three directly. **Asset has no source
+column**: `units.type_id` is stale (all 501 rows = pre-collapse "Equipment" (1), not in the asset
+member set 983/984/985/988/1035) — resolution of the asset source (add a column vs derive) is
+**OPEN, pending Eugene**. Until resolved the writer can enforce 3 of 4.
+*Related flag:* asset member **1035 "Virtual"** exists in the managed list — once §3 retires the
+virtual units, no row should legitimately classify as asset=Virtual; deactivate the member in the
+same pass.
+
 Examples (grain columns only):
 
 | Fact | unit | station | area | utility | country |
@@ -60,9 +94,15 @@ hierarchy (NULL above… means truthfully absent). Do not "unify" them.
    otherwise `WHERE country_id=X` double-counts. **Per period**, not global: §1.6 mixed-grain
    measures (e.g. lump-sum→split revenue) legitimately change grain across periods.
 4. **No sentinel/aggregate rows as grain values — ever** (the clause that rejects the old spec
-   target): no "All areas" member, no "All Countries" (id 100000) or "Others" sub-region anchors,
-   no benchmarking-group addressing. M49 note: real countries are codes ≤999, sentinels ≥100000 —
-   a `country_id < 1000` CHECK suffices at level 5.
+   target): no "All areas" member, no "All Countries"-style anchors, no benchmarking-group
+   addressing. **The rule is now vacuously enforced for the reference tables: the entire sentinel
+   chain was DELETED from the dev DB 2026-07-27** (Eugene one-shot, #14 executed, leaf→root: "All
+   Service Areas" 89 → "All Utilities" org 1 → "All Countries" 100000 → sub_regions 10000/1/5;
+   real data re-homed first; backups `backup.sentinel_*_20260727`). Zero sentinel rows remain in
+   `countries`/`sub_regions`/`organisations`/`service_areas`; the `country_id < 1000` CHECK is
+   downgraded from required guard to optional hardening against future sentinel re-creation
+   (#2's discretion). Post-state independently verified by #13 (2026-07-27): **countries = 26, all
+   real M49; sub_regions = 6, all real UN; 0 sentinels.**
 5. **Unique address:** as built — `uniq_entry_address` UNIQUE **NULLS NOT DISTINCT** over
    period + measure + 5 grain columns + 10 dims. Keep it; it is what makes NULL-above-level rows
    deduplicate.
@@ -94,6 +134,14 @@ before/after; nothing dropped. Expect and dedupe legacy duplicate addresses firs
 `uniq_entry` was never unique). After no entries reference them: soft-delete virtual
 `units`/`service_areas`; drop `is_virtual` only once onboarding/import paths stop creating them.
 
+**The "All Utilities" supra-aggregate — ✅ RETIRED 2026-07-27** (Eugene one-shot, executed by #14,
+ahead of the migration): real data re-homed first (14 units, the Rarotonga Grid service area, 2
+report_periods, user 21 — nothing orphaned, per the promote-don't-orphan rule), then the chain
+deleted leaf→root with 0-ref checks at each step ("All Service Areas" 89 → org 1 → country 100000
+→ sub_regions 10000/1/5). Backups `backup.sentinel_*_20260727`. Remaining for #2's migration pass:
+only the ordinary per-utility virtuals from the promotion table above — the supra-utility case no
+longer exists.
+
 ## 4. RLS (#12) — native but with one sharp edge
 
 `utility_id` on every owned row **is** the tenant column — no extra column needed (improves on the
@@ -104,6 +152,12 @@ old Option A §4). Two obligations:
 - **Leak guarantee:** no utility-owned fact may ever be written with NULL `utility_id` — that's a
   cross-tenant leak. The §2.1 chain-consistency validation is also the enforcement point here:
   every sub-country row must carry its real `utility_id`.
+- **Enable-time plumbing (#12's plan, 2026-07-28 — confirmed aligned):** RLS activation requires
+  (a) the app to `SET app.current_org` (and `app.is_global` for BMO/DEV) per request — an
+  app-layer task that lands with the #8/#11 query pass; (b) ingestion/service accounts (Power BI)
+  on a `BYPASSRLS` role — global access is a **role/session flag, never a sentinel org row**.
+  Sequencing: #12 verifies the §2.1 chain-consistency writer is live BEFORE enabling RLS
+  (their checklist). D1 remains gated on Eugene's greenlight + the writer shipping.
 
 ## 5. Interaction with the submissions rename
 
