@@ -142,7 +142,6 @@ export const units = pgTable(
       .notNull()
       .default(sql`'[]'::jsonb`),
     name: varchar("name", { length: 255 }).notNull(),
-    is_aggregated: boolean("is_aggregated").notNull().default(false),
     unit_qty: integer("unit_qty"),
     power_station_id: integer("power_station_id").references(
       () => powerStations.id,
