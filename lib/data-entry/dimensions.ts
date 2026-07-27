@@ -8,10 +8,10 @@
  * "No NULL-as-All").
  */
 export const ALL_MEMBER = {
-  energy_provider_id: 20,
-  energy_type_id: 30,
-  energy_source_id: 40,
-  energy_resource_type_id: 983,
+  provider_id: 20,
+  category_id: 30,
+  technology_id: 40,
+  asset_id: 983,
   customer_type_id: 690,
   payment_mode_id: 720,
   consumption_band_id: 1005,
@@ -21,10 +21,10 @@ export const ALL_MEMBER = {
 } as const;
 
 export interface DimensionMembers {
-  energy_provider_id: number;
-  energy_type_id: number;
-  energy_source_id: number;
-  energy_resource_type_id: number;
+  provider_id: number;
+  category_id: number;
+  technology_id: number;
+  asset_id: number;
   customer_type_id: number;
   payment_mode_id: number;
   consumption_band_id: number;
@@ -56,18 +56,18 @@ export function buildDimensionMembers(
   slice: DimensionSlice = {},
 ): DimensionMembers {
   return {
-    energy_provider_id: orAll(
-      slice.energy_provider_id,
-      ALL_MEMBER.energy_provider_id,
+    provider_id: orAll(
+      slice.provider_id,
+      ALL_MEMBER.provider_id,
     ),
-    energy_type_id: orAll(slice.energy_type_id, ALL_MEMBER.energy_type_id),
-    energy_source_id: orAll(
-      slice.energy_source_id,
-      ALL_MEMBER.energy_source_id,
+    category_id: orAll(slice.category_id, ALL_MEMBER.category_id),
+    technology_id: orAll(
+      slice.technology_id,
+      ALL_MEMBER.technology_id,
     ),
-    energy_resource_type_id: orAll(
-      slice.energy_resource_type_id,
-      ALL_MEMBER.energy_resource_type_id,
+    asset_id: orAll(
+      slice.asset_id,
+      ALL_MEMBER.asset_id,
     ),
     customer_type_id: orAll(
       slice.customer_type_id,

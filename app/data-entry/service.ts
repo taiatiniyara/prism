@@ -11,7 +11,7 @@ import {
 import { managedListItems } from "@/db/schema/managedLists";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import {
-  energyResources,
+  units,
   EnergyResourcePeriodEntry,
   organisations,
   serviceAreas,
@@ -136,25 +136,25 @@ export async function GetReportPeriods(
 
   const erConditions: ReturnType<typeof eq>[] = [];
   if (scopedUtilityId != null)
-    erConditions.push(eq(energyResources.utility_id, scopedUtilityId));
+    erConditions.push(eq(units.utility_id, scopedUtilityId));
   else if (
     !forceAllUtilities &&
     !hasGlobalUtilityAccess(user) &&
     user.org_id != null
   )
-    erConditions.push(eq(energyResources.utility_id, user.org_id));
+    erConditions.push(eq(units.utility_id, user.org_id));
 
   const allErs = await db
     .select({
-      id: energyResources.id,
-      service_area_id: energyResources.service_area_id,
-      utility_id: energyResources.utility_id,
-      energy_provider_id: energyResources.energy_provider_id,
-      energy_source_id: energyResources.energy_source_id,
-      is_virtual: energyResources.is_virtual,
-      period_entries: energyResources.period_entries,
+      id: units.id,
+      service_area_id: units.service_area_id,
+      utility_id: units.utility_id,
+      provider_id: units.provider_id,
+      technology_id: units.technology_id,
+      is_virtual: units.is_virtual,
+      period_entries: units.period_entries,
     })
-    .from(energyResources)
+    .from(units)
     .where(and(...erConditions));
 
   const irrelevantInputRel = await db
@@ -242,7 +242,7 @@ export async function GetReportPeriods(
         // Generation inputs: × non-virtual generators
         for (const gen of periodGenerators) {
           if (gen.service_area_id && saIds.includes(gen.service_area_id)) {
-            if (!irrelInput.has(`${inputDefId}:${gen.energy_source_id}`)) {
+            if (!irrelInput.has(`${inputDefId}:${gen.technology_id}`)) {
               requested++;
             }
           }

@@ -93,7 +93,7 @@ export default async function ManagedListSettingsPage() {
               })),
             },
             {
-              key: "energy_resource_type_id",
+              key: "asset_id",
               type: "managed-list",
               managedListName: "Energy Resource Type",
               label: "Energy Resource Type",
@@ -125,7 +125,7 @@ export default async function ManagedListSettingsPage() {
               })),
             },
             {
-              key: "energy_resource_type_id",
+              key: "asset_id",
               type: "managed-list",
               managedListName: "Energy Resource Type",
               label: "Energy Resource Type",

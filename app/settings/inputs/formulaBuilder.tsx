@@ -83,9 +83,9 @@ function getFormulaInputs(
     const filters = selectedInputFilters[item.measure_def_id];
     dedup.set(item.measure_def_id, {
       ...item,
-      energy_provider_id: filters?.energyProviderId ?? null,
-      energy_type_id: filters?.energyTypeId ?? null,
-      energy_source_id: filters?.energySourceId ?? null,
+      provider_id: filters?.energyProviderId ?? null,
+      category_id: filters?.energyTypeId ?? null,
+      technology_id: filters?.energySourceId ?? null,
     });
   }
 
@@ -108,32 +108,32 @@ function buildFormulaWithWhereClauses(
   for (const input of formulaInputs) {
     const parts: string[] = [];
 
-    if (input.energy_provider_id != null) {
+    if (input.provider_id != null) {
       const providerLabel = energyProviderNameById.get(
-        input.energy_provider_id,
+        input.provider_id,
       );
       parts.push(
         providerLabel
           ? `provider=${JSON.stringify(providerLabel)}`
-          : `provider=${input.energy_provider_id}`,
+          : `provider=${input.provider_id}`,
       );
     }
 
-    if (input.energy_type_id != null) {
-      const typeLabel = energyTypeNameById.get(input.energy_type_id);
+    if (input.category_id != null) {
+      const typeLabel = energyTypeNameById.get(input.category_id);
       parts.push(
         typeLabel
           ? `type=${JSON.stringify(typeLabel)}`
-          : `type=${input.energy_type_id}`,
+          : `type=${input.category_id}`,
       );
     }
 
-    if (input.energy_source_id != null) {
-      const sourceLabel = energySourceNameById.get(input.energy_source_id);
+    if (input.technology_id != null) {
+      const sourceLabel = energySourceNameById.get(input.technology_id);
       parts.push(
         sourceLabel
           ? `source=${JSON.stringify(sourceLabel)}`
-          : `source=${input.energy_source_id}`,
+          : `source=${input.technology_id}`,
       );
     }
 

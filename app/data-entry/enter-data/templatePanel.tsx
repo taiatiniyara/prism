@@ -29,7 +29,7 @@ type TemplateRow = {
   measure_def_id: number;
   input_name: string;
   unit_name: string;
-  energy_resource_id: number | null;
+  unit_id: number | null;
   generator_name: string;
   payment_mode_id: number | null;
   payment_mode_name: string;
@@ -91,7 +91,7 @@ const getExcludedTemplateHeaders = (
 ): Set<keyof TemplateRow> => {
   const excluded = new Set<keyof TemplateRow>([
     "context_mode",
-    "energy_resource_id",
+    "unit_id",
     "payment_mode_id",
     "payment_mode_name",
     "customer_type_id",
@@ -425,7 +425,7 @@ const flattenTemplateRows = (
       measure_def_id: row.inputDefId,
       input_name: row.inputName,
       unit_name: row.unitName ?? "",
-      energy_resource_id: row.energyResourceId ?? null,
+      unit_id: row.energyResourceId ?? null,
       generator_name: "",
       payment_mode_id: row.paymentModeId ?? null,
       payment_mode_name: row.paymentModeName ?? "",
@@ -450,7 +450,7 @@ const flattenTemplateRows = (
         measure_def_id: row.inputDefId,
         input_name: row.inputName,
         unit_name: row.unitName ?? "",
-        energy_resource_id: row.energyResourceId ?? group.generatorId,
+        unit_id: row.energyResourceId ?? group.generatorId,
         generator_name: group.generatorName,
         payment_mode_id: row.paymentModeId ?? null,
         payment_mode_name: row.paymentModeName ?? "",
@@ -476,7 +476,7 @@ const flattenTemplateRows = (
         measure_def_id: row.inputDefId,
         input_name: row.inputName,
         unit_name: row.unitName ?? "",
-        energy_resource_id: row.energyResourceId ?? null,
+        unit_id: row.energyResourceId ?? null,
         generator_name: "",
         payment_mode_id: row.paymentModeId ?? paymentModeGroup.paymentModeId,
         payment_mode_name:
@@ -748,7 +748,7 @@ export default function EnterDataTemplatePanel({
 
       return {
         inputDefId,
-        energyResourceId: matchedTemplateRow.energy_resource_id,
+        energyResourceId: matchedTemplateRow.unit_id,
         paymentModeId: matchedTemplateRow.payment_mode_id,
         customerTypeId: matchedTemplateRow.customer_type_id,
         value: String(getCell(row, "value") ?? "").trim(),
