@@ -16,6 +16,7 @@ import {
   DataEntryComparisonFilterOptions,
   DataEntryComparisonResult,
 } from "./service";
+import { useTerm } from "@/lib/terminology/useTerm";
 
 type Props = {
   options: DataEntryComparisonFilterOptions;
@@ -41,6 +42,8 @@ export default function DataEntryComparisonPanel({ options }: Props) {
     if (!Number.isFinite(utility)) return options.reportPeriods;
     return options.reportPeriods.filter((rp) => rp.utilityId === utility);
   }, [options.reportPeriods, utilityId]);
+
+  const serviceAreaTerm = useTerm("service_area");
 
   const runComparison = () => {
     startTransition(async () => {
@@ -199,7 +202,7 @@ export default function DataEntryComparisonPanel({ options }: Props) {
                     <th className="px-2 py-2">Input</th>
                     <th className="px-2 py-2">Category</th>
                     <th className="px-2 py-2">Subcategory</th>
-                    <th className="px-2 py-2">Service Area</th>
+                    <th className="px-2 py-2">{serviceAreaTerm}</th>
                     <th className="px-2 py-2">Generator</th>
                     <th className="px-2 py-2">Provider</th>
                     <th className="px-2 py-2">Source</th>

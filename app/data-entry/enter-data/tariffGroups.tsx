@@ -7,6 +7,7 @@ import { DataEntryTariffPaymentModeGroupView } from "@/app/data-entry/types";
 import InputCell from "@/app/data-entry/enter-data/inputCell";
 import { DataEntrySelect } from "@/components/data-entry/dataEntrySelect";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useTerm } from "@/lib/terminology/useTerm";
 
 const STORAGE_KEY_PAYMENT_MODE = "prism:tariff:paymentModeId";
 const STORAGE_KEY_CUSTOMER_TYPE_PREFIX = "prism:tariff:customerType:";
@@ -77,6 +78,7 @@ interface TariffGroupsProps {
 }
 
 export default function TariffGroups({ groups }: TariffGroupsProps) {
+  const serviceAreaTerm = useTerm("service_area");
   const fallbackPaymentModeId = groups[0]?.paymentModeId ?? 0;
 
   const [openPaymentModeId, setOpenPaymentModeId] =
@@ -108,8 +110,9 @@ export default function TariffGroups({ groups }: TariffGroupsProps) {
           <CardTitle>Tariff Inputs</CardTitle>
         </CardHeader>
         <CardContent className="text-muted-foreground text-sm">
-          No tariff inputs are available. Check that a service area is selected,
-          input definitions exist for Tariff Structure under Settings &gt;
+          No tariff inputs are available. Check that a{" "}
+          {serviceAreaTerm.toLowerCase()} is selected, input definitions exist
+          for Tariff Structure under Settings &gt;
           Inputs, and the tariff relevance has been configured under Settings
           &gt; Relevance.
         </CardContent>

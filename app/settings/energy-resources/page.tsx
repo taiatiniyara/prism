@@ -8,6 +8,7 @@ import {
 } from "./service";
 import { AllPowerStations } from "../power-stations/service";
 import { AllServiceAreas } from "../service-areas/service";
+import { resolveTerm } from "@/lib/terminology/resolver";
 
 const ENERGY_SOURCE_MANAGED_LIST_ALIASES = [
   "Energy Source",
@@ -25,6 +26,9 @@ export default async function EnergyResourcesSettingsPage() {
       GetAllReportPeriods(),
     ]);
 
+  const serviceAreaLabel = resolveTerm("service_area");
+  const serviceAreaLabelPlural = resolveTerm("service_area", { plural: true });
+
   return (
     <DataTable<EnergyResourcePeriodTableRow>
       quickFilters={[
@@ -40,8 +44,8 @@ export default async function EnergyResourcesSettingsPage() {
         },
         {
           column: "service_area",
-          label: "Service Area",
-          allLabel: "All Service Areas",
+          label: serviceAreaLabel,
+          allLabel: `All ${serviceAreaLabelPlural}`,
         },
         {
           column: "power_station",
@@ -101,7 +105,7 @@ export default async function EnergyResourcesSettingsPage() {
           {
             key: "service_area_id",
             type: "select",
-            label: "Service Area",
+            label: serviceAreaLabel,
             selectList: serviceAreas.map((serviceArea) => ({
               value: serviceArea.id,
               label: serviceArea.name,
@@ -169,7 +173,7 @@ export default async function EnergyResourcesSettingsPage() {
           {
             key: "service_area_id",
             type: "select",
-            label: "Service Area",
+            label: serviceAreaLabel,
             selectList: serviceAreas.map((serviceArea) => ({
               value: serviceArea.id,
               label: serviceArea.name,

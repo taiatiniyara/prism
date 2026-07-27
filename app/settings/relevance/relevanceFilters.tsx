@@ -5,6 +5,7 @@ import { Label } from "@/components/ui/label";
 import { useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
+import { useTerm } from "@/lib/terminology/useTerm";
 
 type FilterOption = {
   id: number;
@@ -165,6 +166,8 @@ export default function RelevanceFilters(props: {
     );
   };
 
+  const serviceAreaTerm = useTerm("service_area");
+
   return (
     <div className="flex flex-wrap items-end gap-2 sm:gap-3">
       <div className="space-y-1">
@@ -199,7 +202,7 @@ export default function RelevanceFilters(props: {
           htmlFor="service_area_id"
           className="text-[11px] font-medium"
         >
-          Service Area
+          {serviceAreaTerm}
         </Label>
         <select
           id="service_area_id"
