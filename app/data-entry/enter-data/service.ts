@@ -29,7 +29,7 @@ import {
 } from "@/db/schema/dataEntry";
 import { managedListItems, managedLists } from "@/db/schema/managedLists";
 import { reportPeriods } from "@/db/schema/reportPeriods";
-import { energyResources, serviceAreas } from "@/db/schema/utility";
+import { units, serviceAreas } from "@/db/schema/utility";
 import {
   CurrentUser,
   getCurrentUser,
@@ -91,7 +91,7 @@ import {
 const hasActiveEnergyResourcePeriod = (reportPeriodId: number) =>
   sql<boolean>`exists (
     select 1
-    from jsonb_array_elements(${energyResources.period_entries}) as period_entry
+    from jsonb_array_elements(${units.period_entries}) as period_entry
     where (period_entry->>'report_period_id')::int = ${reportPeriodId}
       and coalesce((period_entry->>'is_active')::boolean, false) = true
   )`;
@@ -612,27 +612,27 @@ const getGenerationGroupsForContext = async (
   }
 
   const generatorConditions = [
-    eq(energyResources.is_virtual, false),
-    eq(energyResources.service_area_id, context.serviceAreaId),
+    eq(units.is_virtual, false),
+    eq(units.service_area_id, context.serviceAreaId),
     hasActiveEnergyResourcePeriod(context.reportPeriodId),
   ];
 
   if (!hasGlobalUtilityAccess(user) && user.org_id != null) {
-    generatorConditions.push(eq(energyResources.utility_id, user.org_id));
+    generatorConditions.push(eq(units.utility_id, user.org_id));
   }
 
   const generators = await db
     .select({
-      id: energyResources.id,
-      name: energyResources.name,
-      serviceAreaId: energyResources.service_area_id,
-      energyProviderId: energyResources.energy_provider_id,
-      energySourceId: energyResources.energy_source_id,
-      isVirtual: energyResources.is_virtual,
+      id: units.id,
+      name: units.name,
+      serviceAreaId: units.service_area_id,
+      energyProviderId: units.provider_id,
+      energySourceId: units.technology_id,
+      isVirtual: units.is_virtual,
     })
-    .from(energyResources)
+    .from(units)
     .where(and(...generatorConditions))
-    .orderBy(asc(energyResources.name));
+    .orderBy(asc(units.name));
 
   if (generators.length === 0) {
     return [];
@@ -692,7 +692,7 @@ const getGenerationGroupsForContext = async (
     .select({
       id: dataEntries.id,
       inputDefId: dataEntries.measure_def_id,
-      energyResourceId: dataEntries.energy_resource_id,
+      energyResourceId: dataEntries.unit_id,
       statusId: dataEntries.status_id,
       updatedByName: authUser.name,
       updatedByRole: roles.name,
@@ -713,7 +713,7 @@ const getGenerationGroupsForContext = async (
           definitionRows.map((row) => row.inputDefId),
         ),
         inArray(
-          dataEntries.energy_resource_id,
+          dataEntries.unit_id,
           generators.map((generator) => generator.id),
         ),
       ),
@@ -816,7 +816,7 @@ const getTariffGroupsForContext = async (
         eq(dataEntries.report_period_id, context.reportPeriodId),
         eq(dataEntries.service_area_id, context.serviceAreaId),
         eq(dataEntries.is_deleted, false),
-        isNull(dataEntries.energy_resource_id),
+        isNull(dataEntries.unit_id),
         inArray(
           dataEntries.measure_def_id,
           relevantDefinitions.map((definition) => definition.id),
@@ -1007,20 +1007,20 @@ const getOverallProgressForContext = async (
   });
 
   const generatorConditions = [
-    eq(energyResources.is_virtual, false),
+    eq(units.is_virtual, false),
     hasActiveEnergyResourcePeriod(context.reportPeriodId),
   ];
 
   if (!hasGlobalUtilityAccess(user) && user.org_id != null) {
-    generatorConditions.push(eq(energyResources.utility_id, user.org_id));
+    generatorConditions.push(eq(units.utility_id, user.org_id));
   }
 
   const generators = await db
     .select({
-      id: energyResources.id,
-      serviceAreaId: energyResources.service_area_id,
+      id: units.id,
+      serviceAreaId: units.service_area_id,
     })
-    .from(energyResources)
+    .from(units)
     .where(and(...generatorConditions));
 
   const expectedKeys = new Set<string>();
@@ -1090,7 +1090,7 @@ const getOverallProgressForContext = async (
     .select({
       inputDefId: dataEntries.measure_def_id,
       serviceAreaId: dataEntries.service_area_id,
-      energyResourceId: dataEntries.energy_resource_id,
+      energyResourceId: dataEntries.unit_id,
     })
     .from(dataEntries)
     .where(and(...entryConditions));
@@ -1744,12 +1744,12 @@ const resolveEnergyMetadata = async (
 
   const [resource] = await db
     .select({
-      energySourceId: energyResources.energy_source_id,
-      energyTypeId: energyResources.energy_type_id,
-      energyProviderId: energyResources.energy_provider_id,
+      energySourceId: units.technology_id,
+      energyTypeId: units.category_id,
+      energyProviderId: units.provider_id,
     })
-    .from(energyResources)
-    .where(eq(energyResources.id, energyResourceId))
+    .from(units)
+    .where(eq(units.id, energyResourceId))
     .limit(1);
 
   if (!resource) {
@@ -1779,10 +1779,10 @@ const buildExistingDataEntryConditions = (params: {
   }
 
   if (params.energyResourceId == null) {
-    conditions.push(isNull(dataEntries.energy_resource_id));
+    conditions.push(isNull(dataEntries.unit_id));
   } else {
     conditions.push(
-      eq(dataEntries.energy_resource_id, params.energyResourceId),
+      eq(dataEntries.unit_id, params.energyResourceId),
     );
   }
 
@@ -2058,13 +2058,13 @@ const saveDataEntryValueInternal = async (
       report_period_id: reportPeriodId,
       measure_def_id: payload.inputDefId,
       service_area_id: scopedServiceAreaId,
-      energy_resource_id: energyResourceId,
+      unit_id: energyResourceId,
       value: normalizedValue,
       status_id: DataEntryStatusId.Entered,
-      energy_source_id: energyMetadata?.energySourceId ?? allMemberIds.energySource,
-      energy_type_id: energyMetadata?.energyTypeId ?? allMemberIds.energyType,
-      energy_provider_id: energyMetadata?.energyProviderId ?? allMemberIds.energyProvider,
-      energy_resource_type_id: allMemberIds.energyResourceType,
+      technology_id: energyMetadata?.energySourceId ?? allMemberIds.energySource,
+      category_id: energyMetadata?.energyTypeId ?? allMemberIds.energyType,
+      provider_id: energyMetadata?.energyProviderId ?? allMemberIds.energyProvider,
+      asset_id: allMemberIds.energyResourceType,
       customer_type_id: payload.customerTypeId ?? allMemberIds.customerType,
       payment_mode_id: payload.paymentModeId ?? allMemberIds.paymentMode,
       consumption_band_id: allMemberIds.consumptionBand,
@@ -2236,14 +2236,14 @@ export const updateDataEntryCommentAction = async (
       report_period_id: reportPeriodId,
       measure_def_id: payload.inputDefId,
       service_area_id: scopedServiceAreaId,
-      energy_resource_id: energyResourceId,
+      unit_id: energyResourceId,
       value: null,
       comments: nextComments,
       status_id: DataEntryStatusId.Entered,
-      energy_source_id: energyMetadata?.energySourceId ?? allMemberIds.energySource,
-      energy_provider_id: energyMetadata?.energyProviderId ?? allMemberIds.energyProvider,
-      energy_type_id: energyMetadata?.energyTypeId ?? allMemberIds.energyType,
-      energy_resource_type_id: allMemberIds.energyResourceType,
+      technology_id: energyMetadata?.energySourceId ?? allMemberIds.energySource,
+      provider_id: energyMetadata?.energyProviderId ?? allMemberIds.energyProvider,
+      category_id: energyMetadata?.energyTypeId ?? allMemberIds.energyType,
+      asset_id: allMemberIds.energyResourceType,
       customer_type_id: payload.customerTypeId ?? allMemberIds.customerType,
       payment_mode_id: payload.paymentModeId ?? allMemberIds.paymentMode,
       consumption_band_id: allMemberIds.consumptionBand,
@@ -2319,14 +2319,14 @@ export const updateDataEntryAvailabilityAction = async (
         report_period_id: reportPeriodId,
         measure_def_id: payload.inputDefId,
         service_area_id: scopedServiceAreaId,
-        energy_resource_id: energyResourceId,
+        unit_id: energyResourceId,
         value: null,
         comments: null,
         status_id: nextStatusId,
-        energy_source_id: energyMetadata?.energySourceId ?? allMemberIds.energySource,
-        energy_provider_id: energyMetadata?.energyProviderId ?? allMemberIds.energyProvider,
-        energy_type_id: energyMetadata?.energyTypeId ?? allMemberIds.energyType,
-        energy_resource_type_id: allMemberIds.energyResourceType,
+        technology_id: energyMetadata?.energySourceId ?? allMemberIds.energySource,
+        provider_id: energyMetadata?.energyProviderId ?? allMemberIds.energyProvider,
+        category_id: energyMetadata?.energyTypeId ?? allMemberIds.energyType,
+        asset_id: allMemberIds.energyResourceType,
         customer_type_id: payload.customerTypeId ?? allMemberIds.customerType,
         payment_mode_id: payload.paymentModeId ?? allMemberIds.paymentMode,
         consumption_band_id: allMemberIds.consumptionBand,

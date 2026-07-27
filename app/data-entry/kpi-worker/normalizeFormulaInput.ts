@@ -34,9 +34,9 @@ export const normalizeFormulaInput = (
     return null;
   }
 
-  const energyProviderId = toNullableNumber(input.energy_provider_id);
-  const energyTypeId = toNullableNumber(input.energy_type_id);
-  const energySourceId = toNullableNumber(input.energy_source_id);
+  const energyProviderId = toNullableNumber(input.provider_id);
+  const energyTypeId = toNullableNumber(input.category_id);
+  const energySourceId = toNullableNumber(input.technology_id);
 
   // Carry any other fields through, but drop the legacy key so the emitted
   // binding is canonical (measure_def_id only).
@@ -47,9 +47,9 @@ export const normalizeFormulaInput = (
     ...(rest as unknown as FormulaInput),
     measure_def_id: measureDefId,
     ...(energyProviderId != null
-      ? { energy_provider_id: energyProviderId }
+      ? { provider_id: energyProviderId }
       : {}),
-    ...(energyTypeId != null ? { energy_type_id: energyTypeId } : {}),
-    ...(energySourceId != null ? { energy_source_id: energySourceId } : {}),
+    ...(energyTypeId != null ? { category_id: energyTypeId } : {}),
+    ...(energySourceId != null ? { technology_id: energySourceId } : {}),
   };
 };

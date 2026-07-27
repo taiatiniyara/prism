@@ -3,7 +3,7 @@
 import { db } from "@/db/connection";
 import {
   dataEntries,
-  energyResources,
+  units,
   inputRelevance,
   measureDefinitions,
   organisations,
@@ -590,21 +590,21 @@ const getGenerationDimensionsFromResources = async (
   energyResourceTypes: { id: number; name: string }[];
 }> => {
   const resourceConditions = [
-    eq(energyResources.utility_id, utilityId),
-    eq(energyResources.service_area_id, serviceAreaId),
+    eq(units.utility_id, utilityId),
+    eq(units.service_area_id, serviceAreaId),
   ];
 
   if (!includeVirtual) {
-    resourceConditions.push(eq(energyResources.is_virtual, false));
+    resourceConditions.push(eq(units.is_virtual, false));
   }
 
   const resources = await db
     .select({
-      energyProviderId: energyResources.energy_provider_id,
-      energySourceId: energyResources.energy_source_id,
-      energyResourceTypeId: energyResources.type_id,
+      energyProviderId: units.provider_id,
+      energySourceId: units.technology_id,
+      energyResourceTypeId: units.type_id,
     })
-    .from(energyResources)
+    .from(units)
     .where(and(...resourceConditions));
 
   const providerIds = Array.from(
@@ -1183,8 +1183,8 @@ export async function GetUtilityGenerationRelevance(
 
   const configuredTypeSourceMappings = await db
     .select({
-      energyResourceTypeId: energyResourceTypeRelevance.energy_resource_type_id,
-      energySourceId: energyResourceTypeRelevance.energy_source_id,
+      energyResourceTypeId: energyResourceTypeRelevance.asset_id,
+      energySourceId: energyResourceTypeRelevance.technology_id,
     })
     .from(energyResourceTypeRelevance);
 
@@ -1237,16 +1237,16 @@ export async function GetUtilityGenerationRelevance(
     selectedServiceAreaId != null
       ? await db
           .select({
-            energySourceId: energyResources.energy_source_id,
-            energyProviderId: energyResources.energy_provider_id,
-            periodEntries: energyResources.period_entries,
+            energySourceId: units.technology_id,
+            energyProviderId: units.provider_id,
+            periodEntries: units.period_entries,
           })
-          .from(energyResources)
+          .from(units)
           .where(
             and(
-              eq(energyResources.utility_id, user.org_id!),
-              eq(energyResources.service_area_id, selectedServiceAreaId),
-              eq(energyResources.is_virtual, false),
+              eq(units.utility_id, user.org_id!),
+              eq(units.service_area_id, selectedServiceAreaId),
+              eq(units.is_virtual, false),
             ),
           )
       : [];
@@ -1321,16 +1321,16 @@ export async function SetUtilityGenerationDataLabelRelevance(
 
   const resources = await db
     .select({
-      id: energyResources.id,
-      periodEntries: energyResources.period_entries,
+      id: units.id,
+      periodEntries: units.period_entries,
     })
-    .from(energyResources)
+    .from(units)
     .where(
       and(
-        eq(energyResources.utility_id, user.org_id!),
-        eq(energyResources.service_area_id, payload.serviceAreaId),
-        eq(energyResources.energy_provider_id, payload.energyProviderId),
-        eq(energyResources.energy_source_id, payload.energySourceId),
+        eq(units.utility_id, user.org_id!),
+        eq(units.service_area_id, payload.serviceAreaId),
+        eq(units.provider_id, payload.energyProviderId),
+        eq(units.technology_id, payload.energySourceId),
       ),
     );
 
@@ -1366,13 +1366,13 @@ export async function SetUtilityGenerationDataLabelRelevance(
     }
 
     await db
-      .update(energyResources)
+      .update(units)
       .set({
         period_entries: updatedEntries,
         updated_at: new Date(),
         updated_by_id: user.id,
       })
-      .where(eq(energyResources.id, resource.id));
+      .where(eq(units.id, resource.id));
   }
 
   revalidateRelevanceAndDataEntry();
@@ -1777,7 +1777,7 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
           inArray(dataEntries.measure_def_id, tariffInputDefIds),
           isNotNull(dataEntries.payment_mode_id),
           isNotNull(dataEntries.customer_type_id),
-          isNull(dataEntries.energy_resource_id),
+          isNull(dataEntries.unit_id),
         ),
       )
       .groupBy(serviceAreas.utility_id);
@@ -1805,7 +1805,7 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
           inArray(dataEntries.measure_def_id, tariffInputDefIds),
           isNotNull(dataEntries.payment_mode_id),
           isNotNull(dataEntries.customer_type_id),
-          isNull(dataEntries.energy_resource_id),
+          isNull(dataEntries.unit_id),
         ),
       )
       .groupBy(serviceAreas.utility_id);
@@ -1833,7 +1833,7 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
           inArray(dataEntries.measure_def_id, tariffInputDefIds),
           isNotNull(dataEntries.payment_mode_id),
           isNotNull(dataEntries.customer_type_id),
-          isNull(dataEntries.energy_resource_id),
+          isNull(dataEntries.unit_id),
         ),
       )
       .groupBy(serviceAreas.utility_id);
@@ -1871,7 +1871,7 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
           inArray(dataEntries.measure_def_id, transmissionInputDefIds),
           isNull(dataEntries.payment_mode_id),
           isNull(dataEntries.customer_type_id),
-          isNull(dataEntries.energy_resource_id),
+          isNull(dataEntries.unit_id),
         ),
       )
       .groupBy(serviceAreas.utility_id);
@@ -1899,7 +1899,7 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
           inArray(dataEntries.measure_def_id, transmissionInputDefIds),
           isNull(dataEntries.payment_mode_id),
           isNull(dataEntries.customer_type_id),
-          isNull(dataEntries.energy_resource_id),
+          isNull(dataEntries.unit_id),
         ),
       )
       .groupBy(serviceAreas.utility_id);
@@ -1927,7 +1927,7 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
           inArray(dataEntries.measure_def_id, transmissionInputDefIds),
           isNull(dataEntries.payment_mode_id),
           isNull(dataEntries.customer_type_id),
-          isNull(dataEntries.energy_resource_id),
+          isNull(dataEntries.unit_id),
         ),
       )
       .groupBy(serviceAreas.utility_id);
@@ -1959,7 +1959,7 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
       .where(
         and(
           eq(dataEntries.is_deleted, false),
-          isNotNull(dataEntries.energy_resource_id),
+          isNotNull(dataEntries.unit_id),
         ),
       )
       .groupBy(serviceAreas.utility_id);
@@ -1984,7 +1984,7 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
         and(
           eq(dataEntries.is_deleted, false),
           eq(dataEntries.is_relevant, true),
-          isNotNull(dataEntries.energy_resource_id),
+          isNotNull(dataEntries.unit_id),
         ),
       )
       .groupBy(serviceAreas.utility_id);
@@ -2009,7 +2009,7 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
         and(
           eq(dataEntries.is_deleted, false),
           eq(dataEntries.is_relevant, false),
-          isNotNull(dataEntries.energy_resource_id),
+          isNotNull(dataEntries.unit_id),
         ),
       )
       .groupBy(serviceAreas.utility_id);
@@ -2059,7 +2059,7 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
           inArray(dataEntries.measure_def_id, tariffInputDefIds),
           isNotNull(dataEntries.payment_mode_id),
           isNotNull(dataEntries.customer_type_id),
-          isNull(dataEntries.energy_resource_id),
+          isNull(dataEntries.unit_id),
         ),
       )
       .groupBy(serviceAreas.utility_id);
@@ -2084,7 +2084,7 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
           inArray(dataEntries.measure_def_id, tariffInputDefIds),
           isNotNull(dataEntries.payment_mode_id),
           isNotNull(dataEntries.customer_type_id),
-          isNull(dataEntries.energy_resource_id),
+          isNull(dataEntries.unit_id),
         ),
       )
       .groupBy(serviceAreas.utility_id);
@@ -2120,7 +2120,7 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
           inArray(dataEntries.measure_def_id, transmissionInputDefIds),
           isNull(dataEntries.payment_mode_id),
           isNull(dataEntries.customer_type_id),
-          isNull(dataEntries.energy_resource_id),
+          isNull(dataEntries.unit_id),
         ),
       )
       .groupBy(serviceAreas.utility_id);
@@ -2148,7 +2148,7 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
           inArray(dataEntries.measure_def_id, transmissionInputDefIds),
           isNull(dataEntries.payment_mode_id),
           isNull(dataEntries.customer_type_id),
-          isNull(dataEntries.energy_resource_id),
+          isNull(dataEntries.unit_id),
         ),
       )
       .groupBy(serviceAreas.utility_id);
@@ -2173,11 +2173,11 @@ export async function GetDevOrganisationRelevancePivot(): Promise<{
   {
     const resources = await db
       .select({
-        utilityId: energyResources.utility_id,
-        periodEntries: energyResources.period_entries,
+        utilityId: units.utility_id,
+        periodEntries: units.period_entries,
       })
-      .from(energyResources)
-      .where(eq(energyResources.is_virtual, false));
+      .from(units)
+      .where(eq(units.is_virtual, false));
 
     for (const resource of resources) {
       if (!utilityIdSet.has(resource.utilityId)) {
@@ -2402,9 +2402,9 @@ const getEnergyResourceTypeRelevanceBuilderOptions = async (): Promise<{
 const mapEnergyResourceTypeRelevanceRows = async (
   rows: Array<{
     id: number;
-    energy_resource_type_id: number;
-    energy_type_id: number;
-    energy_source_id: number;
+    asset_id: number;
+    category_id: number;
+    technology_id: number;
   }>,
 ): Promise<DevEnergyResourceTypeRelevanceItem[]> => {
   if (rows.length === 0) {
@@ -2414,9 +2414,9 @@ const mapEnergyResourceTypeRelevanceRows = async (
   const managedItemIds = Array.from(
     new Set(
       rows.flatMap((row) => [
-        row.energy_resource_type_id,
-        row.energy_type_id,
-        row.energy_source_id,
+        row.asset_id,
+        row.category_id,
+        row.technology_id,
       ]),
     ),
   );
@@ -2439,18 +2439,18 @@ const mapEnergyResourceTypeRelevanceRows = async (
   return rows
     .map((row) => ({
       id: row.id,
-      energyResourceTypeId: row.energy_resource_type_id,
+      energyResourceTypeId: row.asset_id,
       energyResourceType:
-        managedItemNameById.get(row.energy_resource_type_id) ??
-        `Unknown (${row.energy_resource_type_id})`,
-      energyTypeId: row.energy_type_id,
+        managedItemNameById.get(row.asset_id) ??
+        `Unknown (${row.asset_id})`,
+      energyTypeId: row.category_id,
       energyType:
-        managedItemNameById.get(row.energy_type_id) ??
-        `Unknown (${row.energy_type_id})`,
-      energySourceId: row.energy_source_id,
+        managedItemNameById.get(row.category_id) ??
+        `Unknown (${row.category_id})`,
+      energySourceId: row.technology_id,
       energySource:
-        managedItemNameById.get(row.energy_source_id) ??
-        `Unknown (${row.energy_source_id})`,
+        managedItemNameById.get(row.technology_id) ??
+        `Unknown (${row.technology_id})`,
     }))
     .sort((a, b) => {
       const byResourceType = a.energyResourceType.localeCompare(
@@ -2596,11 +2596,11 @@ export async function CreateDevEnergyResourceTypeRelevance(
     .where(
       and(
         eq(
-          energyResourceTypeRelevance.energy_resource_type_id,
+          energyResourceTypeRelevance.asset_id,
           energyResourceTypeId,
         ),
-        eq(energyResourceTypeRelevance.energy_type_id, energyTypeId),
-        eq(energyResourceTypeRelevance.energy_source_id, energySourceId),
+        eq(energyResourceTypeRelevance.category_id, energyTypeId),
+        eq(energyResourceTypeRelevance.technology_id, energySourceId),
       ),
     )
     .limit(1);
@@ -2615,9 +2615,9 @@ export async function CreateDevEnergyResourceTypeRelevance(
   const [created] = await db
     .insert(energyResourceTypeRelevance)
     .values({
-      energy_resource_type_id: energyResourceTypeId,
-      energy_type_id: energyTypeId,
-      energy_source_id: energySourceId,
+      asset_id: energyResourceTypeId,
+      category_id: energyTypeId,
+      technology_id: energySourceId,
     })
     .returning({ id: energyResourceTypeRelevance.id });
 
@@ -2718,11 +2718,11 @@ export async function UpdateDevEnergyResourceTypeRelevance(
     .where(
       and(
         eq(
-          energyResourceTypeRelevance.energy_resource_type_id,
+          energyResourceTypeRelevance.asset_id,
           energyResourceTypeId,
         ),
-        eq(energyResourceTypeRelevance.energy_type_id, energyTypeId),
-        eq(energyResourceTypeRelevance.energy_source_id, energySourceId),
+        eq(energyResourceTypeRelevance.category_id, energyTypeId),
+        eq(energyResourceTypeRelevance.technology_id, energySourceId),
       ),
     )
     .limit(2);
@@ -2737,9 +2737,9 @@ export async function UpdateDevEnergyResourceTypeRelevance(
   await db
     .update(energyResourceTypeRelevance)
     .set({
-      energy_resource_type_id: energyResourceTypeId,
-      energy_type_id: energyTypeId,
-      energy_source_id: energySourceId,
+      asset_id: energyResourceTypeId,
+      category_id: energyTypeId,
+      technology_id: energySourceId,
     })
     .where(eq(energyResourceTypeRelevance.id, rowId));
 

@@ -1,6 +1,6 @@
 import { db } from "@/db/connection";
 import { dataEntries } from "@/db/schema/dataEntry";
-import { energyResources } from "@/db/schema/utility";
+import { units } from "@/db/schema/utility";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { managedListItems } from "@/db/schema/managedLists";
 import { eq, and, isNotNull, inArray } from "drizzle-orm";
@@ -44,8 +44,8 @@ export async function GET(req: Request) {
     .where(isNotNull(reportPeriods.status_id));
   const allResources = await db
     .select()
-    .from(energyResources)
-    .where(eq(energyResources.is_virtual, false));
+    .from(units)
+    .where(eq(units.is_virtual, false));
   const allItems = await db
     .select()
     .from(managedListItems)
@@ -63,7 +63,7 @@ export async function GET(req: Request) {
             g.period_entries?.some((pe) => pe.report_period_id === urp.id) &&
             entries.some(
               (de) =>
-                de.energy_resource_id === g.id &&
+                de.unit_id === g.id &&
                 de.report_period_id === urp.id,
             ),
         ),
@@ -74,7 +74,7 @@ export async function GET(req: Request) {
             gen.period_entries?.some((pe) => pe.report_period_id === urp.id) &&
             entries.some(
               (de) =>
-                de.energy_resource_id === gen.id &&
+                de.unit_id === gen.id &&
                 de.report_period_id === urp.id,
             ) &&
             !gen.name.includes("Virtual"),
@@ -92,15 +92,15 @@ export async function GET(req: Request) {
           "Generator Data": rpGens.map((g) => {
             const genEntries = entries.filter(
               (d) =>
-                d.report_period_id === urp.id && d.energy_resource_id === g.id,
+                d.report_period_id === urp.id && d.unit_id === g.id,
             );
             return {
               ServiceAreaId: g.service_area_id,
               GeneratorId: g.id,
               GeneratorName: g.name,
-              EnergyProvider: findItem(g.energy_provider_id)?.name,
-              EnergyType: findItem(g.energy_type_id)?.name,
-              EnergySource: findItem(g.energy_source_id)?.name,
+              EnergyProvider: findItem(g.provider_id)?.name,
+              EnergyType: findItem(g.category_id)?.name,
+              EnergySource: findItem(g.technology_id)?.name,
               "Total Hours in Period": Number(totalHours?.value),
               ...genEntries.reduce(
                 (acc, e) => {

@@ -92,9 +92,9 @@ export const readSourceSnapshot = async (
   }
 
   if (scope.energyResourceId == null) {
-    conditions.push(isNull(dataEntries.energy_resource_id));
+    conditions.push(isNull(dataEntries.unit_id));
   } else {
-    conditions.push(eq(dataEntries.energy_resource_id, scope.energyResourceId));
+    conditions.push(eq(dataEntries.unit_id, scope.energyResourceId));
   }
 
   const rows = await db

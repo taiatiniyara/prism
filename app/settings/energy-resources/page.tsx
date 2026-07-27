@@ -18,7 +18,7 @@ const ENERGY_SOURCE_MANAGED_LIST_ALIASES = [
 ].join("|");
 
 export default async function EnergyResourcesSettingsPage() {
-  const [energyResources, powerStations, serviceAreas, reportPeriods] =
+  const [units, powerStations, serviceAreas, reportPeriods] =
     await Promise.all([
       GetAllEnergyResources(),
       AllPowerStations(),
@@ -68,7 +68,7 @@ export default async function EnergyResourcesSettingsPage() {
         "is_active",
       ]}
       title="Energy Resources"
-      data={energyResources}
+      data={units}
       createFormProps={{
         formAction: CreateEnergyResourceFromPeriodRow,
         fields: [
@@ -112,17 +112,17 @@ export default async function EnergyResourcesSettingsPage() {
             })),
           },
           {
-            key: "energy_provider_id",
+            key: "provider_id",
             type: "managed-list",
             managedListName: "Energy Provider",
           },
           {
-            key: "energy_type_id",
+            key: "category_id",
             type: "managed-list",
             managedListName: "Energy Type",
           },
           {
-            key: "energy_source_id",
+            key: "technology_id",
             type: "managed-list",
             managedListName: ENERGY_SOURCE_MANAGED_LIST_ALIASES,
             label: "Energy Source",
@@ -180,17 +180,17 @@ export default async function EnergyResourcesSettingsPage() {
             })),
           },
           {
-            key: "energy_provider_id",
+            key: "provider_id",
             type: "managed-list",
             managedListName: "Energy Provider",
           },
           {
-            key: "energy_type_id",
+            key: "category_id",
             type: "managed-list",
             managedListName: "Energy Type",
           },
           {
-            key: "energy_source_id",
+            key: "technology_id",
             type: "managed-list",
             managedListName: ENERGY_SOURCE_MANAGED_LIST_ALIASES,
             label: "Energy Source",

@@ -14,14 +14,14 @@ type PowerStation = {
 
 type Props = {
   powerStations: PowerStation[];
-  energyResources: EnergyResourceSummary[];
+  units: EnergyResourceSummary[];
 };
 
 export default function PowerStationDnD({
   powerStations: initialPowerStations,
-  energyResources: initialEnergyResources,
+  units: initialEnergyResources,
 }: Props) {
-  const [energyResources, setEnergyResources] = useState(initialEnergyResources);
+  const [units, setEnergyResources] = useState(initialEnergyResources);
   const [dragOverStationId, setDragOverStationId] = useState<
     number | "unassigned" | null
   >(null);
@@ -42,7 +42,7 @@ export default function PowerStationDnD({
     async (targetStationId: number | "unassigned") => {
       if (draggedResourceId === null) return;
 
-      const prev = [...energyResources];
+      const prev = [...units];
       setEnergyResources((current) =>
         current.map((r) =>
           r.id === draggedResourceId
@@ -71,12 +71,12 @@ export default function PowerStationDnD({
       setDraggedResourceId(null);
       setDragOverStationId(null);
     },
-    [draggedResourceId, energyResources],
+    [draggedResourceId, units],
   );
 
   const handleRemove = useCallback(
     async (resourceId: number) => {
-      const prev = [...energyResources];
+      const prev = [...units];
       setEnergyResources((current) =>
         current.map((r) =>
           r.id === resourceId ? { ...r, power_station_id: null } : r,
@@ -89,13 +89,13 @@ export default function PowerStationDnD({
         setEnergyResources(prev);
       }
     },
-    [energyResources],
+    [units],
   );
 
   const getAssignedResources = (stationId: number) =>
-    energyResources.filter((r) => r.power_station_id === stationId);
+    units.filter((r) => r.power_station_id === stationId);
 
-  const unassignedResources = energyResources.filter(
+  const unassignedResources = units.filter(
     (r) => r.power_station_id === null,
   );
 

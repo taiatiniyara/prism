@@ -1,6 +1,6 @@
 import { db } from "@/db/connection";
 import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
-import { energyResources, serviceAreas } from "@/db/schema/utility";
+import { units, serviceAreas } from "@/db/schema/utility";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { managedListItems } from "@/db/schema/managedLists";
 import { eq, isNotNull } from "drizzle-orm";
@@ -26,8 +26,8 @@ export async function GET(req: Request) {
     .where(eq(serviceAreas.is_active, true));
   const allResources = await db
     .select()
-    .from(energyResources)
-    .where(eq(energyResources.is_virtual, false));
+    .from(units)
+    .where(eq(units.is_virtual, false));
   const allItems = await db
     .select()
     .from(managedListItems)
@@ -65,7 +65,7 @@ export async function GET(req: Request) {
                       l.report_period_id === urp.id &&
                       rpGens.find(
                         (g) =>
-                          g.id === l.energy_resource_id &&
+                          g.id === l.unit_id &&
                           g.service_area_id === sa.id,
                       ),
                   );

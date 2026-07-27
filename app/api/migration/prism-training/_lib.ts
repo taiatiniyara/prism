@@ -6,7 +6,7 @@ import { kpiDefinitions } from "@/db/schema/kpi";
 import { managedListItems, managedLists } from "@/db/schema/managedLists";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import {
-  energyResources,
+  units,
   organisations,
   serviceAreas,
 } from "@/db/schema/utility";
@@ -21,7 +21,7 @@ export const SUPPORTED_TABLES = [
   "organisations",
   "service_areas",
   "report_periods",
-  "energy_resources",
+  "units",
   "measure_definitions ",
   "kpi_definitions",
   "data_entries",
@@ -107,8 +107,8 @@ const getRows = async (
     return db.select().from(reportPeriods).limit(limit).offset(offset);
   }
 
-  if (table === "energy_resources") {
-    return db.select().from(energyResources).limit(limit).offset(offset);
+  if (table === "units") {
+    return db.select().from(units).limit(limit).offset(offset);
   }
 
   if (table === "measure_definitions ") {

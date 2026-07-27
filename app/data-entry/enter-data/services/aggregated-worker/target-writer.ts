@@ -39,10 +39,10 @@ export const writeCalculatedTargetValue = async ({
     }
 
     if (scope.energyResourceId == null) {
-      existingConditions.push(isNull(dataEntries.energy_resource_id));
+      existingConditions.push(isNull(dataEntries.unit_id));
     } else {
       existingConditions.push(
-        eq(dataEntries.energy_resource_id, scope.energyResourceId),
+        eq(dataEntries.unit_id, scope.energyResourceId),
       );
     }
 
@@ -66,7 +66,7 @@ export const writeCalculatedTargetValue = async ({
       report_period_id: scope.reportPeriodId,
       measure_def_id: inputDefId,
       service_area_id: scope.serviceAreaId ?? null,
-      energy_resource_id: scope.energyResourceId ?? null,
+      unit_id: scope.energyResourceId ?? null,
       // Calculated targets are numeric → write the typed column (§4.8); legacy
       // `value` kept transitionally so un-migrated readers don't regress.
       value_numeric: value,
@@ -75,10 +75,10 @@ export const writeCalculatedTargetValue = async ({
       is_deleted: false,
       updated_at: now.toISOString(),
       updated_by_id: user.id,
-      energy_source_id: dims.energySource,
-      energy_type_id: dims.energyType,
-      energy_provider_id: dims.energyProvider,
-      energy_resource_type_id: dims.energyResourceType,
+      technology_id: dims.energySource,
+      category_id: dims.energyType,
+      provider_id: dims.energyProvider,
+      asset_id: dims.energyResourceType,
       customer_type_id: dims.customerType,
       payment_mode_id: dims.paymentMode,
       consumption_band_id: dims.consumptionBand,

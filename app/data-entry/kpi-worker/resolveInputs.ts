@@ -159,10 +159,10 @@ export const resolveFormulaInputValues = async (
   }
 
   if (request.scope.energyResourceId == null) {
-    scopeConditions.push(isNull(dataEntries.energy_resource_id));
+    scopeConditions.push(isNull(dataEntries.unit_id));
   } else {
     scopeConditions.push(
-      eq(dataEntries.energy_resource_id, request.scope.energyResourceId),
+      eq(dataEntries.unit_id, request.scope.energyResourceId),
     );
   }
 
@@ -180,9 +180,9 @@ export const resolveFormulaInputValues = async (
       >`coalesce(${dataEntries.value_numeric}::text, ${dataEntries.value})`,
       isDeleted: dataEntries.is_deleted,
       isRelevant: dataEntries.is_relevant,
-      energyProviderId: dataEntries.energy_provider_id,
-      energySourceId: dataEntries.energy_source_id,
-      energyResourceTypeId: dataEntries.energy_resource_type_id,
+      energyProviderId: dataEntries.provider_id,
+      energySourceId: dataEntries.technology_id,
+      energyResourceTypeId: dataEntries.asset_id,
       customerTypeId: dataEntries.customer_type_id,
       paymentModeId: dataEntries.payment_mode_id,
       consumptionBandId: dataEntries.consumption_band_id,
@@ -245,10 +245,10 @@ export const resolveFormulaInputValues = async (
     ) => matchDimension(actual, bound ?? null, scopeValue, allMember);
     const candidates = sourceRows.filter(
       (c) =>
-        m(c.energyProviderId, formulaInput.energy_provider_id, ALL_MEMBER.energy_provider_id) &&
-        m(c.energyTypeId, formulaInput.energy_type_id, ALL_MEMBER.energy_type_id) &&
-        m(c.energySourceId, formulaInput.energy_source_id, ALL_MEMBER.energy_source_id) &&
-        m(c.energyResourceTypeId, formulaInput.energy_resource_type_id, ALL_MEMBER.energy_resource_type_id) &&
+        m(c.energyProviderId, formulaInput.provider_id, ALL_MEMBER.provider_id) &&
+        m(c.energyTypeId, formulaInput.category_id, ALL_MEMBER.category_id) &&
+        m(c.energySourceId, formulaInput.technology_id, ALL_MEMBER.technology_id) &&
+        m(c.energyResourceTypeId, formulaInput.asset_id, ALL_MEMBER.asset_id) &&
         m(c.customerTypeId, formulaInput.customer_type_id, ALL_MEMBER.customer_type_id, request.scope.customerTypeId ?? null) &&
         m(c.paymentModeId, formulaInput.payment_mode_id, ALL_MEMBER.payment_mode_id, request.scope.paymentModeId ?? null) &&
         m(c.consumptionBandId, formulaInput.consumption_band_id, ALL_MEMBER.consumption_band_id) &&

@@ -1,7 +1,7 @@
 import { db } from "@/db/connection";
 import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
 import {
-  energyResources,
+  units,
   organisations,
   serviceAreas,
 } from "@/db/schema/utility";
@@ -32,8 +32,8 @@ export async function GET(req: Request) {
     .where(eq(serviceAreas.is_active, true));
   const allResources = await db
     .select()
-    .from(energyResources)
-    .where(eq(energyResources.is_virtual, false));
+    .from(units)
+    .where(eq(units.is_virtual, false));
   const allUtils = await db
     .select()
     .from(organisations)
@@ -85,7 +85,7 @@ export async function GET(req: Request) {
                         l.report_period_id === r.id &&
                         allResources.some(
                           (g) =>
-                            g.id === l.energy_resource_id &&
+                            g.id === l.unit_id &&
                             g.service_area_id === sa.id &&
                             g.period_entries?.some(
                               (pe) => pe.report_period_id === r.id,

@@ -13,7 +13,7 @@ import {
 export default async function PowerStationsSettingsPage() {
   const user = await getCurrentUser();
 
-  const [powerStations, serviceAreas, energyResources] = await Promise.all([
+  const [powerStations, serviceAreas, units] = await Promise.all([
     AllPowerStations(),
     AllServiceAreas(),
     GetEnergyResourceList(),
@@ -107,7 +107,7 @@ export default async function PowerStationsSettingsPage() {
             id: ps.id,
             name: ps.name,
           }))}
-          energyResources={energyResources}
+          units={units}
         />
       </div>
     </div>

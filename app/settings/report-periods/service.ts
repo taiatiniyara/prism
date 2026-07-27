@@ -8,7 +8,7 @@ import {
   reportPeriods,
   ReportPeriod,
 } from "@/db/schema/reportPeriods";
-import { energyResources, organisations } from "@/db/schema/utility";
+import { units, organisations } from "@/db/schema/utility";
 import { and, desc, eq, lt } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -50,8 +50,8 @@ export async function CreateReportPeriod(
   if (prevRp) {
     const energyResourcesList = await db
       .select()
-      .from(energyResources)
-      .where(eq(energyResources.utility_id, rp.utility_id));
+      .from(units)
+      .where(eq(units.utility_id, rp.utility_id));
 
     for (const resource of energyResourcesList) {
       const prevEntry = resource.period_entries.find(
@@ -74,9 +74,9 @@ export async function CreateReportPeriod(
       ];
 
       await db
-        .update(energyResources)
+        .update(units)
         .set({ period_entries: newPeriodEntries })
-        .where(eq(energyResources.id, resource.id));
+        .where(eq(units.id, resource.id));
     }
   }
 
