@@ -31,7 +31,12 @@ Never hardcode a sector term in a component — always go through the resolver/h
   (the guaranteed fallback, so nothing ever renders blank/snake_case).
 - `terminology.config.ts` — the **interim app-config map** + the `lookupTerm` seam.
 - `resolver.ts` — the one resolver (map → neutral default → raw key).
-- `useTerm.ts` — thin client hook over `resolveTerm`.
+- `useTerm.ts` — thin client hook over `resolveTerm`; reads the active sector from
+  `sector-context` so client call sites need no changes in Phase 5b.
+- `active-sector.ts` — **server** seam `getActiveSector()`: the single source of
+  the request's active sector (returns electricity today; Phase-5b injection point).
+- `sector-context.tsx` — **client** `SectorProvider` + `useActiveSector()` (defaults
+  to electricity when unmounted, so today needs no provider).
 
 ## Phase 5b handoff (owned by #2 + #11)
 
@@ -44,9 +49,18 @@ is **zero component churn**:
    `organisation_sector`.
 2. **#11** repoints **only `lookupTerm` in `terminology.config.ts`** at the
    `sector_terminology` table (preload into a map at request scope, or make the
-   resolver async), and wires the real **active sector** into `useTerm` /
-   `resolveTerm` calls from the single filter-context source (cookie-scope
-   pattern, cf. `lib/utility-context.ts`) — load-once-per-session + cache,
-   invalidate on BMO edit; never per-render.
+   resolver async) — load-once-per-session + cache, invalidate on BMO edit;
+   never per-render.
+3. **#11** fills in the **active-sector source** (pre-staged, 2026-07-27): replace
+   the body of `getActiveSector()` in `active-sector.ts` to read the request's
+   sector from the filter context (cookie-scope, cf. `lib/utility-context.ts`) /
+   `organisation_sector`, and mount `<SectorProvider sector={await getActiveSector()}>`
+   at the subtree owning the sector filter (seed from a server component). The
+   client hook + provider and the two server call sites (`settings/service-areas`,
+   `settings/energy-resources`) are **already wired** to consume it, so this is a
+   one-function-plus-one-mount change — no other call sites move.
 
 The `resolver.ts` contract, the `useTerm` API, and every call site stay as-is.
+The active-sector seam is already threaded end-to-end (server `getActiveSector`,
+client `useActiveSector`/`SectorProvider`); Phase 5b only swaps the two seam
+bodies (`lookupTerm`, `getActiveSector`) and mounts the provider.
