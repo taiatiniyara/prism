@@ -90,6 +90,19 @@ test), and (b) a backed-up migration (`scripts/fix-kpi-formula-input-key.ts`, ba
 `backup.kpi_formula_inputs_backup_20260723`) that normalised 129 defs. This fixes the *key name*;
 it does **not** fix the disjoint id universe.
 
+**Build-window coordination — energy-dim physical rename (owned by #4).** #4 is authoring ONE atomic
+rename on branch `claude/energy-dim-rename-full`: `energy_provider_id→provider_id`,
+`energy_type_id→category_id`, `energy_source_id→technology_id`, `energy_resource_type_id→asset_id`,
+`energy_resource_id→unit_id`; table `energy_resources→units`; **and the matching `energy_*` keys in
+`FormulaInput` / `kpi_definitions.formula_inputs`**. **#4 moves the resolver itself** — it touches
+`kpi-worker/resolveInputs` + `normalizeFormulaInput`, `settings/kpi`, and `settings/inputs`
+formulaBuilder. **FREEZE (per Eugene): the calculator stream must NOT edit those shared files or
+pre-stage a rename until #4's branch merges** — #4 will ping when it lands. So this rename is *not*
+our task; we just adopt the physical names in the `formula_binding` design (§5.3) and consume the
+renamed columns/keys after it lands. Note: **`kpi_definitions.category_id/subcategory_id` are NOT
+renamed** (Eugene's call) — that's the KPI *grouping*, distinct from the energy `category` dimension
+(`data_entries.category_id`); same word, different table, no conflict with our `dimension_key`.
+
 **DECISION (locked this session):** KPIs will be **rebuilt manually after the measure migration
 is done**, not mechanically re-pointed. The current KPI definitions are treated as a reference
 list to rebuild from, not data to migrate. This spec is the model they'll be rebuilt onto.
@@ -181,14 +194,29 @@ holds *computed* values where `data_entries` holds *entered* ones:
 
 `kpi_actual = (kpi_def_id, period_id, grain anchor, 10 dimension slices, value, computed_at, formula_version)`
 
-- **grain anchor** (equipment / power station / service area / organisation / country + exactly-one
-  anchor) — from stream #8's level-anchored model;
+- **grain anchor** — from stream #8's level-anchored model (**#8 CONFIRMED `kpi_actual` reuses this
+  exact anchor set, 2026-07-26**, see `multi-level-hierarchy-requirements.md`);
 - **dimension slices** — the 10 dimension member columns from stream #2's medallion `data_entries`;
 - **`period_id`** — the canonical `period` time axis from the KPI-time-series spec.
 
 This gives the level+scope keying the rollup needs (the current `kpi` table stores one value per
-(period, kpi_def) with no level/scope column, so rolled-up and finest values would overwrite). The
-column set must be agreed on the board before DDL — see WORKSTREAMS.md cross-stream note.
+(period, kpi_def) with no level/scope column, so rolled-up and finest values would overwrite).
+
+**Anchor rules the write path must honour (confirmed with #8):**
+1. **Exactly-one-anchor** — `CHECK(num_nonnulls(equipment_id, power_station_id, service_area_id,
+   organisation_id, country_id) = 1)`; the populated anchor *is* the row's level.
+2. **`entry_level`** — a derived (1–5) column so queries/AI filter by level without a CASE.
+3. **`NULLS NOT DISTINCT`** on the unique address — 4 of 5 anchors are NULL per row, so a plain unique
+   index would dedupe nothing (#8 flags this applies to `kpi_actual` too; PG 15+).
+4. **No sentinel anchoring** — a rolled-up row anchors to the *real* parent entity (e.g. the real
+   `country_id`); "All Countries"/"Others" sentinels are **computed** aggregates, never a stored
+   address. (This is §0.4 — never store an aggregate as a member — applied to output rows.)
+5. **RLS owning-org column** (from #12) on `kpi_actual`, derivable at write time, so tenant isolation
+   can move to Postgres RLS without a second migration.
+
+**DDL ownership (Eugene 2026-07-26): #2 writes and runs the `kpi_actual` DDL.** #3 owns the
+**column-set merge spec + the write path**; we hand requirements to #2, not DDL. The dimension
+columns / merged set still await **#2's** confirmation — see WORKSTREAMS.md cross-stream note.
 
 ### 4.5 Gold refresh model (DECIDED 2026-07-24)
 
@@ -307,11 +335,19 @@ CREATE UNIQUE INDEX ux_binding_owner_kpi ON formula_binding
 -- One row per dimension the variable pins.
 CREATE TABLE formula_binding_dimension (
   binding_id     integer NOT NULL REFERENCES formula_binding(id) ON DELETE CASCADE,
-  dimension_key  varchar(32) NOT NULL,   -- one of the 10 canonical keys
+  dimension_key  varchar(32) NOT NULL,   -- physical dimension name (see below)
   member_id      integer REFERENCES managed_list_items(id) ON DELETE RESTRICT,
   PRIMARY KEY (binding_id, dimension_key)
 );
 ```
+
+**`dimension_key` uses the physical dimension names** that #2's PR #67 introduces —
+`provider · category · technology · asset · unit · customer_type · payment_mode · band · division ·
+gender · utility_function` — **not** the legacy `type / source / resource_type`. PR #67 physicalises
+the energy columns (`energy_provider_id→provider_id`, `energy_type_id→category_id`,
+`energy_source_id→technology_id`, `energy_resource_type_id→asset_id`, `energy_resource_id→unit_id`)
+and rewrites the matching `energy_*` JSON keys in the legacy `kpi_definitions.formula_inputs`. Naming
+`dimension_key` to match keeps bindings aligned with the physical schema and the settled taxonomy.
 
 **Three states per tag — no ambiguity:**
 
