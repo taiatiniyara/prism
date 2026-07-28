@@ -16,10 +16,11 @@ empty tables are core tables awaiting the medallion bronze reload
 **Result of the diff (schema-declared vs DB public tables):**
 
 ```
-74 tables declared in db/schema/   ==   74 tables present in public schema
+73 tables declared in db/schema/   ==   73 tables present in public schema
 IN DB but not in schema (orphans):  0
 IN schema but not in DB (missing):  0
 ```
+(Was 74=74 until `external_registrations` was retired 2026-07-28 — see below.)
 
 **The live database is in exact 1:1 correspondence with the architecture.**
 There are **no redundant tables in the live model** — nothing in `public` can be
@@ -35,31 +36,27 @@ dropped without first removing it from the design.
 | KPI / BSC (`kpi`, `bsc-builder`) | `kpi_definitions`, `kpi`, `kpi_calculation_attempts`, `bsc`, `bsc_template_node`, `bsc_utility_node`, `bsc_specific_objective`, `bsc_initiative`, `bsc_kpi_link`, `bsc_objective_link`, `bsc_template_link`, `bsc_theme`, `bsc_kpi_target_plan` |
 | Custom-KPI requests (`custom-kpi-requests`) | `custom_kpi_request`, `custom_kpi_decision`, `custom_kpi_lifecycle_event`, `custom_kpi_email_delivery` |
 | AI (`ai`) | `ai_chat_session`, `ai_chat_turn`, `ai_tool_call`, `ai_feedback`, `ai_review_queue`, `ai_usage_metrics`, `ai_benchmark`, `ai_cost_budget`, `ai_rate_limit_window` |
-| Auth & access (`auth-schema`, `rls`) | `roles`, `user`, `session`, `account`, `verification`, `two_factor`, `user_status_event`, `user_registration_clarification_message`, `external_registrations`†, `sidebar_access` |
+| Auth & access (`auth-schema`, `rls`) | `roles`, `user`, `session`, `account`, `verification`, `two_factor`, `user_status_event`, `user_registration_clarification_message`, `sidebar_access` |
 | Migration tooling (`migration*`) | `migration_logs`, `migration_loads`, `migration_rejections`, `migration_scorecard` |
 | Ops / infra (`alerting`, `audit-log`, `backup-log`, `email-schedules`, `error-log`, `governance`, `benchmarking-request`, `devValidationBuilder`, `ui-style`) | `alert_rules`, `alert_history`, `notifications`, `audit_logs`, `backup_logs`, `email_schedules`, `schedule_send_logs`, `error_logs`, `governance_data`, `utility_context_data`, `benchmarking_request`, `dev_validation_builder_config`, `ui_style_override` |
 
 Silver/gold live in separate schemas as **views** derived from the above — also
-required, not counted in the 74.
-
-† `external_registrations` — see below.
+required, not counted in the 73.
 
 ## What can actually be deleted
 
-### 1. The one architectural retirement — `external_registrations`
+### 1. The one architectural retirement — `external_registrations` ✅ DONE
 
-The single table that is declared yet **functionally dead**: 0 rows, no FKs in or
-out, no dependent views, and a **dead write path** (nothing inserts — superseded
-by `user.status = 'pending'`). Its only reader is the vestigial screen
-`app/settings/external-registrations/` (page + action-panel + service).
+The single table that was declared yet **functionally dead**: 0 rows, no FKs in
+or out, no dependent views, and a **dead write path** (nothing inserted —
+superseded by `user.status = 'pending'`, approved via `app/settings/users/`).
 
-Retiring it is a *design change*, not a redundancy cleanup: remove the
-`externalRegistrations` pgTable from `db/schema/auth-schema.ts`, delete the
-screen, then drop the table.
-
-**Ownership: stream #10 (access & registration)** owns this end-to-end
-(2026-07-28, Eugene-approved) — it sits squarely in their auth/registration
-domain. They will broadcast the merge + DB drop when done.
+**Retired 2026-07-28 by stream #10** (PR #79, `30f0f72`) — its domain: the
+`externalRegistrations` pgTable + types removed from `db/schema/auth-schema.ts`
+(tombstone comment left), the `app/settings/external-registrations/` screen
+deleted, and the table dropped from the DB. Verified: DB table gone, schema/DB
+diff now 73=73. The richer structured intake (`access_request`, spec §5.4)
+remains a separate future build — it was **not** stubbed as part of this cleanup.
 
 ### 2. The `backup.*` schema — 38 snapshots, 91,772 rows (not part of the architecture)
 
@@ -83,10 +80,11 @@ not interchangeable:
 
 ## Bottom line
 
-- **Live/public schema: no redundant tables** — 74 declared = 74 present, exact
-  match with the architecture.
+- **Live/public schema: no redundant tables** — 73 declared = 73 present, exact
+  match with the architecture (was 74=74 before the `external_registrations`
+  retirement).
 - **Only deletable objects are the `backup.*` snapshots** (not part of the
   design). Drop the ~19 settled ones freely; hold the recent safety nets; keep
   `data_entries_backup_20260722` until the reload source is confirmed.
-- **`external_registrations`** is the one design wart worth retiring — now owned
-  by #10.
+- **`external_registrations`** — the one design wart — is now **retired** (#10,
+  PR #79, 2026-07-28).
