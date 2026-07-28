@@ -14,8 +14,9 @@ import {
  * load; `started_at` is the run timestamp, `finished_at`/`status` closed by finishLoad().
  *
  * This is what makes load_id auto-increment: inserting a row assigns the next serial id,
- * so the run number climbs 1, 2, 3, … across loads even though the rejection ledger is
- * truncated each run.
+ * so the run number climbs 1, 2, 3, … across loads. Scorecard + rejections are RETAINED per
+ * load_id (not truncated), so variance is comparable iteration-by-iteration
+ * (scripts/migration-status.ts); scripts/reset-migration.ts wipes all history for a clean slate.
  */
 export type MigrationLoadStatus = "running" | "completed" | "failed";
 

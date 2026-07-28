@@ -36,8 +36,11 @@ export async function startLoad(opts?: {
     })
     .returning({ id: migrationLoads.id });
   const loadId = row.id;
-  // Reset the per-run working tables — each load starts clean.
-  await db.execute(sql`TRUNCATE ${migrationRejections} RESTART IDENTITY`);
+  // Rejections + scorecard are TAGGED by load_id and RETAINED across runs, so variance can be
+  // compared iteration-by-iteration (scripts/migration-status.ts). Only clear THIS load's own rows
+  // (a no-op for a fresh loadId; makes a re-run of the same id idempotent). For a full clean slate
+  // — clearing all history — use scripts/reset-migration.ts.
+  await db.delete(migrationRejections).where(eq(migrationRejections.load_id, loadId));
   await db.delete(migrationScorecard).where(eq(migrationScorecard.load_id, loadId));
   return loadId;
 }
