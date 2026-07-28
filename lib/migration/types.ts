@@ -56,4 +56,8 @@ export interface ExtractRow {
   valueType?: ValueType | null;
   value?: number | boolean | string | null; // option: the managed_list_items id
   statusId?: number | null; // optional explicit status; else derived (filled→Entered, empty→Requested)
+  // p1 provenance (all optional) — the original data-entry person, time, and note.
+  updatedById?: string | null; // → data_entries.updated_by_id (a p2-valid user.id; unresolved → nulled + logged)
+  updatedAt?: string | null; // → data_entries.updated_at (the ORIGINAL entry time; preserved, not overwritten)
+  comment?: string | null; // → wrapped into data_entries.comments as one DataEntryComment by the original person
 }

@@ -39,6 +39,9 @@ const COLS: { key: string; req: string; all: string; note: string }[] = [
   { key: "value_type", req: "if value", all: "", note: "one of: numeric | boolean | text | option" },
   { key: "value", req: "optional", all: "", note: "the value (option → managed_list_items id). Present=filled shell, blank=empty shell" },
   { key: "status_id", req: "optional", all: "", note: "else derived: filled→Entered(3), empty→Requested(1)" },
+  { key: "updated_by_id", req: "optional", all: "", note: "provenance: original data-entry person → updated_by_id (must be a p2 user.id; unresolved → nulled + logged)" },
+  { key: "updated_at", req: "optional", all: "", note: "provenance: original entry date/time → updated_at (preserved, not overwritten). Aliases: update_date, entered_at" },
+  { key: "comment", req: "optional", all: "", note: "provenance: the entry person's note → wrapped into data_entries.comments. Aliases: note, comments" },
 ];
 
 const headers = COLS.map((c) => c.key);

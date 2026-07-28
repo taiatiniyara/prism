@@ -12,6 +12,8 @@
  *
  * Flags: --dry-run  parse/validate only, no writes · --label=TEXT  load label
  *        --limit=N   parse at most N extract rows (smoke test)
+ *        --no-flush  append to existing data_entries (default is flush-and-reload: truncate first,
+ *                    so you can iterate the migration cleanly — each run is a fresh replace)
  * Exit code is non-zero if there are parse errors or scorecard anomalies (pipeline-friendly).
  */
 import {
@@ -93,6 +95,17 @@ async function main() {
   const { startLoad, finishLoad, reconcilePeriod, getAnomalies, getScorecardSummary } =
     await import("../lib/migration/loads");
   const { loadExtract } = await import("../lib/migration/load");
+  const { db } = await import("../db/connection");
+  const { sql } = await import("drizzle-orm");
+
+  // FLUSH-AND-RELOAD (default): empty data_entries so every iteration is a clean replace and rows
+  // can't collide on the unique address. Pass --no-flush to append to existing rows.
+  if (!FLAGS.has("--no-flush")) {
+    console.log("\nFlush-and-reload: truncating data_entries (CASCADE — also clears data_entry_logs)…");
+    await db.execute(sql`TRUNCATE data_entries CASCADE`);
+  } else {
+    console.log("\n--no-flush: appending to existing data_entries (rows may collide on the unique address).");
+  }
 
   const loadId = await startLoad({ label: LABEL, sourceSystem: "p1_extract" });
   console.log(`\nLoad #${loadId} started. Loading ${extract.rows.length} rows…`);
