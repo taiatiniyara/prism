@@ -142,6 +142,10 @@ const EXTRACT_COLUMNS = {
   valueType: ["value_type", "valuetype"],
   value: ["value"],
   statusId: ["status_id", "status"],
+  // p1 provenance (optional)
+  updatedById: ["updated_by_id", "entered_by_id", "entered_by", "data_entry_user_id", "user_id"],
+  updatedAt: ["updated_at", "update_date", "entered_at", "entry_date", "date_entered"],
+  comment: ["comment", "comments", "note", "notes"],
 } as const;
 
 type ExtractField = keyof typeof EXTRACT_COLUMNS;
@@ -190,6 +194,20 @@ export async function parseExtractWorkbook(
   const get = (r: ExcelJS.Row, field: ExtractField) => {
     const col = colOf.get(field);
     return col ? cellValue(r.getCell(col).value) : null;
+  };
+  // text getter (trimmed, null when empty)
+  const getStr = (r: ExcelJS.Row, field: ExtractField): string | null => {
+    const v = get(r, field);
+    const s = v == null ? "" : String(v).trim();
+    return s === "" ? null : s;
+  };
+  // timestamp getter — preserve full ISO from a Date cell (cellValue truncates Dates to a date)
+  const getTs = (r: ExcelJS.Row, field: ExtractField): string | null => {
+    const col = colOf.get(field);
+    if (!col) return null;
+    const raw = r.getCell(col).value;
+    if (raw instanceof Date) return raw.toISOString();
+    return getStr(r, field);
   };
 
   let dataRows = 0;
@@ -256,6 +274,9 @@ export async function parseExtractWorkbook(
       valueType,
       value,
       statusId: toInt(get(r, "statusId")),
+      updatedById: getStr(r, "updatedById"),
+      updatedAt: getTs(r, "updatedAt"),
+      comment: getStr(r, "comment"),
     });
   });
 
