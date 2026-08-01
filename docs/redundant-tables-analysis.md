@@ -26,7 +26,7 @@ IN schema but not in DB (missing):  0
 There are **no redundant tables in the live model** — nothing in `public` can be
 dropped without first removing it from the design.
 
-## The 74 required tables, by subsystem
+## The 73 required tables, by subsystem
 
 | Subsystem (schema file) | Tables |
 |---|---|
@@ -58,33 +58,33 @@ deleted, and the table dropped from the DB. Verified: DB table gone, schema/DB
 diff now 73=73. The richer structured intake (`access_request`, spec §5.4)
 remains a separate future build — it was **not** stubbed as part of this cleanup.
 
-### 2. The `backup.*` schema — 38 snapshots, 91,772 rows (not part of the architecture)
+### 2. The `backup.*` schema — CLEARED ✅ DONE
 
 Dated point-in-time safety nets from the rename/migration work; nothing in code
-references the `backup` schema. This is the real reclaim, but the snapshots are
-not interchangeable:
+referenced the `backup` schema, so it was never part of the architecture.
 
-- **Keep (active safety nets, last ~48h, changes still settling):**
-  `managed_list_items_pre_vocab_20260728`, `managed_lists_pre_vocab_20260728`,
-  `units_pre_assetclass_20260728`, `units_dropped_cols_20260728`, the `*_20260727`
-  set (`countries_*`, `sub_regions`, `sentinel_*`, `energy_resources_pre_unitrename`,
-  `kpi_formula_inputs_energyrename`, `data_entries_pre_energyrename`,
-  `measure_definitions_description`), `managed_list_items_pre_all_rename`.
-- **⚠️ Verify before touching — possibly the only live copy:**
-  `data_entries_backup_20260722` (**57,391 rows**). Since `public.data_entries` is
-  currently empty pending the medallion reload, this may be the only copy of the
-  real bronze data. Do not drop until the reload source is confirmed elsewhere.
-- **Safe to drop once each protected change is confirmed stable (≈33k rows, ~19
-  tables, zero app impact):** the `*_pre_taxonomy`, `*_pre_purge`, `*_pre_renumber`,
-  `*_440_pre_delete`, `*_pre_coldrop`, `*_pre_grouprename` snapshots.
+**Emptied 2026-07-28 (Eugene-approved): all 39 tables dropped (~92,273 rows) in
+one transaction.** The empty `backup` schema itself was kept so sessions can
+still write future rollback snapshots into it.
+
+This included `data_entries_backup_20260722` (**57,391 rows**) — flagged at the
+time as *possibly the only copy of the real bronze data*, since `public.data_entries`
+was (and still is) empty pending the medallion reload. Eugene made the explicit,
+eyes-open call to drop it anyway (source data held elsewhere / not needed). All
+the other snapshots (`*_pre_taxonomy`, `*_pre_purge`, `*_pre_renumber`,
+`*_440_pre_delete`, `*_pre_coldrop`, `*_pre_grouprename`, the `*_20260727/28`
+sets) protected changes since verified stable. DB-active streams (#2/#8/#10/#14)
+were notified per the coordination protocol.
 
 ## Bottom line
 
 - **Live/public schema: no redundant tables** — 73 declared = 73 present, exact
   match with the architecture (was 74=74 before the `external_registrations`
   retirement).
-- **Only deletable objects are the `backup.*` snapshots** (not part of the
-  design). Drop the ~19 settled ones freely; hold the recent safety nets; keep
-  `data_entries_backup_20260722` until the reload source is confirmed.
+- **The `backup.*` schema is now cleared** (all 39 tables / ~92,273 rows dropped
+  2026-07-28, Eugene-approved; empty schema kept for future snapshots).
 - **`external_registrations`** — the one design wart — is now **retired** (#10,
   PR #79, 2026-07-28).
+- Net: the live/public schema is a clean 73=73 with the architecture, and there
+  are **no remaining reclaim candidates** — both the one design wart and the
+  entire backup schema have been cleared.
