@@ -114,12 +114,13 @@ Direct DML/DDL on the shared **dev** DB with no commit/PR (or applied ahead of a
 
 Per [`USER-IMPACT.md`](USER-IMPACT.md) (new protocol, `5c2959e`, Eugene-directed): journey-affecting changes must add a ledger row **in the same commit**; **#15 audits** each merged journey-affecting change against a row — a landed change with no row is a gap. Instruction-writing owner is **#11**.
 
-**First pass 2026-07-28 — ledger has 10 rows. Findings:**
-- ⚠ **GAP — `external_registrations` retirement (#10, PR #79 `30f0f72`, landed + DB applied).** The legacy external-registrations intake **console was deleted** (`app/settings/external-registrations`) and the flow replaced by pending-user (`user.status`). Live journey change for **BMO / org-admin / registrant** with **no ledger row** — row 5 covers the *future* intake quiz, not the retirement of the old console. → flagged to #10 to add a row.
-- ❓ **CANDIDATE — managed-lists vocab rename (#4/#14).** List display names changed (→ Strata / Provider / Category / Technology / Asset Class / Unit). A BMO managing these lists sees renamed lists → possibly journey-affecting. Flagged to #4/#14 to decide if a row is warranted.
-- ✅ **Covered:** MFA (r1), "Grid" label (r2), sentinel deletion (r3), API-key tiering (r4), BSC "+Add KPI" picker (r8), trajectory removal (r9).
+**Pass 2 (2026-07-28) — ledger now has 13 rows. Findings:**
+- ✅ **GAP CLOSED — `external_registrations` retirement (#10, PR #79).** #10 authored the remediation row; #15 inserted it as **row 13** (BMO/org-admin/registrant: approve via Pending Users screen, old console gone).
+- ✅ **My pass-1 miscall corrected:** I'd filed the `measure_definitions.description` drop and `units.is_aggregated` drop as "internal-only." **Wrong** — both removed a **settings form field** (Description textarea; "Is Aggregated Resource" checkbox), so both are journey-affecting. #14 caught it and added **rows 11 & 12**. Lesson: a *column* drop can still be a *journey* change if a form field sat on it — check the settings surfaces, not just the schema.
+- ❓ **CANDIDATE still open — managed-lists vocab rename (#4/#14).** List display names changed (→ Strata / Provider / Category / …). Flagged to #4/#14 to decide if a row is warranted.
+- ✅ **Covered:** MFA (r1), "Grid" label (r2), sentinel deletion (r3), API-key tiering (r4), BSC "+Add KPI" picker (r8), trajectory removal (r9), Description drop (r11), is_aggregated drop (r12), external_registrations (r13).
 - 🕐 **Forward obligations (correctly rowed, not yet built):** registration quiz (r5), grain data-entry (r6), unit lifecycle (r7), calculator builder (r10).
-- ⚙ **Internal-only, no row needed:** energy-dim / `asset_class_id` / `strata_id` column renames, `measure_definitions.description` drop, `units.category_id`/`type_id`/`is_aggregated` drops — schema with no user-facing surface.
+- ⚙ **Confirmed internal-only (no row):** energy-dim / `asset_class_id` / `strata_id` column renames, `units.category_id`/`type_id` drops — no user-facing surface (verified these had no settings field, unlike r11/r12).
 
 ## 3. Awaiting Eugene (decisions that unblock merges)
 
