@@ -99,6 +99,10 @@ export async function parseControlTotalsWorkbook(
         errors.push({ sheet, row: rowNumber, field: key, reason: "missing/non-numeric" });
       return val ?? 0;
     };
+    // values_calculated is EXCLUDED from the migration and from the balance tallies (RAW-ONLY: p2
+    // recomputes calculated/KPI values). It is informational-only, so it is OPTIONAL — a blank or
+    // absent column is treated as 0 with no parse error.
+    const optNum = (key: string): number => toInt(cell(r, key)) ?? 0;
     const sumRaw = cell(r, "sum_value_numeric");
     rows.push({
       p1ReportPeriodId: p1,
@@ -111,7 +115,7 @@ export async function parseControlTotalsWorkbook(
       valuesOption: num("values_option"),
       sumValueNumeric: sumRaw == null ? 0 : Number(String(sumRaw).replace(/,/g, "")),
       valuesNoncalcUnfiltered: num("values_noncalc_unfiltered"),
-      valuesCalculated: num("values_calculated"),
+      valuesCalculated: optNum("values_calculated"), // optional/info-only — excluded from tallies
     });
   });
   return { rows, errors };
