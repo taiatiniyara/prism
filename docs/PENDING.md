@@ -110,6 +110,17 @@ Direct DML/DDL on the shared **dev** DB with no commit/PR (or applied ahead of a
 
 ---
 
+## 2b. USER-IMPACT ledger audit (#15 duty — added 2026-07-28)
+
+Per [`USER-IMPACT.md`](USER-IMPACT.md) (new protocol, `5c2959e`, Eugene-directed): journey-affecting changes must add a ledger row **in the same commit**; **#15 audits** each merged journey-affecting change against a row — a landed change with no row is a gap. Instruction-writing owner is **#11**.
+
+**First pass 2026-07-28 — ledger has 10 rows. Findings:**
+- ⚠ **GAP — `external_registrations` retirement (#10, PR #79 `30f0f72`, landed + DB applied).** The legacy external-registrations intake **console was deleted** (`app/settings/external-registrations`) and the flow replaced by pending-user (`user.status`). Live journey change for **BMO / org-admin / registrant** with **no ledger row** — row 5 covers the *future* intake quiz, not the retirement of the old console. → flagged to #10 to add a row.
+- ❓ **CANDIDATE — managed-lists vocab rename (#4/#14).** List display names changed (→ Strata / Provider / Category / Technology / Asset Class / Unit). A BMO managing these lists sees renamed lists → possibly journey-affecting. Flagged to #4/#14 to decide if a row is warranted.
+- ✅ **Covered:** MFA (r1), "Grid" label (r2), sentinel deletion (r3), API-key tiering (r4), BSC "+Add KPI" picker (r8), trajectory removal (r9).
+- 🕐 **Forward obligations (correctly rowed, not yet built):** registration quiz (r5), grain data-entry (r6), unit lifecycle (r7), calculator builder (r10).
+- ⚙ **Internal-only, no row needed:** energy-dim / `asset_class_id` / `strata_id` column renames, `measure_definitions.description` drop, `units.category_id`/`type_id`/`is_aggregated` drops — schema with no user-facing surface.
+
 ## 3. Awaiting Eugene (decisions that unblock merges)
 
 | Stream | Decision needed | Blocks |
