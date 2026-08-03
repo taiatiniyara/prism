@@ -1,9 +1,10 @@
 # Unit lifecycle & temporal service-area spec (DRAFT)
 
-_Status: DRAFT for grilling — 2026-08-02, session #2. Design of a temporal
-(SCD-2) unit model with activation/deactivation dates, cross-service-area
-reactivation, and prorated period membership. **No DDL until this is grilled by
-Eugene and rule-checked by #8.**_
+_Status: **RATIFIED (design)** — 2026-08-03, session #2. Grilled by Eugene ✅,
+rule-checked + endorsed by #8 ✅, calculator-endorsed by #3 ✅. A temporal (SCD-2)
+unit model with activation/deactivation dates, cross-service-area reactivation, and
+prorated period membership. **Execution (coordinated DDL) gated on:** Eugene's
+purge+reimport extract (§7) and the canonical period dimension (§5)._
 
 Owners / consulted: #2 (migration/schema, drafting) · #8 (grain convention —
 assessment folded in) · #3 (calculator/proration) · #14 (reimport).
@@ -385,9 +386,13 @@ Reviews:
       Eugene's PNG mini-grid check). PNG reimports per-technology. #8's Mixed-branch
       was drafted then **withdrawn** on Eugene's ruling — archived, not sanctioned
       (§2.4). #8 endorses single-technology.
-- [~] **F2 — drop vestigial `units.strata_id`:** #8 endorses (dead weight
-      post-virtual-retirement); Eugene confirmed via #8 relay — **awaiting his direct
-      nod here** to close. (Parallel `service_areas.strata_id` noted for #2.)
+- [x] **F2 — drop `units.strata_id` (Eugene-confirmed 2026-08-03).** Data confirms
+      vestigial: the only non-"Unit" values are the 92 retiring virtual units. Drop
+      in the stint DDL.
+- [!] **`service_areas.strata_id` — do NOT drop (data-contradicted).** Unlike units,
+      25 real (non-virtual) SAs are "Utility" level vs 66 "ServiceArea" — live grain,
+      read in migration code. NOT the "same disease". Keep; any change is a separate
+      #8-hierarchy assessment, not this DDL.
 
 Design questions Q1–Q7 + current_sa all resolved.
 
