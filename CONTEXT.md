@@ -48,7 +48,10 @@ A glossary of domain terms, not a spec. No stack choices or implementation detai
 - **Measure Dimension Applicability** — catalogue-level, BMO-maintained table (measure ×
   dimension × valid members) declaring WHICH members are valid for a by_context dimension
   (e.g. Fuel Oil applies only to Diesel/Heavy Fuel sources). Complements Measure Dimension
-  Scope (which dimensions) with which members. No rows = all members valid.
+  Scope (which dimensions) with which members. No rows = all members valid. **Effective-dated:**
+  each row may carry an `effective_from`/`effective_to` window (fiscal-year-compared) so a new
+  expectation — e.g. "Planned Downtime for Battery Storage from FY2026" — appears in shells
+  only from its effective period, never retroactively (see measure-effective-dating-spec / ADR 0004).
 - **Context Profile** — per-utility, per-period snapshot of the facts that drive relevance:
   service areas, tariff structure (per customer_type × payment_mode: rate count, fixed
   charge), and flags (transmission network, buys-from-IPP). Cloned forward each period; the
@@ -139,14 +142,15 @@ A glossary of domain terms, not a spec. No stack choices or implementation detai
 - **Proxy** — Next.js middleware protecting /dashboard/*, /data-entry/*, /settings/*, /profile/*, /docs/*, /prism-ai/* via session check + role-based route gating.
 - **Utility Context Scope** — DEV feature to scope the view to a specific utility.
 - **External Registration** — registration for non-utility users (consultants, donors, researchers).
+- **Primary Contact** — an explicit per-utility designation (`is_primary_contact` on the user record) marking who receives utility-facing notifications — e.g. announcements of new effective-dated measures/expectations (rationale, definition, how-to-collect, mandatory-from date). Defaults to the BLO (Utility Liaison) but is a distinct flag, not a role synonym.
 
 ## Data & Operations
 
 - **Report Period** — time-bound reporting window (Financial Year, Monthly) per utility; scopes all data entries and KPIs.
 - **Benchmarking Report** — the periodic PPA cross-utility performance report. Lifecycle: BMO/consultant (currently the DEV team) completes edits → **releases a Draft** to PPA's CEO → CEO circulates the draft to Utility CEOs for comment (several weeks); flagged changes mean a utility amends inputs, and the benchmarking team refreshes the report + commentaries → the **Final version** is presented at the annual PPA meeting (2–4 months after the draft was released). *(Not yet a first-class modelled entity — see the report-versioning spec.)*
 - **Input Cut-off** — a settable date per report version; at **1 second before midnight** on that date inputs close and **automatically trigger the snapshot**, then notify BMO/DEV that report generation can commence (a managed user journey). There are two cut-offs per cycle: the **Draft** cut-off and (after the comment window) the **Final** cut-off.
-- **Report Version / Snapshot** — a frozen copy of source data + computed KPIs captured automatically at a version's Input Cut-off, *before* the report is generated, so every KPI in that version is verifiable against source data as it stood then. The **Draft** and **Final** reports are built from their snapshots and are immutable.
-- **Updated (Final) Report** — a parallel, always-available version of a released report (e.g. "Updated FINAL Benchmarking Report 2024") that draws from **live data, not the snapshot**, tracking every input change since the Final was released — the transparent, current view alongside the frozen official record.
+- **Report Version / Snapshot** — a frozen copy of source data + computed KPIs captured automatically at a version's Input Cut-off, *before* the report is generated, so every KPI in that version is verifiable against source data as it stood then. The **Draft** and **Final** reports are built from their snapshots and are immutable. **Visibility:** the **Draft** is review-only (BMO/DEV + the PPA-CEO-circulated comment loop); only **Final** and **Updated Final** are viewable by others.
+- **Updated (Final) Report** — a parallel version of a released report (e.g. "Updated FINAL Benchmarking Report 2024") that draws from **live data, not the snapshot**. It is **only surfaced when at least one input has changed versus the Final snapshot** (a live-vs-Final-snapshot diff) — otherwise the Final stands alone. The transparent, current view alongside the frozen official record. Benchmarking cadence is **annual** (for now).
 - **Fiscal Year (FY)** — standard temporal dimension (FY2022, FY2023, etc.).
 - **Country Context** — country-level non-KPI data (GDP, population, renewable targets).
 - **Utility Context Data** — utility-level non-KPI operational metadata.
