@@ -97,13 +97,26 @@ generator **count is not tracked** (Q6 — the count is a form-selector + contex
 not KPI-load-bearing, so it fails the §2.3 stint-state test; and an aggregate stays
 an aggregate, so the flag never flips).
 
-**(B1 resolution — single-technology only.)** Aggregate units are **restricted to a
-single technology**, so `technology_id` is always a **real leaf** and the derive-not-
-store taxonomy chain holds (no All-member on a unit row). This is confirmed by the
-data: every existing aggregate is single-technology — Tonga Power's "All Diesel /
-All Solar / All Wind Generation (&lt;grid&gt;)" and Pitcairn's "Solar combined". A mixed
-"All gens" does not exist in practice; if one were ever needed it must be **split
-into per-technology aggregates at reimport**, never modelled with an All-member leaf.
+**(B1 — OPEN, two-pronged.)** Most aggregates are **single-technology** (Tonga
+Power's "All Diesel / All Solar / All Wind Generation (&lt;grid&gt;)", Pitcairn's "Solar
+combined") — for these `technology_id` is a real leaf and the chain holds cleanly.
+**But a genuinely mixed case exists:** PNG Power's remote **mini grids** report "All
+gens" where **the technology mix is unknown**. A mixed aggregate breaks the taxonomy
+at *both* technology and category levels ("Mixed" spans Renewable + Conventional), so
+it cannot be a normal leaf. Resolution:
+1. **Process (recommended to PNG):** group generators **by technology** — at minimum
+   by installed capacity per technology per grid (usually in the asset register),
+   ideally generation where metered. This is what unlocks Renewable Penetration /
+   Diesel Dependence / tech capacity-factor for those grids — the metrics that
+   matter most — so it improves PNG's own benchmarking value, and aligns them with
+   Tonga Power's practice.
+2. **Fallback (genuinely unsplittable):** model as **technology = unknown/mixed**,
+   which **excludes + flags** those facts from technology-scoped KPIs (never a silent
+   wrong number) while still counting them in technology-agnostic ones (total
+   generation, overall capacity factor) — same discipline as the F1 NULL-capacity
+   rule. This bends the 4-of-4 rule for `is_aggregate` rows only → **needs #8's
+   sign-off on the exact representation** (dedicated "Unknown/Mixed" member + writer
+   relaxation scoped to `is_aggregate` + exclusion from tech-scoped rollups).
 
 Consequences:
 - **Drop `units.unit_qty`** (the integer count, currently 100% null) and **add
@@ -371,11 +384,11 @@ Reviews:
       once B1 resolved.
 
 **Needs Eugene (2 quick confirms before ratification):**
-- [~] **B1 — mixed-technology aggregates → RESOLVED by data (confirm).** All existing
-      aggregates are single-technology (Tonga Power All-Diesel/Solar/Wind, Pitcairn
-      Solar-combined); no mixed "All gens" exists. Resolution: **restrict aggregates
-      to single-technology** (real leaf, taxonomy holds, zero cost) — §2.4. Eugene
-      confirms.
+- [ ] **B1 — mixed-technology aggregates → REOPENED.** Most aggregates are
+      single-tech, BUT PNG Power mini grids report "All gens" with **unknown mix**.
+      Two-pronged (§2.4): (1) recommend PNG group by technology [Eugene endorsed the
+      recommendation]; (2) fallback = technology unknown/mixed, exclude+flag from
+      tech-scoped KPIs. Needs **#8 sign-off** on the fallback representation.
 - [ ] **F2 — drop vestigial `units.strata_id` (recommend YES).** #8: it only marked
       virtual units' pretend levels; post-retirement every real unit is level-1, so
       it's dead weight — drop in the same DDL. (Parallel `service_areas.strata_id`
