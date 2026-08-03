@@ -246,9 +246,6 @@ function UnitChip({
           {resource.capacity_mw != null && (
             <span>{resource.capacity_mw} MW</span>
           )}
-          {resource.unit_qty != null && resource.unit_qty > 1 && (
-            <span className="text-blue-500">x{resource.unit_qty}</span>
-          )}
         </div>
       </div>
       {onRemove && (

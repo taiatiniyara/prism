@@ -83,11 +83,6 @@ export default async function UnitsSettingsPage() {
             label: "Resource Name",
           },
           {
-            key: "unit_qty",
-            type: "number",
-            label: "Resource Quantity",
-          },
-          {
             key: "power_station_id",
             type: "select",
             label: "Power Station",
@@ -139,11 +134,6 @@ export default async function UnitsSettingsPage() {
             key: "name",
             type: "text",
             label: "Resource Name",
-          },
-          {
-            key: "unit_qty",
-            type: "number",
-            label: "Resource Quantity",
           },
           {
             key: "power_station_id",

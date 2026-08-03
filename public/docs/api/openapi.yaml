@@ -30,19 +30,29 @@ components:
   tags:
     - name: AI / Chatbot
     - name: Context
+    - name: Countries
     - name: Data Entry
+    - name: DataEntries
     - name: Development
     - name: Dimensions
     - name: Facts
     - name: KPIs
+    - name: KpiDefinitions
     - name: Logging
+    - name: MeasureDefinitions
+    - name: MeasureDimensionApplicability
+    - name: MeasureDimensionScope
     - name: Migration
     - name: Monitoring
+    - name: Organisations
     - name: Power BI
+    - name: PowerStations
+    - name: ServiceAreas
     - name: Settings
     - name: System
     - name: Tables
     - name: UI
+    - name: Units
     - name: Users
     - name: Webhooks
 
@@ -387,6 +397,17 @@ paths:
           description: Forbidden
         '500':
           description: Internal Server Error
+  /api/countries:
+    get:
+      tags:
+        - Countries
+      summary: Get countries
+      security:
+        - migrationKeyAuth: []
+      x-auth: Requires x-migration-key header
+      responses:
+        '200':
+          description: Success
   /api/cron/email-schedules:
     get:
       tags:
@@ -415,7 +436,7 @@ paths:
           required: true
           schema:
             type: string
-        - name: energyResourceId
+        - name: unitId
           in: query
           required: true
           schema:
@@ -916,7 +937,7 @@ paths:
           required: true
           schema:
             type: string
-        - name: energyResourceId
+        - name: unitId
           in: query
           required: true
           schema:
@@ -1089,6 +1110,17 @@ paths:
           description: Forbidden
         '500':
           description: Internal Server Error
+  /api/dataEntries:
+    get:
+      tags:
+        - DataEntries
+      summary: Get dataEntries
+      security:
+        - migrationKeyAuth: []
+      x-auth: Requires x-migration-key header
+      responses:
+        '200':
+          description: Success
   /api/deployment/info:
     get:
       tags:
@@ -1597,11 +1629,12 @@ paths:
       tags:
         - Facts
       summary: "Fact: SAIDI/SAIFI reliability indices (API-key gated, proxy to prism-training)"
-      x-auth: No authentication required
+      security:
+        - apiKeyAuth: []
+      x-auth: Requires API key in Authorization header
       responses:
-        '200':
-          description: Success
-      security: []
+        '401':
+          description: Unauthorized
   /api/factTariffStructure:
     get:
       tags:
@@ -1674,11 +1707,12 @@ paths:
       tags:
         - Monitoring
       summary: "Health check endpoint — returns system status, DB connectivity, Power BI circuit breaker state, AI model status, SMTP, and World Bank API reachability"
-      x-auth: No authentication required
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
       responses:
         '200':
           description: Success
-      security: []
   /api/kpi/calculation-status:
     get:
       tags:
@@ -1729,6 +1763,17 @@ paths:
           description: Forbidden
         '500':
           description: Internal Server Error
+  /api/kpiDefinitions:
+    get:
+      tags:
+        - KpiDefinitions
+      summary: Get kpiDefinitions
+      security:
+        - migrationKeyAuth: []
+      x-auth: Requires x-migration-key header
+      responses:
+        '200':
+          description: Success
   /api/logs/audit:
     get:
       tags:
@@ -1909,6 +1954,39 @@ paths:
           description: Forbidden
         '500':
           description: Internal Server Error
+  /api/measureDefinitions:
+    get:
+      tags:
+        - MeasureDefinitions
+      summary: Get measureDefinitions
+      security:
+        - migrationKeyAuth: []
+      x-auth: Requires x-migration-key header
+      responses:
+        '200':
+          description: Success
+  /api/measureDimensionApplicability:
+    get:
+      tags:
+        - MeasureDimensionApplicability
+      summary: Get measureDimensionApplicability
+      security:
+        - migrationKeyAuth: []
+      x-auth: Requires x-migration-key header
+      responses:
+        '200':
+          description: Success
+  /api/measureDimensionScope:
+    get:
+      tags:
+        - MeasureDimensionScope
+      summary: Get measureDimensionScope
+      security:
+        - migrationKeyAuth: []
+      x-auth: Requires x-migration-key header
+      responses:
+        '200':
+          description: Success
   /api/migration/dataEntry:
     get:
       tags:
@@ -2203,6 +2281,17 @@ paths:
           description: Bad Request / Validation Error
         '403':
           description: Forbidden
+  /api/organisations:
+    get:
+      tags:
+        - Organisations
+      summary: Get organisations
+      security:
+        - migrationKeyAuth: []
+      x-auth: Requires x-migration-key header
+      responses:
+        '200':
+          description: Success
   /api/pbiRls:
     get:
       tags:
@@ -2213,6 +2302,17 @@ paths:
         '401':
           description: Unauthorized
       security: []
+  /api/powerStations:
+    get:
+      tags:
+        - PowerStations
+      summary: Get powerStations
+      security:
+        - migrationKeyAuth: []
+      x-auth: Requires x-migration-key header
+      responses:
+        '200':
+          description: Success
   /api/security/overview:
     get:
       tags:
@@ -2228,6 +2328,17 @@ paths:
           description: Forbidden
         '500':
           description: Internal Server Error
+  /api/serviceAreas:
+    get:
+      tags:
+        - ServiceAreas
+      summary: Get serviceAreas
+      security:
+        - migrationKeyAuth: []
+      x-auth: Requires x-migration-key header
+      responses:
+        '200':
+          description: Success
   /api/settings/users/pending:
     get:
       tags:
@@ -2407,17 +2518,27 @@ paths:
           description: Forbidden
         '500':
           description: Internal Server Error
+  /api/units:
+    get:
+      tags:
+        - Units
+      summary: Get units
+      security:
+        - migrationKeyAuth: []
+      x-auth: Requires x-migration-key header
+      responses:
+        '200':
+          description: Success
   /api/users:
     get:
       tags:
         - Users
       summary: Get users
-      security:
-        - apiKeyAuth: []
-      x-auth: Requires API key in Authorization header
+      x-auth: No authentication required
       responses:
         '401':
           description: Unauthorized
+      security: []
   /api/webhooks/email/replies:
     post:
       tags:

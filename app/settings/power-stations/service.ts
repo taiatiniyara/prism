@@ -77,7 +77,6 @@ export type UnitSummary = {
   service_area: string | null;
   capacity_mw: number | null;
   power_station_id: number | null;
-  unit_qty: number | null;
 };
 
 export async function GetUnitList(): Promise<
@@ -99,7 +98,6 @@ export async function GetUnitList(): Promise<
       service_area_id: units.service_area_id,
       period_entries: units.period_entries,
       power_station_id: units.power_station_id,
-      unit_qty: units.unit_qty,
     })
     .from(units)
     .leftJoin(
@@ -148,7 +146,6 @@ export async function GetUnitList(): Promise<
       ),
       capacity_mw: latestEntry?.capacity_mw ?? null,
       power_station_id: item.power_station_id ?? null,
-      unit_qty: item.unit_qty ?? null,
     };
   });
 }

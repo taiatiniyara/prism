@@ -269,7 +269,6 @@ export async function CreateUnit(
     period_entries: data.period_entries ?? [],
     updated_by_id: user.id,
     is_virtual: false,
-    strata_id: 1,
     updated_at: new Date(),
   });
   revalidatePath("/settings/energy-resources");

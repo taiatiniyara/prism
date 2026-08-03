@@ -1844,7 +1844,6 @@ export async function retrieveUnits() {
     const utilityId = normalizeRequiredId(er.utility_id);
     const energyProviderId = normalizeRequiredId(er.provider_id);
     const energySourceId = normalizeRequiredId(er.technology_id);
-    const strataId = normalizeRequiredId(er.strata_id);
 
     const hasInvalidForeignKey =
       serviceAreaId == null ||
@@ -1854,9 +1853,7 @@ export async function retrieveUnits() {
       energyProviderId == null ||
       !validManagedItemIds.has(energyProviderId) ||
       energySourceId == null ||
-      !validManagedItemIds.has(energySourceId) ||
-      strataId == null ||
-      !validManagedItemIds.has(strataId);
+      !validManagedItemIds.has(energySourceId);
 
     if (hasInvalidForeignKey) {
       skippedInvalidForeignKeys += 1;
@@ -1869,7 +1866,6 @@ export async function retrieveUnits() {
       utility_id: utilityId,
       provider_id: energyProviderId,
       technology_id: energySourceId,
-      strata_id: strataId,
       updated_at: er.updated_at ? new Date(er.updated_at) : new Date(),
       updated_by_id: null,
     });
