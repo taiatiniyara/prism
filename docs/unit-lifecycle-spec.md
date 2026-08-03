@@ -170,6 +170,20 @@ the BLO/DAO entry workflow is unchanged. The stint profile does the work in
 - **Consequence — the "Rated Capacity" measure retires:** it is no longer a
   `data_entry` fact; its values move to `unit_activations.rated_capacity_mw` (§7).
 
+### 4.2 Where `Σ(cap×hours)` is computed (resolved with #3)
+
+`Σ(stint_capacity × stint_hours)` per `(unit, period)` is materialized as a
+**silver-derived measure** — computed in the silver/data layer from
+`unit_activations`, *not* entered. The calculator consumes it as an **ordinary
+additive input**, divides, and rolls up by summing — the engine stays **stint-
+unaware** (no lifecycle-table coupling). Ownership line: **stint→capacity-hours math
+= silver / #8-data-layer; calculator = division + rollup.** #3 confirmed this is
+consistent with the calculator-engine spec (§4.6, ratio-of-sums; capacity-hours is
+additive so it rolls up unit→utility correctly). The **energy-balance check (§4.1)**
+is a data-quality validation → **loader/gold validation layer**, not the formula
+evaluator. The Rated-Capacity retirement is picked up in #3's **manual KPI rebuild**
+checklist (capacity KPIs re-bind to the new capacity-hours input).
+
 ## 5. Period membership / shell generation
 
 - A unit is relevant to a reporting period iff a stint's span overlaps the
@@ -250,7 +264,11 @@ in-place backfill.
 
 - **#8 (grain):** consulted — stints fit the convention with the §3 amendments;
   offered to rule-check this draft.
-- **#3 (calculator):** owns §4 proration math + capacity KPI day-weighting.
+- **#3 (calculator):** ✅ green-lit (§4/§4.1 consistent w/ calculator-engine spec
+  §4.6). Per §4.2, the calculator consumes a **silver-derived** capacity-hours input
+  (stays stint-unaware); **#8/data-layer owns** materializing `Σ(cap×hours)`;
+  energy-balance check → loader/gold validation. Capacity KPIs re-bind in #3's manual
+  rebuild.
 - **#14 / migration:** owns §7 purge + reimport + loader/extract contract.
 - **Refactor:** ~22–30 files read `units.service_area_id` — migrate to
   stint-resolved reads (period-aware) with `current_service_area_id` only for UI.
@@ -281,9 +299,10 @@ Q7 freeze at report-version snapshot, stints stay live (§5.1) · capacity leave
 fact table + `period_entries` retired (Eugene-agreed).
 
 Still open:
-- [ ] **#3 buy-in:** capacity KPI denominators → `Σ(stint_capacity × stint_hours)`
-      (§4); MWh-downtime aggregate-unit path.
-- [ ] #8 rule-check of this draft against the hierarchy rulebook.
+- [x] **#3 buy-in:** ✅ green-lit; `Σ(cap×hours)` = silver-derived measure (§4.2),
+      calculator stays stint-unaware.
+- [ ] **#8 rule-check** of this draft against the hierarchy rulebook — **plus**
+      confirm #8/data-layer owns the silver-derived `Σ(cap×hours)` measure (§4.2).
 - [ ] Sequencing vs the canonical period dimension (§5 dependency).
 
 All unit-spec design questions resolved. `current_service_area_id` = **trigger-
