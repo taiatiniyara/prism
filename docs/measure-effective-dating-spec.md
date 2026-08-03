@@ -133,6 +133,30 @@ only); with the sparse model most cells render blank (not_applicable) and only ~
 are set, plus the ~75 applicability restrictions — readable and maintainable. The
 actual screen is UI/#11 territory; the **access rule (BMO/DEV only) is fixed here**.
 
+**#8-confirmed safe** (verified, not assumed: zero code references to
+`measure_dimension_scope` today, and the shell consumer isn't written yet — we set
+the convention before the first reader, the cheapest time). Three conditions banked
+with the sparsification:
+
+1. **One shared reader helper for BOTH tables.** The two sparse tables' absences
+   point **opposite** ways — **applicability** absence = *permissive* (all members
+   valid), **scope** absence = *restrictive* (not_applicable). Safe **only if a single
+   lib function encodes both defaults and every consumer goes through it** (same
+   one-choke-point discipline as the value-router / grain-writer). No consumer
+   hand-rolls "no row means…".
+2. **Guard the quiet failure.** Dense's failure mode was noisy-harmless (redundant
+   rows); sparse-restrictive's is **quiet** — a forgotten scope row silently
+   *under-dimensions* a measure (coarser shells, missing splits nobody notices).
+   Mitigate: (a) the measure create/curate flow **requires an explicit scope decision
+   (or a group template)** — never silent empty inheritance; (b) a cheap **audit** —
+   a generation/storage measure (unit strata) with **zero `by_context` rows** on
+   provider/category/technology is almost certainly misconfigured → flag it.
+3. **Rulebook boundary (state it, so it's never mis-cited).** This is **config
+   metadata**; it does **NOT** touch the "dimensions never blank / explicit All" rule,
+   which governs **`data_entries` rows** (per-fact data, where absence was ambiguous).
+   Sparse-with-documented-default is sound for config — it is **not** a precedent for
+   NULL-as-All on facts.
+
 ## 9. Notification to utility primary contacts (linked feature)
 
 When a new effective-dated applicability is created (a new measure/member
@@ -169,9 +193,11 @@ the next benchmarking report. Two pieces:
 
 ## 11. Open items
 
-- [ ] **Scope sparse cleanup** (§8) — drop the 1,075 `not_applicable` rows + make
-      the shell/expected-input consumer read "no row → not_applicable"; **#8 confirm
-      the relevance path** before executing. Coordinated DB+code change.
+- [x] **Scope sparse cleanup** (§8) — **#8 confirmed SAFE** (verified: zero code refs;
+      consumer unwritten). Execute: drop the 1,075 `not_applicable` rows (DB) behind
+      the **shared reader helper** (both tables' defaults in one lib fn), + the quiet-
+      failure guards (explicit-scope-on-create, misconfig audit). Config-metadata only
+      — not a NULL-as-All precedent for facts.
 - [x] Primary-contact placement resolved with #10 (§9): `is_primary_contact` on the
       **seat** (per-org), transitional `user.is_primary_contact` now → seat on unify.
       #10 owns the field; **this stream/alerting owns the email trigger** (reads the
