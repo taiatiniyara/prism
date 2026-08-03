@@ -97,26 +97,22 @@ generator **count is not tracked** (Q6 — the count is a form-selector + contex
 not KPI-load-bearing, so it fails the §2.3 stint-state test; and an aggregate stays
 an aggregate, so the flag never flips).
 
-**(B1 — RESOLVED: single-technology is THE RULE.)** Every aggregate unit carries a
-**single real technology leaf** (like every unit), so `technology_id` is always a
-real leaf and derive-not-store + the 4-of-4 writer check hold **unchanged**.
-Double-verified: the 10 migrated aggregates are single-tech (Tonga Power's "All
-Diesel / All Solar / All Wind Generation (&lt;grid&gt;)", Pitcairn's "Solar combined"),
-**and** Eugene verified every PNG mini-grid generator is properly classified by
-technology (each generator names its grid but is tech-classified). No mixed lump
-exists in practice; a future one must enter as **per-technology aggregates**.
+**(B1 — RESOLVED: single-technology aggregates. FINAL, no exception path.)** Every
+aggregate unit carries a **single real technology leaf** (like every unit), so
+`technology_id` is always a real leaf and derive-not-store + the 4-of-4 writer check
+hold **unchanged**. Basis: **Eugene verified every PNG mini-grid generator is
+classified by technology** (each names its grid but is tech-classified), and the 10
+migrated aggregates are single-tech (Tonga Power's "All Diesel / All Solar / All
+Wind Generation (&lt;grid&gt;)", Pitcairn's "Solar combined"). The reopen's premise
+(genuinely unknown/unmetered mix) does **not** hold.
+**Reimport requirement (not a recommendation):** PNG's "All gens" lumps reimport as
+**per-technology aggregates** (per-grid All-Diesel / All-Solar / …), same as Tonga.
 
-**Sanctioned exception (designed by #8, NOT built now).** Should a genuinely
-unmetered mixed lump ever arise, the taxonomy-clean representation is a **"Mixed
-(unmetered)"** technology leaf under a real **"Mixed Generation"** category under
-asset_class **Generation** — real ancestry, so the derive chain + 4-of-4 stay intact
-(precedent: asset_class 988 "Generator+Storage combined"). Semantics: **excluded +
-coverage-flagged** from technology/category-scoped KPIs (Renewable Penetration,
-Diesel Dependence), **included** in asset-class/technology-agnostic KPIs (total
-generation, overall capacity factor); the writer permits the Mixed leaf **only on
-`is_aggregate` units**. Distinct from *All* (All = aggregation bucket, never on a
-unit row; Mixed = an honest classification a unit carries). **Not created now** — no
-current need; add on demand.
+_Design history (not part of the architecture): a "Mixed Generation" taxonomy branch
+was drafted by #8 for a hypothetical genuinely-unmetered lump, then **withdrawn on
+Eugene's final ruling**. It is **not** a sanctioned exception. A future genuinely
+unclassifiable lump would be a **new decision for Eugene** on new evidence, not a
+pre-built fallback._
 
 Consequences:
 - **Drop `units.unit_qty`** (the integer count, currently 100% null) and **add
@@ -384,10 +380,11 @@ Reviews:
       once B1 resolved.
 
 **Needs Eugene (2 quick confirms before ratification):**
-- [x] **B1 — RESOLVED (Eugene-confirmed 2026-08-03):** single-technology is THE RULE
-      (double-verified: 10 migrated aggregates + Eugene's PNG mini-grid check). #8's
-      "Mixed Generation" branch recorded as the sanctioned, not-built exception
-      (§2.4). #8 endorses.
+- [x] **B1 — RESOLVED (Eugene-confirmed 2026-08-03):** single-technology aggregates,
+      FINAL, **no exception path** (double-verified: 10 migrated aggregates +
+      Eugene's PNG mini-grid check). PNG reimports per-technology. #8's Mixed-branch
+      was drafted then **withdrawn** on Eugene's ruling — archived, not sanctioned
+      (§2.4). #8 endorses single-technology.
 - [~] **F2 — drop vestigial `units.strata_id`:** #8 endorses (dead weight
       post-virtual-retirement); Eugene confirmed via #8 relay — **awaiting his direct
       nod here** to close. (Parallel `service_areas.strata_id` noted for #2.)
