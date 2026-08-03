@@ -395,10 +395,17 @@ Reviews:
 - [x] **F2 — drop `units.strata_id` (Eugene-confirmed 2026-08-03).** Data confirms
       vestigial: the only non-"Unit" values are the 92 retiring virtual units. Drop
       in the stint DDL.
-- [!] **`service_areas.strata_id` — do NOT drop (data-contradicted).** Unlike units,
-      25 real (non-virtual) SAs are "Utility" level vs 66 "ServiceArea" — live grain,
-      read in migration code. NOT the "same disease". Keep; any change is a separate
-      #8-hierarchy assessment, not this DDL.
+- [~] **`service_areas.strata_id` — IS the same disease (corrected).** Its only
+      non-"ServiceArea" values are the **25 "All Service Areas" sentinel
+      pseudo-entities** (all at "Utility" strata); the 66 real grids are all
+      "ServiceArea". The migration "use" is passthrough copy, not grain logic. So it
+      is **vestigial-in-waiting** — droppable **once the 25 "All Service Areas"
+      sentinels are retired** (the 2026-07-27 sentinel cleanup, USER-IMPACT row 3,
+      already removed the global ones). Sequencing: **not this units DDL** (the
+      sentinels still exist + are marked via it); folds into the joint #8/#2
+      post-migration assessment — whose likely outcome is **drop**, not keep. (My
+      earlier "keep — live grain" was a misread of counts without the names; #8's
+      "same disease" flag was correct.)
 
 Design questions Q1–Q7 + current_sa all resolved.
 
