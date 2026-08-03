@@ -162,8 +162,9 @@ leak implementation). Resolve the deactivate→reactivate collision by definitio
   `Σ(stint_capacity × stint_hours)`** across the period's overlapping stints. This
   is strictly more correct than today: a single capacity-per-period **cannot
   express a mid-period derate**, giving wrong capacity-factor denominators. Same
-  spirit as "sum the additive inputs, then apply the formula" — the day×capacity
-  weighting lives in the **KPI math** (#3), not the stored fact.
+  spirit as "sum the additive inputs, then apply the formula" — capacity-hours is a
+  **silver-derived measure** (§4.2) the calculator consumes as an additive input, not
+  a stored fact and not engine-side stint math.
 - `Hours in Period` (existing, `lib/period-hours.ts`) supplies the per-stint active
   hours that weight the denominator.
 
