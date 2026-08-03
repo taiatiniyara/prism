@@ -122,6 +122,7 @@ created_by, created_at, updated_at
 id, subscription_id → subscription, org_id → organisations (denormalized for query),
 user_id → user, role_id → roles (provider RBAC; subscriber seats use a generic viewer role + plan entitlements),
 is_admin (bool — can manage this org's seats),
+is_primary_contact (bool — receives measure/expectation + benchmarking notification emails for this org; defaults to the BLO seat, but a utility may nominate specific people; a distinct flag, NOT a role synonym — see §8),
 status: 'invited' | 'active' | 'expiring' | 'expired' | 'revoked',
 valid_from (date), valid_until (date; ≤ subscription.term_end),
 invited_by → user, assigned_at
@@ -300,6 +301,7 @@ failure_reason
 - **New role `PPA_FIN`** (PPA Finance) — payments queue only.
 - **Org-admin** = a `seat.is_admin` flag (not a new global role) — because access is uniform; admin is a management capability within an org.
 - **BLO** stays the utility's admin (`is_admin` on utility seats) and Utility-Liaison; glossary updated (`CONTEXT.md`).
+- **Primary contact** = a **`seat.is_primary_contact`** flag (per-org, on the seat — like `is_admin`), **not** a role synonym: it defaults to the BLO seat but a utility can nominate specific people, and a utility may have more than one. It's the recipient set for measure/expectation notifications (new effective-dated measures, "mandatory in the next benchmarking report") — from [measure-effective-dating-spec.md](measure-effective-dating-spec.md) §8. The email **trigger** lives in the alerting/email-schedule model (consumes this flag); #10 owns the **designation**, the effective-dating stream owns the trigger.
 - Existing route-prefix / `sidebar_access` gating extends to the new surfaces (Payments, Subscriptions, Seats).
 
 ---
@@ -309,6 +311,7 @@ failure_reason
 - **[RESOLVED 2026-07-28] Default plan contents** — the **`public`** plan = Annual Reports PDF + Public-KPI, view only (§0/§4 matrix, `Tiered Access Plans - 20260728.xlsx`).
 - **[RESOLVED 2026-07-28] Member entitlements** — the **`allied_member`** plan = PDF + Public-KPI + full benchmarking family (view + both downloads), sector-scoped (§0/§4).
 - **[RESOLVED 2026-07-28] Entitlement change semantics** — entitlement edits **forward-apply to all users on the plan** (Eugene); commercial terms (price/seat/term) still lock to the sold `plan_version` (§3.2).
+- **[FORWARD-REQ 2026-07-28, from #4] Primary-contact designation** — `seat.is_primary_contact` (§3.1/§8) added so the user model carries it; recipient set for new-effective-dated-measure emails ([measure-effective-dating-spec.md](measure-effective-dating-spec.md) §8, DRAFT). #10 owns the flag; the email trigger is the effective-dating/alerting stream's. Co-design the field with #4 when that spec firms up.
 - **[RESOLVED 2026-07-26] PCI-DSS** — no PAN in PRISM; bank virtual terminal, PRISM records result only (§6.5).
 - **[RESOLVED 2026-07-26] Unify migration** — full unify now, provider side included, sequenced first (§3.4).
 - **[RESOLVED 2026-07-26] Manual checkout** — subscriber **self-initiates** the payment request (no card entry in PRISM); Finance completes it (§6.3).
