@@ -321,10 +321,16 @@ in-place backfill.
   overlap).
 - **Anchoring backfill (per #8, multi-level-hierarchy §3):** the migration pass must
   drive fact re-anchoring off the **anchor-level ≠ measure-declared-strata MISMATCH**
-  query, **not** `is_virtual` alone — otherwise the 25 real "Utility"-level
-  service areas' parked facts survive **mis-anchored** (they need promotion to the
-  utility anchor when the measure's strata is utility; a real single-grid-utility
-  area stays when the measure's strata is area).
+  query, **not** `is_virtual` alone (their `is_virtual` flags are unreliable). The
+  **25 "All Service Areas" sentinel SAs** are the last sentinels standing (they
+  survived the 2026-07-27 purge because they hold parked data); **every** entry on
+  them **promotes to the utility anchor** (no real area is Utility-strata, so nothing
+  "stays"), then they retire with the virtuals.
+- **Promotion count guardrail (per #8):** the reimport/promotion must **explicitly
+  count the 25 sentinel SAs' entries, before/after** — they are the
+  highest-value promotion population and the easiest to silently miss if the extract
+  keys off real grids only. `service_areas.strata_id` is **kept this DDL** as the
+  identifying signal for them; vestigial after retirement → joint #8/#2 drop.
 - **Virtual units (92)** — old-Prism per-grid grid-total placeholders
   (`is_virtual = true`, "Virtual GEN …", already excluded from every fact read).
   **Retired** in the reimport per the medallion framework (agreed) — grid totals
