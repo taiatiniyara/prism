@@ -103,7 +103,37 @@ on/off, or `all_members` → `by_context`), add `effective_from`/`effective_to` 
 include the effective boundary (time-sliced scope rows). Not built now — the
 member-level applicability window covers the current cases.
 
-## 8. Notification to utility primary contacts (linked feature)
+## 8. Configuration, access & maintenance (BMO / DEV only)
+
+**Access — BMO and DEV only.** Only the **BMO** and **DEV** roles may **view or
+edit** `measure_dimension_scope`, `measure_dimension_applicability`, and their
+effective windows. **No other role has any access — not view, not edit.** Role-gate
+the config screens *and* the read/write APIs to BMO/DEV.
+
+**Sparse-by-default — the 1,075-row cleanup.** Scope is today fully dense (117
+measures × 10 dimensions = 1,170 rows), of which **1,075 (92%) are `not_applicable`**
+— stored negatives. Adopt the applicability convention:
+- **`not_applicable` becomes the default:** a **missing** `(measure, dimension)`
+  scope row *means* not_applicable. Store rows **only** for `all_members` (2) and
+  `by_context` (93) → **~95 rows** (a 92% cut), consistent with applicability ("store
+  only deviations from the default").
+- Cleanup = drop the 1,075 `not_applicable` rows (DB) + read "no row →
+  not_applicable" in the shell/expected-input consumer (code). Coordinated change;
+  #8 to confirm the relevance path (see §11).
+
+**Group-template maintenance — the rules-based lever.** Measures in the same
+**group/subgroup** share dimensional behaviour (e.g. all Generation-group measures →
+Source `by_context`, Provider `by_context`; the rest default). Configure a **group
+template**, override per-measure exceptions — so BMO maintains ~a dozen templates,
+not 1,170 cells. For **applicability**, add member rows only where the valid set is
+**narrower** than "all context members" (e.g. Fuel Oil → Diesel / Heavy-Fuel).
+
+**Surface.** The natural editor is a **measure × 10-dimension matrix** (BMO/DEV
+only); with the sparse model most cells render blank (not_applicable) and only ~95
+are set, plus the ~75 applicability restrictions — readable and maintainable. The
+actual screen is UI/#11 territory; the **access rule (BMO/DEV only) is fixed here**.
+
+## 9. Notification to utility primary contacts (linked feature)
 
 When a new effective-dated applicability is created (a new measure/member
 expectation), **email the utility's primary contact(s)** with: the rationale, the
@@ -119,7 +149,7 @@ the next benchmarking report. Two pieces:
    dispatch the email to those contacts. A distinct, small feature riding on the
    effective-dating (fits alongside the existing alerting / email-schedule model).
 
-## 9. Relationships
+## 10. Relationships
 
 - **ADR 0004 (effective-dated dimensions):** this is the pattern's concrete
   application at the measure/expectation level (3rd instance: units-stints, this,
@@ -130,9 +160,14 @@ the next benchmarking report. Two pieces:
 - **#10:** owns the primary-contact field + notification (§8).
 - **Shell/expected-input generation:** the single integration point (§5).
 
-## 10. Open items
+## 11. Open items
 
-- [ ] #10 to own the `is_primary_contact` field + the notification trigger (§8).
+- [ ] **Scope sparse cleanup** (§8) — drop the 1,075 `not_applicable` rows + make
+      the shell/expected-input consumer read "no row → not_applicable"; **#8 confirm
+      the relevance path** before executing. Coordinated DB+code change.
+- [ ] #10 to own the `is_primary_contact` field + the notification trigger (§9).
 - [ ] Confirm `fy(P)` derivation reuses the canonical period-dim fiscal-year logic
       (shared with the report-versioning + unit-lifecycle specs).
 - [ ] Mandatory-from-effective: confirm it always applies, or per-measure opt-in.
+- [ ] Group-template config model (§8) — is it a stored template layer or a
+      BMO-driven bulk-apply? (UI/#11 + BMO workflow.)
