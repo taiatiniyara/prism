@@ -319,6 +319,12 @@ in-place backfill.
 - **(F5) DDL note:** the `unit_activations` GiST exclusion constraint needs the
   **`btree_gist`** extension (for `unit_id` equality alongside the `daterange`
   overlap).
+- **Anchoring backfill (per #8, multi-level-hierarchy §3):** the migration pass must
+  drive fact re-anchoring off the **anchor-level ≠ measure-declared-strata MISMATCH**
+  query, **not** `is_virtual` alone — otherwise the 25 real "Utility"-level
+  service areas' parked facts survive **mis-anchored** (they need promotion to the
+  utility anchor when the measure's strata is utility; a real single-grid-utility
+  area stays when the measure's strata is area).
 - **Virtual units (92)** — old-Prism per-grid grid-total placeholders
   (`is_virtual = true`, "Virtual GEN …", already excluded from every fact read).
   **Retired** in the reimport per the medallion framework (agreed) — grid totals
