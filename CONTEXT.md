@@ -8,12 +8,15 @@ A glossary of domain terms, not a spec. No stack choices or implementation detai
 
 - **PRISM** — benchmarking platform for Pacific electricity utilities, owned by PPA.
 - **PPA (Pacific Power Association)** — regional industry association governing the platform, setting PPA Targets, providing the BSC Master Template.
-- **Utility / Organisation** — an electricity provider that is a PPA member. Has service areas, power stations, energy resources, report periods, users, and a BSC. (DB: `organisations`, `is_utility = true`.)
+- **Utility / Organisation** — an electricity provider that is a PPA member. Has service areas, power stations, units, report periods, users, and a BSC. (DB: `organisations`, `is_utility = true`.)
 - **Country** — a Pacific Island nation (ISO codes, currency, UN sub-region, ADB membership).
 - **Sub-Region** — UN continental regional grouping (Melanesia, Micronesia, Polynesia).
 - **Service Area** — a geographic territory within a utility. The primary scoping dimension for data entry.
 - **Power Station** — a physical generating facility in a service area.
-- **Energy Resource** — a generating unit or aggregation within a power station (provider, type, source, capacity MW).
+- **Unit** (formerly *Energy Resource*) — a generator or storage instance, or an aggregation, within a power station (provider, technology, rated capacity). DB: `units`; code type `Unit`.
+- **Stint / Unit Activation** — a continuous operating-state period of a Unit: a span over which its service area, power station, and rated capacity are all constant. Any change — moving to another service area (within the same utility), a derate, or decommissioning — ends the current stint; a **deactivation is the gap between two stints**. The Unit Activation timeline is the **single source of truth** for which units are active, where, and at what rated capacity in any period — it *replaces* per-period resource state. A change of the unit's **technology** is a new Unit, not a new stint (identity change).
+- **Aggregate Unit** — a Unit that lumps several physical generators reported together (used by some utilities for some grids), named "All gens — &lt;grid&gt;" or, technology-specific, "All solar gens — &lt;grid&gt;". Marked by an **`is_aggregate` flag** (the exact generator count is not tracked). At data entry, an aggregate unit presents a different form: **downtime is entered in MWh (lost energy), not hours**. Distinct from the retired *Virtual Unit* placeholder.
+- **Virtual Unit** — *(retired)* an old-Prism per-grid grid-total placeholder (`is_virtual = true`, "Virtual GEN …"), excluded from all fact reads. Superseded under the medallion framework by gold rollups (totals = All-row else sum of detail); not carried into the stint model.
 
 ## Data Entry (medallion redesign, 2026-07)
 
@@ -47,11 +50,12 @@ A glossary of domain terms, not a spec. No stack choices or implementation detai
   (e.g. Fuel Oil applies only to Diesel/Heavy Fuel sources). Complements Measure Dimension
   Scope (which dimensions) with which members. No rows = all members valid.
 - **Context Profile** — per-utility, per-period snapshot of the facts that drive relevance:
-  the energy_resources registry (generators/storage by provider/type/source), **per-period
-  resource state** (active/inactive + rated capacity per unit — units are added/decommissioned
-  and can be derated per period), service areas, tariff structure (per customer_type ×
-  payment_mode: rate count, fixed charge), and flags (transmission network, buys-from-IPP).
-  Cloned forward each period; the BLO confirms/edits it.
+  service areas, tariff structure (per customer_type × payment_mode: rate count, fixed
+  charge), and flags (transmission network, buys-from-IPP). Cloned forward each period; the
+  BLO confirms/edits it. **Unit relevance and rated capacity are NOT part of this snapshot** —
+  they are derived from the Unit Activation timeline (see *Stint*), event-dated rather than
+  per-period-confirmed. (Superseded the old per-period resource state / `units.period_entries`
+  blob.)
 - **Generation energy-balance check** — a per-generator, per-period validation: equivalent
   full-load hours (Electricity Generated ÷ Rated Capacity) + planned + unplanned downtime must
   not exceed hours in the period; catches impossible generation/downtime combinations.
@@ -75,7 +79,7 @@ A glossary of domain terms, not a spec. No stack choices or implementation detai
 ## KPIs & Benchmarks
 
 - **KPI Definition** — metadata blueprint: name, formula, formula inputs, category, unit, type (benchmarking/custom), targets, limits, aggregation level.
-- **KPI (instance)** — calculated value per report period, service area, energy resource, etc.
+- **KPI (instance)** — calculated value per report period, service area, unit, etc.
 - **KPI Calculation Attempt** — job tracking for a KPI computation (status, retries, error details).
 - **KPI Target** — desired future value per utility, year, optionally month.
 - **KPI Trajectory** — increase / decrease / same per (utility, KPI) pair.
@@ -139,6 +143,10 @@ A glossary of domain terms, not a spec. No stack choices or implementation detai
 ## Data & Operations
 
 - **Report Period** — time-bound reporting window (Financial Year, Monthly) per utility; scopes all data entries and KPIs.
+- **Benchmarking Report** — the periodic PPA cross-utility performance report. Lifecycle: BMO/consultant (currently the DEV team) completes edits → **releases a Draft** to PPA's CEO → CEO circulates the draft to Utility CEOs for comment (several weeks); flagged changes mean a utility amends inputs, and the benchmarking team refreshes the report + commentaries → the **Final version** is presented at the annual PPA meeting (2–4 months after the draft was released). *(Not yet a first-class modelled entity — see the report-versioning spec.)*
+- **Input Cut-off** — a settable date per report version; at **1 second before midnight** on that date inputs close and **automatically trigger the snapshot**, then notify BMO/DEV that report generation can commence (a managed user journey). There are two cut-offs per cycle: the **Draft** cut-off and (after the comment window) the **Final** cut-off.
+- **Report Version / Snapshot** — a frozen copy of source data + computed KPIs captured automatically at a version's Input Cut-off, *before* the report is generated, so every KPI in that version is verifiable against source data as it stood then. The **Draft** and **Final** reports are built from their snapshots and are immutable.
+- **Updated (Final) Report** — a parallel, always-available version of a released report (e.g. "Updated FINAL Benchmarking Report 2024") that draws from **live data, not the snapshot**, tracking every input change since the Final was released — the transparent, current view alongside the frozen official record.
 - **Fiscal Year (FY)** — standard temporal dimension (FY2022, FY2023, etc.).
 - **Country Context** — country-level non-KPI data (GDP, population, renewable targets).
 - **Utility Context Data** — utility-level non-KPI operational metadata.
