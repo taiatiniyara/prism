@@ -97,26 +97,26 @@ generator **count is not tracked** (Q6 — the count is a form-selector + contex
 not KPI-load-bearing, so it fails the §2.3 stint-state test; and an aggregate stays
 an aggregate, so the flag never flips).
 
-**(B1 — OPEN, two-pronged.)** Most aggregates are **single-technology** (Tonga
-Power's "All Diesel / All Solar / All Wind Generation (&lt;grid&gt;)", Pitcairn's "Solar
-combined") — for these `technology_id` is a real leaf and the chain holds cleanly.
-**But a genuinely mixed case exists:** PNG Power's remote **mini grids** report "All
-gens" where **the technology mix is unknown**. A mixed aggregate breaks the taxonomy
-at *both* technology and category levels ("Mixed" spans Renewable + Conventional), so
-it cannot be a normal leaf. Resolution:
-1. **Process (recommended to PNG):** group generators **by technology** — at minimum
-   by installed capacity per technology per grid (usually in the asset register),
-   ideally generation where metered. This is what unlocks Renewable Penetration /
-   Diesel Dependence / tech capacity-factor for those grids — the metrics that
-   matter most — so it improves PNG's own benchmarking value, and aligns them with
-   Tonga Power's practice.
-2. **Fallback (genuinely unsplittable):** model as **technology = unknown/mixed**,
-   which **excludes + flags** those facts from technology-scoped KPIs (never a silent
-   wrong number) while still counting them in technology-agnostic ones (total
-   generation, overall capacity factor) — same discipline as the F1 NULL-capacity
-   rule. This bends the 4-of-4 rule for `is_aggregate` rows only → **needs #8's
-   sign-off on the exact representation** (dedicated "Unknown/Mixed" member + writer
-   relaxation scoped to `is_aggregate` + exclusion from tech-scoped rollups).
+**(B1 — RESOLVED: single-technology is THE RULE.)** Every aggregate unit carries a
+**single real technology leaf** (like every unit), so `technology_id` is always a
+real leaf and derive-not-store + the 4-of-4 writer check hold **unchanged**.
+Double-verified: the 10 migrated aggregates are single-tech (Tonga Power's "All
+Diesel / All Solar / All Wind Generation (&lt;grid&gt;)", Pitcairn's "Solar combined"),
+**and** Eugene verified every PNG mini-grid generator is properly classified by
+technology (each generator names its grid but is tech-classified). No mixed lump
+exists in practice; a future one must enter as **per-technology aggregates**.
+
+**Sanctioned exception (designed by #8, NOT built now).** Should a genuinely
+unmetered mixed lump ever arise, the taxonomy-clean representation is a **"Mixed
+(unmetered)"** technology leaf under a real **"Mixed Generation"** category under
+asset_class **Generation** — real ancestry, so the derive chain + 4-of-4 stay intact
+(precedent: asset_class 988 "Generator+Storage combined"). Semantics: **excluded +
+coverage-flagged** from technology/category-scoped KPIs (Renewable Penetration,
+Diesel Dependence), **included** in asset-class/technology-agnostic KPIs (total
+generation, overall capacity factor); the writer permits the Mixed leaf **only on
+`is_aggregate` units**. Distinct from *All* (All = aggregation bucket, never on a
+unit row; Mixed = an honest classification a unit carries). **Not created now** — no
+current need; add on demand.
 
 Consequences:
 - **Drop `units.unit_qty`** (the integer count, currently 100% null) and **add
@@ -384,15 +384,13 @@ Reviews:
       once B1 resolved.
 
 **Needs Eugene (2 quick confirms before ratification):**
-- [ ] **B1 — mixed-technology aggregates → REOPENED.** Most aggregates are
-      single-tech, BUT PNG Power mini grids report "All gens" with **unknown mix**.
-      Two-pronged (§2.4): (1) recommend PNG group by technology [Eugene endorsed the
-      recommendation]; (2) fallback = technology unknown/mixed, exclude+flag from
-      tech-scoped KPIs. Needs **#8 sign-off** on the fallback representation.
-- [ ] **F2 — drop vestigial `units.strata_id` (recommend YES).** #8: it only marked
-      virtual units' pretend levels; post-retirement every real unit is level-1, so
-      it's dead weight — drop in the same DDL. (Parallel `service_areas.strata_id`
-      noted for #2, out of scope here.)
+- [x] **B1 — RESOLVED (Eugene-confirmed 2026-08-03):** single-technology is THE RULE
+      (double-verified: 10 migrated aggregates + Eugene's PNG mini-grid check). #8's
+      "Mixed Generation" branch recorded as the sanctioned, not-built exception
+      (§2.4). #8 endorses.
+- [~] **F2 — drop vestigial `units.strata_id`:** #8 endorses (dead weight
+      post-virtual-retirement); Eugene confirmed via #8 relay — **awaiting his direct
+      nod here** to close. (Parallel `service_areas.strata_id` noted for #2.)
 
 Design questions Q1–Q7 + current_sa all resolved.
 
