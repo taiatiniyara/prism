@@ -40,7 +40,7 @@ different capacity — no special case.
 | `unit_id` | FK → `units` | the stable physical identity |
 | `service_area_id` | FK → `service_areas`, NOT NULL | the SA for this stint |
 | `power_station_id` | FK → `power_stations`, nullable | stint-scoped; if set, **must be a child of `service_area_id`** |
-| `rated_capacity_mw` | numeric, nullable | **capacity as stint state** — supersedes per-period capacity; a derate = new stint |
+| `rated_capacity_mw` | numeric, **NOT NULL** for generation/storage stints | **capacity as stint state** — supersedes per-period capacity; a derate = new stint. (F1) A genuinely-unknown capacity must **not** be a silent NULL→0 in `Σ(cap×hours)` — it **excludes** that unit-period from capacity KPIs **and flags it** (silent 0 deflates denominators → inflated capacity factors). |
 | `activation_date` | `date` NOT NULL | BLO enters on add/reactivate |
 | `deactivation_date` | `date` nullable | NULL = currently active; BLO sets on deactivate |
 | `change_reason_id` | FK → managed_list, nullable | derate/impairment/move reason — audit only |
@@ -101,9 +101,11 @@ an aggregate, so the flag never flips). Consequences:
   stint state.
 - `rated_capacity_mw` for an aggregate unit is the **lumped-group total** (stint
   state — a composition change is a capacity change → a new stint, as normal).
-- At data entry, **`is_aggregate` presents a different form**: **downtime is entered
-  in MWh (lost energy), not hours** — so the §4.1 energy-balance check for an
-  aggregate unit consumes `downtime_MWh` directly (no hours→energy conversion).
+- At data entry, an aggregate unit records downtime **in MWh (lost energy), not
+  hours**. **(B2 fix)** This is a **separate measure** `downtime_energy_mwh`
+  (relevance-gated to `is_aggregate` units) — **never** the hours-based `Downtime`
+  measure with two UoMs, which would make any silver/gold "downtime" sum mix hours
+  and MWh. The §4.1 balance check consumes `downtime_energy_mwh` directly.
 
 ## 3. Temporal grain & fact attribution (#8's rulebook)
 
@@ -131,8 +133,11 @@ leak implementation). Resolve the deactivate→reactivate collision by definitio
 - **Same-SA stints within a period → MERGE** into one row — **for additive FLOW
   measures only** (MWh, hours; their sums are capacity-agnostic, so the address
   collision stays solved). Proration weight = total active days in that SA.
-- **Cross-SA stints within a period → SPLIT** into distinct-address rows (one per
-  SA), each weighted by its active days.
+- **Cross-SA stints within a period → SPLIT** into distinct `(unit, SA, period)`
+  addresses. For **entered** data each address carries its own **entered actual**
+  (the BLO/DAOO knows the per-SA figures) — **not** a calendar split of one number
+  (B3). Active-day weighting applies only to **reimport** allocation where the
+  historical per-SA split is unknown.
 - Rows for the same `(unit, measure, period)` must belong to distinct stints whose
   spans **partition** the unit's active time that period; for additive measures the
   values must be that partition (loader/writer-checkable: parts sum to the whole
@@ -144,8 +149,14 @@ leak implementation). Resolve the deactivate→reactivate collision by definitio
 
 ## 4. Proration — per measure type (NOT blanket)
 
-- **Additive / time-based** (MWh, hours, counts): prorate **in the stored fact** by
-  `days(stint ∩ period) / days(period)`.
+- **Additive / time-based** (MWh, hours, counts): **entered actuals are sacrosanct —
+  never calendar-prorated** (B3 fix). A unit can generate 0 MWh in stint 1 and
+  everything in stint 2; `days(stint∩period)` ≠ reality. Entry is per
+  `(unit, service_area, period)` (§4.1), so a mid-period **SA move yields two
+  entered rows** (one per SA address), not one figure split by calendar. Day-ratio
+  proration is used in **exactly two places**: (i) **reimport** allocation where
+  per-SA historical actuals are unknown; (ii) **downtime** allocation across stints
+  for the §4.1 balance check.
 - **Capacity (point-in-time)**: not a fact at all — sourced from stint
   `rated_capacity_mw` (§2.1). Capacity-based KPI **denominators become
   `Σ(stint_capacity × stint_hours)`** across the period's overlapping stints. This
@@ -184,6 +195,24 @@ is a data-quality validation → **loader/gold validation layer**, not the formu
 evaluator. The Rated-Capacity retirement is picked up in #3's **manual KPI rebuild**
 checklist (capacity KPIs re-bind to the new capacity-hours input).
 
+**Ownership (precise, per #8):** **#8 owns the semantics + spec** of the
+capacity-hours derivation (which stints count, span-intersection math, proration
+weights, NULL handling) and verifies the implementation; **#2 builds the physical
+silver object** (same split as the chain-consistency writer). "Silver/#8-data-layer"
+is shorthand, not #8 writing the SQL. #8 confirmed this is a deterministic
+**derivation** (like sub_region-via-FK / grain_level), not formula evaluation — so
+the one-evaluator rule holds. **Four conditions (#8):**
+1. **Never in `data_entries`** — capacity-hours is silver/gold-materialized only;
+   registrable as a system/calculated measure for bindings, but no fact-table rows
+   (capacity left the fact table; its derivative doesn't sneak back).
+2. **NULL-capacity = F1**, load-bearing — a NULL stint capacity excludes the
+   unit-period + flags it; never a silent 0. Resolve F1 before this measure ships.
+3. **Period spans from the canonical period dim** (§5 dependency) — now on this
+   measure's critical path.
+4. **Snapshot this measure too** — under §5.1 live-stints a late edit changes
+   historical capacity-hours (by design); the report-version snapshot must capture
+   the capacity-hours measure, as it is an input to frozen KPIs (see §5.1/§8).
+
 ## 5. Period membership / shell generation
 
 - A unit is relevant to a reporting period iff a stint's span overlaps the
@@ -213,6 +242,19 @@ separate greenfield feature**
 (Benchmarking Report versioning + snapshots) that the stint model *feeds* but does
 not own — see §8. Net effect here: `unit_activations` carries no approval-freeze
 columns; it is purely the live operating-state timeline.
+
+**Snapshot scope (condition 4):** a report-version snapshot must capture the
+**silver-derived capacity-hours measure** too (§4.2), since it is an input to frozen
+KPIs and live-stint edits change it.
+
+**Terminology reconcile with calculator §4.5 (F3):** "approved" and "published" are
+**two different things** — *approved-gold* (the calculator's surface that refreshes
+on entry Approval = current approved data) vs the *frozen report-version snapshot*
+(the immutable published record). They coexist; the spec must not conflate them.
+**Interim (F3):** report-version snapshots are greenfield, so **until they ship there
+is no frozen record** — a live-stint edit mutates approved-gold KPI history in place.
+That gap is acceptable pre-snapshots but must be stated, and the snapshot feature is
+the thing that closes it.
 
 ## 6. Stint authoring workflow (role-gated: BLO + DAOO)
 
@@ -250,6 +292,12 @@ in-place backfill.
   source for seed-stint `rated_capacity_mw`; after migration it is removed from the
   measure catalogue / relevance so capacity is never re-entered as a fact. (This is
   the concrete "capacity leaves the fact table" migration step.)
+- **(F5) Repoint KPI formulas** that reference the "Rated Capacity" measure to the
+  stint-sourced capacity-hours input at the **manual KPI rebuild** — explicit so
+  #3's rebuild checklist catches every capacity KPI.
+- **(F5) DDL note:** the `unit_activations` GiST exclusion constraint needs the
+  **`btree_gist`** extension (for `unit_id` equality alongside the `daterange`
+  overlap).
 - **Virtual units (92)** — old-Prism per-grid grid-total placeholders
   (`is_virtual = true`, "Virtual GEN …", already excluded from every fact read).
   **Retired** in the reimport per the medallion framework (agreed) — grid totals
@@ -276,6 +324,8 @@ in-place backfill.
   feature* this spec depends on for published-KPI integrity, but does not own.
   Needs its own spec + ADR (report-version snapshot as the verifiability mechanism).
   Touches gold/medallion (#8) + a new reporting layer.
+- **#12 (security/RLS) (F4):** `unit_activations` is a new table → needs an RLS
+  policy; tenant is derivable via `unit → utility`. Flag to #12.
 - **Coordinated DDL** (backup-first) once grilled + rule-checked.
 
 ## 9. Rollout / user-impact obligation
@@ -298,16 +348,28 @@ keep aggregate units (§7/§2.4) · Q6 drop `unit_qty` → `is_aggregate` flag (
 Q7 freeze at report-version snapshot, stints stay live (§5.1) · capacity leaves
 fact table + `period_entries` retired (Eugene-agreed).
 
-Still open:
-- [x] **#3 buy-in:** ✅ green-lit; `Σ(cap×hours)` = silver-derived measure (§4.2),
-      calculator stays stint-unaware.
-- [ ] **#8 rule-check** of this draft against the hierarchy rulebook — **plus**
-      confirm #8/data-layer owns the silver-derived `Σ(cap×hours)` measure (§4.2).
-- [ ] Sequencing vs the canonical period dimension (§5 dependency).
+Reviews:
+- [x] **#3 (calculator):** ✅ green-lit; §4.2 accepted (silver-derived
+      capacity-hours; engine stays stint-unaware).
+- [~] **#8 (grain rule-check):** core PASS verbatim (§2.1–2.3/§3/§5/§7/§9); §4.2
+      accepted with ownership precision + 4 conditions (folded into §4.2/§5.1). Clear
+      fixes absorbed: **B2** (downtime → separate `downtime_energy_mwh`, §2.4),
+      **B3** (entered actuals never calendar-prorated, §3.3/§4), **F1** (NULL
+      capacity excludes+flags, §2.1), **F3** (approved≠published + interim, §5.1),
+      **F4** (#12 RLS, §8), **F5** (formula-repoint + btree_gist, §7). #8 endorses
+      once B1 resolved.
 
-All unit-spec design questions resolved. `current_service_area_id` = **trigger-
-maintained** (§2.2, chosen for AI-search + speed). Remaining before build: #8
-rule-check + #3 calculator buy-in.
+**Needs Eugene (2 decisions before ratification):**
+- [ ] **B1 — mixed-technology aggregates.** "All gens — grid" lumps mixed
+      technologies → no single `technology_id` leaf, which breaks the 4-of-4
+      unit-row taxonomy rule. Decide: restrict aggregates to single-technology
+      ("All solar gens" form), or another handling. Needs the fact of how the 2
+      utilities actually report.
+- [ ] **F2 — drop vestigial `units.strata_id`.** #8 says it only ever marked virtual
+      units' pretend levels; post-retirement every real unit is level-1. Drop in the
+      same DDL? (Parallel `service_areas.strata_id` noted for #2, out of scope here.)
+
+Design questions Q1–Q7 + current_sa all resolved.
 
 Spawned / adjacent (separate specs):
 - [ ] **Benchmarking Report versioning + snapshots** (§5.1/§8) — greenfield; this
