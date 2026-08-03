@@ -95,7 +95,17 @@ some grids — "All gens — grid" or, technology-specific, "All solar gens — 
 An intrinsic **`is_aggregate` boolean** (on `units`) marks them; the exact
 generator **count is not tracked** (Q6 — the count is a form-selector + context,
 not KPI-load-bearing, so it fails the §2.3 stint-state test; and an aggregate stays
-an aggregate, so the flag never flips). Consequences:
+an aggregate, so the flag never flips).
+
+**(B1 resolution — single-technology only.)** Aggregate units are **restricted to a
+single technology**, so `technology_id` is always a **real leaf** and the derive-not-
+store taxonomy chain holds (no All-member on a unit row). This is confirmed by the
+data: every existing aggregate is single-technology — Tonga Power's "All Diesel /
+All Solar / All Wind Generation (&lt;grid&gt;)" and Pitcairn's "Solar combined". A mixed
+"All gens" does not exist in practice; if one were ever needed it must be **split
+into per-technology aggregates at reimport**, never modelled with an All-member leaf.
+
+Consequences:
 - **Drop `units.unit_qty`** (the integer count, currently 100% null) and **add
   `units.is_aggregate`** boolean, default false — intrinsic, stays on `units`, never
   stint state.
@@ -360,15 +370,16 @@ Reviews:
       **F4** (#12 RLS, §8), **F5** (formula-repoint + btree_gist, §7). #8 endorses
       once B1 resolved.
 
-**Needs Eugene (2 decisions before ratification):**
-- [ ] **B1 — mixed-technology aggregates.** "All gens — grid" lumps mixed
-      technologies → no single `technology_id` leaf, which breaks the 4-of-4
-      unit-row taxonomy rule. Decide: restrict aggregates to single-technology
-      ("All solar gens" form), or another handling. Needs the fact of how the 2
-      utilities actually report.
-- [ ] **F2 — drop vestigial `units.strata_id`.** #8 says it only ever marked virtual
-      units' pretend levels; post-retirement every real unit is level-1. Drop in the
-      same DDL? (Parallel `service_areas.strata_id` noted for #2, out of scope here.)
+**Needs Eugene (2 quick confirms before ratification):**
+- [~] **B1 — mixed-technology aggregates → RESOLVED by data (confirm).** All existing
+      aggregates are single-technology (Tonga Power All-Diesel/Solar/Wind, Pitcairn
+      Solar-combined); no mixed "All gens" exists. Resolution: **restrict aggregates
+      to single-technology** (real leaf, taxonomy holds, zero cost) — §2.4. Eugene
+      confirms.
+- [ ] **F2 — drop vestigial `units.strata_id` (recommend YES).** #8: it only marked
+      virtual units' pretend levels; post-retirement every real unit is level-1, so
+      it's dead weight — drop in the same DDL. (Parallel `service_areas.strata_id`
+      noted for #2, out of scope here.)
 
 Design questions Q1–Q7 + current_sa all resolved.
 
