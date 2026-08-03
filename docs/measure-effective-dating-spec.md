@@ -140,14 +140,21 @@ expectation), **email the utility's primary contact(s)** with: the rationale, th
 definition, how to collect the data, and that it will be a **mandatory** input in
 the next benchmarking report. Two pieces:
 
-1. **Primary-contact designation** (owner: #10, registration/user model). Add an
-   explicit **`is_primary_contact`** designation on the user record (per org) — a
-   utility can nominate specific people. Natural default: the **BLO** (already the
-   "Utility Liaison / single contact point"), but keep it an explicit flag, not a
-   role synonym, so it's not conflated with the role.
-2. **Notification trigger** — on creation of an effective-dated applicability,
-   dispatch the email to those contacts. A distinct, small feature riding on the
-   effective-dating (fits alongside the existing alerting / email-schedule model).
+1. **Primary-contact designation** (owner: **#10**, registration/user model — placement
+   ruled by #10). `is_primary_contact` lives on the **seat**, not the user directly —
+   **per-org** (same pattern as `is_admin`), so a person can be primary contact for
+   org A but not org B in the multi-org seat model. Defaults to the **BLO** seat; a
+   utility may nominate specific people; **≥1 allowed**; a distinct flag, **not** a
+   role synonym. **Sequencing:** the seat table is part of #10's seat-unify refactor
+   (§3.4), so #10 lands a **transitional `user.is_primary_contact`** (keyed to today's
+   `user.organisation_id`) **now** — it migrates into `seat.is_primary_contact` when
+   the unify lands. This unblocks these emails without waiting for the tenancy
+   refactor.
+2. **Notification trigger** (owner: **this stream / alerting**). On creation of an
+   effective-dated applicability, dispatch the email to the primary contact(s) — it
+   just **reads** #10's flag. A distinct, small feature riding on the effective-dating
+   (fits the existing alerting / email-schedule model). Co-design the field +
+   default-BLO backfill with #10 once this spec firms up.
 
 ## 10. Relationships
 
@@ -165,7 +172,10 @@ the next benchmarking report. Two pieces:
 - [ ] **Scope sparse cleanup** (§8) — drop the 1,075 `not_applicable` rows + make
       the shell/expected-input consumer read "no row → not_applicable"; **#8 confirm
       the relevance path** before executing. Coordinated DB+code change.
-- [ ] #10 to own the `is_primary_contact` field + the notification trigger (§9).
+- [x] Primary-contact placement resolved with #10 (§9): `is_primary_contact` on the
+      **seat** (per-org), transitional `user.is_primary_contact` now → seat on unify.
+      #10 owns the field; **this stream/alerting owns the email trigger** (reads the
+      flag). Co-design field + default-BLO backfill with #10 when spec firms up.
 - [ ] Confirm `fy(P)` derivation reuses the canonical period-dim fiscal-year logic
       (shared with the report-versioning + unit-lifecycle specs).
 - [ ] Mandatory-from-effective: confirm it always applies, or per-measure opt-in.
