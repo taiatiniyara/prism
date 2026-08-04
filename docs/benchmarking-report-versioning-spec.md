@@ -46,17 +46,20 @@ they draw from*.
   that report generation can commence — a **managed user journey** (see §7).
 - The Final cut-off sits **after** the comment window (captures the amendments).
 
-## 4. Snapshot scope (Q8 — two-layer freeze)
+## 4. Snapshot scope (Q8 — three-layer freeze)
 
-A snapshot freezes **both** layers, in a derive relationship:
+A snapshot freezes **three** layers, in a derive relationship:
 
 1. **Source inputs (authoritative):** `data_entries`, the **unit activation (stint)
    timeline**, the **silver-derived measures** it feeds — incl. capacity-hours
    (#8 condition 4) — and the **formula/target versions** in force. These are the
-   source of truth and power the "did any input change since Final?" diff (§5).
+   source of truth and power the "did any input change since Final?" diff (§6).
 2. **Computed KPI outputs (materialised, derived):** the gold KPIs computed **from**
    the input layer at cut-off, stored for **byte-stable** official numbers + instant
    display.
+3. **Narrations + rendered document (§5):** the per-result narrations and the
+   rendered PDF, frozen with the version — they cite the frozen numbers and include
+   authored text that exists nowhere else, so they cannot be regenerated later.
 
 **Why both** (not inputs-only + recompute):
 - **Stability** — storing outputs pins the published numbers even if the calculator
@@ -70,21 +73,60 @@ A snapshot freezes **both** layers, in a derive relationship:
 
 The Updated FINAL does the opposite: **live inputs, live-computed KPIs** (no freeze).
 
-## 5. Updated FINAL — conditional visibility + amendments
+## 5. Report artifact & narrations
+
+The report is delivered in **two forms** (both):
+- a **PDF** — the formal, circulated/presented document (immutable per frozen version);
+- a **dashboard / Power BI view** — the interactive form.
+
+**Narrations (commentaries) are first-class content.** Each result (KPI / section)
+carries an authored **narration** interpreting the number — trend, cause, caveat —
+authored by the benchmarking team (BMO/DEV). They are part of the report, not an
+add-on.
+
+**Frozen per version (Draft, Final).** A version's narrations are authored and
+**frozen in that version's snapshot** alongside its inputs + KPIs (they cite the
+frozen numbers, so they must freeze with them). A regenerated PDF is not enough —
+data, KPIs, narration, and render all pin to the version.
+
+**Content/layout is a later iteration.** Multiple improvements to the report's
+content and layout are **deferred until the medallion framework is running** (its
+silver/gold views are the report's data source). This spec covers *versioning,
+snapshots, and the narration lifecycle* — not the final report design.
+
+## 6. Updated FINAL — conditional visibility + amendments
 
 - Drawn from **live** data; **only surfaced when a live-vs-Final-snapshot diff shows
   ≥1 changed input** — otherwise the Final stands alone.
 - Surfaces the **amendments** since Final (which inputs changed → which KPIs moved)
   for transparency.
 
-## 6. Visibility / access (#12)
+### 6.1 AI-assisted narration revision (Eugene, 2026-08-04)
+
+Because the Updated FINAL runs on **live** data, KPIs move after Final — so a
+narration that cited the Final number is now stale. Rather than silently diverge or
+force a full manual re-read, **PRISM AI proposes narration updates**, per affected
+result, showing the BMO/DEV:
+- **(a) current phrasing** — the Final narration as it stands;
+- **(b) suggested updated phrasing** — regenerated against the new data;
+- **(c) rationale** — what changed (which input/KPI moved, by how much) and why the
+  narration needs updating.
+
+The BMO/DEV **reviews each** and accepts / edits / rejects; accepted revisions become
+the Updated FINAL's narrations. Detection is driven by the **live-vs-Final-snapshot
+diff** linked to the narrations that reference the changed results — so only affected
+narrations surface. This turns "track every change since Final" into a **decision-
+ready** review instead of a manual rewrite. Uses the **PRISM AI / Energy Expert**
+layer; BMO/DEV stay the deciders (opinion-safety: AI proposes, human disposes).
+
+## 7. Visibility / access (#12)
 
 - **Draft:** review-only — BMO/DEV, and the PPA-CEO-circulated comment loop
   (Utility CEOs during the window). **Not** available to other viewers.
 - **Final + Updated FINAL:** viewable by others (the general benchmarking audience).
 - Needs RLS/route gating per version state (→ #12).
 
-## 7. User journeys (to design)
+## 8. User journeys (to design)
 
 - **Set cut-off dates** (Draft, Final) — who, where, guardrails.
 - **Cut-off fires** → snapshot job runs → **notify BMO/DEV** "ready to generate".
@@ -93,7 +135,7 @@ The Updated FINAL does the opposite: **live inputs, live-computed KPIs** (no fre
 - **Final cut-off** → snapshot → generate + present Final.
 - **Updated FINAL** surfaced automatically when inputs drift from Final.
 
-## 8. Relationships
+## 9. Relationships
 
 - **Unit-lifecycle spec §5.1:** this feature is what freezes published KPIs;
   stints stay live, integrity comes from these snapshots. Until this ships, there is
@@ -102,32 +144,42 @@ The Updated FINAL does the opposite: **live inputs, live-computed KPIs** (no fre
   inputs (capacity-hours).
 - **Calculator (#3):** the KPI materialisation at cut-off uses the calculator over
   the frozen inputs.
+- **PRISM AI / Energy Expert:** powers the Updated-FINAL narration-revision proposals
+  (§6.1) — current vs suggested phrasing + rationale, for BMO/DEV decision.
 
-## 9. Open questions (next grilling)
+## 10. Open questions (next grilling)
 
 - [ ] **Snapshot storage model** — how is a snapshot physically materialised +
       retained (a versioned copy of the input + KPI rows per report version)? Scale,
       retention, immutability.
 - [ ] **Report entity scope** — one **cross-utility** report per FY (all members in
       one artifact), reviewed per-utility? Confirm.
-- [ ] **Cut-off scope** — one **global** cut-off per version for the whole FY report
-      (not per-utility)? Confirm.
+- [x] **Cut-off scope** — RESOLVED: a **single global** cut-off date per version
+      (Eugene, 2026-08-04).
 - [ ] **Change-detection granularity** — what counts as "an input changed vs Final"
       (any `data_entry`/stint/derived-measure delta for any utility)? Drives Updated
       visibility.
-- [ ] **Report artifact** — what does "generate the report" produce (document /
-      dashboard view / Power BI)? Out of scope for versioning, but the anchor.
+- [x] **Report artifact** — RESOLVED (§5): **both** a PDF (formal) and a
+      dashboard/Power BI view, with per-result **narrations** as first-class content.
+      Content/layout improvements deferred to post-medallion.
 - [ ] **Backlog** — FY2024 & FY2025 need generating (none since 2023).
 - [ ] **Scheduler** — the 23:59:59 cut-off trigger mechanism.
 - [ ] **Approval vs cut-off** — relationship between per-utility data-entry Approval
       status and the report cut-off/snapshot.
 
-## 10. Decisions log
+## 11. Decisions log
 
 - Cadence = **annual** (Eugene, 2026-08-03).
 - **3 versions** Draft/Final/Updated-Final (Eugene).
 - Snapshot fires at **input cut-off**, before generation (Eugene).
 - **Q8** = snapshot **source inputs** (authoritative) **+ materialised KPIs**
-  (derived, for stability/speed) — two-layer freeze (Eugene, 2026-08-03).
+  (derived) **+ narrations/rendered document** — **three-layer** freeze (Eugene,
+  2026-08-03/04).
 - Updated FINAL = **live**, surfaced **only when inputs changed vs Final** (Eugene).
 - Visibility: Draft review-only; Final + Updated FINAL viewable by others (Eugene).
+- **Cut-off** = single **global** date per version (Eugene, 2026-08-04).
+- **Artifact = both** PDF **and** dashboard/Power BI; **narrations first-class** &
+  frozen per version (Draft/Final); content/layout deferred to post-medallion
+  (Eugene, 2026-08-04).
+- **Updated FINAL narration revision is AI-assisted** — PRISM AI proposes current vs
+  suggested phrasing + rationale; BMO/DEV decide (Eugene, 2026-08-04).
