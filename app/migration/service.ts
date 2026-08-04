@@ -52,10 +52,7 @@ import {
 } from "@/db/schema/kpi";
 import {
   assetClassRelevance,
-  ManagedList,
-  ManagedListItem,
   managedListItems,
-  managedLists,
 } from "@/db/schema/managedLists";
 import { ReportPeriod, reportPeriods } from "@/db/schema/reportPeriods";
 import {
@@ -1344,43 +1341,15 @@ export async function retrieveCountries() {
 
 export async function retrieveManagedLists() {
   await assertDevMigrationAccess();
-  let inserted = 0;
-  const updated = 0;
-  const call = await fetchMigrationEndpoint("/managedList");
-  const list = await call.json();
-  const managedListItemsList: ManagedListItem[] = list.managedListItems;
-  const managedListsList: ManagedList[] = list.managedLists;
-
-  const existingManagedLists = await db.select().from(managedLists);
-  const existingManagedListIds = new Set(existingManagedLists.map((l) => l.id));
-  const nonExistingManagedLists = managedListsList.filter(
-    (l) => !existingManagedListIds.has(l.id),
-  );
-
-  const existingManagedListItems = await db.select().from(managedListItems);
-  const existingManagedListItemIds = new Set(
-    existingManagedListItems.map((li) => li.id),
-  );
-  const nonExistingManagedListItems = managedListItemsList.filter(
-    (li) => !existingManagedListItemIds.has(li.id),
-  );
-
-  try {
-    if (nonExistingManagedLists.length > 0) {
-      await db.insert(managedLists).values(nonExistingManagedLists);
-      inserted += nonExistingManagedLists.length;
-    }
-    if (nonExistingManagedListItems.length > 0) {
-      await db.insert(managedListItems).values(nonExistingManagedListItems);
-      inserted += nonExistingManagedListItems.length;
-    }
-  } catch (error: unknown) {
-    logMigrationError(error);
-  }
-
-  revalidatePath("/migration");
-
-  return { ok: true, inserted, updated, total: inserted + updated };
+  // DISABLED (2026-08-03, Eugene): managed_lists / managed_list_items are maintained DIRECTLY in
+  // p2 with the PRISM 2 vocabulary (Strata / Provider / Category / Technology / Asset Class /
+  // Measures Group / Measures Subgroup / UoM). They must NOT be re-imported from the p1
+  // `/managedList` source, which carries the OLD names ("Energy Provider", "Aggregation Level",
+  // "Data Label Category", …) and REVERTS the rename. The current migration path
+  // (scripts/migrate.ts) never touches these two tables. This legacy p1 reference-data import is
+  // intentionally a NO-OP so nothing re-writes the list names. Restore the git history for this
+  // function if p1 managed-list import is ever genuinely needed again.
+  return { ok: true, inserted: 0, updated: 0, total: 0 };
 }
 
 export async function retrieveMeasureDefinitions() {
