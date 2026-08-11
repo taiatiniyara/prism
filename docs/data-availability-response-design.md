@@ -55,9 +55,10 @@ Entered → Reviewed → **Approved** and publish, exactly like a value — the 
    ALTER TABLE data_entries ADD CONSTRAINT chk_no_data_reason
      CHECK (no_data_reason IS NULL OR no_data_reason IN ('not_available','not_applicable'));
    ```
-   - `not_available` — exists in principle but the utility can't provide it (the current need).
-   - `not_applicable` — the measure doesn't apply to this utility (recommended to include now; a
-     genuinely different, useful distinction for benchmarking).
+   - `not_available` — in scope and applies, but the utility can't provide the value.
+   - `not_applicable` — in scope per the system, but the utility **asserts** it doesn't apply to
+     them. **Both values ship** (ruled by Eugene 2026-08-06) — the clean, non-overlapping split
+     vs the existing `is_relevant` column is defined in **§3.1**.
    - *(Alternative: a managed list "No-Data Reason" if BMOs should configure reasons. Given the
      set is tiny and semantic, a CHECK'd varchar is simpler and matches `status_id` being a code
      enum rather than a managed list. #4's call.)*
@@ -78,6 +79,43 @@ Entered → Reviewed → **Approved** and publish, exactly like a value — the 
 
 4. **(Optional convenience)** a generated `answer_state` column, or just derive it in Silver
    (§4). Deriving is cleaner (no dual-encoding) — recommended.
+
+### 3.1 Applicability — `is_relevant` (system scope) vs `not_applicable` (utility-asserted)
+
+#4 flagged that `not_applicable` could collide with the existing `is_relevant` column (both read
+as "doesn't apply"). Eugene ruled: **keep both, with an explicit, non-overlapping split.** They
+answer *different questions*:
+
+- **`is_relevant` — system / model SCOPE.** Set by the relevance model (→ computed relevance) from
+  the utility's known characteristics. Answers *"is this input in the utility's EXPECTED set at
+  all?"* `is_relevant = false` ⇒ **out of scope** — not asked, no expected shell. A system,
+  up-front determination.
+- **`no_data_reason = 'not_applicable'` — utility-ASSERTED inapplicability.** For an input that is
+  **in scope** (`is_relevant = true`, the system expects it), the utility asserts at entry time
+  *"this doesn't apply to us."* A per-answer, utility-driven signal — typically the utility
+  **refining / correcting** the system's relevance. It is an *answer*, not a scope call.
+
+**Non-overlap invariant:** `no_data_reason` is only meaningful on **in-scope (`is_relevant = true`)
+rows.** So the two encodings never collide:
+
+| `is_relevant` | value | `no_data_reason` | meaning | whose call |
+|---|---|---|---|---|
+| **false** | — | (n/a) | out of scope — not expected/asked | system (relevance) |
+| true | set | NULL | a value | utility |
+| true | — | `not_available` | in scope, applies, couldn't obtain | utility |
+| true | — | `not_applicable` | in scope per system, utility asserts it doesn't apply | utility |
+| true | — | NULL | awaiting (not yet answered) | — |
+
+**Calculator (#3, §9.1):** `not_applicable` → additive formulas treat as **absent (0-contribution)**;
+`not_available` → **propagate** not-available.
+
+**Relevance-model coordination (#8) — to confirm:** this split assumes SCOPE lives in relevance
+(`is_relevant` / computed relevance) and PER-ANSWER inapplicability lives in `no_data_reason`.
+Two things for #8 to ratify as the relevance tables → computed relevance rework proceeds:
+1. That the scope-vs-assertion boundary holds (computed relevance sets the expected set;
+   `no_data_reason` never sets scope).
+2. Whether a utility's `not_applicable` assertion should **feed back** to refine computed
+   relevance for future periods (a learning signal — flagged as a *future enhancement*, not core).
 
 ## 4. Views / reporting (Silver + Gold) — #4
 
