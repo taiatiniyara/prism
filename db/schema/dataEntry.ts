@@ -164,8 +164,13 @@ export enum DataEntryStatusId {
   Approved = 5,
   /** @deprecated Endorsed has been retired — migrated to Approved (5) */
   Endorsed = 6,
+  /** @deprecated retired — answer-availability moved to `data_entries.no_data_reason` */
   Not_Available = 7,
 }
+
+/** Answer-availability reasons on `data_entries.no_data_reason` (derived on kpi_actual). */
+export const NO_DATA_REASONS = ["not_available", "asserted_not_applicable"] as const;
+export type NoDataReason = (typeof NO_DATA_REASONS)[number];
 
 export const DataEntryStatus = {
   Requested: DataEntryStatusId.Requested,
@@ -236,6 +241,9 @@ export const dataEntries = pgTable(
       () => managedListItems.id,
     ),
     status_id: integer("status_id").$type<DataEntryStatusId>(),
+    // Answer-availability axis, orthogonal to status_id (workflow). NULL = a value
+    // was given, or still awaiting. See NoDataReason / CONTEXT.md "No-Data Reason".
+    no_data_reason: varchar("no_data_reason", { length: 32 }).$type<NoDataReason>(),
     is_relevant: boolean("is_relevant").default(true).notNull(),
     is_deleted: boolean("is_deleted").default(false).notNull(),
     // The ten canonical dimensions — NOT NULL, always the explicit "All" member
@@ -285,6 +293,17 @@ export const dataEntries = pgTable(
       + (case when ${table.value_text} is not null then 1 else 0 end)
       + (case when ${table.value_option_id} is not null then 1 else 0 end)
       ) <= 1`,
+    ),
+    // Controlled vocabulary for the answer-availability axis.
+    check(
+      "chk_no_data_reason",
+      sql`${table.no_data_reason} is null or ${table.no_data_reason} in ('not_available','asserted_not_applicable')`,
+    ),
+    // A row is EITHER a value XOR a no-data answer (never both).
+    check(
+      "chk_value_xor_nodata",
+      sql`(num_nonnulls(${table.value_numeric}, ${table.value_boolean}, ${table.value_text}, ${table.value_option_id}) > 0)::int
+        + (${table.no_data_reason} is not null)::int <= 1`,
     ),
     // True unique physical address: period + measure + full grain + all ten
     // dimensions. NULLS NOT DISTINCT so higher-grain rows (NULL service_area /

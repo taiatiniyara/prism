@@ -4,7 +4,10 @@ import {
   serial,
   varchar,
   unique,
+  date,
+  check,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { measureDefinitions } from "./dataEntry";
 import { managedListItems } from "./managedLists";
 import { MEASURE_DIMENSIONS, type MeasureDimension } from "./measureDimensionScope";
@@ -27,9 +30,18 @@ export const measureDimensionApplicability = pgTable(
     member_id: integer("member_id")
       .notNull()
       .references(() => managedListItems.id),
+    // Effective-dating (fiscal-year-compared) — a new expectation appears in shells
+    // only from its effective period, never retroactively. NULL from = always valid.
+    // See measure-effective-dating-spec / ADR 0004.
+    effective_from: date("effective_from"),
+    effective_to: date("effective_to"),
   },
   (table) => [
     unique("uq_mda").on(table.measure_id, table.dimension, table.member_id),
+    check(
+      "chk_mda_eff_order",
+      sql`${table.effective_from} is null or ${table.effective_to} is null or ${table.effective_to} >= ${table.effective_from}`,
+    ),
   ],
 );
 
