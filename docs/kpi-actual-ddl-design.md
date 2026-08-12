@@ -90,8 +90,11 @@ Four conditions (#8), enforced on the write contract:
 
 `data_entries` gets the **same generated `grain_level`** (this was refinement (ii) of
 the hybrid grain ruling — "generated col or Silver field, choice"; `kpi_actual`
-choosing generated-stored settles it). **One derivation definition, one 7-value type**
-(enum or `text` + CHECK), shared by both tables — zero drift. `data_entries`' CASE is
+choosing generated-stored settles it). **One derivation definition, one type** shared
+by both tables — zero drift. **Type = `text` + CHECK** (7 values), settled with #8 —
+*not* a pg enum: the generated CASE can only ever emit the 7 values (the CHECK is
+belt-and-braces documentation), so an enum buys nothing but `ALTER TYPE` pain, while
+`text` keeps the derivation portable across both tables and any silver re-derivation. `data_entries`' CASE is
 simply the **5-branch prefix** (its chain stops at country, so it never yields
 `subregion`/`region`). The `data_entries.grain_level` add lands in the **coordinated
 `data_entries` DDL** (§5).
