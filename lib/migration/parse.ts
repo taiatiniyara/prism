@@ -14,6 +14,7 @@
  */
 import ExcelJS from "exceljs";
 
+import { NO_DATA_REASONS, type NoDataReason } from "@/db/schema/dataEntry";
 import type { ControlTotals } from "./loads";
 import type { ExtractRow, ValueType } from "./types";
 
@@ -36,6 +37,8 @@ const VALUE_TYPES: ReadonlySet<string> = new Set([
   "text",
   "option",
 ]);
+
+const NO_DATA_REASON_SET: ReadonlySet<string> = new Set(NO_DATA_REASONS);
 
 /** Extract the primitive value from an ExcelJS cell (formulas, rich text, hyperlinks). */
 function cellValue(v: ExcelJS.CellValue): string | number | boolean | null {
@@ -145,6 +148,8 @@ const EXTRACT_COLUMNS = {
   countryId: ["country_id", "country"],
   valueType: ["value_type", "valuetype"],
   value: ["value"],
+  // answer availability (optional; mutually exclusive with value)
+  noDataReason: ["no_data_reason", "no_data", "nodata_reason", "availability"],
   statusId: ["status_id", "status"],
   // p1 provenance (optional)
   updatedById: ["updated_by_id", "entered_by_id", "entered_by", "data_entry_user_id", "user_id"],
@@ -265,6 +270,25 @@ export async function parseExtractWorkbook(
       }
     }
 
+    // answer availability: no_data_reason (optional). Must be in the vocab, and mutually exclusive
+    // with a value (mirrors data_entries.chk_value_xor_nodata). The measure-level mandatory gate
+    // (reject asserted_not_applicable on is_mandatory=true) is enforced in the loader, which knows
+    // is_mandatory.
+    const rawNoData = getStr(r, "noDataReason");
+    let noDataReason: NoDataReason | null = null;
+    if (rawNoData != null) {
+      const nd = rawNoData.trim().toLowerCase();
+      if (!NO_DATA_REASON_SET.has(nd)) {
+        errors.push({ sheet, row: rowNumber, field: "no_data_reason", reason: `no_data_reason "${rawNoData}" not in (${[...NO_DATA_REASON_SET].join(" | ")})`, raw: rawNoData });
+        bad = true;
+      } else if (value != null) {
+        errors.push({ sheet, row: rowNumber, field: "no_data_reason", reason: "a row cannot carry BOTH a value and no_data_reason (value XOR no-data)", raw: rawNoData });
+        bad = true;
+      } else {
+        noDataReason = nd as NoDataReason;
+      }
+    }
+
     if (bad) return; // reported above; don't emit a malformed ExtractRow
     rows.push({
       reportPeriodId: rowReportPeriodId,
@@ -275,6 +299,7 @@ export async function parseExtractWorkbook(
       powerStationId: toInt(get(r, "powerStationId")),
       unitId: toInt(get(r, "unitId")),
       countryId: toInt(get(r, "countryId")),
+      noDataReason,
       valueType,
       value,
       statusId: toInt(get(r, "statusId")),

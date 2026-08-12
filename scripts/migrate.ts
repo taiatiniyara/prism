@@ -43,16 +43,17 @@ function printParseErrors(label: string, errors: ParseError[]): void {
 }
 
 function perPeriodBreakdown(rows: ExtractRow[]): void {
-  const by = new Map<number, { total: number; filled: number }>();
+  const by = new Map<number, { total: number; filled: number; noData: number }>();
   for (const r of rows) {
-    const b = by.get(r.reportPeriodId) ?? { total: 0, filled: 0 };
+    const b = by.get(r.reportPeriodId) ?? { total: 0, filled: 0, noData: 0 };
     b.total += 1;
     if (r.value != null && r.valueType) b.filled += 1;
+    else if (r.noDataReason) b.noData += 1;
     by.set(r.reportPeriodId, b);
   }
-  console.log("\nExtract by report_period (period: shells, filled, empty):");
+  console.log("\nExtract by report_period (period: shells, filled, no-data, empty):");
   for (const [pid, b] of [...by.entries()].sort((a, b) => a[0] - b[0]))
-    console.log(`    ${pid}: ${b.total} shells, ${b.filled} filled, ${b.total - b.filled} empty`);
+    console.log(`    ${pid}: ${b.total} shells, ${b.filled} filled, ${b.noData} no-data, ${b.total - b.filled - b.noData} empty`);
 }
 
 async function main() {
@@ -114,7 +115,8 @@ async function main() {
   console.log(
     `\nLoad result: ${result.shellsCreated} shells (${result.calculatedShells} calculated), ` +
       `${result.shellsFailed} shell failures | ${result.valuesFilled} values filled, ` +
-      `${result.valuesFailed} value failures | ${result.skipped} skipped`,
+      `${result.noDataAnswers} no-data answers | ` +
+      `${result.valuesFailed} value/no-data failures | ${result.skipped} skipped`,
   );
 
   if (control.rows.length > 0) {

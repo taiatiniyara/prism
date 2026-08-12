@@ -27,13 +27,14 @@ const STATUS_ENTERED = 3; // filled
 interface MeasureMeta {
   isActive: boolean;
   isCalculated: boolean;
+  isMandatory: boolean; // core PPA measure — asserted_not_applicable is rejected on these
   col: string | null; // target value column from data_type
 }
 
-/** measure_id -> {is_active, is_calculated, value column} (from data_type). */
+/** measure_id -> {is_active, is_calculated, is_mandatory, value column} (from data_type). */
 async function getMeasureMeta(): Promise<Map<number, MeasureMeta>> {
   const rows = ((await db.execute(sql`
-    SELECT m.id, m.is_active, m.is_calculated, dt.name AS data_type
+    SELECT m.id, m.is_active, m.is_calculated, m.is_mandatory, dt.name AS data_type
     FROM measure_definitions m LEFT JOIN managed_list_items dt ON dt.id=m.data_type_id`)).rows ?? []) as any[];
   const colFor = (dt: string | null): string | null => {
     const s = (dt ?? "").toLowerCase();
@@ -43,7 +44,7 @@ async function getMeasureMeta(): Promise<Map<number, MeasureMeta>> {
     if (s.includes("text") || s.includes("string")) return "value_text";
     return null;
   };
-  return new Map(rows.map((r) => [Number(r.id), { isActive: r.is_active, isCalculated: r.is_calculated, col: colFor(r.data_type) }]));
+  return new Map(rows.map((r) => [Number(r.id), { isActive: r.is_active, isCalculated: r.is_calculated, isMandatory: r.is_mandatory, col: colFor(r.data_type) }]));
 }
 
 function coerce(col: string, value: number | boolean | string): number | boolean | string {
@@ -60,6 +61,7 @@ export interface LoadResult {
   shellsFailed: number;
   valuesFilled: number;
   valuesFailed: number;
+  noDataAnswers: number; // rows loaded as a "no value + reason" answer (not_available / asserted_not_applicable)
   skipped: number; // inactive-measure rows, and any values omitted for calculated measures
 }
 
@@ -71,7 +73,7 @@ export async function loadExtract(loadId: number, rows: ExtractRow[]): Promise<L
   const validUsers = new Set(
     ((await db.execute(sql`SELECT id FROM "user"`)).rows ?? []).map((u: any) => String(u.id)),
   );
-  const res: LoadResult = { total: rows.length, shellsCreated: 0, calculatedShells: 0, shellsFailed: 0, valuesFilled: 0, valuesFailed: 0, skipped: 0 };
+  const res: LoadResult = { total: rows.length, shellsCreated: 0, calculatedShells: 0, shellsFailed: 0, valuesFilled: 0, valuesFailed: 0, noDataAnswers: 0, skipped: 0 };
 
   for (const row of rows) {
     const m = meta.get(row.measureId);
@@ -151,6 +153,30 @@ export async function loadExtract(loadId: number, rows: ExtractRow[]): Promise<L
       } catch (e) {
         const c = classifyPgError(e);
         await recordRejection({ ...ctx, stage: "value", category: c.category, columns: c.columns.length ? c.columns : [col], rule: c.rule, intendedValueType: row.valueType, attemptedNumeric: row.valueType === "numeric" ? Number(row.value) : null, reason: c.reason, remediation: "check the value against the measure's type / valid range", rawError: (e as any)?.message });
+        res.valuesFailed++;
+      }
+    }
+    // PASS 2 (alt) — a "no value + reason" answer (not_available / asserted_not_applicable)
+    else if (row.noDataReason) {
+      // calculated measures carry no entered answer — availability is a p2 compute concern.
+      if (m.isCalculated) {
+        await recordRejection({ ...ctx, category: "other", columns: ["no_data_reason"], reason: "calculated measure — availability is computed in p2, not migrated; shell kept empty", remediation: "omit no_data_reason for calculated measures" });
+        res.skipped++; continue;
+      }
+      // Mandatory gate (data-availability §3.1 rule b): "doesn't apply to us" is invalid on a
+      // mandatory measure — the only honest no-data answer there is not_available (a visible gap).
+      // The writer enforces this for the bulk/migration path, not just the UI.
+      if (row.noDataReason === "asserted_not_applicable" && m.isMandatory) {
+        await recordRejection({ ...ctx, stage: "value", category: "other", columns: ["no_data_reason"], reason: "asserted_not_applicable is not allowed on a mandatory measure — record not_available (a visible gap), or fix relevance via the BMO registry", remediation: "mandatory measure with no data: use not_available; genuine inapplicability is a relevance-registry decision, not an assertion" });
+        res.valuesFailed++; continue;
+      }
+      try {
+        // NB: leave updated_at as PASS 1 set it (original p1 time preserved).
+        await db.execute(sql`UPDATE data_entries SET no_data_reason = ${row.noDataReason}, status_id = ${row.statusId ?? STATUS_ENTERED} WHERE id = ${shellId}`);
+        res.noDataAnswers++;
+      } catch (e) {
+        const c = classifyPgError(e);
+        await recordRejection({ ...ctx, stage: "value", category: c.category, columns: c.columns.length ? c.columns : ["no_data_reason"], reason: c.reason, remediation: "check no_data_reason vs chk_no_data_reason / chk_value_xor_nodata", rawError: (e as any)?.message });
         res.valuesFailed++;
       }
     }
