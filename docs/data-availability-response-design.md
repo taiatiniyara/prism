@@ -1,6 +1,6 @@
 # Data-availability response design — separating "Not Available" from workflow status
 
-**Status:** proposed (2026-08-06) · **Author:** #2/jolly (migration) · **For:** #4 (data_entries DDL), #3 (calculator), #11 (entry UI)
+**Status:** RATIFIED (2026-08-12; core + is_relevant/is_mandatory/asserted_not_applicable three-tier) · **Author:** #2/jolly (migration) · **For:** #4 (data_entries DDL), #3 (calculator), #11 (entry UI)
 
 ## 1. The problem
 
@@ -53,15 +53,19 @@ Entered → Reviewed → **Approved** and publish, exactly like a value — the 
    ```sql
    ALTER TABLE data_entries ADD COLUMN no_data_reason varchar(32);
    ALTER TABLE data_entries ADD CONSTRAINT chk_no_data_reason
-     CHECK (no_data_reason IS NULL OR no_data_reason IN ('not_available','not_applicable'));
+     CHECK (no_data_reason IS NULL OR no_data_reason IN ('not_available','asserted_not_applicable'));
    ```
+   **Vocab FINALISED (2026-08-12): `{ 'not_available', 'asserted_not_applicable' }`** — same set on
+   `data_entries.no_data_reason` and the `kpi_actual` not-available marker (#4 owns both DDLs).
    - `not_available` — in scope and applies, but the utility can't provide the value.
-   - `not_applicable` — in scope per the system, but the utility **asserts** it doesn't apply to
-     them. **Both values ship** (ruled by Eugene 2026-08-06) — the clean, non-overlapping split
-     vs the existing `is_relevant` column is defined in **§3.1**.
+   - `asserted_not_applicable` — the utility **asserts** an in-scope, **non-mandatory** input
+     doesn't apply to them. (Named `asserted_not_applicable`, *not* bare `not_applicable`, because
+     `not_applicable` is already a `measure_dimension_scope.expansion_mode` config value and a
+     computed-relevance concept — see the term-collision note in §3.1.) The three-tier gating and
+     the non-overlap vs `is_relevant` are defined in **§3.1**.
    - *(Alternative: a managed list "No-Data Reason" if BMOs should configure reasons. Given the
      set is tiny and semantic, a CHECK'd varchar is simpler and matches `status_id` being a code
-     enum rather than a managed list. #4's call.)*
+     enum rather than a managed list. #4's call — went with the CHECK'd varchar.)*
 
 2. **Mutual-exclusion constraint** — a row can't be both a value and a no-data answer:
    ```sql
@@ -80,54 +84,78 @@ Entered → Reviewed → **Approved** and publish, exactly like a value — the 
 4. **(Optional convenience)** a generated `answer_state` column, or just derive it in Silver
    (§4). Deriving is cleaner (no dual-encoding) — recommended.
 
-### 3.1 Applicability — `is_relevant` (system scope) vs `not_applicable` (utility-asserted)
+### 3.1 Applicability — the three-tier layering (RATIFIED with #8, 2026-08-12)
 
-#4 flagged that `not_applicable` could collide with the existing `is_relevant` column (both read
-as "doesn't apply"). Eugene ruled: **keep both, with an explicit, non-overlapping split.** They
-answer *different questions*:
+#4 flagged that a "doesn't apply" reason could collide with the existing `is_relevant` column.
+Eugene + #8 resolved it into **three layered tiers**, each answering a different question and owned
+by a different actor. Availability is an *answer* at an existing address; it never creates,
+destroys, or reclassifies an address — so it composes with grain, the unique address, and shell
+generation with **zero interaction** (it's the same principle as `chk_one_value` already allowing
+an all-null-value row whose reason lives in workflow columns).
 
-- **`is_relevant` — system / model SCOPE.** Set by the relevance model (→ computed relevance) from
-  the utility's known characteristics. Answers *"is this input in the utility's EXPECTED set at
-  all?"* `is_relevant = false` ⇒ **out of scope** — not asked, no expected shell. A system,
-  up-front determination.
-- **`no_data_reason = 'not_applicable'` — utility-ASSERTED inapplicability.** For an input that is
-  **in scope** (`is_relevant = true`, the system expects it), the utility asserts at entry time
-  *"this doesn't apply to us."* A per-answer, utility-driven signal — typically the utility
-  **refining / correcting** the system's relevance. It is an *answer*, not a scope call.
+| Tier | Column / signal | Question | Owner |
+|---|---|---|---|
+| 1. **Scope** | `is_relevant` / computed relevance | Is this input in the utility's **expected set at all**? `false` ⇒ no shell. | system + BMO registry |
+| 2. **Obligation** | `measure_definitions.is_mandatory` | For an in-scope input, **must** it be answered with data (PPA core set)? | BMO catalogue policy |
+| 3. **Assertion** | `no_data_reason = 'asserted_not_applicable'` | On an in-scope, **non-mandatory** shell, the utility asserts *"doesn't apply to us."* | utility (BMO adjudicates) |
 
-**Non-overlap invariant:** `no_data_reason` is only meaningful on **in-scope (`is_relevant = true`)
-rows.** So the two encodings never collide:
+**The assertion is gated to in-scope, `is_mandatory = false` shells only.** Three enforcement rules:
+- **(a) UI:** the "doesn't apply" option does **not** render on mandatory shells (#11).
+- **(b) Writer (shared choke point):** rejects `asserted_not_applicable` against `is_mandatory = true`
+  — holds for API / bulk / migration paths too, not just the screen (#4/me).
+- **(c) Mandatory + no data ⇒ the only honest answer is `not_available`** — which **stays a visible
+  gap**, counts against completeness, and can feed escalation. A utility can *explain* a missing
+  core number, never *dissolve the expectation* of it.
+- **Edge case:** if a mandatory measure genuinely doesn't apply to a utility, then **relevance was
+  wrong** → fix via the BMO relevance registry (the established human path), never via an assertion.
 
-| `is_relevant` | value | `no_data_reason` | meaning | whose call |
+**State matrix** (`no_data_reason` only meaningful on in-scope rows — enforce structurally, below):
+
+| `is_relevant` | `is_mandatory` | value | `no_data_reason` | meaning |
 |---|---|---|---|---|
-| **false** | — | (n/a) | out of scope — not expected/asked | system (relevance) |
-| true | set | NULL | a value | utility |
-| true | — | `not_available` | in scope, applies, couldn't obtain | utility |
-| true | — | `not_applicable` | in scope per system, utility asserts it doesn't apply | utility |
-| true | — | NULL | awaiting (not yet answered) | — |
+| **false** | — | — | (n/a) | out of scope — no shell |
+| true | any | set | NULL | a value |
+| true | any | — | `not_available` | in scope, applies, couldn't obtain (mandatory ⇒ a real gap) |
+| true | **false** | — | `asserted_not_applicable` | utility asserts it doesn't apply |
+| true | **true** | — | `asserted_not_applicable` | **INVALID — writer rejects** |
+| true | any | — | NULL | awaiting (not yet answered) |
 
-**Why `not_applicable` earns a distinct value (rationale — Eugene, 2026-08-06):** the PRISM
-Project team currently marks some inputs as **mandatory / expected for everyone** (`is_relevant =
-true`), but a number of these **genuinely don't apply to smaller utilities**. `not_applicable` is
-the utility's channel to say so on an in-scope input — and the **aggregate of those assertions is
-a learning signal**: it tells us which "mandatory" measures should be **shifted onto the relevance
-side** (made not-relevant) for particular utility classes. So `not_applicable` is precisely the
-**correction feedback for `is_relevant`** — which is exactly why it must be its own value and not
-folded into the relevance column: today's relevance model is the *hypothesis*, `not_applicable`
-is the *evidence that refines it*.
+**Structural hardening (bank these):**
+- Under the relevance rework, out-of-scope inputs ideally get **no row at all** (shells created
+  in-scope only) — then "reason only on in-scope rows" enforces itself.
+- Wherever an `is_relevant` column survives on entries, add the cheap CHECK:
+  `no_data_reason IS NOT NULL ⇒ is_relevant = true`.
 
-**Calculator (#3, §9.1):** `not_applicable` → additive formulas treat as **absent (0-contribution)**;
-`not_available` → **propagate** not-available.
+**⚠ Term-collision (#8):** `not_applicable` now lives in **three** distinct roles — (i)
+`measure_dimension_scope.expansion_mode` (config: a dimension is sparsified for a measure), (ii)
+computed relevance (system scope), (iii) the utility assertion. They are distinct enums in distinct
+tables, but the **glossary (`CONTEXT.md`) must disambiguate all three**, and the assertion value is
+therefore named **`asserted_not_applicable`** so logs/queries never confuse config with assertion.
 
-**Relevance-model coordination (#8) — to ratify:** this split assumes SCOPE lives in relevance
-(`is_relevant` / computed relevance) and PER-ANSWER inapplicability lives in `no_data_reason`.
-1. Confirm the scope-vs-assertion boundary holds (computed relevance sets the expected set;
-   `no_data_reason` never sets scope).
-2. **The feedback loop is design intent, not an afterthought** (see rationale above): a report of
-   `not_applicable` rates per measure × utility-class is the input to deciding which measures move
-   to the relevance side. The *automated* feedback can be phased, but the model should be designed
-   knowing this signal exists and is the reason the two encodings are kept separate. #8 owns how/
-   when `not_applicable` evidence feeds computed relevance.
+**Why the assertion earns its own value (rationale — Eugene):** the PRISM team marks some inputs
+mandatory/expected for everyone, but a number **genuinely don't apply to smaller utilities**. The
+assertion is the utility's channel to say so, and the **aggregate is a learning signal** for which
+measures should shift onto the relevance side. Today's relevance = the *hypothesis*;
+`asserted_not_applicable` = the *evidence that refines it*.
+
+**Feedback loop — recommendation queue, NEVER automatic (#8):** an assertion must **not** silently
+mutate system scope (that would let a data-entry action shrink a utility's own expected set → fewer
+flagged gaps → quietly inflated completeness — an integrity risk for a benchmarking product).
+Instead: repeated assertions (same input, N≈2–3 consecutive periods) surface a **review candidate**
+to the BMO/BLO — *"utility asserts X doesn't apply; consider scoping out via the relevance
+registry"* — and a **human** moves scope in the registry (already the BMO-governed home of relevance
+and a gold dirty-event). **Assertion = per-period answer; permanent inapplicability = registry
+decision.** The queue is designed-in; the *acting* on it stays human, forever.
+
+**Calculator (#3, §9.1, CONFIRMED):** `asserted_not_applicable` → additive formulas treat as
+**absent (0-contribution)**, else propagate; `not_available` → **propagate** not-available.
+
+**Carve-outs (owner: Eugene / BMO — not a code stream):**
+- The `is_mandatory` values are **PRISM-1 legacy** — a **BMO curation pass over the 117-measure
+  catalogue** is required **before this feature ships** (a domain exercise, on Eugene's queue).
+- **Completeness metrics must report CORE (mandatory) completeness separately from overall.**
+- Per-relationship / per-size mandatory tiers are explicit **v2** (same `is_mandatory` flag) —
+  do not build now.
 
 ## 4. Views / reporting (Silver + Gold) — #4
 
@@ -140,29 +168,40 @@ is the *evidence that refines it*.
   *no-data* from *has-value* from *awaiting*. **Critical for benchmarking:** "not available"
   must not be silently treated as `0` or as a gap.
 
-## 5. Downstream implications (flagged for owners)
+## 5. Downstream implications (flagged for owners) — all CONFIRMED 2026-08-12
 
-- **Calculator (#3):** a KPI input that is *not available* (no value, `no_data_reason` set) must
-  be handled explicitly — the KPI is likely **not computable** (result null / not-available) or
-  the input is excluded per the formula's rules. **Not-available ≠ 0.** #3 decides the rule.
-- **Entry UI (#11):** the entry screen needs an explicit **"Data not available"** action per
-  cell (distinct from leaving it blank/awaiting) that sets `no_data_reason`, plus display of
-  "Not Available". The old status-dropdown "Not Available" option is replaced by this toggle.
-- **Migration (me):** add `no_data_reason` to the extract format (ExtractRow / EXTRACT_COLUMNS /
-  parser / loader / template + spec). p1 "Not Available" rows load as
-  `status_id = 5, no_data_reason = 'not_available'` (a confirmed answer), **not** as empty
-  shells. Reconciliation: a not-available row is an **answered** shell — either add a
-  `values_not_available` control-total line or fold it into the "filled" side so the fill/leak
-  balances still hold (loader detail to confirm with the reload).
+- **Calculator (#3, §9.1):** `not_available` → **propagate** not-available (KPI becomes
+  not-available, never zero-filled, propagating up the graph + rollups); `asserted_not_applicable`
+  → additive formulas treat as **absent (0-contribution)**, else propagate. **Not-available ≠ 0.**
+  `kpi_actual` must be able to store a computed not-available (null value + reason marker, same
+  vocab as `data_entries.no_data_reason`) so a propagated result is honest, not `0`/gap (#4's DDL).
+- **Entry UI (#11):** a per-cell **"Data not available"** action (distinct from blank/awaiting)
+  that sets `no_data_reason` + display of "Not Available", replacing the status-dropdown option.
+  **Must NOT render on `is_mandatory = true` shells** (§3.1 rule a). Bundled with #11's grain-entry
+  pass; journey-affecting → USER-IMPACT row on the commit.
+- **Migration / loader / reconciliation (me):** add `no_data_reason` to the extract format
+  (`ExtractRow` / `EXTRACT_COLUMNS` / parser / loader / template + spec), carrying the exact codes
+  **`{ 'not_available', 'asserted_not_applicable' }`**. p1 "Not Available" rows load as
+  `status_id = 5, no_data_reason = 'not_available'` (a confirmed answer, not an empty shell) — p1
+  is expected to have only the `not_available` flavour (confirm on the reload). The **loader is a
+  writer path**, so it must honour the mandatory gate (§3.1 rule b): reject
+  `asserted_not_applicable` on `is_mandatory = true` measures (→ rejection ledger). Reconciliation:
+  a not-available row is an **answered** shell — add a control-total line or fold it into the
+  "filled" side so fill/leak balances hold. **Gated on #4 landing the `no_data_reason` column.**
 
 ## 6. Ownership summary
 
 | Area | Owner |
 |---|---|
-| `data_entries` DDL: `no_data_reason` column + CHECKs + status-7 migration + Silver/Gold view changes | **#4** |
-| Calculator handling of not-available inputs | **#3** |
-| Entry-screen "Data not available" toggle + display | **#11** |
-| Extract format + loader + reconciliation for `no_data_reason` | **#2/jolly (me)** |
+| `data_entries` **+ `kpi_actual`** DDL: `no_data_reason` column + CHECKs (vocab `{not_available, asserted_not_applicable}`) + `chk_value_xor_nodata` + status-7 migration + Silver/Gold view changes | **#4** |
+| Relevance-model boundary + the `asserted_not_applicable` → registry recommendation queue | **#8** |
+| Calculator propagation / 0-contribution rules; `kpi_actual` not-available representation | **#3** |
+| Entry-screen "Data not available" toggle + display + mandatory gating (rule a) | **#11** |
+| Extract format + loader (writer-gate, rule b) + reconciliation for `no_data_reason` | **#2/jolly (me)** |
+| **BMO curation of `is_mandatory` over the 117-measure catalogue (before ship)** + core-vs-overall completeness | **Eugene / BMO** |
 
-Net: **status = workflow, `no_data_reason` = availability.** "Not available" becomes a real,
-approvable, publishable answer that benchmarking can see and never mistakes for zero or a gap.
+Net: **scope (`is_relevant`) → obligation (`is_mandatory`) → answer-availability (`no_data_reason`)**
+— three layered tiers. "Not available" is a real, approvable, publishable answer benchmarking never
+mistakes for zero or a gap; a utility can explain a missing core number but never dissolve the
+expectation of it; and the utility-influenceable surface is the optional periphery only, always
+assert-then-BMO-adjudicates.
