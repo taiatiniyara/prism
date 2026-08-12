@@ -1,10 +1,11 @@
 # `kpi_actual` DDL design (DRAFT)
 
-_Status: DRAFT — 2026-08-12, session #4 (data_entries / shared-table DDL owner).
-The single computed-KPI table. Synthesises #3's calculator-engine spec (purpose +
-column-set), #8's hybrid nullable-chain grain convention (address model), and the
-existing `data_entries` shape (which it mirrors). For ratification by #8 (grain) +
-#3 (column-set/write-path) before DDL._
+_Status: **RATIFIED (design)** — 2026-08-12, session #4 (data_entries / shared-table
+DDL owner). Grain ✅ #8 · column-set/write-path ✅ #3. The single computed-KPI table,
+synthesising #3's calculator-engine spec (purpose + column-set), #8's hybrid
+nullable-chain grain convention (address model), and the existing `data_entries`
+shape (which it mirrors). **Execution gated on `period_id` = the canonical period
+dimension** (below) + #12's RLS column._
 
 Owners: **#4** DDL (this doc) · **#3** column-set-merge + write path (sole writer) ·
 **#8** grain convention · **#12** RLS owning-org column.
@@ -109,17 +110,27 @@ simply the **5-branch prefix** (its chain stops at country, so it never yields
       generated-stored `grain_level` (5-branch prefix) + one shared 7-value type, +
       make `region NOT NULL` with the write-time region==derivable validation
       (§4 c/d). Lands in the **coordinated `data_entries` DDL**.
-- [ ] **#3 — column-set-merge + write path:** confirm `value` is a single `numeric`
-      (are any KPIs boolean/text? if so, typed columns like `data_entries`), and the
-      exact 10-dimension merged set matches the input side. Confirm `no_data_reason`
-      is derived-only in the write path.
+- [x] **#3 — column-set + write path APPROVED** (2026-08-12): **single `value
+      numeric` (nullable)** — all computed KPIs are numeric (formula arithmetic). The
+      7 `is_descriptive`+formula pass-through KPIs are modelled as **entered** text
+      measures (`data_entries.value_text`) surfaced via the **Track-as-KPI projection**
+      (`source_measure_def_id`), read by reference — **not** materialized as text in
+      `kpi_actual`, so the table stays numeric-only. 10-dim set exact-match ✓;
+      `no_data_reason` derived-only ✓ (a direct KPI-level assertion is a nonsense
+      state; sole-writer enforces); flags out ✓.
 - [ ] **#12 — RLS:** the `owning_org_id` column + policy (tenant derivable via the
       grain chain → utility).
-- [ ] **`period_id` = the canonical period dimension** (time-series spec) — a
-      per-utility `report_period_id` can't key a country rollup. `kpi_actual`'s
-      `period_id` waits on / aligns with the canonical period dim. Flag the sequencing.
-- [ ] **DDL execution** — additive greenfield table; lands in the coordinated
-      medallion DDL (or early, Eugene's call) once #8/#3/#12 ratify the above.
+- [ ] **`period_id` = the canonical period dimension (THE execution gate)** — a
+      per-utility `report_period_id` can't key a country/region rollup, so `kpi_actual`
+      needs the canonical period dim (time-series spec, #8/#5/#9). This is the one
+      dependency between a ratified design and a landable table. Options: wait for the
+      period dim, or land the table now with `period_id integer` and add the FK when
+      the dim exists — Eugene/#8 sequencing call.
+- [ ] **#12 — RLS `owning_org_id`** column + policy (tenant derivable via the grain
+      chain → utility). Small; confirm with #12 when landing.
+- [ ] **DDL execution** — additive greenfield table; design ratified (#8+#3). Lands
+      once `period_id` is resolved + #12's RLS col, in the coordinated medallion DDL
+      (or early, Eugene's call).
 
 ## 6. Ownership recap
 
