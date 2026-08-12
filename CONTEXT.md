@@ -40,8 +40,9 @@ A glossary of domain terms, not a spec. No stack choices or implementation detai
   text; ratios for %) with the legacy raw string retained in `value`. Generation/storage
   measures are collected at **equipment level**; all higher levels are derived, never
   entered (totals = coalesce entered-All-row else sum of detail).
-- **Data Entry Status** — Requested → Pending → Entered → Reviewed → **Approved**
-  (publication event; Endorsed retired) · Not Available.
+- **Data Entry Status** — the **workflow lifecycle only**: Requested → Pending → Entered → Reviewed → **Approved**
+  (publication event; Endorsed retired). *(Not_Available retired as a status — answer-availability moved to No-Data Reason, a separate axis.)*
+- **No-Data Reason** — answer-availability marker on a data entry (nullable), mirrored on computed `kpi_actual`, **orthogonal to workflow status**. Two values: **`not_available`** (exists but unknown / not collected → the calculator **propagates**: the KPI becomes not-available, never 0) · **`asserted_not_applicable`** (the utility asserts, on an **in-scope** `is_relevant=true` input, that it genuinely doesn't apply → an **additive** formula treats it as 0-contribution; every other formula propagates). Only meaningful on `is_relevant=true` rows (so it never collides with scope). **`not-available ≠ 0`.** The `asserted_` prefix disambiguates from the two *other* "not applicable" concepts: `measure_dimension_scope.expansion_mode='not_applicable'` (a *dimension-config* setting) and `is_relevant`/relevance (system *scope*).
 - **Relevance Shell** — a pre-created empty entry row (address only, status Requested)
   generated per utility-period from measure scope + utility context; unfilled shells ARE
   the gap report.
