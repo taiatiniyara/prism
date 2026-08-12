@@ -106,16 +106,28 @@ rows.** So the two encodings never collide:
 | true | — | `not_applicable` | in scope per system, utility asserts it doesn't apply | utility |
 | true | — | NULL | awaiting (not yet answered) | — |
 
+**Why `not_applicable` earns a distinct value (rationale — Eugene, 2026-08-06):** the PRISM
+Project team currently marks some inputs as **mandatory / expected for everyone** (`is_relevant =
+true`), but a number of these **genuinely don't apply to smaller utilities**. `not_applicable` is
+the utility's channel to say so on an in-scope input — and the **aggregate of those assertions is
+a learning signal**: it tells us which "mandatory" measures should be **shifted onto the relevance
+side** (made not-relevant) for particular utility classes. So `not_applicable` is precisely the
+**correction feedback for `is_relevant`** — which is exactly why it must be its own value and not
+folded into the relevance column: today's relevance model is the *hypothesis*, `not_applicable`
+is the *evidence that refines it*.
+
 **Calculator (#3, §9.1):** `not_applicable` → additive formulas treat as **absent (0-contribution)**;
 `not_available` → **propagate** not-available.
 
-**Relevance-model coordination (#8) — to confirm:** this split assumes SCOPE lives in relevance
+**Relevance-model coordination (#8) — to ratify:** this split assumes SCOPE lives in relevance
 (`is_relevant` / computed relevance) and PER-ANSWER inapplicability lives in `no_data_reason`.
-Two things for #8 to ratify as the relevance tables → computed relevance rework proceeds:
-1. That the scope-vs-assertion boundary holds (computed relevance sets the expected set;
+1. Confirm the scope-vs-assertion boundary holds (computed relevance sets the expected set;
    `no_data_reason` never sets scope).
-2. Whether a utility's `not_applicable` assertion should **feed back** to refine computed
-   relevance for future periods (a learning signal — flagged as a *future enhancement*, not core).
+2. **The feedback loop is design intent, not an afterthought** (see rationale above): a report of
+   `not_applicable` rates per measure × utility-class is the input to deciding which measures move
+   to the relevance side. The *automated* feedback can be phased, but the model should be designed
+   knowing this signal exists and is the reason the two encodings are kept separate. #8 owns how/
+   when `not_applicable` evidence feeds computed relevance.
 
 ## 4. Views / reporting (Silver + Gold) — #4
 
