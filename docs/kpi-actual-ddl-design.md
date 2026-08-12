@@ -55,31 +55,57 @@ are **gold-layer evaluations, not stored here** (calc-spec §… confirmed).
   the root; **#4 enforces chain-consistency on the write contract** (Eugene-confirmed
   grain rule). FKs on every grain + dimension + `kpi_def_id`.
 
-## 4. `grain_level` (generated) — needs #8's exact vocabulary
+## 4. `grain_level` (generated) — #8 RATIFIED (authoritative)
 
 `grain_level` is a **generated stored** column = the deepest non-NULL grain level.
-The calc-spec lists five levels (`unit|station|area|utility|country`) but the chain
-has **seven** columns (incl. `subregion_id`, `region`). **Open for #8:** the exact
-level vocabulary + ordering (do `subregion`/`region` get their own levels, or fold
-into `country`?), so the `CASE` is authoritative:
+**#8 ruled subregion + region get their own levels on `kpi_actual`** — because it is
+the rollup store, and supra-country rollups (sub-region / region) "exist only as
+derived rows in gold" (medallion §1.5) = exactly this table. They were dropped from
+`data_entries` because they are never *entry* levels, but they are *rollup* levels.
+Authoritative 7-level CASE (finest→coarsest, matching the managed-list ladder Lvl 1–7):
 ```
 grain_level GENERATED ALWAYS AS (
   CASE WHEN unit_id IS NOT NULL THEN 'unit'
        WHEN power_station_id IS NOT NULL THEN 'station'
        WHEN service_area_id IS NOT NULL THEN 'area'
        WHEN utility_id IS NOT NULL THEN 'utility'
-       WHEN region IS NOT NULL THEN 'region'          -- ? per #8
-       WHEN subregion_id IS NOT NULL THEN 'subregion' -- ? per #8
        WHEN country_id IS NOT NULL THEN 'country'
-       ELSE 'global' END) STORED
+       WHEN subregion_id IS NOT NULL THEN 'subregion'
+       ELSE 'region' END) STORED
 ```
+Four conditions (#8), enforced on the write contract:
+- **(a) supra-country rows are engine-only** — no *entered* fact ever sits above
+  country; the calculator's sole-writer status enforces this mechanically.
+- **(b) chain-consistency extends two more hops:** `country_id` filled ⇒
+  `subregion_id` = that country's real `sub_region` FK **and** `region` = that
+  sub-region's continental region; `country_id` NULL ⇒ `subregion_id` is a real M49
+  row (FK suffices — no sentinels) with `region` consistent.
+- **(c) `region` as a typed string** is acceptable *here only* (region-level rollup
+  addresses need it; no region entity table exists) — it must always equal the
+  derivable value where `subregion_id` is filled, **validated at write**.
+- **(d)** since the chain fills to root, **`region` is effectively `NOT NULL`** on
+  every row — declare it `NOT NULL` explicitly.
+
+### 4.1 Shared `grain_level` on BOTH tables (#8 ruled)
+
+`data_entries` gets the **same generated `grain_level`** (this was refinement (ii) of
+the hybrid grain ruling — "generated col or Silver field, choice"; `kpi_actual`
+choosing generated-stored settles it). **One derivation definition, one 7-value type**
+(enum or `text` + CHECK), shared by both tables — zero drift. `data_entries`' CASE is
+simply the **5-branch prefix** (its chain stops at country, so it never yields
+`subregion`/`region`). The `data_entries.grain_level` add lands in the **coordinated
+`data_entries` DDL** (§5).
 
 ## 5. Dependencies / open items
 
-- [ ] **#8 — grain ratify:** the `grain_level` vocabulary/ordering (§4), the
-      nullable-chain + `NULLS NOT DISTINCT` + chain-consistency mirror. (Should
-      `data_entries` also gain the generated `grain_level`? It doesn't have it today
-      — worth aligning both.)
+- [x] **#8 — grain RATIFIED** (2026-08-12): 7-level `grain_level` CASE + 4 conditions
+      (§4); `data_entries` gets the same generated col (5-branch prefix), shared
+      derivation + type. Address model / NULLS NOT DISTINCT / no-sentinels / XOR /
+      derived-only vocab all verified faithful.
+- [ ] **`data_entries.grain_level`** — new DDL item (from #8's Q2): add the same
+      generated-stored `grain_level` (5-branch prefix) + one shared 7-value type, +
+      make `region NOT NULL` with the write-time region==derivable validation
+      (§4 c/d). Lands in the **coordinated `data_entries` DDL**.
 - [ ] **#3 — column-set-merge + write path:** confirm `value` is a single `numeric`
       (are any KPIs boolean/text? if so, typed columns like `data_entries`), and the
       exact 10-dimension merged set matches the input side. Confirm `no_data_reason`
