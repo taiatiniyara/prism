@@ -157,6 +157,40 @@ decision.** The queue is designed-in; the *acting* on it stays human, forever.
 - Per-relationship / per-size mandatory tiers are explicit **v2** (same `is_mandatory` flag) —
   do not build now.
 
+### 3.2 The evidence surface — assertions → relevance refinement (owned by #8)
+
+Relevance is the **hypothesis** of what applies; `asserted_not_applicable` is the **evidence** that
+refines it. Evidence **never mutates the hypothesis directly** — it flows through the BMO. That's
+what makes the signal *trustworthy*: evidence that auto-rewrites its own hypothesis is a loop a
+utility could game (shrink its own expected set via data entry). **Assertions never set scope**
+(§3.1); they feed an evidence surface the BMO reads.
+
+**Two granularities:**
+- **A — per-utility:** N consecutive assertions on `(utility, measure)` → a **per-utility
+  scope-out candidate** in the BMO queue.
+- **B — rule-level (the powerful one):** the **assertion rate per `(measure × utility-class)`**
+  over a window → the **relevance *rule*** is miscalibrated for that class → BMO adjusts the
+  criteria, fixing scope for the **whole class, including future utilities**. This is the reason
+  the value exists.
+
+**Two signals (covering the mandatory blind spot):** assertions only exist on *optional* shells,
+so A/B never see mandatory measures. For **mandatory** measures the evidence stream is instead
+**persistent `not_available`** — weaker (could be capacity, not inapplicability) but the *only*
+signal there — feeding the **same BMO queue at lower confidence, flagged as such**. Without it, a
+mandatory measure wrongly expected of small utilities would never generate refinement evidence and
+the miscalibration could never self-correct.
+
+**Ship the evidence NOW; automate never-to-later:** build the evidence surface with the
+availability feature — a **gold view** of *assertion-rate + persistent-NA per `(measure ×
+utility-class)` per window*. It's cheap, and its **shape is part of the relevance-rework contract**
+(the relevance model is designed knowing this signal exists). Phasing:
+1. **Evidence view + BMO queue consume it — day one.**
+2. Threshold-based auto-**suggestions** into the queue — later, if wanted.
+3. Auto-**action** on scope — **never** (a human moves scope in the relevance registry).
+
+**Ownership:** #8 owns the evidence model, the BMO recommendation queue, and the registry action;
+the gold evidence view ships as part of the availability feature (built with #4's gold layer).
+
 ## 4. Views / reporting (Silver + Gold) — #4
 
 - **`value_display`**: when `no_data_reason` is set → show **"Not Available"** (or the mapped
