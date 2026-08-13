@@ -2,12 +2,35 @@ import { db } from "@/db/connection";
 import {
   dataEntries,
   DataEntryStatusId,
+  measureDefinitions,
 } from "@/db/schema/dataEntry";
 import { managedListItems, managedLists } from "@/db/schema/managedLists";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { and, eq } from "drizzle-orm";
 
-const HOURS_IN_PERIOD_MEASURE_DEF_ID = 1650;
+const HOURS_IN_PERIOD_MEASURE_NAME = "Hours in Period";
+
+// Resolve the measure by NAME, not a hardcoded id. The medallion catalogue
+// collapse renumbered measures — the old id 1650 no longer exists ("Hours in
+// Period" is now 300) — so binding by id re-breaks on any future renumber.
+// Cached per-process after first lookup.
+let cachedHoursInPeriodMeasureId: number | null = null;
+
+async function getHoursInPeriodMeasureId(): Promise<number> {
+  if (cachedHoursInPeriodMeasureId != null) return cachedHoursInPeriodMeasureId;
+  const [row] = await db
+    .select({ id: measureDefinitions.id })
+    .from(measureDefinitions)
+    .where(eq(measureDefinitions.name, HOURS_IN_PERIOD_MEASURE_NAME))
+    .limit(1);
+  if (!row) {
+    throw new Error(
+      `Measure "${HOURS_IN_PERIOD_MEASURE_NAME}" not found in measure_definitions`,
+    );
+  }
+  cachedHoursInPeriodMeasureId = row.id;
+  return cachedHoursInPeriodMeasureId;
+}
 
 const DAYS_IN_MONTH = [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31];
 const HOURS_PER_DAY = 24;
@@ -108,6 +131,7 @@ export async function upsertHoursInPeriod(reportPeriodId: number): Promise<void>
     await getReportPeriodDetails(reportPeriodId);
   const hours = calculateHoursInPeriod(reportDate, reportTypeName);
   const hoursString = String(hours);
+  const measureId = await getHoursInPeriodMeasureId();
 
   const [existing] = await db
     .select({ id: dataEntries.id })
@@ -115,7 +139,7 @@ export async function upsertHoursInPeriod(reportPeriodId: number): Promise<void>
     .where(
       and(
         eq(dataEntries.report_period_id, reportPeriodId),
-        eq(dataEntries.measure_def_id, HOURS_IN_PERIOD_MEASURE_DEF_ID),
+        eq(dataEntries.measure_def_id, measureId),
         eq(dataEntries.is_deleted, false),
       ),
     )
@@ -136,7 +160,7 @@ export async function upsertHoursInPeriod(reportPeriodId: number): Promise<void>
   } else {
     await db.insert(dataEntries).values({
       report_period_id: reportPeriodId,
-      measure_def_id: HOURS_IN_PERIOD_MEASURE_DEF_ID,
+      measure_def_id: measureId,
       value_numeric: hoursString,
       value: hoursString,
       status_id: DataEntryStatusId.Entered,
@@ -193,4 +217,36 @@ async function getDefaultDimensionMap() {
     gender,
     utilityFunction,
   };
+}
+
+/**
+ * Reload/backfill entry point: (re)generate the system-computed "Hours in Period"
+ * for EVERY report period. Idempotent (upsert). The interactive data-entry paths
+ * call `upsertHoursInPeriod` per period, but a bulk reload does not touch each
+ * period through the UI — so the reload (or a one-off post-reload run) must call
+ * this, otherwise historical periods have no Hours-in-Period row and every KPI
+ * that divides by it breaks. Returns the number of periods processed.
+ */
+export async function backfillHoursInPeriodForAllPeriods(): Promise<{
+  processed: number;
+  failed: number;
+}> {
+  const periods = await db
+    .select({ id: reportPeriods.id })
+    .from(reportPeriods);
+  let processed = 0;
+  let failed = 0;
+  for (const p of periods) {
+    try {
+      await upsertHoursInPeriod(p.id);
+      processed += 1;
+    } catch (err) {
+      failed += 1;
+      console.error(
+        `[hours-in-period] backfill failed for report period ${p.id}:`,
+        err instanceof Error ? err.message : err,
+      );
+    }
+  }
+  return { processed, failed };
 }
