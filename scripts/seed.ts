@@ -2,6 +2,7 @@ import { db } from "@/db/connection";
 import { roles } from "@/db/schema/auth-schema";
 import { managedLists } from "@/db/schema/managedLists";
 import { subRegions } from "@/db/schema/country";
+import { sectors } from "@/db/schema/sector";
 import { sidebarAccess } from "@/db/schema/rls";
 import crypto from "node:crypto";
 
@@ -134,11 +135,28 @@ async function seedSidebar() {
   console.log(`Seeded ${entries.length} sidebar entries.`);
 }
 
+// ADR 0003 sector reference table. Explicit ids (same id = same sector across
+// envs; FK target for #10's benchmarking_group_sector + Phase-5b sector_terminology).
+// Idempotent: run after any `db-push --force`, which recreates tables and drops
+// their seed rows — this restores them without duplicating.
+async function seedSectors() {
+  await db
+    .insert(sectors)
+    .values([
+      { id: 1, code: "electricity", name: "Electricity", sort_order: 1 },
+      { id: 2, code: "water", name: "Water", sort_order: 2 },
+      { id: 3, code: "sanitation", name: "Sanitation", sort_order: 3 },
+    ])
+    .onConflictDoNothing();
+  console.log("Seeded sectors (electricity/water/sanitation).");
+}
+
 async function main() {
   console.log("Seeding PRISM database...\n");
   await seedRoles();
   await seedManagedLists();
   await seedSubRegions();
+  await seedSectors();
   await seedSidebar();
   console.log("\nSeed complete.");
 }
