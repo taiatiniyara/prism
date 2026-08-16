@@ -185,20 +185,9 @@ export const twoFactor = pgTable(
 );
 export type TwoFactor = typeof twoFactor.$inferSelect;
 
-export const externalRegistrations = pgTable("external_registrations", {
-  id: serial("id").primaryKey().notNull(),
-  name: text("name").notNull(),
-  email: text("email").notNull(),
-  organisation: text("organisation").notNull(),
-  dataset_required: text("dataset_required"),
-  data_access_reason: text("data_access_reason"),
-  date_created: timestamp("date_created").defaultNow().notNull(),
-  status_id: integer("status_id").default(1).notNull(),
-});
-
-export type ExternalRegistration = typeof externalRegistrations.$inferSelect;
-export type NewExternalRegistration =
-  typeof externalRegistrations.$inferInsert;
+// external_registrations retired 2026-07-28 (#10): legacy free-text intake path
+// replaced by the pending-user flow (user.status) + the future access_request
+// intake. Table dropped (0 rows, no FKs, no dependent views).
 
 export const userRelations = relations(user, ({ many }) => ({
   sessions: many(session),

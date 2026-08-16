@@ -19,7 +19,7 @@ const COLS: { key: string; header: string; note: string; width: number }[] = [
   { key: "values_option", header: "values_option", note: "VALUE: matched non-calc values typed option (managed-list)", width: 15 },
   { key: "sum_value_numeric", header: "sum_value_numeric", note: "FIDELITY: arithmetic sum of the numeric values", width: 20 },
   { key: "values_noncalc_unfiltered", header: "values_noncalc_unfiltered", note: "LEAK: ALL non-calc values, ignoring relevance", width: 26 },
-  { key: "values_calculated", header: "values_calculated", note: "INFO: calculated values excluded (RAW-ONLY)", width: 18 },
+  { key: "values_calculated", header: "values_calculated", note: "OPTIONAL/INFO: p1 calculated (KPI) values — excluded from the migration AND from the reconciliation tallies (RAW-ONLY; p2 recomputes them). Put 0 (or leave blank) if none.", width: 18 },
 ];
 
 const EXAMPLE: Record<string, string | number> = {

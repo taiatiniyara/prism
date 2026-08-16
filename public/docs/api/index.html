@@ -53,10 +53,10 @@
 <body>
 <div class="container">
 <h1>prism API Reference</h1>
-<p class="subtitle">Auto-generated from 123 route files &middot; 141 endpoints &middot; 17 tag groups</p>
+<p class="subtitle">Auto-generated from 133 route files &middot; 151 endpoints &middot; 27 tag groups</p>
 <div class="stats">
 <span class="stat"><strong>DELETE</strong> 3</span>
-<span class="stat"><strong>GET</strong> 105</span>
+<span class="stat"><strong>GET</strong> 115</span>
 <span class="stat"><strong>PATCH</strong> 3</span>
 <span class="stat"><strong>POST</strong> 22</span>
 <span class="stat"><strong>PUT</strong> 8</span>
@@ -342,6 +342,32 @@
 </div>
 </div>
 
+<div class="tag-group" data-tag="Countries">
+<h2 class="tag-title">Countries</h2>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#22c55e">GET</span>
+    <span class="ep-path">/api/countries</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">Get countries</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> Migration Key (x-migration-key)</span>
+    </div>
+    
+    
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-2xx">200 OK</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
 <div class="tag-group" data-tag="Data Entry">
 <h2 class="tag-title">Data Entry</h2>
 
@@ -356,7 +382,7 @@
     <div class="ep-meta">
       <span><strong>Auth:</strong> Session (Better Auth)</span>
     </div>
-    <div class="ep-params"><strong>Parameters:</strong><ul><li><code>reportPeriodId</code> (query, required)</li><li><code>serviceAreaId</code> (query, required)</li><li><code>energyResourceId</code> (query, required)</li></ul></div>
+    <div class="ep-params"><strong>Parameters:</strong><ul><li><code>reportPeriodId</code> (query, required)</li><li><code>serviceAreaId</code> (query, required)</li><li><code>unitId</code> (query, required)</li></ul></div>
     
     <div style="margin-top:8px">
       <strong>Responses:</strong>
@@ -1018,7 +1044,7 @@
     <div class="ep-meta">
       <span><strong>Auth:</strong> Session (Better Auth)</span>
     </div>
-    <div class="ep-params"><strong>Parameters:</strong><ul><li><code>reportPeriodId</code> (query, required)</li><li><code>serviceAreaId</code> (query, required)</li><li><code>energyResourceId</code> (query, required)</li></ul></div>
+    <div class="ep-params"><strong>Parameters:</strong><ul><li><code>reportPeriodId</code> (query, required)</li><li><code>serviceAreaId</code> (query, required)</li><li><code>unitId</code> (query, required)</li></ul></div>
     
     <div style="margin-top:8px">
       <strong>Responses:</strong>
@@ -1216,6 +1242,32 @@
       <strong>Responses:</strong>
       <div class="status-list" style="margin-top:4px">
         <span class="status-code status-4xx">401 Unauthorized</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="tag-group" data-tag="DataEntries">
+<h2 class="tag-title">DataEntries</h2>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#22c55e">GET</span>
+    <span class="ep-path">/api/dataEntries</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">Get dataEntries</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> Migration Key (x-migration-key)</span>
+    </div>
+    
+    
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-2xx">200 OK</span>
       </div>
     </div>
   </div>
@@ -2234,14 +2286,14 @@
   <div class="ep-body">
     <p style="margin:0 0 8px">Fact: SAIDI/SAIFI reliability indices (API-key gated, proxy to prism-training)</p>
     <div class="ep-meta">
-      <span><strong>Auth:</strong> None (public)</span>
+      <span><strong>Auth:</strong> API Key (Authorization header)</span>
     </div>
     
     
     <div style="margin-top:8px">
       <strong>Responses:</strong>
       <div class="status-list" style="margin-top:4px">
-        <span class="status-code status-2xx">200 OK</span>
+        <span class="status-code status-4xx">401 Unauthorized</span>
       </div>
     </div>
   </div>
@@ -2352,6 +2404,32 @@
       <strong>Responses:</strong>
       <div class="status-list" style="margin-top:4px">
         <span class="status-code status-4xx">401 Unauthorized</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="tag-group" data-tag="KpiDefinitions">
+<h2 class="tag-title">KpiDefinitions</h2>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#22c55e">GET</span>
+    <span class="ep-path">/api/kpiDefinitions</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">Get kpiDefinitions</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> Migration Key (x-migration-key)</span>
+    </div>
+    
+    
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-2xx">200 OK</span>
       </div>
     </div>
   </div>
@@ -2528,6 +2606,84 @@
         <span class="status-code status-4xx">401 Unauthorized</span>
 <span class="status-code status-4xx">403 Forbidden</span>
 <span class="status-code status-5xx">500 Error</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="tag-group" data-tag="MeasureDefinitions">
+<h2 class="tag-title">MeasureDefinitions</h2>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#22c55e">GET</span>
+    <span class="ep-path">/api/measureDefinitions</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">Get measureDefinitions</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> Migration Key (x-migration-key)</span>
+    </div>
+    
+    
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-2xx">200 OK</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="tag-group" data-tag="MeasureDimensionApplicability">
+<h2 class="tag-title">MeasureDimensionApplicability</h2>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#22c55e">GET</span>
+    <span class="ep-path">/api/measureDimensionApplicability</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">Get measureDimensionApplicability</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> Migration Key (x-migration-key)</span>
+    </div>
+    
+    
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-2xx">200 OK</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="tag-group" data-tag="MeasureDimensionScope">
+<h2 class="tag-title">MeasureDimensionScope</h2>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#22c55e">GET</span>
+    <span class="ep-path">/api/measureDimensionScope</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">Get measureDimensionScope</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> Migration Key (x-migration-key)</span>
+    </div>
+    
+    
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-2xx">200 OK</span>
       </div>
     </div>
   </div>
@@ -2986,7 +3142,7 @@
   <div class="ep-body">
     <p style="margin:0 0 8px">Health check endpoint — returns system status, DB connectivity, Power BI circuit breaker state, AI model status, SMTP, and World Bank API reachability</p>
     <div class="ep-meta">
-      <span><strong>Auth:</strong> None (public)</span>
+      <span><strong>Auth:</strong> Session (Better Auth)</span>
     </div>
     
     
@@ -3018,6 +3174,32 @@
         <span class="status-code status-4xx">401 Unauthorized</span>
 <span class="status-code status-4xx">403 Forbidden</span>
 <span class="status-code status-5xx">500 Error</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="tag-group" data-tag="Organisations">
+<h2 class="tag-title">Organisations</h2>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#22c55e">GET</span>
+    <span class="ep-path">/api/organisations</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">Get organisations</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> Migration Key (x-migration-key)</span>
+    </div>
+    
+    
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-2xx">200 OK</span>
       </div>
     </div>
   </div>
@@ -3067,6 +3249,58 @@
       <strong>Responses:</strong>
       <div class="status-list" style="margin-top:4px">
         <span class="status-code status-4xx">401 Unauthorized</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="tag-group" data-tag="PowerStations">
+<h2 class="tag-title">PowerStations</h2>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#22c55e">GET</span>
+    <span class="ep-path">/api/powerStations</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">Get powerStations</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> Migration Key (x-migration-key)</span>
+    </div>
+    
+    
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-2xx">200 OK</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="tag-group" data-tag="ServiceAreas">
+<h2 class="tag-title">ServiceAreas</h2>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#22c55e">GET</span>
+    <span class="ep-path">/api/serviceAreas</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">Get serviceAreas</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> Migration Key (x-migration-key)</span>
+    </div>
+    
+    
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-2xx">200 OK</span>
       </div>
     </div>
   </div>
@@ -3313,6 +3547,32 @@
 </div>
 </div>
 
+<div class="tag-group" data-tag="Units">
+<h2 class="tag-title">Units</h2>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#22c55e">GET</span>
+    <span class="ep-path">/api/units</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">Get units</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> Migration Key (x-migration-key)</span>
+    </div>
+    
+    
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-2xx">200 OK</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
 <div class="tag-group" data-tag="Users">
 <h2 class="tag-title">Users</h2>
 
@@ -3325,7 +3585,7 @@
   <div class="ep-body">
     <p style="margin:0 0 8px">Get users</p>
     <div class="ep-meta">
-      <span><strong>Auth:</strong> API Key (Authorization header)</span>
+      <span><strong>Auth:</strong> None (public)</span>
     </div>
     
     

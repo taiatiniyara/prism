@@ -12,6 +12,7 @@
  * Separately, the p1→p2 map (map.ts / MapEntry) is still used to regenerate `input_dl_def_mappings`
  * for the legacy fact API — not in this load path.
  */
+import type { NoDataReason } from "@/db/schema/dataEntry";
 
 /** The ten canonical dimensions, as managed_list_items member ids. */
 export interface DimensionMembers {
@@ -55,5 +56,12 @@ export interface ExtractRow {
   // value — present = filled shell, absent = empty shell
   valueType?: ValueType | null;
   value?: number | boolean | string | null; // option: the managed_list_items id
-  statusId?: number | null; // optional explicit status; else derived (filled→Entered, empty→Requested)
+  // answer availability — a "no value, but here's why" answer. Mutually exclusive with value
+  // (data_entries.chk_value_xor_nodata). One of NO_DATA_REASONS.
+  noDataReason?: NoDataReason | null; // → data_entries.no_data_reason
+  statusId?: number | null; // optional explicit status; else derived (filled/no-data→Entered, empty→Requested)
+  // p1 provenance (all optional) — the original data-entry person, time, and note.
+  updatedById?: string | null; // → data_entries.updated_by_id (a p2-valid user.id; unresolved → nulled + logged)
+  updatedAt?: string | null; // → data_entries.updated_at (the ORIGINAL entry time; preserved, not overwritten)
+  comment?: string | null; // → wrapped into data_entries.comments as one DataEntryComment by the original person
 }

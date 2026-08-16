@@ -12,6 +12,8 @@
  *
  * Flags: --dry-run  parse/validate only, no writes · --label=TEXT  load label
  *        --limit=N   parse at most N extract rows (smoke test)
+ *        --no-flush  append to existing data_entries (default is flush-and-reload: truncate first,
+ *                    so you can iterate the migration cleanly — each run is a fresh replace)
  * Exit code is non-zero if there are parse errors or scorecard anomalies (pipeline-friendly).
  */
 import {
@@ -41,16 +43,17 @@ function printParseErrors(label: string, errors: ParseError[]): void {
 }
 
 function perPeriodBreakdown(rows: ExtractRow[]): void {
-  const by = new Map<number, { total: number; filled: number }>();
+  const by = new Map<number, { total: number; filled: number; noData: number }>();
   for (const r of rows) {
-    const b = by.get(r.reportPeriodId) ?? { total: 0, filled: 0 };
+    const b = by.get(r.reportPeriodId) ?? { total: 0, filled: 0, noData: 0 };
     b.total += 1;
     if (r.value != null && r.valueType) b.filled += 1;
+    else if (r.noDataReason) b.noData += 1;
     by.set(r.reportPeriodId, b);
   }
-  console.log("\nExtract by report_period (period: shells, filled, empty):");
+  console.log("\nExtract by report_period (period: shells, filled, no-data, empty):");
   for (const [pid, b] of [...by.entries()].sort((a, b) => a[0] - b[0]))
-    console.log(`    ${pid}: ${b.total} shells, ${b.filled} filled, ${b.total - b.filled} empty`);
+    console.log(`    ${pid}: ${b.total} shells, ${b.filled} filled, ${b.noData} no-data, ${b.total - b.filled - b.noData} empty`);
 }
 
 async function main() {
@@ -93,6 +96,17 @@ async function main() {
   const { startLoad, finishLoad, reconcilePeriod, getAnomalies, getScorecardSummary } =
     await import("../lib/migration/loads");
   const { loadExtract } = await import("../lib/migration/load");
+  const { db } = await import("../db/connection");
+  const { sql } = await import("drizzle-orm");
+
+  // FLUSH-AND-RELOAD (default): empty data_entries so every iteration is a clean replace and rows
+  // can't collide on the unique address. Pass --no-flush to append to existing rows.
+  if (!FLAGS.has("--no-flush")) {
+    console.log("\nFlush-and-reload: truncating data_entries (CASCADE — also clears data_entry_logs)…");
+    await db.execute(sql`TRUNCATE data_entries CASCADE`);
+  } else {
+    console.log("\n--no-flush: appending to existing data_entries (rows may collide on the unique address).");
+  }
 
   const loadId = await startLoad({ label: LABEL, sourceSystem: "p1_extract" });
   console.log(`\nLoad #${loadId} started. Loading ${extract.rows.length} rows…`);
@@ -101,7 +115,8 @@ async function main() {
   console.log(
     `\nLoad result: ${result.shellsCreated} shells (${result.calculatedShells} calculated), ` +
       `${result.shellsFailed} shell failures | ${result.valuesFilled} values filled, ` +
-      `${result.valuesFailed} value failures | ${result.skipped} skipped`,
+      `${result.noDataAnswers} no-data answers | ` +
+      `${result.valuesFailed} value/no-data failures | ${result.skipped} skipped`,
   );
 
   if (control.rows.length > 0) {

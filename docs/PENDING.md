@@ -52,6 +52,7 @@ No human PRs open. `#73` (API_KEY split) and `#75` (extract-template header fix)
 ### Direct-to-main commits — hygiene watch (bypassed branch→PR per Protocol #6)
 Recorded because the board's commit-hygiene rule asks for branch→PR; these landed straight on `main`. Not necessarily wrong (some are DB-coordinated), but flagged for visibility / optional retroactive review:
 - `4316624` (**#14**) — drop `measure_definitions.description`. Retroactive-review PR offered to Eugene by #14.
+- `3ead895` (**#14**) — drop `units.is_aggregated`. Same retro-review-PR offer stands.
 - `98cf4e0` / `b7b8473` (**#4**) — energy-taxonomy vocab rename code + SQL. Any hygiene follow-up (retro-review PR) routes to **#4**. (#14 ran only the DB-side list-name UPDATEs — pure DML, no commit.)
 - *(prior, already noted):* #12's MFA + S-series landed direct on `main` earlier → retroactive review PR #63.
 
@@ -90,6 +91,9 @@ Legend: ✅ nothing pending · 📝 uncommitted · ⬆️ committed-not-pushed �
 
 ### Recently applied DB changes (done — do NOT re-run; informational)
 Direct DML/DDL on the shared **dev** DB with no commit/PR (or applied ahead of a PR). Recorded so no session re-runs them and everyone knows the DB state:
+- **2026-08-03 (#2) — 10 legacy `managed_lists` DELETED** (+ their 60 `managed_list_items`), Eugene-approved cleanup: Aggregation Group/Method, Data Group, DLSource/KPISource Tables, KPI Requester, Measure Type, Necessity, Product Level, Service Relevance Group. 0 orphans (nothing referenced them); backups `backup.managed_lists_del_20260803` / `backup.managed_list_items_del_20260803`. Direct DML, no commit. ✅ Journey-affecting — USER-IMPACT **row 15** (BMO-visible in Managed Lists settings; all vestigial).
+- **2026-07-28 (#10) — legacy `external_registrations` table DROPPED** (PR #79 `30f0f72`; 0 rows). Also removed pgTable+types from `db/schema/auth-schema.ts` and deleted the `app/settings/external-registrations` console. Superseded by the pending-user flow (`user.status`) + future `access_request`. Schema+DB in sync.
+- **2026-07-28 (#14) — `units.is_aggregated` column DROPPED** (unused). Code `3ead895` (direct-to-main — see hygiene watch); DB column dropped on dev (guarded txn, verified), 501 rows backed up to `backup.units_is_aggregated_20260728`. Schema+DB in sync.
 - **2026-07-28 (#2/jolly) — `asset_id→asset_class_id` / `agg_level_id→strata_id` column renames** (PR #78 `f06e3d5`) — 7 columns across `data_entries`/`energy_resource_type_relevance`/`managed_list_items`/`measure_definitions`/`kpi_definitions`/`service_areas`/`units`. Metadata-only, no views; tsc + 384/384 tests green. DDL applied to dev DB.
 - **2026-07-28 (#2/jolly) — `units.category_id`/`type_id` columns DROPPED** (closes #4's `935847b` derive refactor; code was already merged, DB now matches). 501 rows intact, no view deps; backups `backup.units_dropped_cols_20260728` / `backup.units_pre_assetclass_20260728`.
 - **2026-07-28 (#14, w/ #4) — `managed_lists`/`managed_list_items` vocab rename** (energy-taxonomy → new names): list id1→Strata, id2→Provider, id3 Category, id4 Technology, id55→Asset Class; item mli id1→Unit. Code on main (`98cf4e0`; SQL `b7b8473`). Guarded txn, verified; backups `backup.managed_lists_pre_vocab_20260728` / `backup.managed_list_items_pre_vocab_20260728`. **Follow-on still pending → see #2 below:** the `units.category_id`/`type_id` column DROP (owned by #2/jolly) is not yet done.
@@ -106,6 +110,19 @@ Direct DML/DDL on the shared **dev** DB with no commit/PR (or applied ahead of a
 - ~~**#10:** no entitlement/access key references those deleted sentinel rows.~~ **✅ CLEARED** — spec grep-clean; #10 has no built runtime access code (design-only); picker/`ensureCountry` key off real M49 codes only, structurally excluding the non-M49 "All Countries" (100000).
 
 ---
+
+## 2b. USER-IMPACT ledger audit (#15 duty — added 2026-07-28)
+
+Per [`USER-IMPACT.md`](USER-IMPACT.md) (new protocol, `5c2959e`, Eugene-directed): journey-affecting changes must add a ledger row **in the same commit**; **#15 audits** each merged journey-affecting change against a row — a landed change with no row is a gap. Instruction-writing owner is **#11**.
+
+**Pass 2 (2026-07-28) — ledger now has 13 rows. Findings:**
+- ✅ **GAP CLOSED — `external_registrations` retirement (#10, PR #79).** #10 authored the remediation row; #15 inserted it as **row 13** (BMO/org-admin/registrant: approve via Pending Users screen, old console gone).
+- ✅ **My pass-1 miscall corrected:** I'd filed the `measure_definitions.description` drop and `units.is_aggregated` drop as "internal-only." **Wrong** — both removed a **settings form field** (Description textarea; "Is Aggregated Resource" checkbox), so both are journey-affecting. #14 caught it and added **rows 11 & 12**. Lesson: a *column* drop can still be a *journey* change if a form field sat on it — check the settings surfaces, not just the schema.
+- ✅ **CANDIDATE RESOLVED — 10 legacy managed_lists DELETED (#2, 2026-08-03).** #2 confirmed they WERE surfaced (Settings → Managed Lists renders all lists unfiltered) → journey-affecting; #2 authored the content, #15 added **row 15**. All 10 were vestigial (0 live data), so impact = "unused clutter removed from an admin picker," not a workflow loss.
+- ✅ **CANDIDATE RESOLVED — managed-lists vocab rename (#4).** #4 confirmed it's journey-affecting (same logic as the "Grid" label row) and authored **row 14** (BMO sees Strata/Provider/Category/Technology/Asset Class/Unit in managed lists).
+- ✅ **Covered:** MFA (r1), "Grid" label (r2), sentinel deletion (r3), API-key tiering (r4), BSC "+Add KPI" picker (r8), trajectory removal (r9), Description drop (r11), is_aggregated drop (r12), external_registrations (r13), vocab rename (r14).
+- 🕐 **Forward obligations (correctly rowed, not yet built):** registration quiz (r5), grain data-entry (r6), unit lifecycle (r7), calculator builder (r10).
+- ⚙ **Confirmed internal-only (no row):** `asset_class_id`/`strata_id` column renames, `units.category_id`/`type_id` drops, and `energy_resource_type_relevance → asset_class_relevance` table+code rename (`17a786d`, per #4) — no user-facing surface.
 
 ## 3. Awaiting Eugene (decisions that unblock merges)
 

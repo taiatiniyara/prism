@@ -8,7 +8,8 @@ superseded before any DDL), AND the medallion spec §1.4 *target* of making grai
 via "All areas"-type sentinel members (rejected — see §2.4). #2: please amend
 `schema-redesign-medallion.md` §1.4/§1.5 target notes accordingly.
 **History:** replaces PRISM 1's virtual-generator pattern. Terminology per PR #68
-(`unit_id`/`units`; dims provider/category/technology/asset).
+(`unit_id`/`units`; dims provider/category/technology/asset_class — the asset dim renamed
+`asset_class_id` and the declared level renamed `agg_level`→`strata` by PR #78, 2026-07-28).
 
 ---
 
@@ -44,16 +45,18 @@ The seven rules, in one list:
 7. **Aggregates across grain are computed** in gold/`kpi_actual` — never stored entries.
 
 **Unit-row dimension consistency (rule 6's dimension twin):** on a **unit-anchored row**, the four
-energy dims (provider / category / technology / asset) must equal that unit's *real* taxonomy — a
+energy dims (provider / category / technology / asset class) must equal that unit's *real* taxonomy — a
 diesel genset's generation row says Diesel, never All. "All" on those four is legitimate only at
 coarser grain, or where the dimension doesn't apply. Enforce in the same shared writer as rule 6.
-*Source-of-truth status (live-DB verified by #2, 2026-07-28):* provider/category/technology exist
-as real columns on `units` — the writer validates those three directly. **Asset has no source
-column**: `units.type_id` is stale (all 501 rows = pre-collapse "Equipment" (1), not in the asset
-member set 983/984/985/988/1035) — resolution of the asset source (add a column vs derive) is
-**OPEN, pending Eugene**. Until resolved the writer can enforce 3 of 4.
-*Related flag:* asset member **1035 "Virtual"** exists in the managed list — once §3 retires the
-virtual units, no row should legitimately classify as asset=Virtual; deactivate the member in the
+*Source-of-truth — **RATIFIED by Eugene 2026-07-28 (final, here in #8's session)**:* on `units`,
+**`technology_id` is the sole stored taxonomy leaf**; category = parent(technology) and
+asset class = grandparent(technology), **derived through the taxonomy, never stored on the unit**
+(same anti-dual-encoding philosophy as `grain_level`). The mispopulated `units.category_id` and
+stale `type_id` are already dropped (935847b, Eugene-instructed). The writer therefore validates
+provider + technology **directly** against the unit and category + asset class **via technology's
+ancestry** — full 4-of-4 enforcement, no pluggable gap remaining.
+*Related flag:* asset-class member **1035 "Virtual"** exists in the managed list — once §3 retires
+the virtual units, no row should legitimately classify as asset_class=Virtual; deactivate the member in the
 same pass.
 
 Examples (grain columns only):
@@ -90,7 +93,7 @@ hierarchy (NULL above… means truthfully absent). Do not "unify" them.
    humans/AI write `WHERE grain_level='utility'` instead of NULL-pattern logic they will get wrong.
    `kpi_actual` carries the same.
 3. **One grain per measure per period:** within a report period, a measure's rows sit at exactly
-   one grain level (the measure's declared `agg_level`, writer-validated per medallion §1.5) —
+   one grain level (the measure's declared `strata`, writer-validated per medallion §1.5) —
    otherwise `WHERE country_id=X` double-counts. **Per period**, not global: §1.6 mixed-grain
    measures (e.g. lump-sum→split revenue) legitimately change grain across periods.
 4. **No sentinel/aggregate rows as grain values — ever** (the clause that rejects the old spec
@@ -98,7 +101,8 @@ hierarchy (NULL above… means truthfully absent). Do not "unify" them.
    addressing. **The rule is now vacuously enforced for the reference tables: the entire sentinel
    chain was DELETED from the dev DB 2026-07-27** (Eugene one-shot, #14 executed, leaf→root: "All
    Service Areas" 89 → "All Utilities" org 1 → "All Countries" 100000 → sub_regions 10000/1/5;
-   real data re-homed first; backups `backup.sentinel_*_20260727`). Zero sentinel rows remain in
+   real data re-homed first; backups `backup.sentinel_*_20260727` — since purged with the whole
+   `backup` schema, Eugene-approved 2026-07-28, so the deletions are final). Zero sentinel rows remain in
    `countries`/`sub_regions`/`organisations`/`service_areas`; the `country_id < 1000` CHECK is
    downgraded from required guard to optional hardening against future sentinel re-creation
    (#2's discretion). Post-state independently verified by #13 (2026-07-27): **countries = 26, all
@@ -126,10 +130,10 @@ say where each entry belongs (`units.power_station_id` / `.service_area_id`;
 | virtual `unit` **with** `power_station_id` | station+area+utility+country; unit NULL | station-level data parked on a station virtual |
 | virtual `unit` without station | area+utility+country | grid-level data parked on a grid virtual |
 | virtual `service_area` | utility+country; area NULL | org-level data parked on a virtual area |
-| org-level rows whose measure's `agg_level` = country | country only; utility NULL | country-level data (see §4 ownership note) |
+| org-level rows whose measure's `strata` = country | country only; utility NULL | country-level data (see §4 ownership note) |
 
 ⚠ Verify the virtual→level convention against actual rows before trusting it (e.g.
-`SELECT … WHERE is_virtual GROUP BY agg_level_id`); one transaction; per-level row counts
+`SELECT … WHERE is_virtual GROUP BY strata_id`); one transaction; per-level row counts
 before/after; nothing dropped. Expect and dedupe legacy duplicate addresses first (the old
 `uniq_entry` was never unique). After no entries reference them: soft-delete virtual
 `units`/`service_areas`; drop `is_virtual` only once onboarding/import paths stop creating them.
@@ -138,7 +142,8 @@ before/after; nothing dropped. Expect and dedupe legacy duplicate addresses firs
 ahead of the migration): real data re-homed first (14 units, the Rarotonga Grid service area, 2
 report_periods, user 21 — nothing orphaned, per the promote-don't-orphan rule), then the chain
 deleted leaf→root with 0-ref checks at each step ("All Service Areas" 89 → org 1 → country 100000
-→ sub_regions 10000/1/5). Backups `backup.sentinel_*_20260727`. Remaining for #2's migration pass:
+→ sub_regions 10000/1/5). Backups `backup.sentinel_*_20260727` (purged 2026-07-28 with the whole
+`backup` schema — deletions final). Remaining for #2's migration pass:
 only the ordinary per-utility virtuals from the promotion table above — the supra-utility case no
 longer exists.
 
