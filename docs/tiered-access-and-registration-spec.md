@@ -2,31 +2,33 @@
 
 **Status:** 🚧 design in progress (grilled with Eugene 2026-07-26; several decisions locked, a few parked — see §9). Not built.
 **Owner stream:** board #10 "Tiered access / tenancy" — **now owned/driven end-to-end by the "PRISM 2 access & registration" session** (Eugene, 2026-07-26): registration & routing (§5) *and* the full tiered-access model (§2 orgs, §3 seats/subscriptions, §4 plans, §6 payment, §7 expiry/admin, §8 RBAC). Overlaps #8 on the `organisations` model — coordinate before any org DDL.
-**Source:** `…/DHI/PPA/Phase 2/10 Implementation/Tiered Access/Tiered Access Plans - 20260728.xlsx` (supersedes the 20260707 docx — now **6 user-groups** with **per-dashboard view / download-charts / download-tables** rights).
+**Source:** `…/Phase 2/10 Implementation/Migration/Data/FINALISED Tiered Access Plans 260803.xlsx`, sheet **"Finalised"** (supersedes 20260728.xlsx → 20260707.docx). Approved: 6 plans + a membership-category label, per-dashboard view / download-charts / download-tables rights, "Teaser Samples" replacing "Public KPI".
 
 > **Why this exists.** PRISM 2 has **six access plans** — three free (Public, Utility, Allied Member) and three paid consumer tiers (Per Project, Basic, Premium) — layered on the existing *provider* (utility) data-collection model. The current schema can't express subscriptions, seats, time-boxed access, per-dashboard rights, or multi-org membership. This spec defines the target model.
 
 ---
 
-## 0. The six user-groups / plans (from `Tiered Access Plans - 20260728.xlsx`)
+## 0. The plans (from `FINALISED Tiered Access Plans 260803.xlsx`, sheet "Finalised")
 
-Six plans, one per expected user-group — **three free** (Public, Utility, Allied Member), **three paid** consumer tiers. (Supersedes the earlier 3-plan sheet; Pay-per-project seat cap changed 3→1.)
+The approved sheet lists **8 columns**, but they collapse to **6 plans + a membership-category label**: the three member columns (**Allied**, **Affiliate Dev Partners**, **Affiliate Others**) have **identical** entitlements / seats / term, so they are **one `member` plan** — *which kind* of member is a governance **label on the org** (`ppa_membership_type_id`, §2/§4), not a separate plan. (Supersedes 20260728: member seats now **10 / 365d** (were unlimited); **"Public KPI" → "Teaser Samples"** and Public now gets *downloads* on it.)
 
 | Plan | Price | Seats | Term | Relationship (§2) |
 |---|---|---|---|---|
-| **Public** | free | unlimited | rolling | subscriber (the default plan) |
+| **Public** | free | — (anon) | rolling | subscriber (the default plan) |
 | **Utility** | free | unlimited | unlimited | utility |
-| **Allied Member** | free | unlimited | unlimited | member |
-| **Per Project** | US$500 | **1** | 60 days | subscriber |
+| **Member** (Allied · Affiliate Dev Partner · Affiliate Other) | free | **10** | **365 days** | member |
+| **Per Project** | US$500 | 1 | 60 days | subscriber |
 | **Basic** | US$2,200 | 5 | 365 days | subscriber |
 | **Premium** | US$3,500 | 10 | 365 days | subscriber |
 
-**Entitlement matrix — three independent rights per dashboard: View / Download-Charts / Download-Tables** (✓ = granted). This is the authoritative source for §3.2 and resolves the previously-parked Public (default) + Allied-Member contents (§9).
+**Entitlement matrix — three rights per dashboard: View / Download-Charts / Download-Tables** (✓ = granted). Authoritative source for §3.2.
 
-| Dashboard / report | right | Public | Utility | Allied | PerProj | Basic | Premium |
+| Dashboard / report | right | Public | Utility | Member | PerProj | Basic | Premium |
 |---|---|:-:|:-:|:-:|:-:|:-:|:-:|
 | Annual Benchmarking Reports (PDF) | view | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
-| Public KPI | view | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **Teaser Samples** | view | ✓ | | | | | |
+| | dl-charts | ✓ | | | | | |
+| | dl-tables | ✓ | | | | | |
 | Utility-Specific KPIs | view | | ✓ | | | | |
 | | dl-charts | | ✓ | | | | |
 | | dl-tables | | ✓ | | | | |
@@ -34,7 +36,7 @@ Six plans, one per expected user-group — **three free** (Public, Utility, Alli
 | | dl-charts | | ✓ | ✓ | ✓ | | ✓ |
 | | dl-tables | | ✓ | ✓ | ✓ | | ✓ |
 
-Key reads: **Public** = PDF + Public-KPI only. **Basic** = benchmarking **view but no downloads**. **Per Project / Premium / Allied / Utility** = benchmarking view **+ both downloads**. **Utility-Specific KPIs** = only the utility, for its own data (the four benchmarking-family dashboards share one row — identical rights). Sector scoping (which sector's data an Allied member / utility sees) is orthogonal, via `benchmarking_group_member` (§2.1).
+Key reads: **Public** = a **teaser funnel** — Teaser Samples (view + downloads) + the PDF report, nothing else; the on-ramp that converts a non-member to a paid plan. **Utility** = its own Utility-Specific KPIs + full benchmarking family, all rights. **Member / Per Project / Premium** = benchmarking family view **+ both downloads**. **Basic** = benchmarking family **view only, no downloads** (its value is seats + annual term). Sector scoping (which sector's data) is orthogonal, via `benchmarking_group_member` (§2.1 / #13).
 
 ---
 
@@ -73,7 +75,7 @@ Key reads: **Public** = PDF + Public-KPI only. **Basic** = benchmarking **view b
 
 - **Stored as a dedicated reference table + FK (decided 2026-07-27), mirroring `sectors` (PR #65).** `organisation_relationships { id (explicit, not serial), code varchar unique — 'utility'|'member'|'subscriber'|'administrator'|'developer', name, is_active }`; `organisations.relationship_id → organisation_relationships.id`. Integrity comes from the **FK** — **no CHECK constraint** (same as every other org classifier). Code branches on the stable **`code`**, never `id` or the editable `name`.
 - **Why a dedicated ref table, not generic `managed_list_items`:** `managed_list_items` has no stable `code` (only a serial `id` that differs across environments and an editable `name`), so code branching on it would drift the day someone renames the row. A dedicated table carries a stable `code` — the exact pattern #13 used for `sectors` ("explicit ids… safe to reference"). It's still a table (so `name`/`is_active`/UI), still an FK (consistent with `entity_type_id` et al.) — just code-safe.
-- **Migration:** seed `organisation_relationships` (utility/member/subscriber/**administrator**/**developer**); then `is_utility = true → relationship_id = (utility row)`; **PPA (org 18) → administrator, Innov8 Pacific (org 12) → developer**; all remaining → `subscriber` or `member` (BMO reviews the non-utility set once); existing `ppa_membership_type_id` values migrate into `benchmarking_group_member` rows (PPA group, electricity sector). Deprecate `is_utility` after backfill.
+- **Migration:** seed `organisation_relationships` (utility/member/subscriber/**administrator**/**developer**); then `is_utility = true → relationship_id = (utility row)`; **PPA (org 18) → administrator, Innov8 Pacific (org 12) → developer**; all remaining → `subscriber` or `member` (BMO reviews the non-utility set once); existing `ppa_membership_type_id` values migrate into `benchmarking_group_member` rows (PPA group, electricity sector) — **⚠ under reconciliation (§9, 2026-08-03): finalised plans indicate `ppa_membership_type_id` is KEPT as the membership *class*, distinct from the sector cohort; awaiting #13**. Deprecate `is_utility` after backfill.
 - Edge case (org is *both* utility and subscriber) is out of scope now — single-valued; revisit only if a real case appears.
 
 **Axis 2 — `entity_type_id` (drives *persona / reporting*).** **Already exists** — FK `organisations.entity_type_id → managed_list_items`. This is the "what kind of org" axis (utility / donor-DFI / consultancy / government / researcher …). No change needed beyond ensuring the vocab covers the consumer types. It stays independent of `relationship` — e.g. a *government* body (entity_type) may be a *member* or a *subscriber* (relationship); a *donor* and a *consultancy* differ in type but are both *subscribers*.
@@ -101,7 +103,7 @@ benchmarking_group_member (group_id → benchmarking_group, organisation_id → 
 - **Drives two things:** (1) benchmarking cohorts for `ai_benchmark` / `benchmarking_request` (within group+sector, and between groups sharing a sector); (2) **free access in this spec** — an org's free "member" entitlements (§4) apply to that union of sectors. A PPA member sees electricity dashboards free; a PWWA member sees water + sanitation; a utility gets both provider access and free member dashboards for its sector(s).
 - **Never a data address (guardrail from #8, 2026-07-27):** a benchmarking group is a **membership/entitlement** structure only — no `data_entries` / `kpi_actual` row may ever anchor to a group. Cohort benchmarks are **read-time rollups over org-anchored (and finer) data**, grouped via this M:N at query time. Under the ruled hybrid `data_entries` convention (#8 ruling `7c01627`, 2026-07-27 — denormalized entity-FK chain utility/country/sub-region/region/area/station/unit, **no sentinel grain rows ever**) a group is not among the row's anchors; the group DDL must not add such an anchor. The no-sentinel / no-group-anchor invariant is preserved verbatim by that ruling.
 - **Ownership:** advisory raised by **Eugene via the #2 migration wrap-up** (not #8 — corrected 2026-07-27), for #10 + #13 to pick up. The `benchmarking_group` concept is co-owned with **#13** (sector tag + cohort semantics) — this stream (#10) owns the org-membership + access-derivation side. #8 reviewed §2.1 and confirmed no conflict with the data-hierarchy anchor model.
-- **DDL sequencing (agreed with #13, 2026-07-27):** `benchmarking_group_sector.sector_id` FKs the `sectors` reference **table**, which is #2's Phase-5b DDL (ADR 0003) — today sectors are only a code-level union (`lib/terminology/sectors.ts`). So `benchmarking_group*` DDL lands **after/with the `sectors` table**, via **#2** (shared-table DDL owner). **#10 does not need it pulled forward** — the member free-access tier is downstream (member entitlements still TBD, §4), and nothing #10 is building now (registration/country picker) depends on it. Retire `ppa_membership_type_id` once membership is migrated into `benchmarking_group_member`.
+- **DDL sequencing (agreed with #13, 2026-07-27):** `benchmarking_group_sector.sector_id` FKs the `sectors` reference **table**, which is #2's Phase-5b DDL (ADR 0003) — today sectors are only a code-level union (`lib/terminology/sectors.ts`). So `benchmarking_group*` DDL lands **after/with the `sectors` table**, via **#2** (shared-table DDL owner). **#10 does not need it pulled forward** — the member free-access tier is downstream (member entitlements still TBD, §4), and nothing #10 is building now (registration/country picker) depends on it. Retire `ppa_membership_type_id` once membership is migrated into `benchmarking_group_member` — **⚠ under reconciliation (§9, 2026-08-03): finalised plans indicate it's KEPT as the membership *class* (drives the free `member` plan), with `benchmarking_group` remaining the orthogonal sector cohort; awaiting #13's confirm**.
 
 ---
 
@@ -142,7 +144,7 @@ invited_by → user, assigned_at
 
 **`plan`** — stable identity (the 6 user-groups, §0):
 ```
-id, code ('public'|'utility'|'allied_member'|'per_project'|'basic'|'premium'),
+id, code ('public'|'utility'|'member'|'per_project'|'basic'|'premium'),
 name, tier_group ('paid'|'free'), is_active
 ```
 
@@ -158,13 +160,13 @@ created_by, created_at
 **`plan_entitlement`** — dashboard × the **three rights** (§0 matrix), keyed to the **plan identity** (not the version) because **entitlement changes forward-apply to every user on the plan** (Eugene 2026-07-28):
 ```
 id, plan_id → plan,
-dashboard: 'annual_reports_pdf'|'public_kpi'|'utility_specific_kpi'
+dashboard: 'annual_reports_pdf'|'teaser_samples'|'utility_specific_kpi'
          | 'benchmarking_kpi'|'country_kpi'|'subregional_kpi'|'regional_kpi',
 can_view (bool), can_download_charts (bool), can_download_tables (bool)
 ```
 - **View is prerequisite** for either download (enforce: a download right implies `can_view`). Editing a plan's entitlements takes effect immediately for **all** its subscribers — no per-subscription locking. History is an **audit trail** (`plan_entitlement_event`: from/to, actor, timestamp), not version-locking — so "see historical changes" is satisfied without freezing anyone.
 - **Why the split:** commercial terms (what you *paid*) lock to the sold `plan_version`; feature entitlements (what the plan *grants*) forward-apply from the live `plan_entitlement`. A repricing never changes access; a dashboard added to Premium reaches every Premium subscriber at once.
-- Everything is a plan — the 3 paid tiers **plus** `public` (free default / BMO-revert target, §5), `allied_member` (free; scoped per the org's `benchmarking_group_member` sector(s), §2.1), and `utility` (provider set). One uniform mechanism.
+- Everything is a plan — the 3 paid tiers **plus** `public` (free default / BMO-revert target, §5), `member` (free; the three PPA member classes — Allied / Affiliate-Dev-Partner / Affiliate-Other, labelled on the org via `ppa_membership_type_id`, §4 — share this one plan), and `utility` (provider set). One uniform mechanism.
 - **UX in flight:** #11 builds a throwaway mock-backed **prototype** (view/edit plans + version-history) → rebind to the real `plan`/`plan_version`/`plan_entitlement` tables (**DDL with #2**) once it lands.
 
 ### 3.3 Act-as (multi-org effective access)
@@ -183,12 +185,12 @@ A consultant with a **Premium** seat (WB) and a **Basic** seat (ADB) must not si
 
 ---
 
-## 4. Plans coverage — all six resolved by the 2026-07-28 matrix (§0)
+## 4. Plans coverage — all resolved by the FINALISED 2026-08-03 matrix (§0)
 
 - **Paid:** Per Project (US$500 / 1 seat / 60d) · Basic (US$2,200 / 5 / 365d) · Premium (US$3,500 / 10 / 365d). Commercial ladder: **Basic** trades downloads for seats+duration (benchmarking **view-only**); **Per Project** trades seats+duration for downloads; **Premium** = both.
-- **`public`** (free, the **default** / BMO-revert plan): Annual Reports PDF + Public-KPI, **view only** — no benchmarking, no downloads. ✅ *Resolves the former "default-plan contents" open item.*
-- **`allied_member`** (free): PDF + Public-KPI + the full benchmarking family (Benchmarking / Country / Sub-regional / Regional) with **view + both downloads**; **not** Utility-Specific KPIs. **Sector-scoped** to the org's `benchmarking_group_member` sector(s), §2.1 (PPA→electricity, PWWA→water/sanitation). ✅ *Resolves the former "member entitlements" open item.*
-- **`utility`** (free): everything — its own Utility-Specific KPIs (view + downloads) **and** the full benchmarking family (view + downloads), scoped to its own data / sector.
+- **`public`** (free, the **default** / BMO-revert plan): **Teaser Samples** (view + downloads) + Annual Reports PDF — nothing else. The non-member on-ramp that converts to a paid plan.
+- **`member`** (free, **10 seats / 365d**): PDF + full benchmarking family (Benchmarking / Country / Sub-regional / Regional) with **view + both downloads**; **not** Utility-Specific KPIs, **not** Teaser Samples. **One plan covers all three PPA member classes** — Allied, Affiliate (Dev Partner), Affiliate (Other) — which are **identical in entitlements**; *which* class an org is = a governance label on the org via **`ppa_membership_type_id`** (§2 reconciliation note). Sector scope (which sector's data) via `benchmarking_group_member`, §2.1.
+- **`utility`** (free, unlimited): everything — its own Utility-Specific KPIs (view + downloads) **and** the full benchmarking family (view + downloads), scoped to its own data / sector.
 
 ---
 
@@ -312,8 +314,10 @@ failure_reason
 
 ## 9. Pending follow-ups & open questions
 
-- **[RESOLVED 2026-07-28] Default plan contents** — the **`public`** plan = Annual Reports PDF + Public-KPI, view only (§0/§4 matrix, `Tiered Access Plans - 20260728.xlsx`).
-- **[RESOLVED 2026-07-28] Member entitlements** — the **`allied_member`** plan = PDF + Public-KPI + full benchmarking family (view + both downloads), sector-scoped (§0/§4).
+- **[UPDATED 2026-08-03] Plans finalised** — folded `FINALISED Tiered Access Plans 260803.xlsx` into §0/§3.2/§4: member tier = one `member` plan (10 seats/365d) covering the 3 PPA member classes (label via `ppa_membership_type_id`); **`public_kpi` dashboard → `teaser_samples`** (Public gets view + downloads on it); paid tiers unchanged.
+- **[RESOLVED 2026-08-03] Default plan contents** — the **`public`** plan = Teaser Samples (view + downloads) + Annual Reports PDF (§0/§4).
+- **[RESOLVED 2026-08-03] Member entitlements** — the **`member`** plan = PDF + full benchmarking family (view + both downloads), 10 seats/365d, sector-scoped (§0/§4).
+- **[⚠ RECONCILE with #13, 2026-08-03] `ppa_membership_type_id` — class vs cohort.** The finalised plans show `ppa_membership_type_id` encodes the **membership class** (Utility / Allied / Affiliate-Dev / Affiliate-Other) — a governance label that picks the free plan. That's a **different dimension** from #13's `benchmarking_group` (which sector *cohort* an org benchmarks in). So the earlier joint decision to **retire `ppa_membership_type_id` into `benchmarking_group_member`** (§2.1, §2 migration) needs revisiting: it should be **kept** as the class label, with `benchmarking_group` remaining the orthogonal sector cohort. Flagged to #13; §2.1/§2-migration NOT yet rewritten pending their confirm.
 - **[RESOLVED 2026-07-28] Entitlement change semantics** — entitlement edits **forward-apply to all users on the plan** (Eugene); commercial terms (price/seat/term) still lock to the sold `plan_version` (§3.2).
 - **[RESOLVED 2026-08-03] Platform/internal orgs (the "operator" question)** — two new relationship values: **`administrator`** (PPA, org 18) + **`developer`** (Innov8, org 12); role-based access, excluded from subscription/payment/plan flows (§2). No new orgs needed (both already exist); the sentinel that used to house their staff is retired, users already re-homed.
 - **[FORWARD-REQ 2026-07-28, from #4] Primary-contact designation** — `seat.is_primary_contact` (§3.1/§8) added so the user model carries it; recipient set for new-effective-dated-measure emails ([measure-effective-dating-spec.md](measure-effective-dating-spec.md) §8, DRAFT). #10 owns the flag; the email trigger is the effective-dating/alerting stream's. Co-design the field with #4 when that spec firms up.
