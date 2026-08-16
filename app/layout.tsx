@@ -5,7 +5,7 @@ import Sidebar from "@/components/layout/sidebar";
 import { getSession } from "@/lib/session.service";
 import { Toaster } from "sonner";
 import { Suspense } from "react";
-import { Noto_Sans } from "next/font/google";
+import { IBM_Plex_Sans } from "next/font/google";
 import Footer from "@/components/layout/footer";
 import BlockedAccessOverlay from "@/components/auth/blocked-access-overlay";
 import { FloatingChatbot } from "@/components/ai/floating-chatbot";
@@ -15,8 +15,12 @@ import { db } from "@/db/connection";
 import { organisations } from "@/db/schema/utility";
 import { and, asc, eq } from "drizzle-orm";
 
-const notoSans = Noto_Sans({
+// IBM Plex Sans — institutional, engineered character with strong tabular
+// numerals for PRISM's data tables. `variable` defines --font-sans app-wide so
+// Tailwind's `font-sans` token resolves everywhere (not just where the class lands).
+const plexSans = IBM_Plex_Sans({
   subsets: ["latin"],
+  weight: ["400", "500", "600", "700"],
   variable: "--font-sans",
 });
 
@@ -34,9 +38,9 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" className={plexSans.variable}>
       <body
-        className={`${notoSans.className} flex h-screen flex-col overflow-hidden text-slate-900`}
+        className={`${plexSans.className} font-sans flex h-screen flex-col overflow-hidden text-slate-900`}
       >
         <Suspense fallback={<div className="p-6 bg-slate-900"></div>}>
           <AppNavigation />
