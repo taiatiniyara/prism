@@ -1,6 +1,6 @@
 # Data-availability response design — separating "Not Available" from workflow status
 
-**Status:** RATIFIED (2026-08-12; core + is_relevant/is_mandatory/asserted_not_applicable three-tier) · **Author:** #2/jolly (migration) · **For:** #4 (data_entries DDL), #3 (calculator), #11 (entry UI)
+**Status:** RATIFIED (2026-08-12; core + is_relevant/is_mandatory/asserted_not_applicable three-tier) · **Amended 2026-08-16: obligation is dimension-aware — see §3.1.1 (recirculating for #8/#3/#4 comment)** · **Author:** #2/jolly (migration) · **For:** #4 (data_entries DDL), #3 (calculator), #11 (entry UI), #8 (relevance/obligation grain)
 
 ## 1. The problem
 
@@ -96,7 +96,7 @@ an all-null-value row whose reason lives in workflow columns).
 | Tier | Column / signal | Question | Owner |
 |---|---|---|---|
 | 1. **Scope** | `is_relevant` / computed relevance | Is this input in the utility's **expected set at all**? `false` ⇒ no shell. | system + BMO registry |
-| 2. **Obligation** | `measure_definitions.is_mandatory` | For an in-scope input, **must** it be answered with data (PPA core set)? | BMO catalogue policy |
+| 2. **Obligation** | `is_mandatory` — **at the `(measure × dimension × member)` grain**, defaulting from `measure_definitions.is_mandatory` | For an in-scope input, **must** it be answered with data (PPA core set)? Obligation can differ **per dimension slice** — see §3.1.1. | BMO catalogue policy |
 | 3. **Assertion** | `no_data_reason = 'asserted_not_applicable'` | On an in-scope, **non-mandatory** shell, the utility asserts *"doesn't apply to us."* | utility (BMO adjudicates) |
 
 **The assertion is gated to in-scope, `is_mandatory = false` shells only.** Three enforcement rules:
@@ -126,6 +126,49 @@ an all-null-value row whose reason lives in workflow columns).
 - Wherever an `is_relevant` column survives on entries, add the cheap CHECK:
   `no_data_reason IS NOT NULL ⇒ is_relevant = true`.
 
+### 3.1.1 Obligation is dimension-aware — the employees/division case (AMENDED 2026-08-16)
+
+The original framing put **obligation** as a **flat, measure-level** flag
+(`measure_definitions.is_mandatory`). Eugene showed that is too coarse: **obligation varies by
+dimension slice**, and pure relevance does *not* absorb the difference.
+
+**The clinching example — "Number of employees", broken down by `division`** (All, Administrative,
+PR & Marketing, Technical, Finance …). Two independent things are happening:
+
+- **Scope (relevance)** answers: *does this utility even have a PR & Marketing division?* If not,
+  that slice is never asked — relevance handles it, and this is genuinely utility-specific.
+- **Obligation** answers something relevance cannot: **even among slices that DO exist**, the
+  **aggregate `division = All` (total headcount) is typically mandatory** while the **per-division
+  breakdown is optional/contextual** — a blank on "PR & Marketing employees" is not the same
+  compliance gap as a missing total. Both slices can be **in scope**, yet carry **different
+  obligation**.
+
+A flat `is_mandatory` on the measure cannot say "mandatory at `All`, optional at the specific
+members." So **obligation must live at the same `(measure × dimension × member)` grain as
+relevance** (`measure_dimension_applicability`), with the measure-level flag serving only as the
+**default** for measures that don't break down.
+
+**Corrected model — all three tiers operate at the slice grain:**
+
+| Tier | Question | Grain |
+|---|---|---|
+| **Scope** (relevance) | Does this slice **exist** for this utility? (has the division / IPP / payment mode) | measure × slice × **utility** |
+| **Obligation** (mandatory) | Of the slices that exist, which **must** be answered? | measure × **slice** (policy; defaults from measure) |
+| **Answer** (`no_data_reason`) | The utility's response | the row |
+
+**Consequences / design asks:**
+- **#8/#3/#4:** carry obligation as an attribute at the `(measure × dimension × member)` grain
+  (co-located with relevance/applicability), **defaulting from `measure_definitions.is_mandatory`
+  and overridable per slice** — one dimension-aware model carrying **both** relevance and
+  obligation, not a flat mandatory flag bolted onto the side.
+- **No blanket rule** on which slices are mandatory: usually *aggregate mandatory, breakdown
+  optional*, but not always (a gender split may itself be mandatory). Hence it must be *settable*
+  per slice, not derived from "is this the All member".
+- **The writer gate (§3.1 rule b) now reads the slice-level obligation**, not the measure flag:
+  `asserted_not_applicable` is rejected when **the specific slice** is mandatory.
+- **Curation (Eugene/BMO):** the flat 118-row Y/N pass sets the **default / aggregate** obligation;
+  slice-level overrides are layered on afterwards for the measures that break down.
+
 **⚠ Term-collision (#8):** `not_applicable` now lives in **three** distinct roles — (i)
 `measure_dimension_scope.expansion_mode` (config: a dimension is sparsified for a measure), (ii)
 computed relevance (system scope), (iii) the utility assertion. They are distinct enums in distinct
@@ -151,8 +194,9 @@ decision.** The queue is designed-in; the *acting* on it stays human, forever.
 **absent (0-contribution)**, else propagate; `not_available` → **propagate** not-available.
 
 **Carve-outs (owner: Eugene / BMO — not a code stream):**
-- The `is_mandatory` values are **PRISM-1 legacy** — a **BMO curation pass over the 117-measure
-  catalogue** is required **before this feature ships** (a domain exercise, on Eugene's queue).
+- The `is_mandatory` values are **PRISM-1 legacy** — a **BMO curation pass over the 118-measure
+  catalogue** is required **before this feature ships** (a domain exercise, on Eugene's queue). This
+  sets the **default / aggregate** obligation; per-slice overrides (§3.1.1) layer on afterwards.
 - **Completeness metrics must report CORE (mandatory) completeness separately from overall.**
 - Per-relationship / per-size mandatory tiers are explicit **v2** (same `is_mandatory` flag) —
   do not build now.
@@ -228,14 +272,17 @@ the gold evidence view ships as part of the availability feature (built with #4'
 | Area | Owner |
 |---|---|
 | `data_entries` **+ `kpi_actual`** DDL: `no_data_reason` column + CHECKs (vocab `{not_available, asserted_not_applicable}`) + `chk_value_xor_nodata` + status-7 migration + Silver/Gold view changes | **#4** |
-| Relevance-model boundary + the `asserted_not_applicable` → registry recommendation queue | **#8** |
+| Relevance-model boundary + the `asserted_not_applicable` → registry recommendation queue; **obligation at the `(measure × dimension × member)` grain, defaulting from the measure flag (§3.1.1)** | **#8** |
 | Calculator propagation / 0-contribution rules; `kpi_actual` not-available representation | **#3** |
 | Entry-screen "Data not available" toggle + display + mandatory gating (rule a) | **#11** |
 | Extract format + loader (writer-gate, rule b) + reconciliation for `no_data_reason` | **#2/jolly (me)** |
 | **BMO curation of `is_mandatory` over the 117-measure catalogue (before ship)** + core-vs-overall completeness | **Eugene / BMO** |
 
 Net: **scope (`is_relevant`) → obligation (`is_mandatory`) → answer-availability (`no_data_reason`)**
-— three layered tiers. "Not available" is a real, approvable, publishable answer benchmarking never
+— three layered tiers, **all resolved at the `(measure × dimension × member)` slice grain** (§3.1.1):
+scope decides which slices exist for a utility, obligation (defaulting from the measure flag,
+overridable per slice) decides which of those must be answered, availability records the answer.
+"Not available" is a real, approvable, publishable answer benchmarking never
 mistakes for zero or a gap; a utility can explain a missing core number but never dissolve the
 expectation of it; and the utility-influenceable surface is the optional periphery only, always
 assert-then-BMO-adjudicates.
