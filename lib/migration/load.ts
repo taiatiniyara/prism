@@ -21,7 +21,7 @@ const VALUETYPE_COL: Record<ValueType, string> = {
 };
 
 // data_entries status ids (from dataEntry.ts DataEntryStatusId)
-const STATUS_REQUESTED = 1; // empty shell, awaiting entry
+const STATUS_PENDING = 2; // empty shell, awaiting entry — the single starting state ("Requested" (1) retired)
 const STATUS_ENTERED = 3; // filled
 
 interface MeasureMeta {
@@ -117,7 +117,7 @@ export async function loadExtract(loadId: number, rows: ExtractRow[]): Promise<L
           ${row.dims.provider}, ${row.dims.type}, ${row.dims.source}, ${row.dims.resource_type},
           ${row.dims.customer_type}, ${row.dims.payment_mode}, ${row.dims.band}, ${row.dims.division}, ${row.dims.gender}, ${row.dims.utility_function},
           ${row.utilityId ?? null}, ${row.serviceAreaId ?? null}, ${row.powerStationId ?? null}, ${row.unitId ?? null}, ${row.countryId ?? null},
-          ${STATUS_REQUESTED}, true, false,
+          ${STATUS_PENDING}, true, false,
           ${authorId}, COALESCE(${row.updatedAt ?? null}::timestamp, now()), ${commentsJson}::json
         ) RETURNING id`);
       shellId = (r.rows[0] as any).id;

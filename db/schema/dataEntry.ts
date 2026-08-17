@@ -157,7 +157,11 @@ export const inputDefinitionRelations = relations(
 );
 
 export enum DataEntryStatusId {
+  /** @deprecated Requested (1) retired — **Pending (2) is the single starting state** (chosen for its
+   * call-to-action: an empty shell is an outstanding task, not a passive request). Shells now birth
+   * at Pending; the loader/UI no longer assign 1. Kept only so historical/legacy code resolves. */
   Requested = 1,
+  /** Starting state — a generated shell awaiting the utility's data (action needed). */
   Pending = 2,
   Entered = 3,
   /** Reviewed by the BLO. Business label: "BLO Reviewed". */
@@ -192,8 +196,8 @@ export const DATA_ENTRY_STATUS_META: Record<
   number,
   { code: string; label: string; description: string; color: string; publishable: boolean }
 > = {
-  [DataEntryStatusId.Requested]: { code: "Requested", label: "Requested", description: "Data requested; entry not yet started.", color: "#fb923c", publishable: false },
-  [DataEntryStatusId.Pending]: { code: "Pending", label: "Pending", description: "Entry in progress / awaiting the utility's data.", color: "#facc15", publishable: false },
+  // Requested (1) retired — Pending (2) is the single starting state (see enum). Not listed here.
+  [DataEntryStatusId.Pending]: { code: "Pending", label: "Pending", description: "The shell's starting state — awaiting the utility's data (action needed / outstanding).", color: "#facc15", publishable: false },
   [DataEntryStatusId.Entered]: { code: "Entered", label: "Entered", description: "A value (or a confirmed no-data answer) has been entered, awaiting review.", color: "#a3e635", publishable: false },
   [DataEntryStatusId.Reviewed]: { code: "Reviewed", label: "BLO Reviewed", description: "Reviewed by the BLO.", color: "#34d399", publishable: false },
   [DataEntryStatusId.Approved]: { code: "Approved", label: "CEO Approved", description: "Approved by the utility CEO — the terminal, publishable state that feeds Power BI / benchmarking.", color: "#38bdf8", publishable: true },

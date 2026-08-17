@@ -53,3 +53,24 @@ Workflow status is a **state machine / control-flow contract** (publish gate `st
 - **#11:** no action required — `reportPeriodTable.tsx` reads `DataEntryStatusList.name`/`.color`, which are unchanged; the new `label`/`description` are available if you want to surface CEO/BLO wording.
 
 No `data_entries` change (it's already enum-typed, 0 rows).
+
+## Addendum (2026-08-17) — retire status 1 (Requested); Pending is the single starting state
+
+Eugene's decision: the workflow needs **one** starting state, not two. `Requested (1)` and `Pending (2)`
+were functionally identical (both = unfilled shell; no formula, publish gate, calculator, or
+completeness metric branches on the difference), so `Requested (1)` is retired and **`Pending (2)`
+is the single starting state** — chosen because it conveys an outstanding action (an empty shell is a
+task), whereas "Requested" reads as passive. New lifecycle: **Pending (2) → Entered (3) → Reviewed
+(4) → Approved (5)**.
+
+**Done in this stream (migration):**
+- `db/schema/dataEntry.ts` — `Requested (1)` marked `@deprecated`; removed from `DATA_ENTRY_STATUS_META`; `Pending` re-described as the starting state.
+- `lib/migration/load.ts` — shells now birth at `Pending (2)` (`STATUS_PENDING`), was `STATUS_REQUESTED`.
+- `lib/migration/types.ts`, `scripts/gen-extract-template.ts` — extract convention updated: empty → `Pending (2)`.
+- `CONTEXT.md` — "Data Entry Status" lifecycle + "Relevance Shell" glossary now say Pending.
+- **No data migration:** `data_entries` is empty (0 rows), so nothing to backfill. (The legacy `app/migration/service.ts` `mapStatus` already returns `Pending` for empty rows — now consistent with the extract loader.)
+
+**Additional asks:**
+- **#4 (medallion views):** in the Silver/Gold `status_label` derivation, treat `Requested (1)` as deprecated — don't surface it as a current state (source it from `DATA_ENTRY_STATUS_META`, which no longer lists it).
+- **#11 (UI):** drop the "Requested" column from `reportPeriodTable.tsx` and remove `Requested` from the public `DataEntryStatus`/`dataEntryStatusColors` maps when convenient (kept for now as back-compat so nothing breaks). The `enter-data-v2` status filter already uses Pending, not Requested — no change there.
+- **Distinct concept — do NOT touch:** the completeness **"Requested" count** (`app/data-entry/service.ts` "Requested formula"; `lib/ai/data-service`) means the *expected/relevant answer-set denominator*, unrelated to `status_id = 1`. It stays.
