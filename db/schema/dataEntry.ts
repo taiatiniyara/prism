@@ -160,13 +160,44 @@ export enum DataEntryStatusId {
   Requested = 1,
   Pending = 2,
   Entered = 3,
+  /** Reviewed by the BLO. Business label: "BLO Reviewed". */
   Reviewed = 4,
+  /** Approved by the utility CEO — the terminal, publishable state. Business label: "CEO Approved". */
   Approved = 5,
-  /** @deprecated Endorsed has been retired — migrated to Approved (5) */
+  /** @deprecated BMO "Endorsed" step retired — CEO Approved (5) is now the final, publishable
+   * state (no separate central endorsement). Legacy Endorsed rows were migrated to Approved (5). */
   Endorsed = 6,
-  /** @deprecated retired — answer-availability moved to `data_entries.no_data_reason` */
+  /** @deprecated retired — answer-availability moved to `data_entries.no_data_reason`
+   * (`not_available` / `asserted_not_applicable`). "Not available" is an ANSWER, not a workflow state. */
   Not_Available = 7,
 }
+
+/**
+ * Publish gate — an entry is approved/publishable (feeds Silver→Gold, Power BI, benchmarking)
+ * once it reaches the terminal Approved (CEO Approved) state. Named constant so the `>= 5` rule
+ * has a single home; BMO endorsement was removed, so Approved (5) is final.
+ */
+export const APPROVED_STATUS = DataEntryStatusId.Approved;
+export const isPublishableStatus = (statusId?: number | null): boolean =>
+  (statusId ?? 0) >= APPROVED_STATUS;
+
+/**
+ * Enriched, SINGLE SOURCE of workflow-status metadata for the active states (1–5). `status_id` is
+ * a CODE ENUM (a state-machine contract) — its values gate control flow, so it is intentionally
+ * NOT a BMO-editable managed list. These business `label`/`description`s carry the BLO/CEO
+ * language that previously lived — duplicated and id-mismatched — in the "Data Workflow Status"
+ * managed list (list 21), which is being retired. Use this for ALL user- and AI-facing status text.
+ */
+export const DATA_ENTRY_STATUS_META: Record<
+  number,
+  { code: string; label: string; description: string; color: string; publishable: boolean }
+> = {
+  [DataEntryStatusId.Requested]: { code: "Requested", label: "Requested", description: "Data requested; entry not yet started.", color: "#fb923c", publishable: false },
+  [DataEntryStatusId.Pending]: { code: "Pending", label: "Pending", description: "Entry in progress / awaiting the utility's data.", color: "#facc15", publishable: false },
+  [DataEntryStatusId.Entered]: { code: "Entered", label: "Entered", description: "A value (or a confirmed no-data answer) has been entered, awaiting review.", color: "#a3e635", publishable: false },
+  [DataEntryStatusId.Reviewed]: { code: "Reviewed", label: "BLO Reviewed", description: "Reviewed by the BLO.", color: "#34d399", publishable: false },
+  [DataEntryStatusId.Approved]: { code: "Approved", label: "CEO Approved", description: "Approved by the utility CEO — the terminal, publishable state that feeds Power BI / benchmarking.", color: "#38bdf8", publishable: true },
+};
 
 /** Answer-availability reasons on `data_entries.no_data_reason` (derived on kpi_actual). */
 export const NO_DATA_REASONS = ["not_available", "asserted_not_applicable"] as const;
@@ -190,11 +221,19 @@ export const dataEntryStatusColors = {
   Not_Available: "#94a3b8",
 };
 
-export const DataEntryStatusList = Object.keys(DataEntryStatus).map((key) => ({
-  id: DataEntryStatus[key as keyof typeof DataEntryStatus],
-  name: key,
-  color: dataEntryStatusColors[key as keyof typeof dataEntryStatusColors],
-}));
+export const DataEntryStatusList = Object.keys(DataEntryStatus).map((key) => {
+  const id = DataEntryStatus[key as keyof typeof DataEntryStatus];
+  const meta = DATA_ENTRY_STATUS_META[id];
+  return {
+    id,
+    name: key,
+    // Business/AI-facing label + description (fall back to the code key for deprecated states).
+    label: meta?.label ?? key,
+    description: meta?.description ?? null,
+    color: meta?.color ?? dataEntryStatusColors[key as keyof typeof dataEntryStatusColors],
+    publishable: meta?.publishable ?? false,
+  };
+});
 
 export type DataEntryComment = {
   comment: string;
