@@ -232,17 +232,19 @@ All 32 physical columns below are **BUILT** on the dev DB (column names verbatim
 | id | uuid PK | ✔ |
 | report_period_id | FK, NOT NULL | ✔ implies FY/Monthly report type |
 | **measure_def_id** | FK, NOT NULL | the measure — **physically renamed** from `input_def_id` (2026-07-09); references `measure_definitions` |
-| **Hierarchy (denormalised onto the row, as built):** | | |
-| utility_id · country_id · subregion_id | FK, nullable | target: backfill + NOT NULL |
-| region | varchar | as built (typed string, not FK) |
-| service_area_id | FK, nullable | target: NOT NULL via "All areas" member |
-| power_station_id | FK, nullable | station-level grain now supported |
-| energy_resource_id | FK, nullable | **mandatory for generation/storage measures** (equipment = their collection grain, §5 Q4); NULL for all other measures |
-| **Ten dimensions (all BUILT, all currently nullable):** | | target: All-member backfill + NOT NULL |
-| energy_provider_id | FK | default **All (20)** |
-| energy_type_id | FK | default **All (30)** |
-| energy_source_id | FK | default **All GEN (40)**; All ESS (58) for storage |
-| energy_resource_type_id | FK | default **All (983**, renamed from Nill 2026-07-09**)**; Generator (984) / Energy Storage (985) / 988 = combined systems |
+| **Grain / hierarchy address — RULED convention 2 (2026-07-27), supersedes the old "NOT NULL via All-areas" target:** | | nullable chain, **filled DOWN to the row's level, NULL below**; NO sentinel members, NO NOT-NULL grain target (rejected — a fake "All Stations" row is the virtual-generator disease) |
+| unit_id | FK → **units**, nullable | *(renamed from `energy_resource_id` by #68)* mandatory for generation/storage measures (unit = their collection grain, §5 Q4); NULL for measures collected above unit |
+| power_station_id | FK, nullable | set only at/below station level |
+| service_area_id | FK, nullable | set only at/below area level |
+| utility_id | FK, nullable | set for utility-owned facts; **NULL for shared country-level facts** (GDP, population — owned by no single utility) |
+| country_id | FK, nullable | set at country level and above |
+| ~~subregion_id · region~~ | **DROP** from `data_entries` | derivable from `country_id` (dual-encoding); moved to the **Silver view** only. Already excluded from `uniq_entry_address`, never an entry level (§1.5) |
+| **grain_level** *(NEW — derived)* | generated col **or** Silver field | `'unit'\|'station'\|'area'\|'utility'\|'country'` = the deepest non-null grain. Readable level for AI/dashboards; source-of-truth stays **the address**, this is a convenience derivation (so an LLM writes `WHERE grain_level='utility'`, not `utility_id IS NOT NULL AND service_area_id IS NULL`) |
+| **Ten dimensions (NOT NULL, explicit All — as built, unchanged):** | | All-member always, never NULL. *(This All-NOT-NULL rule is for the 10 **dimensions**; it does NOT apply to the grain columns above, which stay nullable.)* |
+| provider_id | FK | *(was `energy_provider_id`)* default **All** |
+| category_id | FK | *(was `energy_type_id`)* default **All**; Conventional/Renewable/Storage |
+| technology_id | FK | *(was `energy_source_id`)* default **All**; Solar/Diesel/Battery/… |
+| asset_id | FK | *(was `energy_resource_type_id`)* default **All (983)**; Generation (984)/Storage (985) |
 | customer_type_id | FK | default **All Customers (690)** |
 | payment_mode_id | FK | default **All Payment Modes (720)** |
 | consumption_band_id | FK | list + members pending |
@@ -266,7 +268,7 @@ All 32 physical columns below are **BUILT** on the dev DB (column names verbatim
   (all null = awaiting entry; the status column carries the why).
 - ✅ **Unique address** — `uniq_entry_address` `UNIQUE NULLS NOT DISTINCT` over the full
   17-column physical address: period + measure + grain (utility_id, country_id, service_area_id,
-  power_station_id, energy_resource_id) + **all ten** dimension columns. Fuller than the original
+  power_station_id, unit_id) + **all ten** dimension columns. Fuller than the original
   target (period + area + measure + 10 dims) because a NULL "area" cannot by itself distinguish
   two utilities or a utility- vs country-level row; `NULLS NOT DISTINCT` (PG 15+) makes NULL
   grains deduplicate instead of the default "every NULL is unique" (which would let duplicates
@@ -275,6 +277,28 @@ All 32 physical columns below are **BUILT** on the dev DB (column names verbatim
   never NULL (no NULL-as-All). The RAW-ONLY reload must COALESCE legacy NULL dims → All-member.
 - Which value column a measure uses is dictated by `data_type_id`, enforced by **one shared
   routing function** (`lib/data-entry/value-router.ts` — exists) used by every write path.
+
+**Ruled additions (2026-07-27) — grain convention 2 + chain integrity:**
+
+- **Grain columns stay NULLABLE.** The old "backfill grain → NOT NULL via All-areas member" target is **rejected**: it reintroduces pretend physical entities (an "All Stations" station holding data = the PRISM-1 virtual-generator disease). NULL on a grain column means "this fact lives *above* that grain" — truthful, not a placeholder. (The 10 **dimensions** keep All-NOT-NULL; the two rules are different because dimensions *classify* while grain *locates*.)
+- **`grain_level`** — a derived level (`'unit'|'station'|'area'|'utility'|'country'` = deepest non-null grain), exposed as a generated column or a Silver field. Keeps "level = the address" as truth but hands consumers/AI a clean predicate.
+- **Chain-consistency validation (writer + DB-trigger backstop).** A row's filled grain columns must match real parentage (a unit row's `power_station_id`/`service_area_id`/`utility_id` = the unit's actual parents; a utility row's `country_id` = the utility's country). Enforced by the shared writer, which **both** `enter-data` (v1) and `enter-data-v2` must route through — no direct `data_entries` inserts — with a Postgres trigger as belt-and-suspenders so no path (script, future code) can bypass it.
+- **Unit-row dimension consistency (rule #3).** On a **unit-anchored** row the 4 energy dims must equal the unit's real taxonomy: `provider_id`/`technology_id` validated directly against `units`; **`category_id = parent(units.technology_id)`** and **`asset_id = grandparent(units.technology_id)`** — derived up the `managed_list_items.parent_id` chain (technology → category → asset). `units.technology_id` is the leaf source-of-truth; the mispopulated `units.category_id` (holds asset-tier 984/1035) and stale `units.type_id` ("Equipment"=1) are **dropped** in the grain DDL. *(Live-DB check PASSED 2026-07-27: all 409 real units resolve `technology → category → asset` with 0 breaks; the 92 virtual units sit at All/All/All → #8's virtual-promotion backfill. Derive rule confirmed viable.)*
+- **One-grain-per-measure is enforced PER REPORT PERIOD**, not globally — mixed-grain measures (§1.6) legitimately change grain across periods; within a period a measure sits at one grain, and cross-level rollups live in gold (`kpi_actual`), never mixed into `data_entries` (prevents `WHERE country_id=Z` double-counting).
+- **RLS caveat (for #12):** utility-owned rows carry `utility_id` (native RLS filter); **shared country-level rows carry `utility_id = NULL`**, so the policy must be `utility_id = current_utility OR utility_id IS NULL`, and no utility-owned fact may ever be NULL-utility (else cross-tenant leak).
+
+**Reload contract — what each migration sample row must carry (so sample files align to this spec):**
+
+1. **Period:** `report_period_id` (the submission).
+2. **Measure:** `measure_def_id`.
+3. **Grain address — fill DOWN to the measure's `agg_level_id`, NULL below (convention 2):**
+   - *unit* measure → `unit_id` + `power_station_id` + `service_area_id` + `utility_id` + `country_id` all filled to the unit's real parents.
+   - *utility* measure → `utility_id` + `country_id` filled; `service_area_id`/`power_station_id`/`unit_id` **NULL**.
+   - *country* measure (the 16 shared measures) → `country_id` filled; **`utility_id` NULL**; area/station/unit NULL.
+   - **Do NOT supply** `subregion_id`/`region` (dropped — Silver derives them) or `grain_level` (derived).
+4. **Ten dimensions — always a real member id, NEVER NULL:** the sliced member where the fact is broken down, else the dimension's **All** member. On unit-anchored rows, `provider_id`/`technology_id` must equal the unit's, and `category_id`/`asset_id` must equal `parent`/`grandparent` of `units.technology_id` (the loader can derive these rather than trusting the extract).
+5. **Value — exactly one** of `value_numeric` / `value_boolean` / `value_text` / `value_option_id`, per the measure's `data_type_id` (routed by `value-router`). Raw string may also ride in legacy `value`.
+6. Rows must satisfy `uniq_entry_address` (no duplicate physical addresses) and the chain-consistency rule (grain columns = real parentage).
 
 **Example rows (IDs shown as labels for readability):**
 
@@ -294,16 +318,19 @@ Active measures today collect at three: utility (62), service area (25), country
 
 - **Declared grain:** `measure_definitions.agg_level_id` — the level a measure is *collected* at.
   Drives shell creation (relevance pass) and the entry UI.
-- **Actual level of a row = its address, not a column:** equipment → `energy_resource_id` set;
-  service area → specific `service_area_id`; utility → the **All areas** member; country →
-  context measures via the utility's country. There is deliberately **no level column** on
-  entries — a redundant level declaration could disagree with the address (the dual-encoding
-  disease again).
+- **Actual level of a row = its address (convention 2, RULED 2026-07-27):** the grain chain is
+  filled DOWN to the level, NULL below. Unit → `unit_id` set (+ station/area/utility/country
+  filled up); station → `power_station_id` deepest; area → `service_area_id` deepest;
+  **utility → `utility_id` deepest, with area/station/unit NULL** — *not* an "All areas" member;
+  **country → `country_id` set and `utility_id` NULL** (shared fact, owned by no utility). The
+  derived **`grain_level`** exposes this readably; there is deliberately **no stored level
+  column** — a redundant declaration could disagree with the address (dual-encoding).
 - **Sub-region and Region are never entry levels** — they exist only as derived rows in
   `gold.fact_kpi_rollup`.
 - **Validation:** the writer rejects a row whose address grain contradicts the measure's
   declared grain (like a wrong-typed value).
-- **Silver derives a readable `entry_level` label** from the address.
+- **`grain_level`** (the derived level defined in §1.4) is exposed as a generated column or a
+  Silver field — the readable level, computed from the address.
 - **Power Station note (updated as-built):** `power_station_id` now EXISTS on entries, so
   station-level facts are addressable (row level = station when it's the deepest specific
   component). No active measure declares station grain yet; whether any should is part of
