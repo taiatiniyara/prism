@@ -222,7 +222,8 @@ grain columns NULL, `grain_level` = the coarser level); a **dimension rollup** p
 on that dimension. `kpi_actual` is the **one place coarse-grain computed values live** — `data_entries`
 stays finest-per-measure-per-period.
 
-**HOLD lifted** (grain convention ruled). **DDL ownership: #2 writes the `kpi_actual` DDL**; #3 owns
+**HOLD lifted** (grain convention ruled). **DDL ownership: #4 writes the `kpi_actual` DDL** (all
+shared-table DDL is #4's per Eugene); #3 owns
 the column-set-merge spec + write path. Still pending: #2's confirmation of the dimension
 columns / merged set — see WORKSTREAMS.md cross-stream note.
 
@@ -277,9 +278,28 @@ in a service area," "AF for the whole utility," etc. Consequences for the engine
    90/100 and Unit B 400/500 → fleet AF is (90+400)/(100+500)=**81.7%**, not the (90%+80%)/2=**85%**
    an average would give. Weighting by size is the whole point.)
 3. **Inputs are stored at the finest grain (unit) with full dimension tags**, and must be
-   **additive quantities** (available-hours, rated capacity, MWh, outage-hours) — never pre-computed
+   **additive quantities** (available-hours, MWh, outage-hours, capacity-hours) — never pre-computed
    ratios. The ratio is only ever formed at the final step, at each level. This is a defining
    constraint on how these KPIs' *inputs* are specified.
+
+### 4.6.1 Capacity KPIs & unit lifecycle (DECIDED 2026-07-28 — option (a))
+
+Per `unit-lifecycle-spec.md` §4, units are temporal (SCD-2 stints), so a capacity-factor
+**denominator is `Σ(stint_capacity × stint_hours)`** over a period's overlapping stints (a
+single capacity-per-period can't express a mid-period derate). This is fully consistent with §4.6
+(ratio-of-sums, additive inputs) — **Capacity Factor = `Σ(generation) ÷ Σ(capacity-hours)`** at
+every level, and capacity-hours rolls up unit→utility by summing.
+
+**Ownership (Eugene's call, option (a)):** the stint→capacity-hours weighting is a **silver-derived
+measure** (computed in the data layer, #8, per (unit, period)) — *not* a hand-entered fact and *not*
+computed inside the calculator. The engine consumes **capacity-hours as an ordinary additive input**
+and just divides + rolls up; it stays **free of stint awareness**. Consequences:
+- The retired **"Rated Capacity"** measure is not a binding target — the **manual KPI rebuild binds
+  capacity KPIs to the silver `capacity-hours` measure** instead.
+- Additive/time-based facts (MWh, hours) arrive **already prorated** by `days(stint∩period)/days(period)`
+  (upstream) — the calculator receives them as normal additive inputs.
+- The **energy-balance check** (`generation ≤ Σ(cap×hours) − downtime_energy`) is data-quality
+  validation owned by the loader/gold layer, **not** the formula evaluator.
 
 ---
 
@@ -545,8 +565,54 @@ plugs into the reactive cascade.
 Keep the existing rule: **pure-addition formulas zero-fill missing inputs; every other formula waits
 for all inputs.** A sum of costs is still meaningful with some components absent (they're zero); a
 ratio or difference with a missing operand is "not yet computable," not a number. Centralised in the
-one engine. Note this is distinct from §6: a *legitimately-not-yet-entered* input is "waiting"; an
-input whose *measure is deleted/deactivated* is an error that surfaces a status.
+one engine.
+
+### 9.1 Three input states — "not available" is not zero (DECIDED 2026-07-28, #3's call)
+
+An input can be in one of **three** distinct states; the engine treats each differently
+(this refines the §6 note; driven by `data_entries.no_data_reason` from `data-availability-response-design.md`):
+
+| State | What it means | Engine behaviour |
+|---|---|---|
+| **Not yet entered** (blank, no reason) | awaiting entry | "waiting / not yet computable"; the pure-addition zero-fill above applies (absent additive component = 0) |
+| **Explicitly not available** (`no_data_reason` set) | the utility affirmatively declares no value exists | **propagates**: the KPI result is **not-available** (null + reason), **never 0** and never a partial number — and the zero-fill rule does **not** apply to it |
+| **Measure deleted/deactivated** (referential) | binding target is gone | error/status warning (§6), never silently dropped |
+
+**The governing rule: `not-available ≠ 0`.** An explicitly not-available input is *not* zero-filled,
+even in an additive formula — because "there is no data" is a different statement from "the value is
+zero." When any **required** input is not-available, the computed KPI is itself **not-available**
+(the state propagates up the dependency graph and through rollups).
+
+**Schema implication (#4 owns the `kpi_actual` DDL — draft `kpi-actual-ddl-design.md`, #3 signed off
+the column set 2026-08-12):** `kpi_actual` carries a **single nullable `value numeric`** +
+**`no_data_reason`** (same CHECK'd vocab as `data_entries`) + a **value-XOR-no_data mutual-exclusion
+constraint** — so a propagated not-available KPI stores **`null value + reason`**, never 0/gap. Value
+is **numeric-only**: computed KPIs are numbers (the evaluator does arithmetic); qualitative/text
+"descriptive" values are *entered* measures surfaced via the **Track-as-KPI projection** (read from
+`data_entries` by reference), **not** materialized as text in `kpi_actual`. `no_data_reason` on
+`kpi_actual` is **derived-only** (always propagated from input states; never a direct KPI assertion).
+The 10 dim slices match the input side exactly; `meets_target`/within-band stay gold-layer, not stored.
+
+**The two reasons — FINALIZED (glossary `984e88a`, 2026-07-28; shared by `data_entries.no_data_reason`
+AND `kpi_actual`):** `no_data_reason ∈ { 'not_available', 'asserted_not_applicable' }`.
+- **`not_available`** — exists but unknown / not collected → **propagate** (KPI is not-available), never 0.
+- **`asserted_not_applicable`** — utility-asserted "doesn't apply to us" on an in-scope input → an
+  **additive** formula treats it as **absent (= 0 contribution)**; every other formula still **propagates**.
+
+The rule is **locked — build against it** (impl only awaits the DDL landing). **Key the engine off
+`asserted_not_applicable`, NOT bare `not_applicable`** — the `asserted_` prefix keeps it distinct in
+queries/logs from `measure_dimension_scope.expansion_mode = 'not_applicable'` (dimension config),
+which the resolver also touches.
+
+*Upstream constraint (Eugene via #8, 2026-07-28):* `asserted_not_applicable` is legal only on
+**optional measures (`is_mandatory = false`)** — mandatory + no-data ⇒ `not_available`. The
+writer/UI enforce this, so the engine receives **already-validated** not-available values; no
+engine-side gating needed.
+
+**Two orthogonal axes, never conflated:** **`is_relevant` = SCOPE** ("is this shell expected at
+all?" → excluded if false; our §5 "absence of a binding row = not applicable to this measure");
+**`no_data_reason` = the KIND of no-data answer** for an *in-scope* shell. Different questions,
+different axes — only `no_data_reason` is a per-input calculator signal.
 
 ---
 
