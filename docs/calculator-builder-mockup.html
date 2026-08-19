@@ -5,29 +5,64 @@
 <meta name="viewport" content="width=device-width, initial-scale=1" />
 <title>PRISM 2 — Calculator / Formula Builder mockup</title>
 <style>
+  /* PRISM tokens (shadcn slate, oklch) — app-content register. Nav uses raw slate/amber per house style. */
   :root{
-    --bg:#f6f7f9; --panel:#ffffff; --ink:#1c2430; --muted:#66707c; --line:#e3e7ec;
-    --accent:#2f6df6; --accent-soft:#e8f0ff; --pin:#0d7d5a; --pin-soft:#e0f4ec;
-    --all:#8a6d00; --all-soft:#fbf1d3; --inherit:#5b6472; --inherit-soft:#eef1f4;
-    --warn:#b4361d; --warn-soft:#fbe6e1; --ok:#0d7d5a; --chip:#eef1f5;
-    --shadow:0 1px 2px rgba(20,30,45,.06),0 4px 16px rgba(20,30,45,.06);
+    --bg:oklch(0.967 0.003 264.542);         /* muted page (PRISM --muted) */
+    --panel:oklch(1 0 0);                    /* card = white (PRISM --card) */
+    --ink:oklch(0.13 0.028 261.692);         /* PRISM --foreground */
+    --muted:oklch(0.551 0.027 264.364);      /* PRISM --muted-foreground */
+    --line:oklch(0.928 0.006 264.531);       /* PRISM --border */
+    --field:oklch(0.985 0.002 247.839);      /* input fill */
+    --primary:oklch(0.21 0.034 264.665);     /* PRISM --primary (near-black navy) */
+    --primary-fg:oklch(0.985 0.002 247.839); /* PRISM --primary-foreground */
+    --accent:oklch(0.35 0.035 264);          /* code identifiers (derived) */
+    --accent-soft:oklch(0.967 0.003 264.542);/* hover/chip = PRISM --accent */
+    --amber:#f59e0b; --amber-fg:#78350f; --amber-soft:#fef3c7; --amber-line:#fcd34d;
+    --pin:oklch(0.52 0.12 162); --pin-soft:oklch(0.958 0.03 165);
+    --all:#92600a; --all-soft:#fef3c7;
+    --inherit:oklch(0.5 0.02 260); --inherit-soft:oklch(0.965 0.006 248);
+    --warn:oklch(0.55 0.2 27); --warn-soft:oklch(0.96 0.04 22);
+    --ok:oklch(0.5 0.13 150);
+    --radius:0.625rem;
+    --shadow:0 1px 2px oklch(0.2 0.04 265 / .06),0 4px 14px oklch(0.2 0.04 265 / .06);
   }
   @media (prefers-color-scheme:dark){
     :root{
-      --bg:#0f1319; --panel:#161c24; --ink:#e7ecf2; --muted:#9aa5b1; --line:#26303b;
-      --accent:#5b8bff; --accent-soft:#18263f; --pin:#4cd1a0; --pin-soft:#123027;
-      --all:#e0be5a; --all-soft:#332a12; --inherit:#9aa5b1; --inherit-soft:#1d2530;
-      --warn:#ff8f75; --warn-soft:#3a1c16; --ok:#4cd1a0; --chip:#1d2530;
-      --shadow:0 1px 2px rgba(0,0,0,.3),0 6px 20px rgba(0,0,0,.35);
+      --bg:oklch(0.13 0.028 261.692); --panel:oklch(0.21 0.034 264.665);
+      --ink:oklch(0.985 0.002 247.839); --muted:oklch(0.707 0.022 261.325);
+      --line:oklch(1 0 0 / 10%); --field:oklch(1 0 0 / 6%);
+      --primary:oklch(0.928 0.006 264.531); --primary-fg:oklch(0.21 0.034 264.665);
+      --accent:oklch(0.8 0.02 260); --accent-soft:oklch(0.278 0.033 256.848);
+      --amber:#fbbf24; --amber-fg:#fde68a; --amber-soft:oklch(0.32 0.06 70); --amber-line:oklch(0.45 0.09 75);
+      --pin:oklch(0.72 0.14 165); --pin-soft:oklch(0.28 0.05 165);
+      --all:#e0be5a; --all-soft:oklch(0.3 0.05 72);
+      --inherit:oklch(0.7 0.03 258); --inherit-soft:oklch(0.26 0.03 262);
+      --warn:oklch(0.72 0.15 25); --warn-soft:oklch(0.28 0.08 25);
+      --ok:oklch(0.72 0.14 158);
+      --shadow:0 1px 2px #0006,0 6px 20px #0007;
     }
   }
   *{box-sizing:border-box}
   body{margin:0;background:var(--bg);color:var(--ink);
-    font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;padding:24px}
-  .wrap{max-width:960px;margin:0 auto}
-  h1{font-size:15px;margin:0;font-weight:650}
+    font:14px/1.5 "Noto Sans",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  /* ---- PRISM app shell (nav uses raw slate/amber, per house style) ---- */
+  .appnav{background:linear-gradient(to right,#1e293b,#0f172a);color:#fff}
+  .nav-in{max-width:1120px;margin:0 auto;display:flex;align-items:center;gap:26px;padding:0 22px;height:52px}
+  .brand{font-weight:700;font-size:15px;display:flex;align-items:center;gap:7px;letter-spacing:.02em}
+  .brand .tri{color:#fbbf24;font-size:12px}
+  .nav-links{display:flex;gap:20px;font-size:13.5px}
+  .nav-links a{color:#cbd5e1;text-decoration:none}
+  .nav-links a.active{color:#fbbf24;font-weight:600}
+  .nav-right{margin-left:auto;display:flex;align-items:center;gap:14px;font-size:13px}
+  .progress{color:#94a3b8;font-size:12.5px}
+  .org{color:#e2e8f0;font-weight:600}
+  .rolebadge{background:#fbbf24;color:#1e293b;font-weight:700;font-size:11px;border-radius:4px;padding:2px 7px;letter-spacing:.02em}
+  .avatar{width:28px;height:28px;border-radius:50%;background:#475569;color:#fff;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600}
+  .crumb{color:var(--muted);font-size:12.5px;margin:0 0 3px}
+  .wrap{max-width:1120px;margin:0 auto;padding:22px}
+  h1{font-size:18px;margin:0;font-weight:700;color:var(--ink);letter-spacing:-.01em}
   .sub{color:var(--muted);font-size:12.5px}
-  .card{background:var(--panel);border:1px solid var(--line);border-radius:12px;
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:var(--radius);
     box-shadow:var(--shadow);margin-bottom:16px}
   .card-pad{padding:16px 18px}
   .row{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
@@ -35,25 +70,23 @@
   .divide{border-top:1px solid var(--line)}
   label.fld{display:block;font-size:11px;letter-spacing:.03em;text-transform:uppercase;
     color:var(--muted);margin-bottom:5px;font-weight:600}
-  .input{background:var(--bg);border:1px solid var(--line);border-radius:8px;
+  .input{background:var(--field);border:1px solid var(--line);border-radius:8px;
     padding:8px 10px;color:var(--ink);font-size:13.5px;min-width:120px}
   .formula{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14.5px;
-    background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
+    background:var(--field);border:1px solid var(--line);border-radius:8px;padding:12px 14px}
   .tok{background:var(--accent-soft);color:var(--accent);border-radius:6px;padding:1px 6px;
     font-weight:600;cursor:pointer}
   .op{color:var(--muted);padding:0 3px}
-  /* toggle */
-  .toggle{display:inline-flex;align-items:center;gap:9px;font-size:13px}
-  .sw{width:38px;height:22px;border-radius:99px;background:var(--accent);position:relative;flex:0 0 auto}
+  /* Track-as-KPI switch — ON uses the app amber accent */
+  .toggle{display:inline-flex;align-items:center;gap:9px;font-size:13px;font-weight:500}
+  .sw{width:38px;height:22px;border-radius:99px;background:var(--amber);position:relative;flex:0 0 auto}
   .sw::after{content:"";position:absolute;top:2px;left:18px;width:18px;height:18px;border-radius:50%;
-    background:#fff;box-shadow:0 1px 2px rgba(0,0,0,.3)}
-  .pill{display:inline-flex;align-items:center;gap:6px;background:var(--chip);border-radius:99px;
+    background:#fff;box-shadow:0 1px 2px #0005}
+  .pill{display:inline-flex;align-items:center;gap:6px;background:var(--accent-soft);border-radius:99px;
     padding:3px 10px;font-size:12px;color:var(--muted)}
   /* tag card */
-  .tagcard{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:12px}
+  .tagcard{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:12px;background:var(--panel)}
   .tagcard.warnb{border-color:var(--warn)}
-  .tc-head{display:flex;justify-content:space-between;align-items:center;gap:10px;
-    padding:10px 14px;background:var(--bg)}
   .tc-split{display:flex;align-items:stretch}
   .tc-left{flex:0 0 30%;max-width:30%;padding:14px;display:flex;flex-direction:column;
     gap:6px;align-items:flex-start}
@@ -63,16 +96,14 @@
   .reads b{color:var(--ink);font-weight:600}
   .tags{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;padding:12px 14px 8px}
   .tag{border:1px solid var(--line);border-radius:8px;padding:6px 9px;background:var(--panel)}
-  .tag .k{font-size:10.5px;letter-spacing:.02em;text-transform:uppercase;color:var(--muted)}
+  .tag .k{font-size:10.5px;letter-spacing:.02em;text-transform:uppercase;color:var(--muted);font-weight:600}
   .tag .v{font-size:12.5px;font-weight:600;margin-top:1px;display:flex;align-items:center;gap:6px}
   .dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
-  .t-pin{background:var(--pin-soft)} .t-pin .v{color:var(--pin)} .t-pin .dot{background:var(--pin)}
-  .t-all{background:var(--all-soft)} .t-all .v{color:var(--all)} .t-all .dot{background:var(--all)}
+  .t-pin{background:var(--pin-soft);border-color:color-mix(in oklab,var(--pin) 25%,var(--line))}
+  .t-pin .v{color:var(--pin)} .t-pin .dot{background:var(--pin)}
+  .t-all{background:var(--all-soft);border-color:var(--amber-line)}
+  .t-all .v{color:var(--all)} .t-all .dot{background:var(--all)}
   .t-inh{background:var(--inherit-soft)} .t-inh .v{color:var(--inherit)} .t-inh .dot{background:var(--inherit)}
-  .grainctl{display:flex;align-items:center;gap:12px;padding:10px 14px 12px;border-top:1px dashed var(--line);margin:0 14px}
-  .glabel{font-size:10.5px;text-transform:uppercase;letter-spacing:.02em;color:var(--muted);font-weight:600;flex:0 0 auto}
-  .gval{font-size:13px;font-weight:600;color:var(--inherit);display:flex;align-items:center;gap:7px}
-  .gval .dot{width:7px;height:7px;border-radius:50%}
   .tc-body{display:flex;align-items:stretch}
   .dimcol{flex:1 1 auto;min-width:0}
   .graincol{flex:0 0 150px;max-width:150px;border-left:1px solid var(--line);padding:12px 14px;display:flex;align-items:flex-start}
@@ -82,61 +113,83 @@
   .legend .dot{display:inline-block;margin-right:5px;vertical-align:middle}
   table{width:100%;border-collapse:collapse;font-size:13px}
   th,td{text-align:left;padding:7px 10px;border-bottom:1px solid var(--line)}
+  thead tr{background:var(--accent-soft)}
   th{font-size:11px;text-transform:uppercase;letter-spacing:.03em;color:var(--muted);font-weight:600}
-  td.num{font-family:ui-monospace,monospace}
+  td.num{font-family:ui-monospace,monospace;font-variant-numeric:tabular-nums}
   .tick{color:var(--ok);font-weight:700}
   .mut{color:var(--muted)}
-  .sec{font-weight:650;font-size:13px;margin:0 0 2px}
+  .sec{font-weight:700;font-size:13px;margin:0 0 2px;color:var(--ink)}
   .flag{display:inline-flex;gap:6px;align-items:center;font-size:12.5px;color:var(--ok)}
   .grow{flex:1}
   .note{font-size:12px;color:var(--muted);margin-top:8px}
-  .kpiband{background:var(--accent-soft);border:1px solid color-mix(in srgb,var(--accent) 30%,transparent);
+  /* Published-as-KPI note — amber accent card */
+  .kpiband{background:var(--amber-soft);border:1px solid var(--amber-line);
     border-radius:8px;padding:8px 12px;font-size:12.5px;color:var(--ink);margin-top:10px}
-  .authhdr{margin:28px 0 2px;font-weight:700;font-size:15px}
+  .kpiband b{color:var(--amber-fg)}
+  .authhdr{margin:28px 0 2px;font-weight:700;font-size:16px;color:var(--ink)}
   .cap{font-size:12.5px;color:var(--muted);margin:0 0 10px}
-  .pickbtn{display:inline-flex;align-items:center;gap:7px;background:var(--accent);color:#fff;border:0;
+  /* primary button = dark navy + white */
+  .pickbtn{display:inline-flex;align-items:center;gap:7px;background:var(--primary);color:var(--primary-fg);border:0;
     border-radius:8px;padding:8px 12px;font-size:13px;font-weight:600;cursor:pointer}
   .ghost{border:1px dashed var(--line);border-radius:8px;padding:14px;color:var(--muted);font-size:12.5px;
-    background:repeating-linear-gradient(45deg,transparent,transparent 7px,var(--bg) 7px,var(--bg) 14px)}
+    background:var(--field)}
   .picker{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:var(--panel)}
   .pk-search{padding:11px 14px;border-bottom:1px solid var(--line);display:flex;align-items:center;gap:10px}
-  .pk-search input{flex:1;background:var(--bg);border:1px solid var(--accent);border-radius:8px;padding:8px 10px;
+  .pk-search input{flex:1;background:var(--field);border:1px solid var(--primary);border-radius:8px;padding:8px 10px;
     color:var(--ink);font-size:13.5px}
   .pk-body{display:flex}
   .pk-groups{flex:0 0 240px;border-right:1px solid var(--line);padding:8px;max-height:300px;overflow:auto}
   .pk-results{flex:1;padding:8px;max-height:300px;overflow:auto}
   .grp{padding:6px 10px;border-radius:6px;font-size:13px;cursor:pointer;display:flex;justify-content:space-between}
-  .grp.on{background:var(--accent-soft);color:var(--accent);font-weight:600}
+  .grp.on{background:var(--accent-soft);color:var(--ink);font-weight:600}
   .grp .c{color:var(--muted);font-weight:400;font-size:12px}
   .subg{padding:4px 10px 4px 24px;font-size:12.5px;color:var(--muted);cursor:pointer;border-radius:6px}
-  .subg.on{color:var(--accent);font-weight:600;background:var(--accent-soft)}
+  .subg.on{color:var(--ink);font-weight:600;background:var(--accent-soft)}
   .res{padding:8px 10px;border-radius:8px;cursor:pointer;display:flex;justify-content:space-between;gap:10px;align-items:center}
-  .res.on,.res:hover{background:var(--bg)}
+  .res.on,.res:hover{background:var(--accent-soft)}
   .res .nm{font-size:13.5px;font-weight:600}
   .res .path{font-size:11.5px;color:var(--muted);margin-top:1px}
-  .hl{background:var(--all-soft);color:var(--all);border-radius:3px;padding:0 1px;font-weight:700}
+  .hl{background:var(--amber-soft);color:var(--amber-fg);border-radius:3px;padding:0 1px;font-weight:700}
   .pop{border:1px solid var(--line);border-radius:10px;box-shadow:var(--shadow);background:var(--panel);padding:8px;width:260px}
   .opt{display:flex;align-items:center;gap:9px;padding:7px 8px;border-radius:7px;font-size:13px;cursor:pointer}
   .opt.on{background:var(--accent-soft)}
   .radio{width:14px;height:14px;border-radius:50%;border:2px solid var(--muted);flex:0 0 auto}
-  .opt.on .radio{border-color:var(--accent);background:radial-gradient(circle,var(--accent) 38%,transparent 42%)}
+  .opt.on .radio{border-color:var(--primary);background:radial-gradient(circle,var(--primary) 38%,transparent 42%)}
   .mini-select{margin:2px 0 6px 23px;border:1px solid var(--line);border-radius:6px;padding:6px 9px;
-    font-size:12.5px;background:var(--bg);display:flex;justify-content:space-between;align-items:center;gap:8px}
-  .caret{display:inline-block;width:2px;height:19px;background:var(--accent);margin-left:1px;vertical-align:middle}
+    font-size:12.5px;background:var(--field);display:flex;justify-content:space-between;align-items:center;gap:8px}
+  .caret{display:inline-block;width:2px;height:19px;background:var(--primary);margin-left:1px;vertical-align:middle}
   .oprow{display:flex;align-items:center;gap:6px;margin-top:10px;flex-wrap:wrap}
   .opbtn{min-width:32px;height:30px;border:1px solid var(--line);background:var(--panel);border-radius:7px;
     font-size:15px;color:var(--ink);cursor:pointer;padding:0 8px}
   .acbox{border:1px solid var(--line);border-radius:8px;overflow:hidden;box-shadow:var(--shadow);background:var(--panel);max-width:440px}
-  .achdr{font-size:12px;color:var(--muted);padding:7px 10px;border-bottom:1px solid var(--line)}
+  .achdr{font-size:12px;color:var(--muted);padding:7px 10px;border-bottom:1px solid var(--line);background:var(--accent-soft)}
   .acitem{padding:8px 10px;font-size:13px;cursor:pointer;border-top:1px solid var(--line)}
-  .acitem:hover{background:var(--bg)}
+  .acitem:hover{background:var(--accent-soft)}
 </style>
 </head>
 <body>
+
+  <!-- PRISM authenticated app shell -->
+  <div class="appnav">
+    <div class="nav-in">
+      <div class="brand"><span class="tri">▲</span> PRISM</div>
+      <nav class="nav-links">
+        <a>Dashboard</a><a>Data Entry</a><a>Benchmarking</a><a class="active">Settings</a>
+      </nav>
+      <div class="nav-right">
+        <span class="progress">Measures 115 active</span>
+        <span class="org">EFL</span>
+        <span class="rolebadge">BMO</span>
+        <span class="avatar">E</span>
+      </div>
+    </div>
+  </div>
+
 <div class="wrap">
 
   <div style="margin-bottom:14px">
-    <h1>Measure Builder <span class="mut">›</span> Renewable Generation Share</h1>
+    <div class="crumb">Settings › Measures › Builder</div>
+    <h1>Measure Builder <span class="mut" style="font-weight:400">›</span> Renewable Generation Share</h1>
     <div class="sub">One builder for every computed value — a KPI is just a measure you also publish.</div>
   </div>
 
@@ -148,7 +201,7 @@
           <div><label class="fld">Name</label><input class="input" value="Renewable Generation Share" style="width:240px"></div>
           <div><label class="fld">Unit</label><input class="input" value="%" style="width:70px"></div>
           <div><label class="fld">Reported at (derived)</label>
-            <span class="pill">unit → country · by technology / category / asset</span></div>
+            <span class="pill">unit → country · by technology / category / asset class</span></div>
         </div>
         <div style="margin-top:14px">
           <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
@@ -404,7 +457,8 @@
   </div>
 
   <p class="sub" style="text-align:center;margin-top:18px">
-    Mockup · PRISM 2 Calculator spec §5–§7 · the tag card is the same address model used by inputs, computed values, and limits.
+    Mockup · PRISM 2 Calculator spec §5–§7 · styled to PRISM's design system (slate-navy shell, shadcn tokens, amber accent).
+    Tag-state colours are deliberately distinct from the 5-state data-pipeline palette.
   </p>
 </div>
 </body>

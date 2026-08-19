@@ -2,6 +2,30 @@
 
 **Status: DRAFT for discussion** · updated 2026-07-09 to **as-built** state
 
+---
+
+> ### ⚠ Currency notice (2026-08-19) — read before trusting details
+>
+> This document is an accurate snapshot of the **medallion core** (Bronze→Silver→Gold, the
+> relevance/shell pass §3B, flush-and-reload §4, and the RULED grain convention with `grain_level`).
+> But the ~3 weeks of decisions **after 2026-07-27 were captured in focused spec docs, not folded
+> back here** — so for the areas below, the spec doc is the source of truth and this doc may be
+> silent or stale. Column-name/vocab fixes from the physicalisation have been applied inline
+> (see `naming-change-log.md`); the deeper additions below have **not** been folded in.
+>
+> | Area | Current source of truth | Status here |
+> |---|---|---|
+> | Column & vocab renames (physicalisation: `energy_*`→`provider/category/technology/asset_class/unit`; `agg_level_id`→`strata_id`; lists → **Strata / Provider / Category / Technology / Asset Class**) | **`naming-change-log.md`** | fixed inline; §1.2a framing corrected |
+> | Period / time axis, `report_periods`→**`submissions`** rename, `kpi_target` / `kpi_actual` / `time_aggregation`, `period` dimension | **`kpi-time-series-spec.md`** | not folded in |
+> | Computed-KPI table DDL (`kpi_actual`) | **`kpi-actual-ddl-design.md`** | 1 stray mention only |
+> | Data-availability axis — **not-available ≠ 0**, `no_data_reason` | **`data-availability-response-design.md`** | absent |
+> | Unit lifecycle — the **stint model** (`unit_activations`), commission/decommission | **`unit-lifecycle-spec.md`** | absent |
+> | Measure **effective-dating** (`effective_from` on applicability) | **`measure-effective-dating-spec.md`** + **`adr/0004-effective-dated-dimensions.md`** | absent |
+> | `is_apportionable` measures (apportioned costs / contextual label) | **`apportioned-costs-contextual-label-design.md`** + `apportion` SQL | absent |
+> | Country-context **annual time-series** (`country_context.period_year`, carry-forward read) | `scripts/sql/2026-08-18-country-context-period-year.sql` (no dedicated spec yet) | absent |
+> | **`lean_mode`** submission fast-path | `data-entry-ux-requirements.md` + report-periods SQL | absent |
+> | Computed "measures" / calculator engine | **`calculator-engine-spec.md`** | absent |
+
 > **As-built status (full-schema audit, second pass, 2026-07-09 PM):**
 > **BUILT** — all 32 physical columns on `data_entries` (typed values, 10 dimensions,
 > hierarchy columns, legacy `value` retained), with **`input_def_id` renamed →
@@ -86,7 +110,7 @@ The collapsed catalogue. One row per measure, ~55–65 rows.
 | unit_id | FK managed_list | MWh, Hours, %, Currency, … — NOT NULL always; measures with no unit point at the explicit **Units N/A** member (90), never NULL. Hygiene rule for the collapse: Units N/A is legitimate only for boolean/option/text data types — a **number** measure must carry a real unit (flag number+N/A combos in the sign-off workbook; e.g. audit found Depreciation Expense mis-united as "Number" instead of Currency). Display rule: Silver/UI render nothing for Units N/A |
 | data_type_id | FK managed_list | `number` \| `boolean` \| `option` \| `text` — decides which value column rows use |
 | category_id / subcategory_id | FK managed_list | **re-based at the collapse to classify the measure's NATURE, function-neutrally** (e.g. Costs, Network Performance, Workforce, Reliability). Old function-flavoured subcats (Generation/Transmission/Distribution/Energy Storage) dissolve into the utility_function / resource-type dimensions; "browse by function" becomes a dimension query, and Silver derives a combined display label (function · theme). Categories keep driving entry navigation and DAO role routing (§1.3 user-journey note) |
-| agg_level_id | FK managed_list | finest grain the measure is entered at |
+| strata_id | FK managed_list | *(was `agg_level_id`, PR #78)* finest grain the measure is entered at |
 | valid_range_min / valid_range_max | **numeric** | **BUILT 2026-07-09** (were integer; ratio-stored % measures need e.g. 0–1 ranges) |
 | ~~measure_type_id~~ | — | **DROPPED 2026-07-09 (same day)** — Fixed/Contextual proved to be a per-dimension property, not per-measure; the classification lives in `measure_dimension_scope.expansion_mode` (§1.3) and the measure-level label is **computed** (Contextual ⇔ any dimension is `by_context`). Managed list 62 remains as the label vocabulary |
 | is_mandatory, is_active, is_calculated, formula, formula_inputs | as today | |
@@ -96,17 +120,17 @@ The collapsed catalogue. One row per measure, ~55–65 rows.
 
 **AS BUILT (2026-07-09): the managed-lists system was rebuilt** — a `managed_lists` parent
 table (62 lists: id, name, description, is_active) with `managed_list_items` now carrying
-`list_id` (NOT NULL), `parent_id` (in-list hierarchy), `energy_resource_type_id`
-(items can be tagged Generator/ESS — e.g. sources), and `color`.
+`list_id` (NOT NULL), `parent_id` (in-list hierarchy), `asset_class_id`
+*(was `energy_resource_type_id`, PR #78)* (items can be tagged Generation/Storage), and `color`.
 
 **The ten dimension lists and their canonical member ids (all BUILT):**
 
 | List (id) | Members (id = name) |
 |---|---|
-| Energy Provider (2) | **20 = All** · 21 = Utility · 22 = IPP · **23 = Customer** (grid-connect prosumers — §5 Q6 resolved; re-id'd from 1234 on 2026-07-09, taking the id freed by the deleted "Every" member). All is always used |
+| **Provider (2)** *(was "Energy Provider")* | **20 = All** · 21 = Utility · 22 = IPP · **23 = Customer** (grid-connect prosumers — §5 Q6 resolved; re-id'd from 1234 on 2026-07-09, taking the id freed by the deleted "Every" member). All is always used |
 | **Category (3)** *(was "Energy Type")* | **30 = All** · 31 = Conventional · 32 = Renewable · **99717 = Storage** (added 2026-07-23). Parents → asset: Conventional/Renewable → Generation (984), Storage → Storage (985), All → All (983) |
 | **Technology (4)** *(was "Energy Source")* | **40 = All** *(was "All GEN")* · leaves parent-linked to category: [Renewable] Solar 54, Wind 55, Hydro Dams 49, Hydro RoR 50, Geothermal 47, Biomass 44; [Conventional] Diesel 46, Coal 45, Heavy Fuel 48, Natural Gas 53; [Storage] Battery 43, Hydro Pumped Storage 51, Hydrogen Cells 52. **Deleted 2026-07-23:** All Conventional (41), All Renewable (42), All ESS (58), Other Conventional (56), Other Renewable (57) — fake aggregates + unused catch-alls |
-| **Asset (55)** *(was "Energy Resource Type")* | **983 = All** · 984 = **Generation** *(was Generator)* · 985 = **Storage** *(was Energy Storage)* · 988 = Generator + Storage (inactive) · 1035 = Virtual (legacy, slated for deletion §5 Q9) |
+| **Asset Class (55)** *(was "Energy Resource Type" → "Asset")* | **983 = All** · 984 = **Generation** *(was Generator)* · 985 = **Storage** *(was Energy Storage)* · 988 = Generator + Storage (inactive) · 1035 = Virtual (legacy, slated for deletion §5 Q9) |
 | Customer Type (9) | **690 = All** · 691 = Residential · 692 = Commercial · 693 = Industrial · 694 = Government · 695 = Streetlights · 696 = Recreational Facilities · 697 = Others |
 | Payment Mode (36) | **720 = All** · 721 = Prepaid · 722 = Postpaid |
 | Gender (52) | **1022 = All** · 930 = Male · 931 = Female |
@@ -132,18 +156,23 @@ reload writes All ids explicitly from the first row.
 > in the same pass (ESS rows filled `category = Storage`; the unused Other Conv/Renew references
 > scrubbed and unmapped). Labels/columns rule below held — DB columns + dimension keys unchanged.
 
-The three energy dimensions form a **technology hierarchy** (`asset → category → technology`),
-with the physical instance as a fourth, registry-level concept. **Renamed labels only — DB columns
-and the internal dimension string keys (`resource_type` / `type` / `source`) stay unchanged**, so
-scope/applicability data, `MEASURE_DIMENSIONS`, the migration code, and the formula builder are
-untouched. Only managed-list names, UI labels, the AI dictionary, and these docs change.
+The three energy dimensions form a **technology hierarchy** (`asset class → category → technology`),
+with the physical instance as a fourth, registry-level concept.
 
-| new label | old label | column (unchanged) | key (unchanged) | values |
+> **⚠ Superseded (PR #68/#78, 2026-07-27):** this section was originally written as a **display-relabel
+> only** ("DB columns and internal keys stay unchanged"). That is **no longer true** — the columns were
+> then **physically renamed** to drop the `energy_` prefix (`energy_type_id`→`category_id`,
+> `energy_source_id`→`technology_id`, `energy_resource_type_id`→`asset_class_id`,
+> `energy_provider_id`→`provider_id`, `energy_resource_id`→`unit_id`; table `energy_resources`→`units`),
+> so DB now matches the terminology. The "column" values in the table below have been updated to the
+> **current physical names**; the "old label" column is kept only for history. See `naming-change-log.md`.
+
+| new label | old label | column (physicalised, PR #68) | key (unchanged) | values |
 |---|---|---|---|---|
-| **asset** | resource_type | `energy_resource_type_id` | `resource_type` | Generation, Storage |
-| **category** | energy type | `energy_type_id` | `type` | Renewable, Conventional, **Storage** |
-| **technology** | energy source | `energy_source_id` | `source` | Solar, Diesel, Battery, … |
-| **unit** | (energy) resource | `energy_resource_id` | — (grain) | the specific generator/battery instance |
+| **asset class** | resource_type | `asset_class_id` *(was `energy_resource_type_id`)* | `resource_type` | Generation, Storage |
+| **category** | energy type | `category_id` *(was `energy_type_id`)* | `type` | Renewable, Conventional, **Storage** |
+| **technology** | energy source | `technology_id` *(was `energy_source_id`)* | `source` | Solar, Diesel, Battery, … |
+| **unit** | (energy) resource | `unit_id` *(was `energy_resource_id`)* | — (grain) | the specific generator/battery instance |
 
 `asset` is the coarse rollup of `category` (Renewable/Conventional → Generation; Storage → Storage);
 `category` is the parent of `technology` via `managed_list_items.parent_id`. So picking a technology
@@ -232,17 +261,19 @@ All 32 physical columns below are **BUILT** on the dev DB (column names verbatim
 | id | uuid PK | ✔ |
 | report_period_id | FK, NOT NULL | ✔ implies FY/Monthly report type |
 | **measure_def_id** | FK, NOT NULL | the measure — **physically renamed** from `input_def_id` (2026-07-09); references `measure_definitions` |
-| **Hierarchy (denormalised onto the row, as built):** | | |
-| utility_id · country_id · subregion_id | FK, nullable | target: backfill + NOT NULL |
-| region | varchar | as built (typed string, not FK) |
-| service_area_id | FK, nullable | target: NOT NULL via "All areas" member |
-| power_station_id | FK, nullable | station-level grain now supported |
-| energy_resource_id | FK, nullable | **mandatory for generation/storage measures** (equipment = their collection grain, §5 Q4); NULL for all other measures |
-| **Ten dimensions (all BUILT, all currently nullable):** | | target: All-member backfill + NOT NULL |
-| energy_provider_id | FK | default **All (20)** |
-| energy_type_id | FK | default **All (30)** |
-| energy_source_id | FK | default **All GEN (40)**; All ESS (58) for storage |
-| energy_resource_type_id | FK | default **All (983**, renamed from Nill 2026-07-09**)**; Generator (984) / Energy Storage (985) / 988 = combined systems |
+| **Grain / hierarchy address — RULED convention 2 (2026-07-27), supersedes the old "NOT NULL via All-areas" target:** | | nullable chain, **filled DOWN to the row's level, NULL below**; NO sentinel members, NO NOT-NULL grain target (rejected — a fake "All Stations" row is the virtual-generator disease) |
+| unit_id | FK → **units**, nullable | *(renamed from `energy_resource_id` by #68)* mandatory for generation/storage measures (unit = their collection grain, §5 Q4); NULL for measures collected above unit |
+| power_station_id | FK, nullable | set only at/below station level |
+| service_area_id | FK, nullable | set only at/below area level |
+| utility_id | FK, nullable | set for utility-owned facts; **NULL for shared country-level facts** (GDP, population — owned by no single utility) |
+| country_id | FK, nullable | set at country level and above |
+| ~~subregion_id · region~~ | **DROP** from `data_entries` | derivable from `country_id` (dual-encoding); moved to the **Silver view** only. Already excluded from `uniq_entry_address`, never an entry level (§1.5) |
+| **grain_level** *(NEW — derived)* | generated col **or** Silver field | `'unit'\|'station'\|'area'\|'utility'\|'country'` = the deepest non-null grain. Readable level for AI/dashboards; source-of-truth stays **the address**, this is a convenience derivation (so an LLM writes `WHERE grain_level='utility'`, not `utility_id IS NOT NULL AND service_area_id IS NULL`) |
+| **Ten dimensions (NOT NULL, explicit All — as built, unchanged):** | | All-member always, never NULL. *(This All-NOT-NULL rule is for the 10 **dimensions**; it does NOT apply to the grain columns above, which stay nullable.)* |
+| provider_id | FK | *(was `energy_provider_id`)* default **All** |
+| category_id | FK | *(was `energy_type_id`)* default **All**; Conventional/Renewable/Storage |
+| technology_id | FK | *(was `energy_source_id`)* default **All**; Solar/Diesel/Battery/… |
+| asset_class_id | FK | *(was `energy_resource_type_id`, then `asset_id`; PR #68/#78)* default **All (983)**; Generation (984)/Storage (985) |
 | customer_type_id | FK | default **All Customers (690)** |
 | payment_mode_id | FK | default **All Payment Modes (720)** |
 | consumption_band_id | FK | list + members pending |
@@ -266,7 +297,7 @@ All 32 physical columns below are **BUILT** on the dev DB (column names verbatim
   (all null = awaiting entry; the status column carries the why).
 - ✅ **Unique address** — `uniq_entry_address` `UNIQUE NULLS NOT DISTINCT` over the full
   17-column physical address: period + measure + grain (utility_id, country_id, service_area_id,
-  power_station_id, energy_resource_id) + **all ten** dimension columns. Fuller than the original
+  power_station_id, unit_id) + **all ten** dimension columns. Fuller than the original
   target (period + area + measure + 10 dims) because a NULL "area" cannot by itself distinguish
   two utilities or a utility- vs country-level row; `NULLS NOT DISTINCT` (PG 15+) makes NULL
   grains deduplicate instead of the default "every NULL is unique" (which would let duplicates
@@ -275,6 +306,28 @@ All 32 physical columns below are **BUILT** on the dev DB (column names verbatim
   never NULL (no NULL-as-All). The RAW-ONLY reload must COALESCE legacy NULL dims → All-member.
 - Which value column a measure uses is dictated by `data_type_id`, enforced by **one shared
   routing function** (`lib/data-entry/value-router.ts` — exists) used by every write path.
+
+**Ruled additions (2026-07-27) — grain convention 2 + chain integrity:**
+
+- **Grain columns stay NULLABLE.** The old "backfill grain → NOT NULL via All-areas member" target is **rejected**: it reintroduces pretend physical entities (an "All Stations" station holding data = the PRISM-1 virtual-generator disease). NULL on a grain column means "this fact lives *above* that grain" — truthful, not a placeholder. (The 10 **dimensions** keep All-NOT-NULL; the two rules are different because dimensions *classify* while grain *locates*.)
+- **`grain_level`** — a derived level (`'unit'|'station'|'area'|'utility'|'country'` = deepest non-null grain), exposed as a generated column or a Silver field. Keeps "level = the address" as truth but hands consumers/AI a clean predicate.
+- **Chain-consistency validation (writer + DB-trigger backstop).** A row's filled grain columns must match real parentage (a unit row's `power_station_id`/`service_area_id`/`utility_id` = the unit's actual parents; a utility row's `country_id` = the utility's country). Enforced by the shared writer, which **both** `enter-data` (v1) and `enter-data-v2` must route through — no direct `data_entries` inserts — with a Postgres trigger as belt-and-suspenders so no path (script, future code) can bypass it.
+- **Unit-row dimension consistency (rule #3).** On a **unit-anchored** row the 4 energy dims must equal the unit's real taxonomy: `provider_id`/`technology_id` validated directly against `units`; **`category_id = parent(units.technology_id)`** and **`asset_class_id = grandparent(units.technology_id)`** — derived up the `managed_list_items.parent_id` chain (technology → category → asset class). `units.technology_id` is the leaf source-of-truth; the mispopulated `units.category_id` (holds asset-tier 984/1035) and stale `units.type_id` ("Equipment"=1) are **dropped** in the grain DDL. *(Live-DB check PASSED 2026-07-27: all 409 real units resolve `technology → category → asset` with 0 breaks; the 92 virtual units sit at All/All/All → #8's virtual-promotion backfill. Derive rule confirmed viable.)*
+- **One-grain-per-measure is enforced PER REPORT PERIOD**, not globally — mixed-grain measures (§1.6) legitimately change grain across periods; within a period a measure sits at one grain, and cross-level rollups live in gold (`kpi_actual`), never mixed into `data_entries` (prevents `WHERE country_id=Z` double-counting).
+- **RLS caveat (for #12):** utility-owned rows carry `utility_id` (native RLS filter); **shared country-level rows carry `utility_id = NULL`**, so the policy must be `utility_id = current_utility OR utility_id IS NULL`, and no utility-owned fact may ever be NULL-utility (else cross-tenant leak).
+
+**Reload contract — what each migration sample row must carry (so sample files align to this spec):**
+
+1. **Period:** `report_period_id` (the submission).
+2. **Measure:** `measure_def_id`.
+3. **Grain address — fill DOWN to the measure's `strata_id`, NULL below (convention 2):**
+   - *unit* measure → `unit_id` + `power_station_id` + `service_area_id` + `utility_id` + `country_id` all filled to the unit's real parents.
+   - *utility* measure → `utility_id` + `country_id` filled; `service_area_id`/`power_station_id`/`unit_id` **NULL**.
+   - *country* measure (the 16 shared measures) → `country_id` filled; **`utility_id` NULL**; area/station/unit NULL.
+   - **Do NOT supply** `subregion_id`/`region` (dropped — Silver derives them) or `grain_level` (derived).
+4. **Ten dimensions — always a real member id, NEVER NULL:** the sliced member where the fact is broken down, else the dimension's **All** member. On unit-anchored rows, `provider_id`/`technology_id` must equal the unit's, and `category_id`/`asset_class_id` must equal `parent`/`grandparent` of `units.technology_id` (the loader can derive these rather than trusting the extract).
+5. **Value — exactly one** of `value_numeric` / `value_boolean` / `value_text` / `value_option_id`, per the measure's `data_type_id` (routed by `value-router`). Raw string may also ride in legacy `value`.
+6. Rows must satisfy `uniq_entry_address` (no duplicate physical addresses) and the chain-consistency rule (grain columns = real parentage).
 
 **Example rows (IDs shown as labels for readability):**
 
@@ -292,18 +345,21 @@ The level ladder is the existing managed list: Lvl_Equipment (1) · Lvl_PowerSta
 Lvl_ServiceArea (3) · Lvl_Organisation (4) · Lvl_Country (5) · Lvl_SubRegion (6) · Lvl_Region (7).
 Active measures today collect at three: utility (62), service area (25), country (16).
 
-- **Declared grain:** `measure_definitions.agg_level_id` — the level a measure is *collected* at.
+- **Declared grain:** `measure_definitions.strata_id` *(was `agg_level_id`)* — the level a measure is *collected* at.
   Drives shell creation (relevance pass) and the entry UI.
-- **Actual level of a row = its address, not a column:** equipment → `energy_resource_id` set;
-  service area → specific `service_area_id`; utility → the **All areas** member; country →
-  context measures via the utility's country. There is deliberately **no level column** on
-  entries — a redundant level declaration could disagree with the address (the dual-encoding
-  disease again).
+- **Actual level of a row = its address (convention 2, RULED 2026-07-27):** the grain chain is
+  filled DOWN to the level, NULL below. Unit → `unit_id` set (+ station/area/utility/country
+  filled up); station → `power_station_id` deepest; area → `service_area_id` deepest;
+  **utility → `utility_id` deepest, with area/station/unit NULL** — *not* an "All areas" member;
+  **country → `country_id` set and `utility_id` NULL** (shared fact, owned by no utility). The
+  derived **`grain_level`** exposes this readably; there is deliberately **no stored level
+  column** — a redundant declaration could disagree with the address (dual-encoding).
 - **Sub-region and Region are never entry levels** — they exist only as derived rows in
   `gold.fact_kpi_rollup`.
 - **Validation:** the writer rejects a row whose address grain contradicts the measure's
   declared grain (like a wrong-typed value).
-- **Silver derives a readable `entry_level` label** from the address.
+- **`grain_level`** (the derived level defined in §1.4) is exposed as a generated column or a
+  Silver field — the readable level, computed from the address.
 - **Power Station note (updated as-built):** `power_station_id` now EXISTS on entries, so
   station-level facts are addressable (row level = station when it's the deepest specific
   component). No active measure declares station grain yet; whether any should is part of
@@ -495,7 +551,7 @@ database enforces the rules from the first inserted row (loader bugs are rejecte
    aggregates as a source of total-vs-detail conflict.
 5. **Un-costume the virtual-generator rows** (§5 Q9): the ~39,905 raw entries on the 92 virtual
    generators re-home at their true LEVEL, deterministically by the virtual generator's
-   `agg_level_id` — 66 ServiceArea-level → `service_area_id` + `energy_resource_id` NULL; 26
+   `strata_id` *(was `agg_level_id`)* — 66 ServiceArea-level → `service_area_id` + `unit_id` NULL; 26
    Utility-level → the utility's "All areas" area + resource NULL. Virtual generators do NOT
    reload into the equipment registry. **Flag total-vs-detail collisions** (§1.6): recent
    periods where a re-homed aggregate coexists with real equipment-level entries for the same
@@ -689,7 +745,7 @@ builder; persisted formula **test cases** re-run on every formula change.
    through the equipment slot — 92 exist (one per area), and **39,905 entries (most of the
    data) hang on them**. The new address ladder makes this obsolete (area-level fact =
    area set, resource NULL). Consequences: **(a) migration rule** — entries on virtual
-   resources reload at their true address (the virtual resource's area, `energy_resource_id`
+   resources reload at their true address (the virtual resource's area, `unit_id`
    NULL); the 92 virtual generators do not reload into the registry; **(b)** the `Virtual`
    member (currently unreferenced) is **slated for deletion post-reload** once confirmed
    unused.

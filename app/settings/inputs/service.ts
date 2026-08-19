@@ -424,6 +424,7 @@ export async function UpdateMeasureDefinitionFromExcel(
     is_kpi_input: item.is_kpi_input,
     is_mandatory: item.is_mandatory,
     is_system_generated: item.is_system_generated,
+    is_apportionable: false,
     unit_id: item.unit_id,
     valid_polarity_id: item.valid_polarity_id,
     valid_range_max:
