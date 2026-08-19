@@ -24,42 +24,39 @@ function loadEnv(file: string) {
 loadEnv(resolve(".env"));
 loadEnv(resolve(".env.local"));
 
-const WRONG_STATUS_ID = 5;
-const CORRECT_STATUS_ID = 844;
+// Repoint report_periods.status_id from the legacy managed-list 21
+// ("Data Workflow Status", items 840-845) to the shared DataEntryStatusId
+// enum (1-7). Mirrors scripts/sql/2026-08-18-report-periods-status-repoint.sql.
 
 async function main() {
   const { db } = await import("@/db/connection");
-  const { reportPeriods } = await import("@/db/schema/reportPeriods");
-  const { eq, sql } = await import("drizzle-orm");
+  const { sql } = await import("drizzle-orm");
 
-  const wrong = await db
-    .select({ id: reportPeriods.id })
-    .from(reportPeriods)
-    .where(eq(reportPeriods.status_id, WRONG_STATUS_ID));
-
-  console.log(
-    `Found ${wrong.length} report periods with status_id=${WRONG_STATUS_ID} (stale value).`,
+  const before = await db.execute(
+    sql.raw(`SELECT status_id, count(*)::int AS n FROM report_periods GROUP BY status_id ORDER BY status_id`),
   );
+  console.log("before:");
+  for (const row of before.rows) console.log(`  status_id=${row.status_id} -> ${row.n}`);
 
-  if (wrong.length === 0) {
-    console.log("Nothing to fix.");
-    process.exit(0);
-  }
+  const r = await db.execute(sql.raw(`
+    UPDATE report_periods SET status_id = CASE status_id
+      WHEN 840 THEN 1
+      WHEN 841 THEN 3
+      WHEN 842 THEN 2
+      WHEN 843 THEN 4
+      WHEN 844 THEN 5
+      WHEN 845 THEN 5
+      ELSE status_id END
+    WHERE status_id BETWEEN 840 AND 845
+  `));
+  console.log("updated rows:", r.rowCount);
 
-  await db
-    .update(reportPeriods)
-    .set({ status_id: CORRECT_STATUS_ID })
-    .where(eq(reportPeriods.status_id, WRONG_STATUS_ID));
+  const after = await db.execute(
+    sql.raw(`SELECT status_id, count(*)::int AS n FROM report_periods GROUP BY status_id ORDER BY status_id`),
+  );
+  console.log("after:");
+  for (const row of after.rows) console.log(`  status_id=${row.status_id} -> ${row.n}`);
 
-  const after = await db
-    .select({ status_id: reportPeriods.status_id, cnt: sql<number>`count(*)` })
-    .from(reportPeriods)
-    .groupBy(reportPeriods.status_id);
-
-  console.log("Updated. Status distribution now:");
-  for (const row of after) {
-    console.log(`  status_id=${row.status_id} -> ${row.cnt} periods`);
-  }
   process.exit(0);
 }
 
