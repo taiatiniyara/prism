@@ -46,8 +46,8 @@ export async function GET(req: NextRequest) {
         sub.name AS subcategory_name
       FROM input_dl_def_mappings m
       LEFT JOIN measure_definitions  i ON m.measure_def_id = i.id
-      LEFT JOIN managed_list_items cat ON i.category_id = cat.id
-      LEFT JOIN managed_list_items sub ON i.subcategory_id = sub.id
+      LEFT JOIN managed_list_items cat ON i.measures_group_id = cat.id
+      LEFT JOIN managed_list_items sub ON i.measures_subgroup_id = sub.id
       ORDER BY m.id
     `);
 

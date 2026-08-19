@@ -6,9 +6,9 @@ import { eq, and, isNotNull, inArray } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
 import {
   resolveDlIds,
-  dlValue,
   formatReportPeriodIso,
 } from "@/lib/legacy/legacy-dl-resolver";
+import { resolveEntryValue } from "@/lib/legacy/entry-value";
 
 const trainingIds = {
   HoursLostToWorkRelatedInjuries: 4213040181,
@@ -54,6 +54,11 @@ export async function GET(req: Request) {
       ),
     );
 
+  const itemsById = new Map(allItems.map((i) => [i.id, i.name]));
+  const dataTypeNameById = new Map(
+    inputDefs.map((d) => [d.id, itemsById.get(d.data_type_id) ?? null]),
+  );
+
   function findItem(id: number | null) {
     return id ? allItems.find((m) => m.id === id) : undefined;
   }
@@ -67,7 +72,14 @@ export async function GET(req: Request) {
             const val = entries.find(
               (v) => v.measure_def_id === d.id && v.report_period_id === urp.id,
             );
-            return { [d.name]: dlValue(val?.value), ...acc };
+            return {
+              [d.name]: resolveEntryValue(
+                val,
+                dataTypeNameById.get(d.id) ?? null,
+                itemsById,
+              ),
+              ...acc,
+            };
           },
           {} as Record<string, unknown>,
         );

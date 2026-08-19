@@ -80,6 +80,7 @@ import {
 import { revalidatePath } from "next/cache";
 import { migrationLogs } from "@/db/schema/migration-log";
 import { getDimensionDefaults } from "@/lib/data-entry/dimension-defaults";
+import { resolveValueColumn } from "@/lib/data-entry/value-router";
 
 export type MigrationStepResult = {
   ok: boolean;
@@ -820,20 +821,38 @@ export async function retrieveCountryContextData(options?: {
       }
     }
 
-    const [targetInputDefs, targetReportPeriods] = await Promise.all([
-      db.select({ id: measureDefinitions.id }).from(measureDefinitions),
-      db
-        .select({ id: reportPeriods.id })
-        .from(reportPeriods)
-        .where(
-          options?.reportPeriodId != null
-            ? eq(reportPeriods.id, options.reportPeriodId)
-            : undefined,
-        ),
-    ]);
+    const [targetInputDefs, targetReportPeriods, targetCountries, targetItems] =
+      await Promise.all([
+        db
+          .select({
+            id: measureDefinitions.id,
+            dataTypeId: measureDefinitions.data_type_id,
+          })
+          .from(measureDefinitions),
+        db
+          .select({ id: reportPeriods.id })
+          .from(reportPeriods)
+          .where(
+            options?.reportPeriodId != null
+              ? eq(reportPeriods.id, options.reportPeriodId)
+              : undefined,
+          ),
+        db.select({ id: countries.id }).from(countries),
+        db
+          .select({ id: managedListItems.id, name: managedListItems.name })
+          .from(managedListItems),
+      ]);
 
     const targetInputDefIds = new Set(targetInputDefs.map((d) => d.id));
     const targetReportPeriodIds = new Set(targetReportPeriods.map((r) => r.id));
+    const targetCountryIds = new Set(targetCountries.map((c) => c.id));
+    const dataTypeById = new Map(targetItems.map((i) => [i.id, i.name]));
+    const itemIdByName = new Map(
+      targetItems.map((i) => [i.name.trim().toLowerCase(), i.id]),
+    );
+    const measureDataTypeById = new Map(
+      targetInputDefs.map((d) => [d.id, dataTypeById.get(d.dataTypeId) ?? null]),
+    );
 
     for (const row of list) {
       const reportPeriodId = normalizeRequiredId(
@@ -870,9 +889,34 @@ export async function retrieveCountryContextData(options?: {
 
       const dims2 = await getDimensionDefaults();
 
+      const countryId = normalizeOptionalFkId(
+        normalizeOptionalId(row.country_id),
+        targetCountryIds,
+      );
+
+      const rawValue = row.dl_value ?? row.value ?? null;
+      const dataTypeName = measureDataTypeById.get(inputDefId) ?? null;
+      const valueColumn = resolveValueColumn(dataTypeName);
+      const valueField: Record<string, unknown> = {};
+      if (rawValue != null) {
+        if (valueColumn === "value_numeric") {
+          const n = Number(rawValue);
+          valueField.value_numeric = Number.isFinite(n) ? n : null;
+        } else if (valueColumn === "value_boolean") {
+          valueField.value_boolean =
+            rawValue === "true" || rawValue === "1" || rawValue === "yes";
+        } else if (valueColumn === "value_option_id") {
+          valueField.value_option_id =
+            itemIdByName.get(String(rawValue).trim().toLowerCase()) ?? null;
+        } else {
+          valueField.value_text = String(rawValue);
+        }
+      }
+
       const payload = {
         report_period_id: reportPeriodId,
         measure_def_id: inputDefId,
+        country_id: countryId,
         service_area_id: null,
         unit_id: null,
         provider_id: dims2.energyProvider,
@@ -885,7 +929,7 @@ export async function retrieveCountryContextData(options?: {
         division_id: dims2.division,
         gender_id: dims2.gender,
         utility_function_id: dims2.utilityFunction,
-        value: row.dl_value ?? row.value ?? null,
+        ...valueField,
         comments: toStructuredComments(row.comments ?? null, updatedAt),
         update_medium_id: null,
         status_id:
@@ -905,6 +949,9 @@ export async function retrieveCountryContextData(options?: {
           and(
             eq(dataEntries.report_period_id, reportPeriodId),
             eq(dataEntries.measure_def_id, inputDefId),
+            countryId != null
+              ? eq(dataEntries.country_id, countryId)
+              : isNull(dataEntries.country_id),
             isNull(dataEntries.service_area_id),
             isNull(dataEntries.unit_id),
             eq(dataEntries.provider_id, dims2.energyProvider),

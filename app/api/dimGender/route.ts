@@ -1,5 +1,5 @@
 import { dimManagedListRoute } from "@/lib/legacy/dim-route-helper";
 
 export async function GET(req: Request) {
-  return dimManagedListRoute(req, "gender", "Gender");
+  return dimManagedListRoute(req, "Gender", "Gender");
 }

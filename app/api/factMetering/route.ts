@@ -7,9 +7,9 @@ import { eq, and, isNotNull, inArray } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
 import {
   resolveDlIds,
-  dlValue,
   formatReportPeriodIso,
 } from "@/lib/legacy/legacy-dl-resolver";
+import { resolveEntryValue } from "@/lib/legacy/entry-value";
 
 const trainingIds = {
   ElectricityCustomers: 3213040204,
@@ -68,6 +68,11 @@ export async function GET(req: Request) {
     return id ? allItems.find((m) => m.id === id) : undefined;
   }
 
+  const itemsById = new Map(allItems.map((i) => [i.id, i.name]));
+  const dataTypeNameById = new Map(
+    inputDefs.map((d) => [d.id, itemsById.get(d.data_type_id) ?? null]),
+  );
+
   return Response.json(
     rps.map((urp) => {
       const reportType = findItem(urp.report_type_id)?.name;
@@ -80,14 +85,21 @@ export async function GET(req: Request) {
           .map((sa) => {
             const dataValues = inputDefs.reduce(
               (acc, dl) => {
-                const val = entries.find(
+                const entry = entries.find(
                   (l) =>
                     l.measure_def_id === dl.id &&
                     l.report_period_id === urp.id &&
                     allResources.find((g) => g.id === l.unit_id)
                       ?.service_area_id === sa.id,
-                )?.value;
-                return { ...acc, [dl.name]: dlValue(val) };
+                );
+                return {
+                  ...acc,
+                  [dl.name]: resolveEntryValue(
+                    entry,
+                    dataTypeNameById.get(dl.id) ?? null,
+                    itemsById,
+                  ),
+                };
               },
               {} as Record<string, unknown>,
             );

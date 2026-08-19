@@ -294,11 +294,10 @@ async function main() {
           .values({
             name: def.name.substring(0, 255),
             variable_name: varName,
-            category_id: cat,
-            subcategory_id: subcat,
+            measures_group_id: cat,
+            measures_subgroup_id: subcat,
             unit_id: unitId,
             data_type_id: 82, // number
-            is_descriptive: false,
             is_currency: unitId === 92,
             is_aggregated: false,
             is_active: true,

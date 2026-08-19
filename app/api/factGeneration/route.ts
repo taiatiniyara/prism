@@ -8,8 +8,11 @@ import { authorizeApiKey } from "../service";
 import {
   resolveDlIds,
   formatReportPeriodIso,
-  dlValue,
 } from "@/lib/legacy/legacy-dl-resolver";
+import {
+  resolveEntryValue,
+  getValueResolutionContext,
+} from "@/lib/legacy/entry-value";
 
 const TrainingDlIds = {
   ElectricityDemandAverageLoad: 3213040221,
@@ -88,6 +91,10 @@ export async function GET(req: Request) {
     (id): id is number => id != null,
   );
 
+  const { dataTypeNameById, itemsById } = await getValueResolutionContext(
+    prismIds,
+  );
+
   const inputDefs = await db
     .select()
     .from(measureDefinitions)
@@ -121,7 +128,11 @@ export async function GET(req: Request) {
             });
             return {
               ServiceAreaId: sa.id,
-              [dl.name]: dlValue(val?.value),
+              [dl.name]: resolveEntryValue(
+                val,
+                dataTypeNameById.get(dl.id) ?? null,
+                itemsById,
+              ),
               ...acc,
             };
           }, {});
@@ -139,7 +150,11 @@ export async function GET(req: Request) {
           return {
             ...dataValues,
             "Gen Electricity Consumed Internally": eci
-              ? Number(eci.value)
+              ? resolveEntryValue(
+                  eci,
+                  dataTypeNameById.get(consumedInternallyId ?? -1) ?? null,
+                  itemsById,
+                )
               : null,
           };
         });

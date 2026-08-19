@@ -1,32 +1,24 @@
 import { db } from "@/db/connection";
-import { countries, countryContext } from "@/db/schema/country";
+import { countries } from "@/db/schema/country";
 import { organisations } from "@/db/schema/utility";
 import { reportPeriods } from "@/db/schema/reportPeriods";
-import { managedLists, managedListItems } from "@/db/schema/managedLists";
+import { managedListItems } from "@/db/schema/managedLists";
 import { eq, and, isNotNull } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
-import {
-  resolveDlName,
-  formatReportPeriodIso,
-  dlValue,
-} from "@/lib/legacy/legacy-dl-resolver";
-
-const NationalPopulationTrainingId = 5203040006;
+import { formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
+import { getResolvedContextRows } from "@/lib/legacy/context-data";
 
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
-  if (authorize.success === false) {
+  if (authorize.success === false)
     return Response.json({ message: authorize.message }, { status: 401 });
-  }
 
-  const nationalPopName = await resolveDlName(NationalPopulationTrainingId);
-
+  const ctxRows = await getResolvedContextRows(221);
   const rps = await db
     .select()
     .from(reportPeriods)
     .where(isNotNull(reportPeriods.status_id));
-
-  const allUtilities = await db
+  const allUtils = await db
     .select()
     .from(organisations)
     .where(
@@ -35,62 +27,34 @@ export async function GET(req: Request) {
         eq(organisations.is_active, true),
       ),
     );
-
   const allCountries = await db.select().from(countries);
-
-  const allManagedItems = await db
+  const allItems = await db
     .select()
     .from(managedListItems)
     .where(eq(managedListItems.is_active, true));
 
-  const allManagedLists = await db
-    .select()
-    .from(managedLists)
-    .where(eq(managedLists.is_active, true));
-
-  let nationalPopItemId: number | null = null;
-  if (nationalPopName) {
-    const [item] = allManagedItems.filter((m) => m.name === nationalPopName);
-    nationalPopItemId = item?.id ?? null;
+  const uMap = new Map(allUtils.map((u) => [u.id, u]));
+  const cMap = new Map(allCountries.map((c) => [c.id, c]));
+  function findItem(id: number | null) {
+    return id ? allItems.find((m) => m.id === id) : undefined;
   }
-
-  const contextRows =
-    nationalPopItemId != null
-      ? await db
-          .select()
-          .from(countryContext)
-          .where(eq(countryContext.dl_def_id, nationalPopItemId))
-      : [];
-
-  function findManagedList(id: number | null) {
-    if (!id) return undefined;
-    return allManagedItems.find(
-      (m) =>
-        m.id === id &&
-        allManagedLists.some((l) => l.id === m.list_id),
-    );
-  }
-
-  const utilityMap = new Map(allUtilities.map((u) => [u.id, u]));
-  const countryMap = new Map(allCountries.map((c) => [c.id, c]));
 
   return Response.json(
     rps.map((urp) => {
-      const utility = utilityMap.get(urp.utility_id);
-      const country = utility ? countryMap.get(utility.country_id) : undefined;
-      const cc = contextRows.find(
-        (row) => row.country_id === (country?.id ?? -1),
+      const u = uMap.get(urp.utility_id);
+      const country = u ? cMap.get(u.country_id) : undefined;
+      const cc = ctxRows.find(
+        (r) =>
+          r.country_id === (country?.id ?? -1) &&
+          r.measureName === "Population",
       );
-      const reportType = findManagedList(urp.report_type_id)?.name;
+      const reportType = findItem(urp.report_type_id)?.name;
       return {
         ReportType: reportType,
-        ReportPeriod: formatReportPeriodIso(
-          urp.report_date,
-          reportType,
-        ),
+        ReportPeriod: formatReportPeriodIso(urp.report_date, reportType),
         Country: country?.name,
-        Population: dlValue(cc?.value),
-        Source: cc?.source_url || cc?.source_doc || "unknown",
+        Population: cc?.value ?? null,
+        Source: "unknown",
       };
     }),
   );

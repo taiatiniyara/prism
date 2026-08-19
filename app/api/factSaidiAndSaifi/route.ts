@@ -7,9 +7,9 @@ import { eq, and, isNotNull, inArray } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
 import {
   resolveDlIds,
-  dlValue,
   formatReportPeriodIso,
 } from "@/lib/legacy/legacy-dl-resolver";
+import { resolveEntryValue } from "@/lib/legacy/entry-value";
 
 const trainingIds = {
   TotalPlannedInterruptionEvents: 3213040300,
@@ -67,6 +67,11 @@ export async function GET(req: Request) {
     return id ? allItems.find((m) => m.id === id) : undefined;
   }
 
+  const itemsById = new Map(allItems.map((i) => [i.id, i.name]));
+  const dataTypeNameById = new Map(
+    inputDefs.map((d) => [d.id, itemsById.get(d.data_type_id) ?? null]),
+  );
+
   return Response.json(
     rps
       .filter((r) => entries.some((l) => l.report_period_id === r.id))
@@ -94,7 +99,11 @@ export async function GET(req: Request) {
                   return {
                     ServiceAreaId: sa.id,
                     UtilityId: urp.utility_id,
-                    [dl.name]: dlValue(val?.value),
+                    [dl.name]: resolveEntryValue(
+                      val,
+                      dataTypeNameById.get(dl.id) ?? null,
+                      itemsById,
+                    ),
                     ...acc,
                   };
                 },

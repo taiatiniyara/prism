@@ -6,6 +6,7 @@ import { managedListItems } from "@/db/schema/managedLists";
 import { eq, isNotNull } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
 import { formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
+import { resolveEntryValue } from "@/lib/legacy/entry-value";
 
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
@@ -41,6 +42,11 @@ export async function GET(req: Request) {
     return id ? allItems.find((m) => m.id === id) : undefined;
   }
 
+  const itemsById = new Map(allItems.map((i) => [i.id, i.name]));
+  const dataTypeNameById = new Map(
+    inputDefs.map((d) => [d.id, itemsById.get(d.data_type_id) ?? null]),
+  );
+
   return Response.json(
     rps
       .filter((r) => entries.some((l) => l.report_period_id === r.id))
@@ -72,7 +78,11 @@ export async function GET(req: Request) {
                   return {
                     ...acc,
                     ServiceAreaId: sa.id,
-                    [dl.name]: val ? Number(val.value) : null,
+                    [dl.name]: resolveEntryValue(
+                      val,
+                      dataTypeNameById.get(dl.id) ?? null,
+                      itemsById,
+                    ),
                   };
                 },
                 {} as Record<string, unknown>,
