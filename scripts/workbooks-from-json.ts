@@ -17,7 +17,6 @@ async function main() {
   const measures = JSON.parse(readFileSync("docs/measures-enrichment/measures-enriched-final.json", "utf8"));
   const mem = await db.execute(sql`SELECT id, name FROM managed_list_items`);
   const memName = new Map(((mem.rows ?? mem) as any[]).map((r) => [r.id, r.name]));
-  const mById = new Map(measures.map((m: any) => [m.id, m]));
 
   // scope matrix
   const wb = new ExcelJS.Workbook();

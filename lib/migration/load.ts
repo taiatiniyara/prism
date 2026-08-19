@@ -20,6 +20,9 @@ const VALUETYPE_COL: Record<ValueType, string> = {
   option: "value_option_id",
 };
 
+const messageOf = (e: unknown): string | undefined =>
+  (e as { message?: string } | null | undefined)?.message;
+
 // data_entries status ids (from dataEntry.ts DataEntryStatusId)
 const STATUS_REQUESTED = 1; // empty shell, awaiting entry
 const STATUS_ENTERED = 3; // filled
@@ -31,11 +34,19 @@ interface MeasureMeta {
   col: string | null; // target value column from data_type
 }
 
+interface MeasureMetaRow {
+  id: number;
+  is_active: boolean;
+  is_calculated: boolean;
+  is_mandatory: boolean;
+  data_type: string | null;
+}
+
 /** measure_id -> {is_active, is_calculated, is_mandatory, value column} (from data_type). */
 async function getMeasureMeta(): Promise<Map<number, MeasureMeta>> {
   const rows = ((await db.execute(sql`
     SELECT m.id, m.is_active, m.is_calculated, m.is_mandatory, dt.name AS data_type
-    FROM measure_definitions m LEFT JOIN managed_list_items dt ON dt.id=m.data_type_id`)).rows ?? []) as any[];
+    FROM measure_definitions m LEFT JOIN managed_list_items dt ON dt.id=m.data_type_id`)).rows ?? []) as unknown as MeasureMetaRow[];
   const colFor = (dt: string | null): string | null => {
     const s = (dt ?? "").toLowerCase();
     if (s.includes("numeric") || s.includes("number")) return "value_numeric";
@@ -71,7 +82,9 @@ export async function loadExtract(loadId: number, rows: ExtractRow[]): Promise<L
   // Valid p2 user ids — a migrated author that isn't a p2 user is nulled (+ soft-logged), never
   // failing the whole entry.
   const validUsers = new Set(
-    ((await db.execute(sql`SELECT id FROM "user"`)).rows ?? []).map((u: any) => String(u.id)),
+    (((await db.execute(sql`SELECT id FROM "user"`)).rows ?? []) as unknown as { id: string }[]).map(
+      (u) => String(u.id),
+    ),
   );
   const res: LoadResult = { total: rows.length, shellsCreated: 0, calculatedShells: 0, shellsFailed: 0, valuesFilled: 0, valuesFailed: 0, noDataAnswers: 0, skipped: 0 };
 
@@ -120,12 +133,12 @@ export async function loadExtract(loadId: number, rows: ExtractRow[]): Promise<L
           ${STATUS_REQUESTED}, true, false,
           ${authorId}, COALESCE(${row.updatedAt ?? null}::timestamp, now()), ${commentsJson}::json
         ) RETURNING id`);
-      shellId = (r.rows[0] as any).id;
+      shellId = (r.rows[0] as { id: string }).id;
       res.shellsCreated++;
       if (m.isCalculated) res.calculatedShells++;
     } catch (e) {
       const c = classifyPgError(e);
-      await recordRejection({ ...ctx, stage: "shell", category: c.category, columns: c.columns, rule: c.rule, reason: c.reason, remediation: shellRemediation(c.category), rawError: (e as any)?.message });
+      await recordRejection({ ...ctx, stage: "shell", category: c.category, columns: c.columns, rule: c.rule, reason: c.reason, remediation: shellRemediation(c.category), rawError: messageOf(e) });
       res.shellsFailed++; continue;
     }
 
@@ -148,11 +161,11 @@ export async function loadExtract(loadId: number, rows: ExtractRow[]): Promise<L
         const v = coerce(col, row.value);
         // NB: do NOT touch updated_at here — the shell insert set the ORIGINAL p1 entry time,
         // which migration must preserve (not the load run time).
-        await db.execute(sql`UPDATE data_entries SET ${sql.raw(col)} = ${v as any}, status_id = ${row.statusId ?? STATUS_ENTERED} WHERE id = ${shellId}`);
+        await db.execute(sql`UPDATE data_entries SET ${sql.raw(col)} = ${v}, status_id = ${row.statusId ?? STATUS_ENTERED} WHERE id = ${shellId}`);
         res.valuesFilled++;
       } catch (e) {
         const c = classifyPgError(e);
-        await recordRejection({ ...ctx, stage: "value", category: c.category, columns: c.columns.length ? c.columns : [col], rule: c.rule, intendedValueType: row.valueType, attemptedNumeric: row.valueType === "numeric" ? Number(row.value) : null, reason: c.reason, remediation: "check the value against the measure's type / valid range", rawError: (e as any)?.message });
+        await recordRejection({ ...ctx, stage: "value", category: c.category, columns: c.columns.length ? c.columns : [col], rule: c.rule, intendedValueType: row.valueType, attemptedNumeric: row.valueType === "numeric" ? Number(row.value) : null, reason: c.reason, remediation: "check the value against the measure's type / valid range", rawError: messageOf(e) });
         res.valuesFailed++;
       }
     }
@@ -176,7 +189,7 @@ export async function loadExtract(loadId: number, rows: ExtractRow[]): Promise<L
         res.noDataAnswers++;
       } catch (e) {
         const c = classifyPgError(e);
-        await recordRejection({ ...ctx, stage: "value", category: c.category, columns: c.columns.length ? c.columns : ["no_data_reason"], reason: c.reason, remediation: "check no_data_reason vs chk_no_data_reason / chk_value_xor_nodata", rawError: (e as any)?.message });
+        await recordRejection({ ...ctx, stage: "value", category: c.category, columns: c.columns.length ? c.columns : ["no_data_reason"], reason: c.reason, remediation: "check no_data_reason vs chk_no_data_reason / chk_value_xor_nodata", rawError: messageOf(e) });
         res.valuesFailed++;
       }
     }

@@ -4,6 +4,7 @@ import { countries } from "@/db/schema/country";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { eq, and, gt, isNotNull } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
+import { getCountryCoordinates } from "@/lib/legacy/country-coordinates";
 
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
@@ -40,13 +41,17 @@ export async function GET(req: Request) {
           : null;
         const fyIso =
           fy && !isNaN(fy.getTime()) ? fy.toISOString() : null;
+        const countryName = allCountries.find(
+          (c) => c.id === u.country_id,
+        )?.name;
+        const coords = getCountryCoordinates(countryName);
         return {
           UtilityId: u.id,
           Utility: u.name,
           Acronym: u.acronym || u.name,
-          Lat: 0.0,
-          Lng: 0.0,
-          Country: allCountries.find((c) => c.id === u.country_id)?.name,
+          Lat: coords.lat,
+          Lng: coords.lng,
+          Country: countryName,
           "Financial Year End": fyIso,
         };
       }),

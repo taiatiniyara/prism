@@ -1,33 +1,37 @@
 import { db } from "@/db/connection";
-import { dataEntries } from "@/db/schema/dataEntry";
+import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
 import { units } from "@/db/schema/utility";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { managedListItems } from "@/db/schema/managedLists";
 import { eq, and, isNotNull, inArray } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
+import { formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
 import {
-  resolveDlIds,
-  dlValue,
-  formatReportPeriodIso,
-} from "@/lib/legacy/legacy-dl-resolver";
+  resolveEntryValue,
+  getValueResolutionContext,
+} from "@/lib/legacy/entry-value";
 import { buildParentMap, categoryFromTechnology } from "@/lib/energy-taxonomy";
 
-const trainingIds = {
-  TotalHoursInPeriod: 4213040270,
-  GeneratorElectrictyGenerated: 261,
-  GeneratorElectritySentToGrid: 263,
-};
+const GENERATOR_MEASURE_NAMES = [
+  "Hours in Period",
+  "Electricity Generated",
+  "Electricity Sent to Grid",
+] as const;
 
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
   if (authorize.success === false)
     return Response.json({ message: authorize.message }, { status: 401 });
 
-  const idMap = await resolveDlIds(Object.values(trainingIds));
-  const totalHoursId = idMap.get(trainingIds.TotalHoursInPeriod);
-  const allDlIds = Array.from(idMap.values()).filter(
-    (id): id is number => id != null,
-  );
+  const measureDefs = await db
+    .select()
+    .from(measureDefinitions)
+    .where(inArray(measureDefinitions.name, [...GENERATOR_MEASURE_NAMES]));
+
+  const totalHoursId = measureDefs.find(
+    (m) => m.name === "Hours in Period",
+  )?.id;
+  const allDlIds = measureDefs.map((m) => m.id);
   if (allDlIds.length === 0) return Response.json([]);
 
   const entries = await db
@@ -52,10 +56,22 @@ export async function GET(req: Request) {
     .from(managedListItems)
     .where(eq(managedListItems.is_active, true));
 
+  const { dataTypeNameById, itemsById } = await getValueResolutionContext(
+    allDlIds,
+  );
+
   const parentById = buildParentMap(allItems);
 
   function findItem(id: number | null) {
     return id ? allItems.find((m) => m.id === id) : undefined;
+  }
+
+  function valueFor(entry: (typeof entries)[number] | undefined) {
+    return resolveEntryValue(
+      entry,
+      dataTypeNameById.get(entry?.measure_def_id ?? -1) ?? null,
+      itemsById,
+    );
   }
 
   return Response.json(
@@ -104,11 +120,11 @@ export async function GET(req: Request) {
               EnergyProvider: findItem(g.provider_id)?.name,
               EnergyType: findItem(categoryFromTechnology(g.technology_id, parentById))?.name,
               EnergySource: findItem(g.technology_id)?.name,
-              "Total Hours in Period": Number(totalHours?.value),
+              "Total Hours in Period": Number(valueFor(totalHours)),
               ...genEntries.reduce(
                 (acc, e) => {
-                  const item = allItems.find((m) => m.id === e.measure_def_id);
-                  return { [item?.name ?? ""]: dlValue(e.value), ...acc };
+                  const def = measureDefs.find((m) => m.id === e.measure_def_id);
+                  return { [def?.name ?? ""]: valueFor(e), ...acc };
                 },
                 {} as Record<string, unknown>,
               ),

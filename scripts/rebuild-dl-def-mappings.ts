@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 function loadEnv(file: string) {
   let raw: string;
   try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     raw = readFileSync(file, "utf8");
   } catch {
     return;
@@ -56,6 +57,7 @@ async function main() {
   const { sql } = await import("drizzle-orm");
 
   const trainingDefs = JSON.parse(
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     readFileSync(DUMP_PATH, "utf8"),
   ) as Array<{
     id: number;

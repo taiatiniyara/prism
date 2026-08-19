@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 function loadEnv(file: string) {
   let raw: string;
   try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     raw = readFileSync(file, "utf8");
   } catch {
     return;
@@ -54,6 +55,7 @@ async function main() {
     "@/lib/data-entry/dimension-defaults"
   );
 
+  // eslint-disable-next-line security/detect-non-literal-fs-filename
   const rows = JSON.parse(readFileSync(DUMP_PATH, "utf8")) as DumpRow[];
 
   const defs = await db

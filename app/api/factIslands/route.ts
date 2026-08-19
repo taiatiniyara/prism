@@ -19,6 +19,7 @@ export async function GET(req: Request) {
       return {
         Country: c.name,
         Islands: val?.value ?? null,
+        Year: null,
         Source: "unknown",
       };
     }),

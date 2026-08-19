@@ -4,6 +4,7 @@ import { resolve } from "node:path";
 function loadEnv(file: string) {
   let raw: string;
   try {
+    // eslint-disable-next-line security/detect-non-literal-fs-filename
     raw = readFileSync(file, "utf8");
   } catch {
     return;

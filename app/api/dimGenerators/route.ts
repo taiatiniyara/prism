@@ -15,7 +15,6 @@ export async function GET(req: Request) {
   const resources = await db
     .select()
     .from(units)
-    .where(eq(units.is_virtual, false))
     .orderBy(asc(units.id));
 
   const allManagedItems = await db
