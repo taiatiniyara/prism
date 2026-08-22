@@ -165,6 +165,9 @@
   .achdr{font-size:12px;color:var(--muted);padding:7px 10px;border-bottom:1px solid var(--line);background:var(--accent-soft)}
   .acitem{padding:8px 10px;font-size:13px;cursor:pointer;border-top:1px solid var(--line)}
   .acitem:hover{background:var(--accent-soft)}
+  .visbox{border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-top:4px}
+  .visbox .opt{border-radius:0}
+  .visbox .opt + .opt{border-top:1px solid var(--line)}
 </style>
 </head>
 <body>
@@ -214,11 +217,13 @@
         </div>
       </div>
       <aside style="flex:0 0 26%;max-width:26%">
-        <div style="display:flex;justify-content:flex-end">
-          <div class="toggle"><span>Track as KPI</span><span class="sw"></span></div>
-        </div>
-        <div class="kpiband" style="margin-top:69px;padding-top:4px;padding-bottom:4px">
-          <b>Published as KPI.</b> This value feeds the KPI dashboard &amp; benchmarking.
+        <div style="margin-top:52px">
+          <label class="fld">Visibility</label>
+          <div class="visbox">
+            <div class="opt on"><span class="radio"></span><b>Private</b><span class="mut" style="margin-left:auto;font-size:11.5px">my utility</span></div>
+            <div class="opt"><span class="radio"></span><b>Shared</b><span class="mut" style="margin-left:auto;font-size:11.5px">BMO approval</span></div>
+          </div>
+          <p class="cap" style="margin:6px 0 0;font-size:11.5px">Shared KPIs feed cross-utility benchmarking (after BMO approval).</p>
         </div>
       </aside>
     </div>
