@@ -1,8 +1,10 @@
 import { db } from "@/db/connection";
-import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
+import { measureDefinitions } from "@/db/schema/dataEntry";
+import { countryContext } from "@/db/schema/country";
+import { reportPeriods } from "@/db/schema/reportPeriods";
+import { organisations } from "@/db/schema/utility";
 import { managedListItems } from "@/db/schema/managedLists";
-import { eq, and, inArray } from "drizzle-orm";
-import { resolveEntryValue } from "@/lib/legacy/entry-value";
+import { eq, isNotNull } from "drizzle-orm";
 
 export type ResolvedContextRow = {
   report_period_id: number;
@@ -10,55 +12,101 @@ export type ResolvedContextRow = {
   utility_id: number | null;
   measure_def_id: number;
   measureName: string;
+  // The country_context.period_year this carried-forward value came from. Lets
+  // country-keyed routes (Islands, Land Area) pick the latest figure deterministically.
+  period_year: number;
   value: string | number | boolean | null;
 };
 
+/**
+ * The fiscal YEAR a report period represents — must match formatReportPeriodIso:
+ * a "Financial Year" period is stamped one calendar year back; everything else
+ * (e.g. Monthly) uses its own calendar year. This is the alignment key between a
+ * submission's period and country_context.period_year.
+ */
+export function fiscalYearOfReportPeriod(
+  reportDate: Date | string | null,
+  reportTypeName: string | null | undefined,
+): number | null {
+  if (!reportDate) return null;
+  const d = typeof reportDate === "string" ? new Date(reportDate) : reportDate;
+  if (isNaN(d.getTime())) return null;
+  const y = d.getFullYear();
+  return reportTypeName === "Financial Year" ? y - 1 : y;
+}
+
+/**
+ * Country-context read bridge (Option 2, 2026-08-23).
+ *
+ * National annual figures live in the country_context table (country × metric ×
+ * period_year), written by the BMO. Power BI still consumes the utility ×
+ * report-period fact shape, so this bridge EXPANDS country_context onto every
+ * report period AT READ TIME — no per-utility duplication is stored. For each
+ * (report period, metric) it carries forward the latest period_year <= that
+ * period's fiscal year. `subgroupId` scopes which measure_definitions are the
+ * country-context metrics (221 = "Country Context"); their names are the keys the
+ * fact routes match on.
+ */
 export async function getResolvedContextRows(
   subgroupId: number,
 ): Promise<ResolvedContextRow[]> {
   const defs = await db
-    .select({
-      id: measureDefinitions.id,
-      name: measureDefinitions.name,
-      data_type_id: measureDefinitions.data_type_id,
-    })
+    .select({ id: measureDefinitions.id, name: measureDefinitions.name })
     .from(measureDefinitions)
     .where(eq(measureDefinitions.measures_subgroup_id, subgroupId));
-
   if (defs.length === 0) return [];
+  const metricIds = new Set(defs.map((d) => d.id));
 
-  const measureIds = defs.map((d) => d.id);
-  const items = await db.select().from(managedListItems);
-  const itemsById = new Map(items.map((i) => [i.id, i.name]));
-  const dataTypeNames = new Map<number, string | null>();
-  for (const d of defs) {
-    const dt = itemsById.get(d.data_type_id);
-    dataTypeNames.set(d.id, dt ?? null);
-  }
+  const ctx = await db.select().from(countryContext);
+  if (ctx.length === 0) return [];
 
-  const entries = await db
+  const rps = await db
     .select()
-    .from(dataEntries)
-    .where(
-      and(
-        inArray(dataEntries.measure_def_id, measureIds),
-        eq(dataEntries.is_deleted, false),
-      ),
+    .from(reportPeriods)
+    .where(isNotNull(reportPeriods.status_id));
+
+  const orgs = await db.select().from(organisations);
+  const countryByUtil = new Map(orgs.map((o) => [o.id, o.country_id]));
+
+  const items = await db.select().from(managedListItems);
+  const typeNameById = new Map(items.map((i) => [i.id, i.name]));
+
+  // index country_context by (country_id, measure_def_id) -> period_year desc
+  const byKey = new Map<string, { period_year: number; value: string | null }[]>();
+  for (const r of ctx) {
+    if (!metricIds.has(r.measure_def_id)) continue;
+    const k = `${r.country_id}|${r.measure_def_id}`;
+    const arr = byKey.get(k) ?? [];
+    arr.push({ period_year: r.period_year, value: r.value });
+    byKey.set(k, arr);
+  }
+  for (const arr of byKey.values())
+    arr.sort((a, b) => b.period_year - a.period_year);
+
+  const out: ResolvedContextRow[] = [];
+  for (const rp of rps) {
+    const countryId = countryByUtil.get(rp.utility_id) ?? null;
+    if (countryId == null) continue;
+    const fy = fiscalYearOfReportPeriod(
+      rp.report_date,
+      typeNameById.get(rp.report_type_id),
     );
-
-  const measureNameById = new Map(defs.map((d) => [d.id, d.name]));
-
-  return entries.map((e) => {
-    const dataTypeName = dataTypeNames.get(e.measure_def_id) ?? null;
-    const value = resolveEntryValue(e, dataTypeName, itemsById);
-
-    return {
-      report_period_id: e.report_period_id,
-      country_id: e.country_id,
-      utility_id: e.utility_id,
-      measure_def_id: e.measure_def_id,
-      measureName: measureNameById.get(e.measure_def_id) ?? "",
-      value,
-    };
-  });
+    if (fy == null) continue;
+    for (const d of defs) {
+      const arr = byKey.get(`${countryId}|${d.id}`);
+      if (!arr) continue;
+      const pick = arr.find((x) => x.period_year <= fy); // carry-forward
+      if (!pick) continue;
+      out.push({
+        report_period_id: rp.id,
+        country_id: countryId,
+        utility_id: rp.utility_id,
+        measure_def_id: d.id,
+        measureName: d.name,
+        period_year: pick.period_year,
+        value: pick.value,
+      });
+    }
+  }
+  return out;
 }

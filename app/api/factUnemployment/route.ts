@@ -45,7 +45,7 @@ export async function GET(req: Request) {
       const country = u ? cMap.get(u.country_id) : undefined;
       const cc = ctxRows.find(
         (r) =>
-          r.country_id === (country?.id ?? -1) &&
+          r.report_period_id === urp.id && r.country_id === (country?.id ?? -1) &&
           r.measureName === "Unemployment Rate",
       );
       const reportType = findItem(urp.report_type_id)?.name;

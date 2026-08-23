@@ -44,7 +44,7 @@ export async function GET(req: Request) {
       const u = uMap.get(urp.utility_id);
       const country = u ? cMap.get(u.country_id) : undefined;
       const ccData = ctxRows
-        .filter((r) => r.country_id === (country?.id ?? -1))
+        .filter((r) => r.report_period_id === urp.id && r.country_id === (country?.id ?? -1))
         .reduce(
           (acc, r) => ({ [r.measureName]: r.value, ...acc }),
           {} as Record<string, unknown>,

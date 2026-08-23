@@ -1,6 +1,6 @@
 import { db } from "@/db/connection";
 import { countries, countryContext, subRegions } from "@/db/schema/country";
-import { managedLists, managedListItems } from "@/db/schema/managedLists";
+import { measureDefinitions } from "@/db/schema/dataEntry";
 import { eq, and } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
 import { dlValueOrNull } from "@/lib/legacy/legacy-dl-resolver";
@@ -14,24 +14,8 @@ const COUNTRY_DISPLAY_NAMES: Record<string, string> = {
   "Wallis and Futuna Islands": "Wallis and Futuna",
 };
 
-async function getManagedListByName(listName: string) {
-  const [list] = await db
-    .select()
-    .from(managedLists)
-    .where(eq(managedLists.name, listName))
-    .limit(1);
-  if (!list) return null;
-  const items = await db
-    .select()
-    .from(managedListItems)
-    .where(
-      and(
-        eq(managedListItems.list_id, list.id),
-        eq(managedListItems.is_active, true),
-      ),
-    );
-  return items;
-}
+// The "Country Context" measures subgroup — country_context.measure_def_id ∈ this set.
+const COUNTRY_CONTEXT_SUBGROUP_ID = 221;
 
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
@@ -41,22 +25,31 @@ export async function GET(req: Request) {
 
   const allCountries = await db.select().from(countries);
   const allSubRegions = await db.select().from(subRegions);
-  const fuelRegulationItems =
-    (await getManagedListByName("Fuel Pricing Regulation")) ?? [];
-  const fuelRegulationDlDefId = fuelRegulationItems[0]?.id;
+  const [fuelReg] = await db
+    .select({ id: measureDefinitions.id })
+    .from(measureDefinitions)
+    .where(
+      and(
+        eq(measureDefinitions.name, "Fuel Pricing Regulation"),
+        eq(measureDefinitions.measures_subgroup_id, COUNTRY_CONTEXT_SUBGROUP_ID),
+      ),
+    )
+    .limit(1);
+  const fuelRegulationMeasureId = fuelReg?.id;
 
   let contextRows: (typeof countryContext.$inferSelect)[] = [];
-  if (fuelRegulationDlDefId) {
+  if (fuelRegulationMeasureId) {
     contextRows = await db
       .select()
       .from(countryContext)
-      .where(eq(countryContext.dl_def_id, fuelRegulationDlDefId));
+      .where(eq(countryContext.measure_def_id, fuelRegulationMeasureId));
   }
 
   const rows = allCountries.map((country) => {
-    const val = contextRows.find(
-      (cc) => cc.country_id === country.id,
-    )?.value;
+    // dimension (not period-keyed): take the latest available figure
+    const val = contextRows
+      .filter((cc) => cc.country_id === country.id)
+      .sort((a, b) => b.period_year - a.period_year)[0]?.value;
     return {
       Country: COUNTRY_DISPLAY_NAMES[country.name] ?? country.name,
       "ISO 3166 Alpha-2": country.iso_code_alpha2.toUpperCase(),

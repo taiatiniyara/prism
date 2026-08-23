@@ -13,13 +13,14 @@ export async function GET(req: Request) {
 
   return Response.json(
     allCountries.map((c) => {
-      const val = ctxRows.find(
-        (r) => r.country_id === c.id && r.measureName === "Islands",
-      );
+      // country-keyed (not period-keyed): take the latest available figure
+      const val = ctxRows
+        .filter((r) => r.country_id === c.id && r.measureName === "Islands")
+        .sort((a, b) => b.period_year - a.period_year)[0];
       return {
         Country: c.name,
         Islands: val?.value ?? null,
-        Year: null,
+        Year: val?.period_year ?? null,
         Source: "unknown",
       };
     }),

@@ -47,7 +47,7 @@ export async function GET(req: Request) {
       const dls = ctxRows
         .filter(
           (r) =>
-            r.country_id === (country?.id ?? -1) &&
+            r.report_period_id === urp.id && r.country_id === (country?.id ?? -1) &&
             (r.measureName === "Urban Population" ||
               r.measureName === "Rural Population"),
         )

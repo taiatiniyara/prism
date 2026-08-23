@@ -1,6 +1,5 @@
 import { db } from "@/db/connection";
 import { inputDlDefMappings } from "@/db/schema/dataEntry";
-import { countryContext } from "@/db/schema/country";
 import { managedLists, managedListItems } from "@/db/schema/managedLists";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { eq, and, inArray } from "drizzle-orm";
@@ -57,35 +56,6 @@ export async function resolveDlIds(
     .from(inputDlDefMappings)
     .where(inArray(inputDlDefMappings.training_dl_def_id, trainingDlIds));
   return new Map(rows.map((r) => [r.training_dl_def_id, r.measure_def_id]));
-}
-
-export async function getCountryContextValue(
-  countryId: number,
-  trainingDlId: number,
-): Promise<string | null> {
-  const dlName = await resolveDlName(trainingDlId);
-  if (!dlName) return null;
-
-  const [item] = await db
-    .select({ id: managedListItems.id })
-    .from(managedListItems)
-    .where(eq(managedListItems.name, dlName))
-    .limit(1);
-
-  if (!item) return null;
-
-  const [ctx] = await db
-    .select({ value: countryContext.value })
-    .from(countryContext)
-    .where(
-      and(
-        eq(countryContext.country_id, countryId),
-        eq(countryContext.dl_def_id, item.id),
-      ),
-    )
-    .limit(1);
-
-  return ctx?.value ?? null;
 }
 
 export async function getSubmittedReportPeriods() {
