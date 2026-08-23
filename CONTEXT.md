@@ -40,12 +40,14 @@ A glossary of domain terms, not a spec. No stack choices or implementation detai
   text; ratios for %) with the legacy raw string retained in `value`. Generation/storage
   measures are collected at **equipment level**; all higher levels are derived, never
   entered (totals = coalesce entered-All-row else sum of detail).
-- **Data Entry Status** — the **workflow lifecycle only**: Requested → Pending → Entered → Reviewed → **Approved**
-  (publication event; Endorsed retired). *(Not_Available retired as a status — answer-availability moved to No-Data Reason, a separate axis.)*
+- **Data Entry Status** — the **workflow lifecycle only**: Pending → Entered → Reviewed → **Approved**
+  (publication event; Endorsed retired). Pending (2) is the single starting state — *Requested (1) retired*
+  (Pending conveys the outstanding action; an empty shell is a task, not a passive request).
+  *(Not_Available retired as a status — answer-availability moved to No-Data Reason, a separate axis.)*
 - **No-Data Reason** — answer-availability marker on a data entry (nullable), mirrored on computed `kpi_actual`, **orthogonal to workflow status**. Two values: **`not_available`** (exists but unknown / not collected → the calculator **propagates**: the KPI becomes not-available, never 0) · **`asserted_not_applicable`** (the utility asserts, on an **in-scope** `is_relevant=true` input, that it genuinely doesn't apply → an **additive** formula treats it as 0-contribution; every other formula propagates). Only meaningful on `is_relevant=true` rows (so it never collides with scope). **`not-available ≠ 0`.** The `asserted_` prefix disambiguates from the two *other* "not applicable" concepts: `measure_dimension_scope.expansion_mode='not_applicable'` (a *dimension-config* setting) and `is_relevant`/relevance (system *scope*). **Mandatory gate:** `asserted_not_applicable` is valid **only on optional measures** (`measure_definitions.is_mandatory=false`) — a **mandatory** measure with no data must be `not_available` (stays a visible gap, never asserted away). Enforced at the **writer + UI** (a DB CHECK can't cross tables); feature depends on a BMO curation pass over the 117 measures' legacy `is_mandatory` flags (Eugene's queue). On **`kpi_actual`** the marker is **derived-only** — the calculator *propagates* it from input states (so consumers see *why* a KPI is absent: asserted-inapplicable vs unavailable inputs), **never** a direct KPI-level assertion; utilities assert on **inputs** only (enforced by the calculator being `kpi_actual`'s sole writer).
-- **Relevance Shell** — a pre-created empty entry row (address only, status Requested)
-  generated per utility-period from measure scope + utility context; unfilled shells ARE
-  the gap report.
+- **Relevance Shell** — a pre-created empty entry row (address only, status **Pending** — the single
+  starting state; *Requested retired*) generated per utility-period from measure scope + utility
+  context; unfilled shells ARE the gap report.
 - **Measure Dimension Applicability** — catalogue-level, BMO-maintained table (measure ×
   dimension × valid members) declaring WHICH members are valid for a by_context dimension
   (e.g. Fuel Oil applies only to Diesel/Heavy Fuel sources). Complements Measure Dimension

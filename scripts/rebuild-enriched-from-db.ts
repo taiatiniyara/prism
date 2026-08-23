@@ -1,3 +1,6 @@
+/* ⚠️ STALE (2026-08-17) — SELECT uses m.category_id / m.subcategory_id, renamed to
+ * measures_group_id / measures_subgroup_id; will error against the current schema. Superseded by
+ * the 2026-08-17 DB→JSON regen. See docs/measures-enrichment/README.md before reuse. */
 /**
  * Rebuilds measures-enriched-final.json + the enriched workbook from the DB (source of truth
  * after the downtime split). Resolves id→name columns for readability.
