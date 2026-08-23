@@ -301,6 +301,24 @@ and just divides + rolls up; it stays **free of stint awareness**. Consequences:
 - The **energy-balance check** (`generation ≤ Σ(cap×hours) − downtime_energy`) is data-quality
   validation owned by the loader/gold layer, **not** the formula evaluator.
 
+### 4.6.2 Input sources — not every input lives in `data_entries`
+
+A binding references a measure by `measure_def_id`; the **resolver dispatches to that measure's
+home** when reading its value. Most measures resolve from `data_entries`, but some do not, and the
+resolver must route accordingly (the binding/formula stay identical — this is purely *where the value
+is read from*):
+
+| Input kind | Read from | Notes |
+|---|---|---|
+| Raw / calculated measures | `data_entries` (the address model) | the default |
+| **Country-context** measures (subgroup **221** — e.g. Population, GDP Per Capita) | **`country_context`** table (keyed by `measure_def_id`), via the **`getResolvedContextRows`** bridge | #4, shipped `fcf8e4e` (Option 2); **carry-forward per report period**; used as per-capita / per-GDP **denominators**. NOT in `data_entries`. |
+| Capacity-hours | silver-derived measure (§4.6.1) | `Σ(stint_cap × stint_hours)` |
+
+So a "per-capita" KPI (e.g. `x ÷ population`) binds `population` like any input, but the resolver
+fetches it from `country_context` (carry-forward), not `data_entries`. **Build note:** the resolver
+needs a small source-dispatch layer keyed on the measure's home; country-context reads go through
+`getResolvedContextRows`.
+
 ---
 
 ## 5. Input context & traceability — "a tag card for every input"
