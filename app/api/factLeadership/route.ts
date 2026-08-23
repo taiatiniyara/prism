@@ -5,15 +5,20 @@ import { reportPeriods } from "@/db/schema/reportPeriods";
 import { managedListItems } from "@/db/schema/managedLists";
 import { eq, and, isNotNull, inArray } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
+import { formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
 import {
-  resolveDlIds,
-  dlValue,
-  formatReportPeriodIso,
-} from "@/lib/legacy/legacy-dl-resolver";
+  resolveEntryValue,
+  getValueResolutionContext,
+} from "@/lib/legacy/entry-value";
 
-const trainingIds = {
-  GenderOfCeo: 4213040135,
-  GenderOf2ic: 4213040136,
+const LEADERSHIP_MEASURE_NAMES = [
+  "CEO Gender",
+  "2IC (2nd in Command) Gender",
+] as const;
+
+const POSITION_BY_MEASURE: Record<string, string> = {
+  "CEO Gender": "CEO",
+  "2IC (2nd in Command) Gender": "2IC",
 };
 
 export async function GET(req: Request) {
@@ -21,10 +26,12 @@ export async function GET(req: Request) {
   if (authorize.success === false)
     return Response.json({ message: authorize.message }, { status: 401 });
 
-  const idMap = await resolveDlIds(Object.values(trainingIds));
-  const prismIds = Array.from(idMap.values()).filter(
-    (id): id is number => id != null,
-  );
+  const measureDefs = await db
+    .select()
+    .from(measureDefinitions)
+    .where(inArray(measureDefinitions.name, [...LEADERSHIP_MEASURE_NAMES]));
+
+  const prismIds = measureDefs.map((m) => m.id);
   if (prismIds.length === 0) return Response.json([]);
 
   const entries = await db
@@ -48,16 +55,12 @@ export async function GET(req: Request) {
     .select()
     .from(managedListItems)
     .where(eq(managedListItems.is_active, true));
-  const inputDefs = await db
-    .select()
-    .from(measureDefinitions)
-    .where(
-      and(
-        eq(measureDefinitions.is_active, true),
-        inArray(measureDefinitions.id, prismIds),
-      ),
-    );
 
+  const { dataTypeNameById, itemsById } = await getValueResolutionContext(
+    prismIds,
+  );
+
+  const nameById = new Map(measureDefs.map((d) => [d.id, d.name]));
   const rpMap = new Map(rps.map((r) => [r.id, r]));
   const orgMap = new Map(orgs.map((o) => [o.id, o]));
   function findItem(id: number | null) {
@@ -68,7 +71,7 @@ export async function GET(req: Request) {
   for (const l of entries) {
     const urp = rpMap.get(l.report_period_id);
     const reportType = findItem(urp?.report_type_id ?? null);
-    const dl = inputDefs.find((d) => d.id === l.measure_def_id);
+    const name = nameById.get(l.measure_def_id) ?? "";
     const utility = urp ? orgMap.get(urp.utility_id) : undefined;
     list.push({
       ReportType: reportType?.name,
@@ -78,8 +81,12 @@ export async function GET(req: Request) {
       ),
       UtilityId: urp?.utility_id,
       Utility: utility?.name ?? "",
-      Position: dl?.name.split(" ").pop() ?? "",
-      Gender: dlValue(l.value),
+      Position: POSITION_BY_MEASURE[name] ?? name,
+      Gender: resolveEntryValue(
+        l,
+        dataTypeNameById.get(l.measure_def_id) ?? null,
+        itemsById,
+      ),
     });
   }
 

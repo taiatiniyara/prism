@@ -43,7 +43,7 @@ export async function loadMap(filePath: string): Promise<LoadedMap> {
   const ws = wb.worksheets[0];
   const hdr = ws.getRow(1).values as ExcelJS.CellValue[];
   const idx = (name: string) => {
-    const i = (hdr as any[]).indexOf(name);
+    const i = hdr.indexOf(name);
     if (i < 0) throw new Error(`map is missing column "${name}"`);
     return i;
   };
@@ -87,7 +87,7 @@ export async function validateMap(map: LoadedMap): Promise<MapValidationIssue[]>
   // 1. measures exist?
   const measureIds = [...new Set(entries.map((e) => e.measureId))];
   const existing = new Set(
-    (((await db.execute(sql.raw(`SELECT id FROM measure_definitions WHERE id IN (${measureIds.join(",")})`))).rows ?? []) as any[]).map((r) => Number(r.id)),
+    (((await db.execute(sql.raw(`SELECT id FROM measure_definitions WHERE id IN (${measureIds.join(",")})`))).rows ?? []) as unknown as { id: number }[]).map((r) => Number(r.id)),
   );
   for (const e of entries) if (!existing.has(e.measureId)) issues.push({ dlDefId: e.dlDefId, measureId: e.measureId, problem: `measure ${e.measureId} does not exist` });
 
@@ -95,7 +95,7 @@ export async function validateMap(map: LoadedMap): Promise<MapValidationIssue[]>
   const memberIds = new Set<number>();
   for (const e of entries) for (const k of Object.keys(DIM_COLUMNS) as (keyof DimensionMembers)[]) if (e.dims[k]) memberIds.add(e.dims[k]);
   const validMembers = new Set(
-    (((await db.execute(sql.raw(`SELECT id FROM managed_list_items WHERE id IN (${[...memberIds].join(",") || "0"})`))).rows ?? []) as any[]).map((r) => Number(r.id)),
+    (((await db.execute(sql.raw(`SELECT id FROM managed_list_items WHERE id IN (${[...memberIds].join(",") || "0"})`))).rows ?? []) as unknown as { id: number }[]).map((r) => Number(r.id)),
   );
   for (const e of entries) {
     for (const k of Object.keys(DIM_COLUMNS) as (keyof DimensionMembers)[]) {

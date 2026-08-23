@@ -1,6 +1,7 @@
 import { db } from "@/db/connection";
 import { units } from "@/db/schema/utility";
 import { managedListItems } from "@/db/schema/managedLists";
+import { user } from "@/db/schema/auth-schema";
 import { eq, asc } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
 import { buildParentMap, categoryFromTechnology } from "@/lib/energy-taxonomy";
@@ -14,7 +15,6 @@ export async function GET(req: Request) {
   const resources = await db
     .select()
     .from(units)
-    .where(eq(units.is_virtual, false))
     .orderBy(asc(units.id));
 
   const allManagedItems = await db
@@ -23,6 +23,9 @@ export async function GET(req: Request) {
     .where(eq(managedListItems.is_active, true));
 
   const parentById = buildParentMap(allManagedItems);
+
+  const users = await db.select({ id: user.id, name: user.name }).from(user);
+  const userById = new Map(users.map((u) => [u.id, u.name]));
 
   function findItem(id: number | null) {
     if (!id) return undefined;
@@ -39,6 +42,8 @@ export async function GET(req: Request) {
       "Energy Provider": findItem(gen.provider_id)?.name,
       "Energy Type": findItem(categoryFromTechnology(gen.technology_id, parentById))?.name,
       "Energy Source": findItem(gen.technology_id)?.name,
+      "Updated By":
+        gen.updated_by_id != null ? userById.get(gen.updated_by_id) ?? "" : "",
     })),
   );
 }

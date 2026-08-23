@@ -1,44 +1,34 @@
 import { db } from "@/db/connection";
 import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
 import { reportPeriods } from "@/db/schema/reportPeriods";
-import { managedListItems } from "@/db/schema/managedLists";
+import { managedLists, managedListItems } from "@/db/schema/managedLists";
 import { eq, and, isNotNull, inArray } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
+import { formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
 import {
-  resolveDlIds,
-  dlValue,
-  formatReportPeriodIso,
-} from "@/lib/legacy/legacy-dl-resolver";
-
-const trainingIds = {
-  TotalEmployeesMale: 4213040167,
-  TotalEmployeesFemale: 4213040168,
-  TotalEmployees: 4213040169,
-};
-
-const gender = (dlName: string) => {
-  if (dlName.includes("Male")) return "Male";
-  if (dlName.includes("Female")) return "Female";
-  return "All";
-};
+  resolveEntryValue,
+  getValueResolutionContext,
+} from "@/lib/legacy/entry-value";
 
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
   if (authorize.success === false)
     return Response.json({ message: authorize.message }, { status: 401 });
 
-  const idMap = await resolveDlIds(Object.values(trainingIds));
-  const prismIds = Array.from(idMap.values()).filter(
-    (id): id is number => id != null,
-  );
-  if (prismIds.length === 0) return Response.json([]);
+  const measureDefs = await db
+    .select()
+    .from(measureDefinitions)
+    .where(inArray(measureDefinitions.name, ["Employees"]));
+
+  const employeesId = measureDefs.find((m) => m.name === "Employees")?.id;
+  if (employeesId == null) return Response.json([]);
 
   const entries = await db
     .select()
     .from(dataEntries)
     .where(
       and(
-        inArray(dataEntries.measure_def_id, prismIds),
+        eq(dataEntries.measure_def_id, employeesId),
         eq(dataEntries.is_deleted, false),
       ),
     );
@@ -50,15 +40,31 @@ export async function GET(req: Request) {
     .select()
     .from(managedListItems)
     .where(eq(managedListItems.is_active, true));
-  const inputDefs = await db
-    .select()
-    .from(measureDefinitions)
-    .where(
-      and(
-        eq(measureDefinitions.is_active, true),
-        inArray(measureDefinitions.id, prismIds),
-      ),
-    );
+
+  const { dataTypeNameById, itemsById } = await getValueResolutionContext([
+    employeesId,
+  ]);
+
+  // Resolve the gender dimension (Male / Female) from the Gender list.
+  const genderList = (
+    await db
+      .select({ id: managedLists.id })
+      .from(managedLists)
+      .where(eq(managedLists.name, "Gender"))
+      .limit(1)
+  )[0];
+  const genderItems = genderList
+    ? await db
+        .select()
+        .from(managedListItems)
+        .where(
+          and(
+            eq(managedListItems.list_id, genderList.id),
+            eq(managedListItems.is_active, true),
+          ),
+        )
+    : [];
+  const genderNameById = new Map(genderItems.map((g) => [g.id, g.name]));
 
   const rpMap = new Map(rps.map((r) => [r.id, r]));
   function findItem(id: number | null) {
@@ -66,30 +72,27 @@ export async function GET(req: Request) {
   }
 
   return Response.json(
-    entries
-      .filter((l) => {
-        const dl = inputDefs.find((d) => d.id === l.measure_def_id);
-        return dl && !dl.name.includes("Total") && dl.name !== "Employees";
-      })
-      .map((l) => {
-        const urp = rpMap.get(l.report_period_id);
-        const dl = inputDefs.find((d) => d.id === l.measure_def_id);
-        const reportType = findItem(urp?.report_type_id ?? null);
-        const division =
-          dl?.name.replace("Male", "").replace("Female", "").trim() ?? "";
-        const reportDate = formatReportPeriodIso(
-          urp?.report_date ?? null,
-          reportType?.name,
-        );
-        return {
-          "Report Type": reportType?.name,
-          "Report Period": reportDate,
-          "Utility ID": urp?.utility_id,
-          Division: division,
-          Gender: gender(dl?.name ?? ""),
-          "Number of Employees": dlValue(l.value),
-        };
-      })
-      .filter((e) => e.Division !== "Employees"),
+    entries.map((l) => {
+      const urp = rpMap.get(l.report_period_id);
+      const reportType = findItem(urp?.report_type_id ?? null);
+      const reportDate = formatReportPeriodIso(
+        urp?.report_date ?? null,
+        reportType?.name,
+      );
+      const gender =
+        genderNameById.get(l.gender_id) ?? "All";
+      return {
+        "Report Type": reportType?.name,
+        "Report Period": reportDate,
+        "Utility ID": urp?.utility_id,
+        Division: "Employees",
+        Gender: gender,
+        "Number of Employees": resolveEntryValue(
+          l,
+          dataTypeNameById.get(employeesId) ?? null,
+          itemsById,
+        ),
+      };
+    }),
   );
 }

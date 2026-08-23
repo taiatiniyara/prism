@@ -28,7 +28,7 @@ export async function GET(req: Request) {
     return Response.json({ message: authorize.message }, { status: 401 });
   }
 
-  const list = (await getManagedListByName("Currency")) ?? [];
+  const list = (await getManagedListByName("Currencies")) ?? [];
   return Response.json(
     list.map((item) => ({
       Currency: item.name,

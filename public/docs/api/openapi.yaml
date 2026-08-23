@@ -50,6 +50,7 @@ components:
     - name: ServiceAreas
     - name: Settings
     - name: System
+    - name: TableDefinitions
     - name: Tables
     - name: UI
     - name: Units
@@ -2162,6 +2163,35 @@ paths:
           description: Forbidden
         '500':
           description: Internal Server Error
+  /api/migration/sync/generators:
+    post:
+      tags:
+        - Migration
+      summary: POST migration sync/generators
+      security:
+        - migrationKeyAuth: []
+      x-auth: Requires x-migration-key header
+      responses:
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal Server Error
+        '503':
+          description: Service Unavailable
+    get:
+      tags:
+        - Migration
+      summary: GET migration sync/generators
+      security:
+        - migrationKeyAuth: []
+      x-auth: Requires x-migration-key header
+      responses:
+        '401':
+          description: Unauthorized
+        '500':
+          description: Internal Server Error
+        '503':
+          description: Service Unavailable
   /api/migration/tariffRelevance:
     get:
       tags:
@@ -2461,6 +2491,17 @@ paths:
       responses:
         '401':
           description: Unauthorized
+  /api/tableDefinitions:
+    get:
+      tags:
+        - TableDefinitions
+      summary: Get tableDefinitions
+      security:
+        - migrationKeyAuth: []
+      x-auth: Requires x-migration-key header
+      responses:
+        '200':
+          description: Success
   /api/tables/dataEntry:
     get:
       tags:

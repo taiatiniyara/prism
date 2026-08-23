@@ -4,9 +4,10 @@ import { organisations } from "@/db/schema/utility";
 import { countries } from "@/db/schema/country";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { managedListItems } from "@/db/schema/managedLists";
-import { eq, isNotNull } from "drizzle-orm";
+import { eq, and, isNotNull } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
 import { formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
+import { resolveEntryValue } from "@/lib/legacy/entry-value";
 import { getAllExchangeRates } from "@/lib/exchange-rates";
 
 export async function GET(req: Request) {
@@ -34,11 +35,20 @@ export async function GET(req: Request) {
   const inputDefs = await db
     .select()
     .from(measureDefinitions)
-    .where(eq(measureDefinitions.is_active, true));
+    .where(
+      and(
+        eq(measureDefinitions.is_active, true),
+        eq(measureDefinitions.measures_subgroup_id, 231),
+      ),
+    );
   const exchangeRates = await getAllExchangeRates();
 
   const utilsMap = new Map(allUtils.map((u) => [u.id, u]));
   const countriesMap = new Map(allCountries.map((c) => [c.id, c]));
+  const itemsById = new Map(allItems.map((i) => [i.id, i.name]));
+  const dataTypeNameById = new Map(
+    inputDefs.map((d) => [d.id, itemsById.get(d.data_type_id) ?? null]),
+  );
   function findItem(id: number | null) {
     return id ? allItems.find((m) => m.id === id) : undefined;
   }
@@ -62,7 +72,13 @@ export async function GET(req: Request) {
                 (l) =>
                   l.measure_def_id === dl.id && l.report_period_id === r.id,
               );
-              const numericValue = v?.value ? Number(v.value) : null;
+              const rawValue = resolveEntryValue(
+                v,
+                dataTypeNameById.get(dl.id) ?? null,
+                itemsById,
+              );
+              const numericValue =
+                typeof rawValue === "number" ? rawValue : null;
               return {
                 ...acc,
                 [dl.name]: numericValue,

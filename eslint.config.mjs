@@ -27,6 +27,15 @@ const eslintConfig = defineConfig([
       "security/detect-object-injection": "off",
     },
   },
+  // One-off development scripts (migration/utility) work with raw DB rows, JSON, and
+  // Excel data where `any` and dynamic file paths are intentional — relax the strict
+  // lint rules for this directory only.
+  {
+    files: ["scripts/**/*.ts"],
+    rules: {
+      "@typescript-eslint/no-explicit-any": "off",
+    },
+  },
   // Override default ignores of eslint-config-next.
   globalIgnores([
     // Default ignores of eslint-config-next:

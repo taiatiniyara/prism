@@ -6,10 +6,13 @@ import { managedListItems } from "@/db/schema/managedLists";
 import { eq, and, isNotNull } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
 import {
-  dlValue,
   formatReportPeriodIso,
   resolveDlIds,
 } from "@/lib/legacy/legacy-dl-resolver";
+import {
+  resolveEntryValue,
+  getValueResolutionContext,
+} from "@/lib/legacy/entry-value";
 
 const FxRateTrainingId = 4213040060;
 
@@ -20,6 +23,13 @@ export async function GET(req: Request) {
 
   const idMap = await resolveDlIds([FxRateTrainingId]);
   const prismId = idMap.get(FxRateTrainingId);
+
+  const { dataTypeNameById, itemsById } = prismId
+    ? await getValueResolutionContext([prismId])
+    : {
+        dataTypeNameById: new Map<number, string | null>(),
+        itemsById: new Map<number, string>(),
+      };
 
   const entries = prismId
     ? await db
@@ -61,7 +71,11 @@ export async function GET(req: Request) {
       return {
         Date: formatReportPeriodIso(rp?.report_date ?? null, reportType),
         CurrencyCode: u ? findItem(u.country_id)?.name : undefined,
-        "Local to USD Conversion Rate": dlValue(l.value),
+        "Local to USD Conversion Rate": resolveEntryValue(
+          l,
+          prismId != null ? dataTypeNameById.get(prismId) ?? null : null,
+          itemsById,
+        ),
       };
     }),
   );

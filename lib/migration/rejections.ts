@@ -92,9 +92,17 @@ export function classifyPgError(err: unknown): {
 } {
   // Drizzle (and pg pools) wrap the real Postgres error under `.cause` — walk down to the
   // node that actually carries a pg error `code`, so classification doesn't fall through to "other".
-  let e = err as any;
-  for (let i = 0; i < 4 && e && e.code == null && e.cause != null; i++) e = e.cause;
-  e = (e ?? err) as { code?: string; column?: string; constraint?: string; detail?: string; message?: string };
+  type PgErrorNode = {
+    code?: string;
+    column?: string;
+    constraint?: string;
+    detail?: string;
+    message?: string;
+    cause?: unknown;
+  };
+  let e = err as PgErrorNode | null | undefined;
+  for (let i = 0; i < 4 && e && e.code == null && e.cause != null; i++) e = e.cause as PgErrorNode | null | undefined;
+  e = (e ?? err) as PgErrorNode;
   const detail = e?.detail || e?.message || "";
   switch (e?.code) {
     case "23502": // not_null_violation

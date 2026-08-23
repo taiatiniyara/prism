@@ -1,20 +1,20 @@
 import { db } from "@/db/connection";
 import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
-import { units, serviceAreas } from "@/db/schema/utility";
+import { serviceAreas } from "@/db/schema/utility";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { managedListItems } from "@/db/schema/managedLists";
 import { eq, and, isNotNull, inArray } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
+import { formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
 import {
-  resolveDlIds,
-  dlValue,
-  formatReportPeriodIso,
-} from "@/lib/legacy/legacy-dl-resolver";
+  resolveEntryValue,
+  getValueResolutionContext,
+} from "@/lib/legacy/entry-value";
 
-const trainingIds = {
-  TotalPlannedInterruptionEvents: 3213040300,
-  TotalUnplannedInterruptionCustomerMinutes: 3213040305,
-};
+const SAIDI_SAIFI_MEASURE_NAMES = [
+  "Total Planned Interruptions Events",
+  "Total Unplanned Interruptions Customer Minutes",
+] as const;
 
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
@@ -22,10 +22,12 @@ export async function GET(req: Request) {
     return Response.json({ message: authorize.message }, { status: 401 });
   }
 
-  const idMap = await resolveDlIds(Object.values(trainingIds));
-  const prismIds = Array.from(idMap.values()).filter(
-    (id): id is number => id != null,
-  );
+  const measureDefs = await db
+    .select()
+    .from(measureDefinitions)
+    .where(inArray(measureDefinitions.name, [...SAIDI_SAIFI_MEASURE_NAMES]));
+
+  const prismIds = measureDefs.map((m) => m.id);
   if (prismIds.length === 0) return Response.json([]);
 
   const entries = await db
@@ -45,23 +47,14 @@ export async function GET(req: Request) {
     .select()
     .from(serviceAreas)
     .where(eq(serviceAreas.is_active, true));
-  const allResources = await db
-    .select()
-    .from(units)
-    .where(eq(units.is_virtual, false));
   const allItems = await db
     .select()
     .from(managedListItems)
     .where(eq(managedListItems.is_active, true));
-  const inputDefs = await db
-    .select()
-    .from(measureDefinitions)
-    .where(
-      and(
-        inArray(measureDefinitions.id, prismIds),
-        eq(measureDefinitions.is_active, true),
-      ),
-    );
+
+  const { dataTypeNameById, itemsById } = await getValueResolutionContext(
+    prismIds,
+  );
 
   function findItem(id: number | null) {
     return id ? allItems.find((m) => m.id === id) : undefined;
@@ -79,22 +72,22 @@ export async function GET(req: Request) {
           Data: allSa
             .filter((sa) => sa.utility_id === urp.utility_id)
             .map((sa) =>
-              inputDefs.reduce(
+              measureDefs.reduce(
                 (acc, dl) => {
                   const val = entries.find(
                     (l) =>
                       l.measure_def_id === dl.id &&
                       l.report_period_id === urp.id &&
-                      allResources.some(
-                        (g) =>
-                          g.id === l.unit_id &&
-                          g.service_area_id === sa.id,
-                      ),
+                      l.service_area_id === sa.id,
                   );
                   return {
                     ServiceAreaId: sa.id,
                     UtilityId: urp.utility_id,
-                    [dl.name]: dlValue(val?.value),
+                    [dl.name]: resolveEntryValue(
+                      val,
+                      dataTypeNameById.get(dl.id) ?? null,
+                      itemsById,
+                    ),
                     ...acc,
                   };
                 },

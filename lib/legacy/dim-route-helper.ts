@@ -12,5 +12,12 @@ export async function dimManagedListRoute(
   }
 
   const list = await getManagedListByName(listName);
-  return Response.json(list.map((item) => ({ [outputKey]: item.name })));
+  return Response.json(
+    list
+      .filter(
+        (item) =>
+          !item.name.includes("All") && !item.name.includes("Every"),
+      )
+      .map((item) => ({ [outputKey]: item.name })),
+  );
 }

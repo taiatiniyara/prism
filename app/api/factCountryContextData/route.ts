@@ -1,21 +1,19 @@
 import { db } from "@/db/connection";
-import { countryContext as ccTable } from "@/db/schema/country";
-import { measureDefinitions } from "@/db/schema/dataEntry";
+import { countries } from "@/db/schema/country";
 import { organisations } from "@/db/schema/utility";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { managedListItems } from "@/db/schema/managedLists";
 import { eq, and, isNotNull } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
-import {
-  dlValue,
-  formatReportPeriodIso,
-} from "@/lib/legacy/legacy-dl-resolver";
+import { formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
+import { getResolvedContextRows } from "@/lib/legacy/context-data";
 
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
   if (authorize.success === false)
     return Response.json({ message: authorize.message }, { status: 401 });
 
+  const ctxRows = await getResolvedContextRows(221);
   const rps = await db
     .select()
     .from(reportPeriods)
@@ -29,17 +27,14 @@ export async function GET(req: Request) {
         eq(organisations.is_active, true),
       ),
     );
+  const allCountries = await db.select().from(countries);
   const allItems = await db
     .select()
     .from(managedListItems)
     .where(eq(managedListItems.is_active, true));
-  const ctxRows = await db.select().from(ccTable);
-  const inputDefs = await db
-    .select()
-    .from(measureDefinitions)
-    .where(eq(measureDefinitions.is_active, true));
 
   const uMap = new Map(allUtils.map((u) => [u.id, u]));
+  const cMap = new Map(allCountries.map((c) => [c.id, c]));
   function findItem(id: number | null) {
     return id ? allItems.find((m) => m.id === id) : undefined;
   }
@@ -47,22 +42,18 @@ export async function GET(req: Request) {
   return Response.json(
     rps.map((urp) => {
       const u = uMap.get(urp.utility_id);
+      const country = u ? cMap.get(u.country_id) : undefined;
       const ccData = ctxRows
-        .filter((cc) => cc.country_id === (u?.country_id ?? -1))
+        .filter((r) => r.report_period_id === urp.id && r.country_id === (country?.id ?? -1))
         .reduce(
-          (acc, cc) => {
-            const dl = inputDefs.find((d) => d.id === cc.dl_def_id);
-            return { [dl?.name ?? ""]: dlValue(cc.value), ...acc };
-          },
+          (acc, r) => ({ [r.measureName]: r.value, ...acc }),
           {} as Record<string, unknown>,
         );
       const reportType = findItem(urp.report_type_id)?.name;
       return {
         ReportType: reportType,
         ReportPeriod: formatReportPeriodIso(urp.report_date, reportType),
-        Country: u
-          ? allItems.find((m) => m.id === u.country_id)?.name
-          : undefined,
+        Country: country?.name,
         ...ccData,
       };
     }),

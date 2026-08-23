@@ -85,6 +85,10 @@ export const measureDefinitions = pgTable("measure_definitions", {
   strata_id: integer("strata_id").references(() => managedListItems.id),
   is_active: boolean("is_active").default(true).notNull(),
   is_mandatory: boolean("is_mandatory").default(false).notNull(),
+  // TRUE for measures whose value can be apportioned/allocated (the ~5 financial
+  // measures the 2 utilities that report differently need split). Catalogue policy —
+  // BMO/migration sets which measures; default false.
+  is_apportionable: boolean("is_apportionable").default(false).notNull(),
   is_system_generated: boolean("is_system_generated").default(false).notNull(),
   is_calculated: boolean("is_calculated").default(false).notNull(),
   is_kpi: boolean("is_kpi").default(false).notNull(),

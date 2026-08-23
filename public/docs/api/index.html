@@ -53,12 +53,12 @@
 <body>
 <div class="container">
 <h1>prism API Reference</h1>
-<p class="subtitle">Auto-generated from 133 route files &middot; 151 endpoints &middot; 27 tag groups</p>
+<p class="subtitle">Auto-generated from 135 route files &middot; 154 endpoints &middot; 28 tag groups</p>
 <div class="stats">
 <span class="stat"><strong>DELETE</strong> 3</span>
-<span class="stat"><strong>GET</strong> 115</span>
+<span class="stat"><strong>GET</strong> 117</span>
 <span class="stat"><strong>PATCH</strong> 3</span>
-<span class="stat"><strong>POST</strong> 22</span>
+<span class="stat"><strong>POST</strong> 23</span>
 <span class="stat"><strong>PUT</strong> 8</span>
 </div>
 <div class="filter"><input type="text" id="filter" placeholder="Filter endpoints..." oninput="filterEndpoints(this.value)"></div>
@@ -2897,6 +2897,54 @@
 
 <div class="endpoint">
   <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#3b82f6">POST</span>
+    <span class="ep-path">/api/migration/sync/generators</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">POST migration sync/generators</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> Migration Key (x-migration-key)</span>
+    </div>
+    
+    
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-4xx">401 Unauthorized</span>
+<span class="status-code status-5xx">500 Error</span>
+<span class="status-code status-5xx">503 Unavailable</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#22c55e">GET</span>
+    <span class="ep-path">/api/migration/sync/generators</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">GET migration sync/generators</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> Migration Key (x-migration-key)</span>
+    </div>
+    
+    
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-4xx">401 Unauthorized</span>
+<span class="status-code status-5xx">500 Error</span>
+<span class="status-code status-5xx">503 Unavailable</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
     <span class="method" style="background:#22c55e">GET</span>
     <span class="ep-path">/api/migration/tariffRelevance</span>
     <span class="ep-arrow">&#9654;</span>
@@ -3441,6 +3489,32 @@
       <div class="status-list" style="margin-top:4px">
         <span class="status-code status-4xx">401 Unauthorized</span>
 <span class="status-code status-5xx">500 Error</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="tag-group" data-tag="TableDefinitions">
+<h2 class="tag-title">TableDefinitions</h2>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#22c55e">GET</span>
+    <span class="ep-path">/api/tableDefinitions</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">Get tableDefinitions</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> Migration Key (x-migration-key)</span>
+    </div>
+    
+    
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-2xx">200 OK</span>
       </div>
     </div>
   </div>

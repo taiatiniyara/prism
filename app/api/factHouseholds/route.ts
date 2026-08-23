@@ -1,41 +1,67 @@
 import { db } from "@/db/connection";
-import { countryContext as ccTable } from "@/db/schema/country";
+import { countries } from "@/db/schema/country";
 import { organisations } from "@/db/schema/utility";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { managedListItems } from "@/db/schema/managedLists";
-import { eq, and, isNotNull, inArray } from "drizzle-orm";
+import { eq, and, isNotNull } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
-import { dlValue, formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
-
-async function getDlItemIds(names: string[]): Promise<(number | null)[]> {
-  const items = await db.select().from(managedListItems).where(inArray(managedListItems.name, names));
-  return names.map((n) => items.find((m) => m.name === n)?.id ?? null);
-}
+import { formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
+import { getResolvedContextRows } from "@/lib/legacy/context-data";
 
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
-  if (authorize.success === false) return Response.json({ message: authorize.message }, { status: 401 });
+  if (authorize.success === false)
+    return Response.json({ message: authorize.message }, { status: 401 });
 
-  const [householdsId, avgSizeId] = await getDlItemIds(["Number of Households", "Average Household Size"]);
-
-  const dlIds = [householdsId, avgSizeId].filter((id): id is number => id != null);
-  const rps = await db.select().from(reportPeriods).where(isNotNull(reportPeriods.status_id));
-  const allUtils = await db.select().from(organisations).where(and(eq(organisations.is_utility, true), eq(organisations.is_active, true)));
-  const allItems = await db.select().from(managedListItems).where(eq(managedListItems.is_active, true));
-  const ctxRows = dlIds.length > 0 ? await db.select().from(ccTable).where(inArray(ccTable.dl_def_id, dlIds)) : [];
+  const ctxRows = await getResolvedContextRows(221);
+  const rps = await db
+    .select()
+    .from(reportPeriods)
+    .where(isNotNull(reportPeriods.status_id));
+  const allUtils = await db
+    .select()
+    .from(organisations)
+    .where(
+      and(
+        eq(organisations.is_utility, true),
+        eq(organisations.is_active, true),
+      ),
+    );
+  const allCountries = await db.select().from(countries);
+  const allItems = await db
+    .select()
+    .from(managedListItems)
+    .where(eq(managedListItems.is_active, true));
 
   const uMap = new Map(allUtils.map((u) => [u.id, u]));
-  function findItem(id: number | null) { return id ? allItems.find((m) => m.id === id) : undefined; }
+  const cMap = new Map(allCountries.map((c) => [c.id, c]));
+  function findItem(id: number | null) {
+    return id ? allItems.find((m) => m.id === id) : undefined;
+  }
 
-  return Response.json(rps.map((urp) => {
-    const u = uMap.get(urp.utility_id);
-    const dls = ctxRows
-      .filter((dl) => dl.country_id === (u?.country_id ?? -1) && (dl.dl_def_id === householdsId || dl.dl_def_id === avgSizeId))
-      .reduce((acc, cc) => {
-        const item = allItems.find((m) => m.id === cc.dl_def_id);
-        return { [item?.name ?? ""]: dlValue(cc.value), Source: cc.source_url || cc.source_doc || "unknown", ...acc };
-      }, {} as Record<string, unknown>);
-    const reportType = findItem(urp.report_type_id)?.name;
-    return { ReportType: reportType, ReportPeriod: formatReportPeriodIso(urp.report_date, reportType), ...dls };
-  }));
+  return Response.json(
+    rps.map((urp) => {
+      const u = uMap.get(urp.utility_id);
+      const country = u ? cMap.get(u.country_id) : undefined;
+      const reportType = findItem(urp.report_type_id)?.name;
+      const dls = ctxRows
+        .filter(
+          (r) =>
+            r.report_period_id === urp.id && r.country_id === (country?.id ?? -1) &&
+            (r.measureName === "Households" ||
+              r.measureName === "Average Household Size"),
+        )
+        .reduce(
+          (acc, r) => ({ [r.measureName]: r.value, ...acc }),
+          {} as Record<string, unknown>,
+        );
+      return {
+        ReportType: reportType,
+        ReportPeriod: formatReportPeriodIso(urp.report_date, reportType),
+        Country: country?.name,
+        Source: "unknown",
+        ...dls,
+      };
+    }),
+  );
 }

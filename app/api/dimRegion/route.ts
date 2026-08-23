@@ -17,7 +17,6 @@ export async function GET(req: Request) {
   return Response.json(
     regions.map((r) => ({
       Region: r.name,
-      "UN Continental Region": r.un_continental_region,
     })),
   );
 }

@@ -301,6 +301,24 @@ and just divides + rolls up; it stays **free of stint awareness**. Consequences:
 - The **energy-balance check** (`generation ≤ Σ(cap×hours) − downtime_energy`) is data-quality
   validation owned by the loader/gold layer, **not** the formula evaluator.
 
+### 4.6.2 Input sources — not every input lives in `data_entries`
+
+A binding references a measure by `measure_def_id`; the **resolver dispatches to that measure's
+home** when reading its value. Most measures resolve from `data_entries`, but some do not, and the
+resolver must route accordingly (the binding/formula stay identical — this is purely *where the value
+is read from*):
+
+| Input kind | Read from | Notes |
+|---|---|---|
+| Raw / calculated measures | `data_entries` (the address model) | the default |
+| **Country-context** measures (subgroup **221** — e.g. Population, GDP Per Capita) | **`country_context`** table (keyed by `measure_def_id`), via the **`getResolvedContextRows`** bridge | #4, shipped `fcf8e4e` (Option 2); **carry-forward per report period**; used as per-capita / per-GDP **denominators**. NOT in `data_entries`. |
+| Capacity-hours | silver-derived measure (§4.6.1) | `Σ(stint_cap × stint_hours)` |
+
+So a "per-capita" KPI (e.g. `x ÷ population`) binds `population` like any input, but the resolver
+fetches it from `country_context` (carry-forward), not `data_entries`. **Build note:** the resolver
+needs a small source-dispatch layer keyed on the measure's home; country-context reads go through
+`getResolvedContextRows`.
+
 ---
 
 ## 5. Input context & traceability — "a tag card for every input"
@@ -548,6 +566,42 @@ tools.
 - **Referential warnings inline** (§6) — an input whose measure is deactivated/missing shows a ⚠
   badge with the reason.
 - **Cycle + unit validation** and a **sample-evaluation readout**.
+
+### 7.1 Access & custom-KPI governance (DECIDED 2026-08-18)
+
+The same builder is served to **DEV**, **BMO** (system admin / PPA), and **BLO** (utility) — but the
+capability is **role-tiered**, because p2 lets utilities create **custom KPIs**.
+
+**The controlling principle — creating a *measure* ≠ creating a *KPI*.** A new **input measure** is a
+new thing every utility must *collect and enter* — a platform-wide data-collection obligation, so it
+is **centrally governed (DEV/BMO only)**. A **custom KPI** is just a new *formula over measures that
+already exist* — no new collection burden — so a BLO may **self-serve** it. This split is the whole
+control: a BLO cannot pollute the input catalogue.
+
+| Capability | DEV | BMO | BLO |
+|---|---|---|---|
+| Create/edit raw & calculated **input measures** | ✅ | ✅ | ❌ — picker is **catalogue-only** + "Request a measure" |
+| Create **shared/benchmarking KPIs** (standard catalogue) | ✅ | ✅ | ❌ |
+| Create **custom KPIs** (formula over existing measures) | ✅ | ✅ | ✅ **for own utility only** |
+| Approve BLO measure-requests & shared-KPI submissions | ✅ | ✅ | ❌ |
+
+**BLO mode** ("Create Custom KPI"): Track-as-KPI is implicit; the new-measure path is hidden; the
+measure picker offers **only existing catalogue measures** (a gap → **Request a measure**, routed to
+BMO); the KPI is owned by their utility (`owner_utility_id`) and computed for it. A **dedup check** on
+save surfaces similar existing KPIs to discourage clutter.
+
+**Visibility (a required radio on the BLO form) — DECIDED:**
+| Choice | Behaviour |
+|---|---|
+| **Private — my utility only** | **Instant, no review.** `is_private = true`, `owner_utility_id` set. Never enters cross-utility benchmarking. |
+| **Share with all utilities** | **Requires BMO approval** (via `custom_kpi_request` / `custom_kpi_decision`). Stays private/pending until approved; on approval it's promoted to the shared set (`is_private = false`) and joins the benchmarking pool. Protects the pool from duplicates / low-quality / non-comparable KPIs. |
+
+The read/benchmarking + AI layer **filters by visibility**: a private KPI is invisible to other
+utilities and to cross-utility comparisons; a shared+approved one participates.
+
+**Schema support already exists:** `kpi_definitions.type ('benchmarking'|'custom')`, `owner_utility_id`,
+`is_private`, `utility_ids`; and the `custom_kpi_request` / `custom_kpi_decision` /
+`custom_kpi_lifecycle_event` workflow tables carry the share-approval flow.
 
 ---
 

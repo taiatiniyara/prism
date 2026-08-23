@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { toast } from "sonner";
 
 import { Button } from "@/components/ui/button";
@@ -126,24 +126,27 @@ export default function BscKpiPickerModal({
   const [cSubcategory, setCSubcategory] = useState<string | null>(null);
   const [cDataType, setCDataType] = useState<string | null>(null);
 
-  const itemsFor = (src: "kpi" | "input"): NormItem[] =>
-    src === "kpi"
-      ? kpiOptions.map((o) => ({
-          id: o.kpiDefinitionId,
-          name: o.name,
-          unit: o.unit,
-          category: o.category,
-          subcategory: o.subcategory,
-        }))
-      : inputOptions.map((o) => ({
-          id: o.inputDefinitionId,
-          name: o.name,
-          unit: o.unit,
-          category: o.category,
-          subcategory: o.subcategory,
-        }));
+  const itemsFor = useCallback(
+    (src: "kpi" | "input"): NormItem[] =>
+      src === "kpi"
+        ? kpiOptions.map((o) => ({
+            id: o.kpiDefinitionId,
+            name: o.name,
+            unit: o.unit,
+            category: o.category,
+            subcategory: o.subcategory,
+          }))
+        : inputOptions.map((o) => ({
+            id: o.inputDefinitionId,
+            name: o.name,
+            unit: o.unit,
+            category: o.category,
+            subcategory: o.subcategory,
+          })),
+    [kpiOptions, inputOptions],
+  );
 
-  const items = useMemo(() => itemsFor(source), [source, kpiOptions, inputOptions]);
+  const items = useMemo(() => itemsFor(source), [source, itemsFor]);
   const categories = useMemo(() => distinct(items.map((i) => i.category)), [items]);
   const subcategories = useMemo(
     () =>
@@ -168,7 +171,7 @@ export default function BscKpiPickerModal({
     [items, category, subcategory],
   );
 
-  const createItems = useMemo(() => itemsFor(cSource), [cSource, kpiOptions, inputOptions]);
+  const createItems = useMemo(() => itemsFor(cSource), [cSource, itemsFor]);
   const cCategories = useMemo(
     () => distinct(createItems.map((i) => i.category)),
     [createItems],
