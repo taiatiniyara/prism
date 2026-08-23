@@ -93,12 +93,13 @@ Legend: ✅ nothing pending · 📝 uncommitted · ⬆️ committed-not-pushed �
 | 14 | Data-entry / fixes | — (`powerStationDnD.tsx` nit fixed by #4, `f2f3cba`) | — (energy-dim rename PR #68 applied; country name fixes applied — see below) | — | ✅ |
 | 15 | Pending tracker | ✅ `PENDING.md` merged (PR #71); refresh 2 landed in `6cda722`; refresh 3 uncommitted in-place | — | — | ✅ |
 
-**Net pending right now:** **5 human PRs awaiting review/merge** (#107, #104, #83, #77, #76 — see §1); 16 Dependabot; Eugene decisions (#2 extract, #10 plan/entitlements); #12's P2/D2 operator steps (env/Power BI/rotate); a branch-triage pass over the ~15 un-PR'd `claude/*` branches. `npm install` after pull.
+**Net pending right now:** **5 human PRs awaiting review/merge** (#107, #104, #83, #77, #76 — see §1); 16 Dependabot; Eugene decisions (#2 extract, #10 plan/entitlements, #4 country-context history load); #12's P2/D2 operator steps (env/Power BI/rotate); **#11 follow-up** — make the BMO country-context metric field a select + add Update/upsert; **country-context repoint SQL** still to run per-env (prod); a branch-triage pass over the ~15 un-PR'd `claude/*` branches. `npm install` after pull.
 
 **Doc-debt (flagged by #8):** #2's medallion spec (`schema-redesign-medallion.md` §1.4/§1.5) still describes "All areas" NOT-NULL grain targets, now **contradicted** by the hybrid ruling. #2 asked to amend; tracked here until they do.
 
 ### Recently applied DB changes (done — do NOT re-run; informational)
 Direct DML/DDL on the shared **dev** DB with no commit/PR (or applied ahead of a PR). Recorded so no session re-runs them and everyone knows the DB state:
+- **2026-08-23 (#4) — country-context repoint (Option 2)** (code merged `fcf8e4e`): `country_context` FK repointed `managed_list_items → measure_definitions`; `dl_def_id → measure_def_id` rename. Script `scripts/sql/2026-08-23-country-context-repoint-measure-def.sql`. **⚠ applied to dev only — must be run per-env (prod pending).** Follow-ups tracked below.
 - **2026-08-03 (#2) — 10 legacy `managed_lists` DELETED** (+ their 60 `managed_list_items`), Eugene-approved cleanup: Aggregation Group/Method, Data Group, DLSource/KPISource Tables, KPI Requester, Measure Type, Necessity, Product Level, Service Relevance Group. 0 orphans (nothing referenced them); backups `backup.managed_lists_del_20260803` / `backup.managed_list_items_del_20260803`. Direct DML, no commit. ✅ Journey-affecting — USER-IMPACT **row 15** (BMO-visible in Managed Lists settings; all vestigial).
 - **2026-07-28 (#10) — legacy `external_registrations` table DROPPED** (PR #79 `30f0f72`; 0 rows). Also removed pgTable+types from `db/schema/auth-schema.ts` and deleted the `app/settings/external-registrations` console. Superseded by the pending-user flow (`user.status`) + future `access_request`. Schema+DB in sync.
 - **2026-07-28 (#14) — `units.is_aggregated` column DROPPED** (unused). Code `3ead895` (direct-to-main — see hygiene watch); DB column dropped on dev (guarded txn, verified), 501 rows backed up to `backup.units_is_aggregated_20260728`. Schema+DB in sync.
@@ -138,6 +139,7 @@ Per [`USER-IMPACT.md`](USER-IMPACT.md) (new protocol, `5c2959e`, Eugene-directed
 |--------|-----------------|--------|
 | #2 | provide the real **sample data extract** | the medallion data reload (last step of the migration) |
 | #10 | **default-plan contents** + **member entitlements** (the free `member` plan's sector-scoped dashboard set; `member` is now association-agnostic — PPA→electricity, PWWA→water/sanitation) | tiered-access schema (no code until settled) |
+| #4 | load **real country-context history** via `scripts/seed-country-context.ts` | populated country-context data (post the 2026-08-23 repoint) |
 | — | review/merge the **5 human PRs** (#107, #104, #83, #77, #76) + **16 Dependabot** individually — not a blocker | PR backlog / dependency currency |
 
 *Cleared since refresh 1:* **#8** schema-convention (Eugene ruled hybrid freeze-as-built, `7c01627`). **#12 D1** — RLS tenant column decided (`utility_id`); #12 writes the policy DDL (handles `utility_id IS NULL` shared rows). **#12 D2** — API_KEY split now in PR #73 (no longer a decision). **Dependabot triage** — safe subset merged (#37/#41/#72), 10 majors held per Eugene's individual-review call.
