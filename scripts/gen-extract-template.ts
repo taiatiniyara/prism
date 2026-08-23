@@ -19,6 +19,7 @@ const OUT = arg("out") ?? "./p2_migration_extract_template.xlsx";
 // Dimension headers use the PHYSICALISED names (post-#68 rename) — they must match
 // EXTRACT_COLUMNS in lib/migration/parse.ts and the data_entries schema columns.
 const COLS: { key: string; req: string; all: string; note: string }[] = [
+  { key: "mig_id", req: "optional", all: "", note: "MIGRATION-ONLY: your source row's unique id. Echoed into the rejection ledger (source_ref) so every error traces to the exact row. NOT stored in p2. Aliases: unique_id, uid, source_row_id, row_id, ref." },
   { key: "report_period_id", req: "REQUIRED", all: "", note: "report_periods.id — unchanged p1↔p2" },
   { key: "measure_id", req: "REQUIRED", all: "", note: "measure_definitions.id (the measure) → maps to measure_def_id" },
   { key: "provider_id", req: "REQUIRED", all: "20", note: "dim: Provider member id (All=20)" },

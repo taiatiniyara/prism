@@ -44,6 +44,10 @@ export type ValueType = "numeric" | "boolean" | "text" | "option";
  * from p1. Grain ids are null at higher levels (utility-level → serviceArea/resource null, etc.).
  */
 export interface ExtractRow {
+  // migration-only reference: the customer's own unique id for this source row. NOT persisted to
+  // data_entries — carried into migration_rejections.source_ref so any rejection traces straight
+  // back to the exact source row.
+  sourceRowId?: string | null;
   reportPeriodId: number; // same id in p1 and p2
   measureId: number;
   dims: DimensionMembers;
