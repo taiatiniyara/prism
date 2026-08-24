@@ -69,11 +69,13 @@ Mirrors `unit_activations` exactly:
 - **Effective-dated by construction, genuinely** (ADR 0004): "in effect for a period" is the
   span overlapping the report period's **fiscal year** — the *same* fiscal-year comparison
   the verifier already codes for measure `effective_from`. No new comparison logic.
-- **Provenance columns** (for §4 rule 3): the table carries `created_by`/`created_at` (append)
-  and, on amend, `change_reason` + `changed_by`/`changed_at` — the `change_reason` analog #8's
-  amend-provenance rule requires. Same shape and audit discipline as the unit-stint table (one
-  family); if stints resolve provenance via a shared history/audit table instead of inline
-  columns, capability spans use the identical mechanism.
+- **Provenance columns** (for §4 rule 3), **inline, mirroring the ratified stint table exactly**
+  (#8, 2026-08-25): `created_by`/`created_at` (append) and, on amend, `change_reason_id`
+  (FK, the same column the stint table already carries) + `changed_by`/`changed_at`. A shared
+  audit/history table is **declined at this scale** — at n=2 temporal tables it's the
+  generic-model over-abstraction the project keeps refusing (same call as the value_source
+  enum): inline keeps the amend-audit queryable without a join in the verifier; consolidate
+  only *if* the temporal family grows past 3–4 tables.
 - **Extensible:** `capability` is a controlled vocabulary; `has_transmission` is the first
   member (the driver). Future per-area temporal capabilities (network presence, seasonal
   operation) are new `capability` values, no schema change. The static
@@ -163,7 +165,11 @@ of the unit "seed stint" fold-in (unit-lifecycle-spec §7) and should ride the s
   fiscal-year comparison; declaration stamped at change; append-vs-amend §4). Endorsed
   2026-08-25. **When the stint DDL + this table land in the coordinated package, #4 pings #8
   for a single semantics-verification pass over spans + stints together** (one family, one
-  review).
+  review). **At that package-assembly point the shared temporal-semantics family — span/stint
+  shape, append-vs-amend, the three consequence rules, provenance — lifts into ONE shared
+  section** (the unit-lifecycle spec or a small temporal-semantics doc) that both specs cite;
+  until then this §4 is the authoritative text and the unit spec cross-refs it (#8, 2026-08-25
+  — no churn now, one rulebook at assembly).
 - **#2 (migration):** the seed-span backfill (§6), folded into the reimport alongside seed
   stints.
 
