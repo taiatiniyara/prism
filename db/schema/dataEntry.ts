@@ -89,6 +89,11 @@ export const measureDefinitions = pgTable("measure_definitions", {
   // measures the 2 utilities that report differently need split). Catalogue policy —
   // BMO/migration sets which measures; default false.
   is_apportionable: boolean("is_apportionable").default(false).notNull(),
+  // TRUE for the "Country Context" measures (subgroup 221) whose data is fed from
+  // the country_context table via the read bridge, not entered per-utility. An
+  // absolute gate: these never get data-entry relevance/shells. Distinct from
+  // is_system_generated (computed, e.g. Hours in Period). Flagged 2026-08-24.
+  is_context_fed: boolean("is_context_fed").default(false).notNull(),
   is_system_generated: boolean("is_system_generated").default(false).notNull(),
   is_calculated: boolean("is_calculated").default(false).notNull(),
   is_kpi: boolean("is_kpi").default(false).notNull(),
