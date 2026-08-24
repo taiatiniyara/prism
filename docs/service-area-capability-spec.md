@@ -1,8 +1,9 @@
 # Service-area capability declaration — per-period context for contextual shells
 
-**Status: DRAFT for #8/#11 comment** · author #4 (schema) · initiated by Eugene 2026-08-25
-**Related:** [unit-lifecycle-spec.md](unit-lifecycle-spec.md) (the pattern this mirrors),
-[adr/0004-effective-dated-dimensions.md](adr/0004-effective-dated-dimensions.md),
+**Status: DRAFT for #11 comment · #8-endorsed (span model)** · author #4 (schema) ·
+initiated by Eugene 2026-08-25 · **revised 2026-08-25 per #8: span model, not jsonb**
+**Related:** [unit-lifecycle-spec.md](unit-lifecycle-spec.md) (the ratified stint model this
+mirrors), [adr/0004-effective-dated-dimensions.md](adr/0004-effective-dated-dimensions.md),
 [schema-redesign-medallion.md](schema-redesign-medallion.md) §3B (the context profile),
 `lib/relevance/expected.ts` (the verifier that will enforce it).
 
@@ -15,105 +16,108 @@ relevant only for a service area that **has a transmission network**.
 
 Today "has a transmission network" is **inferred from the data** — an area has transmission
 because it happens to carry Transmission-slice shells (the 4 grid areas: Ramu, Port Moresby,
-Gazelle, Viti Levu). That is **circular** (the shell must exist to prove the context that
-decides whether the shell should exist) and, critically, it **cannot handle change**: if a
-new transmission network is commissioned — for an existing utility or a new one — there is
-no channel for the utility to *tell* the system, so the generator can never produce the
-right shells for it.
+Gazelle, Viti Levu). That is **circular** with a fatal bootstrap failure on exactly Eugene's
+scenario: the shell must pre-exist for the data to prove the context that justifies the
+shell, so a **newly commissioned** network — for an existing utility or a brand-new one —
+can never bootstrap its shells. Context must be **declared, not inferred** — and temporal,
+because networks emerge over time (Eugene, 2026-08-25).
 
-Context must be **declared, not inferred** — and per period, because networks emerge over
-time (Eugene, 2026-08-25).
+## 2. Mirror the RATIFIED unit model — spans, not the legacy jsonb
 
-## 2. The pattern already exists for units — mirror it
+Units solve the identical problem, and the **ratified** answer is
+[`unit_activations`](unit-lifecycle-spec.md) **stints**: a relational SCD-2 table of
+`activation_date` / `deactivation_date` intervals carrying the operating state, with ≤1 open
+stint and GiST non-overlap per unit. A utility signals a **new technology or provider** by
+registering a unit (`technology_id` + `provider_id`) and **opening a stint** from its
+commissioning date.
 
-Units already solve the identical problem. `units.period_entries` (jsonb) declares, **per
-reporting period**, whether a unit is active and its capacity:
+> **Correction (per #8, 2026-08-25):** `units.period_entries` jsonb — which an earlier draft
+> of this spec proposed mirroring — is **explicitly being RETIRED** by the unit-lifecycle
+> spec (§2.2: proto-SCD-2 keyed to *reporting periods* instead of real dates; folded into
+> seed stints; "one temporal mechanism, not two"). It runs today only because the stint DDL
+> is gated on the reimport. **`service_areas.report_periods` jsonb is the same legacy shape**
+> and retires with it. Mirroring it would build a second instance of a disease already
+> scheduled for cure, plus fresh `report_period_id` coupling the period-dim rework must then
+> unwind. So this spec mirrors the **stint/span model**, and `service_areas.report_periods`
+> stays empty and retires alongside `units.period_entries`.
 
-```json
-"Satala GE 4": [
-  { "report_period_id": 169, "is_active": false },
-  { "report_period_id": 210, "is_active": true, "capacity_mw": 3 },
-  { "report_period_id": 240, "is_active": true, "capacity_mw": 3 }
-]
+## 3. The model — a capability-span table
+
+```
+service_area_capabilities (
+  id             serial pk,
+  service_area_id integer not null → service_areas(id),
+  capability     varchar   not null,   -- e.g. 'has_transmission'
+  effective_from date      not null,   -- BLO sets when the capability begins
+  effective_to   date      null        -- null = currently in effect
+)
 ```
 
-That is how a utility signals a **new technology or provider**: it registers a unit
-(carrying `technology_id` + `provider_id`) and declares it active from the commissioning
-period. The generator reads `period_entries` → knows the active technologies/providers that
-period → produces the right generation shells. **This half is built and working.**
-
-`service_areas` **already has the analog column — `report_periods` (jsonb) — but it is
-empty (`[]`) for every area.** The infrastructure was designed in; it was never populated.
-This spec is: **use it, the same way units use `period_entries`.**
-
-## 3. The model
-
-Per-period, per-service-area capability declaration on `service_areas.report_periods`:
-
-```json
-service_areas.report_periods = [
-  { "report_period_id": 210, "has_transmission": true },
-  { "report_period_id": 240, "has_transmission": true }
-]
-```
-
-- **One entry per reporting period** the area is reported (mirrors `units.period_entries`).
-- **Carry-forward read rule:** a period with no entry inherits the most recent prior
-  entry's capabilities. So a capability is declared once when it changes and carries forward
-  — no re-entry every period, but an explicit checkpoint every period (§4).
-- **Extensible shape:** `has_transmission` is the first capability (the driver). The same
-  entry can carry future per-period capabilities (network presence, seasonal operation,
-  etc.). The existing static `provides_electricity/water/sanitation` booleans stay as-is for
-  now; temporalise them here only if they turn out to change over time.
-
-**Effective-dated by construction** (ADR 0004): the declaration is compared to the report
-period's fiscal year, exactly like unit stints and measure `effective_from`.
+Mirrors `unit_activations` exactly:
+- **≤ 1 open span per (service_area, capability)** — partial unique index
+  `WHERE effective_to IS NULL`.
+- **Non-overlapping spans per (service_area, capability)** — GiST exclusion on
+  `daterange(effective_from, effective_to, '[)')`.
+- **`effective_to >= effective_from`** check.
+- **Carry-forward is not a rule — it's the shape.** An open span *is* carried forward; a
+  capability is declared once, at the span boundary. (The jsonb needed a read-rule precisely
+  because it was the wrong shape.)
+- **Effective-dated by construction, genuinely** (ADR 0004): "in effect for a period" is the
+  span overlapping the report period's **fiscal year** — the *same* fiscal-year comparison
+  the verifier already codes for measure `effective_from`. No new comparison logic.
+- **Extensible:** `capability` is a controlled vocabulary; `has_transmission` is the first
+  member (the driver). Future per-area temporal capabilities (network presence, seasonal
+  operation) are new `capability` values, no schema change. The static
+  `provides_electricity/water/sanitation` booleans stay as-is unless they prove to change
+  mid-life, in which case they become capability spans too.
 
 ## 4. Entry UX — "a flag to check each period" (Eugene)
 
-Per-period **confirmation with carry-forward**, at submission time:
-- The entry screen shows the area's **current** capabilities, carried forward from the last
-  period.
+Storage shape and workflow are decoupled — the per-period checkpoint is a UX affordance that
+writes **span operations**:
+- At submission, the entry screen shows the area's **currently-open** capabilities.
 - The utility **confirms or updates**: "New transmission network in this area? ✓" (and, via
-  units, "New unit / IPP? ✓"). Only *changes* need touching — an explicit checkpoint, not
-  full re-entry.
-- A change is **stamped with the period** (effective from there); history stays accurate.
+  units, "New unit / IPP? ✓").
+- **Confirm = no-op** (the open span already carries forward). **Change = close the open span
+  + open a new one**, stamped with the change date. Only changes touch storage; history stays
+  accurate; no re-entry every period.
 
 ## 5. Generator + verifier integration
 
 - **Shell generation:** the Transmission slice of a network measure is generated for a
-  `(service_area, period)` **iff** that area's carried-forward declaration has
-  `has_transmission = true`. Distribution slices stay universal (every area distributes).
+  `(service_area, period)` **iff** an open/covering `has_transmission` span overlaps that
+  period's fiscal year. Distribution slices stay universal.
 - **Verifier (`lib/relevance/expected.ts`):** replace today's inferred signal with the
-  declared one — a Transmission shell should exist **iff** the area declared transmission
-  that period. This upgrades the current "already gated in the data" observation into an
-  enforced invariant (and would flag a Transmission shell on a non-transmission area, or a
+  declared span — a Transmission shell should exist **iff** the area has a `has_transmission`
+  span covering that period. Upgrades today's "already gated in the data" observation into an
+  enforced invariant (flags a Transmission shell on a non-transmission area, or a
   declared-transmission area missing its Transmission shells).
 
-## 6. Migration / backfill
+## 6. Migration / backfill — seed spans (like seed stints)
 
-The existing data already reflects the truth for FY2020–2025: the 4 grid areas carry
-Transmission shells. Backfill their `report_periods` with `has_transmission = true` for the
-periods they have Transmission shells (derive once from the current data — a legitimate
-one-time seed, after which the declaration, not the shells, is authoritative). All other
-areas default to `has_transmission = false` (no entry).
+The current data reflects the truth for FY2020–2025: the 4 grid areas carry Transmission
+shells. **Seed one `has_transmission` span per grid area**, `effective_from` = its first
+Transmission-shell period's fiscal-year start, `effective_to` = NULL (open). A legitimate
+one-time derivation from the current data, after which the **span, not the shells,** is
+authoritative. All other areas have no span (= no transmission). This is the direct analog
+of the unit "seed stint" fold-in (unit-lifecycle-spec §7) and should ride the same reimport.
 
 ## 7. Ownership
 
-- **#4 (schema):** the `service_areas.report_periods` capability contract + the generator/
-  verifier gate (this spec).
-- **#11 (entry UI):** the per-period confirm-or-update step (§4), carrying forward defaults.
-- **#8 (grain / stint pattern owner):** confirm this mirrors the unit-stint model cleanly
-  and fits the §3B context profile; own the carry-forward/effective-dating semantics
-  alongside the unit stints.
-- **#2 (migration):** the one-time backfill (§6) alongside the extract contract.
+- **#4 (schema):** the `service_area_capabilities` table + the generator/verifier gate.
+- **#11 (entry UI):** the confirm-or-update checkpoint (§4) that writes span operations.
+- **#8 (grain / stint pattern owner):** owns the capability-span semantics alongside unit
+  stints — one rulebook family (span = state period; explicit close; non-overlap;
+  fiscal-year comparison; declaration stamped at change). Endorsed 2026-08-25.
+- **#2 (migration):** the seed-span backfill (§6), folded into the reimport alongside seed
+  stints.
 
 ## 8. Open questions
 
-- **Scope of capabilities:** just `has_transmission` now, or seed the fuller set
-  (network presence, provider availability) so the profile is one place? Recommend start
-  with `has_transmission`, keep the shape open.
-- **Grain of declaration:** capability is per **service area**; a utility-wide capability
-  (e.g. "has any transmission") is derivable as the OR across its areas — no separate store.
-- **Static vs temporal for `provides_*`:** leave the existing booleans static unless
-  evidence shows they change mid-life.
+- **Capability vocabulary:** just `has_transmission` now, or seed a fuller set? Recommend
+  start with `has_transmission`, keep `capability` open.
+- **Shared DDL timing:** the GiST exclusion needs the `btree_gist` extension (same
+  dependency as `unit_activations`); land both in the same coordinated DDL so there's one
+  temporal-spans migration, not two.
+- **Utility-wide capability** (e.g. "has any transmission") is the OR across the utility's
+  area spans — derived, not separately stored.
