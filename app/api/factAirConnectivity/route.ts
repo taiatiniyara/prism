@@ -61,7 +61,7 @@ export async function GET(req: Request) {
       const reportType = findItem(urp.report_type_id)?.name;
       return {
         "Report Type": reportType,
-        "Report Period": formatReportPeriodIso(urp.report_date, reportType),
+        "Report Period": formatReportPeriodIso(urp.report_date, reportType, u?.financial_year_end),
         Country: country?.name,
         "Air Connectivity": iata?.value ?? null,
         "Air Connectivity per 1000 people": acp?.value ?? null,

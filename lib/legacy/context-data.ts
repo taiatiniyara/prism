@@ -4,6 +4,7 @@ import { countryContext } from "@/db/schema/country";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { organisations } from "@/db/schema/utility";
 import { managedListItems } from "@/db/schema/managedLists";
+import { fiscalYearForReportPeriod } from "@/lib/legacy/legacy-dl-resolver";
 import { eq, isNotNull } from "drizzle-orm";
 
 export type ResolvedContextRow = {
@@ -17,23 +18,6 @@ export type ResolvedContextRow = {
   period_year: number;
   value: string | number | boolean | null;
 };
-
-/**
- * The fiscal YEAR a report period represents — must match formatReportPeriodIso:
- * a "Financial Year" period is stamped one calendar year back; everything else
- * (e.g. Monthly) uses its own calendar year. This is the alignment key between a
- * submission's period and country_context.period_year.
- */
-export function fiscalYearOfReportPeriod(
-  reportDate: Date | string | null,
-  reportTypeName: string | null | undefined,
-): number | null {
-  if (!reportDate) return null;
-  const d = typeof reportDate === "string" ? new Date(reportDate) : reportDate;
-  if (isNaN(d.getTime())) return null;
-  const y = d.getFullYear();
-  return reportTypeName === "Financial Year" ? y - 1 : y;
-}
 
 /**
  * Country-context read bridge (Option 2, 2026-08-23).
@@ -67,6 +51,7 @@ export async function getResolvedContextRows(
 
   const orgs = await db.select().from(organisations);
   const countryByUtil = new Map(orgs.map((o) => [o.id, o.country_id]));
+  const fyeByUtil = new Map(orgs.map((o) => [o.id, o.financial_year_end]));
 
   const items = await db.select().from(managedListItems);
   const typeNameById = new Map(items.map((i) => [i.id, i.name]));
@@ -87,9 +72,10 @@ export async function getResolvedContextRows(
   for (const rp of rps) {
     const countryId = countryByUtil.get(rp.utility_id) ?? null;
     if (countryId == null) continue;
-    const fy = fiscalYearOfReportPeriod(
+    const fy = fiscalYearForReportPeriod(
       rp.report_date,
       typeNameById.get(rp.report_type_id),
+      fyeByUtil.get(rp.utility_id),
     );
     if (fy == null) continue;
     for (const d of defs) {
