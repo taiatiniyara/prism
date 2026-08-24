@@ -275,7 +275,15 @@ export const listBuilderInputOptions = async (): Promise<InputOption[]> => {
       eq(measureDefinitions.measures_subgroup_id, subcategory.id),
     )
     .leftJoin(dataType, eq(measureDefinitions.data_type_id, dataType.id))
-    .where(eq(measureDefinitions.is_active, true))
+    .where(
+      and(
+        eq(measureDefinitions.is_active, true),
+        // Exclude context-fed measures (e.g. the 16 Country Context measures fed
+        // from country_context) — a BLO tracks initiative performance against
+        // data-entry Inputs, not country-level context values.
+        eq(measureDefinitions.is_context_fed, false),
+      ),
+    )
     .orderBy(asc(measureDefinitions.name));
 
   return rows;
