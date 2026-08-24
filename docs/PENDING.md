@@ -19,7 +19,7 @@ A row is *pending* if it has not cleared all the gates that apply to it. Docs-on
 - **Only one uncommitted file:** **#3's `calculator-engine-spec.md`** (active WIP, left for #3).
 - **Open PRs: 20** (re-scan 2026-08-24) — **4 human** (`#104` data-availability, `#83` #12 USER-IMPACT rows, `#77` #11 access-plans proto, `#76` #12 RLS-D1) + 16 Dependabot. `#107` (measures/status-enum) merged. ⚠ **Dependabot vuln count jumped 4 → 24** (per #8, flagged to #12).
 - **Cleared this session:** #8 schema-convention ruling (`7c01627`); #12 D2 API_KEY split merged (`167f080`); both sentinel-deletion confirmations (#2 views, #10 access); safe Dependabot subset merged.
-- **Awaiting Eugene — 4:** #2 medallion sample extract; #10 default-plan + member entitlements; #4 country-context history load; **subgroup-221 disposition** (prepped, awaiting #4 fact) + **3 null `financial_year_end`** values.
+- **Awaiting Eugene — 3:** #2 medallion sample extract; #10 default-plan + member entitlements; #4 country-context history load; **3 null `financial_year_end`** values. *(subgroup-221 already RULED 2026-08-20 — survive as context-fed; my earlier scan crossed the ruling.)*
 - **Applied DB changes today** (informational, all backed up): sentinel-chain deletion, `measure_definitions.description` drop, managed-lists vocab rename — plus the follow-on `units.category_id`/`type_id` DROP still owed by #2.
 
 ---
@@ -81,7 +81,7 @@ Legend: ✅ nothing pending · 📝 uncommitted · ⬆️ committed-not-pushed �
 | # | Stream | Code pending | DB apply pending | Waiting on | Verdict |
 |---|--------|--------------|------------------|-----------|---------|
 | 1 | Project mgt | — | — | — | ✅ |
-| 2 | Medallion migration | — (DDL done; PRs #75/#78 merged; `units` col DROP + `asset_class_id`/`strata_id` renames applied ✅) | data **reload** via `migrate.ts` + `input_dl_def_mappings` regen | ⏳ Eugene: sample extract (#2 reports no open items of its own) | ⏳ paused |
+| 2 | Medallion migration | **context-fed pass** (subgroup-221 ruling): parts 1–2 authored (`8d80cc6` — `is_context_fed` col + SQL to flag the 16); remaining parts 3–4 = **loader extract guard** + **medallion §1.5 absolute-exclusion rule** | data **reload** via `migrate.ts` + `input_dl_def_mappings` regen; **⚠ confirm `8d80cc6`'s `is_context_fed` SQL applied to dev** | ⏳ Eugene sample extract; context-fed pass sequenced with next migration (non-blocking) | ⏳ paused |
 | 3 | Calculator engine | — (design + mockup approved) | schema tracer-bullets deferred | ⏳ #2 landing | ⏳ gated |
 | 4 | Schema for AI | — (energy-dim rename #68; clearing last spec WIP) | — | ✅ **RATIFIED 2026-07-28** (derive-not-store: technology leaf, category/asset-class derived) — hold lifted | ✅ |
 | 5 | BSC Builder | — (PR #35 merged; worktree clean) | — | ⏳ #2 `kpi_target` for Input-tracked targets (deferred) | ✅ / ⏳ deferred |
@@ -94,7 +94,7 @@ Legend: ✅ nothing pending · 📝 uncommitted · ⬆️ committed-not-pushed �
 | 14 | Data-entry / fixes | — (`powerStationDnD.tsx` nit fixed by #4, `f2f3cba`) | — (energy-dim rename PR #68 applied; country name fixes applied — see below) | — | ✅ |
 | 15 | Pending tracker | ✅ `PENDING.md` merged (PR #71); refresh 2 landed in `6cda722`; refresh 3 uncommitted in-place | — | — | ✅ |
 
-**Net pending right now:** **4 human PRs awaiting review/merge** (#104, #83, #77, #76 — see §1); 16 Dependabot (+ ⚠ vuln count 4→24 for #12 to triage); Eugene decisions (#2 extract, #10 plan/entitlements, #4 country-context history, #8/#4 subgroup-221, 3 null `financial_year_end`); #12's P2/D2 operator steps (env/Power BI/rotate); **#11 follow-up** — make the BMO country-context metric field a select + add Update/upsert; **country-context repoint SQL** still to run per-env (prod); a branch-triage pass over the ~15 un-PR'd `claude/*` branches. `npm install` after pull.
+**Net pending right now:** **4 human PRs awaiting review/merge** (#104, #83, #77, #76 — see §1); 16 Dependabot (+ ⚠ vuln count 4→24 for #12 to triage); Eugene decisions (#2 extract, #10 plan/entitlements, #4 country-context history, 3 null `financial_year_end`); **#2 context-fed pass** (parts 3–4: loader guard + medallion §1.5 rule; non-blocking); #12's P2/D2 operator steps (env/Power BI/rotate); **#11 follow-up** — make the BMO country-context metric field a select + add Update/upsert; **country-context repoint SQL** still to run per-env (prod); a branch-triage pass over the ~15 un-PR'd `claude/*` branches. `npm install` after pull.
 
 **Doc-debt (flagged by #8):** #2's medallion spec (`schema-redesign-medallion.md` §1.4/§1.5) still describes "All areas" NOT-NULL grain targets, now **contradicted** by the hybrid ruling. #2 asked to amend; tracked here until they do.
 
@@ -142,7 +142,6 @@ Per [`USER-IMPACT.md`](USER-IMPACT.md) (new protocol, `5c2959e`, Eugene-directed
 | #2 | provide the real **sample data extract** | the medallion data reload (last step of the migration) |
 | #10 | **default-plan contents** + **member entitlements** (the free `member` plan's sector-scoped dashboard set; `member` is now association-agnostic — PPA→electricity, PWWA→water/sanitation) | tiered-access schema (no code until settled) |
 | #4 | load **real country-context history** via `scripts/seed-country-context.ts` | populated country-context data (post the 2026-08-23 repoint) |
-| #8/#4 | **subgroup-221 disposition** — prepped by #8, awaiting a fact from #4 then Eugene's call | resolving that subgroup |
 | #? | **3 null `financial_year_end`** values — data fix (which FY-end for the 3 orgs) | per-utility FY period bucketing for those orgs |
 | — | review/merge the **4 human PRs** (#104, #83, #77, #76) + **16 Dependabot** individually — not a blocker | PR backlog / dependency currency |
 
