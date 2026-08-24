@@ -1,6 +1,7 @@
 # Service-area capability declaration — per-period context for contextual shells
 
-**Status: DRAFT for #11 comment · #8-endorsed (span model)** · author #4 (schema) ·
+**Status: RATIFIED-BY-DIRECTION 2026-08-25** (Eugene approved the spans approach AS FINAL, in
+#8's session; #8 endorses §3/§6; #11 aligned on §4 placement) · author #4 (schema) ·
 initiated by Eugene 2026-08-25 · **revised 2026-08-25 per #8: span model, not jsonb**
 **Related:** [unit-lifecycle-spec.md](unit-lifecycle-spec.md) (the ratified stint model this
 mirrors), [adr/0004-effective-dated-dimensions.md](adr/0004-effective-dated-dimensions.md),
@@ -47,10 +48,13 @@ commissioning date.
 service_area_capabilities (
   id             serial pk,
   service_area_id integer not null → service_areas(id),
-  capability     varchar   not null,   -- e.g. 'has_transmission'
+  capability     text      not null,   -- controlled vocab; CHECK lists members (§3)
   effective_from date      not null,   -- BLO sets when the capability begins
   effective_to   date      null        -- null = currently in effect
 )
+-- capability vocabulary is a CHECK, updated as members are added (grain_level treatment):
+--   CHECK (capability IN ('has_transmission'))            -- one member today
+-- so a typo'd capability can't silently gate nothing (per #8, 2026-08-25).
 ```
 
 Mirrors `unit_activations` exactly:
@@ -74,13 +78,42 @@ Mirrors `unit_activations` exactly:
 ## 4. Entry UX — "a flag to check each period" (Eugene)
 
 Storage shape and workflow are decoupled — the per-period checkpoint is a UX affordance that
-writes **span operations**:
-- At submission, the entry screen shows the area's **currently-open** capabilities.
-- The utility **confirms or updates**: "New transmission network in this area? ✓" (and, via
-  units, "New unit / IPP? ✓").
-- **Confirm = no-op** (the open span already carries forward). **Change = close the open span
-  + open a new one**, stamped with the change date. Only changes touch storage; history stays
-  accurate; no re-entry every period.
+writes **span operations**. The key sequencing point (raised by #11, 2026-08-25): because
+capabilities **drive which contextual shells exist**, the declaration must resolve **before
+entry, not at submission**. The span model makes that automatic for the common case, because
+the carried-forward open span already *is* the declaration — no user action is needed for a
+period where nothing changed. So the period lifecycle is:
+
+1. **Period opens (or is first opened).** The shell set is generated from the area's
+   **currently-open** capability spans (carry-forward). A period with no change needs zero
+   capability input — the correct contextual shells are already there.
+2. **Utility declares a change during entry** (rare): "New transmission network in this
+   area? ✓" (and, via units, "New unit / IPP? ✓"). This writes a span op — **confirm =
+   no-op** (open span carries forward); **change = close the open span + open a new one**,
+   stamped with the change date — and **triggers an incremental shell re-gen** for the
+   affected contextual measures (§5). Re-gen is **additive-safe**: it creates the newly
+   relevant shells and never destroys anything already entered.
+3. **Submission re-confirm** (lightweight safety net): the capabilities that shaped this
+   period's shells are shown for a final "still correct? ✓". A late change here re-runs the
+   incremental re-gen exactly as in step 2 before the period closes.
+
+Placement is therefore **period-start / first-open** for the gate, with a **submit-time
+re-confirm** — not submission-only. Only changes touch storage; history stays accurate; no
+re-entry every period.
+
+**Two kinds of "change" the span model distinguishes** (raised by #11, 2026-08-25 — a real
+semantic split, not one affordance): the model separates them structurally, so the UI can
+surface them as two intents rather than conflating them.
+- **New commissioning** — a network genuinely came online *this* period → **append**: open a
+  new span with `effective_from` = this period's fiscal-year start. History is untouched; the
+  prior state remains true for prior periods.
+- **Correction of a past mis-declaration** — last period's capability was recorded wrong (said
+  "no transmission" when there was, or with the wrong start date) → **amend**: adjust the
+  existing span's boundary (move `effective_from`, or reopen a wrongly-closed span). No new
+  span; the timeline is fixed, not forked.
+This distinction is **owned by #8** (capability-span semantics) alongside the identical
+append-vs-amend split for unit stints; #11 renders it as a two-option affordance
+("a new network came online" vs "correct a past entry"), no span mechanics surfaced.
 
 ## 5. Generator + verifier integration
 
@@ -108,7 +141,10 @@ of the unit "seed stint" fold-in (unit-lifecycle-spec §7) and should ride the s
 - **#11 (entry UI):** the confirm-or-update checkpoint (§4) that writes span operations.
 - **#8 (grain / stint pattern owner):** owns the capability-span semantics alongside unit
   stints — one rulebook family (span = state period; explicit close; non-overlap;
-  fiscal-year comparison; declaration stamped at change). Endorsed 2026-08-25.
+  fiscal-year comparison; declaration stamped at change; append-vs-amend §4). Endorsed
+  2026-08-25. **When the stint DDL + this table land in the coordinated package, #4 pings #8
+  for a single semantics-verification pass over spans + stints together** (one family, one
+  review).
 - **#2 (migration):** the seed-span backfill (§6), folded into the reimport alongside seed
   stints.
 
