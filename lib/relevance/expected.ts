@@ -34,6 +34,10 @@ export async function missingUtilityLevelShells(): Promise<Finding> {
       SELECT md.id, md.name, md.effective_from, md.is_calculated
       FROM measure_definitions md
       WHERE md.is_active AND NOT md.is_context_fed AND NOT md.is_system_generated
+        -- MANDATORY only: contextual measures (is_mandatory=false — e.g. 2IC Gender where
+        -- the role may not exist, purchases where there's no IPP) can be legitimately
+        -- absent, so their absence is never a gap. Per Eugene's classification 2026-08-25.
+        AND md.is_mandatory
         -- utility grain (strata "Utility") specifically — service-area (strata 3) and
         -- unit (strata 1) measures are covered by their own classes below/above
         AND md.strata_id = (SELECT id FROM managed_list_items WHERE name = 'Utility'
@@ -218,6 +222,20 @@ export async function serviceAreaCoverage(): Promise<Finding> {
     count: rows.length,
     rows,
   };
+}
+
+/** Measure classification by grain × obligation — mandatory (required everywhere it's in
+ * scope) vs contextual (relevant only where the context exists: a provider, active units,
+ * a transmission network, a role that exists). Per Eugene's 2026-08-25 ruling. */
+export async function measureClassification(): Promise<Row[]> {
+  return run(sql`
+    SELECT str.name AS grain,
+      count(*) FILTER (WHERE md.is_mandatory)::int AS mandatory,
+      count(*) FILTER (WHERE NOT md.is_mandatory)::int AS contextual
+    FROM measure_definitions md
+    JOIN managed_list_items str ON str.id = md.strata_id
+    WHERE md.is_active AND NOT md.is_context_fed AND NOT md.is_system_generated
+    GROUP BY 1, str.id ORDER BY str.id`);
 }
 
 export async function runGenerativeChecks(): Promise<Finding[]> {

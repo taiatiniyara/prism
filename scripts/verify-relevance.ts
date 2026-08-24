@@ -8,7 +8,7 @@
  * otherwise — so it can gate a migration/cutover or run in CI against a target DB.
  */
 import { runAllChecks, type Finding } from "@/lib/relevance/verify";
-import { runGenerativeChecks } from "@/lib/relevance/expected";
+import { runGenerativeChecks, measureClassification } from "@/lib/relevance/expected";
 
 const icon = (f: Finding) =>
   f.ok ? "✓" : f.severity === "error" ? "✗" : "!";
@@ -35,6 +35,13 @@ async function main() {
 
   console.log("\nGENERATIVE (expected − actual — what's missing / over-applied)");
   for (const f of generative) printFinding(f);
+
+  const classes = await measureClassification();
+  console.log("\nMEASURE CLASSIFICATION (by grain — mandatory vs contextual)");
+  for (const c of classes)
+    console.log(
+      `  ${String(c.grain).padEnd(14)} mandatory ${String(c.mandatory).padStart(3)}   contextual ${String(c.contextual).padStart(3)}`,
+    );
 
   console.log("\nSHELL ACCOUNTING — two denominators (never mixed)");
   for (const b of accounting) {
