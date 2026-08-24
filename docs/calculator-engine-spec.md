@@ -311,13 +311,21 @@ is read from*):
 | Input kind | Read from | Notes |
 |---|---|---|
 | Raw / calculated measures | `data_entries` (the address model) | the default |
-| **Country-context** measures (subgroup **221** — e.g. Population, GDP Per Capita) | **`country_context`** table (keyed by `measure_def_id`), via the **`getResolvedContextRows`** bridge | #4, shipped `fcf8e4e` (Option 2); **carry-forward per report period**; used as per-capita / per-GDP **denominators**. NOT in `data_entries`. |
+| **Country-context** measures (the 16 flagged `measure_definitions.is_context_fed`, subgroup **221** — e.g. Population, GDP Per Capita) | **`country_context`** table (keyed by `measure_def_id × period_year`), via the **`getResolvedContextRows`** bridge | #4, Option 2 (`fcf8e4e`; FY-end-aware since `6504e7e`; flag added `8d80cc6`); **read-time carry-forward per report period**; used as per-capita / per-GDP **denominators**. NOT in `data_entries`. |
 | Capacity-hours | silver-derived measure (§4.6.1) | `Σ(stint_cap × stint_hours)` |
 
 So a "per-capita" KPI (e.g. `x ÷ population`) binds `population` like any input, but the resolver
-fetches it from `country_context` (carry-forward), not `data_entries`. **Build note:** the resolver
-needs a small source-dispatch layer keyed on the measure's home; country-context reads go through
-`getResolvedContextRows`.
+fetches it from `country_context` (carry-forward), not `data_entries`. **Build notes:**
+- The resolver needs a small **source-dispatch** layer keyed on the measure's home — dispatch
+  country-context reads (measures flagged **`is_context_fed`**) through `getResolvedContextRows`;
+  build against `6504e7e`+ so carry-forward matches the FY-end-corrected period labels (the bridge's
+  signature is unchanged).
+- **Staleness is not silent (#8 hole H2).** Carry-forward is unbounded, so a benchmarking KPI could
+  divide by a years-old denominator. `getResolvedContextRows` returns **`period_year` on every row**,
+  so the resolver **surfaces the denominator's age and flags staleness** rather than emitting a
+  silent stale figure; an **approved snapshot pins the RESOLVED context** it was computed against
+  (no re-drift). This is a read/provenance concern (like `no_data_reason`), not a change to the
+  formula or binding.
 
 ### 4.6.3 Tariff bills & currency conversion (DECIDED 2026-08-24)
 
