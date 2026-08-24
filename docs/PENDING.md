@@ -17,7 +17,7 @@ A row is *pending* if it has not cleared all the gates that apply to it. Docs-on
 
 - **Tree clean and in sync with `origin/main`.** ⚠ deps changed → run `npm install` after your next pull.
 - **Only one uncommitted file:** **#3's `calculator-engine-spec.md`** (active WIP, left for #3).
-- **Open PRs: 17** (re-scan 2026-08-24b) — **5 human** (`#113` #3 calc-spec, `#104` data-availability, `#83` #12 USER-IMPACT rows, `#77` #11 access-plans proto, `#76` #12 RLS-D1) + 12 Dependabot (down from 16 — #12 PR #119 hygiene cut prod count 14→5). ✅ **Vuln triage COMPLETE (#12):** 5 residuals accepted low-risk / non-reachable; nothing production-reachable remains.
+- **Open PRs: 14** (re-scan 2026-08-24c) — **2 human** (`#104` Eugene's data-availability amendment — #3/#4 review owed; `#77` #11 access-plans proto — parked by design) + 12 Dependabot. Backlog nudge cleared 3: #113/#76/#83 merged. ✅ **Vuln triage COMPLETE (#12):** residuals accepted low-risk / non-reachable.
 - **Cleared this session:** #8 schema-convention ruling (`7c01627`); #12 D2 API_KEY split merged (`167f080`); both sentinel-deletion confirmations (#2 views, #10 access); safe Dependabot subset merged.
 - **Awaiting Eugene — 3:** #2 medallion sample extract; #10 default-plan + member entitlements; #4 country-context history load; **3 null `financial_year_end`** values. *(subgroup-221 already RULED 2026-08-20 — survive as context-fed; my earlier scan crossed the ruling.)*
 - **Applied DB changes today** (informational, all backed up): sentinel-chain deletion, `measure_definitions.description` drop, managed-lists vocab rename — plus the follow-on `units.category_id`/`type_id` DROP still owed by #2.
@@ -41,15 +41,13 @@ A row is *pending* if it has not cleared all the gates that apply to it. Docs-on
 | `C:/Users/eugen/prism` | `main` | see above |
 | `C:/Users/eugen/prism-bsc` | `feat/bsc-input-kpi-picker` | **clean; fully merged** into `main` (PR #35). Nothing pending. Branch has no upstream but no unmerged commits either — safe to leave or delete. |
 
-### Open PRs (17 total — re-scan 2026-08-24b)
+### Open PRs (14 total — re-scan 2026-08-24c)
 > Method: full `gh pr list --state open` each refresh (pings are additive, not a substitute — see the Lesson in §4).
+> **Backlog-nudge result (Eugene-directed):** #113 (#3 calc-spec), #76 (#12 RLS docs), #83 (#12 USER-IMPACT rows) all **MERGED** after nudges. #83's 3-way merge applied cleanly — USER-IMPACT still has all 17 rows. #12 now has nothing open.
 
-**5 human PRs (awaiting review/merge):**
-- `#113` [#3] **calculator spec §4.6.3** — tariff bills & currency (docs).
-- `#104` **docs(data-availability) §3.1.1** — obligation is dimension-aware.
-- `#83` [#12] **sharpen USER-IMPACT rows 1 (MFA) + 4 (API-key)** — ⚠ **conflict risk:** edits `USER-IMPACT.md` rows 1/4 while `main` has grown rows 11–17; rebase before merge.
+**2 human PRs open:**
+- `#104` **docs(data-availability) §3.1.1 — obligation is dimension-aware** — ⚠ **Eugene's own PR** (authored 2026-08-16 mid-outage; its "recirculate for #8/#3/#4 comment" ask was a lost delivery). **Substantive** amendment to the ratified availability design (obligation moves to slice grain) — **not blind-mergeable.** Status: **#8 review ✅ delivered + endorsed** (4 impl notes); **#3 + #4 review comments still OWED** (review debt — pinged). Merge is Eugene's call once #3/#4 weigh in (or on #8's endorsement alone — his PR).
 - `#77` [#11] **Access Plans (Tiered Access) DEV/BMO form — PROTOTYPE.** 🅿️ **Deliberately parked (review artifact), NOT stuck** — mock-backed click-through, on hold since 2026-07-28 pending Eugene's UX sign-off. Matures toward merge only when **both** (a) Eugene approves the UX **and** (b) #10/#2 land the real `plan`/`plan_version`/`plan_entitlement` DDL so #11 can rebind from mock to real tables. Do not treat as backlog to clear.
-- `#76` [#12/D1] **align RLS design to the `data_entries` ruling + no-sentinel rule** — the D1 RLS item (was "#12 to write policy DDL"; now a PR).
 
 **12 Dependabot PRs** (down from 16 — #12's PR #119 audit fix + shadcn→devDeps + sharp override cut the prod-dependency count **14→5**). Eugene reviews the rest individually; notable: `#47` **typescript 7**, `#44` eslint 10, `#89` @types/node 26.
 > **Dependabot/vuln note:** #8 reported the vuln count spiking 4→24 (2026-08-24); #12's PR #119 (`51d5f8e`, merged) addressed it (npm audit fix, prod count 14→5). ✅ **#12's dependency triage is COMPLETE (accepted-residual):** the 5 prod residuals (exceljs/react-d3-tree/uuid — uuid advisory needs a `buf` arg neither passes; brace-expansion/minimatch — DoS needs untrusted glob input no user-facing path exposes) are **non-reachable**, documented in #119's notes. Fully clearing them would need breaking major bumps (e.g. exceljs) for non-reachable advisories — **not done deliberately; Eugene's call only if zero-alert is wanted.** No DB/runtime change from #119.
@@ -94,7 +92,7 @@ Legend: ✅ nothing pending · 📝 uncommitted · ⬆️ committed-not-pushed �
 | 14 | Data-entry / fixes | — (`powerStationDnD.tsx` nit fixed by #4, `f2f3cba`) | — (energy-dim rename PR #68 applied; country name fixes applied — see below) | — | ✅ |
 | 15 | Pending tracker | ✅ `PENDING.md` merged (PR #71); refresh 2 landed in `6cda722`; refresh 3 uncommitted in-place | — | — | ✅ |
 
-**Net pending right now:** **5 human PRs awaiting review/merge** (#113, #104, #83, #77, #76 — see §1); 12 Dependabot (vuln triage ✅ COMPLETE — accepted-residual, nothing prod-reachable); Eugene decisions (#2 extract, #10 plan/entitlements, #4 country-context history, 3 null `financial_year_end`); **#2 context-fed pass** (parts 3–4: loader guard + medallion §1.5 rule; non-blocking); #12's P2/D2 operator steps (env/Power BI/rotate); **#11 follow-up** — make the BMO country-context metric field a select + add Update/upsert; **country-context repoint SQL** still to run per-env (prod); a branch-triage pass over the ~15 un-PR'd `claude/*` branches. `npm install` after pull.
+**Net pending right now:** **2 human PRs** — `#104` (Eugene's, needs #3/#4 review) + `#77` (parked by design); 12 Dependabot (vuln triage ✅ COMPLETE — accepted-residual, nothing prod-reachable); **review debt: #3 + #4 owe comments on #104**; Eugene decisions (#2 extract, #10 plan/entitlements, #4 country-context history, 3 null `financial_year_end`); **#2 context-fed pass** (parts 3–4: loader guard + medallion §1.5 rule; non-blocking); #12's P2/D2 operator steps (env/Power BI/rotate); **#11 follow-up** — make the BMO country-context metric field a select + add Update/upsert; **country-context repoint SQL** still to run per-env (prod); a branch-triage pass over the ~15 un-PR'd `claude/*` branches. `npm install` after pull.
 
 **Doc-debt (flagged by #8):** #2's medallion spec (`schema-redesign-medallion.md` §1.4/§1.5) still describes "All areas" NOT-NULL grain targets, now **contradicted** by the hybrid ruling. #2 asked to amend; tracked here until they do.
 
@@ -145,7 +143,8 @@ Per [`USER-IMPACT.md`](USER-IMPACT.md) (new protocol, `5c2959e`, Eugene-directed
 | #10 | **default-plan contents** + **member entitlements** (the free `member` plan's sector-scoped dashboard set; `member` is now association-agnostic — PPA→electricity, PWWA→water/sanitation) | tiered-access schema (no code until settled) |
 | #4 | load **real country-context history** via `scripts/seed-country-context.ts` | populated country-context data (post the 2026-08-23 repoint) |
 | #? | **3 null `financial_year_end`** values — data fix (which FY-end for the 3 orgs) | per-utility FY period bucketing for those orgs |
-| — | review/merge the **5 human PRs** (#113, #104, #83, #77, #76) + **12 Dependabot** individually — not a blocker | PR backlog / dependency currency |
+| #3, #4 | **review comments on #104** (Eugene's data-availability amendment — recirculation ask; #8 already endorsed) | Eugene's merge decision on #104 |
+| — | **#104** merge (Eugene's call, after #3/#4 review or on #8's endorsement) + **12 Dependabot** individually — not a blocker | PR backlog / dependency currency |
 
 *Cleared since refresh 1:* **#8** schema-convention (Eugene ruled hybrid freeze-as-built, `7c01627`). **#12 D1** — RLS tenant column decided (`utility_id`); #12 writes the policy DDL (handles `utility_id IS NULL` shared rows). **#12 D2** — API_KEY split now in PR #73 (no longer a decision). **Dependabot triage** — safe subset merged (#37/#41/#72), 10 majors held per Eugene's individual-review call.
 
