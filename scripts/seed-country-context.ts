@@ -136,6 +136,10 @@ async function main() {
     const name = cellStr(cell.value);
     if (name) col[name.toLowerCase()] = c;
   });
+  // "measure_id" is the user-facing header for the metric; it maps to the DB column
+  // measure_def_id. Accept either.
+  if (col["measure_id"] != null && col["measure_def_id"] == null)
+    col["measure_def_id"] = col["measure_id"];
   const need = ["country_id", "measure_def_id", "period_year", "value"];
   for (const h of need)
     if (!(h in col)) throw new Error(`missing required column "${h}" in header row`);
