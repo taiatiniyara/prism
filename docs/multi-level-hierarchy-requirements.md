@@ -73,6 +73,47 @@ Dims vs grain — the split philosophy is deliberate (per #4): the 10 dimension 
 (NOT NULL, explicit **All** member — a real bucket), grain columns **locate** in a physical
 hierarchy (NULL above… means truthfully absent). Do not "unify" them.
 
+**Utility obligation counts only human-answerable shells (Eugene, 2026-08-25):** the
+utility-facing "requested" count = shells WHERE `is_calculated = false AND is_system_generated =
+false AND is_context_fed = false`. Engine-filled, system-generated, and context-fed shells are
+real addresses in the relevance balance but are **never part of what a utility is asked to
+answer** — they must not inflate requested counts or completeness denominators. Corollary: two
+denominators, never mixed — **utility completeness** (answered / human-answerable requested) is a
+*performance* metric; **calculated/context shell fill-rate** is an *engine/pipeline health*
+metric. The generator and the scorecard compute the utility count identically, from this rule.
+
+**Service-area capability declaration — SPANS RULED FINAL (Eugene, 2026-08-25):** contextual
+shells (e.g. the Transmission slice) are gated on **declared** capability, never inferred from
+data (inference is circular and cannot bootstrap a new network). Storage = relational
+**capability spans** (`service_area_capabilities`: SA × capability × effective_from/to; non-overlap
++ ≤1 open, fiscal-year comparison per ADR 0004) — the ratified stint pattern, NOT period-keyed
+jsonb (`service_areas.report_periods` stays empty and retires with `units.period_entries`).
+Confirm-each-period UX = span operations (confirm no-op / change close+open). #8 owns
+capability-span semantics alongside unit stints — one temporal rulebook family.
+
+**IPP boundary rule (Eugene, 2026-08-25, data-confirmed 0/12 + 2/12 fills):** units provided by an
+IPP carry **output metrics only** for the off-taking utility (Rated Capacity / Generation /
+Downtime @ provider=IPP) — never consumable inputs (the "Fuel and Oil" subgroup): those are the
+IPP operator's costs, invisible to and unreportable by the off-taker. Encoded in the relevance
+verifier (consumables not expected where a technology is IPP-only for a utility, via
+`units.provider_id`). The general principle: **expectation follows the ownership boundary — a
+utility is only asked what it can actually know.**
+*Pending nuance (disposition open with Eugene, migration log `11c9010`):* **fuel** may legitimately
+cross the boundary under fuel-supply/pass-through arrangements (utility supplies fuel to its IPP)
+— two real CUC Fuel Oil @ IPP-diesel values (FY2022/23, ~28.4M/28.6M) are **soft-deleted and
+preserved**, explicitly NOT ruled invalid. If Eugene later rules them genuine: restore Fuel Oil @
+IPP and **narrow this rule to lube-oil-only**. Lube oil stays cleaned (0 fills anywhere —
+unambiguously operator O&M).
+
+**Cross-dimension conditional (structural invariant, banked 2026-08-25 from the Hours Worked
+290–292 case):** the four energy dimensions (provider / category / technology / asset_class)
+expand **only under `utility_function` = Generation**; under Transmission / Distribution /
+Ancillary Services every energy dim carries its **All** member — those dims *describe generation*,
+so a non-Generation slice with a pinned energy dim is structurally meaningless. The
+relevance/shell generator enforces this as an invariant, not per-measure config. Escape hatch per
+case law: a future measure genuinely needing energy-dim expansion under a non-Generation function
+is an **explicit Eugene decision on evidence**, never a silent allowance.
+
 ## 2. Requirements on the grain columns
 
 1. **Chain-consistency validation** (replaces the old exactly-one CHECK): a row's filled grain
