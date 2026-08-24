@@ -92,12 +92,13 @@ Legend: ✅ nothing pending · 📝 uncommitted · ⬆️ committed-not-pushed �
 | 14 | Data-entry / fixes | — (`powerStationDnD.tsx` nit fixed by #4, `f2f3cba`) | — (energy-dim rename PR #68 applied; country name fixes applied — see below) | — | ✅ |
 | 15 | Pending tracker | ✅ `PENDING.md` merged (PR #71); refresh 2 landed in `6cda722`; refresh 3 uncommitted in-place | — | — | ✅ |
 
-**Net pending right now:** **2 human PRs** — `#104` (Eugene's, needs #3/#4 review) + `#77` (parked by design); 12 Dependabot (vuln triage ✅ COMPLETE — accepted-residual, nothing prod-reachable); **review debt: #4 owes a comment on #104** (#8 + #3 endorsed); Eugene decisions (#2 extract, #10 plan/entitlements, 3 null `financial_year_end`); **#2 context-fed pass** (parts 3–4: loader guard + medallion §1.5 rule; non-blocking); #12's P2/D2 operator steps (env/Power BI/rotate); **#11 follow-up** — country-context form (metric select + upsert + not-available option, USER-IMPACT r16); **prod apply debt** — 4 country-context SQL scripts + seed + `is_context_fed` SQL, per-env at prod cutover; a branch-triage pass over the ~15 un-PR'd `claude/*` branches. `npm install` after pull.
+**Net pending right now:** **2 human PRs** — `#104` (Eugene's, needs #3/#4 review) + `#77` (parked by design); 12 Dependabot (vuln triage ✅ COMPLETE — accepted-residual, nothing prod-reachable); **review debt: #4 owes a comment on #104** (#8 + #3 endorsed); Eugene decisions (#2 extract, #10 plan/entitlements, 3 null `financial_year_end`); **#2 context-fed pass** (parts 3–4: loader guard + medallion §1.5 rule; non-blocking); #12's P2/D2 operator steps (env/Power BI/rotate); **#11 follow-up** — country-context form (metric select + upsert + not-available option, USER-IMPACT r16); **prod apply debt** — see the 🚀 **Cutover Runbook** (10 idempotent SQL + seed + `verify-relevance` gate, all live on dev, per-env owed at prod migration); **forward requirement** (#4): utility-facing "shells requested" count must exclude `is_calculated=true` (engine-filled, not requested); a branch-triage pass over the ~15 un-PR'd `claude/*` branches. `npm install` after pull.
 
 **Doc-debt (flagged by #8):** #2's medallion spec (`schema-redesign-medallion.md` §1.4/§1.5) still describes "All areas" NOT-NULL grain targets, now **contradicted** by the hybrid ruling. #2 asked to amend; tracked here until they do.
 
 ### Recently applied DB changes (done — do NOT re-run; informational)
 Direct DML/DDL on the shared **dev** DB with no commit/PR (or applied ahead of a PR). Recorded so no session re-runs them and everyone knows the DB state:
+- **2026-08-25 (#4) — shell-audit + relevance-generator batch** (all on `main`, applied to dev; scripts in the Cutover Runbook below). Resolved end-state: the committed `verify-relevance` tool is **fully green on dev**. Changes: `measure_definitions.effective_from` date col added (`4eaac1e`; 111 @ 2020-01-01, then 9 @ 2026 after the `a10029a` correction); downtime EVENTS + transmission measures deactivated (`a10029a`/`8ff154a` — is_active=false on 330/332/340/342/440; ADR 0004 amended); Hours Worked 290/291/292 relevance reconciled (`87fea19` — +Ancillary Services 1030 applicability, source scope by_context); managed-list 1030 spelling fix "Ancilliary"→"Ancillary Services" (`f30d85a`, user-facing member, 0 code refs); backfilled 154 calc-measure shells for 230/231 (`a5c3154`); soft-deleted 195 hydro/wind Lubrication-Oil shells (`c924024`, is_deleted, reversible, ruling: lube oil = thermal-only) + 24 IPP consumable shells (`2c00d56`). Also 2 code-only tools (no DB): `verify-relevance` invariant checker (`23d76ef`) + generative expected-set half (`ecdb545`) → the recommended **post-load cutover gate**. **⚠ all SQL per-env pending for prod.**
 - **2026-08-25 (#4) — `country_context` DATA loaded on dev** via `scripts/seed-country-context.ts`: **1040 rows** (16 countries × 16 measures, 2020–2025), flush-and-reload of Eugene's real extract; 0 dups, FK-clean, real values. Data (not schema). **⚠ Prod pending:** the 4 country-context SQL scripts **+ this seed run**, per-env when prod migrates. Clears the "#4 country-context history" Awaiting-Eugene item.
 - **2026-08-24 (#4) — `country_context.no_data_reason` added** (`024d935`, applied to dev): `varchar(32)`, null | `'not_available'`, + two CHECKs (vocab; value-XOR-reason). Mirrors the `data_entries` availability axis; part of the country-context migration path (Eugene's real load). Script `scripts/sql/2026-08-24-country-context-no-data-reason.sql` (idempotent, **⚠ per-env run pending for prod**). Internal (no journey surface *itself*) → forward follow-up folded into USER-IMPACT **row 16** (#11 adds a "not available" option to the BMO form).
 - **2026-08-24 (#4) — `measure_definitions.is_context_fed` flag added** (`8d80cc6`, applied to dev): boolean NOT NULL DEFAULT false; all **16 subgroup-221 "Country Context" measures flagged true** — implements Eugene's context-fed disposition ruling; #2 keys their shell-exclusion gate on it. Script `scripts/sql/2026-08-24-measure-is-context-fed.sql` (idempotent, **⚠ per-env run pending for prod**). Internal catalogue flag → no USER-IMPACT row (per #4).
@@ -120,6 +121,22 @@ Direct DML/DDL on the shared **dev** DB with no commit/PR (or applied ahead of a
 **Open confirmations (post-change verification owed):** — ✅ **all cleared 2026-07-27.**
 - ~~**#2:** no Silver/gold view keys off the deleted "All" sentinel rows.~~ **✅ CLEARED** — jolly-murdock (author of the #68 silver/gold views) scanned all 11 live views/matviews via `pg_get_viewdef`; none keys off org 1 / country 100000 / sub_region 10000·1·5 / service_area 89 (only false-positive was `status_id >= 5`, an approval threshold). Views join by FK, so deleted rows just stop appearing. (Formal view-layer owner is #4/#2; jolly authored the 2 core views + scanned the full set — flag if #4 wants to co-sign.)
 - ~~**#10:** no entitlement/access key references those deleted sentinel rows.~~ **✅ CLEARED** — spec grep-clean; #10 has no built runtime access code (design-only); picker/`ensureCountry` key off real M49 codes only, structurally excluding the non-M49 "All Countries" (100000).
+
+### 🚀 Prod cutover runbook (idempotent SQL applied to dev, per-env run OWED at prod migration)
+These changes are live on **dev** but their scripts still need a per-env run when prod migrates. Run **in order**, then the seed, then the verifier gate:
+1. `scripts/sql/2026-08-23-country-context-repoint-measure-def.sql` (#4) — country_context FK repoint + `dl_def_id→measure_def_id`
+2. `scripts/sql/2026-08-24-measure-is-context-fed.sql` (#4) — `is_context_fed` col + flag the 16
+3. `scripts/sql/2026-08-24-country-context-no-data-reason.sql` (#4) — `no_data_reason` axis + CHECKs
+4. `scripts/sql/2026-08-25-measure-effective-from.sql` (#4) — `effective_from` col + dates
+5. `scripts/sql/2026-08-25-deactivate-downtime-events.sql` (#4) — is_active=false on 330/332/340/342/440
+6. `scripts/sql/2026-08-25-hours-worked-scope-reconcile.sql` (#4) — Hours Worked 290/291/292 applicability+scope
+7. `scripts/sql/2026-08-25-fix-ancillary-spelling.sql` (#4) — managed_list_items 1030 spelling
+8. `scripts/sql/2026-08-25-backfill-calc-shells.sql` (#4) — 154 calc shells for 230/231
+9. `scripts/sql/2026-08-25-remove-hydro-wind-lube-oil-shells.sql` (#4) — soft-delete 195 lube-oil shells
+10. `scripts/sql/2026-08-25-remove-ipp-consumable-shells.sql` (#4) — soft-delete 24 IPP consumable shells
+11. **Seed:** `scripts/seed-country-context.ts` — 1040 country-context rows (Eugene's extract)
+12. **GATE:** `node --env-file=.env --import tsx scripts/verify-relevance.ts` — read-only invariant + generative check; **exits 1 on violation.** Run AFTER 1–11; currently all-green on dev.
+> ⚠ Also owed: MFA `scripts/sql/2026-07-26-admin-mfa.sql` for prod (from the S-series; already on `.env` DB, not on a fresh prod). This runbook is the single place tracking prod-apply debt — keep it current as new dev-applied SQL lands.
 
 ---
 
@@ -144,7 +161,8 @@ Per [`USER-IMPACT.md`](USER-IMPACT.md) (new protocol, `5c2959e`, Eugene-directed
 | #10 | **default-plan contents** + **member entitlements** (the free `member` plan's sector-scoped dashboard set; `member` is now association-agnostic — PPA→electricity, PWWA→water/sanitation) | tiered-access schema (no code until settled) |
 | #? | **3 null `financial_year_end`** values — data fix (which FY-end for the 3 orgs) | per-utility FY period bucketing for those orgs |
 | #4 | **review comment on #104** (Eugene's data-availability amendment; #8 + #3 already endorsed) | Eugene's merge decision on #104 |
-| — | **#104** merge (Eugene's call, after #3/#4 review or on #8's endorsement) + **12 Dependabot** individually — not a blocker | PR backlog / dependency currency |
+| #2/#4 | **PNG Power (util 20) missing Lubrication-Oil shells for its Natural Gas units** — verifier-surfaced candidate; assess add-or-exclude | shell-audit completeness for util 20 |
+| — | **#104** merge (Eugene's call, after #4 review or on #8+#3 endorsement) + **12 Dependabot** individually — not a blocker | PR backlog / dependency currency |
 
 *Cleared since refresh 1:* **#8** schema-convention (Eugene ruled hybrid freeze-as-built, `7c01627`). **#12 D1** — RLS tenant column decided (`utility_id`); #12 writes the policy DDL (handles `utility_id IS NULL` shared rows). **#12 D2** — API_KEY split now in PR #73 (no longer a decision). **Dependabot triage** — safe subset merged (#37/#41/#72), 10 majors held per Eugene's individual-review call.
 
