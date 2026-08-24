@@ -108,13 +108,32 @@ export async function generationCoverageDiff(): Promise<Finding> {
       SELECT gm.measure_id, ut.utility_id, ut.technology_id
       FROM gen_measures gm
       CROSS JOIN util_tech ut
-      WHERE NOT EXISTS (
-              SELECT 1 FROM measure_dimension_applicability a
-              WHERE a.measure_id = gm.measure_id AND a.dimension = 'source')
-         OR EXISTS (
-              SELECT 1 FROM measure_dimension_applicability a
-              WHERE a.measure_id = gm.measure_id AND a.dimension = 'source'
-                AND a.member_id = ut.technology_id)
+      WHERE (
+          NOT EXISTS (
+            SELECT 1 FROM measure_dimension_applicability a
+            WHERE a.measure_id = gm.measure_id AND a.dimension = 'source')
+          OR EXISTS (
+            SELECT 1 FROM measure_dimension_applicability a
+            WHERE a.measure_id = gm.measure_id AND a.dimension = 'source'
+              AND a.member_id = ut.technology_id)
+        )
+        -- consumable-INPUT measures (the "Fuel and Oil" subgroup: fuel oil, lube oil) are
+        -- the IPP operator's cost, not the purchasing utility's — so they are NOT expected
+        -- for a technology that is IPP-only for this utility. A utility benchmarks an IPP's
+        -- OUTPUT (capacity/generation/downtime), never its inputs. Only expect a consumable
+        -- when the utility owns a non-IPP unit of that technology.
+        AND (
+          gm.measure_id NOT IN (
+            SELECT id FROM measure_definitions
+            WHERE measures_subgroup_id =
+              (SELECT id FROM managed_list_items WHERE name = 'Fuel and Oil' LIMIT 1))
+          OR EXISTS (
+            SELECT 1 FROM units u2
+            WHERE u2.utility_id = ut.utility_id AND u2.technology_id = ut.technology_id
+              AND u2.is_virtual = false
+              AND u2.provider_id IS DISTINCT FROM
+                  (SELECT id FROM managed_list_items WHERE name = 'IPP' LIMIT 1))
+        )
     ),
     actual AS (
       SELECT de.measure_def_id AS measure_id, rp.utility_id, de.technology_id
