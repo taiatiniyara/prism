@@ -4,9 +4,10 @@
  *   node --env-file=.env --import tsx scripts/gen-country-context-template.ts [outPath.xlsx]
  *
  * Sheets:
- *   country_context   — the data sheet (headers + 2 example rows) matching the seed loader
- *   measures (lookup)  — measure_def_id -> name (the 16 Country Context measures, subgroup 221)
- *   countries (lookup) — country_id (UN M49) -> name
+ *   country_context    — the data sheet (headers only) — FILL THIS ONE
+ *   instructions        — how to fill each column, with worked examples
+ *   measures (lookup)   — measure_def_id -> name (the 16 Country Context measures, subgroup 221)
+ *   countries (lookup)  — country_id (UN M49) -> name
  */
 import ExcelJS from "exceljs";
 import { db } from "@/db/connection";
@@ -29,7 +30,8 @@ const HEADERS = [
 ];
 
 async function main() {
-  const out = process.argv.slice(2).find((a) => !a.startsWith("--")) ??
+  const out =
+    process.argv.slice(2).find((a) => !a.startsWith("--")) ??
     "country-context-template.xlsx";
 
   const measures = await db
@@ -45,33 +47,77 @@ async function main() {
   const wb = new ExcelJS.Workbook();
   wb.creator = "PRISM #4 (schema)";
 
+  // 1) DATA sheet — headers only, ready to fill
   const ws = wb.addWorksheet("country_context");
   ws.addRow(HEADERS);
   ws.getRow(1).font = { bold: true };
-  // two example rows (Population for the first country, two years) — delete before loading
-  const c0 = allCountries[0]?.id ?? 583;
-  const pop = measures.find((m) => m.name === "Population")?.id ?? 3;
-  ws.addRow(["ex-1", c0, pop, 2023, "920000", "2023-06-30", "National Statistics Office", "", ""]);
-  ws.addRow(["ex-2", c0, pop, 2024, "935000", "2024-06-30", "National Statistics Office", "", ""]);
   ws.columns.forEach((col) => (col.width = 16));
+  ws.getColumn(HEADERS.indexOf("value") + 1).width = 22;
+  ws.getColumn(HEADERS.indexOf("source_doc") + 1).width = 28;
+  ws.getColumn(HEADERS.indexOf("source_url") + 1).width = 28;
+  ws.views = [{ state: "frozen", ySplit: 1 }];
 
+  // 2) INSTRUCTIONS sheet
+  const wi = wb.addWorksheet("instructions");
+  const note = (a: string, b = "") => {
+    const r = wi.addRow([a, b]);
+    return r;
+  };
+  wi.addRow(["How to fill this template"]).font = { bold: true, size: 14 };
+  wi.addRow([]);
+  note(
+    "Put one row per country × metric × year on the 'country_context' sheet.",
+  );
+  note(
+    "Use the lookup tabs for the two id columns. Only the first 5 columns are required.",
+  );
+  wi.addRow([]);
+  wi.addRow(["Column", "What to enter"]).font = { bold: true };
+  const cols: [string, string][] = [
+    ["mig_id", "Your own row reference for tracing (e.g. cc-001). Optional, not stored."],
+    ["country_id", "REQUIRED. UN M49 code from the 'countries (lookup)' tab (e.g. Fiji = 242)."],
+    ["measure_def_id", "REQUIRED. The metric id from the 'measures (lookup)' tab (1..16, e.g. Population = 3)."],
+    ["period_year", "REQUIRED. The year the figure is FOR, e.g. 2024. One row per year — add a new row for each year of history."],
+    ["value", "REQUIRED. The figure itself, entered as text exactly as sourced (e.g. 935000 or 12.4)."],
+    ["source_date", "Optional. Date of the source figure (e.g. 2024-06-30)."],
+    ["source_doc", "Optional. Where it came from (e.g. National Statistics Office 2024 report)."],
+    ["source_url", "Optional. Link to the source."],
+    ["updated_by", "Optional. Who entered it (else left blank)."],
+  ];
+  for (const [a, b] of cols) wi.addRow([a, b]);
+  wi.addRow([]);
+  wi.addRow(["Worked examples (copy the shape onto the data sheet):"]).font = {
+    bold: true,
+  };
+  wi.addRow(HEADERS).font = { italic: true };
+  const c0 = allCountries.find((c) => c.name === "Fiji")?.id ?? allCountries[0]?.id ?? 242;
+  const pop = measures.find((m) => m.name === "Population")?.id ?? 3;
+  const gdp = measures.find((m) => m.name === "GDP Per Capita")?.id ?? 9;
+  wi.addRow(["cc-001", c0, pop, 2023, "920000", "2023-06-30", "Stats Office", "", ""]);
+  wi.addRow(["cc-002", c0, pop, 2024, "935000", "2024-06-30", "Stats Office", "", ""]);
+  wi.addRow(["cc-003", c0, gdp, 2024, "5600", "2024-06-30", "Stats Office", "", ""]);
+  wi.getColumn(1).width = 16;
+  wi.getColumn(2).width = 60;
+
+  // 3) measures lookup
   const wm = wb.addWorksheet("measures (lookup)");
-  wm.addRow(["measure_def_id", "name"]);
-  wm.getRow(1).font = { bold: true };
+  wm.addRow(["measure_def_id", "name"]).font = { bold: true };
   for (const m of measures) wm.addRow([m.id, m.name]);
   wm.getColumn(1).width = 16;
   wm.getColumn(2).width = 34;
+  wm.views = [{ state: "frozen", ySplit: 1 }];
 
+  // 4) countries lookup
   const wc = wb.addWorksheet("countries (lookup)");
-  wc.addRow(["country_id (UN M49)", "name"]);
-  wc.getRow(1).font = { bold: true };
+  wc.addRow(["country_id (UN M49)", "name"]).font = { bold: true };
   for (const c of allCountries) wc.addRow([c.id, c.name]);
   wc.getColumn(1).width = 20;
   wc.getColumn(2).width = 34;
+  wc.views = [{ state: "frozen", ySplit: 1 }];
 
   await wb.xlsx.writeFile(out);
   console.log(
-    `wrote ${out} — ${measures.length} measures, ${allCountries.length} countries. Delete the ex-* rows before loading.`,
+    `wrote ${out} — data sheet (headers only) + instructions + ${measures.length} measures + ${allCountries.length} countries.`,
   );
   process.exit(0);
 }
