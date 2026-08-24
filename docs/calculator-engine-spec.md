@@ -326,6 +326,12 @@ fetches it from `country_context` (carry-forward), not `data_entries`. **Build n
   silent stale figure; an **approved snapshot pins the RESOLVED context** it was computed against
   (no re-drift). This is a read/provenance concern (like `no_data_reason`), not a change to the
   formula or binding.
+- **A not-available context row propagates (§9.1).** `country_context` now carries the same
+  availability axis as `data_entries` (`no_data_reason`, `024d935`): a not-available context measure
+  resolves to `value = null, no_data_reason = 'not_available'` on the `ResolvedContextRow`. So a
+  **not-available per-capita / per-GDP _denominator_ makes the whole KPI not-available (null + reason),
+  never 0** — exactly §9.1's rule, now applying to the country-context source too (zero-fill never
+  applies to a denominator regardless of source). Interface addition only; existing fields unchanged.
 
 ### 4.6.3 Tariff bills & currency conversion (DECIDED 2026-08-24)
 
