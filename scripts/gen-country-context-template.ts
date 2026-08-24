@@ -13,6 +13,7 @@ import ExcelJS from "exceljs";
 import { db } from "@/db/connection";
 import { countries } from "@/db/schema/country";
 import { measureDefinitions } from "@/db/schema/dataEntry";
+import { managedLists, managedListItems } from "@/db/schema/managedLists";
 import { eq, asc } from "drizzle-orm";
 
 const COUNTRY_CONTEXT_SUBGROUP_ID = 221;
@@ -78,7 +79,7 @@ async function main() {
     ["country_id", "REQUIRED. UN M49 code from the 'countries (lookup)' tab (e.g. Fiji = 242)."],
     ["measure_def_id", "REQUIRED. The metric id from the 'measures (lookup)' tab (1..16, e.g. Population = 3)."],
     ["period_year", "REQUIRED. The year the figure is FOR, e.g. 2024. One row per year — add a new row for each year of history."],
-    ["value", "REQUIRED. The figure itself, entered as text exactly as sourced (e.g. 935000 or 12.4)."],
+    ["value", "REQUIRED. The figure as text (e.g. 935000 or 12.4). For the two OPTION measures (15 Fuel Supply Access, 16 Fuel Pricing Regulation) put the option_id from the 'options (lookup)' tab, NOT free text."],
     ["source_date", "Optional. Date of the source figure (e.g. 2024-06-30)."],
     ["source_doc", "Optional. Where it came from (e.g. National Statistics Office 2024 report)."],
     ["source_url", "Optional. Link to the source."],
@@ -114,6 +115,46 @@ async function main() {
   wc.getColumn(1).width = 20;
   wc.getColumn(2).width = 34;
   wc.views = [{ state: "frozen", ySplit: 1 }];
+
+  // 5) options lookup — for option-typed measures (e.g. Fuel Pricing Regulation),
+  // the value column takes the OPTION ID listed here (not free text).
+  const optionMeasures = await db
+    .select({
+      id: measureDefinitions.id,
+      name: measureDefinitions.name,
+      dataType: managedListItems.name,
+    })
+    .from(measureDefinitions)
+    .leftJoin(
+      managedListItems,
+      eq(managedListItems.id, measureDefinitions.data_type_id),
+    )
+    .where(eq(measureDefinitions.measures_subgroup_id, COUNTRY_CONTEXT_SUBGROUP_ID))
+    .orderBy(asc(measureDefinitions.id));
+  const wo = wb.addWorksheet("options (lookup)");
+  wo.addRow(["measure_def_id", "measure_name", "option_id (put in value)", "option_label"]).font =
+    { bold: true };
+  for (const m of optionMeasures) {
+    if (m.dataType !== "option") continue;
+    const [list] = await db
+      .select({ id: managedLists.id })
+      .from(managedLists)
+      .where(eq(managedLists.name, m.name))
+      .limit(1);
+    const opts = list
+      ? await db
+          .select({ id: managedListItems.id, name: managedListItems.name })
+          .from(managedListItems)
+          .where(eq(managedListItems.list_id, list.id))
+          .orderBy(asc(managedListItems.id))
+      : [];
+    for (const o of opts) wo.addRow([m.id, m.name, o.id, o.name]);
+  }
+  wo.getColumn(1).width = 16;
+  wo.getColumn(2).width = 24;
+  wo.getColumn(3).width = 24;
+  wo.getColumn(4).width = 40;
+  wo.views = [{ state: "frozen", ySplit: 1 }];
 
   await wb.xlsx.writeFile(out);
   console.log(

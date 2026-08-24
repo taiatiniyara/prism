@@ -35,7 +35,11 @@ export async function getResolvedContextRows(
   subgroupId: number,
 ): Promise<ResolvedContextRow[]> {
   const defs = await db
-    .select({ id: measureDefinitions.id, name: measureDefinitions.name })
+    .select({
+      id: measureDefinitions.id,
+      name: measureDefinitions.name,
+      data_type_id: measureDefinitions.data_type_id,
+    })
     .from(measureDefinitions)
     .where(eq(measureDefinitions.measures_subgroup_id, subgroupId));
   if (defs.length === 0) return [];
@@ -55,6 +59,21 @@ export async function getResolvedContextRows(
 
   const items = await db.select().from(managedListItems);
   const typeNameById = new Map(items.map((i) => [i.id, i.name]));
+
+  // Option-typed context measures (e.g. Fuel Pricing Regulation) store the chosen
+  // managed_list_items id in country_context.value as text; resolve it to the option
+  // label on read, mirroring how data_entries option values resolve. Non-option
+  // measures pass their value through unchanged.
+  const optionMeasureIds = new Set(
+    defs
+      .filter((d) => typeNameById.get(d.data_type_id) === "option")
+      .map((d) => d.id),
+  );
+  const resolveValue = (measureDefId: number, value: string | null) => {
+    if (value == null || !optionMeasureIds.has(measureDefId)) return value;
+    const optId = Number(value);
+    return Number.isInteger(optId) ? typeNameById.get(optId) ?? value : value;
+  };
 
   // index country_context by (country_id, measure_def_id) -> period_year desc
   const byKey = new Map<string, { period_year: number; value: string | null }[]>();
@@ -90,7 +109,7 @@ export async function getResolvedContextRows(
         measure_def_id: d.id,
         measureName: d.name,
         period_year: pick.period_year,
-        value: pick.value,
+        value: resolveValue(d.id, pick.value),
       });
     }
   }

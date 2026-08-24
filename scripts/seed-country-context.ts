@@ -25,7 +25,8 @@ import ExcelJS from "exceljs";
 import { db } from "@/db/connection";
 import { countries, countryContext } from "@/db/schema/country";
 import { measureDefinitions } from "@/db/schema/dataEntry";
-import { eq, sql } from "drizzle-orm";
+import { managedLists, managedListItems } from "@/db/schema/managedLists";
+import { eq, and, sql } from "drizzle-orm";
 
 const COUNTRY_CONTEXT_SUBGROUP_ID = 221;
 const SHEET = "country_context";
@@ -92,6 +93,37 @@ async function main() {
     ).map((r) => r.id),
   );
 
+  // Option-typed context measures (Fuel Pricing Regulation, Fuel Supply Access):
+  // value must be a valid option id from the measure's like-named managed list.
+  const contextMeasures = await db
+    .select({
+      id: measureDefinitions.id,
+      name: measureDefinitions.name,
+      dataType: managedListItems.name,
+    })
+    .from(measureDefinitions)
+    .leftJoin(
+      managedListItems,
+      eq(managedListItems.id, measureDefinitions.data_type_id),
+    )
+    .where(eq(measureDefinitions.measures_subgroup_id, COUNTRY_CONTEXT_SUBGROUP_ID));
+  const optionIdsByMeasure = new Map<number, Set<number>>();
+  for (const m of contextMeasures) {
+    if (m.dataType !== "option") continue;
+    const [list] = await db
+      .select({ id: managedLists.id })
+      .from(managedLists)
+      .where(eq(managedLists.name, m.name))
+      .limit(1);
+    const opts = list
+      ? await db
+          .select({ id: managedListItems.id })
+          .from(managedListItems)
+          .where(eq(managedListItems.list_id, list.id))
+      : [];
+    optionIdsByMeasure.set(m.id, new Set(opts.map((o) => o.id)));
+  }
+
   const wb = new ExcelJS.Workbook();
   await wb.xlsx.readFile(file);
   const ws = wb.getWorksheet(SHEET) ?? wb.worksheets[0];
@@ -151,6 +183,14 @@ async function main() {
     if (r.period_year == null || Number.isNaN(r.period_year))
       problems.push("period_year missing/non-numeric");
     if (r.value == null) problems.push("value missing");
+    else if (r.measure_def_id != null && optionIdsByMeasure.has(r.measure_def_id)) {
+      const opts = optionIdsByMeasure.get(r.measure_def_id)!;
+      const v = Number(r.value);
+      if (!Number.isInteger(v) || !opts.has(v))
+        problems.push(
+          `value "${r.value}" is not a valid option id for measure ${r.measure_def_id} — expected one of: ${[...opts].join(", ")}`,
+        );
+    }
     if (problems.length) bad.push({ row: r, why: problems.join("; ") });
     else good.push(r);
   }
