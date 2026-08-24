@@ -8,6 +8,13 @@
 --
 -- SOFT-delete (is_deleted=true) — reversible; preserves the 2 filled Fuel Oil @ IPP values
 -- in case they're wanted. 24 shells (12 Fuel Oil incl. 2 filled, 12 Lubrication Oil empty).
+--
+-- DISPOSITION of the 2 filled Fuel Oil @ IPP values (Commonwealth Utilities Corp, IPP
+-- diesel, FY2022 28,418,920.78 + FY2023 28,559,079.00): **PENDING** Eugene's ruling, NOT
+-- ruled invalid. Fuel (unlike lube oil) can legitimately be a utility cost where the
+-- utility SUPPLIES the fuel to the IPP (fuel pass-through, common in the Pacific). The
+-- soft-delete preserves both values fully; if Eugene rules them genuine, restore Fuel Oil
+-- @ IPP and narrow this rule to Lubrication Oil only. (2026-08-25, per #8 data-preservation.)
 -- Applied to dev 2026-08-25. Run per environment. Idempotent.
 
 UPDATE data_entries

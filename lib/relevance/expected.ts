@@ -34,6 +34,10 @@ export async function missingUtilityLevelShells(): Promise<Finding> {
       SELECT md.id, md.name, md.effective_from, md.is_calculated
       FROM measure_definitions md
       WHERE md.is_active AND NOT md.is_context_fed AND NOT md.is_system_generated
+        -- utility grain (strata "Utility") specifically — service-area (strata 3) and
+        -- unit (strata 1) measures are covered by their own classes below/above
+        AND md.strata_id = (SELECT id FROM managed_list_items WHERE name = 'Utility'
+                            AND list_id = (SELECT id FROM managed_lists WHERE name = 'Strata'))
         AND NOT EXISTS (
           SELECT 1 FROM measure_dimension_scope s
           WHERE s.measure_id = md.id AND s.expansion_mode <> 'not_applicable')
@@ -174,6 +178,57 @@ export async function generationCoverageDiff(): Promise<Finding> {
   };
 }
 
+/** Service-area-grain measures (strata ServiceArea) are collected once per active service
+ * area. A measure present for a utility-period but missing a shell for a service area its
+ * period-peers DO cover is a coverage gap. Uses the active-area set from the data (the
+ * areas the utility actually reports that period), so it's robust to sentinel/registry
+ * areas and per-measure area applicability. (Tariff measures are also service-area grain —
+ * they'll flow through this class once the tariff migration lands.) */
+export async function serviceAreaCoverage(): Promise<Finding> {
+  const rows = await run(sql`
+    WITH active AS (
+      -- the service areas a utility actually reports for a period (any sa-measure shell)
+      SELECT rp.utility_id, de.report_period_id, de.service_area_id
+      FROM data_entries de
+      JOIN report_periods rp ON rp.id = de.report_period_id
+      WHERE de.service_area_id IS NOT NULL AND de.is_deleted = false
+      GROUP BY 1, 2, 3
+    ),
+    present AS (
+      -- (service-area measure, period) pairs where the measure is present that period
+      SELECT de.measure_def_id, de.report_period_id
+      FROM data_entries de
+      WHERE de.service_area_id IS NOT NULL AND de.is_deleted = false
+      GROUP BY 1, 2
+    )
+    SELECT p.measure_def_id AS measure, md.name,
+           a.utility_id, a.report_period_id AS period_id,
+           a.service_area_id, sa.name AS service_area
+    FROM present p
+    JOIN active a ON a.report_period_id = p.report_period_id
+    JOIN measure_definitions md ON md.id = p.measure_def_id
+    LEFT JOIN service_areas sa ON sa.id = a.service_area_id
+    WHERE NOT EXISTS (
+      SELECT 1 FROM data_entries de
+      WHERE de.measure_def_id = p.measure_def_id
+        AND de.report_period_id = a.report_period_id
+        AND de.service_area_id = a.service_area_id
+        AND de.is_deleted = false)
+    ORDER BY measure, a.utility_id, a.service_area_id`);
+  return {
+    check: "service-area coverage",
+    severity: "warn",
+    ok: rows.length === 0,
+    summary: "service-area measures missing a shell for an active service area their period-peers cover",
+    count: rows.length,
+    rows,
+  };
+}
+
 export async function runGenerativeChecks(): Promise<Finding[]> {
-  return Promise.all([missingUtilityLevelShells(), generationCoverageDiff()]);
+  return Promise.all([
+    missingUtilityLevelShells(),
+    generationCoverageDiff(),
+    serviceAreaCoverage(),
+  ]);
 }
