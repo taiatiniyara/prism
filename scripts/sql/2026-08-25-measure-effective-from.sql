@@ -9,8 +9,9 @@
 -- 302 (Electricity Sold to Customers) corrected from the file's 2024/2026 to 2020-01-01
 -- (they carry pre-2024/2026 shells — the file dates were wrong, not the data).
 --
--- Net: 111 measures effective 2020-01-01 (baseline); 8 effective 2026-01-01 (solar
--- irradiance 360-363, storage 390-392, IPP purchases 431 — all with 0 historical shells).
+-- Net: 110 measures effective 2020-01-01 (baseline); 9 effective 2026-01-01 (solar
+-- irradiance 360-363, storage 390-392, IPP purchases 431, Non-Revenue Energy 303 — all
+-- with 0 historical shells; 303 added per Eugene 2026-08-25, file had it as baseline).
 -- Verified 2026-08-25 on dev: no measure has a shell before its effective_from. Idempotent.
 
 ALTER TABLE measure_definitions
@@ -25,4 +26,5 @@ UPDATE measure_definitions
   SET effective_from = DATE '2026-01-01'
   WHERE id IN (360, 361, 362, 363,   -- Solar irradiance (H, G_measured, G_STC, theoretical)
                390, 391, 392,        -- Electricity for Charging / Energy Stored / Discharged
-               431);                 -- Electricity Purchased from Other Providers
+               431,                  -- Electricity Purchased from Other Providers
+               303);                 -- Non-Revenue Energy Consumed
