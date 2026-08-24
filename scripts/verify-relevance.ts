@@ -8,26 +8,33 @@
  * otherwise — so it can gate a migration/cutover or run in CI against a target DB.
  */
 import { runAllChecks, type Finding } from "@/lib/relevance/verify";
+import { runGenerativeChecks } from "@/lib/relevance/expected";
 
 const icon = (f: Finding) =>
   f.ok ? "✓" : f.severity === "error" ? "✗" : "!";
 
+function printFinding(f: Finding) {
+  console.log(
+    `  ${icon(f)} [${f.severity}] ${f.check} — ${f.ok ? "pass" : `${f.count}`} ${f.ok ? "" : "issue(s)"}`,
+  );
+  if (!f.ok) {
+    console.log(`      ${f.summary}`);
+    for (const r of f.rows.slice(0, 20)) console.log("      · " + JSON.stringify(r));
+    if (f.rows.length > 20) console.log(`      … and ${f.rows.length - 20} more`);
+  }
+}
+
 async function main() {
   const { findings, accounting, completeness, ok } = await runAllChecks();
+  const generative = await runGenerativeChecks();
 
   console.log("\n══ Relevance / shell verification ══\n");
 
-  console.log("INVARIANTS");
-  for (const f of findings) {
-    console.log(
-      `  ${icon(f)} [${f.severity}] ${f.check} — ${f.ok ? "pass" : `${f.count}`} ${f.ok ? "" : "issue(s)"}`,
-    );
-    if (!f.ok) {
-      console.log(`      ${f.summary}`);
-      for (const r of f.rows.slice(0, 20)) console.log("      · " + JSON.stringify(r));
-      if (f.rows.length > 20) console.log(`      … and ${f.rows.length - 20} more`);
-    }
-  }
+  console.log("INVARIANTS (verify — what exists is valid)");
+  for (const f of findings) printFinding(f);
+
+  console.log("\nGENERATIVE (expected − actual — what's missing / over-applied)");
+  for (const f of generative) printFinding(f);
 
   console.log("\nSHELL ACCOUNTING — two denominators (never mixed)");
   for (const b of accounting) {
@@ -54,8 +61,9 @@ async function main() {
   for (const w of worst)
     console.log(`  ${String(w.utility).padEnd(38)} ${w.period}  ${w.answered}/${w.requested}  ${w.pct}%`);
 
-  console.log(`\n${ok ? "✓ PASS — no invariant violations" : "✗ FAIL — invariant violation(s) above"}\n`);
-  process.exit(ok ? 0 : 1);
+  const allOk = ok && generative.every((f) => f.severity !== "error" || f.ok);
+  console.log(`\n${allOk ? "✓ PASS — no invariant or expected-set violations" : "✗ FAIL — violation(s) above"}\n`);
+  process.exit(allOk ? 0 : 1);
 }
 
 main().catch((e) => {
