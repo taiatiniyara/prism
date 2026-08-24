@@ -392,6 +392,25 @@ within a customer type**, not a customer type of its own and **not an 11th dimen
 Lifeline = `customer_type = Residential` **+** `tariff_class = Lifeline`. It qualifies both the tariff
 KPI and its component inputs; the ~10-dimension model (§12) is untouched.
 
+**How the class is carried — separate measures per class (DECIDED 2026-08-25, Eugene via #2).** Because
+`tariff_class` is deliberately **not** a dimension, it can't be a slice on the row; instead it is carried
+by **measure identity** — each tariff component has a **Standard measure and a parallel Lifeline
+measure**. This keeps the dimension set clean, needs no new `data_entries` column, and gives distinct
+addresses (the precedent is #2's gender 250/251 split). Concretely:
+- **Existing tariff component measures = the Standard set.** p1 has **zero Lifeline entries** (all p1
+  tariff is Standard-class, Eugene-confirmed), so #2's migration maps **every p1 tariff input onto the
+  existing (Standard) measures unchanged** — no class field, no collision, and `tariff_class` drops out
+  of the migration entirely.
+- **Lifeline is forward-looking.** Parallel **Lifeline-twin** component measures are added to the
+  catalogue (mirroring the Standard defs, `is_context_fed = false`), **empty at migration** (no data yet).
+  `block_tariff` binds the Lifeline component set on them when Lifeline data later exists. Naming: the
+  existing measures **stay as-is** (Standard is the implied default — no rename churn); Lifeline twins are
+  added alongside.
+- **Ownership of the twin build (forward, non-blocking):** Eugene/BMO decide *which* components a
+  Lifeline tariff carries → **#3** pins the twin list + their `block_tariff` bindings in this section →
+  **#2 or #4** creates the mirrored `measure_defs`. Gated only on the tariff extract revealing the actual
+  component measures; it does **not** block #2's migration.
+
 **Currency → USD via measure 140 (Decision #3).** FX is the existing measure **140 "USD Exchange Rate"**
 (`usd_exchange_rate_ratio`) — a **dimensionless ratio reported per (utility, period)** (one rate for
 every slice; verified: no dimensional scope). It binds as an **ordinary input** (all dims inherit;
@@ -798,7 +817,7 @@ Definition tables (`measure_definitions`, `kpi_definitions`) otherwise stay sepa
 | 11.10 | Missing-input policy | keep zero-fill-if-additive · revise | Keep (§9) |
 | 11.11 | `variable_name` | token on binding · token on measure · structured (no token) | **DECIDED 2026-07-24: token on the binding** (§5.7); measure `variable_name` kept, re-purposed as a stable AI/machine handle |
 | 11.12 | Cross-scope aggregation depth | same-scope only · aggregate across dims/grain | **DECIDED 2026-07-24: common & deep, two-axis** (§4.6) |
-| 11.13 | Tariff-bill computation & currency | user-authored formula · **system-defined built-in evaluator** · convert at read layer | **DECIDED 2026-08-24: built-in `block_tariff` evaluator, reviewable (reactive + materialized); USD via measure 140; `tariff_class` Standard/Lifeline qualifier; `reference_kwh` + `tax_treatment` as KPI params** (§4.6.3) |
+| 11.13 | Tariff-bill computation & currency | user-authored formula · **system-defined built-in evaluator** · convert at read layer | **DECIDED 2026-08-24: built-in `block_tariff` evaluator, reviewable (reactive + materialized); USD via measure 140; `tariff_class` Standard/Lifeline qualifier; `reference_kwh` + `tax_treatment` as KPI params** (§4.6.3). **`tariff_class` representation finalized 2026-08-25: separate measures per class — existing = Standard, Lifeline twins added parallel/empty (no rename); p1 all-Standard so it drops out of migration.** |
 
 The two biggest forks (11.1 engine topology, 11.2 compute home) are now **decided** (§4.4–4.5).
 Everything in §5/§6 (the binding + integrity model) is the direction the design converged on.
