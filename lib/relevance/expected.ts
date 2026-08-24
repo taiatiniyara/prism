@@ -78,23 +78,18 @@ export async function missingUtilityLevelShells(): Promise<Finding> {
 export async function generationCoverageDiff(): Promise<Finding> {
   const rows = await run(sql`
     WITH gen_measures AS (
-      SELECT DISTINCT s.measure_id
-      FROM measure_dimension_scope s
-      JOIN measure_definitions md ON md.id = s.measure_id
-      WHERE s.dimension = 'source' AND s.expansion_mode = 'by_context'
+      -- unit-grain measures (strata "Unit"), effective within the migrated window. Precise
+      -- via strata_id (not a scope heuristic); the effective filter drops not-yet-effective
+      -- ones (2026 solar irradiance / storage) whose absence is correct, not a gap.
+      SELECT md.id AS measure_id
+      FROM measure_definitions md
+      WHERE md.strata_id = (SELECT id FROM managed_list_items WHERE name = 'Unit'
+                            AND list_id = (SELECT id FROM managed_lists WHERE name = 'Strata'))
         AND md.is_active AND NOT md.is_context_fed
-        -- pure per-unit generation only: exclude function-split measures (Hours carry
-        -- technology only under the Generation function, not per unit) and measures
-        -- captured at the All aggregate (require a real per-technology shell to exist)
-        AND NOT EXISTS (
-          SELECT 1 FROM measure_dimension_scope s2
-          WHERE s2.measure_id = s.measure_id
-            AND s2.dimension = 'utility_function' AND s2.expansion_mode = 'by_context')
-        AND EXISTS (
-          SELECT 1 FROM data_entries de
-          JOIN managed_list_items t ON t.id = de.technology_id
-          WHERE de.measure_def_id = s.measure_id AND de.is_deleted = false
-            AND t.name NOT ILIKE 'All%')
+        AND (md.effective_from IS NULL OR EXTRACT(year FROM md.effective_from) <=
+             (SELECT EXTRACT(year FROM max(rp.report_date))
+              FROM report_periods rp JOIN data_entries d ON d.report_period_id = rp.id
+              WHERE d.is_deleted = false))
     ),
     util_tech AS (
       SELECT u.utility_id, u.technology_id
