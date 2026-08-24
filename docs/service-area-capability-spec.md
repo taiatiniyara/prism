@@ -69,6 +69,11 @@ Mirrors `unit_activations` exactly:
 - **Effective-dated by construction, genuinely** (ADR 0004): "in effect for a period" is the
   span overlapping the report period's **fiscal year** — the *same* fiscal-year comparison
   the verifier already codes for measure `effective_from`. No new comparison logic.
+- **Provenance columns** (for §4 rule 3): the table carries `created_by`/`created_at` (append)
+  and, on amend, `change_reason` + `changed_by`/`changed_at` — the `change_reason` analog #8's
+  amend-provenance rule requires. Same shape and audit discipline as the unit-stint table (one
+  family); if stints resolve provenance via a shared history/audit table instead of inline
+  columns, capability spans use the identical mechanism.
 - **Extensible:** `capability` is a controlled vocabulary; `has_transmission` is the first
   member (the driver). Future per-area temporal capabilities (network presence, seasonal
   operation) are new `capability` values, no schema change. The static
@@ -114,6 +119,20 @@ surface them as two intents rather than conflating them.
 This distinction is **owned by #8** (capability-span semantics) alongside the identical
 append-vs-amend split for unit stints; #11 renders it as a two-option affordance
 ("a new network came online" vs "correct a past entry"), no span mechanics surfaced.
+
+**The three amend-consequence rules** (ruled by #8, 2026-08-25 — shared temporal-semantics
+family, written once here and cited by the unit-stint timeline; append needs none of this,
+amend needs all three because it rewrites what the system believed):
+1. **Amend reflows its consequences.** Moving a boundary regenerates the shells for every
+   period now inside/outside the capability window and **recomputes those periods' scorecard
+   denominators**. An amendment that doesn't reflow is worse than the mis-declaration it fixes.
+2. **Snapshots pin; live absorbs** (the §5.1 stint-edit pattern). The amendment flows into
+   live views and the next report refresh; a **frozen report version never changes** — the
+   amendment surfaces only in the "Updated (Final)" delta view. Published benchmarks are never
+   retroactively rewritten.
+3. **Amend carries provenance** — who / when / why (a `change_reason` analog) — because it
+   rewrites declared history that past scorecards consumed. Same authors as append (BLO/DAOO
+   per the stint authoring rule): **audited, not escalated.** Append needs no ceremony.
 
 ## 5. Generator + verifier integration
 
