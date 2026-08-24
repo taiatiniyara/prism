@@ -15,6 +15,7 @@ import {
   check,
   timestamp,
   numeric,
+  date,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { managedListItems, managedLists } from "./managedLists";
@@ -98,6 +99,13 @@ export const measureDefinitions = pgTable("measure_definitions", {
   is_calculated: boolean("is_calculated").default(false).notNull(),
   is_kpi: boolean("is_kpi").default(false).notNull(),
   is_kpi_input: boolean("is_kpi_input").default(false).notNull(),
+  // Measure-level "birth date": the measure exists (and can be shelled) only from this
+  // fiscal year onward. Compared by fiscal year: a period is in scope when
+  // fy(period) >= fy(effective_from). NULL = always valid. This is the coarse,
+  // measure-level gate; measure_dimension_applicability.effective_from/to carries the
+  // finer per-(dimension,member) validity. Populated from the BMO effective-dating
+  // catalogue (2026-08-25). See measure-effective-dating-spec / ADR 0004.
+  effective_from: date("effective_from"),
   updated_at: timestamp("updated_at").notNull().defaultNow(),
   alternative_names:
     json("alternative_names").$type<MeasureDefinitionAlternativeNames>(),
