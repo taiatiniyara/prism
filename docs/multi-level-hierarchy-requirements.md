@@ -116,8 +116,14 @@ hierarchy (NULL above… means truthfully absent). Do not "unify" them.
    *Post-drop note (#13, 2026-07-27):* the spent one-off `scripts/cleanup-m49-country-duplicates.ts`
    safety-checks `data_entries.subregion_id` — already applied on dev, don't re-run it against a
    post-drop DB (it will error on the missing column, by design not by accident).
-7. **`country_context` fold-or-keep (flag, not blocker):** unchanged — #8 will bring a
-   recommendation once country-grain entry is live; not first-DDL-pass.
+7. **`country_context` fold-or-keep — RESOLVED (Option 2, `fcf8e4e`, 2026-08-19):** the
+   side-channel won, formalized — national annual figures stay in `country_context`
+   (country × metric × `period_year` + unique, DDL applied) and are projected to
+   utility × report_period shape at read time by a carry-forward bridge. #8 validated the
+   architecture; open holes flagged to #4: H1 the bridge's blanket "report_date year −1"
+   FY mapping must resolve via the canonical period dim / `financial_year_end` (no second
+   source of time truth); H2 unbounded carry-forward needs a staleness flag (no silent
+   stale denominators in benchmarking KPIs); snapshots must pin RESOLVED context.
 
 ## 3. Backfill: promoting entries off the virtual entities
 
@@ -130,11 +136,25 @@ say where each entry belongs (`units.power_station_id` / `.service_area_id`;
 | virtual `unit` **with** `power_station_id` | station+area+utility+country; unit NULL | station-level data parked on a station virtual |
 | virtual `unit` without station | area+utility+country | grid-level data parked on a grid virtual |
 | virtual `service_area` | utility+country; area NULL | org-level data parked on a virtual area |
-| org-level rows whose measure's `strata` = country | country only; utility NULL | country-level data (see §4 ownership note) |
+| ~~org-level rows whose measure's `strata` = country~~ | ~~country only; utility NULL~~ | **SUPERSEDED by country-context Option 2 (`fcf8e4e`, 2026-08-19):** historical country-strata values reimport INTO `country_context` (country × metric × period_year) — NOT as country-anchored entries; national figures never enter `data_entries` (read-time carry-forward bridge projects them; #8-validated with holes H1–H3 flagged, see board). The `country_id` anchor remains for `kpi_actual` computed rollups + any future genuinely-entered country facts. |
 
 ⚠ Verify the virtual→level convention against actual rows before trusting it (e.g.
 `SELECT … WHERE is_virtual GROUP BY strata_id`); one transaction; per-level row counts
-before/after; nothing dropped. Expect and dedupe legacy duplicate addresses first (the old
+before/after; nothing dropped.
+
+**Promotion is mismatch-driven, not virtual-driven (widened 2026-08-03; re-corrected same day
+on Eugene-driven evidence):** the table above covers flagged virtuals, but **25 further sentinel
+service areas exist — all named "All Service Areas", one per utility, marked Utility-strata**
+(the SA analog of the retired "All Utilities"/virtual-unit pattern; they survived the 2026-07-27
+sentinel purge because they hold parked data, and their `is_virtual` flag is not reliable).
+**Every** entry on them is a parked utility-level fact → promote to the utility anchor, then
+retire the 25 rows with the other virtuals. (An earlier framing of these as "real areas
+coextensive with single-grid utilities" was wrong — no real area is Utility-strata; the 66 real
+grids are all ServiceArea-strata.) Detection for the whole backfill is therefore
+**anchor-level ≠ measure-declared-strata mismatch** — the robust net that catches sentinels
+regardless of flags — with `is_virtual` as corroborating signal, not the filter.
+(`service_areas.strata_id`: KEPT this DDL as the identifying signal for the 25; after their
+retirement it is vestigial — joint #8/#4 assessment, likely outcome **drop**, per unit-spec §10.) Expect and dedupe legacy duplicate addresses first (the old
 `uniq_entry` was never unique). After no entries reference them: soft-delete virtual
 `units`/`service_areas`; drop `is_virtual` only once onboarding/import paths stop creating them.
 
