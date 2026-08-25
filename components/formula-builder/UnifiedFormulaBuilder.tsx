@@ -1,0 +1,544 @@
+"use client";
+
+import { type ReactNode, useMemo, useState, useTransition } from "react";
+import { toast } from "sonner";
+import { cn } from "@/lib/utils";
+import {
+  saveUnifiedFormula,
+  recomputeKpiNow,
+} from "@/app/settings/kpi/unified-formula-service";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { SearchableSelect } from "@/components/ui/searchable-select";
+
+import { FormulaEditor, formulaVariables } from "./FormulaEditor";
+import { InputTagCard } from "./InputTagCard";
+import { MeasurePickerModal } from "./MeasurePickerModal";
+import { TestHarness } from "./TestHarness";
+import {
+  type BuilderData,
+  type BuilderMode,
+  type DimBinding,
+  type DimensionField,
+  type MeasureCatalogueItem,
+  type MemberOption,
+  type RecomputeResult,
+  type SavePayload,
+  type TagCardState,
+  type TargetOption,
+} from "./types";
+
+let cardKeySeq = 0;
+const nextCardKey = () => `card_${Date.now().toString(36)}_${cardKeySeq++}`;
+
+function seedDims(
+  measure: MeasureCatalogueItem,
+  dimMembers: Record<DimensionField, MemberOption[]>,
+): Partial<Record<DimensionField, DimBinding>> {
+  const dims: Partial<Record<DimensionField, DimBinding>> = {};
+  for (const d of measure.applicableDims) {
+    if (d.expansionMode === "all_members") {
+      dims[d.field] = { mode: "all", memberId: null };
+    } else {
+      const first =
+        d.allowedMemberIds?.[0] ?? dimMembers[d.field]?.[0]?.id ?? null;
+      dims[d.field] = { mode: "pin", memberId: first };
+    }
+  }
+  return dims;
+}
+
+export interface UnifiedFormulaBuilderProps {
+  data: BuilderData;
+  mode: BuilderMode;
+}
+
+export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps) {
+  const [selectedTargetId, setSelectedTargetId] = useState<number | null>(null);
+  const [formula, setFormula] = useState("");
+  const [cards, setCards] = useState<TagCardState[]>([]);
+  const [onlyWithoutFormula, setOnlyWithoutFormula] = useState(false);
+  const [trackAsKpi, setTrackAsKpi] = useState(mode === "kpi");
+  const [pickerCardKey, setPickerCardKey] = useState<string | null>(null);
+  const [recompute, setRecompute] = useState<RecomputeResult | null>(null);
+  const [justSaved, setJustSaved] = useState(false);
+  const [isSaving, startSave] = useTransition();
+  const [isComputing, startCompute] = useTransition();
+
+  const measuresById = useMemo(() => {
+    const m = new Map<number, MeasureCatalogueItem>();
+    for (const item of data.measures) m.set(item.id, item);
+    return m;
+  }, [data.measures]);
+
+  const targetsById = useMemo(() => {
+    const m = new Map<number, TargetOption>();
+    for (const t of data.targets) m.set(t.id, t);
+    return m;
+  }, [data.targets]);
+
+  const filteredTargets = useMemo(
+    () =>
+      data.targets.filter((t) => (onlyWithoutFormula ? !t.hasFormula : true)),
+    [data.targets, onlyWithoutFormula],
+  );
+
+  const variables = useMemo(() => formulaVariables(formula), [formula]);
+  const knownVariables = useMemo(
+    () => cards.map((c) => c.variableName),
+    [cards],
+  );
+
+  // --- card reconciliation ------------------------------------------------
+  const reconcileCards = (
+    nextFormula: string,
+    prev: TagCardState[],
+  ): TagCardState[] => {
+    const vars = formulaVariables(nextFormula);
+    const byName = new Map(prev.map((c) => [c.variableName, c]));
+    return vars.map(
+      (name) =>
+        byName.get(name) ?? {
+          key: nextCardKey(),
+          variableName: name,
+          measureDefId: null,
+          grainMode: "inherit",
+          dims: {},
+        },
+    );
+  };
+
+  const handleFormulaChange = (next: string) => {
+    setFormula(next);
+    setCards((prev) => reconcileCards(next, prev));
+    setJustSaved(false);
+  };
+
+  const handleSelectTarget = (value: string) => {
+    const id = Number(value);
+    const target = targetsById.get(id);
+    setSelectedTargetId(id);
+    setFormula(target?.formula ?? "");
+    setCards(target?.existingCards.map((c) => ({ ...c })) ?? []);
+    setRecompute(null);
+    setJustSaved(false);
+  };
+
+  const updateCard = (key: string, next: TagCardState) =>
+    setCards((prev) => prev.map((c) => (c.key === key ? next : c)));
+
+  const removeCard = (key: string) => {
+    const card = cards.find((c) => c.key === key);
+    setCards((prev) => prev.filter((c) => c.key !== key));
+    if (card) {
+      // strip the variable's tokens from the formula so state stays consistent
+      const stripped = formula
+        .split(/\s+/)
+        .filter((tok) => tok !== card.variableName)
+        .join(" ")
+        .trim();
+      setFormula(stripped);
+    }
+  };
+
+  const handlePickMeasure = (measure: MeasureCatalogueItem) => {
+    if (!pickerCardKey) return;
+    setCards((prev) =>
+      prev.map((c) =>
+        c.key === pickerCardKey
+          ? {
+              ...c,
+              measureDefId: measure.id,
+              measureName: measure.name,
+              unitLabel: measure.unitLabel ?? undefined,
+              strataId: measure.strataId,
+              dims: seedDims(measure, data.dimMembers),
+            }
+          : c,
+      ),
+    );
+  };
+
+  // --- validation ---------------------------------------------------------
+  const validationErrors = useMemo(() => {
+    const errs: string[] = [];
+    if (selectedTargetId == null) errs.push("Choose a target first.");
+    if (!formula.trim()) errs.push("Formula is empty.");
+    const cardByName = new Map(cards.map((c) => [c.variableName, c]));
+    for (const v of variables) {
+      const card = cardByName.get(v);
+      if (!card) {
+        errs.push(`Variable “${v}” has no input card.`);
+      } else if (card.measureDefId == null) {
+        errs.push(`Input “${v}” needs a measure.`);
+      } else if (!measuresById.has(card.measureDefId)) {
+        errs.push(`Input “${v}” points at an unavailable measure.`);
+      }
+    }
+    return errs;
+  }, [selectedTargetId, formula, cards, variables, measuresById]);
+
+  const canSave = validationErrors.length === 0;
+  const bindingsResolved =
+    variables.length > 0 &&
+    variables.every((v) => {
+      const c = cards.find((x) => x.variableName === v);
+      return c?.measureDefId != null && measuresById.has(c.measureDefId);
+    });
+
+  // --- actions ------------------------------------------------------------
+  const handleSave = () => {
+    if (selectedTargetId == null) {
+      toast.error("Choose a target first.");
+      return;
+    }
+    if (!canSave) {
+      toast.error(validationErrors[0]);
+      return;
+    }
+    const payload: SavePayload = {
+      mode,
+      ownerId: selectedTargetId,
+      formula: formula.trim(),
+      cards,
+    };
+    startSave(() => {
+      void (async () => {
+        const res = await saveUnifiedFormula(payload);
+        if (!res.ok) {
+          toast.error(res.error ?? "Save failed.");
+          return;
+        }
+        toast.success("Saved ✓");
+        setJustSaved(true);
+        // ready the builder for the next entry, keep the target selector in view
+        setSelectedTargetId(null);
+        setFormula("");
+        setCards([]);
+        setRecompute(null);
+      })();
+    });
+  };
+
+  const handleCompute = () => {
+    if (selectedTargetId == null) {
+      toast.error("Choose a target first.");
+      return;
+    }
+    startCompute(() => {
+      void (async () => {
+        const res = await recomputeKpiNow(selectedTargetId);
+        setRecompute(res);
+        if (res.failed > 0) {
+          toast.warning(
+            `Recomputed ${res.processed}, ${res.failed} failed.`,
+          );
+        } else {
+          toast.success(`Recomputed ${res.processed} period(s).`);
+        }
+      })();
+    });
+  };
+
+  const activeMeasureCount = data.measures.length;
+
+  return (
+    <div className="space-y-4">
+      {/* target selector */}
+      <Card>
+        <CardContent className="space-y-3">
+          <div className="flex flex-wrap items-end justify-between gap-3">
+            <div className="min-w-64 flex-1">
+              <Label className="text-xs">
+                {mode === "kpi" ? "KPI to build" : "Calculated measure to build"}
+              </Label>
+              <SearchableSelect
+                value={
+                  selectedTargetId != null ? String(selectedTargetId) : undefined
+                }
+                onValueChange={handleSelectTarget}
+                options={filteredTargets.map((t) => ({
+                  value: String(t.id),
+                  label: t.hasFormula ? t.name : `${t.name} — no formula`,
+                }))}
+                placeholder={
+                  mode === "kpi" ? "Select a KPI…" : "Select a measure…"
+                }
+                searchPlaceholder="Search…"
+                emptyLabel="Nothing found."
+                triggerClassName="mt-1 w-full"
+                allowEscapeKeyPropagation={false}
+              />
+            </div>
+            <Label className="text-muted-foreground flex items-center gap-2 text-xs">
+              <Checkbox
+                checked={onlyWithoutFormula}
+                onCheckedChange={(c) => setOnlyWithoutFormula(c === true)}
+              />
+              Show only {mode === "kpi" ? "KPIs" : "measures"} without a formula
+            </Label>
+          </div>
+          {justSaved && (
+            <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+              Saved ✓ — pick the next {mode === "kpi" ? "KPI" : "measure"} to
+              keep going.
+            </p>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* definition + formula */}
+      <Card>
+        <CardContent className="space-y-4">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <h2 className="text-base font-bold">
+                {selectedTargetId != null
+                  ? (targetsById.get(selectedTargetId)?.name ??
+                    "Untitled")
+                  : "Select a target to begin"}
+              </h2>
+              <p className="text-muted-foreground text-xs">
+                One builder for every computed value — a KPI is just a measure
+                you also publish.
+              </p>
+            </div>
+            {mode === "kpi" && (
+              <div className="flex flex-col items-end gap-1.5">
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={trackAsKpi}
+                  onClick={() => setTrackAsKpi((v) => !v)}
+                  className="flex items-center gap-2 text-xs font-medium"
+                >
+                  Track as KPI
+                  <span
+                    className={cn(
+                      "relative h-5 w-9 rounded-full transition-colors",
+                      trackAsKpi ? "bg-amber-400" : "bg-muted",
+                    )}
+                  >
+                    <span
+                      className={cn(
+                        "absolute top-0.5 size-4 rounded-full bg-white shadow transition-all",
+                        trackAsKpi ? "left-[18px]" : "left-0.5",
+                      )}
+                    />
+                  </span>
+                </button>
+                <span className="text-muted-foreground max-w-44 text-right text-[10.5px]">
+                  Informational in Phase 1 — KPI definitions already publish to
+                  the dashboard.
+                </span>
+              </div>
+            )}
+          </div>
+
+          <div>
+            <div className="mb-1.5 flex items-baseline gap-3">
+              <Label className="text-xs">Formula</Label>
+              <span className="text-muted-foreground text-xs">
+                Each variable has its own dimension context in the inputs below.
+              </span>
+            </div>
+            <FormulaEditor
+              formula={formula}
+              onChange={handleFormulaChange}
+              knownVariables={knownVariables}
+              onNewVariable={(name) =>
+                setCards((prev) =>
+                  prev.some((c) => c.variableName === name)
+                    ? prev
+                    : [
+                        ...prev,
+                        {
+                          key: nextCardKey(),
+                          variableName: name,
+                          measureDefId: null,
+                          grainMode: "inherit",
+                          dims: {},
+                        },
+                      ],
+                )
+              }
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* inputs = tag cards */}
+      <Card>
+        <CardContent className="space-y-1">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="text-sm font-bold">Inputs — a tag card per variable</p>
+            <div className="flex items-center gap-4 text-xs">
+              <span className="text-muted-foreground">
+                <b>Pin</b> a slice, aggregate with <b>All</b>, or{" "}
+                <b>Inherit</b> its scope
+              </span>
+              <span className="text-muted-foreground flex items-center gap-3">
+                <span className="flex items-center gap-1.5">
+                  <span className="size-1.5 rounded-full bg-emerald-500" />
+                  Pinned
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="size-1.5 rounded-full bg-amber-500" />
+                  All
+                </span>
+                <span className="flex items-center gap-1.5">
+                  <span className="size-1.5 rounded-full bg-slate-400" />
+                  Inherit
+                </span>
+              </span>
+            </div>
+          </div>
+
+          {cards.length === 0 ? (
+            <p className="text-muted-foreground py-6 text-center text-sm">
+              Write a formula above — each variable you type gets its own input
+              card here.
+            </p>
+          ) : (
+            cards.map((card) => (
+              <InputTagCard
+                key={card.key}
+                card={card}
+                measure={
+                  card.measureDefId != null
+                    ? measuresById.get(card.measureDefId)
+                    : undefined
+                }
+                dimMembers={data.dimMembers}
+                onChange={(next) => updateCard(card.key, next)}
+                onRemove={() => removeCard(card.key)}
+                onPickMeasure={() => setPickerCardKey(card.key)}
+              />
+            ))
+          )}
+        </CardContent>
+      </Card>
+
+      {/* test harness */}
+      <Card>
+        <CardContent className="space-y-3">
+          <p className="text-sm font-bold">Test harness</p>
+          <TestHarness formula={formula} variableNames={variables} />
+        </CardContent>
+      </Card>
+
+      {/* validation footer + actions */}
+      <Card>
+        <CardContent className="space-y-3">
+          <div className="flex flex-wrap items-center gap-4 text-xs">
+            <Flag ok={bindingsResolved}>All bindings resolve</Flag>
+            <Flag ok={!!formula.trim()}>Formula present</Flag>
+            <Flag ok={validationErrors.length === 0}>Ready to save</Flag>
+          </div>
+          {validationErrors.length > 0 && selectedTargetId != null && (
+            <ul className="text-destructive space-y-0.5 text-xs">
+              {validationErrors.map((e, i) => (
+                <li key={i}>• {e}</li>
+              ))}
+            </ul>
+          )}
+          <div className="flex flex-wrap items-center gap-2">
+            <Button
+              type="button"
+              onClick={handleSave}
+              disabled={isSaving || !canSave}
+            >
+              {isSaving ? "Saving…" : "Save"}
+            </Button>
+            {mode === "kpi" && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCompute}
+                disabled={isComputing || selectedTargetId == null}
+              >
+                {isComputing ? "Computing…" : "Compute now"}
+              </Button>
+            )}
+            <span className="text-muted-foreground ml-auto text-xs">
+              {activeMeasureCount} measures available
+            </span>
+          </div>
+
+          {recompute && (
+            <div className="bg-muted/30 rounded-lg border p-3">
+              <p className="mb-2 text-xs font-semibold">
+                Recompute · {recompute.processed} processed ·{" "}
+                {recompute.failed} failed
+              </p>
+              <div className="max-h-48 overflow-auto">
+                <table className="w-full text-xs">
+                  <thead>
+                    <tr className="text-muted-foreground text-left">
+                      <th className="py-1 pr-3 font-medium">Period</th>
+                      <th className="py-1 pr-3 font-medium">Status</th>
+                      <th className="py-1 pr-3 font-medium">Value</th>
+                      <th className="py-1 font-medium">Reason</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {recompute.byPeriod.map((r, i) => (
+                      <tr key={i} className="border-t">
+                        <td className="py-1 pr-3 tabular-nums">
+                          {r.reportPeriodId}
+                        </td>
+                        <td className="py-1 pr-3">
+                          <Badge
+                            variant={
+                              r.status === "ok" ? "secondary" : "destructive"
+                            }
+                          >
+                            {r.status}
+                          </Badge>
+                        </td>
+                        <td className="py-1 pr-3 font-mono tabular-nums">
+                          {r.value ?? "—"}
+                        </td>
+                        <td className="text-muted-foreground py-1">
+                          {r.reason ?? ""}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      <MeasurePickerModal
+        open={pickerCardKey != null}
+        onOpenChange={(o) => {
+          if (!o) setPickerCardKey(null);
+        }}
+        measures={data.measures}
+        onPick={handlePickMeasure}
+      />
+    </div>
+  );
+}
+
+function Flag({ ok, children }: { ok: boolean; children: ReactNode }) {
+  return (
+    <span
+      className={cn(
+        "flex items-center gap-1.5",
+        ok ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground",
+      )}
+    >
+      <span aria-hidden>{ok ? "✓" : "○"}</span>
+      {children}
+    </span>
+  );
+}
+
+export default UnifiedFormulaBuilder;
