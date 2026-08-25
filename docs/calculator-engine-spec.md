@@ -332,6 +332,19 @@ fetches it from `country_context` (carry-forward), not `data_entries`. **Build n
   **not-available per-capita / per-GDP _denominator_ makes the whole KPI not-available (null + reason),
   never 0** — exactly §9.1's rule, now applying to the country-context source too (zero-fill never
   applies to a denominator regardless of source). Interface addition only; existing fields unchanged.
+- **⚠ Dispatch keys ONLY on `is_context_fed` — never on `expansion_mode` (word-collision guardrail).**
+  Two unrelated mechanisms both say "context"; do not conflate them:
+  - `measure_definitions.is_context_fed` decides the **read-home** (true → `country_context` bridge,
+    exclusively the 16 subgroup-221 measures; false → `data_entries`). **This is the only key for
+    source-dispatch.**
+  - `measure_dimension_scope.expansion_mode = 'by_context'` (`87fea19`) is a **shell-generation / grain**
+    rule ("expand this dimension across the members the utility's context activates") — it governs *how
+    many shells*, **not where they're read from**, and must **never** drive source-dispatch.
+
+  Same word, different axis. Example: Hours Worked (290/291/292) are `is_context_fed = false`
+  (subgroup "Staff Utilization") → they read from **`data_entries` at technology grain**, even though
+  their scope uses `expansion_mode = 'by_context'`; the sponsor "conventional vs renewable hours" KPI
+  then rolls technology→category there (a §4.6 dimension rollup up the taxonomy parent).
 
 ### 4.6.3 Tariff bills & currency conversion (DECIDED 2026-08-24)
 
@@ -375,6 +388,27 @@ in `data_entries`, bound like any input (§5), sliced by `customer_type × payme
 | Energy rate per block | price applied to the kWh falling in each `consumption_band` |
 | Block limits | the band boundaries — which `consumption_band` a kWh falls into |
 | GST rate | applied iff the KPI's `tax_treatment = includes` |
+
+The evaluator is a plain piecewise sum: `bill = fixed + Σ(units_in_band × rate_band) [+ GST]`.
+
+**Zero-rate blocks are legal — no `rate > 0` guard (DECIDED 2026-08-25, Eugene via #2/#4).** A `0`
+energy rate on a block is a valid, first-class input — it is the mechanism for **bundled
+minimum + quota** plans (below), not an error. **Both surfaces must accept it:** the `block_tariff`
+evaluator *and* the tariff-component **entry-path validation** guard on `rate ≥ 0` only (reject
+**negative**, never zero). #4 confirmed the schema/data layer imposes no positivity constraint either.
+
+**Worked example — bundled "minimum $X/month including a free quota".** Eugene confirmed **all** such
+p1 plans are the **bundled** type (the minimum bundles a free allowance), **not** a floor
+(`max(X, usage × rate)`) — so no evaluator change, it maps straight onto the components above:
+- minimum monthly amount → the **Fixed / rental charge** (flat addend),
+- included quota (first *N* units) → the **first block**, with **energy rate = 0** (its cost is inside
+  the minimum) and **block-1 limit = the quota *N***,
+- above-quota → the next block(s) at the real rate.
+
+So `bill = min + max(0, usage − N) × rate [+ GST]`: under-quota pays exactly the minimum, over-quota
+adds only the excess. E.g. **"$20 incl 30 kWh, then $0.50/kWh"** → `fixed = 20`, block-1 `limit = 30,
+rate = 0`, block-2 `rate = 0.50`; **25 kWh → $20**, **50 kWh → $30**. (No floor variant exists — Eugene
+ruled.)
 
 **Parameters (fixed on the KPI definition, not entered).** Each tariff KPI carries evaluator
 parameters — seeded from the xlsx:
@@ -836,4 +870,11 @@ Everything in §5/§6 (the binding + integrity model) is the direction the desig
   payment_mode · band · division · gender · utility_function`.
 - **Calculated shells** — the loader creates empty shells for calculated measures (counted in the
   relevance balance) and never migrates their values; this engine fills them. Medallion doc §4.2/§4.3.
+  **Two-denominator rule (#8, `884dfc4`):** engine-filled / system-generated / context-fed shells are
+  real addresses in the relevance balance but are **never** part of the utility's *human-answerable
+  requested* count — so they belong to the **engine/pipeline-health** fill-rate denominator, distinct
+  from the **utility-completeness** (performance) denominator; the two are never mixed. The calculator
+  is the writer that fills the former and stays **blind to which denominator a shell counts toward**
+  (a scorecard/relevance concern, not the evaluator's). NB "denominator" here ≠ a KPI *ratio*
+  denominator (§4.6 ratio-of-sums, e.g. capacity-hours) — different sense of the word.
 - **KPI rebuild** — KPIs are rebuilt manually onto this model after the measure migration (§2).
