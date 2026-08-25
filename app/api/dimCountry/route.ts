@@ -1,7 +1,7 @@
 import { db } from "@/db/connection";
 import { countries, countryContext, subRegions } from "@/db/schema/country";
 import { measureDefinitions } from "@/db/schema/dataEntry";
-import { managedListItems } from "@/db/schema/managedLists";
+import { managedLists, managedListItems } from "@/db/schema/managedLists";
 import { eq, and } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
 
@@ -42,9 +42,11 @@ export async function GET(req: Request) {
 
   // Option-typed measure: country_context.value stores the chosen managed-list
   // item id as text ("890"). Resolve it to its label ("Price Regulation") rather
-  // than emitting the raw id.
-  const fuelRegulationItems = fuelReg?.optionListId
-    ? await db
+  // than emitting the raw id. Prefer the measure's explicit option_list_id;
+  // fall back to the list of the same name while option_list_id is unpopulated.
+  const fuelRegulationItems = await (async () => {
+    if (fuelReg?.optionListId != null) {
+      return db
         .select()
         .from(managedListItems)
         .where(
@@ -52,8 +54,24 @@ export async function GET(req: Request) {
             eq(managedListItems.list_id, fuelReg.optionListId),
             eq(managedListItems.is_active, true),
           ),
-        )
-    : [];
+        );
+    }
+    const [list] = await db
+      .select({ id: managedLists.id })
+      .from(managedLists)
+      .where(eq(managedLists.name, "Fuel Pricing Regulation"))
+      .limit(1);
+    if (!list) return [];
+    return db
+      .select()
+      .from(managedListItems)
+      .where(
+        and(
+          eq(managedListItems.list_id, list.id),
+          eq(managedListItems.is_active, true),
+        ),
+      );
+  })();
   const fuelRegulationNameById = new Map(
     fuelRegulationItems.map((item) => [item.id, item.name]),
   );
