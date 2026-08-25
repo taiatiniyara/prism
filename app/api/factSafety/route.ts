@@ -1,7 +1,7 @@
 import { db } from "@/db/connection";
 import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
 import { reportPeriods } from "@/db/schema/reportPeriods";
-import { managedListItems } from "@/db/schema/managedLists";
+import { managedLists, managedListItems } from "@/db/schema/managedLists";
 import { eq, and, isNotNull, inArray } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
 import { formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
@@ -58,6 +58,31 @@ export async function GET(req: Request) {
     prismIds,
   );
 
+  // Hours Worked measures are stored per utility-function slice; "Total Hours
+  // Worked" is the function-wide row. Resolve the All member so slice rows
+  // don't shadow the total when picking.
+  const ufListId = (
+    await db
+      .select({ id: managedLists.id })
+      .from(managedLists)
+      .where(eq(managedLists.name, "Utility Function"))
+      .limit(1)
+  )[0]?.id;
+  const ufAllId = ufListId
+    ? (
+        await db
+          .select({ id: managedListItems.id })
+          .from(managedListItems)
+          .where(
+            and(
+              eq(managedListItems.list_id, ufListId),
+              eq(managedListItems.name, "All"),
+            ),
+          )
+          .limit(1)
+      )[0]?.id
+    : undefined;
+
   function findItem(id: number | null) {
     return id ? allItems.find((m) => m.id === id) : undefined;
   }
@@ -68,17 +93,41 @@ export async function GET(req: Request) {
       .map((urp) => {
         const dlValues = measureDefs.reduce(
           (acc, d) => {
-            const val = entries.find(
-              (v) =>
-                v.measure_def_id === d.id && v.report_period_id === urp.id,
+            const base = (v: typeof entries[number]) =>
+              v.measure_def_id === d.id && v.report_period_id === urp.id;
+            const val =
+              entries.find(
+                (v) =>
+                  base(v) &&
+                  (ufAllId == null || v.utility_function_id === ufAllId),
+              ) ?? entries.find(base);
+            let value = resolveEntryValue(
+              val,
+              dataTypeNameById.get(d.id) ?? null,
+              itemsById,
             );
+            // "Total" measures: when the function-wide row is absent for this
+            // period but per-function slices carry values, sum the slices.
+            if (value == null && ufAllId != null) {
+              let sum = 0;
+              let any = false;
+              for (const v of entries.filter(base)) {
+                if (v.utility_function_id === ufAllId) continue;
+                const n = resolveEntryValue(
+                  v,
+                  dataTypeNameById.get(d.id) ?? null,
+                  itemsById,
+                );
+                if (typeof n === "number") {
+                  sum += n;
+                  any = true;
+                }
+              }
+              if (any) value = sum;
+            }
             const label = SAFETY_COLUMN_LABELS[d.name] ?? d.name;
             return {
-              [label]: resolveEntryValue(
-                val,
-                dataTypeNameById.get(d.id) ?? null,
-                itemsById,
-              ),
+              [label]: value,
               ...acc,
             };
           },

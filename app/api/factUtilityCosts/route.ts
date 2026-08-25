@@ -26,6 +26,32 @@ const UTILITY_COSTS_COLUMN_LABELS: Record<string, string> = {
   "Duty and Taxes - Others": "Apportioned Cost: Duty and Taxes - Others",
 };
 
+// The PBIX model was built on PRISM 1's data-list names, which differ from the
+// enriched catalogue names. Staff/O&M are stored per utility-function slice in
+// PRISM 2 but were separate data lists in PRISM 1 — map each slice to its own
+// legacy column.
+const UTILITY_COSTS_P1_LABELS: Record<
+  string,
+  string | Record<number, string>
+> = {
+  "Electricity Staff": {
+    1024: "Generation Labor Costs",
+    1025: "Distribution Labor Costs",
+    1026: "Transmission Labor Costs",
+  },
+  "Electricity O&M": {
+    1024: "Generation OM Costs",
+    1025: "Distribution OM Costs",
+    1026: "Transmission OM Costs",
+  },
+  "Electricity Purchases": "Power Purchase Costs",
+  "Fuel & Oil Expenditure": "Fuel Expenditure",
+  "Other Staff": "Other Labor Expenditure",
+  "Other O&M": "Other Expenditure",
+  "Duty and Taxes - Fuel & Oil": "Duty on Fuel and Lube Oil",
+  "Duty and Taxes - Others": "Other Duty and Taxes",
+};
+
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
   if (authorize.success === false)
@@ -86,30 +112,51 @@ export async function GET(req: Request) {
         )
         .reduce(
           (acc, dl) => {
-            const val = entries.find(
+            const slices = entries.filter(
               (l) => l.measure_def_id === dl.id && l.report_period_id === r.id,
             );
-            const rawValue = resolveEntryValue(
-              val,
-              dataTypeNameById.get(dl.id) ?? null,
-              itemsById,
-            );
-            const numericValue =
-              typeof rawValue === "number" ? rawValue : null;
-            const label = UTILITY_COSTS_COLUMN_LABELS[dl.name] ?? dl.name;
-            const factor = multiplierFactor(val?.multiplier);
-            if (numericValue != null && val) acc.mults.add(val.multiplier);
-            return {
-              ...acc,
-              cols: {
-                ...acc.cols,
-                [label]: numericValue ?? 0,
-                [`${label} USD`]:
-                  numericValue != null
-                    ? (numericValue * factor) / fxRate
-                    : null,
-              },
-            };
+            const baseLabel =
+              UTILITY_COSTS_COLUMN_LABELS[dl.name] ?? dl.name;
+            const p1Spec = UTILITY_COSTS_P1_LABELS[dl.name];
+            const cols: Record<string, unknown> = {};
+            for (const val of slices) {
+              const rawValue = resolveEntryValue(
+                val,
+                dataTypeNameById.get(dl.id) ?? null,
+                itemsById,
+              );
+              if (rawValue == null) continue;
+              const numericValue =
+                typeof rawValue === "number" ? rawValue : null;
+              const factor = multiplierFactor(val.multiplier);
+              acc.mults.add(val.multiplier);
+              const usd =
+                numericValue != null
+                  ? (numericValue * factor) / fxRate
+                  : null;
+
+              // Function-sliced measures emit one legacy column per slice.
+              if (typeof p1Spec !== "string" && p1Spec != null) {
+                const fnLabel =
+                  val.utility_function_id != null
+                    ? p1Spec[val.utility_function_id]
+                    : undefined;
+                if (fnLabel) {
+                  cols[fnLabel] = numericValue;
+                  cols[`${fnLabel} USD`] = usd;
+                  continue;
+                }
+              }
+
+              cols[baseLabel] = numericValue ?? 0;
+              cols[`${baseLabel} USD`] = usd;
+              // Legacy PRISM 1 alias alongside the enriched label.
+              if (typeof p1Spec === "string") {
+                cols[p1Spec] = numericValue ?? 0;
+                cols[`${p1Spec} USD`] = usd;
+              }
+            }
+            return { ...acc, cols: { ...acc.cols, ...cols } };
           },
           { cols: {} as Record<string, unknown>, mults: new Set<string>() },
         );
