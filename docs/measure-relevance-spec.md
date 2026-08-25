@@ -151,15 +151,28 @@ Rides the coordinated temporal-spans package (`unit_activations` + this):
 - **Create `measure_relevance`.**
 - **Migrate `tariff_relevance` → `measure_relevance`** as `declared` rows (179 rows,
   payment_mode + customer_type set); then retire `tariff_relevance`.
-- **Drop `transmission_relevance`** — verify-before-drop (0 rows confirmed); retire its
-  service/UI refs (`app/settings/relevance/service.ts` Get/SetTransmissionDataLabelRelevance,
-  the transmission relevance UI, the `transmissionRelevance` schema + `/api/migration/
-  transmissionRelevance` route) in the same migration so nothing dangles. **#11/#2 co-own the
-  code retirement; #4 lists the refs.**
+- **Drop `transmission_relevance`** — verify-before-drop (0 rows confirmed). The DROP must be
+  **ATOMIC with retiring its 5 live code refs** (else the app queries a dropped table). The
+  authoritative ref list (#2-confirmed 2026-08-26): (1) `app/api/migration/transmissionRelevance/
+  route.ts`, (2) `app/migration/service.ts`, (3) `app/settings/relevance/service.ts`
+  (Get/SetTransmissionDataLabelRelevance), (4) `app/settings/relevance/utilityRelevance.tsx`,
+  (5) `db/schema/dataEntry.ts` (`transmissionRelevance`). **Ownership:** #2 takes
+  `app/migration/service.ts` + the schema; **#11** takes the settings UI/service + the API route.
+  `tariff_relevance` stays untouched (agreed — genuine per-cell overrides).
 - **Retire `units.period_entries`** — its `is_active` half becomes `derived_stint` generation
   rows (projected from seed stints); its `capacity_mw` half becomes stint state (unit-lifecycle
   §2.2). Fold into the reimport.
 - **Seed generation rows** by projecting the seed stints (§4.3) once the stints load.
+  **Seed-fidelity caveat (#2, 2026-08-26):** `period_entries` carries capacity / is_active /
+  period-keying but **not service-area history** (unit-lifecycle §2.2), so seed stints inherit
+  each unit's *current* SA. Consequence: at migration there are ~no cross-SA historical stints,
+  so the §3.3 cross-SA-split projection is **forward-looking, not migration-active** — all
+  seed-projected `derived_stint` rows are current-SA. Acceptable, but state it so no one expects
+  reconstructed SA history. **Sequencing (#2-owned):** data_entries reload → stint seed (reads
+  Rated-Capacity measure for `rated_capacity_mw`) → `derived_stint` projection → verify the 1:1
+  invariant (§4.4); the `period_entries` fold + `tariff_relevance`→declared migrate-in slot into
+  the same package. #2 also gates migrated generation **shells ↔ projected `derived_stint` rows**
+  so they can't silently diverge.
 
 ## 9. Ownership
 

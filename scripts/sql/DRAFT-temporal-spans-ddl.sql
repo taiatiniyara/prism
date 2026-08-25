@@ -190,14 +190,14 @@ COMMIT;
 -- ===========================================================================
 -- E2. transmission_relevance DROP + code retirement  (verify-before-drop; §8 measure-relevance-spec)
 -- ===========================================================================
--- 0 rows confirmed (2026-08-25). Drop rides Phase 3. Retire these refs IN THE SAME migration so
--- nothing dangles (#4-listed; #11/#2 co-own the code removal):
---   • app/settings/relevance/service.ts  → GetTransmissionRelevance / SetTransmissionDataLabelRelevance
---   • the transmission relevance UI surface (settings/relevance)
---   • db schema `transmissionRelevance` (dataEntry.ts) + drizzle types
---   • app/api/migration/transmissionRelevance/route.ts
---   • scripts/migrate-relevance-tables.ts / pass2 refs
--- DROP TABLE transmission_relevance;   -- after code refs removed + verified
+-- 0 rows confirmed (2026-08-25). Drop rides Phase 3, ATOMIC with retiring its 5 live code refs
+-- (else the app queries a dropped table). Authoritative list (#2-confirmed 2026-08-26):
+--   1. app/api/migration/transmissionRelevance/route.ts          } #11
+--   2. app/settings/relevance/service.ts (Get/SetTransmission…)  } #11
+--   3. app/settings/relevance/utilityRelevance.tsx               } #11
+--   4. app/migration/service.ts                                  } #2
+--   5. db/schema/dataEntry.ts  (transmissionRelevance)           } #2
+-- DROP TABLE transmission_relevance;   -- in the SAME migration/PR as the 5 removals above
 
 -- ===========================================================================
 -- F.  Deferred — post-retirement  (NOT this migration)
