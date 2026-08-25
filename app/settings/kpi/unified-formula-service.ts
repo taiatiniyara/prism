@@ -17,6 +17,9 @@ import {
   resolveManagedListName,
 } from "@/lib/managed-list-utils";
 import { recomputeKpiNow as engineRecomputeKpiNow } from "@/app/data-entry/kpi-worker/recompute";
+import { runAggregatedWorker } from "@/app/data-entry/enter-data/services/aggregated-worker/orchestrator";
+import { getCurrentUser } from "@/lib/user.service";
+import { reportPeriods } from "@/db/schema/reportPeriods";
 import {
   ALL_MEMBER_BY_FIELD,
   BuilderData,
@@ -371,4 +374,46 @@ export async function recomputeKpiNow(
 
 export async function recomputeAllKpis(): Promise<RecomputeResult> {
   return engineRecomputeKpiNow({ all: true });
+}
+
+/**
+ * Compute calculated MEASURES (is_calculated=true). Reuses the existing
+ * aggregated-worker (fixpoint over all calculated-measure formulas, writing
+ * derived values into data_entries), run once per report period at utility
+ * scope. The builder's saved formula_inputs cache is what the worker reads.
+ */
+export async function recomputeCalculatedMeasuresNow(
+  reportPeriodIds?: number[],
+): Promise<{
+  periods: number;
+  calculated: number;
+  skipped: number;
+  errors: number;
+}> {
+  const user = await getCurrentUser();
+  let periodIds = reportPeriodIds ?? [];
+  if (!periodIds.length) {
+    const rows = await db
+      .select({ id: reportPeriods.id })
+      .from(reportPeriods)
+      .orderBy(asc(reportPeriods.id));
+    periodIds = rows.map((r) => r.id);
+  }
+
+  let calculated = 0;
+  let skipped = 0;
+  let errors = 0;
+  for (const reportPeriodId of periodIds) {
+    try {
+      const { outcomes } = await runAggregatedWorker(user, { reportPeriodId });
+      for (const o of outcomes) {
+        if (o.status === "calculated") calculated += 1;
+        else skipped += 1;
+      }
+    } catch {
+      errors += 1;
+    }
+  }
+  revalidatePath("/settings/inputs");
+  return { periods: periodIds.length, calculated, skipped, errors };
 }

@@ -11,12 +11,20 @@ import UploadInputsFromExcel from "./uploadFromExcel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SectionContainer from "@/components/layout/section-container";
 import InputDlMapBuilder from "./mapBuilder";
+import { UnifiedFormulaBuilder } from "@/components/formula-builder/UnifiedFormulaBuilder";
+import { getUnifiedFormulaBuilderData } from "@/app/settings/kpi/unified-formula-service";
 
-type InputsTab = "definitions" | "formula-builder" | "upload" | "map-builder";
+type InputsTab =
+  | "definitions"
+  | "formula-builder"
+  | "new-formula-builder"
+  | "upload"
+  | "map-builder";
 
 function resolveDefaultTab(tab: string | undefined): InputsTab {
   if (
     tab === "formula-builder" ||
+    tab === "new-formula-builder" ||
     tab === "upload" ||
     tab === "definitions" ||
     tab === "map-builder"
@@ -33,6 +41,7 @@ export default async function InputsSettingsPage(props: {
   const defaultTab = resolveDefaultTab(searchParams?.tab);
   const measureDefinitions = await GetAllMeasureDefinitions();
   const formulaBuilderData = await GetInputFormulaBuilderData();
+  const unifiedMeasureData = await getUnifiedFormulaBuilderData("measure");
 
   return (
     <div className="mx-auto w-full max-w-350 space-y-6 pb-8 sm:space-y-8">
@@ -43,6 +52,9 @@ export default async function InputsSettingsPage(props: {
         <TabsList className="h-auto flex-wrap justify-start gap-2 p-1">
           <TabsTrigger value="definitions">Definitions</TabsTrigger>
           <TabsTrigger value="formula-builder">Formula Builder</TabsTrigger>
+          <TabsTrigger value="new-formula-builder">
+            New Formula Builder
+          </TabsTrigger>
           <TabsTrigger value="upload">Upload</TabsTrigger>
           <TabsTrigger value="map-builder">Map Builder</TabsTrigger>
         </TabsList>
@@ -154,6 +166,20 @@ export default async function InputsSettingsPage(props: {
               energyTypeOptions={formulaBuilderData.energyTypeOptions}
               energySourceOptions={formulaBuilderData.energySourceOptions}
               previewContextLabel={formulaBuilderData.previewContextLabel}
+            />
+          </SectionContainer>
+        </TabsContent>
+
+        <TabsContent value="new-formula-builder">
+          <SectionContainer>
+            <p className="mb-4 text-sm text-muted-foreground">
+              Build calculated-measure formulas with full 10-dimension
+              bindings. Saved to the durable formula-binding store; use
+              “Compute calculated measures” to calculate into data entries.
+            </p>
+            <UnifiedFormulaBuilder
+              data={unifiedMeasureData}
+              mode="measure"
             />
           </SectionContainer>
         </TabsContent>

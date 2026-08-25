@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import {
   saveUnifiedFormula,
   recomputeKpiNow,
+  recomputeCalculatedMeasuresNow,
 } from "@/app/settings/kpi/unified-formula-service";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -224,18 +225,31 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
   };
 
   const handleCompute = () => {
-    if (selectedTargetId == null) {
-      toast.error("Choose a target first.");
-      return;
-    }
     startCompute(() => {
       void (async () => {
+        if (mode === "measure") {
+          // Batch: compute ALL calculated measures across all periods
+          // (the aggregated worker is fixpoint over the whole set).
+          const res = await recomputeCalculatedMeasuresNow();
+          if (res.errors > 0) {
+            toast.warning(
+              `Computed ${res.calculated} value(s) across ${res.periods} period(s); ${res.errors} period(s) errored.`,
+            );
+          } else {
+            toast.success(
+              `Computed ${res.calculated} calculated-measure value(s) across ${res.periods} period(s) (${res.skipped} skipped).`,
+            );
+          }
+          return;
+        }
+        if (selectedTargetId == null) {
+          toast.error("Choose a target first.");
+          return;
+        }
         const res = await recomputeKpiNow(selectedTargetId);
         setRecompute(res);
         if (res.failed > 0) {
-          toast.warning(
-            `Recomputed ${res.processed}, ${res.failed} failed.`,
-          );
+          toast.warning(`Recomputed ${res.processed}, ${res.failed} failed.`);
         } else {
           toast.success(`Recomputed ${res.processed} period(s).`);
         }
@@ -453,16 +467,20 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
             >
               {isSaving ? "Saving…" : "Save"}
             </Button>
-            {mode === "kpi" && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCompute}
-                disabled={isComputing || selectedTargetId == null}
-              >
-                {isComputing ? "Computing…" : "Compute now"}
-              </Button>
-            )}
+            <Button
+              type="button"
+              variant="outline"
+              onClick={handleCompute}
+              disabled={
+                isComputing || (mode === "kpi" && selectedTargetId == null)
+              }
+            >
+              {isComputing
+                ? "Computing…"
+                : mode === "kpi"
+                  ? "Compute now"
+                  : "Compute calculated measures"}
+            </Button>
             <span className="text-muted-foreground ml-auto text-xs">
               {activeMeasureCount} measures available
             </span>
