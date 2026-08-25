@@ -16,6 +16,13 @@ const SAFETY_MEASURE_NAMES = [
   "Number of Work Related Injuries",
 ] as const;
 
+// Power BI column labels for measures whose catalogue name drifted from the
+// legacy semantic-model name. Keyed by measure name.
+const SAFETY_COLUMN_LABELS: Record<string, string> = {
+  "Hours lost to Work Related Injuries": "Hours Lost to Work Related Injuries",
+  "Hours Worked Actual": "Total Hours Worked",
+};
+
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
   if (authorize.success === false)
@@ -65,8 +72,9 @@ export async function GET(req: Request) {
               (v) =>
                 v.measure_def_id === d.id && v.report_period_id === urp.id,
             );
+            const label = SAFETY_COLUMN_LABELS[d.name] ?? d.name;
             return {
-              [d.name]: resolveEntryValue(
+              [label]: resolveEntryValue(
                 val,
                 dataTypeNameById.get(d.id) ?? null,
                 itemsById,

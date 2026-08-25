@@ -18,6 +18,16 @@ const DISTRIBUTION_MEASURE_NAMES = [
   "FTE Employees",
 ] as const;
 
+// Power BI column labels (measure name -> semantic-model column name).
+const DISTRIBUTION_COLUMN_LABELS: Record<string, string> = {
+  "Distribution Transformer Rated Capacity":
+    "Distribution Network Transformer Capacity",
+  "Network Length": "Distribution Network Length",
+  "Network Unplanned Downtime Events":
+    "Distribution Network Unplanned Downtime Events",
+  "FTE Employees": "FTE Employees in Distribution",
+};
+
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
   if (authorize.success === false)
@@ -28,11 +38,8 @@ export async function GET(req: Request) {
     .from(measureDefinitions)
     .where(inArray(measureDefinitions.name, [...DISTRIBUTION_MEASURE_NAMES]));
 
-  const fteId = measureDefs.find((m) => m.name === "FTE Employees")?.id;
   const allDlIds = measureDefs.map((m) => m.id);
-  if (allDlIds.length === 0) return Response.json([]);
-
-  // "FTE Employees" is scoped by utility function; resolve the Distribution member.
+  if (allDlIds.length === 0) return Response.json([]);  // Distribution measures are scoped by the Distribution utility function.
   const distributionListId = (
     await db
       .select({ id: managedLists.id })
@@ -116,34 +123,23 @@ export async function GET(req: Request) {
           UtilityId: urp.utility_id,
           Data: allSa
             .filter((sa) => sa.utility_id === urp.utility_id)
-            .map((sa) => ({
-              ServiceAreaId: sa.id,
-              "Distribution Transformer Rated Capacity": findEntryValue(
-                measureDefs.find(
-                  (m) => m.name === "Distribution Transformer Rated Capacity",
-                )!.id,
-                urp.id,
-                sa.id,
+            .map((sa) =>
+              measureDefs.reduce(
+                (acc, dl) => {
+                  const label = DISTRIBUTION_COLUMN_LABELS[dl.name] ?? dl.name;
+                  return {
+                    ...acc,
+                    [label]: findEntryValue(
+                      dl.id,
+                      urp.id,
+                      sa.id,
+                      distributionFunctionId,
+                    ),
+                  };
+                },
+                { ServiceAreaId: sa.id } as Record<string, unknown>,
               ),
-              "Network Length": findEntryValue(
-                measureDefs.find((m) => m.name === "Network Length")!.id,
-                urp.id,
-                sa.id,
-              ),
-              "Network Unplanned Downtime Events": findEntryValue(
-                measureDefs.find(
-                  (m) => m.name === "Network Unplanned Downtime Events",
-                )!.id,
-                urp.id,
-                sa.id,
-              ),
-              "FTE Employees in Distribution": findEntryValue(
-                fteId!,
-                urp.id,
-                sa.id,
-                distributionFunctionId,
-              ),
-            })),
+            ),
         };
       }),
   );

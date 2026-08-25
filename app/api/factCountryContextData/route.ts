@@ -8,6 +8,14 @@ import { authorizeApiKey } from "../service";
 import { formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
 import { getResolvedContextRows } from "@/lib/legacy/context-data";
 
+// Power BI column labels for the country-context measures (measure name ->
+// legacy semantic-model name).
+const COUNTRY_CONTEXT_COLUMN_LABELS: Record<string, string> = {
+  Population: "National Population",
+  Islands: "Number of Islands",
+  Households: "Number of Households",
+};
+
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
   if (authorize.success === false)
@@ -44,16 +52,28 @@ export async function GET(req: Request) {
       const u = uMap.get(urp.utility_id);
       const country = u ? cMap.get(u.country_id) : undefined;
       const ccData = ctxRows
-        .filter((r) => r.country_id === (country?.id ?? -1))
+        .filter(
+          (r) =>
+            r.report_period_id === urp.id &&
+            r.country_id === (country?.id ?? -1),
+        )
         .reduce(
-          (acc, r) => ({ [r.measureName]: r.value, ...acc }),
+          (acc, r) => ({
+            [COUNTRY_CONTEXT_COLUMN_LABELS[r.measureName] ?? r.measureName]:
+              r.value,
+            ...acc,
+          }),
           {} as Record<string, unknown>,
         );
       const reportType = findItem(urp.report_type_id)?.name;
       return {
         ReportType: reportType,
         ReportPeriod: formatReportPeriodIso(urp.report_date, reportType),
+        CountryId: country?.id,
         Country: country?.name,
+        AlphaCode2: country?.iso_code_alpha2,
+        AlphaCode3: country?.iso_code_alpha3,
+        UtilityId: u?.id,
         ...ccData,
       };
     }),

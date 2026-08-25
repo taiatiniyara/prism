@@ -282,6 +282,13 @@ export const dataEntries = pgTable(
     value_option_id: integer("value_option_id").references(
       () => managedListItems.id,
     ),
+    // Unit scale the reporter used when stating the figure ("Ones", "Tens",
+    // "Thousands", …). Backfilled from prism-training's data_entry_main
+    // (2026-08-25) where the extract migration dropped it; PRISM 2 stores the
+    // as-entered number, so true LCU = value × multiplier. Defaults to Ones.
+    multiplier: varchar("multiplier", { length: 16 })
+      .notNull()
+      .default("Ones"),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
     updatedById: text("updated_by_id").references(() => user.id),
   },

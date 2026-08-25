@@ -1,6 +1,7 @@
 import { db } from "@/db/connection";
 import { dataEntries } from "@/db/schema/dataEntry";
 import { organisations } from "@/db/schema/utility";
+import { countries } from "@/db/schema/country";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { managedListItems } from "@/db/schema/managedLists";
 import { eq, and, isNotNull } from "drizzle-orm";
@@ -51,6 +52,7 @@ export async function GET(req: Request) {
         eq(organisations.is_active, true),
       ),
     );
+  const allCountries = await db.select().from(countries);
   const allItems = await db
     .select()
     .from(managedListItems)
@@ -58,6 +60,7 @@ export async function GET(req: Request) {
 
   const rpMap = new Map(rps.map((r) => [r.id, r]));
   const uMap = new Map(allUtils.map((u) => [u.id, u]));
+  const cMap = new Map(allCountries.map((c) => [c.id, c]));
 
   function findItem(id: number | null) {
     return id ? allItems.find((m) => m.id === id) : undefined;
@@ -67,10 +70,11 @@ export async function GET(req: Request) {
     entries.map((l) => {
       const rp = rpMap.get(l.report_period_id);
       const u = rp ? uMap.get(rp.utility_id) : undefined;
+      const country = u ? cMap.get(u.country_id) : undefined;
       const reportType = findItem(rp?.report_type_id ?? null)?.name;
       return {
         Date: formatReportPeriodIso(rp?.report_date ?? null, reportType),
-        CurrencyCode: u ? findItem(u.country_id)?.name : undefined,
+        CurrencyCode: country ? findItem(country.currency_id)?.name : undefined,
         "Local to USD Conversion Rate": resolveEntryValue(
           l,
           prismId != null ? dataTypeNameById.get(prismId) ?? null : null,

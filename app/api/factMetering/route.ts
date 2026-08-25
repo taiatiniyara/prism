@@ -2,7 +2,7 @@ import { db } from "@/db/connection";
 import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
 import { serviceAreas } from "@/db/schema/utility";
 import { reportPeriods } from "@/db/schema/reportPeriods";
-import { managedListItems } from "@/db/schema/managedLists";
+import { managedLists, managedListItems } from "@/db/schema/managedLists";
 import { eq, and, isNotNull, inArray } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
 import { formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
@@ -16,6 +16,11 @@ const METERING_MEASURE_NAMES = [
   "Electricity Sold to Customers",
 ] as const;
 
+// Power BI column label for the distribution-scoped "Customers Served" measure.
+const METERING_COLUMN_LABELS: Record<string, string> = {
+  "Customers Served": "Electricity Customers",
+};
+
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
   if (authorize.success === false)
@@ -28,6 +33,29 @@ export async function GET(req: Request) {
 
   const prismIds = measureDefs.map((m) => m.id);
   if (prismIds.length === 0) return Response.json([]);
+
+  // Scope metering (customers sold) to the Distribution utility function.
+  const functionListId = (
+    await db
+      .select({ id: managedLists.id })
+      .from(managedLists)
+      .where(eq(managedLists.name, "Utility Function"))
+      .limit(1)
+  )[0]?.id;
+  const distributionFunctionId = functionListId
+    ? (
+        await db
+          .select({ id: managedListItems.id })
+          .from(managedListItems)
+          .where(
+            and(
+              eq(managedListItems.list_id, functionListId),
+              eq(managedListItems.name, "Distribution"),
+            ),
+          )
+          .limit(1)
+      )[0]?.id
+    : undefined;
 
   const entries = await db
     .select()
@@ -79,11 +107,14 @@ export async function GET(req: Request) {
                     (l) =>
                       l.measure_def_id === dl.id &&
                       l.report_period_id === urp.id &&
-                      l.service_area_id === sa.id,
+                      l.service_area_id === sa.id &&
+                      (distributionFunctionId == null ||
+                        l.utility_function_id === distributionFunctionId),
                   );
+                  const label = METERING_COLUMN_LABELS[dl.name] ?? dl.name;
                   return {
                     ...acc,
-                    [dl.name]: resolveEntryValue(
+                    [label]: resolveEntryValue(
                       entry,
                       dataTypeNameById.get(dl.id) ?? null,
                       itemsById,

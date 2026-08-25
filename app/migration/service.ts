@@ -903,8 +903,12 @@ export async function retrieveCountryContextData(options?: {
           const n = Number(rawValue);
           valueField.value_numeric = Number.isFinite(n) ? n : null;
         } else if (valueColumn === "value_boolean") {
+          const normalized = String(rawValue).trim().toLowerCase();
           valueField.value_boolean =
-            rawValue === "true" || rawValue === "1" || rawValue === "yes";
+            normalized === "true" ||
+            normalized === "1" ||
+            normalized === "yes" ||
+            normalized === "y";
         } else if (valueColumn === "value_option_id") {
           valueField.value_option_id =
             itemIdByName.get(String(rawValue).trim().toLowerCase()) ?? null;

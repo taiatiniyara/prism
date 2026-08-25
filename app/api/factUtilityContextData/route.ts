@@ -9,6 +9,11 @@ import {
 } from "@/lib/legacy/legacy-dl-resolver";
 import { resolveEntryValue } from "@/lib/legacy/entry-value";
 
+// Power BI column labels (measure name -> legacy semantic-model name).
+const UTILITY_CONTEXT_COLUMN_LABELS: Record<string, string> = {
+  "Utility Ownership Type": "Ownership Type",
+};
+
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
   if (authorize.success === false)
@@ -56,8 +61,11 @@ export async function GET(req: Request) {
         .reduce(
           (acc, e) => {
             const dl = inputDefs.find((d) => d.id === e.measure_def_id);
+            const label = dl
+              ? (UTILITY_CONTEXT_COLUMN_LABELS[dl.name] ?? dl.name)
+              : "";
             return {
-              [dl?.name ?? ""]: resolveEntryValue(
+              [label]: resolveEntryValue(
                 e,
                 dataTypeNameById.get(e.measure_def_id) ?? null,
                 itemsById,

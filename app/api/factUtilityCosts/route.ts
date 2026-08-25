@@ -9,6 +9,22 @@ import { authorizeApiKey } from "../service";
 import { formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
 import { resolveEntryValue } from "@/lib/legacy/entry-value";
 import { getAllExchangeRates } from "@/lib/exchange-rates";
+import {
+  multiplierFactor,
+  rollUpMultiplier,
+} from "@/lib/pbi/multiplier";
+
+// Power BI column labels (measure name -> legacy semantic-model name).
+const UTILITY_COSTS_COLUMN_LABELS: Record<string, string> = {
+  "Electricity Staff": "Direct Costs: Electricity Staff",
+  "Electricity O&M": "Direct Costs: Electricity O&M",
+  "Electricity Purchases": "Direct Costs: Electricity Purchases",
+  "Fuel & Oil Expenditure": "Apportioned Cost: Fuel & Oil Expenditure",
+  "Other Staff": "Apportioned Cost: Other Staff",
+  "Other O&M": "Apportioned Cost: Other O&M",
+  "Duty and Taxes - Fuel & Oil": "Apportioned Cost: Duty and Taxes - Fuel & Oil",
+  "Duty and Taxes - Others": "Apportioned Cost: Duty and Taxes - Others",
+};
 
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
@@ -80,16 +96,22 @@ export async function GET(req: Request) {
             );
             const numericValue =
               typeof rawValue === "number" ? rawValue : null;
+            const label = UTILITY_COSTS_COLUMN_LABELS[dl.name] ?? dl.name;
+            const factor = multiplierFactor(val?.multiplier);
+            if (numericValue != null && val) acc.mults.add(val.multiplier);
             return {
-              Unit: findItem(dl.unit_id)?.name,
-              Multiplier: "Ones",
-              [dl.name]: numericValue ?? 0,
-              [`${dl.name} USD`]:
-                numericValue != null ? numericValue / fxRate : null,
               ...acc,
+              cols: {
+                ...acc.cols,
+                [label]: numericValue ?? 0,
+                [`${label} USD`]:
+                  numericValue != null
+                    ? (numericValue * factor) / fxRate
+                    : null,
+              },
             };
           },
-          {} as Record<string, unknown>,
+          { cols: {} as Record<string, unknown>, mults: new Set<string>() },
         );
       const reportType = findItem(r.report_type_id)?.name;
       return {
@@ -98,7 +120,8 @@ export async function GET(req: Request) {
         UtilityId: r.utility_id,
         Currency: currency,
         UsdExchangeRate: fxRate,
-        ...dls,
+        Multiplier: rollUpMultiplier(dls.mults),
+        ...dls.cols,
       };
     }),
   );

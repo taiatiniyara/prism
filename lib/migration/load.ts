@@ -60,7 +60,19 @@ async function getMeasureMeta(): Promise<Map<number, MeasureMeta>> {
 
 function coerce(col: string, value: number | boolean | string): number | boolean | string {
   if (col === "value_numeric") return Number(value);
-  if (col === "value_boolean") return value === true || value === "true" || value === 1 || value === "1";
+  if (col === "value_boolean") {
+    if (typeof value === "boolean") return value;
+    if (typeof value === "number") return value === 1;
+    const s = String(value).trim().toLowerCase();
+    return (
+      s === "true" ||
+      s === "1" ||
+      s === "yes" ||
+      s === "y" ||
+      s === "t" ||
+      s === "on"
+    );
+  }
   if (col === "value_option_id") return Number(value);
   return String(value);
 }

@@ -13,6 +13,10 @@ import {
 
 const SAIDI_SAIFI_MEASURE_NAMES = [
   "Total Planned Interruptions Events",
+  "Total Planned Interruptions Customers Affected",
+  "Total Planned Interruptions Customer Minutes",
+  "Total Unplanned Interruptions Events",
+  "Total Unplanned Interruptions Customers Affected",
   "Total Unplanned Interruptions Customer Minutes",
 ] as const;
 

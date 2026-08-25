@@ -16,7 +16,27 @@ const GENERATOR_MEASURE_NAMES = [
   "Hours in Period",
   "Electricity Generated",
   "Electricity Sent to Grid",
+  "Rated Capacity",
+  "Fuel Oil",
+  "Lubrication Oil",
+  "Equipment Planned Downtime Hours",
+  "Equipment Unplanned Downtime Hours",
 ] as const;
+
+// Power BI column labels (measure name -> semantic-model column name).
+const GENERATOR_COLUMN_LABELS: Record<string, string> = {
+  "Electricity Generated": "GEN Electricity Generated",
+  "Rated Capacity": "GEN Installed Capacity",
+  "Equipment Planned Downtime Hours": "GEN Downtime Planned Hours",
+  "Equipment Unplanned Downtime Hours": "GEN Downtime Unplanned Hours",
+  "Lubrication Oil": "Oil for Lubrication",
+};
+
+// "Fuel Oil" is split by technology in the semantic model.
+const FUEL_OIL_LABEL_BY_TECHNOLOGY: Record<string, string> = {
+  Diesel: "Fuel Oil for Diesel Generators",
+  "Heavy Fuel": "Fuel Oil for Heavy Fuel Generators",
+};
 
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
@@ -124,7 +144,13 @@ export async function GET(req: Request) {
               ...genEntries.reduce(
                 (acc, e) => {
                   const def = measureDefs.find((m) => m.id === e.measure_def_id);
-                  return { [def?.name ?? ""]: valueFor(e), ...acc };
+                  if (!def) return acc;
+                  const techName = findItem(g.technology_id)?.name ?? "";
+                  const label =
+                    def.name === "Fuel Oil"
+                      ? (FUEL_OIL_LABEL_BY_TECHNOLOGY[techName] ?? def.name)
+                      : (GENERATOR_COLUMN_LABELS[def.name] ?? def.name);
+                  return { [label]: valueFor(e), ...acc };
                 },
                 {} as Record<string, unknown>,
               ),

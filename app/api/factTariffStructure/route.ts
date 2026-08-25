@@ -1,10 +1,6 @@
 import { db } from "@/db/connection";
 import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
-import {
-  units,
-  organisations,
-  serviceAreas,
-} from "@/db/schema/utility";
+import { organisations, serviceAreas } from "@/db/schema/utility";
 import { countries } from "@/db/schema/country";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { managedListItems } from "@/db/schema/managedLists";
@@ -13,6 +9,10 @@ import { authorizeApiKey } from "../service";
 import { formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
 import { resolveEntryValue } from "@/lib/legacy/entry-value";
 import { getAllExchangeRates } from "@/lib/exchange-rates";
+import {
+  multiplierFactor,
+  rollUpMultiplier,
+} from "@/lib/pbi/multiplier";
 
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
@@ -31,10 +31,6 @@ export async function GET(req: Request) {
     .select()
     .from(serviceAreas)
     .where(eq(serviceAreas.is_active, true));
-  const allResources = await db
-    .select()
-    .from(units)
-    .where(eq(units.is_virtual, false));
   const allUtils = await db
     .select()
     .from(organisations)
@@ -82,10 +78,15 @@ export async function GET(req: Request) {
           UsdExchangeRate: fxRate,
           Data: allSa
             .filter((sa) => sa.utility_id === r.utility_id)
-            .map((sa) =>
-              inputDefs
+            .map((sa) => {
+              const slice = inputDefs
                 .filter((dlDef) =>
-                  entries.some((l) => l.measure_def_id === dlDef.id),
+                  entries.some(
+                    (l) =>
+                      l.measure_def_id === dlDef.id &&
+                      l.report_period_id === r.id &&
+                      l.service_area_id === sa.id,
+                  ),
                 )
                 .reduce(
                   (acc, dl) => {
@@ -93,14 +94,7 @@ export async function GET(req: Request) {
                       (l) =>
                         l.measure_def_id === dl.id &&
                         l.report_period_id === r.id &&
-                        allResources.some(
-                          (g) =>
-                            g.id === l.unit_id &&
-                            g.service_area_id === sa.id &&
-                            g.period_entries?.some(
-                              (pe) => pe.report_period_id === r.id,
-                            ),
-                        ),
+                        l.service_area_id === sa.id,
                     );
                     const rawValue = resolveEntryValue(
                       val,
@@ -109,21 +103,33 @@ export async function GET(req: Request) {
                     );
                     const numericValue =
                       typeof rawValue === "number" ? rawValue : null;
+                    const factor = multiplierFactor(val?.multiplier);
+                    if (numericValue != null && val != null)
+                      acc.mults.add(val.multiplier);
                     return {
                       ...acc,
-                      ServiceAreaId: sa.id,
-                      [dl.name]: numericValue,
-                      Unit: findItem(dl.unit_id)?.name,
-                      Multiplier: "Ones",
-                      [`${dl.name} USD`]:
-                        numericValue != null && isFinite(numericValue)
-                          ? numericValue / fxRate
-                          : 0,
+                      cols: {
+                        ...acc.cols,
+                        [dl.name]: numericValue,
+                        Unit: findItem(dl.unit_id)?.name,
+                        [`${dl.name} USD`]:
+                          numericValue != null && isFinite(numericValue)
+                            ? (numericValue * factor) / fxRate
+                            : 0,
+                      },
                     };
                   },
-                  {} as Record<string, unknown>,
-                ),
-            ),
+                  {
+                    cols: {} as Record<string, unknown>,
+                    mults: new Set<string>(),
+                  },
+                );
+              return {
+                ServiceAreaId: sa.id,
+                Multiplier: rollUpMultiplier(slice.mults),
+                ...slice.cols,
+              };
+            }),
         };
       }),
   );

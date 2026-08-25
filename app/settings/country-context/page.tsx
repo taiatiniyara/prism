@@ -13,7 +13,7 @@ export default async function CountryContextPage() {
     <DataTable<(typeof list)[number]>
       columns={[
         "country_name",
-        "dl_def_name",
+        "measure_name",
         "value",
         "source_date",
         "source_doc",
@@ -33,7 +33,8 @@ export default async function CountryContextPage() {
               label: c.name,
             })),
           },
-          { key: "dl_def_id", type: "number" },
+          { key: "measure_def_id", type: "number" },
+          { key: "period_year", type: "number" },
           { key: "value", type: "text" },
           { key: "source_date", type: "date" },
           { key: "source_doc", type: "text" },
