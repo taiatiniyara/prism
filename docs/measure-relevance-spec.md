@@ -184,12 +184,26 @@ Rides the coordinated temporal-spans package (`unit_activations` + this):
 - **#2 (migration):** §8 — tariff migrate-in, transmission drop + code retirement, period_entries
   fold, generation seed-projection. Rides the reimport.
 
-## 10. Open detail
+## 10. Open detail — leans banked, confirmed formally in the joint spans+stints+relevance pass
 
-- **`is_deleted` vs hard-managed derived rows:** declared rows soft-delete (audit); derived rows
-  are engine-regenerated, so a stale derived row is *replaced*, not soft-deleted. Confirm the
-  regeneration is a clean delete+reinsert (or upsert) of the derived set per stint change — #4/#8
-  at DDL time.
-- **Dimension-column set:** the four current columns cover transmission (none), tariff
-  (payment_mode, customer_type), generation (provider, technology). Confirm no generation shell
-  needs a further dim (source/asset) in the relevance address before freezing the columns.
+Both pre-positioned by #8 (2026-08-26) as it falls out of case law; non-binding until the joint
+pass when #2 assembles the coordinated package.
+
+- **Derived-row regeneration = delete+reinsert per affected scope, in one transaction** (#8 lean).
+  Derived rows are a pure projection, so a stint amend that *shortens* a stint must **retract**
+  the rows whose overlap vanished — an upsert can update matches but can't remove those, so it
+  needs a paired delete-missing anyway; at which point delete+reinsert of the affected
+  **(unit × period)** scope is the same work with no stale-row failure mode. **Scope the delete
+  to the stint's affected periods, not the whole table.** (Declared rows are unaffected — they
+  soft-delete for audit as normal; only `derived_stint` rows are regenerated.)
+- **Relevance address carries provider + technology ONLY** (#8 lean). category/asset_class
+  **derive** from technology (ratified derive-not-store — storing them in the address would be the
+  dual-encoding disease in a new home); non-energy dims belong to the **scope/applicability**
+  layer, not relevance. **Division of labor:** *relevance* = which `(area, measure, provider,
+  technology)` slices exist this period; *scope/applicability* = which dim members expand within
+  them; *obligation* = which must be answered. If a generation measure ever needs a non-energy dim
+  in its **existence** condition (not just its expansion), that's an **on-evidence** question —
+  default is no. **#2 is validating this** against `measure_dimension_scope` (does any generation
+  measure slice `by_context` on a dim beyond provider+technology not derivable via
+  technology→category→asset ancestry?); if one escapes, the column set gains it, else the four
+  columns freeze as-is.
