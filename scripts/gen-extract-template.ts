@@ -19,6 +19,7 @@ const OUT = arg("out") ?? "./p2_migration_extract_template.xlsx";
 // Dimension headers use the PHYSICALISED names (post-#68 rename) — they must match
 // EXTRACT_COLUMNS in lib/migration/parse.ts and the data_entries schema columns.
 const COLS: { key: string; req: string; all: string; note: string }[] = [
+  { key: "mig_id", req: "optional", all: "", note: "MIGRATION-ONLY: your source row's unique id. Echoed into the rejection ledger (source_ref) so every error traces to the exact row. NOT stored in p2. Aliases: unique_id, uid, source_row_id, row_id, ref." },
   { key: "report_period_id", req: "REQUIRED", all: "", note: "report_periods.id — unchanged p1↔p2" },
   { key: "measure_id", req: "REQUIRED", all: "", note: "measure_definitions.id (the measure) → maps to measure_def_id" },
   { key: "provider_id", req: "REQUIRED", all: "20", note: "dim: Provider member id (All=20)" },
@@ -39,7 +40,7 @@ const COLS: { key: string; req: string; all: string; note: string }[] = [
   { key: "value_type", req: "if value", all: "", note: "one of: numeric | boolean | text | option" },
   { key: "value", req: "optional", all: "", note: "the value (option → managed_list_items id). Present=filled shell, blank=empty shell" },
   { key: "no_data_reason", req: "optional", all: "", note: "answer-availability (no value, but why): 'not_available' (in scope + applies, couldn't obtain) or 'asserted_not_applicable' (utility asserts doesn't apply — OPTIONAL measures only, rejected on mandatory). MUTUALLY EXCLUSIVE with value. p1 'Not Available' → not_available." },
-  { key: "status_id", req: "optional", all: "", note: "else derived: filled/no-data→Entered(3), empty→Requested(1). p1 not_available convention → 5 (Approved)." },
+  { key: "status_id", req: "optional", all: "", note: "else derived: filled/no-data→Entered(3), empty→Pending(2). p1 not_available convention → 5 (Approved). (Requested(1) retired — Pending is the single starting state.)" },
   { key: "updated_by_id", req: "optional", all: "", note: "provenance: original data-entry person → updated_by_id (must be a p2 user.id; unresolved → nulled + logged)" },
   { key: "updated_at", req: "optional", all: "", note: "provenance: original entry date/time → updated_at (preserved, not overwritten). Aliases: update_date, entered_at" },
   { key: "comment", req: "optional", all: "", note: "provenance: the entry person's note → wrapped into data_entries.comments. Aliases: note, comments" },

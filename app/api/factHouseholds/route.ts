@@ -47,7 +47,7 @@ export async function GET(req: Request) {
       const dls = ctxRows
         .filter(
           (r) =>
-            r.country_id === (country?.id ?? -1) &&
+            r.report_period_id === urp.id && r.country_id === (country?.id ?? -1) &&
             (r.measureName === "Households" ||
               r.measureName === "Average Household Size"),
         )
@@ -57,7 +57,7 @@ export async function GET(req: Request) {
         );
       return {
         ReportType: reportType,
-        ReportPeriod: formatReportPeriodIso(urp.report_date, reportType),
+        ReportPeriod: formatReportPeriodIso(urp.report_date, reportType, u?.financial_year_end),
         Country: country?.name,
         Source: "unknown",
         ...dls,

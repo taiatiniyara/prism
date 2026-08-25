@@ -124,13 +124,15 @@ export function fiscalYearForReportPeriod(
 export function formatReportPeriodIso(
   reportDate: Date | string | null,
   reportType: string | null | undefined,
+  financialYearEnd?: string | null,
 ): string | null {
   if (!reportDate) return null;
   const d = typeof reportDate === "string" ? new Date(reportDate) : reportDate;
   if (isNaN(d.getTime())) return null;
 
   if (reportType === "Financial Year") {
-    d.setFullYear(d.getFullYear() - 1);
+    const fy = fiscalYearForReportPeriod(d, reportType, financialYearEnd);
+    if (fy != null) d.setFullYear(fy);
     return d.toISOString();
   }
 

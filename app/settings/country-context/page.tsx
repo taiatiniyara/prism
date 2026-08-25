@@ -13,7 +13,8 @@ export default async function CountryContextPage() {
     <DataTable<(typeof list)[number]>
       columns={[
         "country_name",
-        "measure_name",
+        "measure_def_name",
+        "period_year",
         "value",
         "source_date",
         "source_doc",

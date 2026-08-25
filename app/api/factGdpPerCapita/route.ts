@@ -45,13 +45,13 @@ export async function GET(req: Request) {
       const country = u ? cMap.get(u.country_id) : undefined;
       const cc = ctxRows.find(
         (r) =>
-          r.country_id === (country?.id ?? -1) &&
+          r.report_period_id === urp.id && r.country_id === (country?.id ?? -1) &&
           r.measureName === "GDP Per Capita",
       );
       const reportType = findItem(urp.report_type_id)?.name;
       return {
         "Report Type": reportType,
-        "Report Period": formatReportPeriodIso(urp.report_date, reportType),
+        "Report Period": formatReportPeriodIso(urp.report_date, reportType, u?.financial_year_end),
         Country: country?.name,
         "GDP Per Capita": cc?.value ?? null,
         Source: "unknown",

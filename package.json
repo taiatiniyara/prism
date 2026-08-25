@@ -58,7 +58,6 @@
     "read-excel-file": "^7.0.1",
     "recharts": "^3.10.1",
     "remark-gfm": "^4.0.1",
-    "shadcn": "^3.6.3",
     "sharp": "^0.35.3",
     "sonner": "^2.0.7",
     "tailwind-merge": "^3.6.0",
@@ -80,6 +79,7 @@
     "eslint-config-next": "16.2.12",
     "eslint-plugin-security": "^3.0.1",
     "jsdom": "^29.0.0",
+    "shadcn": "^3.6.3",
     "tailwindcss": "^4",
     "tsx": "^4.23.1",
     "typescript": "^5",
@@ -90,6 +90,7 @@
     "esbuild": "0.28.1",
     "hono": "4.12.27",
     "body-parser": "2.3.0",
-    "brace-expansion": "2.0.1"
+    "brace-expansion": "2.0.1",
+    "sharp": "^0.35.3"
   }
 }

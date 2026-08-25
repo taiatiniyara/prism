@@ -1,3 +1,8 @@
+/* ⚠️ STALE (2026-08-17) — DO NOT RUN AS-IS. References DB columns renamed away:
+ * category_id → measures_group_id, subcategory_id → measures_subgroup_id (the INSERT/UPDATE
+ * below error against the current schema). Also predates is_mandatory/is_apportionable and
+ * TRUNCATEs measure_dimension_scope. The live measure_definitions catalogue is now the source
+ * of truth (118 measures, curated). See docs/measures-enrichment/README.md before any reuse. */
 /**
  * Loads the finalised measures catalogue + dimension scope into the dev DB.
  *   1. Upsert 114 enriched measures into measure_definitions (by id).

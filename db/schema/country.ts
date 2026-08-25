@@ -1,5 +1,6 @@
 import {
   boolean,
+  check,
   integer,
   pgTable,
   serial,
@@ -7,6 +8,7 @@ import {
   unique,
   varchar,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { managedListItems } from "./managedLists";
 
 export type Region = "Oceania" | "Europe" | "Asia" | "Africa" | "Americas";
@@ -79,7 +81,7 @@ export const countryContext = pgTable(
     // Answer-availability axis (mirrors data_entries.no_data_reason), orthogonal to
     // the value: NULL = a value was given (or the row is still to be filled);
     // 'not_available' = the BMO states this national figure is not available for the
-    // year. A row carries a value OR a not-available reason, never both.
+    // year. A row carries a value OR a not-available reason, never both (see checks).
     no_data_reason: varchar("no_data_reason", { length: 32 }).$type<"not_available">(),
     updated_by: varchar("updated_by", { length: 255 }),
     updated_date: timestamp("updated_date").defaultNow().notNull(),
@@ -90,6 +92,16 @@ export const countryContext = pgTable(
       table.country_id,
       table.measure_def_id,
       table.period_year,
+    ),
+    // controlled vocabulary for the availability axis (per Eugene: null | not_available)
+    check(
+      "chk_cc_no_data_reason",
+      sql`${table.no_data_reason} is null or ${table.no_data_reason} = 'not_available'`,
+    ),
+    // a value XOR a not-available reason — never both (mirrors chk_value_xor_nodata)
+    check(
+      "chk_cc_value_xor_nodata",
+      sql`(${table.value} is not null)::int + (${table.no_data_reason} is not null)::int <= 1`,
     ),
   ],
 );

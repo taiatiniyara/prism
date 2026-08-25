@@ -44,6 +44,10 @@ export type ValueType = "numeric" | "boolean" | "text" | "option";
  * from p1. Grain ids are null at higher levels (utility-level → serviceArea/resource null, etc.).
  */
 export interface ExtractRow {
+  // migration-only reference: the customer's own unique id for this source row. NOT persisted to
+  // data_entries — carried into migration_rejections.source_ref so any rejection traces straight
+  // back to the exact source row.
+  sourceRowId?: string | null;
   reportPeriodId: number; // same id in p1 and p2
   measureId: number;
   dims: DimensionMembers;
@@ -59,7 +63,7 @@ export interface ExtractRow {
   // answer availability — a "no value, but here's why" answer. Mutually exclusive with value
   // (data_entries.chk_value_xor_nodata). One of NO_DATA_REASONS.
   noDataReason?: NoDataReason | null; // → data_entries.no_data_reason
-  statusId?: number | null; // optional explicit status; else derived (filled/no-data→Entered, empty→Requested)
+  statusId?: number | null; // optional explicit status; else derived (filled/no-data→Entered, empty→Pending)
   // p1 provenance (all optional) — the original data-entry person, time, and note.
   updatedById?: string | null; // → data_entries.updated_by_id (a p2-valid user.id; unresolved → nulled + logged)
   updatedAt?: string | null; // → data_entries.updated_at (the ORIGINAL entry time; preserved, not overwritten)

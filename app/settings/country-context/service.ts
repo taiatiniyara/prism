@@ -20,7 +20,7 @@ export async function GetCountryContext() {
       country_id: countryContext.country_id,
       country_name: countries.name,
       measure_def_id: countryContext.measure_def_id,
-      measure_name: measureDefinitions.name,
+      measure_def_name: measureDefinitions.name,
       period_year: countryContext.period_year,
       source_date: countryContext.source_date,
       source_doc: countryContext.source_doc,

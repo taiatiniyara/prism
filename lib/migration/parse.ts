@@ -94,7 +94,9 @@ export async function parseControlTotalsWorkbook(
 
   ws.eachRow((r, rowNumber) => {
     if (rowNumber === 1) return; // header
-    const p1 = toInt(cell(r, "p1_report_period_id"));
+    // Period key: accept p1_report_period_id (our template) OR report_period_id (p1↔p2 unchanged,
+    // so the resolved id is the same value) — the customer's recon sheet may use either name.
+    const p1 = toInt(cell(r, "p1_report_period_id") ?? cell(r, "report_period_id"));
     if (p1 == null) return; // blank line or the italic EXAMPLE row — skip silently
     const num = (key: string): number => {
       const val = toInt(cell(r, key));
@@ -129,6 +131,8 @@ export async function parseControlTotalsWorkbook(
 // real sample's headers (each logical field -> accepted header aliases, lower-case).
 // ---------------------------------------------------------------------------
 const EXTRACT_COLUMNS = {
+  // migration-only per-row reference (customer's unique id) → migration_rejections.source_ref
+  sourceRowId: ["mig_id", "unique_id", "uid", "source_row_id", "row_id", "source_id", "source_ref", "ref"],
   reportPeriodId: ["report_period_id", "reportperiodid", "period_id"],
   measureId: ["measure_id", "measure_def_id", "measureid"],
   provider: ["provider_id", "provider_id", "provider"],
@@ -146,7 +150,7 @@ const EXTRACT_COLUMNS = {
   powerStationId: ["power_station_id", "power_station"],
   unitId: ["unit_id", "energy_resource"],
   countryId: ["country_id", "country"],
-  valueType: ["value_type", "valuetype"],
+  valueType: ["value_type", "valuetype", "data_value", "datavalue"],
   value: ["value"],
   // answer availability (optional; mutually exclusive with value)
   noDataReason: ["no_data_reason", "no_data", "nodata_reason", "availability"],
@@ -291,6 +295,7 @@ export async function parseExtractWorkbook(
 
     if (bad) return; // reported above; don't emit a malformed ExtractRow
     rows.push({
+      sourceRowId: getStr(r, "sourceRowId"),
       reportPeriodId: rowReportPeriodId,
       measureId: rowMeasureId,
       dims,

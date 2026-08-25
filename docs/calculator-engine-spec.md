@@ -301,6 +301,136 @@ and just divides + rolls up; it stays **free of stint awareness**. Consequences:
 - The **energy-balance check** (`generation ≤ Σ(cap×hours) − downtime_energy`) is data-quality
   validation owned by the loader/gold layer, **not** the formula evaluator.
 
+### 4.6.2 Input sources — not every input lives in `data_entries`
+
+A binding references a measure by `measure_def_id`; the **resolver dispatches to that measure's
+home** when reading its value. Most measures resolve from `data_entries`, but some do not, and the
+resolver must route accordingly (the binding/formula stay identical — this is purely *where the value
+is read from*):
+
+| Input kind | Read from | Notes |
+|---|---|---|
+| Raw / calculated measures | `data_entries` (the address model) | the default |
+| **Country-context** measures (the 16 flagged `measure_definitions.is_context_fed`, subgroup **221** — e.g. Population, GDP Per Capita) | **`country_context`** table (keyed by `measure_def_id × period_year`), via the **`getResolvedContextRows`** bridge | #4, Option 2 (`fcf8e4e`; FY-end-aware since `6504e7e`; flag added `8d80cc6`); **read-time carry-forward per report period**; used as per-capita / per-GDP **denominators**. NOT in `data_entries`. |
+| Capacity-hours | silver-derived measure (§4.6.1) | `Σ(stint_cap × stint_hours)` |
+
+So a "per-capita" KPI (e.g. `x ÷ population`) binds `population` like any input, but the resolver
+fetches it from `country_context` (carry-forward), not `data_entries`. **Build notes:**
+- The resolver needs a small **source-dispatch** layer keyed on the measure's home — dispatch
+  country-context reads (measures flagged **`is_context_fed`**) through `getResolvedContextRows`;
+  build against `6504e7e`+ so carry-forward matches the FY-end-corrected period labels (the bridge's
+  signature is unchanged).
+- **Staleness is not silent (#8 hole H2).** Carry-forward is unbounded, so a benchmarking KPI could
+  divide by a years-old denominator. `getResolvedContextRows` returns **`period_year` on every row**,
+  so the resolver **surfaces the denominator's age and flags staleness** rather than emitting a
+  silent stale figure; an **approved snapshot pins the RESOLVED context** it was computed against
+  (no re-drift). This is a read/provenance concern (like `no_data_reason`), not a change to the
+  formula or binding.
+- **A not-available context row propagates (§9.1).** `country_context` now carries the same
+  availability axis as `data_entries` (`no_data_reason`, `024d935`): a not-available context measure
+  resolves to `value = null, no_data_reason = 'not_available'` on the `ResolvedContextRow`. So a
+  **not-available per-capita / per-GDP _denominator_ makes the whole KPI not-available (null + reason),
+  never 0** — exactly §9.1's rule, now applying to the country-context source too (zero-fill never
+  applies to a denominator regardless of source). Interface addition only; existing fields unchanged.
+
+### 4.6.3 Tariff bills & currency conversion (DECIDED 2026-08-24)
+
+**The problem.** Utilities submit a *tariff structure* in **local currency** — a fixed/rental charge,
+an energy rate per consumption block, the block limits themselves, and a GST rate — varying by
+**customer type**, **payment mode** (prepaid/postpaid) and a **tariff class** (Standard vs Lifeline).
+Benchmarking needs the **cost of a fixed reference consumption** (e.g. "Residential postpaid @ 200 kWh"),
+computed from that block structure and **converted to USD** so utilities compare like-for-like.
+~72 such tariff KPIs (source: `kpi_tariff_structure - 20260824.xlsx`), enumerated by
+`customer_type × payment_mode × reference_kwh × tax_treatment (GST incl/excl)`.
+
+A block-tariff bill is **not arithmetic over a single expression** — it is a piecewise calculation
+over the block table. Modelling it as a user-authored formula would (a) make it un-reviewable as a
+stable comparable, and (b) let each utility express it differently, defeating comparability.
+
+**Decision — a system-defined built-in evaluator (Decision #1 = A: calculator-side & reactive).**
+The engine gains a **formula _kind_**: a computed measure's formula is either
+- `arithmetic` — a user expression over tag-card inputs (everything today), **or**
+- a **named built-in** — a system-defined evaluator identified by name (`block_tariff` is the first).
+
+The block-tariff bill is a **first-class computed measure/KPI** whose formula `kind = block_tariff`.
+It is **reviewable exactly like any KPI** — the BLO review surfaces the bill **and** its inputs
+**and** its formula — because *BLOs review the bills and care that the figures are correct for the
+benchmarking comparisons* (Eugene). Being built-in and **system-defined makes the formula identical
+across utilities** (the comparability guarantee); utilities supply only the *inputs*, never the
+calculation.
+
+**One evaluator, reactive + materialized** (consistent with §4.4). The same `block_tariff` code path runs:
+- **reactively at review time** — so the BLO sees the computed bill (and its USD value) while validating, and
+- **at gold refresh** — materialized into `kpi_actual` for benchmarking.
+
+It is never re-expressed in SQL and never authored per-utility.
+
+**Inputs (ordinary tag-card bindings).** The utility-entered **tariff components** are normal measures
+in `data_entries`, bound like any input (§5), sliced by `customer_type × payment_mode × consumption_band`
+(+ `tariff_class`, below):
+
+| Component | Role in the evaluator |
+|---|---|
+| Fixed / rental charge | flat addend |
+| Energy rate per block | price applied to the kWh falling in each `consumption_band` |
+| Block limits | the band boundaries — which `consumption_band` a kWh falls into |
+| GST rate | applied iff the KPI's `tax_treatment = includes` |
+
+**Parameters (fixed on the KPI definition, not entered).** Each tariff KPI carries evaluator
+parameters — seeded from the xlsx:
+- `reference_kwh` — the consumption point the bill is computed at, **customer-type-specific**:
+  Residential Lifeline 60/120/180 · Residential 100/200/500 · Commercial 1000/5000 · Industrial 10000 ·
+  Government 1000/5000 · Streetlights 1000 · Recreational/Others 100/500/1000.
+- `tax_treatment ∈ {includes, excludes}` — GST-inclusive vs -exclusive variant.
+- `tariff_class ∈ {Standard, Lifeline}` — see below.
+
+These live as **built-in-evaluator parameters** on the formula/computed-measure definition (a small
+`params` payload), **not** as entered data and **not** as dimensions.
+
+**Tariff class — a lightweight qualifier, not a dimension (confirmed).** `Lifeline` is a **sub-tariff
+within a customer type**, not a customer type of its own and **not an 11th dimension**. Residential
+Lifeline = `customer_type = Residential` **+** `tariff_class = Lifeline`. It qualifies both the tariff
+KPI and its component inputs; the ~10-dimension model (§12) is untouched.
+
+**How the class is carried — separate measures per class (DECIDED 2026-08-25, Eugene via #2).** Because
+`tariff_class` is deliberately **not** a dimension, it can't be a slice on the row; instead it is carried
+by **measure identity** — each tariff component has a **Standard measure and a parallel Lifeline
+measure**. This keeps the dimension set clean, needs no new `data_entries` column, and gives distinct
+addresses (the precedent is #2's gender 250/251 split). Concretely:
+- **Existing tariff component measures = the Standard set.** p1 has **zero Lifeline entries** (all p1
+  tariff is Standard-class, Eugene-confirmed), so #2's migration maps **every p1 tariff input onto the
+  existing (Standard) measures unchanged** — no class field, no collision, and `tariff_class` drops out
+  of the migration entirely.
+- **Lifeline is forward-looking.** Parallel **Lifeline-twin** component measures are added to the
+  catalogue (mirroring the Standard defs, `is_context_fed = false`), **empty at migration** (no data yet).
+  `block_tariff` binds the Lifeline component set on them when Lifeline data later exists. Naming: the
+  existing measures **stay as-is** (Standard is the implied default — no rename churn); Lifeline twins are
+  added alongside.
+- **Ownership of the twin build (forward, non-blocking):** Eugene/BMO decide *which* components a
+  Lifeline tariff carries → **#3** pins the twin list + their `block_tariff` bindings in this section →
+  **#2 or #4** creates the mirrored `measure_defs`. Gated only on the tariff extract revealing the actual
+  component measures; it does **not** block #2's migration.
+
+**Currency → USD via measure 140 (Decision #3).** FX is the existing measure **140 "USD Exchange Rate"**
+(`usd_exchange_rate_ratio`) — a **dimensionless ratio reported per (utility, period)** (one rate for
+every slice; verified: no dimensional scope). It binds as an **ordinary input** (all dims inherit;
+grain = utility/period), so:
+
+> `bill_USD = block_tariff(local components, reference_kwh, tax_treatment) ⊗ rate(140)`
+
+The FX rate appears **as an input in the review**, keeping the USD figure transparent. This is
+**general** — any monetary KPI converts to USD by binding 140, so it is not tariff-specific.
+*(Build note: confirm 140's direction — local-per-USD vs USD-per-local — to fix `⊗` as ÷ or ×.)*
+
+**Why this fits the existing engine.**
+- The bill stays a **computed measure** (§3) — KPI is still just the publishing label; no new node type.
+- Inputs and FX are **ordinary additive/ratio inputs** via the tag-card model (§5), resolving from
+  `data_entries` (§4.6.2 default) — no new input source.
+- Cross-scope rollups (§4.6) don't apply to a per-slice reference bill (it's a point calculation at a
+  fixed kWh); the evaluator returns the slice value and the FX multiply is per (utility, period).
+- The only genuinely new surface is the **formula `kind`** (arithmetic | named built-in) + a **`params`
+  payload** for built-ins. Everything else reuses §3–§6.
+
 ---
 
 ## 5. Input context & traceability — "a tag card for every input"
@@ -549,6 +679,42 @@ tools.
   badge with the reason.
 - **Cycle + unit validation** and a **sample-evaluation readout**.
 
+### 7.1 Access & custom-KPI governance (DECIDED 2026-08-18)
+
+The same builder is served to **DEV**, **BMO** (system admin / PPA), and **BLO** (utility) — but the
+capability is **role-tiered**, because p2 lets utilities create **custom KPIs**.
+
+**The controlling principle — creating a *measure* ≠ creating a *KPI*.** A new **input measure** is a
+new thing every utility must *collect and enter* — a platform-wide data-collection obligation, so it
+is **centrally governed (DEV/BMO only)**. A **custom KPI** is just a new *formula over measures that
+already exist* — no new collection burden — so a BLO may **self-serve** it. This split is the whole
+control: a BLO cannot pollute the input catalogue.
+
+| Capability | DEV | BMO | BLO |
+|---|---|---|---|
+| Create/edit raw & calculated **input measures** | ✅ | ✅ | ❌ — picker is **catalogue-only** + "Request a measure" |
+| Create **shared/benchmarking KPIs** (standard catalogue) | ✅ | ✅ | ❌ |
+| Create **custom KPIs** (formula over existing measures) | ✅ | ✅ | ✅ **for own utility only** |
+| Approve BLO measure-requests & shared-KPI submissions | ✅ | ✅ | ❌ |
+
+**BLO mode** ("Create Custom KPI"): Track-as-KPI is implicit; the new-measure path is hidden; the
+measure picker offers **only existing catalogue measures** (a gap → **Request a measure**, routed to
+BMO); the KPI is owned by their utility (`owner_utility_id`) and computed for it. A **dedup check** on
+save surfaces similar existing KPIs to discourage clutter.
+
+**Visibility (a required radio on the BLO form) — DECIDED:**
+| Choice | Behaviour |
+|---|---|
+| **Private — my utility only** | **Instant, no review.** `is_private = true`, `owner_utility_id` set. Never enters cross-utility benchmarking. |
+| **Share with all utilities** | **Requires BMO approval** (via `custom_kpi_request` / `custom_kpi_decision`). Stays private/pending until approved; on approval it's promoted to the shared set (`is_private = false`) and joins the benchmarking pool. Protects the pool from duplicates / low-quality / non-comparable KPIs. |
+
+The read/benchmarking + AI layer **filters by visibility**: a private KPI is invisible to other
+utilities and to cross-utility comparisons; a shared+approved one participates.
+
+**Schema support already exists:** `kpi_definitions.type ('benchmarking'|'custom')`, `owner_utility_id`,
+`is_private`, `utility_ids`; and the `custom_kpi_request` / `custom_kpi_decision` /
+`custom_kpi_lifecycle_event` workflow tables carry the share-approval flow.
+
 ---
 
 ## 8. Test harness — formula regression tests
@@ -628,6 +794,7 @@ different axes — only `no_data_reason` is a per-input calculator signal.
 | **`kpi_limit` + `kpi_limit_dimension`** (§5.6) — *owned by #5/#9* | KPI-specific, time-varying, dimension-scoped limit bands with BMO notes/history; replaces the `kpi_definitions.limits` JSON; reuses the tag-card model |
 | `ON DELETE RESTRICT` on binding→measure (§6) | Deleting a used measure is blocked, not silent |
 | **DONE:** legacy `input_def_id → measure_def_id` shim + migration (§2) | Bindings resolve on the canonical key |
+| **Formula `kind`** (arithmetic \| named built-in) + built-in `params` payload (§4.6.3) | System-defined evaluators (first: `block_tariff`) for piecewise calcs that must be identical across utilities; `params` (`reference_kwh`, `tax_treatment`, `tariff_class`) seeded from `kpi_tariff_structure` |
 
 Definition tables (`measure_definitions`, `kpi_definitions`) otherwise stay separate. The JSON
 `formula_inputs` columns are superseded by `formula_binding` once migrated.
@@ -650,11 +817,13 @@ Definition tables (`measure_definitions`, `kpi_definitions`) otherwise stay sepa
 | 11.10 | Missing-input policy | keep zero-fill-if-additive · revise | Keep (§9) |
 | 11.11 | `variable_name` | token on binding · token on measure · structured (no token) | **DECIDED 2026-07-24: token on the binding** (§5.7); measure `variable_name` kept, re-purposed as a stable AI/machine handle |
 | 11.12 | Cross-scope aggregation depth | same-scope only · aggregate across dims/grain | **DECIDED 2026-07-24: common & deep, two-axis** (§4.6) |
+| 11.13 | Tariff-bill computation & currency | user-authored formula · **system-defined built-in evaluator** · convert at read layer | **DECIDED 2026-08-24: built-in `block_tariff` evaluator, reviewable (reactive + materialized); USD via measure 140; `tariff_class` Standard/Lifeline qualifier; `reference_kwh` + `tax_treatment` as KPI params** (§4.6.3). **`tariff_class` representation finalized 2026-08-25: separate measures per class — existing = Standard, Lifeline twins added parallel/empty (no rename); p1 all-Standard so it drops out of migration.** |
 
 The two biggest forks (11.1 engine topology, 11.2 compute home) are now **decided** (§4.4–4.5).
 Everything in §5/§6 (the binding + integrity model) is the direction the design converged on.
 **All open forks are now resolved** — 11.9 (drop "result level"), 11.11 (token on the binding), and
-11.12 (cross-scope) all decided 2026-07-24. The design register carries no remaining open decisions.
+11.12 (cross-scope) all decided 2026-07-24; **11.13 (tariff bills & currency) decided 2026-08-24**
+(§4.6.3). The design register carries no remaining open decisions.
 
 ---
 

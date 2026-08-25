@@ -17,10 +17,13 @@ export type ResolvedContextRow = {
   // country-keyed routes (Islands, Land Area) pick the latest figure deterministically.
   period_year: number;
   value: string | number | boolean | null;
+  // 'not_available' when the BMO stated the figure is unavailable for that year
+  // (value is then null); null otherwise. Answer-availability axis, mirrors data_entries.
+  no_data_reason: "not_available" | null;
 };
 
 /**
- * Country-context read bridge.
+ * Country-context read bridge (Option 2, 2026-08-23).
  *
  * National annual figures live in the country_context table (country × metric ×
  * period_year), written by the BMO. Power BI still consumes the utility ×
@@ -76,12 +79,19 @@ export async function getResolvedContextRows(
   };
 
   // index country_context by (country_id, measure_def_id) -> period_year desc
-  const byKey = new Map<string, { period_year: number; value: string | null }[]>();
+  const byKey = new Map<
+    string,
+    { period_year: number; value: string | null; no_data_reason: "not_available" | null }[]
+  >();
   for (const r of ctx) {
     if (!metricIds.has(r.measure_def_id)) continue;
     const k = `${r.country_id}|${r.measure_def_id}`;
     const arr = byKey.get(k) ?? [];
-    arr.push({ period_year: r.period_year, value: r.value });
+    arr.push({
+      period_year: r.period_year,
+      value: r.value,
+      no_data_reason: r.no_data_reason,
+    });
     byKey.set(k, arr);
   }
   for (const arr of byKey.values())
@@ -109,7 +119,8 @@ export async function getResolvedContextRows(
         measure_def_id: d.id,
         measureName: d.name,
         period_year: pick.period_year,
-        value: resolveValue(d.id, pick.value),
+        value: pick.no_data_reason ? null : resolveValue(d.id, pick.value),
+        no_data_reason: pick.no_data_reason,
       });
     }
   }

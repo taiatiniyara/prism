@@ -73,6 +73,47 @@ Dims vs grain — the split philosophy is deliberate (per #4): the 10 dimension 
 (NOT NULL, explicit **All** member — a real bucket), grain columns **locate** in a physical
 hierarchy (NULL above… means truthfully absent). Do not "unify" them.
 
+**Utility obligation counts only human-answerable shells (Eugene, 2026-08-25):** the
+utility-facing "requested" count = shells WHERE `is_calculated = false AND is_system_generated =
+false AND is_context_fed = false`. Engine-filled, system-generated, and context-fed shells are
+real addresses in the relevance balance but are **never part of what a utility is asked to
+answer** — they must not inflate requested counts or completeness denominators. Corollary: two
+denominators, never mixed — **utility completeness** (answered / human-answerable requested) is a
+*performance* metric; **calculated/context shell fill-rate** is an *engine/pipeline health*
+metric. The generator and the scorecard compute the utility count identically, from this rule.
+
+**Service-area capability declaration — SPANS RULED FINAL (Eugene, 2026-08-25):** contextual
+shells (e.g. the Transmission slice) are gated on **declared** capability, never inferred from
+data (inference is circular and cannot bootstrap a new network). Storage = relational
+**capability spans** (`service_area_capabilities`: SA × capability × effective_from/to; non-overlap
++ ≤1 open, fiscal-year comparison per ADR 0004) — the ratified stint pattern, NOT period-keyed
+jsonb (`service_areas.report_periods` stays empty and retires with `units.period_entries`).
+Confirm-each-period UX = span operations (confirm no-op / change close+open). #8 owns
+capability-span semantics alongside unit stints — one temporal rulebook family.
+
+**IPP boundary rule (Eugene, 2026-08-25, data-confirmed 0/12 + 2/12 fills):** units provided by an
+IPP carry **output metrics only** for the off-taking utility (Rated Capacity / Generation /
+Downtime @ provider=IPP) — never consumable inputs (the "Fuel and Oil" subgroup): those are the
+IPP operator's costs, invisible to and unreportable by the off-taker. Encoded in the relevance
+verifier (consumables not expected where a technology is IPP-only for a utility, via
+`units.provider_id`). The general principle: **expectation follows the ownership boundary — a
+utility is only asked what it can actually know.**
+*Pending nuance (disposition open with Eugene, migration log `11c9010`):* **fuel** may legitimately
+cross the boundary under fuel-supply/pass-through arrangements (utility supplies fuel to its IPP)
+— two real CUC Fuel Oil @ IPP-diesel values (FY2022/23, ~28.4M/28.6M) are **soft-deleted and
+preserved**, explicitly NOT ruled invalid. If Eugene later rules them genuine: restore Fuel Oil @
+IPP and **narrow this rule to lube-oil-only**. Lube oil stays cleaned (0 fills anywhere —
+unambiguously operator O&M).
+
+**Cross-dimension conditional (structural invariant, banked 2026-08-25 from the Hours Worked
+290–292 case):** the four energy dimensions (provider / category / technology / asset_class)
+expand **only under `utility_function` = Generation**; under Transmission / Distribution /
+Ancillary Services every energy dim carries its **All** member — those dims *describe generation*,
+so a non-Generation slice with a pinned energy dim is structurally meaningless. The
+relevance/shell generator enforces this as an invariant, not per-measure config. Escape hatch per
+case law: a future measure genuinely needing energy-dim expansion under a non-Generation function
+is an **explicit Eugene decision on evidence**, never a silent allowance.
+
 ## 2. Requirements on the grain columns
 
 1. **Chain-consistency validation** (replaces the old exactly-one CHECK): a row's filled grain
@@ -116,8 +157,14 @@ hierarchy (NULL above… means truthfully absent). Do not "unify" them.
    *Post-drop note (#13, 2026-07-27):* the spent one-off `scripts/cleanup-m49-country-duplicates.ts`
    safety-checks `data_entries.subregion_id` — already applied on dev, don't re-run it against a
    post-drop DB (it will error on the missing column, by design not by accident).
-7. **`country_context` fold-or-keep (flag, not blocker):** unchanged — #8 will bring a
-   recommendation once country-grain entry is live; not first-DDL-pass.
+7. **`country_context` fold-or-keep — RESOLVED (Option 2, `fcf8e4e`, 2026-08-19):** the
+   side-channel won, formalized — national annual figures stay in `country_context`
+   (country × metric × `period_year` + unique, DDL applied) and are projected to
+   utility × report_period shape at read time by a carry-forward bridge. #8 validated the
+   architecture; open holes flagged to #4: H1 the bridge's blanket "report_date year −1"
+   FY mapping must resolve via the canonical period dim / `financial_year_end` (no second
+   source of time truth); H2 unbounded carry-forward needs a staleness flag (no silent
+   stale denominators in benchmarking KPIs); snapshots must pin RESOLVED context.
 
 ## 3. Backfill: promoting entries off the virtual entities
 
@@ -130,11 +177,25 @@ say where each entry belongs (`units.power_station_id` / `.service_area_id`;
 | virtual `unit` **with** `power_station_id` | station+area+utility+country; unit NULL | station-level data parked on a station virtual |
 | virtual `unit` without station | area+utility+country | grid-level data parked on a grid virtual |
 | virtual `service_area` | utility+country; area NULL | org-level data parked on a virtual area |
-| org-level rows whose measure's `strata` = country | country only; utility NULL | country-level data (see §4 ownership note) |
+| ~~org-level rows whose measure's `strata` = country~~ | ~~country only; utility NULL~~ | **SUPERSEDED by country-context Option 2 (`fcf8e4e`, 2026-08-19):** historical country-strata values reimport INTO `country_context` (country × metric × period_year) — NOT as country-anchored entries; national figures never enter `data_entries` (read-time carry-forward bridge projects them; #8-validated with holes H1–H3 flagged, see board). The `country_id` anchor remains for `kpi_actual` computed rollups + any future genuinely-entered country facts. |
 
 ⚠ Verify the virtual→level convention against actual rows before trusting it (e.g.
 `SELECT … WHERE is_virtual GROUP BY strata_id`); one transaction; per-level row counts
-before/after; nothing dropped. Expect and dedupe legacy duplicate addresses first (the old
+before/after; nothing dropped.
+
+**Promotion is mismatch-driven, not virtual-driven (widened 2026-08-03; re-corrected same day
+on Eugene-driven evidence):** the table above covers flagged virtuals, but **25 further sentinel
+service areas exist — all named "All Service Areas", one per utility, marked Utility-strata**
+(the SA analog of the retired "All Utilities"/virtual-unit pattern; they survived the 2026-07-27
+sentinel purge because they hold parked data, and their `is_virtual` flag is not reliable).
+**Every** entry on them is a parked utility-level fact → promote to the utility anchor, then
+retire the 25 rows with the other virtuals. (An earlier framing of these as "real areas
+coextensive with single-grid utilities" was wrong — no real area is Utility-strata; the 66 real
+grids are all ServiceArea-strata.) Detection for the whole backfill is therefore
+**anchor-level ≠ measure-declared-strata mismatch** — the robust net that catches sentinels
+regardless of flags — with `is_virtual` as corroborating signal, not the filter.
+(`service_areas.strata_id`: KEPT this DDL as the identifying signal for the 25; after their
+retirement it is vestigial — joint #8/#4 assessment, likely outcome **drop**, per unit-spec §10.) Expect and dedupe legacy duplicate addresses first (the old
 `uniq_entry` was never unique). After no entries reference them: soft-delete virtual
 `units`/`service_areas`; drop `is_virtual` only once onboarding/import paths stop creating them.
 

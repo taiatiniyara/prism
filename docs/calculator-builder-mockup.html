@@ -165,6 +165,9 @@
   .achdr{font-size:12px;color:var(--muted);padding:7px 10px;border-bottom:1px solid var(--line);background:var(--accent-soft)}
   .acitem{padding:8px 10px;font-size:13px;cursor:pointer;border-top:1px solid var(--line)}
   .acitem:hover{background:var(--accent-soft)}
+  .visbox{border:1px solid var(--line);border-radius:8px;overflow:hidden;margin-top:4px}
+  .visbox .opt{border-radius:0}
+  .visbox .opt + .opt{border-top:1px solid var(--line)}
 </style>
 </head>
 <body>
@@ -199,7 +202,7 @@
       <div style="flex:1 1 auto;min-width:0">
         <div class="row">
           <div><label class="fld">Name</label><input class="input" value="Renewable Generation Share" style="width:240px"></div>
-          <div><label class="fld">Unit</label><input class="input" value="%" style="width:70px"></div>
+          <div style="position:relative;top:4px"><label class="fld">Unit</label><input class="input" value="%" style="width:70px"></div>
           <div><label class="fld">Reported at (derived)</label>
             <span class="pill">unit → country · by technology / category / asset class</span></div>
         </div>
@@ -454,6 +457,50 @@
       </div>
     </div>
     <p class="cap" style="margin-top:10px">Only the dimensions this measure is scoped on appear as tags. Grain uses the same picker in its own column — Inherit / Roll up from finer / Pin a level.</p>
+  </div>
+
+  <!-- ===== BLO custom KPI — same layout as the first section ===== -->
+  <div class="authhdr">Custom KPIs — the BLO (utility) view</div>
+  <p class="cap"><b>Same layout as the first section</b>, role-tiered. <b>BLOs</b> build custom KPIs for their own utility <b>from existing measures only</b> — no create-measure (a new input is a data-collection obligation → DEV/BMO). The top-right shows <b>Visibility (Private / Shared)</b> instead of Track-as-KPI. Need a measure that doesn't exist → request it.</p>
+
+  <div class="card card-pad">
+    <div class="row between" style="margin-bottom:6px">
+      <div class="crumb" style="margin:0">Settings › KPIs › Create Custom KPI</div>
+      <span class="pill" style="background:var(--amber-soft);color:var(--amber-fg)">Utility: EFL · role BLO</span>
+    </div>
+    <div style="display:flex;gap:20px;align-items:flex-start">
+      <div style="flex:1 1 auto;min-width:0">
+        <div class="row">
+          <div><label class="fld">Name</label><input class="input" value="Feeder Reliability Index" style="width:230px"></div>
+          <div style="position:relative;top:4px"><label class="fld">Unit</label><input class="input" value="index" style="width:80px"></div>
+          <div><label class="fld">Reported at (derived)</label>
+            <span class="pill">service area → utility · by feeder type</span></div>
+        </div>
+        <div style="margin-top:14px">
+          <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
+            <label class="fld" style="margin-bottom:0">Formula</label>
+            <span class="note" style="margin:0">Inputs are picked from existing measures only — see the picker note below</span>
+          </div>
+          <div class="formula" style="margin-top:5px">
+            <span class="tok">outage_mins</span><span class="op">&divide;</span><span class="tok">feeders</span>
+          </div>
+        </div>
+      </div>
+      <aside style="flex:0 0 26%;max-width:26%">
+        <div style="margin-top:8px">
+          <label class="fld">Visibility</label>
+          <div class="visbox">
+            <div class="opt on"><span class="radio"></span><b>Private</b><span class="mut" style="margin-left:auto;font-size:11.5px">my utility</span></div>
+            <div class="opt"><span class="radio"></span><b>Shared</b><span class="mut" style="margin-left:auto;font-size:11.5px">BMO approval</span></div>
+          </div>
+          <p class="cap" style="margin:6px 0 0;font-size:11.5px">Shared → cross-utility benchmarking, after BMO approval.</p>
+        </div>
+      </aside>
+    </div>
+    <div class="ghost" style="margin-top:14px">
+      <b>Measure picker is catalogue-only for BLOs</b> — pick from existing measures; the "create new measure" path is hidden.
+      Need a measure that doesn't exist? <span style="color:var(--ink);font-weight:600">＋ Request a measure →</span> (routes to BMO — a new input is a platform-wide collection obligation).
+    </div>
   </div>
 
   <p class="sub" style="text-align:center;margin-top:18px">

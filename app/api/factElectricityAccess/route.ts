@@ -45,13 +45,13 @@ export async function GET(req: Request) {
       const country = u ? cMap.get(u.country_id) : undefined;
       const cc = ctxRows.find(
         (r) =>
-          r.country_id === (country?.id ?? -1) &&
+          r.report_period_id === urp.id && r.country_id === (country?.id ?? -1) &&
           r.measureName === "Access to Electricity",
       );
       const reportType = findItem(urp.report_type_id)?.name;
       return {
         ReportType: reportType,
-        ReportPeriod: formatReportPeriodIso(urp.report_date, reportType),
+        ReportPeriod: formatReportPeriodIso(urp.report_date, reportType, u?.financial_year_end),
         Country: country?.name,
         "Electricity Access": cc?.value ?? null,
         Source: "unknown",

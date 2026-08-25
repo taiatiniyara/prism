@@ -45,23 +45,23 @@ export async function GET(req: Request) {
       const country = u ? cMap.get(u.country_id) : undefined;
       const iata = ctxRows.find(
         (r) =>
-          r.country_id === (country?.id ?? -1) &&
+          r.report_period_id === urp.id && r.country_id === (country?.id ?? -1) &&
           r.measureName === "IATA Air Connectivity Score",
       );
       const acp = ctxRows.find(
         (r) =>
-          r.country_id === (country?.id ?? -1) &&
+          r.report_period_id === urp.id && r.country_id === (country?.id ?? -1) &&
           r.measureName === "Air Connectivity per 1000 People",
       );
       const acg = ctxRows.find(
         (r) =>
-          r.country_id === (country?.id ?? -1) &&
+          r.report_period_id === urp.id && r.country_id === (country?.id ?? -1) &&
           r.measureName === "Air Connectivity per Unit GDP",
       );
       const reportType = findItem(urp.report_type_id)?.name;
       return {
         "Report Type": reportType,
-        "Report Period": formatReportPeriodIso(urp.report_date, reportType),
+        "Report Period": formatReportPeriodIso(urp.report_date, reportType, u?.financial_year_end),
         Country: country?.name,
         "Air Connectivity": iata?.value ?? null,
         "Air Connectivity per 1000 people": acp?.value ?? null,

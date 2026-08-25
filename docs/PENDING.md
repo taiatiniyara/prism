@@ -17,9 +17,9 @@ A row is *pending* if it has not cleared all the gates that apply to it. Docs-on
 
 - **Tree clean and in sync with `origin/main`.** ⚠ deps changed → run `npm install` after your next pull.
 - **Only one uncommitted file:** **#3's `calculator-engine-spec.md`** (active WIP, left for #3).
-- **Open PRs: 10 — all held Dependabot majors** (Eugene reviews individually). No human PRs open: `#73` (API_KEY split) and `#75` (extract-template fix) both merged.
+- **Open PRs: 14** (re-scan 2026-08-24c) — **2 human** (`#104` Eugene's data-availability amendment — #3/#4 review owed; `#77` #11 access-plans proto — parked by design) + 12 Dependabot. Backlog nudge cleared 3: #113/#76/#83 merged. ✅ **Vuln triage COMPLETE (#12):** residuals accepted low-risk / non-reachable.
 - **Cleared this session:** #8 schema-convention ruling (`7c01627`); #12 D2 API_KEY split merged (`167f080`); both sentinel-deletion confirmations (#2 views, #10 access); safe Dependabot subset merged.
-- **Awaiting Eugene — down to 2:** #2 medallion sample extract, #10 default-plan + member entitlements.
+- **Awaiting Eugene — 3:** #2 medallion sample extract; #10 default-plan + member entitlements; **3 null `financial_year_end`** values. *(#4 country-context history ✅ DONE — Eugene's extract loaded to dev 2026-08-25, 1040 rows; subgroup-221 RULED 2026-08-20.)*
 - **Applied DB changes today** (informational, all backed up): sentinel-chain deletion, `measure_definitions.description` drop, managed-lists vocab rename — plus the follow-on `units.category_id`/`type_id` DROP still owed by #2.
 
 ---
@@ -41,13 +41,20 @@ A row is *pending* if it has not cleared all the gates that apply to it. Docs-on
 | `C:/Users/eugen/prism` | `main` | see above |
 | `C:/Users/eugen/prism-bsc` | `feat/bsc-input-kpi-picker` | **clean; fully merged** into `main` (PR #35). Nothing pending. Branch has no upstream but no unmerged commits either — safe to leave or delete. |
 
-### Open PRs (10 — all held Dependabot majors)
-No human PRs open. `#73` (API_KEY split) and `#75` (extract-template header fix) both merged since refresh 3.
-**10 Dependabot majors — HELD** (Eugene's call: major bumps need individual review): `#49` read-excel-file 7→9 · `#48` eslint-plugin-security 3→4 · `#47` **typescript 5.9→7 (major)** · `#46` jest-dom 6→7 · `#45` @types/node 20→26 · `#44` eslint 9→10 · `#43` lucide-react 0.5→1 · `#42` @ai-sdk/anthropic 3→4 · `#39` codeql-action 3→4 · `#38` actions/checkout 4→7.
+### Open PRs (14 total — re-scan 2026-08-24c)
+> Method: full `gh pr list --state open` each refresh (pings are additive, not a substitute — see the Lesson in §4).
+> **Backlog-nudge result (Eugene-directed):** #113 (#3 calc-spec), #76 (#12 RLS docs), #83 (#12 USER-IMPACT rows) all **MERGED** after nudges. #83's 3-way merge applied cleanly — USER-IMPACT still has all 17 rows. #12 now has nothing open.
 
-**Recently merged (since refresh 3):** `#73` #12 API_KEY tiering (`167f080`) · `#75` #2 extract-template header fix (`77b2acf`) · `#74` #11 Phase-5b seam (`9b94edc`).
-**Dependabot safe-subset MERGED by #2 (verified `npm i` + `tsc` green):** `#37` ssh-action (`cafafba`) · `#41` production-deps, 19 bumps (`a20e117`) · `#72` dev-deps, 5 bumps (`4b4dd7f`).
-⚠ **main's deps changed → after `git pull`, run `npm install` to resync `node_modules`.**
+**2 human PRs open:**
+- `#104` **docs(data-availability) §3.1.1 — obligation is dimension-aware** — ⚠ **Eugene's own PR** (authored 2026-08-16 mid-outage; its "recirculate for #8/#3/#4 comment" ask was a lost delivery). **Substantive** amendment to the ratified availability design (obligation moves to slice grain) — **not blind-mergeable.** Status: **#8 ✅ endorsed** (4 impl notes) + **#3 ✅ endorsed** ([posted](https://github.com/taiatiniyara/prism/pull/104#issuecomment-5395727089); §4.6 note — entered aggregate `All` is authoritative when it diverges from Σ of optional breakdown members). **Only #4's review still OWED** (pinged). Merge is Eugene's call — two endorsements in, one review outstanding.
+- `#77` [#11] **Access Plans (Tiered Access) DEV/BMO form — PROTOTYPE.** 🅿️ **Deliberately parked (review artifact), NOT stuck** — mock-backed click-through, on hold since 2026-07-28 pending Eugene's UX sign-off. Matures toward merge only when **both** (a) Eugene approves the UX **and** (b) #10/#2 land the real `plan`/`plan_version`/`plan_entitlement` DDL so #11 can rebind from mock to real tables. Do not treat as backlog to clear.
+
+**12 Dependabot PRs** (down from 16 — #12's PR #119 audit fix + shadcn→devDeps + sharp override cut the prod-dependency count **14→5**). Eugene reviews the rest individually; notable: `#47` **typescript 7**, `#44` eslint 10, `#89` @types/node 26.
+> **Dependabot/vuln note:** #8 reported the vuln count spiking 4→24 (2026-08-24); #12's PR #119 (`51d5f8e`, merged) addressed it (npm audit fix, prod count 14→5). ✅ **#12's dependency triage is COMPLETE (accepted-residual):** the 5 prod residuals (exceljs/react-d3-tree/uuid — uuid advisory needs a `buf` arg neither passes; brace-expansion/minimatch — DoS needs untrusted glob input no user-facing path exposes) are **non-reachable**, documented in #119's notes. Fully clearing them would need breaking major bumps (e.g. exceljs) for non-reachable advisories — **not done deliberately; Eugene's call only if zero-alert is wanted.** No DB/runtime change from #119.
+
+⚠ **main's deps changed again (#119: `package.json`+lock) → run `npm install` after your next pull.**
+
+**Also: ~15+ unmerged `claude/*` and `feat/*`/`security/*` branches ahead of main with no open PR** (e.g. `security/api-key-tiering` +2, `claude/data-availability-*`, `claude/apportioned-costs-spec`, `claude/evidence-surface`, `claude/not-applicable-rationale`). Mix of squash-merged leftovers and genuinely un-PR'd spec/work branches — needs a triage pass (are they merged-content, abandoned, or pending?). Flagged, not yet classified.
 
 ### Direct-to-main commits — hygiene watch (bypassed branch→PR per Protocol #6)
 Recorded because the board's commit-hygiene rule asks for branch→PR; these landed straight on `main`. Not necessarily wrong (some are DB-coordinated), but flagged for visibility / optional retroactive review:
@@ -72,7 +79,7 @@ Legend: ✅ nothing pending · 📝 uncommitted · ⬆️ committed-not-pushed �
 | # | Stream | Code pending | DB apply pending | Waiting on | Verdict |
 |---|--------|--------------|------------------|-----------|---------|
 | 1 | Project mgt | — | — | — | ✅ |
-| 2 | Medallion migration | — (DDL done; PRs #75/#78 merged; `units` col DROP + `asset_class_id`/`strata_id` renames applied ✅) | data **reload** via `migrate.ts` + `input_dl_def_mappings` regen | ⏳ Eugene: sample extract (#2 reports no open items of its own) | ⏳ paused |
+| 2 | Medallion migration | **context-fed pass** (subgroup-221 ruling): parts 1–2 **done** (`8d80cc6` — `is_context_fed` col + 16 flagged, applied to dev); remaining parts 3–4 = **loader extract guard** + **medallion §1.5 absolute-exclusion rule** | data **reload** via `migrate.ts` + `input_dl_def_mappings` regen; `is_context_fed` SQL **⚠ per-env run pending for prod** | ⏳ Eugene sample extract; context-fed pass parts 3–4 sequenced with next migration (non-blocking) | ⏳ paused |
 | 3 | Calculator engine | — (design + mockup approved) | schema tracer-bullets deferred | ⏳ #2 landing | ⏳ gated |
 | 4 | Schema for AI | — (energy-dim rename #68; clearing last spec WIP) | — | ✅ **RATIFIED 2026-07-28** (derive-not-store: technology leaf, category/asset-class derived) — hold lifted | ✅ |
 | 5 | BSC Builder | — (PR #35 merged; worktree clean) | — | ⏳ #2 `kpi_target` for Input-tracked targets (deferred) | ✅ / ⏳ deferred |
@@ -85,12 +92,18 @@ Legend: ✅ nothing pending · 📝 uncommitted · ⬆️ committed-not-pushed �
 | 14 | Data-entry / fixes | — (`powerStationDnD.tsx` nit fixed by #4, `f2f3cba`) | — (energy-dim rename PR #68 applied; country name fixes applied — see below) | — | ✅ |
 | 15 | Pending tracker | ✅ `PENDING.md` merged (PR #71); refresh 2 landed in `6cda722`; refresh 3 uncommitted in-place | — | — | ✅ |
 
-**Net pending right now:** **#3's `calculator-engine-spec.md`** WIP (uncommitted); 10 held Dependabot majors; Eugene decisions (#2 extract, #10 plan/entitlements); #12's P2/D2 operator steps (env/Power BI/rotate). #2 reports **no open items** of its own. No unpushed commits, no unmerged human PRs, no un-applied DB changes. Tree clean and in sync (`npm install` after pull).
+**Net pending right now:** **2 human PRs** — `#104` (Eugene's, needs #3/#4 review) + `#77` (parked by design); 12 Dependabot (vuln triage ✅ COMPLETE — accepted-residual, nothing prod-reachable); **review debt: #4 owes a comment on #104** (#8 + #3 endorsed); Eugene decisions (#2 extract, #10 plan/entitlements, 3 null `financial_year_end`); **#2 context-fed pass** (parts 3–4: loader guard + medallion §1.5 rule; non-blocking); #12's P2/D2 operator steps (env/Power BI/rotate); **#11 follow-up** — country-context form (metric select + upsert + not-available option, USER-IMPACT r16); **prod apply debt** — see the 🚀 **Cutover Runbook** (10 idempotent SQL + seed + `verify-relevance` gate, all live on dev, per-env owed at prod migration); **forward requirement** (#4): utility-facing "shells requested" count must exclude `is_calculated=true` (engine-filled, not requested); a branch-triage pass over the ~15 un-PR'd `claude/*` branches. `npm install` after pull.
 
 **Doc-debt (flagged by #8):** #2's medallion spec (`schema-redesign-medallion.md` §1.4/§1.5) still describes "All areas" NOT-NULL grain targets, now **contradicted** by the hybrid ruling. #2 asked to amend; tracked here until they do.
 
 ### Recently applied DB changes (done — do NOT re-run; informational)
 Direct DML/DDL on the shared **dev** DB with no commit/PR (or applied ahead of a PR). Recorded so no session re-runs them and everyone knows the DB state:
+- **2026-08-25 (#4) — shell-audit + relevance-generator batch** (all on `main`, applied to dev; scripts in the Cutover Runbook below). Resolved end-state: the committed `verify-relevance` tool is **fully green on dev**. Changes: `measure_definitions.effective_from` date col added (`4eaac1e`; 111 @ 2020-01-01, then 9 @ 2026 after the `a10029a` correction); downtime EVENTS + transmission measures deactivated (`a10029a`/`8ff154a` — is_active=false on 330/332/340/342/440; ADR 0004 amended); Hours Worked 290/291/292 relevance reconciled (`87fea19` — +Ancillary Services 1030 applicability, source scope by_context); managed-list 1030 spelling fix "Ancilliary"→"Ancillary Services" (`f30d85a`, user-facing member, 0 code refs); backfilled 154 calc-measure shells for 230/231 (`a5c3154`); soft-deleted 195 hydro/wind Lubrication-Oil shells (`c924024`, is_deleted, reversible, ruling: lube oil = thermal-only) + 24 IPP consumable shells (`2c00d56`). Also 2 code-only tools (no DB): `verify-relevance` invariant checker (`23d76ef`) + generative expected-set half (`ecdb545`) → the recommended **post-load cutover gate**. **⚠ all SQL per-env pending for prod.**
+- **2026-08-25 (#4) — `country_context` DATA loaded on dev** via `scripts/seed-country-context.ts`: **1040 rows** (16 countries × 16 measures, 2020–2025), flush-and-reload of Eugene's real extract; 0 dups, FK-clean, real values. Data (not schema). **⚠ Prod pending:** the 4 country-context SQL scripts **+ this seed run**, per-env when prod migrates. Clears the "#4 country-context history" Awaiting-Eugene item.
+- **2026-08-24 (#4) — `country_context.no_data_reason` added** (`024d935`, applied to dev): `varchar(32)`, null | `'not_available'`, + two CHECKs (vocab; value-XOR-reason). Mirrors the `data_entries` availability axis; part of the country-context migration path (Eugene's real load). Script `scripts/sql/2026-08-24-country-context-no-data-reason.sql` (idempotent, **⚠ per-env run pending for prod**). Internal (no journey surface *itself*) → forward follow-up folded into USER-IMPACT **row 16** (#11 adds a "not available" option to the BMO form).
+- **2026-08-24 (#4) — `measure_definitions.is_context_fed` flag added** (`8d80cc6`, applied to dev): boolean NOT NULL DEFAULT false; all **16 subgroup-221 "Country Context" measures flagged true** — implements Eugene's context-fed disposition ruling; #2 keys their shell-exclusion gate on it. Script `scripts/sql/2026-08-24-measure-is-context-fed.sql` (idempotent, **⚠ per-env run pending for prod**). Internal catalogue flag → no USER-IMPACT row (per #4).
+- **2026-08-24 (#4) — FY-end-aware fiscal-year derivation** (`6504e7e`, **code-only, no DB**): ReportPeriod labels now derived from each org's `financial_year_end` (fixes calendar-year utilities); **~30 report periods relabel** across all 24 fact routes' Power BI exports. Journey-affecting → USER-IMPACT **row 17** (analysts/BMO see corrected FY labels).
+- **2026-08-23 (#4) — country-context repoint (Option 2)** (code merged `fcf8e4e`): `country_context` FK repointed `managed_list_items → measure_definitions`; `dl_def_id → measure_def_id` rename. Script `scripts/sql/2026-08-23-country-context-repoint-measure-def.sql`. **⚠ applied to dev only — must be run per-env (prod pending).** Follow-ups: #11 metric-field select+upsert (USER-IMPACT **row 16**, 🕐); #4 load real history (Awaiting Eugene).
 - **2026-08-03 (#2) — 10 legacy `managed_lists` DELETED** (+ their 60 `managed_list_items`), Eugene-approved cleanup: Aggregation Group/Method, Data Group, DLSource/KPISource Tables, KPI Requester, Measure Type, Necessity, Product Level, Service Relevance Group. 0 orphans (nothing referenced them); backups `backup.managed_lists_del_20260803` / `backup.managed_list_items_del_20260803`. Direct DML, no commit. ✅ Journey-affecting — USER-IMPACT **row 15** (BMO-visible in Managed Lists settings; all vestigial).
 - **2026-07-28 (#10) — legacy `external_registrations` table DROPPED** (PR #79 `30f0f72`; 0 rows). Also removed pgTable+types from `db/schema/auth-schema.ts` and deleted the `app/settings/external-registrations` console. Superseded by the pending-user flow (`user.status`) + future `access_request`. Schema+DB in sync.
 - **2026-07-28 (#14) — `units.is_aggregated` column DROPPED** (unused). Code `3ead895` (direct-to-main — see hygiene watch); DB column dropped on dev (guarded txn, verified), 501 rows backed up to `backup.units_is_aggregated_20260728`. Schema+DB in sync.
@@ -109,6 +122,22 @@ Direct DML/DDL on the shared **dev** DB with no commit/PR (or applied ahead of a
 - ~~**#2:** no Silver/gold view keys off the deleted "All" sentinel rows.~~ **✅ CLEARED** — jolly-murdock (author of the #68 silver/gold views) scanned all 11 live views/matviews via `pg_get_viewdef`; none keys off org 1 / country 100000 / sub_region 10000·1·5 / service_area 89 (only false-positive was `status_id >= 5`, an approval threshold). Views join by FK, so deleted rows just stop appearing. (Formal view-layer owner is #4/#2; jolly authored the 2 core views + scanned the full set — flag if #4 wants to co-sign.)
 - ~~**#10:** no entitlement/access key references those deleted sentinel rows.~~ **✅ CLEARED** — spec grep-clean; #10 has no built runtime access code (design-only); picker/`ensureCountry` key off real M49 codes only, structurally excluding the non-M49 "All Countries" (100000).
 
+### 🚀 Prod cutover runbook (idempotent SQL applied to dev, per-env run OWED at prod migration)
+These changes are live on **dev** but their scripts still need a per-env run when prod migrates. Run **in order**, then the seed, then the verifier gate:
+1. `scripts/sql/2026-08-23-country-context-repoint-measure-def.sql` (#4) — country_context FK repoint + `dl_def_id→measure_def_id`
+2. `scripts/sql/2026-08-24-measure-is-context-fed.sql` (#4) — `is_context_fed` col + flag the 16
+3. `scripts/sql/2026-08-24-country-context-no-data-reason.sql` (#4) — `no_data_reason` axis + CHECKs
+4. `scripts/sql/2026-08-25-measure-effective-from.sql` (#4) — `effective_from` col + dates
+5. `scripts/sql/2026-08-25-deactivate-downtime-events.sql` (#4) — is_active=false on 330/332/340/342/440
+6. `scripts/sql/2026-08-25-hours-worked-scope-reconcile.sql` (#4) — Hours Worked 290/291/292 applicability+scope
+7. `scripts/sql/2026-08-25-fix-ancillary-spelling.sql` (#4) — managed_list_items 1030 spelling
+8. `scripts/sql/2026-08-25-backfill-calc-shells.sql` (#4) — 154 calc shells for 230/231
+9. `scripts/sql/2026-08-25-remove-hydro-wind-lube-oil-shells.sql` (#4) — soft-delete 195 lube-oil shells
+10. `scripts/sql/2026-08-25-remove-ipp-consumable-shells.sql` (#4) — soft-delete 24 IPP consumable shells
+11. **Seed:** `scripts/seed-country-context.ts` — 1040 country-context rows (Eugene's extract)
+12. **GATE:** `node --env-file=.env --import tsx scripts/verify-relevance.ts` — read-only invariant + generative check; **exits 1 on violation.** Run AFTER 1–11; currently all-green on dev.
+> ⚠ Also owed: MFA `scripts/sql/2026-07-26-admin-mfa.sql` for prod (from the S-series; already on `.env` DB, not on a fresh prod). This runbook is the single place tracking prod-apply debt — keep it current as new dev-applied SQL lands.
+
 ---
 
 ## 2b. USER-IMPACT ledger audit (#15 duty — added 2026-07-28)
@@ -120,9 +149,9 @@ Per [`USER-IMPACT.md`](USER-IMPACT.md) (new protocol, `5c2959e`, Eugene-directed
 - ✅ **My pass-1 miscall corrected:** I'd filed the `measure_definitions.description` drop and `units.is_aggregated` drop as "internal-only." **Wrong** — both removed a **settings form field** (Description textarea; "Is Aggregated Resource" checkbox), so both are journey-affecting. #14 caught it and added **rows 11 & 12**. Lesson: a *column* drop can still be a *journey* change if a form field sat on it — check the settings surfaces, not just the schema.
 - ✅ **CANDIDATE RESOLVED — 10 legacy managed_lists DELETED (#2, 2026-08-03).** #2 confirmed they WERE surfaced (Settings → Managed Lists renders all lists unfiltered) → journey-affecting; #2 authored the content, #15 added **row 15**. All 10 were vestigial (0 live data), so impact = "unused clutter removed from an admin picker," not a workflow loss.
 - ✅ **CANDIDATE RESOLVED — managed-lists vocab rename (#4).** #4 confirmed it's journey-affecting (same logic as the "Grid" label row) and authored **row 14** (BMO sees Strata/Provider/Category/Technology/Asset Class/Unit in managed lists).
-- ✅ **Covered:** MFA (r1), "Grid" label (r2), sentinel deletion (r3), API-key tiering (r4), BSC "+Add KPI" picker (r8), trajectory removal (r9), Description drop (r11), is_aggregated drop (r12), external_registrations (r13), vocab rename (r14).
-- 🕐 **Forward obligations (correctly rowed, not yet built):** registration quiz (r5), grain data-entry (r6), unit lifecycle (r7), calculator builder (r10).
-- ⚙ **Confirmed internal-only (no row):** `asset_class_id`/`strata_id` column renames, `units.category_id`/`type_id` drops, and `energy_resource_type_relevance → asset_class_relevance` table+code rename (`17a786d`, per #4) — no user-facing surface.
+- ✅ **Covered:** MFA (r1), "Grid" label (r2), sentinel deletion (r3), API-key tiering (r4), BSC "+Add KPI" picker (r8), trajectory removal (r9), Description drop (r11), is_aggregated drop (r12), external_registrations (r13), vocab rename (r14), managed-lists deletion (r15), **FY-aware ReportPeriod labels (r17, #4 `6504e7e`)**.
+- 🕐 **Forward obligations (correctly rowed, not yet built):** registration quiz (r5), grain data-entry (r6), unit lifecycle (r7), calculator builder (r10), **country-context metric select+upsert (r16, #11 build)**.
+- ⚙ **Confirmed internal-only (no row):** `asset_class_id`/`strata_id` column renames, `units.category_id`/`type_id` drops, `energy_resource_type_relevance → asset_class_relevance` table+code rename (`17a786d`), `measure_definitions.is_context_fed` flag (`8d80cc6`, internal catalogue flag, per #4), and `country_context.no_data_reason` (`024d935` — column itself internal; its BMO-form surfacing is folded into forward row 16) — no user-facing surface from the schema change alone.
 
 ## 3. Awaiting Eugene (decisions that unblock merges)
 
@@ -130,7 +159,10 @@ Per [`USER-IMPACT.md`](USER-IMPACT.md) (new protocol, `5c2959e`, Eugene-directed
 |--------|-----------------|--------|
 | #2 | provide the real **sample data extract** | the medallion data reload (last step of the migration) |
 | #10 | **default-plan contents** + **member entitlements** (the free `member` plan's sector-scoped dashboard set; `member` is now association-agnostic — PPA→electricity, PWWA→water/sanitation) | tiered-access schema (no code until settled) |
-| — | review/merge the **10 held Dependabot majors** individually (esp. #47 TypeScript 7, #45 @types/node 26) — one at a time, not a blocker | dependency currency |
+| #? | **3 null `financial_year_end`** values — data fix (which FY-end for the 3 orgs) | per-utility FY period bucketing for those orgs |
+| #4 | **review comment on #104** (Eugene's data-availability amendment; #8 + #3 already endorsed) | Eugene's merge decision on #104 |
+| #2/#4 | **PNG Power (util 20) missing Lubrication-Oil shells for its Natural Gas units** — verifier-surfaced candidate; assess add-or-exclude | shell-audit completeness for util 20 |
+| — | **#104** merge (Eugene's call, after #4 review or on #8+#3 endorsement) + **12 Dependabot** individually — not a blocker | PR backlog / dependency currency |
 
 *Cleared since refresh 1:* **#8** schema-convention (Eugene ruled hybrid freeze-as-built, `7c01627`). **#12 D1** — RLS tenant column decided (`utility_id`); #12 writes the policy DDL (handles `utility_id IS NULL` shared rows). **#12 D2** — API_KEY split now in PR #73 (no longer a decision). **Dependabot triage** — safe subset merged (#37/#41/#72), 10 majors held per Eugene's individual-review call.
 
@@ -150,6 +182,8 @@ echo "## local branches merged per gh (prune candidates):" && for b in $(git for
 ```
 
 > **Merged-detection note:** PRISM squash-merges, so `git merge-base --is-ancestor <branch> main` reports squash-merged branches as *not* merged. Always read the merge gate from `gh pr list --state merged`, never from git ancestry.
+
+> **⚠ Lesson (2026-08-05):** ping-driven incremental updates keep the DB-change/journey-audit sections fresh but **silently miss new PRs/branches nobody pinged about** — the open-PR count drifted from a real 21 down to a stale "10." **Every refresh MUST re-run the full `gh pr list` + branch-ahead scan (§4)**, not just fold in pings. Pings are additive, not a substitute for the scan.
 
 ---
 

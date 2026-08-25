@@ -183,6 +183,32 @@ A consultant with a **Premium** seat (WB) and a **Basic** seat (ADB) must not si
 
 **Decision (Eugene 2026-07-26): full unify now** — *all* access is via seats, including the provider side, done in this stream (not a hybrid). Utilities get an auto-provisioned free `utility` subscription per org; utility staff become seats (BLO = `is_admin`). `user.organisation_id` / `user.role_id` are retained transitionally as a cache of the user's home seat, then removed once all reads move to `seat`. **This is the largest single refactor** (every current read of `user.organisation_id`/`role_id`) → its own build phase, sequenced first so nothing has to be reworked twice.
 
+### 3.5 Impact on existing tables (delta from today's schema)
+
+New registration + tiered-access state lives mostly in **new** tables (`access_request`, `seat`, `subscription`, `plan`/`plan_version`/`plan_entitlement`, `payment`/`payment_event`/`payment_settings`, `benchmarking_group*`, `organisation_relationships`, `access_settings`). Changes to **existing** tables are deliberately small:
+
+**`user`** — mostly unchanged; net *subtractive* across the build:
+
+| column | verdict |
+|---|---|
+| `id`, `name`, `email`, `emailVerified`, `twoFactorEnabled`, `image`, `createdAt`, `updatedAt` | **keep as-is** (identity/auth) |
+| `status` (pending/active/deactivated) | **keep** — drives the approval flow (§5) |
+| `date_approved`, `date_rejected`, `rejected_by_user_id`, `reject_reason` | **keep** — approval audit (+ `user_status_event`) |
+| `organisation_id`, `role_id` | **remove at the seat-unify (§3.4)** — access moves to `seat`; kept transitionally as a home-seat cache, then dropped |
+| `dataset_required`, `data_access_reason` | **retire** — old free-text intake, superseded by the structured `access_request` (§5.4); migrate values → `access_request`, then drop |
+| **`is_primary_contact`** *(ADD now, transitional)* | measure-notification recipient (§8, from #4); keyed to `organisation_id` now → migrates to `seat.is_primary_contact` at the unify |
+| **`active_seat_id`** *(ADD later, nullable FK → seat)* | act-as context (§3.3); may live on `session` instead |
+
+> Immediate `user` change ≈ **one column** (`is_primary_contact`); the removals land at the seat-unify phase (§3.4), the stream's largest migration.
+
+**`organisations`** — add `relationship_id` FK (§2); keep `ppa_membership_type_id` as the membership-class label (§4; ⚠ §9 reconcile with #13); deprecate then drop `is_utility` after backfill.
+
+**`external_registrations`** — already **dropped** (PR #79); replaced by the new `access_request` table (not modified).
+
+**`roles`** — add the `PPA_FIN` row (§8); no structural change.
+
+**Untouched (reused as-is):** `session`, `account`, `verification`, `user_status_event`, `user_registration_clarification_message`.
+
 ---
 
 ## 4. Plans coverage — all resolved by the FINALISED 2026-08-03 matrix (§0)
