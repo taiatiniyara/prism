@@ -1,7 +1,11 @@
 # `kpi_actual` DDL design (DRAFT)
 
-_Status: **RATIFIED (design)** — 2026-08-12, session #4 (data_entries / shared-table
-DDL owner). Grain ✅ #8 · column-set/write-path ✅ #3. The single computed-KPI table,
+_Status: **APPLIED TO DEV** — 2026-08-26 (early-landed for Eugene's calculator push;
+`scripts/sql/2026-08-26-kpi-actual.sql`, validated). RATIFIED (design) 2026-08-12,
+session #4 (data_entries / shared-table DDL owner). Grain ✅ #8 · column-set/write-path
+✅ #3. **Two deferrals at execution:** `period_id` landed as a **bare integer (no FK)** —
+add the FK when the canonical period dim exists; `owning_org_id` column present but #12's
+RLS policy not yet applied. The single computed-KPI table,
 synthesising #3's calculator-engine spec (purpose + column-set), #8's hybrid
 nullable-chain grain convention (address model), and the existing `data_entries`
 shape (which it mirrors). **Execution gated on `period_id` = the canonical period
