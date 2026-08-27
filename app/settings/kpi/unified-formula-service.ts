@@ -194,12 +194,10 @@ export async function getUnifiedFormulaBuilderData(
         formula_inputs: measureDefinitions.formula_inputs,
       })
       .from(measureDefinitions)
-      .where(
-        and(
-          eq(measureDefinitions.is_active, true),
-          eq(measureDefinitions.is_calculated, true),
-        ),
-      )
+      // Offer ALL active measures as calculated-input candidates (matching the
+      // legacy inputs builder). A measure is not is_calculated until a formula
+      // is saved — filtering on is_calculated here would show an empty list.
+      .where(eq(measureDefinitions.is_active, true))
       .orderBy(asc(measureDefinitions.name));
     targets = rows.map((r) => ({
       id: r.id,
