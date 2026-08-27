@@ -58,11 +58,14 @@ export interface UnifiedFormulaBuilderProps {
 }
 
 export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps) {
+  const [activeMode, setActiveMode] = useState<BuilderMode>(mode);
+  const targets =
+    activeMode === "kpi" ? data.kpiTargets : data.measureTargets;
   const [selectedTargetId, setSelectedTargetId] = useState<number | null>(null);
   const [formula, setFormula] = useState("");
   const [cards, setCards] = useState<TagCardState[]>([]);
   const [onlyWithoutFormula, setOnlyWithoutFormula] = useState(false);
-  const [trackAsKpi, setTrackAsKpi] = useState(mode === "kpi");
+  const [trackAsKpi, setTrackAsKpi] = useState(activeMode === "kpi");
   const [pickerCardKey, setPickerCardKey] = useState<string | null>(null);
   const [recompute, setRecompute] = useState<RecomputeResult | null>(null);
   const [justSaved, setJustSaved] = useState(false);
@@ -77,14 +80,14 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
 
   const targetsById = useMemo(() => {
     const m = new Map<number, TargetOption>();
-    for (const t of data.targets) m.set(t.id, t);
+    for (const t of targets) m.set(t.id, t);
     return m;
-  }, [data.targets]);
+  }, [targets]);
 
   const filteredTargets = useMemo(
     () =>
-      data.targets.filter((t) => (onlyWithoutFormula ? !t.hasFormula : true)),
-    [data.targets, onlyWithoutFormula],
+      targets.filter((t) => (onlyWithoutFormula ? !t.hasFormula : true)),
+    [targets, onlyWithoutFormula],
   );
 
   const variables = useMemo(() => formulaVariables(formula), [formula]);
@@ -126,6 +129,18 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     setCards(target?.existingCards.map((c) => ({ ...c })) ?? []);
     setRecompute(null);
     setJustSaved(false);
+  };
+
+  const handleModeSwitch = (next: BuilderMode) => {
+    if (next === activeMode) return;
+    setActiveMode(next);
+    setSelectedTargetId(null);
+    setFormula("");
+    setCards([]);
+    setRecompute(null);
+    setJustSaved(false);
+    setOnlyWithoutFormula(false);
+    setTrackAsKpi(next === "kpi");
   };
 
   const updateCard = (key: string, next: TagCardState) =>
@@ -201,7 +216,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
       return;
     }
     const payload: SavePayload = {
-      mode,
+      mode: activeMode,
       ownerId: selectedTargetId,
       formula: formula.trim(),
       cards,
@@ -227,7 +242,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
   const handleCompute = () => {
     startCompute(() => {
       void (async () => {
-        if (mode === "measure") {
+        if (activeMode === "measure") {
           // Batch: compute ALL calculated measures across all periods
           // (the aggregated worker is fixpoint over the whole set).
           const res = await recomputeCalculatedMeasuresNow();
@@ -264,10 +279,39 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
       {/* target selector */}
       <Card>
         <CardContent className="space-y-3">
+          <div>
+            <Label className="text-xs">What are you building?</Label>
+            <div className="mt-1 flex w-fit items-center gap-1 rounded-md border p-1">
+              <button
+                type="button"
+                onClick={() => handleModeSwitch("measure")}
+                className={cn(
+                  "rounded px-3 py-1 text-sm font-medium transition",
+                  activeMode === "measure"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted",
+                )}
+              >
+                Calculated Measures
+              </button>
+              <button
+                type="button"
+                onClick={() => handleModeSwitch("kpi")}
+                className={cn(
+                  "rounded px-3 py-1 text-sm font-medium transition",
+                  activeMode === "kpi"
+                    ? "bg-primary text-primary-foreground"
+                    : "text-muted-foreground hover:bg-muted",
+                )}
+              >
+                KPIs
+              </button>
+            </div>
+          </div>
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div className="min-w-64 flex-1">
               <Label className="text-xs">
-                {mode === "kpi" ? "KPI to build" : "Calculated measure to build"}
+                {activeMode === "kpi" ? "KPI to build" : "Calculated measure to build"}
               </Label>
               <SearchableSelect
                 value={
@@ -279,7 +323,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                   label: t.hasFormula ? t.name : `${t.name} — no formula`,
                 }))}
                 placeholder={
-                  mode === "kpi" ? "Select a KPI…" : "Select a measure…"
+                  activeMode === "kpi" ? "Select a KPI…" : "Select a measure…"
                 }
                 searchPlaceholder="Search…"
                 emptyLabel="Nothing found."
@@ -292,12 +336,12 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                 checked={onlyWithoutFormula}
                 onCheckedChange={(c) => setOnlyWithoutFormula(c === true)}
               />
-              Show only {mode === "kpi" ? "KPIs" : "measures"} without a formula
+              Show only {activeMode === "kpi" ? "KPIs" : "measures"} without a formula
             </Label>
           </div>
           {justSaved && (
             <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-              Saved ✓ — pick the next {mode === "kpi" ? "KPI" : "measure"} to
+              Saved ✓ — pick the next {activeMode === "kpi" ? "KPI" : "measure"} to
               keep going.
             </p>
           )}
@@ -320,7 +364,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                 you also publish.
               </p>
             </div>
-            {mode === "kpi" && (
+            {activeMode === "kpi" && (
               <div className="flex flex-col items-end gap-1.5">
                 <button
                   type="button"
@@ -472,12 +516,12 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
               variant="outline"
               onClick={handleCompute}
               disabled={
-                isComputing || (mode === "kpi" && selectedTargetId == null)
+                isComputing || (activeMode === "kpi" && selectedTargetId == null)
               }
             >
               {isComputing
                 ? "Computing…"
-                : mode === "kpi"
+                : activeMode === "kpi"
                   ? "Compute now"
                   : "Compute calculated measures"}
             </Button>

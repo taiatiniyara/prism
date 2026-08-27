@@ -109,8 +109,12 @@ export interface TargetOption {
 }
 
 export interface BuilderData {
+  /** initial mode (radio default); the builder can switch at runtime */
   mode: BuilderMode;
-  targets: TargetOption[];
+  /** all KPI definitions */
+  kpiTargets: TargetOption[];
+  /** calculated measures (is_calculated = true) */
+  measureTargets: TargetOption[];
   measures: MeasureCatalogueItem[];
   /** member option lists keyed by physical dimension field */
   dimMembers: Record<DimensionField, MemberOption[]>;

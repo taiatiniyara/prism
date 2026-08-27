@@ -117,11 +117,9 @@ export async function getUnifiedFormulaBuilderData(
   const measureById = new Map(measures.map((m) => [m.id, m]));
 
   // --- targets + rehydrate existing bindings ---
-  const ownerKind = mode === "kpi" ? "kpi" : "measure";
   const bindings = await db
     .select()
     .from(formulaBinding)
-    .where(eq(formulaBinding.owner_kind, ownerKind))
     .orderBy(asc(formulaBinding.sort_order));
   const bindingIds = bindings.map((b) => b.id);
   const bindingDims = bindingIds.length
@@ -136,7 +134,8 @@ export async function getUnifiedFormulaBuilderData(
     list.push(bd);
     dimsByBinding.set(bd.binding_id, list);
   }
-  const cardsByOwner = new Map<number, TagCardState[]>();
+  // keyed "kpi:<id>" / "measure:<id>" — owner id-spaces overlap across tables
+  const cardsByOwner = new Map<string, TagCardState[]>();
   for (const b of bindings) {
     const measure = measureById.get(b.input_measure_def_id);
     const dims: TagCardState["dims"] = {};
@@ -150,7 +149,8 @@ export async function getUnifiedFormulaBuilderData(
         dims[field] = { mode: "pin", memberId: bd.member_id };
       }
     }
-    const list = cardsByOwner.get(b.owner_id) ?? [];
+    const ownerKey = `${b.owner_kind}:${b.owner_id}`;
+    const list = cardsByOwner.get(ownerKey) ?? [];
     list.push({
       key: `b${b.id}`,
       variableName: b.variable_name,
@@ -161,56 +161,56 @@ export async function getUnifiedFormulaBuilderData(
       grainMode: b.grain_mode,
       dims,
     });
-    cardsByOwner.set(b.owner_id, list);
+    cardsByOwner.set(ownerKey, list);
   }
 
-  let targets: TargetOption[];
-  if (mode === "kpi") {
-    const rows = await db
-      .select({
-        id: kpiDefinitions.id,
-        name: kpiDefinitions.name,
-        formula: kpiDefinitions.formula,
-        formula_inputs: kpiDefinitions.formula_inputs,
-      })
-      .from(kpiDefinitions)
-      .where(eq(kpiDefinitions.is_active, true))
-      .orderBy(asc(kpiDefinitions.name));
-    targets = rows.map((r) => ({
-      id: r.id,
-      name: r.name,
-      formula: r.formula ?? null,
-      hasFormula: !!(r.formula && r.formula.trim()),
-      existingCards:
-        cardsByOwner.get(r.id) ??
-        cardsFromLegacyJson(r.formula_inputs, measureById),
-    }));
-  } else {
-    const rows = await db
-      .select({
-        id: measureDefinitions.id,
-        name: measureDefinitions.name,
-        formula: measureDefinitions.formula,
-        formula_inputs: measureDefinitions.formula_inputs,
-      })
-      .from(measureDefinitions)
-      // Offer ALL active measures as calculated-input candidates (matching the
-      // legacy inputs builder). A measure is not is_calculated until a formula
-      // is saved — filtering on is_calculated here would show an empty list.
-      .where(eq(measureDefinitions.is_active, true))
-      .orderBy(asc(measureDefinitions.name));
-    targets = rows.map((r) => ({
-      id: r.id,
-      name: r.name,
-      formula: r.formula ?? null,
-      hasFormula: !!(r.formula && r.formula.trim()),
-      existingCards:
-        cardsByOwner.get(r.id) ??
-        cardsFromLegacyJson(r.formula_inputs, measureById),
-    }));
-  }
+  const kpiRows = await db
+    .select({
+      id: kpiDefinitions.id,
+      name: kpiDefinitions.name,
+      formula: kpiDefinitions.formula,
+      formula_inputs: kpiDefinitions.formula_inputs,
+    })
+    .from(kpiDefinitions)
+    .where(eq(kpiDefinitions.is_active, true))
+    .orderBy(asc(kpiDefinitions.name));
+  const kpiTargets: TargetOption[] = kpiRows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    formula: r.formula ?? null,
+    hasFormula: !!(r.formula && r.formula.trim()),
+    existingCards:
+      cardsByOwner.get(`kpi:${r.id}`) ??
+      cardsFromLegacyJson(r.formula_inputs, measureById),
+  }));
 
-  return { mode, targets, measures, dimMembers };
+  // Calculated measures = is_calculated measures (e.g. Total Costs, Profit).
+  const measureTargetRows = await db
+    .select({
+      id: measureDefinitions.id,
+      name: measureDefinitions.name,
+      formula: measureDefinitions.formula,
+      formula_inputs: measureDefinitions.formula_inputs,
+    })
+    .from(measureDefinitions)
+    .where(
+      and(
+        eq(measureDefinitions.is_active, true),
+        eq(measureDefinitions.is_calculated, true),
+      ),
+    )
+    .orderBy(asc(measureDefinitions.name));
+  const measureTargets: TargetOption[] = measureTargetRows.map((r) => ({
+    id: r.id,
+    name: r.name,
+    formula: r.formula ?? null,
+    hasFormula: !!(r.formula && r.formula.trim()),
+    existingCards:
+      cardsByOwner.get(`measure:${r.id}`) ??
+      cardsFromLegacyJson(r.formula_inputs, measureById),
+  }));
+
+  return { mode, kpiTargets, measureTargets, measures, dimMembers };
 }
 
 function cardsFromLegacyJson(
