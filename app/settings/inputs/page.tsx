@@ -173,9 +173,8 @@ export default async function InputsSettingsPage(props: {
         <TabsContent value="new-formula-builder">
           <SectionContainer>
             <p className="mb-4 text-sm text-muted-foreground">
-              Build calculated-measure formulas with full 10-dimension
-              bindings. Saved to the durable formula-binding store; use
-              “Compute calculated measures” to calculate into data entries.
+              Build or re-build Calculated Measures or KPIs formulas and
+              update existing values if needed.
             </p>
             <UnifiedFormulaBuilder
               data={unifiedMeasureData}
