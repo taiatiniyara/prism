@@ -10,6 +10,8 @@ import { CustomKpiRequestDialog } from "@/components/data-entry/custom-kpi-reque
 import { CustomKpiRequestStatusBadge } from "@/components/data-entry/custom-kpi-request-status-badge";
 import { CustomKpiReviewActions } from "@/components/data-entry/custom-kpi-review-actions";
 import KpiFormulaBuilder from "./formulaBuilder";
+import { UnifiedFormulaBuilder } from "@/components/formula-builder/UnifiedFormulaBuilder";
+import { getUnifiedFormulaBuilderData } from "./unified-formula-service";
 import {
   CreateKpiDefinition,
   GetAllKpiDefinitions,
@@ -48,6 +50,9 @@ export default async function KpiSettingsPage() {
   const showCustomKpiRequestsView = isBloRole;
   const kpiDefinitions = await GetAllKpiDefinitions();
   const data = await GetKpiFormulaBuilderData();
+  const unifiedFormulaData = isDevRole
+    ? await getUnifiedFormulaBuilderData("kpi")
+    : null;
   const kpiTargetsFilterOptions = await GetKpiTargetsFilterOptions();
   const kpiTypes = await GetKpiTypeOptions();
   const customKpiViewModel = showCustomKpiRequestsView
@@ -406,6 +411,11 @@ export default async function KpiSettingsPage() {
           {isDevRole ? (
             <TabsTrigger value="formula-builder">Formula Builder</TabsTrigger>
           ) : null}
+          {isDevRole ? (
+            <TabsTrigger value="new-formula-builder">
+              New Formula Builder
+            </TabsTrigger>
+          ) : null}
         </TabsList>
 
         {!isBloRole ? (
@@ -522,6 +532,21 @@ export default async function KpiSettingsPage() {
                 energyTypeOptions={data.energyTypeOptions}
                 energySourceOptions={data.energySourceOptions}
                 previewContextLabel={data.previewContextLabel}
+              />
+            </SectionContainer>
+          </TabsContent>
+        ) : null}
+
+        {isDevRole && unifiedFormulaData ? (
+          <TabsContent value="new-formula-builder">
+            <SectionContainer>
+              <p className="mb-4 text-sm text-muted-foreground">
+                Build KPI formulas with full 10-dimension bindings. Saved to the
+                durable formula-binding store; use “Compute now” to calculate.
+              </p>
+              <UnifiedFormulaBuilder
+                data={unifiedFormulaData}
+                mode="kpi"
               />
             </SectionContainer>
           </TabsContent>
