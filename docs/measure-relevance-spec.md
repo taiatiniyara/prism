@@ -125,28 +125,20 @@ measure_relevance (
 
 - **Declared** (`source='declared'`) — **transmission + tariff.** Service-written from the entry UI
   (§7). Editorial yes/no.
-- **Derived** (`source='derived_stint'`) — **generation only (owned + IPP-output).** Engine-projected
-  from `unit_activations` stint overlap; never hand-entered. Stints remain the **SOLE truth** for
-  generation existence/location/capacity. A generation measure is relevant for `(area, provider,
-  technology, period)` iff a stint of a unit with that provider+technology overlaps the period at that
-  area — including §3.3 **cross-SA splits** (a unit that moves mid-period → derived rows in BOTH areas).
-
-  **Derive vs unconditional — the criterion (SETTLED #4/#2/#8, terminal — the deciding factor is
-  layer, not preference):** relevance answers *"should we ask?"*; **existence-integrity** answers *"is a
-  nonzero answer consistent?"* — and in this project integrity lives at the **write-path validation**
-  layer (the 4-of-4 check, chain-consistency), never the relevance layer. So:
-  - **Asset-output** measures whose question *presupposes the asset* (solar generation without solar =
-    N/A, not 0) are **derived** — the asset is the relevance condition.
-  - **Flow/transaction** measures where **0 is a legitimate report** (purchases — 431 §9; revenue) are
-    **unconditional**. The constraint "*nonzero* 431 ⟹ a registered IPP/Customer provider unit" is an
-    existence-integrity rule, so it belongs at **write-path validation** (same family as 4-of-4 /
-    chain-consistency), **not** as a relevance gate. Deriving 431 would leak integrity into relevance —
-    inconsistent with where the project puts it everywhere else. Validation ≠ gate, the same lesson as
-    obligation ≠ scope.
-  - _(Fleet-modeling note, not relevance: customer feed-in — rooftop / net-metering fleets — should be
-    Customer-provider aggregate units for generation-tracking completeness; that belongs with the
-    unit/fleet model, [unit-lifecycle-spec.md](unit-lifecycle-spec.md), and #8 carries it to the joint
-    pass — independent of 431's relevance.)_
+- **Derived** (`source='derived_stint'`) — **generation + purchases.** Engine-projected from
+  `unit_activations`; never hand-entered. Stints remain the **SOLE truth**. Rule: **the derived family
+  = stint-presence ∩ the measure's provider applicability** — one projection, no per-measure machinery.
+  A measure is relevant for `(area, provider, technology, period)` iff a stint of a unit with that
+  provider+technology (provider ∈ the measure's applicability) overlaps the period at that area —
+  including §3.3 **cross-SA splits**.
+  - **Owned generation** (applicability incl. Utility): the owned fleet.
+  - **Purchases — 431** (applicability = {IPP, Customer}): lights up from IPP/Customer stints. A
+    utility with no provider units structurally cannot purchase, so it gets no shell; the derivation
+    governs who is asked. **Support case:** "we buy power but have no purchases shell" → register the
+    provider unit (which also fixes the fleet picture), never a hand-added relevance row.
+  - _(Fleet-modeling note: customer feed-in — rooftop / net-metering — should be Customer-provider
+    aggregate units for generation-tracking completeness; #8 carries it to the joint pass as
+    unit/fleet-model territory, [unit-lifecycle-spec.md](unit-lifecycle-spec.md).)_
 
 ## 5. Transmission — a per-area declaration materialised as coherent slice rows (#8 ruling A)
 
@@ -222,17 +214,20 @@ state to carry, it is a yes/no declaration, not a timeline-state asset.
 
 - **Backfill `relevance_mode`** — authoritative id→mode list derived by #2 from the by_context
   inventory (2026-08-26), criterion + counts:
-  - **`conditional_default_off` (15)** — the derived family (§4): owned/IPP-output generation, the
-    full-4-way-taxonomy set (320, 321, 330–333, 360–363, 380, 381, 390, 391, 392). **No 431.**
+  - **`conditional_default_off` (16)** — the derived family (§4, stint-presence ∩ provider
+    applicability): owned/IPP-output generation (320, 321, 330–333, 360–363, 380, 381, 390, 391, 392)
+    **+ 431 Electricity Purchased** (lights up from IPP/Customer stints). `effective_from=2026` → 431
+    has 0 migrated shells regardless; its mode governs 2026+ forward only.
   - **`conditional_default_on` (4)** — tariff inputs: 500, 501, 502, 503 (all Financial/Tariff
     Structure, `is_calculated=false`; 500 is the tariff-VAT *input*, not the computed bill).
-  - **`unconditional` (the rest, ~98)** — including **431 Electricity Purchased** and the 13
-    utility_function transmission hosts (141/142, 270, 290–292, 340–343, 410/411, 420 — transmission
-    rides as a member-level gate on their utility_function=Transmission slice) and all non-sliced
-    single-value measures. **431 is unconditional** (SETTLED, terminal, #4/#2/#8): a flow/transaction
-    measure where 0 is a legitimate report; the "nonzero 431 ⟹ registered provider unit" integrity
-    rule lives at **write-path validation**, not as a relevance gate (§4). `effective_from=2026` → 0
-    migrated shells regardless.
+  - **`unconditional` (the rest, ~97)** — the 13 utility_function transmission hosts (141/142, 270,
+    290–292, 340–343, 410/411, 420 — transmission rides as a member-level gate on their
+    utility_function=Transmission slice) and all non-sliced single-value measures.
+
+> **431 note — TERMINAL, do not reopen async.** 431 = `conditional_default_off` (derived). This flag
+> flipped repeatedly on crossed messages; the committed value here at HEAD is the sole source of truth.
+> Reopening requires a synchronous resolution or Eugene, never a queued message. Zero migration impact
+> (effective-2026).
 - **Create `measure_relevance`** (5 dim columns).
 - **Tariff → declared:** tariff is `conditional_default_on`, so migrate its **suppress rows** — the
   139 `is_relevant=false` cells become `declared` suppress rows; the 40 redundant-true are dropped
