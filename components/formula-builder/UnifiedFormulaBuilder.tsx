@@ -254,11 +254,9 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
         }
         toast.success("Saved ✓");
         setJustSaved(true);
-        // ready the builder for the next entry, keep the target selector in view
-        setSelectedTargetId(null);
-        setFormula("");
-        setCards([]);
-        setRecompute(null);
+        // Keep the definition on screen after saving — the user can keep
+        // editing, save again, or pick another target from the dropdown.
+        // (Blanking the form here read as data loss.)
       })();
     });
   };
@@ -365,8 +363,8 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
           </div>
           {justSaved && (
             <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-              Saved ✓ — pick the next {activeMode === "kpi" ? "KPI" : "measure"} to
-              keep going.
+              Saved ✓ — still shown below. Keep editing, or pick another{" "}
+              {activeMode === "kpi" ? "KPI" : "measure"} from the dropdown above.
             </p>
           )}
         </CardContent>
