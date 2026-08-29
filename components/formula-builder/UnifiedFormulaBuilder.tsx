@@ -146,6 +146,30 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
   const updateCard = (key: string, next: TagCardState) =>
     setCards((prev) => prev.map((c) => (c.key === key ? next : c)));
 
+  // Rename a variable: rewrite its token in the formula AND the card, so the
+  // binding (measure + dims) is preserved (no orphaned/re-created card).
+  const handleRenameVariable = (card: TagCardState, rawNext: string) => {
+    const next = rawNext.trim();
+    const oldName = card.variableName;
+    if (!next || next === oldName) return;
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(next)) {
+      toast.error(
+        "Variable names use letters, numbers and underscores, and can’t start with a number.",
+      );
+      return;
+    }
+    if (cards.some((c) => c.key !== card.key && c.variableName === next)) {
+      toast.error(`“${next}” is already used by another input.`);
+      return;
+    }
+    const re = new RegExp(`\\b${oldName}\\b`, "g");
+    setFormula((f) => f.replace(re, next));
+    setCards((prev) =>
+      prev.map((c) => (c.key === card.key ? { ...c, variableName: next } : c)),
+    );
+    setJustSaved(false);
+  };
+
   const removeCard = (key: string) => {
     const card = cards.find((c) => c.key === key);
     setCards((prev) => prev.filter((c) => c.key !== key));
@@ -472,6 +496,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                 }
                 dimMembers={data.dimMembers}
                 onChange={(next) => updateCard(card.key, next)}
+                onRename={(next) => handleRenameVariable(card, next)}
                 onRemove={() => removeCard(card.key)}
                 onPickMeasure={() => setPickerCardKey(card.key)}
               />

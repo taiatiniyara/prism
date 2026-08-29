@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,7 @@ export interface InputTagCardProps {
   measure?: MeasureCatalogueItem;
   dimMembers: Record<DimensionField, MemberOption[]>;
   onChange: (card: TagCardState) => void;
+  onRename: (newName: string) => void;
   onRemove: () => void;
   onPickMeasure: () => void;
 }
@@ -40,11 +42,22 @@ export function InputTagCard({
   measure,
   dimMembers,
   onChange,
+  onRename,
   onRemove,
   onPickMeasure,
 }: InputTagCardProps) {
   const hasMeasureRef = card.measureDefId != null;
   const measureMissing = hasMeasureRef && !measure;
+
+  // Local draft so renaming commits on blur/Enter (keeps the formula token +
+  // this card's binding in sync) rather than on every keystroke.
+  const [nameDraft, setNameDraft] = useState(card.variableName);
+  useEffect(() => setNameDraft(card.variableName), [card.variableName]);
+  const commitName = () => {
+    const next = nameDraft.trim();
+    if (next && next !== card.variableName) onRename(next);
+    else setNameDraft(card.variableName);
+  };
 
   const setBinding = (field: DimensionField, binding: DimBinding) => {
     onChange({ ...card, dims: { ...card.dims, [field]: binding } });
@@ -61,11 +74,18 @@ export function InputTagCard({
         {/* LEFT 30% */}
         <div className="flex w-[30%] shrink-0 flex-col items-start gap-2 p-3.5">
           <Input
-            value={card.variableName}
+            value={nameDraft}
             placeholder="variable_name"
-            onChange={(e) =>
-              onChange({ ...card, variableName: e.target.value })
-            }
+            title="Rename this variable — updates the formula and keeps its binding"
+            onChange={(e) => setNameDraft(e.target.value)}
+            onBlur={commitName}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") e.currentTarget.blur();
+              if (e.key === "Escape") {
+                setNameDraft(card.variableName);
+                e.currentTarget.blur();
+              }
+            }}
             className="text-accent-foreground h-8 border-transparent bg-transparent px-1 font-mono text-sm font-bold shadow-none focus-visible:border-ring focus-visible:bg-background"
           />
           {measure ? (
