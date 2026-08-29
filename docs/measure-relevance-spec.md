@@ -55,6 +55,30 @@ This single field encodes Eugene's per-family polarity ruling exactly as two of 
 reads `measure_relevance` **only** for the two conditional modes; unconditional measures never
 touch it.
 
+### 2.1 Measure-level mode vs member-level gate — the distinguishing rule (#8, 2026-08-26)
+
+`relevance_mode` is a **measure-level** field, but conditionality is sometimes a property of a
+single dimension *member*. The rule that decides which applies — and prevents the
+distribution-suppression bug #8 caught:
+
+> **Uniform conditional treatment across the measure's expansion → measure-level mode.
+> A mix of always-relevant members and gated members → member-level gate (measure stays
+> `unconditional`).**
+
+- **Generation** (`conditional_default_off`, measure-level): *all* provider×technology slices are
+  uniformly stint-gated — no always-relevant slice. Uniform → measure-level.
+- **Tariff** (`conditional_default_on`, measure-level): *all* customer_type×payment_mode cells follow
+  the same default-on/suppress rule — no always-relevant-vs-gated split. Uniform → measure-level.
+  Safe **because it is default-ON** (includes by default): it has no analog of the
+  distribution-suppression bug, which is specific to default-OFF wrongly hiding an always-relevant
+  member.
+- **Transmission** (member-level gate; hosts stay `unconditional`): the 13 host measures **mix** an
+  always-relevant Distribution member with a gated Transmission member. A measure-level
+  `conditional_default_off` would suppress Distribution — so transmission alone is member-level (§5).
+
+So the asymmetry is principled, not incidental: transmission is member-level **only** because its
+hosts carry a mixed member set; generation and tariff are uniform, so they stay measure-level.
+
 ## 3. The surface — `measure_relevance`
 
 ```
@@ -87,10 +111,15 @@ measure_relevance (
   customer_type_id, provider_id, technology_id, utility_function_id)` **NULLS NOT DISTINCT**, partial
   `WHERE is_deleted = false` — one verdict per address among live rows. `source` is not in the
   address; an address is either declared or derived, never both.
-- **Dimension columns are frozen at five** (#2-verified): generation needs provider+technology only
-  (category/asset_class derive from technology via `parent_id` ancestry — confirmed
-  Technology→Category→Asset Class); tariff needs payment_mode+customer_type; transmission needs
-  utility_function. No generation measure slices `by_context` on a non-energy dim outside this set.
+- **Dimension columns are frozen at five** (#2-verified against the 38-measure by_context inventory):
+  generation needs provider+technology only (category/asset_class derive from technology via
+  `parent_id` ancestry — confirmed Technology→Category→Asset Class); tariff needs
+  payment_mode+customer_type; transmission needs utility_function. No generation measure slices
+  `by_context` on a non-energy dim outside this set.
+  - **`band` (consumption block) is NOT a relevance dimension.** Tariff measures 502/503 slice by
+    `band`, but band is the tariff's internal block *structure* (which consumption tier), resolved in
+    the scope/shell-generation layer — relevance stays per `(customer_type, payment_mode)`. So the two
+    tariff columns suffice; band never enters `measure_relevance`.
 
 ## 4. Declared vs derived — who writes which
 
