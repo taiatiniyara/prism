@@ -237,7 +237,7 @@ export function FormulaEditor({
                           e.stopPropagation();
                           removeTokenAtIndex(index);
                         }}
-                        className="text-muted-foreground hover:text-destructive"
+                        className="text-destructive/70 hover:text-destructive font-bold"
                       >
                         &times;
                       </button>
