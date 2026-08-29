@@ -392,8 +392,8 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                   : "Select a target to begin"}
               </h2>
               <p className="text-muted-foreground text-xs">
-                One builder for every computed value — a KPI is just a measure
-                you also publish.
+                If the calculated result is a KPI, ensure the “Track as KPI”
+                switch is turned on.
               </p>
             </div>
             {activeMode === "kpi" && (
