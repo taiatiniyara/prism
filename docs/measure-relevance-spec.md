@@ -203,9 +203,22 @@ state to carry, it is a yes/no declaration, not a timeline-state asset.
 
 ## 9. Migration / cutover (#2) — rides the coordinated temporal-spans package
 
-- **Backfill `relevance_mode`** on all measures: generation + transmission-host families set per §2/§5
-  (transmission hosts stay `unconditional`; the Transmission *member* is the gate), tariff measures
-  `conditional_default_on`, the rest `unconditional`.
+- **Backfill `relevance_mode`** — authoritative id→mode list derived by #2 from the by_context
+  inventory (2026-08-26), criterion + counts:
+  - **`conditional_default_off` (15)** — the **full-4-way-taxonomy** owned/IPP-output generation set
+    (slices on {provider, type, source, resource_type}): 320, 321, 330–333, 360–363, 380, 381, 390,
+    391, 392.
+  - **`conditional_default_on` (4)** — tariff inputs: 500, 501, 502, 503 (all Financial/Tariff
+    Structure, `is_calculated=false`; 500 is the tariff-VAT *input*, not the computed bill).
+  - **`unconditional` (~98, the rest)** — including the 13 utility_function transmission hosts
+    (141/142, 270, 290–292, 340–343, 410/411, 420 — transmission rides as a member-level gate on
+    their utility_function=Transmission slice) and **431 Electricity Purchased**. 431 is
+    `unconditional` on principle, not just by the taxonomy criterion: it is a **transaction/flow
+    measure** (like Revenue) — every utility can report it (0 if it purchases nothing) — *not* an
+    asset-conditional generation measure that is genuinely absent without the physical unit. It
+    slices on only 3 taxonomy dims ({provider, source, type}, not resource_type), consistent with
+    not-owned-generation. So the **derived family stays owned/IPP-output generation only**; purchases
+    are a universal question, not a stint-derived one.
 - **Create `measure_relevance`** (5 dim columns).
 - **Tariff → declared:** tariff is `conditional_default_on`, so migrate its **suppress rows** — the
   139 `is_relevant=false` cells become `declared` suppress rows; the 40 redundant-true are dropped
