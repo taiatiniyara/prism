@@ -135,10 +135,12 @@ measure_relevance (
   **write-path validation** layer (4-of-4 check, chain-consistency), never the relevance layer.
   - **Asset-output** measures whose question *presupposes the asset* (solar generation without solar =
     N/A, not 0) are **derived**.
-  - **Flow/transaction** measures where **0 is a legitimate report** (purchases — 431; revenue) are
-    **unconditional**. The rule "*nonzero* 431 ⟹ a registered IPP/Customer provider unit" is
-    existence-integrity → **write-path validation**, not a relevance gate. Validation ≠ gate (same
-    lesson as obligation ≠ scope). Deriving 431 would leak integrity into relevance.
+  - **Flow/transaction** measures where **0 is a legitimate report** (revenue) are **unconditional**.
+  - **431 Electricity Purchased is DERIVED — EUGENE RULED (synchronous, 2026-08-30):** 431 derives
+    from stint-presence ∩ its {IPP, Customer} provider applicability — no purchases shell for a
+    utility with no registered provider units to buy from. The write-path validation ("*nonzero*
+    431 ⟹ registered provider unit") applies additionally, belt-and-braces. Settled by Eugene's
+    synchronous ruling, not by argument; no reading of the criterion reopens it.
   - _(Fleet-modeling note: customer feed-in — rooftop / net-metering — should be Customer-provider
     aggregate units for generation-tracking completeness; unit/fleet-model territory,
     [unit-lifecycle-spec.md](unit-lifecycle-spec.md), #8 carries it to the joint pass.)_
@@ -217,21 +219,23 @@ state to carry, it is a yes/no declaration, not a timeline-state asset.
 
 - **Backfill `relevance_mode`** — authoritative id→mode list derived by #2 from the by_context
   inventory (2026-08-26), criterion + counts:
-  - **`conditional_default_off` (15)** — the derived family (§4): owned/IPP-output generation, the
-    full-4-way-taxonomy set (320, 321, 330–333, 360–363, 380, 381, 390, 391, 392). **No 431.**
+  - **`conditional_default_off` (16)** — the derived family (§4): owned/IPP-output generation, the
+    full-4-way-taxonomy set (320, 321, 330–333, 360–363, 380, 381, 390, 391, 392), **plus 431
+    Electricity Purchased (EUGENE RULED — see note below)**.
   - **`conditional_default_on` (4)** — tariff inputs: 500, 501, 502, 503 (all Financial/Tariff
     Structure, `is_calculated=false`; 500 is the tariff-VAT *input*, not the computed bill).
-  - **`unconditional` (the rest, ~98)** — including **431 Electricity Purchased**, the 13
+  - **`unconditional` (the rest, ~97)** — including the 13
     utility_function transmission hosts (141/142, 270, 290–292, 340–343, 410/411, 420 — transmission
     rides as a member-level gate on their utility_function=Transmission slice), and all non-sliced
     single-value measures.
 
-> **431 note — TERMINAL, LOCKED. 431 = `unconditional` (15-off).** This is the reasoned consensus of
-> #4/#2/#8 (validation ≠ gate, §4): the provider-unit integrity rule is a write-path validation, not a
-> relevance gate. The flag oscillated on crossed messages; two derived commits (`9c95732`, `77acb43`)
-> were crossed-message errors, now corrected. **Do not edit this value on any queued message — the
-> committed value at HEAD is the sole source of truth; reopen only via synchronous resolution or
-> Eugene.** Zero migration impact (effective-2026).
+> **431 — EUGENE RULED (synchronous, 2026-08-30): `conditional_default_off` (derived). Counts:
+> 16-off / 4-on / rest.** This value was set by Eugene's direct synchronous ruling after the flag
+> oscillated nine times on crossed async messages between sessions — it is not a consensus
+> artifact and is exempt from all anchor/HEAD-alignment mechanics. **No session commits any
+> further change to this value for any reason; any residual document inconsistency waits for the
+> joint spans+stints+relevance pass. Reopening requires Eugene, synchronously.** Zero migration
+> impact (effective-2026).
 - **Create `measure_relevance`** (5 dim columns).
 - **Tariff → declared:** tariff is `conditional_default_on`, so migrate its **suppress rows** — the
   139 `is_relevant=false` cells become `declared` suppress rows; the 40 redundant-true are dropped
