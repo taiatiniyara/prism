@@ -373,7 +373,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
       </Card>
 
       {/* definition + formula */}
-      <Card>
+      <Card className="overflow-visible">
         <CardContent className="space-y-4">
           <div className="flex items-start justify-between gap-4">
             <div>
