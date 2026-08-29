@@ -1,11 +1,13 @@
 # Measure relevance — one standardised surface (declared + stint-derived)
 
-**Status: RATIFIED-BY-DIRECTION 2026-08-26** (Eugene + #8 aligned, B-clean). Author #4 (schema).
+**Status: RATIFIED-BY-DIRECTION 2026-08-26** (Eugene + #8 aligned, B-clean; cluster of 4 follow-on
+rulings by #8 2026-08-26 folded in — polarity, generator-scope, transmission-keying, relevance-mode).
+Author #4 (schema).
 **Supersedes:** [service-area-capability-spec.md](service-area-capability-spec.md) (the span model —
 its storage shape is replaced; its case law transfers here).
 **Related:** [unit-lifecycle-spec.md](unit-lifecycle-spec.md) (stints — the sole truth for
 generation), [adr/0004-effective-dated-dimensions.md](adr/0004-effective-dated-dimensions.md),
-`lib/relevance/expected.ts` (the verifier that will enforce the invariant).
+`lib/relevance/expected.ts` (the verifier that will enforce the invariants).
 
 ## 1. The problem — three relevance mechanisms, one job
 
@@ -15,7 +17,7 @@ mechanisms, none of them the same shape:
 | mechanism | storage | shape | status |
 |---|---|---|---|
 | Transmission | `transmission_relevance` | period × area × measure, `is_relevant` | 0 rows; **default-ON/suppress** (backwards for a rare capability) |
-| Tariff | `tariff_relevance` | period × area × measure × payment_mode × customer_type | 179 rows; per-cell editorial |
+| Tariff | `tariff_relevance` | period × area × measure × payment_mode × customer_type | 179 rows (139 false / 40 true) — **default-ON in practice** |
 | Generation | `units.period_entries` jsonb `is_active` | per-unit, per-period | all 535 units; **being retired** by the stint model |
 
 Three mechanisms → three code paths, three UIs, and (for transmission) a polarity that made it
@@ -25,9 +27,35 @@ produced two ways — *declared* by the utility, or *derived* by the engine from
 The **bootstrap principle is retained** (from the superseded span spec): relevance is
 **declared, not inferred from the presence of shells** — a newly-commissioned network or a new
 generation source becomes relevant by a declaration/derivation, never by the circular "a shell
-exists therefore the context exists." What changes is the storage shape, not this principle.
+exists therefore the context exists." Only the storage shape changes, not this principle.
 
-## 2. The model — `measure_relevance`
+## 2. What is even in scope — `relevance_mode` (per measure)
+
+Only **conditional-existence** measures belong in the surface. The other ~114 measures (Revenue,
+Customers, FTE, …) are **unconditionally** relevant at their grain — seeding always-true rows for
+them would be dense noise that makes *absence* ambiguous again. A single per-measure field on
+`measure_definitions` classifies every measure (grain_level treatment — `text` + CHECK, NOT NULL,
+explicit at measure creation):
+
+```
+relevance_mode ∈ { 'unconditional', 'conditional_default_on', 'conditional_default_off' }
+```
+
+- **`unconditional`** — always shelled at its grain; **no `measure_relevance` rows**. The generator
+  shells it from grain × scope-expansion directly. (~114 measures, incl. the 13 utility_function
+  measures — see §5 for why their *transmission slice* is still gated.)
+- **`conditional_default_off`** — relevant only where declared/derived; absence = not relevant.
+  **generation + transmission.**
+- **`conditional_default_on`** — relevant everywhere *except* where a suppress row says otherwise;
+  absence = relevant. **tariff** (its real polarity: 139 suppress rows today).
+
+This single field encodes Eugene's per-family polarity ruling exactly as two of the three values
+(a two-field `is_conditional` + `default_relevant` shape would allow nonsense states —
+`unconditional` has no meaningful default; the enum can't express the nonsense). The generator
+reads `measure_relevance` **only** for the two conditional modes; unconditional measures never
+touch it.
+
+## 3. The surface — `measure_relevance`
 
 ```
 measure_relevance (
@@ -36,174 +64,148 @@ measure_relevance (
   service_area_id   integer not null → service_areas,
   measure_def_id    integer not null → measure_definitions,
   -- optional dimension-member columns (nullable; set per relevance family):
-  payment_mode_id   integer → managed_list_items,     -- tariff
-  customer_type_id  integer → managed_list_items,     -- tariff
-  provider_id       integer → managed_list_items,     -- generation
-  technology_id     integer → managed_list_items,     -- generation
-  is_relevant       boolean not null,                 -- default policy: OFF (declare-to-enable)
+  payment_mode_id     integer → managed_list_items,   -- tariff
+  customer_type_id    integer → managed_list_items,   -- tariff
+  provider_id         integer → managed_list_items,   -- generation
+  technology_id       integer → managed_list_items,   -- generation (leaf; category/asset_class derive)
+  utility_function_id integer → managed_list_items,   -- transmission (= the Transmission member)
+  is_relevant       boolean not null,
   source            text    not null,                 -- 'declared' | 'derived_stint'
   is_deleted        boolean not null default false,
-  -- provenance (transferred from the span spec's §4 rule 3):
+  -- provenance (transferred from the span spec's amend rule):
   change_reason_id  integer → managed_list_items,
-  created_at        timestamp not null default now(),
-  created_by_id     text → "user",
-  updated_at        timestamp,
-  updated_by_id     text → "user"
+  created_at, created_by_id, updated_at, updated_by_id
 )
 ```
 
-- **Uniform read surface (guardrail 1).** The shell generator reads *only* `measure_relevance`
-  to decide which shells exist for a `(period, area, measure[, dims])`. It never reads stints or
-  the old per-mechanism tables directly. One table, one code path.
-- **Default-OFF / declare-to-enable.** Absence of a relevant row = not relevant. This is the
-  polarity flip that fixes transmission (the old table's default-ON needed ~62 suppression rows
-  nobody would write). It preserves the bootstrap fix: a new context is turned on by writing a
-  row, not by a pre-existing shell.
-- **`source` discriminator** separates the two production paths and is the spine of the
-  guardrails (§4): `'declared'` (hand-entered) vs `'derived_stint'` (engine projection).
-- **Unique address:** UNIQUE `(report_period_id, service_area_id, measure_def_id,
-  payment_mode_id, customer_type_id, provider_id, technology_id)` **NULLS NOT DISTINCT** — one
-  relevance verdict per address per period (fixes the old tables' silent-duplicate + dedupe-in-code
-  smell). `source` is not in the address: an address is either declared or derived, never both.
-- **Extensible:** more dimension-member columns can be added if a future relevance family needs
-  them; the three current families need only these four.
+- **Uniform read surface (guardrail 1).** For a conditional measure the generator reads *only*
+  `measure_relevance` to decide which `(period, area, measure[, dims])` slices exist. It never reads
+  stints or the old per-mechanism tables directly.
+- **`source` discriminator:** `'declared'` (transmission + tariff, service-written) vs
+  `'derived_stint'` (generation, engine-projected from `unit_activations` overlap).
+- **Unique address:** UNIQUE `(report_period_id, service_area_id, measure_def_id, payment_mode_id,
+  customer_type_id, provider_id, technology_id, utility_function_id)` **NULLS NOT DISTINCT**, partial
+  `WHERE is_deleted = false` — one verdict per address among live rows. `source` is not in the
+  address; an address is either declared or derived, never both.
+- **Dimension columns are frozen at five** (#2-verified): generation needs provider+technology only
+  (category/asset_class derive from technology via `parent_id` ancestry — confirmed
+  Technology→Category→Asset Class); tariff needs payment_mode+customer_type; transmission needs
+  utility_function. No generation measure slices `by_context` on a non-energy dim outside this set.
 
-## 3. Declared vs derived — who writes which
+## 4. Declared vs derived — who writes which
 
-- **Declared** (`source = 'declared'`) — **transmission + tariff.** Hand-entered by the utility
-  through the entry UI (§5 carry-forward). These are **editorial yes/no declarations**: does this
-  area have transmission this period; is this tariff cell collected.
-- **Derived** (`source = 'derived_stint'`) — **generation.** **Engine-projected from
-  `unit_activations` stint overlap**, never hand-entered. **Stints remain the SOLE truth** for
-  generation existence / location / capacity (unit-lifecycle §5). A generation measure is relevant
-  for `(area, provider, technology, period)` iff a stint of a unit with that provider+technology
-  overlaps the period at that area — **including §3.3 cross-SA splits: a unit that moves mid-period
-  yields derived rows in BOTH service areas** for that period. (SA-shift handling confirmed by #8:
-  span-carried SA §2.1 + temporal chain-consistency §3.1 + partition §3.3.)
+- **Declared** (`source='declared'`) — **transmission + tariff.** Service-written from the entry UI
+  (§7). Editorial yes/no.
+- **Derived** (`source='derived_stint'`) — **generation.** Engine-projected from `unit_activations`
+  stint overlap; never hand-entered. Stints remain the **SOLE truth** for generation
+  existence/location/capacity. A generation measure is relevant for `(area, provider, technology,
+  period)` iff a stint of a unit with that provider+technology overlaps the period at that area —
+  including §3.3 **cross-SA splits** (a unit that moves mid-period → derived rows in BOTH areas).
 
-## 4. Guardrails that make the projection safe (#8)
+## 5. Transmission — a per-area declaration materialised as coherent slice rows (#8 ruling A)
 
-Because generation rows are a *projection* of stints, the two must never diverge:
+Transmission is **not** standalone measures — it is the **`utility_function=Transmission` slice** of
+the 13 measures that scope `by_context` on utility_function (network: 340–343, 410, 411, 420; labour:
+141, 142, 270, 290–292). Those 13 host measures stay **`relevance_mode='unconditional'`** — their
+*other* slices (Distribution, etc.) are always relevant; only the **Transmission member** is
+context-gated. So transmission is a **member-level gate**, layered on otherwise-unconditional
+measures — encoding it as a measure-level `conditional_default_off` would wrongly suppress their
+distribution slices.
 
-1. **`source` discriminator** on every row ('derived_stint' | 'declared').
-2. **Writer/UI reject manual edits on derived rows** — a `derived_stint` row is engine-owned;
-   the entry UI neither shows it as editable nor accepts a write to it. Generation relevance is
-   changed by editing the *stint*, never the relevance row.
-3. **Regeneration hooks on stint append/amend** — any `unit_activations` insert/update
-   regenerates the affected `derived_stint` rows. This is the **same hook the amend-reflow rule
-   already mandates** (span spec §4 rule 1) — an amendment that moves a stint boundary reflows the
-   derived relevance + the downstream shells/denominators for the periods it now covers/uncovers.
-4. **Verifier invariant** (`lib/relevance/expected.ts`): **stint-overlaps ↔ `derived_stint` rows
-   match 1:1, both directions.** A stint overlap with no derived row = missing projection; a
-   derived row with no stint overlap = orphan. Either fails the gate.
+The real-world fact is **per-area** ("area A has transmission"). Storing it as 13 independent
+per-measure rows risks incoherent states (network-length transmission-relevant but
+downtime-transmission not). So:
 
-**B-override is rejected** (case law): `measure_relevance` is NOT a manual-override layer sitting
-on top of stint-derived defaults. A pre-built override is an invitation to a stint/relevance
-contradiction. A future concrete need for one is an **Eugene-on-evidence escape hatch, never a
-silent pre-build.**
+- **The declaration is the BLO's single per-area toggle** (an event) — "Area A has transmission this
+  period? ✓". #11's single-toggle UI is exactly this.
+- **The 13 rows are its materialisation** — the service writes them **atomically, all-13-or-none**
+  (`source='declared'`, `utility_function_id=Transmission`, one per host measure). Individual
+  transmission rows are **never hand-edited**.
+- **Coherence invariant** (verifier, guardrail): the Transmission-slice rows agree per `(area,
+  period)` — all conditional host measures relevant together or none. No incoherent state reachable.
 
-## 5. Carry-forward for declared rows — materialized roll-forward (ONE rule)
+**Joint-pass detail (i):** the utility-grain labour measures (141/142/270/290–292) gate on
+*∃ area-with-transmission* for the utility. Lean: the **generator derives** that ∃ from the area
+declarations (fewer rows, one fact) rather than the service writing separate utility-grain rows.
+**Detail (ii):** the per-area declaration event carries append-vs-amend + provenance like everything
+temporal (§7).
 
-**Declared** relevance is carried forward by **materialized per-period roll-forward**, not an
-implicit read-rule (#8-recommended, #4-adopted):
+## 6. Guardrails + generator scope
 
-- **At period creation**, copy the previous period's `declared` rows into the new period.
-- The **confirm-each-period UX** (§6) edits those pre-populated rows: confirm = leave as-is,
-  change = toggle/insert/delete.
+**Guardrails** (spec §4 case law):
+1. `source` discriminator on every row.
+2. **Writer/UI reject manual edits on `derived_stint` rows** (engine-owned; change the stint).
+3. **Regeneration hooks on stint append/amend** regenerate affected derived rows — same hook as the
+   amend-reflow rule; **delete+reinsert per affected (unit × period) scope, one txn** (a shortened
+   stint must retract rows, so upsert needs a paired delete-missing anyway).
+4. **Verifier invariants:** (a) stint-overlaps ↔ `derived_stint` rows 1:1 both directions; (b)
+   transmission-slice coherence per `(area, period)` (§5).
 
-Rationale: explicit rows every period keep the generator's read trivial (no span-vs-period overlap
-math for declared relevance) and match `tariff_relevance`'s existing dense shape. **Derived** rows
-need no roll-forward — they are regenerated from stints (§4.3). Net: both paths yield explicit
-per-period rows, so the surface the generator reads is uniformly dense with zero read-rules.
+**Generator scope (#8 ruling — forward-generative + historical-reconcile):**
+- **New periods:** fully generative — every conditional slice's existence is governed by
+  `measure_relevance`; unconditional measures shell from grain × scope.
+- **Migrated/historical periods:** **reconcile, do not cull.** Migrated shells are p1 truth,
+  authoritative; the generator never deletes a historical shell for lacking a relevance row. The
+  consistency gate (#2) **verifies** (fails loud on orphan either direction) but does not delete.
 
-## 6. Entry UX (declared rows) — #11
+## 7. Carry-forward + entry UX (declared rows) — #11
 
-Unchanged in intent from the span spec's §4, now writing `declared` rows:
-- At submission the entry screen shows the area's **rolled-forward** declared relevance.
-- The utility **confirms or updates** ("Transmission network in this area this period? ✓";
-  tariff cells). Confirm = no-op; change = edit the row.
-- **append-vs-amend + provenance transfer here** (span spec §4): a genuine new declaration vs a
-  correction of a past period are different intents; an amend to a past period's declared row
-  **reflows** that period's shells + denominators (rule 1), **snapshots pin / live absorbs** (rule
-  2), and **carries provenance** — `change_reason_id` + `updated_by_id`/`updated_at`; append needs
-  none (rule 3). Same case law as stint edits — one family.
+- **Declared relevance carries forward by materialised per-period roll-forward:** at period creation,
+  copy the previous period's `declared` rows into the new period; the confirm-each-period UX edits
+  the pre-populated rows (confirm = no-op, change = edit). Derived rows need no roll-forward (they
+  regenerate from stints). Both paths yield explicit per-period rows → the surface is uniformly dense,
+  zero read-rules.
+- **UI presents ONE normalised toggle per row** — "Applies this period? ✓/✗" — and the **service
+  translates** to storage polarity (declare-true for a `conditional_default_off` family; suppress-
+  false for `conditional_default_on` tariff). The BLO never sees two mental models. Polarity is a
+  storage/migration concern, invisible at the UI (#11).
+- **append-vs-amend + the three consequence rules** transfer here and to the transmission declaration
+  event: amend **reflows** the period's shells + denominators; **snapshots pin / live absorbs**
+  (frozen reports never rewritten — surface in "Updated (Final)"); amend carries **provenance**
+  (`change_reason_id` + who/when), append needs none. Same family as stint edits.
 
-## 7. The classification criterion (record it — it prevents the next mis-build)
+## 8. The classification criterion (record it — it prevents the next mis-build)
 
-**Rich timeline state → stints/spans. Yes/no or per-cell editorial declarations →
-`measure_relevance`.**
+**Rich timeline state → stints/spans. Yes/no or per-cell editorial declarations → `measure_relevance`.**
+A stint/span fits what carries state attributes (a unit at capacity C; a *rated* line). A relevance
+row fits a yes/no or per-cell editorial decision with no state to carry. Transmission sits on the
+relevance side **because Eugene descoped the electrical rating** (2026-08-26) — with no rated-asset
+state to carry, it is a yes/no declaration, not a timeline-state asset.
 
-- A **stint/span** fits what is rare, slowly-changing, and **carries state attributes** (a unit
-  exists here at capacity C; a transmission line rated R). Test: "carry-forward" is the natural
-  read *and there is state to carry*.
-- A **relevance row** fits what is a **yes/no or per-cell editorial decision** with **no state
-  attribute** to record (does this area have transmission this period; is this tariff cell
-  collected).
+## 9. Migration / cutover (#2) — rides the coordinated temporal-spans package
 
-Transmission sits on the **relevance** side **because Eugene descoped the electrical rating**
-(2026-08-26): with no rated-asset state to carry, it is a yes/no editorial declaration, not a
-timeline-state asset. Had the rating stayed in scope, transmission would have been a stint (a
-rated line, like a unit). The criterion is stable; the descoping is what placed transmission.
+- **Backfill `relevance_mode`** on all measures: generation + transmission-host families set per §2/§5
+  (transmission hosts stay `unconditional`; the Transmission *member* is the gate), tariff measures
+  `conditional_default_on`, the rest `unconditional`.
+- **Create `measure_relevance`** (5 dim columns).
+- **Tariff → declared:** tariff is `conditional_default_on`, so migrate its **suppress rows** — the
+  139 `is_relevant=false` cells become `declared` suppress rows; the 40 redundant-true are dropped
+  (default already relevant). No dense materialisation of the relevant grid (that was the default-off
+  trap).
+- **Transmission → declared:** none to migrate (0 rows). Seed per-area declarations for the areas that
+  carry transmission shells today (best-effort from current data, AFTER data_entries reload), then the
+  service materialises the 13 slice rows.
+- **Generation → derived:** project from seed stints (guardrail 4a). Retire `units.period_entries`
+  (is_active→derived rows, capacity→stint state).
+- **Drop `transmission_relevance`** atomically with its 5 code refs (#11: route + settings UI/service;
+  #2: migration/service.ts + schema). `tariff_relevance` retired after migrate-in.
 
-## 8. Migration / cutover (#2)
+## 10. Ownership
 
-Rides the coordinated temporal-spans package (`unit_activations` + this):
-- **Create `measure_relevance`.**
-- **Migrate `tariff_relevance` → `measure_relevance`** as `declared` rows (179 rows,
-  payment_mode + customer_type set); then retire `tariff_relevance`.
-- **Drop `transmission_relevance`** — verify-before-drop (0 rows confirmed). The DROP must be
-  **ATOMIC with retiring its 5 live code refs** (else the app queries a dropped table). The
-  authoritative ref list (#2-confirmed 2026-08-26): (1) `app/api/migration/transmissionRelevance/
-  route.ts`, (2) `app/migration/service.ts`, (3) `app/settings/relevance/service.ts`
-  (Get/SetTransmissionDataLabelRelevance), (4) `app/settings/relevance/utilityRelevance.tsx`,
-  (5) `db/schema/dataEntry.ts` (`transmissionRelevance`). **Ownership:** #2 takes
-  `app/migration/service.ts` + the schema; **#11** takes the settings UI/service + the API route.
-  `tariff_relevance` stays untouched (agreed — genuine per-cell overrides).
-- **Retire `units.period_entries`** — its `is_active` half becomes `derived_stint` generation
-  rows (projected from seed stints); its `capacity_mw` half becomes stint state (unit-lifecycle
-  §2.2). Fold into the reimport.
-- **Seed generation rows** by projecting the seed stints (§4.3) once the stints load.
-  **Seed-fidelity caveat (#2, 2026-08-26):** `period_entries` carries capacity / is_active /
-  period-keying but **not service-area history** (unit-lifecycle §2.2), so seed stints inherit
-  each unit's *current* SA. Consequence: at migration there are ~no cross-SA historical stints,
-  so the §3.3 cross-SA-split projection is **forward-looking, not migration-active** — all
-  seed-projected `derived_stint` rows are current-SA. Acceptable, but state it so no one expects
-  reconstructed SA history. **Sequencing (#2-owned):** data_entries reload → stint seed (reads
-  Rated-Capacity measure for `rated_capacity_mw`) → `derived_stint` projection → verify the 1:1
-  invariant (§4.4); the `period_entries` fold + `tariff_relevance`→declared migrate-in slot into
-  the same package. #2 also gates migrated generation **shells ↔ projected `derived_stint` rows**
-  so they can't silently diverge.
+- **#4 (schema):** `measure_relevance` DDL, `relevance_mode` column, the generator read + verifier
+  invariants (§6).
+- **#8 (grain / relevance semantics):** the `derived_stint` projection, the transmission
+  declaration→materialisation semantics + coherence invariant, the classification criterion.
+- **#11 (entry UI):** the single-toggle confirm/roll-forward UX + the per-area transmission toggle +
+  service translation.
+- **#2 (migration):** §9. Rides the reimport.
 
-## 9. Ownership
+## 11. Open — confirmed at the joint spans+stints+relevance pass
 
-- **#4 (schema):** `measure_relevance` DDL + the shell generator's read + the verifier invariant
-  (§4.4).
-- **#8 (grain / stint semantics):** the `derived_stint` projection rules (which stint overlaps →
-  which rows, incl. §3.3 splits), the regeneration hook, and the classification criterion (§7).
-- **#11 (entry UI):** the declared-row confirm/roll-forward UX (§6).
-- **#2 (migration):** §8 — tariff migrate-in, transmission drop + code retirement, period_entries
-  fold, generation seed-projection. Rides the reimport.
-
-## 10. Open detail — leans banked, confirmed formally in the joint spans+stints+relevance pass
-
-Both pre-positioned by #8 (2026-08-26) as it falls out of case law; non-binding until the joint
-pass when #2 assembles the coordinated package.
-
-- **Derived-row regeneration = delete+reinsert per affected scope, in one transaction** (#8 lean).
-  Derived rows are a pure projection, so a stint amend that *shortens* a stint must **retract**
-  the rows whose overlap vanished — an upsert can update matches but can't remove those, so it
-  needs a paired delete-missing anyway; at which point delete+reinsert of the affected
-  **(unit × period)** scope is the same work with no stale-row failure mode. **Scope the delete
-  to the stint's affected periods, not the whole table.** (Declared rows are unaffected — they
-  soft-delete for audit as normal; only `derived_stint` rows are regenerated.)
-- **Relevance address carries provider + technology ONLY** (#8 lean). category/asset_class
-  **derive** from technology (ratified derive-not-store — storing them in the address would be the
-  dual-encoding disease in a new home); non-energy dims belong to the **scope/applicability**
-  layer, not relevance. **Division of labor:** *relevance* = which `(area, measure, provider,
-  technology)` slices exist this period; *scope/applicability* = which dim members expand within
-  them; *obligation* = which must be answered. If a generation measure ever needs a non-energy dim
-  in its **existence** condition (not just its expansion), that's an **on-evidence** question —
-  default is no. **#2 is validating this** against `measure_dimension_scope` (does any generation
-  measure slice `by_context` on a dim beyond provider+technology not derivable via
-  technology→category→asset ancestry?); if one escapes, the column set gains it, else the four
-  columns freeze as-is.
+- **Transmission encoding confirm (#4→#8):** the 13 host measures stay `relevance_mode='unconditional'`
+  and transmission is a **member-level gate** on their `utility_function=Transmission` slice (not
+  measure-level `conditional_default_off`, which would suppress their distribution slices). Flagged to
+  #8 for confirmation; encoded that way here.
+- **Labour-measure ∃-transmission** (§5 detail i): generator-derives vs service-writes — lean
+  generator-derives.
+- **Derived-row regen** = delete+reinsert per (unit × period) scope (§6.3), confirmed at the joint pass.

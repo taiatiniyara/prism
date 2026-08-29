@@ -86,11 +86,12 @@ CREATE TABLE measure_relevance (
   report_period_id  integer NOT NULL REFERENCES report_periods(id),
   service_area_id   integer NOT NULL REFERENCES service_areas(id),
   measure_def_id    integer NOT NULL REFERENCES measure_definitions(id),
-  -- optional dimension-member columns (nullable; set per relevance family):
-  payment_mode_id   integer REFERENCES managed_list_items(id),      -- tariff
-  customer_type_id  integer REFERENCES managed_list_items(id),      -- tariff
-  provider_id       integer REFERENCES managed_list_items(id),      -- generation
-  technology_id     integer REFERENCES managed_list_items(id),      -- generation
+  -- optional dimension-member columns (nullable; set per relevance family) — FROZEN at 5 (#8+#2):
+  payment_mode_id     integer REFERENCES managed_list_items(id),    -- tariff
+  customer_type_id    integer REFERENCES managed_list_items(id),    -- tariff
+  provider_id         integer REFERENCES managed_list_items(id),    -- generation
+  technology_id       integer REFERENCES managed_list_items(id),    -- generation (leaf; category/asset_class derive via parent_id)
+  utility_function_id integer REFERENCES managed_list_items(id),    -- transmission (= the Transmission member slice; #8 ruling A)
   is_relevant       boolean NOT NULL,
   source            text    NOT NULL,                               -- 'declared' | 'derived_stint'
   is_deleted        boolean NOT NULL DEFAULT false,
@@ -109,7 +110,7 @@ CREATE TABLE measure_relevance (
 -- replacement). `source` is NOT in the address — an address is either declared or derived.
 CREATE UNIQUE INDEX uq_mr_address ON measure_relevance (
   report_period_id, service_area_id, measure_def_id,
-  payment_mode_id, customer_type_id, provider_id, technology_id
+  payment_mode_id, customer_type_id, provider_id, technology_id, utility_function_id
 ) NULLS NOT DISTINCT WHERE is_deleted = false;
 
 -- shell generator reads by (period, area); verifier walks derived rows by source
@@ -124,8 +125,29 @@ CREATE INDEX ix_mr_source      ON measure_relevance (source);
 --   (4) verifier invariant: stint-overlaps ↔ derived_stint rows 1:1 both directions
 --       (lib/relevance/expected.ts).
 -- Family-consistency of dim columns vs measure (tariff rows set payment_mode+customer_type;
--- generation rows set provider+technology; transmission sets none) is loader/app-enforced, not a
--- CHECK — it depends on the measure's dimension scope.
+-- generation rows set provider+technology; transmission rows set utility_function=Transmission) is
+-- loader/app-enforced, not a CHECK — it depends on the measure's relevance_mode + dimension scope.
+
+-- ---------------------------------------------------------------------------
+-- B2.  relevance_mode on measure_definitions  (#8 ruling B — what's even in the surface)
+-- ---------------------------------------------------------------------------
+-- One field decides whether a measure is in measure_relevance at all + its default polarity.
+-- grain_level treatment: text + CHECK, NOT NULL, explicit at measure creation.
+--   'unconditional'          → NEVER in measure_relevance; shelled at grain × scope (~114 measures,
+--                              incl. the 13 utility_function hosts — their Transmission MEMBER is
+--                              gated separately, §5 of measure-relevance-spec, not the measure).
+--   'conditional_default_off'→ relevant only where declared/derived (generation + transmission).
+--   'conditional_default_on' → relevant except where a suppress row says otherwise (tariff).
+-- Backfill (Phase 2, coordinate with #2): generation measures + the 13 transmission hosts stay
+-- 'unconditional' at the measure level (transmission gates the member, not the measure); tariff
+-- measures 'conditional_default_on'; the rest 'unconditional'. generation measures whose WHOLE
+-- existence is stint-conditional = 'conditional_default_off'. (Exact per-measure classification is a
+-- #4/#8/#2 backfill script, not this DDL.)
+-- ALTER TABLE measure_definitions ADD COLUMN relevance_mode text;   -- nullable first, backfill, then:
+-- UPDATE measure_definitions SET relevance_mode = ... ;             -- per the classification above
+-- ALTER TABLE measure_definitions ALTER COLUMN relevance_mode SET NOT NULL;
+-- ALTER TABLE measure_definitions ADD CONSTRAINT chk_md_relevance_mode
+--   CHECK (relevance_mode IN ('unconditional','conditional_default_on','conditional_default_off'));
 
 
 -- ===========================================================================
