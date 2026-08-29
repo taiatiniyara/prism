@@ -82,16 +82,15 @@ denominators, never mixed — **utility completeness** (answered / human-answera
 *performance* metric; **calculated/context shell fill-rate** is an *engine/pipeline health*
 metric. The generator and the scorecard compute the utility count identically, from this rule.
 
-**431 FINAL (2026-08-30, #8 — aligned to HEAD, closing the crossed-message saga):** measure 431
-"Electricity Purchased" is **DERIVED (`conditional_default_off`)** per the authoritative spec text
-at HEAD (`measure-relevance-spec.md` — 431 lights up from IPP/Customer provider stints; §9 counts
-16-off/4-on/rest; spec carries its own TERMINAL note). Both candidate answers were defensible with
-zero migration impact; the state was settled by **the rule, not the argument**: committed spec at
-HEAD is sole truth, and three streams (#2/#4/#15) converged there. #8's earlier declaration in
-this slot (asserting unconditional) was outrun by queue ordering and is superseded — the saga's
-real deliverable is the law it forced: **repo-state outranks message-state; contested async
-threads anchor to HEAD's text; reopening requires Eugene or synchronous resolution.** All #8
-431-messages of any content remain void; this line and the spec agree and end it.
+**431 — EUGENE RULED (synchronous, 2026-08-30):** measure 431 "Electricity Purchased" is **DERIVED
+(`conditional_default_off`)**, counts **16-off / 4-on / rest** — set by Eugene's direct synchronous
+ruling in #8's session after nine crossed-async-message flips proved the sessions structurally
+unable to terminate the thread themselves (every async device — settling messages, anchors,
+terminal commits, HEAD-alignment — became oscillation fuel). The ruling is exempt from all
+anchor/alignment mechanics: **no session commits any further 431 change for any reason; residual
+inconsistencies wait for the joint pass; reopening requires Eugene, synchronously.** All prior #8
+431-messages remain void. Saga's durable law: repo-state outranks message-state on contested async
+threads — and when even that oscillates, the escape clause is the human, synchronously.
 
 **Relevance standardisation — B-CLEAN RULED (Eugene + #8, 2026-08-26; supersedes the spans spec
 below per Eugene's descoping of transmission rating):** one period-keyed `measure_relevance` table
