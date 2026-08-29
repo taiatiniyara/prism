@@ -373,7 +373,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
       </Card>
 
       {/* definition + formula */}
-      <Card>
+      <Card className="overflow-visible">
         <CardContent className="space-y-4">
           <div className="flex items-start justify-between gap-4">
             <div>
@@ -517,7 +517,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
       <Card>
         <CardContent className="space-y-3">
           <div className="flex flex-wrap items-center gap-4 text-xs">
-            <Flag ok={bindingsResolved}>All bindings resolve</Flag>
+            <Flag ok={bindingsResolved}>All bindings resolved</Flag>
             <Flag ok={!!formula.trim()}>Formula present</Flag>
             <Flag ok={validationErrors.length === 0}>Ready to save</Flag>
           </div>
