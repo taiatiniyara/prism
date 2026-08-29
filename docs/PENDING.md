@@ -19,7 +19,7 @@ A row is *pending* if it has not cleared all the gates that apply to it. Docs-on
 - **Only one uncommitted file:** **#3's `calculator-engine-spec.md`** (active WIP, left for #3).
 - **Open PRs: 14** (re-scan 2026-08-24c) — **2 human** (`#104` Eugene's data-availability amendment — #3/#4 review owed; `#77` #11 access-plans proto — parked by design) + 12 Dependabot. Backlog nudge cleared 3: #113/#76/#83 merged. ✅ **Vuln triage COMPLETE (#12):** residuals accepted low-risk / non-reachable.
 - **Cleared this session:** #8 schema-convention ruling (`7c01627`); #12 D2 API_KEY split merged (`167f080`); both sentinel-deletion confirmations (#2 views, #10 access); safe Dependabot subset merged.
-- **Awaiting Eugene — 3:** #2 medallion sample extract; #10 default-plan + member entitlements; **3 null `financial_year_end`** values. *(#4 country-context history ✅ DONE — Eugene's extract loaded to dev 2026-08-25, 1040 rows; subgroup-221 RULED 2026-08-20.)*
+- **Awaiting Eugene — 3:** #2 medallion sample extract; #10 default-plan + member entitlements; **FYE for 3 placeholder utilities** (Vanuatu/Pitcairn/NZ — forward onboarding pre-req, no live impact today). *(#4 country-context history ✅ DONE — extract loaded to dev 2026-08-25, 1040 rows; subgroup-221 RULED 2026-08-20.)*
 - **Applied DB changes today** (informational, all backed up): sentinel-chain deletion, `measure_definitions.description` drop, managed-lists vocab rename — plus the follow-on `units.category_id`/`type_id` DROP still owed by #2.
 
 ---
@@ -166,7 +166,7 @@ Per [`USER-IMPACT.md`](USER-IMPACT.md) (new protocol, `5c2959e`, Eugene-directed
 |--------|-----------------|--------|
 | #2 | provide the real **sample data extract** | the medallion data reload (last step of the migration) |
 | #10 | **default-plan contents** + **member entitlements** (the free `member` plan's sector-scoped dashboard set; `member` is now association-agnostic — PPA→electricity, PWWA→water/sanitation) | tiered-access schema (no code until settled) |
-| #? | **3 null `financial_year_end`** values — data fix (which FY-end for the 3 orgs) | per-utility FY period bucketing for those orgs |
+| BMO/Eugene | **Set `financial_year_end` for 3 placeholder utilities** — **Vanuatu (46)**, **Pitcairn (51)**, **New Zealand (52)** — *before* they onboard any Financial-Year data. Forward-looking, **no live impact today** (all 3 carry 0 report periods; the other 10 null-FYE orgs are stray test rows). Without an FYE, FY-placement silently falls back to `report_date`-as-FY-end and mislabels their fiscal year (#2, verified 2026-08-28). Owner = whoever onboards them. | correct FY labelling if/when those 3 submit FY data |
 | #4 | **review comment on #104** (Eugene's data-availability amendment; #8 + #3 already endorsed) | Eugene's merge decision on #104 |
 | #2/#4 | **PNG Power (util 20) missing Lubrication-Oil shells for its Natural Gas units** — verifier-surfaced candidate; assess add-or-exclude | shell-audit completeness for util 20 |
 | #4 | 🅿️ **CUC fuel pass-through disposition** — 2 soft-deleted Fuel Oil @ IPP values (Commonwealth Utilities Corp diesel: FY22 28,418,920.78 + FY23 28,559,079.00), preserved. **Eugene: "leave as-is for now"** — low-urgency, awaiting ruling on whether they're genuine fuel pass-through | reactivating or purging those 2 values |
