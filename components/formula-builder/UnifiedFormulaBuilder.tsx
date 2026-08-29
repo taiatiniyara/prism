@@ -391,10 +391,6 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                     "Untitled")
                   : "Select a target to begin"}
               </h2>
-              <p className="text-muted-foreground text-xs">
-                One builder for every computed value — a KPI is just a measure
-                you also publish.
-              </p>
             </div>
             {activeMode === "kpi" && (
               <div className="flex flex-col items-end gap-1.5">
