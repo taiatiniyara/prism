@@ -82,7 +82,18 @@ denominators, never mixed — **utility completeness** (answered / human-answera
 *performance* metric; **calculated/context shell fill-rate** is an *engine/pipeline health*
 metric. The generator and the scorecard compute the utility count identically, from this rule.
 
-**Service-area capability declaration — SPANS RULED FINAL (Eugene, 2026-08-25):** contextual
+**Relevance standardisation — B-CLEAN RULED (Eugene + #8, 2026-08-26; supersedes the spans spec
+below per Eugene's descoping of transmission rating):** one period-keyed `measure_relevance` table
+is the uniform surface the shell generator reads (default-OFF/declare-to-enable). Transmission +
+tariff rows are hand-DECLARED; **generation rows are ENGINE-DERIVED from stint overlap** — stints
+stay the sole truth for generation (no second source: `source` discriminator, derived rows locked
+against hand-edits, regeneration on stint append/amend, verifier 1:1 invariant). B-override
+rejected (escape-hatch-on-evidence only). Criterion final form: **rich timeline state →
+stints/spans; yes/no or per-cell editorial declarations → measure_relevance.** Append-vs-amend +
+provenance semantics transfer unchanged.
+
+~~**Service-area capability declaration — SPANS RULED FINAL (Eugene, 2026-08-25):**~~ *(superseded
+2026-08-26 by the relevance standardisation above — retained for history:)* contextual
 shells (e.g. the Transmission slice) are gated on **declared** capability, never inferred from
 data (inference is circular and cannot bootstrap a new network). Storage = relational
 **capability spans** (`service_area_capabilities`: SA × capability × effective_from/to; non-overlap
