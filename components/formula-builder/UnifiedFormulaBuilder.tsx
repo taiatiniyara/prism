@@ -391,10 +391,6 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                     "Untitled")
                   : "Select a target to begin"}
               </h2>
-              <p className="text-muted-foreground text-xs">
-                If the calculated result is a KPI, ensure the “Track as KPI”
-                switch is turned on.
-              </p>
             </div>
             {activeMode === "kpi" && (
               <div className="flex flex-col items-end gap-1.5">
