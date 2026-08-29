@@ -68,7 +68,7 @@ export const VARIABLE_COLORS: string[] = [
   "bg-rose-100 text-rose-900 dark:bg-rose-950/50 dark:text-rose-200",
   "bg-cyan-100 text-cyan-900 dark:bg-cyan-950/50 dark:text-cyan-200",
   "bg-fuchsia-100 text-fuchsia-900 dark:bg-fuchsia-950/50 dark:text-fuchsia-200",
-  "bg-teal-100 text-teal-900 dark:bg-teal-950/50 dark:text-teal-200",
+  "bg-yellow-200 text-yellow-900 dark:bg-yellow-950/50 dark:text-yellow-200",
   "bg-orange-100 text-orange-900 dark:bg-orange-950/50 dark:text-orange-200",
   "bg-indigo-100 text-indigo-900 dark:bg-indigo-950/50 dark:text-indigo-200",
 ];

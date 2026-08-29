@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -20,9 +21,15 @@ const formatNumber = (value: number): string =>
 export interface TestHarnessProps {
   formula: string;
   variableNames: string[];
+  /** variable name -> tailwind bg/text colour classes (matches its card/token) */
+  variableColors?: Record<string, string>;
 }
 
-export function TestHarness({ formula, variableNames }: TestHarnessProps) {
+export function TestHarness({
+  formula,
+  variableNames,
+  variableColors,
+}: TestHarnessProps) {
   const [baseValue, setBaseValue] = useState(10);
   const [seed, setSeed] = useState(1);
   const [manual, setManual] = useState<Record<string, string>>({});
@@ -134,8 +141,15 @@ export function TestHarness({ formula, variableNames }: TestHarnessProps) {
             ) : (
               variableNames.map((name) => (
                 <tr key={name} className="border-t">
-                  <td className="px-3 py-1.5 font-mono font-semibold">
-                    {name}
+                  <td className="px-3 py-1.5">
+                    <span
+                      className={cn(
+                        "inline-block rounded-md px-1.5 py-0.5 font-mono text-xs font-semibold",
+                        variableColors?.[name],
+                      )}
+                    >
+                      {name}
+                    </span>
                   </td>
                   <td className="px-3 py-1.5 text-right">
                     <Input

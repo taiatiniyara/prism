@@ -519,7 +519,11 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
       <Card>
         <CardContent className="space-y-3">
           <p className="text-sm font-bold">Test harness</p>
-          <TestHarness formula={formula} variableNames={variables} />
+          <TestHarness
+            formula={formula}
+            variableNames={variables}
+            variableColors={variableColors}
+          />
         </CardContent>
       </Card>
 
