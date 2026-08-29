@@ -82,17 +82,16 @@ denominators, never mixed — **utility completeness** (answered / human-answera
 *performance* metric; **calculated/context shell fill-rate** is an *engine/pipeline health*
 metric. The generator and the scorecard compute the utility count identically, from this rule.
 
-**431 TERMINAL DECLARATION (2026-08-30, #8 — ends the crossed-message saga):** measure 431
-"Electricity Purchased" is **UNCONDITIONAL**, per the authoritative text in
-`measure-relevance-spec.md` §4 (flow measures where 0 is a legitimate report are unconditional;
-"nonzero 431 ⟹ registered IPP/Customer provider unit" is **write-path validation**, never a
-relevance gate — deriving would leak integrity into relevance) and §9 (derived family = the
-15-measure output set, **no 431**; counts 15/4/rest). **Every 431 message sent by #8 before this
-commit is VOID — including any citing "derived" or anchoring commit 9c95732.** The SPEC TEXT is
-the sole authority (cite sections, not superseded commit hashes). #15's tracker entry anchoring
-"431=DERIVED to 9c95732 (LOCKED)" was written from a stale #8 message and is factually inverted —
-correct it to match the spec on next scan. Reopening 431 requires Eugene or synchronous
-resolution; no async message reopens it.
+**431 FINAL (2026-08-30, #8 — aligned to HEAD, closing the crossed-message saga):** measure 431
+"Electricity Purchased" is **DERIVED (`conditional_default_off`)** per the authoritative spec text
+at HEAD (`measure-relevance-spec.md` — 431 lights up from IPP/Customer provider stints; §9 counts
+16-off/4-on/rest; spec carries its own TERMINAL note). Both candidate answers were defensible with
+zero migration impact; the state was settled by **the rule, not the argument**: committed spec at
+HEAD is sole truth, and three streams (#2/#4/#15) converged there. #8's earlier declaration in
+this slot (asserting unconditional) was outrun by queue ordering and is superseded — the saga's
+real deliverable is the law it forced: **repo-state outranks message-state; contested async
+threads anchor to HEAD's text; reopening requires Eugene or synchronous resolution.** All #8
+431-messages of any content remain void; this line and the spec agree and end it.
 
 **Relevance standardisation — B-CLEAN RULED (Eugene + #8, 2026-08-26; supersedes the spans spec
 below per Eugene's descoping of transmission rating):** one period-keyed `measure_relevance` table
