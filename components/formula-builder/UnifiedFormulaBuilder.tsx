@@ -20,6 +20,7 @@ import { InputTagCard } from "./InputTagCard";
 import { MeasurePickerModal } from "./MeasurePickerModal";
 import { TestHarness } from "./TestHarness";
 import {
+  colorForVariableIndex,
   type BuilderData,
   type BuilderMode,
   type DimBinding,
@@ -95,6 +96,15 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     () => cards.map((c) => c.variableName),
     [cards],
   );
+
+  // distinct colour per variable, shared by its formula token and its card
+  const variableColors = useMemo(() => {
+    const map: Record<string, string> = {};
+    knownVariables.forEach((name, i) => {
+      if (!(name in map)) map[name] = colorForVariableIndex(i);
+    });
+    return map;
+  }, [knownVariables]);
 
   // --- card reconciliation ------------------------------------------------
   const reconcileCards = (
@@ -429,6 +439,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
               formula={formula}
               onChange={handleFormulaChange}
               knownVariables={knownVariables}
+              variableColors={variableColors}
               onNewVariable={(name) =>
                 setCards((prev) =>
                   prev.some((c) => c.variableName === name)
@@ -497,6 +508,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                 onRename={(next) => handleRenameVariable(card, next)}
                 onRemove={() => removeCard(card.key)}
                 onPickMeasure={() => setPickerCardKey(card.key)}
+                nameColor={variableColors[card.variableName]}
               />
             ))
           )}

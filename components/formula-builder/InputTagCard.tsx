@@ -35,6 +35,8 @@ export interface InputTagCardProps {
   onRename: (newName: string) => void;
   onRemove: () => void;
   onPickMeasure: () => void;
+  /** tailwind bg/text colour classes matching this variable's formula token */
+  nameColor?: string;
 }
 
 export function InputTagCard({
@@ -45,6 +47,7 @@ export function InputTagCard({
   onRename,
   onRemove,
   onPickMeasure,
+  nameColor,
 }: InputTagCardProps) {
   const hasMeasureRef = card.measureDefId != null;
   const measureMissing = hasMeasureRef && !measure;
@@ -86,7 +89,10 @@ export function InputTagCard({
                 e.currentTarget.blur();
               }
             }}
-            className="text-accent-foreground h-8 border-transparent bg-transparent px-1 font-mono text-sm font-bold shadow-none focus-visible:border-ring focus-visible:bg-background"
+            className={cn(
+              nameColor ?? "text-accent-foreground bg-transparent",
+              "focus-visible:border-ring h-8 rounded-md border-transparent px-1.5 font-mono text-sm font-bold shadow-none",
+            )}
           />
           {measure ? (
             <span className="text-muted-foreground text-xs">
