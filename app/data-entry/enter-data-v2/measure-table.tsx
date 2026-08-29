@@ -1,11 +1,16 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Loader2, MessageSquare } from "lucide-react";
+import {
+  getDataTypeValidationMessage,
+  getRangeOrPolarityValidationMessage,
+  isValueValidForDataType,
+} from "@/app/data-entry/enter-data/services/dataEntryValidation.service";
 import {
   MeasureEntryRowView,
   MeasureEntryFilterContext,
@@ -307,7 +312,32 @@ function InputCell({
 }) {
   const [draft, setDraft] = useState(row.displayValue ?? "");
 
+  // Live client-side validation — same pure rules the server enforces.
+  const validationError = useMemo<string | null>(() => {
+    if (draft.trim().length === 0) return null;
+    if (!isValueValidForDataType(row.dataTypeName, draft)) {
+      return getDataTypeValidationMessage({
+        inputName: row.measureName,
+        dataTypeName: row.dataTypeName,
+      });
+    }
+    return getRangeOrPolarityValidationMessage(
+      {
+        inputName: row.measureName,
+        isMandatory: row.isMandatory,
+        dataTypeName: row.dataTypeName,
+        isCurrency: row.isCurrency,
+        validRangeMin: row.validRangeMin,
+        validRangeMax: row.validRangeMax,
+        validPolarityId: row.validPolarityId,
+        validPolarityName: row.validPolarityName,
+      },
+      draft,
+    );
+  }, [draft, row]);
+
   const handleBlur = () => {
+    if (validationError) return; // don't save an invalid value
     if (draft.trim() !== (row.displayValue ?? "")) {
       onSave(row, draft);
     }
@@ -316,30 +346,44 @@ function InputCell({
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Enter") {
       e.preventDefault();
-      if (draft.trim() !== (row.displayValue ?? "")) {
+      if (!validationError && draft.trim() !== (row.displayValue ?? "")) {
         onSave(row, draft);
       }
       (e.target as HTMLInputElement).blur();
     }
   };
 
+  const borderClass = validationError
+    ? "border-red-500"
+    : row.displayValue
+      ? "border-lime-300"
+      : "border-red-100";
+
   switch (row.valueColumn) {
     case "value_numeric":
       return (
-        <div className="flex items-center gap-1">
-          <Input
-            type="number"
-            inputMode="decimal"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={handleBlur}
-            onKeyDown={handleKeyDown}
-            disabled={isSaving}
-            className={`h-8 w-28 text-xs ${row.displayValue ? "border-lime-300" : "border-red-100"} border-l-4 rounded-l-none`}
-            aria-label={`Value for ${row.measureName}`}
-          />
-          {isSaving ? (
-            <Loader2 className="size-3 animate-spin shrink-0" />
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-1">
+            <Input
+              type="number"
+              inputMode="decimal"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onBlur={handleBlur}
+              onKeyDown={handleKeyDown}
+              disabled={isSaving}
+              aria-invalid={validationError ? true : undefined}
+              className={`h-8 w-28 text-xs ${borderClass} border-l-4 rounded-l-none`}
+              aria-label={`Value for ${row.measureName}`}
+            />
+            {isSaving ? (
+              <Loader2 className="size-3 animate-spin shrink-0" />
+            ) : null}
+          </div>
+          {validationError ? (
+            <p className="max-w-40 text-[11px] leading-tight text-red-600">
+              {validationError}
+            </p>
           ) : null}
         </div>
       );
@@ -369,19 +413,27 @@ function InputCell({
     case "value_option_id":
     default:
       return (
-        <div className="flex items-center gap-1">
-          <Input
-            type="text"
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            onBlur={handleBlur}
-            onKeyDown={handleKeyDown}
-            disabled={isSaving}
-            className={`h-8 w-28 text-xs ${row.displayValue ? "border-lime-300" : "border-red-100"} border-l-4 rounded-l-none`}
-            aria-label={`Value for ${row.measureName}`}
-          />
-          {isSaving ? (
-            <Loader2 className="size-3 animate-spin shrink-0" />
+        <div className="flex flex-col gap-0.5">
+          <div className="flex items-center gap-1">
+            <Input
+              type="text"
+              value={draft}
+              onChange={(e) => setDraft(e.target.value)}
+              onBlur={handleBlur}
+              onKeyDown={handleKeyDown}
+              disabled={isSaving}
+              aria-invalid={validationError ? true : undefined}
+              className={`h-8 w-28 text-xs ${borderClass} border-l-4 rounded-l-none`}
+              aria-label={`Value for ${row.measureName}`}
+            />
+            {isSaving ? (
+              <Loader2 className="size-3 animate-spin shrink-0" />
+            ) : null}
+          </div>
+          {validationError ? (
+            <p className="max-w-40 text-[11px] leading-tight text-red-600">
+              {validationError}
+            </p>
           ) : null}
         </div>
       );

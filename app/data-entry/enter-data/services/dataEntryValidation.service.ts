@@ -96,8 +96,6 @@ const resolvePolarityRule = (
   return null;
 };
 
-const CURRENCY_MAX_RANGE = 999999999999;
-
 export const getRangeOrPolarityValidationMessage = (
   metadata: DataEntryValidationMetadata,
   value: string | null,
@@ -120,9 +118,11 @@ export const getRangeOrPolarityValidationMessage = (
     return null;
   }
 
-  const effectiveRangeMax = metadata.isCurrency
-    ? Math.max(metadata.validRangeMax ?? 0, CURRENCY_MAX_RANGE)
-    : metadata.validRangeMax;
+  // Currency amounts are limitless (max = NULL): a fixed numeric cap can't work
+  // across currencies (VUV ~120/USD vs FJD ~2/USD), so oversized entries are
+  // caught at review, not blocked here. Non-null caps (e.g. the GST rate 0–1)
+  // are still respected.
+  const effectiveRangeMax = metadata.validRangeMax;
 
   if (
     metadata.validRangeMin != null &&
