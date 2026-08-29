@@ -45,6 +45,8 @@ export interface FormulaEditorProps {
   onChange: (formula: string) => void;
   knownVariables: string[];
   onNewVariable?: (name: string) => void;
+  /** variable name -> tailwind bg/text colour classes (matches its card) */
+  variableColors?: Record<string, string>;
 }
 
 export function FormulaEditor({
@@ -52,6 +54,7 @@ export function FormulaEditor({
   onChange,
   knownVariables,
   onNewVariable,
+  variableColors,
 }: FormulaEditorProps) {
   const [customToken, setCustomToken] = useState("");
   const [isTextMode, setIsTextMode] = useState(false);
@@ -217,7 +220,8 @@ export function FormulaEditor({
                   className={cn(
                     "inline-flex cursor-grab items-center gap-1 rounded-md px-1.5 py-0.5 font-semibold active:cursor-grabbing",
                     isVar &&
-                      "bg-accent text-accent-foreground/90 dark:bg-accent",
+                      (variableColors?.[token] ??
+                        "bg-accent text-accent-foreground/90 dark:bg-accent"),
                     isNum &&
                       "bg-lime-100 text-lime-800 dark:bg-lime-950/40 dark:text-lime-300",
                     isOp && "bg-transparent font-sans text-muted-foreground",
@@ -237,7 +241,7 @@ export function FormulaEditor({
                           e.stopPropagation();
                           removeTokenAtIndex(index);
                         }}
-                        className="text-muted-foreground hover:text-destructive"
+                        className="text-destructive/70 hover:text-destructive font-bold"
                       >
                         &times;
                       </button>

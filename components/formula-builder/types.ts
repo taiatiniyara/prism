@@ -55,6 +55,28 @@ export const ALL_MEMBER_BY_FIELD: Record<DimensionField, number> = Object.fromEn
 export type DimMode = "pin" | "all" | "inherit";
 export type GrainMode = "inherit" | "rollup" | "pin";
 
+/**
+ * Distinct per-variable colour classes (bg + text, light & dark). Assigned by
+ * variable order and used to tint BOTH a variable's formula token and its
+ * input card, so a token and its card are visually linked.
+ */
+export const VARIABLE_COLORS: string[] = [
+  "bg-sky-100 text-sky-900 dark:bg-sky-950/50 dark:text-sky-200",
+  "bg-emerald-100 text-emerald-900 dark:bg-emerald-950/50 dark:text-emerald-200",
+  "bg-amber-100 text-amber-900 dark:bg-amber-950/50 dark:text-amber-200",
+  "bg-violet-100 text-violet-900 dark:bg-violet-950/50 dark:text-violet-200",
+  "bg-rose-100 text-rose-900 dark:bg-rose-950/50 dark:text-rose-200",
+  "bg-cyan-100 text-cyan-900 dark:bg-cyan-950/50 dark:text-cyan-200",
+  "bg-fuchsia-100 text-fuchsia-900 dark:bg-fuchsia-950/50 dark:text-fuchsia-200",
+  "bg-yellow-200 text-yellow-900 dark:bg-yellow-950/50 dark:text-yellow-200",
+  "bg-orange-100 text-orange-900 dark:bg-orange-950/50 dark:text-orange-200",
+  "bg-indigo-100 text-indigo-900 dark:bg-indigo-950/50 dark:text-indigo-200",
+];
+
+export const colorForVariableIndex = (index: number): string =>
+  VARIABLE_COLORS[((index % VARIABLE_COLORS.length) + VARIABLE_COLORS.length) %
+    VARIABLE_COLORS.length];
+
 export interface DimBinding {
   mode: DimMode;
   /** the pinned member id when mode==="pin"; else null */
