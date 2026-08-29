@@ -125,11 +125,24 @@ measure_relevance (
 
 - **Declared** (`source='declared'`) — **transmission + tariff.** Service-written from the entry UI
   (§7). Editorial yes/no.
-- **Derived** (`source='derived_stint'`) — **generation.** Engine-projected from `unit_activations`
-  stint overlap; never hand-entered. Stints remain the **SOLE truth** for generation
-  existence/location/capacity. A generation measure is relevant for `(area, provider, technology,
-  period)` iff a stint of a unit with that provider+technology overlaps the period at that area —
-  including §3.3 **cross-SA splits** (a unit that moves mid-period → derived rows in BOTH areas).
+- **Derived** (`source='derived_stint'`) — **generation + purchases.** Engine-projected from
+  `unit_activations`; never hand-entered. Stints remain the **SOLE truth**. The general rule (#8):
+  **the derived family = stint-presence ∩ the measure's provider applicability** — one projection
+  mechanism, no per-measure machinery. A measure is relevant for `(area, provider, technology,
+  period)` iff a stint of a unit with that provider+technology (and the provider ∈ the measure's
+  provider applicability) overlaps the period at that area — including §3.3 **cross-SA splits**.
+  - **Owned generation** (provider applicability includes Utility): the owned fleet.
+  - **Purchases — measure 431 Electricity Purchased** (provider applicability = {IPP, Customer}):
+    lights up from IPP/Customer-provider stints. This is airtight for **IPP** (the IPP-boundary rule
+    already requires IPP plant to be unitized for output tracking — you cannot purchase from an
+    unregistered IPP). For **Customer** provider it is a modeling commitment: customer feed-in
+    (net-metering / rooftop fleets) must be represented as Customer-provider aggregate units for 431
+    to light up.
+  - **Support case, answered forever:** "we buy power but have no purchases shell" → the resolution
+    is **register the provider unit** (which also correctly puts that provider's generation into the
+    fleet picture) — **never** a hand-added relevance row bypassing the projection. Unit registration
+    is the bootstrap for purchase reporting; a missing shell is a prompt to fix the fleet model, not
+    a bug.
 
 ## 5. Transmission — a per-area declaration materialised as coherent slice rows (#8 ruling A)
 
@@ -205,20 +218,19 @@ state to carry, it is a yes/no declaration, not a timeline-state asset.
 
 - **Backfill `relevance_mode`** — authoritative id→mode list derived by #2 from the by_context
   inventory (2026-08-26), criterion + counts:
-  - **`conditional_default_off` (15)** — the **full-4-way-taxonomy** owned/IPP-output generation set
-    (slices on {provider, type, source, resource_type}): 320, 321, 330–333, 360–363, 380, 381, 390,
-    391, 392.
+  - **`conditional_default_off` (16)** — the derived family (stint-presence ∩ provider applicability,
+    §4): owned/IPP-output generation (320, 321, 330–333, 360–363, 380, 381, 390, 391, 392) **+ 431
+    Electricity Purchased**. 431 is derived, not unconditional (unanimous #4/#2/#8): purchased power
+    is **structurally tied to a registered provider unit** — the IPP-boundary rule requires IPP plant
+    to be unitized, and Customer feed-in must be Customer-provider aggregate units — so it lights up
+    from IPP/Customer stints via the same projection (§4), and unconditional would wrongly permit a
+    purchase with no provider in the fleet. (431 is `effective_from=2026` → 0 migrated shells, so its
+    mode governs 2026+ forward periods only; nothing in the historical cutover.)
   - **`conditional_default_on` (4)** — tariff inputs: 500, 501, 502, 503 (all Financial/Tariff
     Structure, `is_calculated=false`; 500 is the tariff-VAT *input*, not the computed bill).
-  - **`unconditional` (~98, the rest)** — including the 13 utility_function transmission hosts
+  - **`unconditional` (the rest, ~97)** — including the 13 utility_function transmission hosts
     (141/142, 270, 290–292, 340–343, 410/411, 420 — transmission rides as a member-level gate on
-    their utility_function=Transmission slice) and **431 Electricity Purchased**. 431 is
-    `unconditional` on principle, not just by the taxonomy criterion: it is a **transaction/flow
-    measure** (like Revenue) — every utility can report it (0 if it purchases nothing) — *not* an
-    asset-conditional generation measure that is genuinely absent without the physical unit. It
-    slices on only 3 taxonomy dims ({provider, source, type}, not resource_type), consistent with
-    not-owned-generation. So the **derived family stays owned/IPP-output generation only**; purchases
-    are a universal question, not a stint-derived one.
+    their utility_function=Transmission slice) and all non-sliced single-value measures.
 - **Create `measure_relevance`** (5 dim columns).
 - **Tariff → declared:** tariff is `conditional_default_on`, so migrate its **suppress rows** — the
   139 `is_relevant=false` cells become `declared` suppress rows; the 40 redundant-true are dropped
