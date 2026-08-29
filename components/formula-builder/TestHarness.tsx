@@ -125,11 +125,8 @@ export function TestHarness({ formula, variableNames }: TestHarnessProps) {
               <th className="text-muted-foreground px-3 py-2 text-left text-xs font-semibold tracking-wide uppercase">
                 Variable
               </th>
-              <th className="text-muted-foreground px-3 py-2 text-left text-xs font-semibold tracking-wide uppercase">
-                Sample value
-              </th>
               <th className="text-muted-foreground px-3 py-2 text-right text-xs font-semibold tracking-wide uppercase">
-                Used
+                Sample value
               </th>
             </tr>
           </thead>
@@ -137,7 +134,7 @@ export function TestHarness({ formula, variableNames }: TestHarnessProps) {
             {variableNames.length === 0 ? (
               <tr>
                 <td
-                  colSpan={3}
+                  colSpan={2}
                   className="text-muted-foreground px-3 py-4 text-center text-xs"
                 >
                   No variables yet.
@@ -149,7 +146,7 @@ export function TestHarness({ formula, variableNames }: TestHarnessProps) {
                   <td className="px-3 py-1.5 font-mono font-semibold">
                     {name}
                   </td>
-                  <td className="px-3 py-1.5">
+                  <td className="px-3 py-1.5 text-right">
                     <Input
                       type="number"
                       step="any"
@@ -161,11 +158,8 @@ export function TestHarness({ formula, variableNames }: TestHarnessProps) {
                           [name]: e.target.value,
                         }))
                       }
-                      className="h-7 max-w-40 text-xs"
+                      className="ml-auto h-7 max-w-40 text-right text-xs tabular-nums"
                     />
-                  </td>
-                  <td className="px-3 py-1.5 text-right font-mono text-xs tabular-nums">
-                    {formatNumber(valueFor(name))}
                   </td>
                 </tr>
               ))
@@ -181,7 +175,7 @@ export function TestHarness({ formula, variableNames }: TestHarnessProps) {
             {formula.trim() || "—"}
           </p>
         </div>
-        <div className="bg-card rounded-lg border p-2.5">
+        <div className="bg-card rounded-lg border p-2.5 text-right">
           <p className="text-xs font-medium">Result</p>
           {result.status === "ok" ? (
             <p className="mt-1 text-base font-semibold text-emerald-600 dark:text-emerald-400">
