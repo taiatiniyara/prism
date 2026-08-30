@@ -10,7 +10,7 @@ import {
 import { organisations } from "./utility";
 import { managedListItems } from "./managedLists";
 import { roles } from "./auth-schema";
-import { DataEntryStatusId, APPROVED_STATUS } from "./dataEntry";
+import { DataEntryStatusId, APPROVED_STATUS } from "./dataEntryStatus";
 
 export const reportPeriods = pgTable(
   "report_periods",

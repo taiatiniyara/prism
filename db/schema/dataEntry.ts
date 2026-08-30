@@ -28,6 +28,7 @@ import {
 } from "./utility";
 import { user } from "./auth-schema";
 import { relations } from "drizzle-orm";
+import { DataEntryStatusId, APPROVED_STATUS } from "./dataEntryStatus";
 import { countries, Region, subRegions } from "./country";
 
 export interface FormulaInput {
@@ -173,32 +174,12 @@ export const inputDefinitionRelations = relations(
   }),
 );
 
-export enum DataEntryStatusId {
-  /** @deprecated Requested (1) retired — **Pending (2) is the single starting state** (chosen for its
-   * call-to-action: an empty shell is an outstanding task, not a passive request). Shells now birth
-   * at Pending; the loader/UI no longer assign 1. Kept only so historical/legacy code resolves. */
-  Requested = 1,
-  /** Starting state — a generated shell awaiting the utility's data (action needed). */
-  Pending = 2,
-  Entered = 3,
-  /** Reviewed by the BLO. Business label: "BLO Reviewed". */
-  Reviewed = 4,
-  /** Approved by the utility CEO — the terminal, publishable state. Business label: "CEO Approved". */
-  Approved = 5,
-  /** @deprecated BMO "Endorsed" step retired — CEO Approved (5) is now the final, publishable
-   * state (no separate central endorsement). Legacy Endorsed rows were migrated to Approved (5). */
-  Endorsed = 6,
-  /** @deprecated retired — answer-availability moved to `data_entries.no_data_reason`
-   * (`not_available` / `asserted_not_applicable`). "Not available" is an ANSWER, not a workflow state. */
-  Not_Available = 7,
-}
-
-/**
- * Publish gate — an entry is approved/publishable (feeds Silver→Gold, Power BI, benchmarking)
- * once it reaches the terminal Approved (CEO Approved) state. Named constant so the `>= 5` rule
- * has a single home; BMO endorsement was removed, so Approved (5) is final.
- */
-export const APPROVED_STATUS = DataEntryStatusId.Approved;
+// DataEntryStatusId + APPROVED_STATUS moved to ./dataEntryStatus — a LEAF module with no
+// table-schema imports — to break the dataEntry <-> reportPeriods circular-init (TDZ) crash
+// (reportPeriods needs APPROVED_STATUS as a module-init value for its publish gate). Re-exported
+// here so existing `import { DataEntryStatusId | APPROVED_STATUS } from "@/db/schema/dataEntry"`
+// call sites are unaffected.
+export { DataEntryStatusId, APPROVED_STATUS };
 export const isPublishableStatus = (statusId?: number | null): boolean =>
   (statusId ?? 0) >= APPROVED_STATUS;
 
