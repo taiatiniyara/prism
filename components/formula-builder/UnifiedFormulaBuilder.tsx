@@ -26,7 +26,6 @@ import {
   type DimBinding,
   type DimensionField,
   type MeasureCatalogueItem,
-  type MemberOption,
   type RecomputeResult,
   type SavePayload,
   type TagCardState,
@@ -38,17 +37,15 @@ const nextCardKey = () => `card_${Date.now().toString(36)}_${cardKeySeq++}`;
 
 function seedDims(
   measure: MeasureCatalogueItem,
-  dimMembers: Record<DimensionField, MemberOption[]>,
 ): Partial<Record<DimensionField, DimBinding>> {
   const dims: Partial<Record<DimensionField, DimBinding>> = {};
   for (const d of measure.applicableDims) {
-    if (d.expansionMode === "all_members") {
-      dims[d.field] = { mode: "all", memberId: null };
-    } else {
-      const first =
-        d.allowedMemberIds?.[0] ?? dimMembers[d.field]?.[0]?.id ?? null;
-      dims[d.field] = { mode: "pin", memberId: first };
-    }
+    // Default every applicable dimension to All (aggregate across it). Previously
+    // `by_context` dimensions silently pinned to their first allowed member
+    // (e.g. Utility Function → "Generation"), which quietly restricted the
+    // formula to a single slice. Aggregating across the dimension is the safe,
+    // expected default; the author can still narrow it to Pin/Inherit per card.
+    dims[d.field] = { mode: "all", memberId: null };
   }
   return dims;
 }
@@ -206,7 +203,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
               measureName: measure.name,
               unitLabel: measure.unitLabel ?? undefined,
               strataId: measure.strataId,
-              dims: seedDims(measure, data.dimMembers),
+              dims: seedDims(measure),
             }
           : c,
       ),
