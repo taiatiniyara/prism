@@ -51,7 +51,7 @@ export async function GET(req: Request) {
       const reportType = findItem(urp.report_type_id)?.name;
       return {
         "Report Type": reportType,
-        "Report Period": formatReportPeriodIso(urp.report_date, reportType, u?.financial_year_end),
+        "Report Period": formatReportPeriodIso(urp.report_date, reportType, u?.fye_month, u?.fye_day),
         Country: country?.name,
         "Unemployment Rate": cc?.value ?? null,
         Source: "unknown",

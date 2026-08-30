@@ -57,7 +57,7 @@ export async function GET(req: Request) {
         );
       return {
         ReportType: reportType,
-        ReportPeriod: formatReportPeriodIso(urp.report_date, reportType, u?.financial_year_end),
+        ReportPeriod: formatReportPeriodIso(urp.report_date, reportType, u?.fye_month, u?.fye_day),
         Country: country?.name,
         Source: "unknown",
         ...dls,

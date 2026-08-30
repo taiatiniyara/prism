@@ -58,7 +58,8 @@ export async function getResolvedContextRows(
 
   const orgs = await db.select().from(organisations);
   const countryByUtil = new Map(orgs.map((o) => [o.id, o.country_id]));
-  const fyeByUtil = new Map(orgs.map((o) => [o.id, o.financial_year_end]));
+  const fyeMonthByUtil = new Map(orgs.map((o) => [o.id, o.fye_month]));
+  const fyeDayByUtil = new Map(orgs.map((o) => [o.id, o.fye_day]));
 
   const items = await db.select().from(managedListItems);
   const typeNameById = new Map(items.map((i) => [i.id, i.name]));
@@ -104,7 +105,8 @@ export async function getResolvedContextRows(
     const fy = fiscalYearForReportPeriod(
       rp.report_date,
       typeNameById.get(rp.report_type_id),
-      fyeByUtil.get(rp.utility_id),
+      fyeMonthByUtil.get(rp.utility_id),
+      fyeDayByUtil.get(rp.utility_id),
     );
     if (fy == null) continue;
     for (const d of defs) {
