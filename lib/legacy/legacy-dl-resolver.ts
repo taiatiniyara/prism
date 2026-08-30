@@ -62,46 +62,30 @@ export async function getSubmittedReportPeriods() {
   return db.select().from(reportPeriods).where(eq(reportPeriods.status_id, 3));
 }
 
-const MONTHS: Record<string, number> = {
-  jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
-  jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12,
-};
-
-/** Parse organisations.financial_year_end ("30 Sep 2024", "31 Dec 2024") → {month, day}. */
-export function parseFinancialYearEnd(
-  fye: string | null | undefined,
-): { month: number; day: number } | null {
-  if (!fye) return null;
-  const m = /^\s*(\d{1,2})\s+([A-Za-z]{3})/.exec(fye.trim());
-  if (!m) return null;
-  const day = Number(m[1]);
-  const month = MONTHS[m[2].toLowerCase()];
-  if (!month || !day) return null;
-  return { month, day };
-}
-
 /**
  * The fiscal YEAR a report period represents — the calendar year the financial
  * year STARTS in (the platform's labelling convention). This is the alignment key
  * between a submission's period and country_context.period_year.
  *
- * When the utility's financial_year_end is known we use it (robust to imperfect
- * report_date values): a full calendar-year FY (ends 31 Dec) → the report_date's
- * year; otherwise the FY spans into the prior year → its start year. When it isn't
- * known we derive the same start year from report_date itself (report_date is the
- * FY-end date), which fixes the old blanket "−1" for calendar-year utilities.
+ * When the utility's canonical FY-end (organisations.fye_month/fye_day) is known we
+ * use it (robust to imperfect report_date values): a full calendar-year FY (ends
+ * 31 Dec) → the report_date's year; otherwise the FY spans into the prior year → its
+ * start year. When it isn't known (onboarding-pending utilities) we derive the same
+ * start year from report_date itself (report_date is the FY-end date), which fixes
+ * the old blanket "−1" for calendar-year utilities.
  */
 export function fiscalYearForReportPeriod(
   reportDate: Date | string | null,
   reportType: string | null | undefined,
-  financialYearEnd?: string | null,
+  fyeMonth?: number | null,
+  fyeDay?: number | null,
 ): number | null {
   if (!reportDate) return null;
   const d = typeof reportDate === "string" ? new Date(reportDate) : reportDate;
   if (isNaN(d.getTime())) return null;
   if (reportType !== "Financial Year") return d.getFullYear();
 
-  const fye = parseFinancialYearEnd(financialYearEnd);
+  const fye = fyeMonth != null && fyeDay != null ? { month: fyeMonth, day: fyeDay } : null;
   if (fye) {
     if (fye.month === 12 && fye.day === 31) return d.getFullYear(); // calendar-year FY
     // FY ends at fye.month/day; find the FY-end on/after d, label by start year.
@@ -124,14 +108,15 @@ export function fiscalYearForReportPeriod(
 export function formatReportPeriodIso(
   reportDate: Date | string | null,
   reportType: string | null | undefined,
-  financialYearEnd?: string | null,
+  fyeMonth?: number | null,
+  fyeDay?: number | null,
 ): string | null {
   if (!reportDate) return null;
   const d = typeof reportDate === "string" ? new Date(reportDate) : reportDate;
   if (isNaN(d.getTime())) return null;
 
   if (reportType === "Financial Year") {
-    const fy = fiscalYearForReportPeriod(d, reportType, financialYearEnd);
+    const fy = fiscalYearForReportPeriod(d, reportType, fyeMonth, fyeDay);
     if (fy != null) d.setFullYear(fy);
     return d.toISOString();
   }

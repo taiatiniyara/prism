@@ -15,6 +15,7 @@ import {
   check,
   timestamp,
   numeric,
+  date,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { managedListItems, managedLists } from "./managedLists";
@@ -27,6 +28,7 @@ import {
 } from "./utility";
 import { user } from "./auth-schema";
 import { relations } from "drizzle-orm";
+import { DataEntryStatusId, APPROVED_STATUS } from "./dataEntryStatus";
 import { countries, Region, subRegions } from "./country";
 
 export interface FormulaInput {
@@ -98,6 +100,13 @@ export const measureDefinitions = pgTable("measure_definitions", {
   is_calculated: boolean("is_calculated").default(false).notNull(),
   is_kpi: boolean("is_kpi").default(false).notNull(),
   is_kpi_input: boolean("is_kpi_input").default(false).notNull(),
+  // Measure-level "birth date": the measure exists (and can be shelled) only from this
+  // fiscal year onward. Compared by fiscal year: a period is in scope when
+  // fy(period) >= fy(effective_from). NULL = always valid. This is the coarse,
+  // measure-level gate; measure_dimension_applicability.effective_from/to carries the
+  // finer per-(dimension,member) validity. Populated from the BMO effective-dating
+  // catalogue (2026-08-25). See measure-effective-dating-spec / ADR 0004.
+  effective_from: date("effective_from"),
   updated_at: timestamp("updated_at").notNull().defaultNow(),
   alternative_names:
     json("alternative_names").$type<MeasureDefinitionAlternativeNames>(),
@@ -165,32 +174,12 @@ export const inputDefinitionRelations = relations(
   }),
 );
 
-export enum DataEntryStatusId {
-  /** @deprecated Requested (1) retired — **Pending (2) is the single starting state** (chosen for its
-   * call-to-action: an empty shell is an outstanding task, not a passive request). Shells now birth
-   * at Pending; the loader/UI no longer assign 1. Kept only so historical/legacy code resolves. */
-  Requested = 1,
-  /** Starting state — a generated shell awaiting the utility's data (action needed). */
-  Pending = 2,
-  Entered = 3,
-  /** Reviewed by the BLO. Business label: "BLO Reviewed". */
-  Reviewed = 4,
-  /** Approved by the utility CEO — the terminal, publishable state. Business label: "CEO Approved". */
-  Approved = 5,
-  /** @deprecated BMO "Endorsed" step retired — CEO Approved (5) is now the final, publishable
-   * state (no separate central endorsement). Legacy Endorsed rows were migrated to Approved (5). */
-  Endorsed = 6,
-  /** @deprecated retired — answer-availability moved to `data_entries.no_data_reason`
-   * (`not_available` / `asserted_not_applicable`). "Not available" is an ANSWER, not a workflow state. */
-  Not_Available = 7,
-}
-
-/**
- * Publish gate — an entry is approved/publishable (feeds Silver→Gold, Power BI, benchmarking)
- * once it reaches the terminal Approved (CEO Approved) state. Named constant so the `>= 5` rule
- * has a single home; BMO endorsement was removed, so Approved (5) is final.
- */
-export const APPROVED_STATUS = DataEntryStatusId.Approved;
+// DataEntryStatusId + APPROVED_STATUS moved to ./dataEntryStatus — a LEAF module with no
+// table-schema imports — to break the dataEntry <-> reportPeriods circular-init (TDZ) crash
+// (reportPeriods needs APPROVED_STATUS as a module-init value for its publish gate). Re-exported
+// here so existing `import { DataEntryStatusId | APPROVED_STATUS } from "@/db/schema/dataEntry"`
+// call sites are unaffected.
+export { DataEntryStatusId, APPROVED_STATUS };
 export const isPublishableStatus = (statusId?: number | null): boolean =>
   (statusId ?? 0) >= APPROVED_STATUS;
 
@@ -330,6 +319,13 @@ export const dataEntries = pgTable(
     value_option_id: integer("value_option_id").references(
       () => managedListItems.id,
     ),
+    // Unit scale the reporter used when stating the figure ("Ones", "Tens",
+    // "Thousands", …). Backfilled from prism-training's data_entry_main
+    // (2026-08-25) where the extract migration dropped it; PRISM 2 stores the
+    // as-entered number, so true LCU = value × multiplier. Defaults to Ones.
+    multiplier: varchar("multiplier", { length: 16 })
+      .notNull()
+      .default("Ones"),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
     updatedById: text("updated_by_id").references(() => user.id),
   },

@@ -50,6 +50,4 @@ dist/
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts
-
-graphify-out
+next-env.d.ts.claude/launch.json

@@ -14,7 +14,8 @@ export default async function ReportingSettingsPage() {
     <div className="p-4">
       <UpdateReportingDetailsForm
         orgId={org?.id ?? orgId}
-        financial_year_end={org?.financial_year_end}
+        fye_month={org?.fye_month ?? null}
+        fye_day={org?.fye_day ?? null}
         is_mth_report_relevant={org?.is_mth_reports_relevant_month}
       />
     </div>

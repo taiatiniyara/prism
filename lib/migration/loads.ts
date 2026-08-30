@@ -9,6 +9,7 @@ import {
   type NewMigrationScorecard,
 } from "@/db/schema/migrationScorecard";
 import { migrationRejections } from "@/db/schema/migrationRejections";
+import { APPROVED_STATUS } from "@/db/schema/dataEntry";
 
 /**
  * Migration load lifecycle + scorecard reconciliation.
@@ -209,4 +210,35 @@ export async function getScorecardSummary(loadId: number) {
         ORDER BY recon_line, value_type`)
     ).rows ?? []
   );
+}
+
+/**
+ * Migration status reconciliation — MODEL A (preserve p1 CEO-approval end-to-end).
+ * Ruled 2026-08-30 (Eugene + #8): p1 "CEO Approved" was a recorded, PERIOD-SCOPED act — approving a
+ * period approved its content wholesale — so the shells of an Approved period inherit Approved(5).
+ * Truly-empty shells become no_data_reason='not_available' (the CEO approving a period with a blank
+ * cell is the implicit acceptance that data was unavailable — NOT a utility assertion), marked
+ * loader-derived in comments so evidence views distinguish them. Shells under a NON-Approved period
+ * keep their workflow-derived status. Idempotent; run AFTER loadExtract, BEFORE the scorecard so the
+ * fill/calc lines reflect the reconciled statuses. Mirrors scripts/sql/2026-08-30-migration-approval-model-a.sql.
+ */
+export async function reconcileApprovalModelA(): Promise<{ empties: number; lifted: number }> {
+  const r1 = await db.execute(sql`
+    UPDATE data_entries de
+    SET no_data_reason = 'not_available', status_id = ${APPROVED_STATUS},
+        comments = (COALESCE(de.comments::jsonb, '[]'::jsonb) || jsonb_build_array(jsonb_build_object(
+          'comment', 'Loader-derived (migration Model A): not_available inferred from a CEO-approved period with a blank cell — implicit acceptance that data was unavailable. Not a utility assertion.',
+          'commenterId', 'system:migration', 'commenterName', 'Migration (Model A)',
+          'commenterRole', 'system', 'date', now(), 'resolved', true)))::json,
+        updated_at = now()
+    FROM report_periods rp
+    WHERE rp.id = de.report_period_id AND rp.status_id = ${APPROVED_STATUS} AND de.status_id < ${APPROVED_STATUS}
+      AND de.value_numeric IS NULL AND de.value_boolean IS NULL
+      AND de.value_text IS NULL AND de.value_option_id IS NULL AND de.no_data_reason IS NULL`);
+  const r2 = await db.execute(sql`
+    UPDATE data_entries de SET status_id = ${APPROVED_STATUS}, updated_at = now()
+    FROM report_periods rp
+    WHERE rp.id = de.report_period_id AND rp.status_id = ${APPROVED_STATUS} AND de.status_id < ${APPROVED_STATUS}`);
+  const empties = r1.rowCount ?? 0;
+  return { empties, lifted: empties + (r2.rowCount ?? 0) };
 }

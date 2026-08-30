@@ -2,13 +2,55 @@ import { db } from "@/db/connection";
 import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
 import { organisations } from "@/db/schema/utility";
 import { countries } from "@/db/schema/country";
-import { reportPeriods } from "@/db/schema/reportPeriods";
+import { reportPeriods, publishedPeriodCondition } from "@/db/schema/reportPeriods";
 import { managedListItems } from "@/db/schema/managedLists";
-import { eq, and, isNotNull } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
 import { formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
 import { resolveEntryValue } from "@/lib/legacy/entry-value";
 import { getAllExchangeRates } from "@/lib/exchange-rates";
+import {
+  multiplierFactor,
+  rollUpMultiplier,
+} from "@/lib/pbi/multiplier";
+
+// Power BI column labels (measure name -> legacy semantic-model name).
+const UTILITY_COSTS_COLUMN_LABELS: Record<string, string> = {
+  "Electricity Staff": "Direct Costs: Electricity Staff",
+  "Electricity O&M": "Direct Costs: Electricity O&M",
+  "Electricity Purchases": "Direct Costs: Electricity Purchases",
+  "Fuel & Oil Expenditure": "Apportioned Cost: Fuel & Oil Expenditure",
+  "Other Staff": "Apportioned Cost: Other Staff",
+  "Other O&M": "Apportioned Cost: Other O&M",
+  "Duty and Taxes - Fuel & Oil": "Apportioned Cost: Duty and Taxes - Fuel & Oil",
+  "Duty and Taxes - Others": "Apportioned Cost: Duty and Taxes - Others",
+};
+
+// The PBIX model was built on PRISM 1's data-list names, which differ from the
+// enriched catalogue names. Staff/O&M are stored per utility-function slice in
+// PRISM 2 but were separate data lists in PRISM 1 — map each slice to its own
+// legacy column.
+const UTILITY_COSTS_P1_LABELS: Record<
+  string,
+  string | Record<number, string>
+> = {
+  "Electricity Staff": {
+    1024: "Generation Labor Costs",
+    1025: "Distribution Labor Costs",
+    1026: "Transmission Labor Costs",
+  },
+  "Electricity O&M": {
+    1024: "Generation OM Costs",
+    1025: "Distribution OM Costs",
+    1026: "Transmission OM Costs",
+  },
+  "Electricity Purchases": "Power Purchase Costs",
+  "Fuel & Oil Expenditure": "Fuel Expenditure",
+  "Other Staff": "Other Labor Expenditure",
+  "Other O&M": "Other Expenditure",
+  "Duty and Taxes - Fuel & Oil": "Duty on Fuel and Lube Oil",
+  "Duty and Taxes - Others": "Other Duty and Taxes",
+};
 
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
@@ -22,7 +64,7 @@ export async function GET(req: Request) {
   const rps = await db
     .select()
     .from(reportPeriods)
-    .where(isNotNull(reportPeriods.status_id));
+    .where(publishedPeriodCondition);
   const allUtils = await db
     .select()
     .from(organisations)
@@ -70,26 +112,53 @@ export async function GET(req: Request) {
         )
         .reduce(
           (acc, dl) => {
-            const val = entries.find(
+            const slices = entries.filter(
               (l) => l.measure_def_id === dl.id && l.report_period_id === r.id,
             );
-            const rawValue = resolveEntryValue(
-              val,
-              dataTypeNameById.get(dl.id) ?? null,
-              itemsById,
-            );
-            const numericValue =
-              typeof rawValue === "number" ? rawValue : null;
-            return {
-              Unit: findItem(dl.unit_id)?.name,
-              Multiplier: "Ones",
-              [dl.name]: numericValue ?? 0,
-              [`${dl.name} USD`]:
-                numericValue != null ? numericValue / fxRate : null,
-              ...acc,
-            };
+            const baseLabel =
+              UTILITY_COSTS_COLUMN_LABELS[dl.name] ?? dl.name;
+            const p1Spec = UTILITY_COSTS_P1_LABELS[dl.name];
+            const cols: Record<string, unknown> = {};
+            for (const val of slices) {
+              const rawValue = resolveEntryValue(
+                val,
+                dataTypeNameById.get(dl.id) ?? null,
+                itemsById,
+              );
+              if (rawValue == null) continue;
+              const numericValue =
+                typeof rawValue === "number" ? rawValue : null;
+              const factor = multiplierFactor(val.multiplier);
+              acc.mults.add(val.multiplier);
+              const usd =
+                numericValue != null
+                  ? (numericValue * factor) / fxRate
+                  : null;
+
+              // Function-sliced measures emit one legacy column per slice.
+              if (typeof p1Spec !== "string" && p1Spec != null) {
+                const fnLabel =
+                  val.utility_function_id != null
+                    ? p1Spec[val.utility_function_id]
+                    : undefined;
+                if (fnLabel) {
+                  cols[fnLabel] = numericValue;
+                  cols[`${fnLabel} USD`] = usd;
+                  continue;
+                }
+              }
+
+              cols[baseLabel] = numericValue ?? 0;
+              cols[`${baseLabel} USD`] = usd;
+              // Legacy PRISM 1 alias alongside the enriched label.
+              if (typeof p1Spec === "string") {
+                cols[p1Spec] = numericValue ?? 0;
+                cols[`${p1Spec} USD`] = usd;
+              }
+            }
+            return { ...acc, cols: { ...acc.cols, ...cols } };
           },
-          {} as Record<string, unknown>,
+          { cols: {} as Record<string, unknown>, mults: new Set<string>() },
         );
       const reportType = findItem(r.report_type_id)?.name;
       return {
@@ -98,7 +167,10 @@ export async function GET(req: Request) {
         UtilityId: r.utility_id,
         Currency: currency,
         UsdExchangeRate: fxRate,
-        ...dls,
+        Multiplier: rollUpMultiplier(dls.mults),
+        // legacy spelling kept as an alias for models keyed on "Multipler"
+        Multipler: rollUpMultiplier(dls.mults),
+        ...dls.cols,
       };
     }),
   );

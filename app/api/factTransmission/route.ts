@@ -1,61 +1,127 @@
 import { db } from "@/db/connection";
 import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
-import { units, serviceAreas } from "@/db/schema/utility";
-import { reportPeriods } from "@/db/schema/reportPeriods";
-import { managedListItems } from "@/db/schema/managedLists";
-import { eq, isNotNull } from "drizzle-orm";
+import { serviceAreas } from "@/db/schema/utility";
+import { reportPeriods, publishedPeriodCondition } from "@/db/schema/reportPeriods";
+import { managedLists, managedListItems } from "@/db/schema/managedLists";
+import { eq, and, inArray } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
 import { formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
-import { resolveEntryValue } from "@/lib/legacy/entry-value";
+import {
+  resolveEntryValue,
+  getValueResolutionContext,
+} from "@/lib/legacy/entry-value";
+
+// Transmission measures, each scoped by the Transmission utility function and
+// mapped to its legacy semantic-model column name.
+const TRANSMISSION_MEASURES: { name: string; label: string }[] = [
+  { name: "Network Length", label: "Transmission Network Length" },
+  {
+    name: "Customers Served",
+    label: "Transmission Network Customers Served",
+  },
+  {
+    name: "Electricity Sold to Customers",
+    label: "Transmission Electricity Sold to Customers",
+  },
+  {
+    name: "Electricity Sent to Grid",
+    label: "Transmission Network Electricity Sent to Grid",
+  },
+  {
+    name: "Network Planned Downtime Events",
+    label: "Transmission Network Planned Downtime Events",
+  },
+  {
+    name: "Network Planned Downtime Hours",
+    label: "Transmission Network Planned Downtime Minutes",
+  },
+  {
+    name: "Network Unplanned Downtime Events",
+    label: "Transmission Network Unplanned Downtime Events",
+  },
+  {
+    name: "Network Unplanned Downtime Hours",
+    label: "Transmission Network Unplanned Downtime Minutes",
+  },
+  { name: "FTE Employees", label: "FTE Employees in Transmission" },
+];
 
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
   if (authorize.success === false)
     return Response.json({ message: authorize.message }, { status: 401 });
 
+  const measureDefs = await db
+    .select()
+    .from(measureDefinitions)
+    .where(
+      inArray(
+        measureDefinitions.name,
+        TRANSMISSION_MEASURES.map((m) => m.name),
+      ),
+    );
+
+  const labelByName = new Map(
+    TRANSMISSION_MEASURES.map((m) => [m.name, m.label]),
+  );
+  const prismIds = measureDefs.map((m) => m.id);
+  if (prismIds.length === 0) return Response.json([]);
+
+  // Resolve the Transmission utility function member.
+  const functionListId = (
+    await db
+      .select({ id: managedLists.id })
+      .from(managedLists)
+      .where(eq(managedLists.name, "Utility Function"))
+      .limit(1)
+  )[0]?.id;
+  const transmissionFunctionId = functionListId
+    ? (
+        await db
+          .select({ id: managedListItems.id })
+          .from(managedListItems)
+          .where(
+            and(
+              eq(managedListItems.list_id, functionListId),
+              eq(managedListItems.name, "Transmission"),
+            ),
+          )
+          .limit(1)
+      )[0]?.id
+    : undefined;
+
   const entries = await db
     .select()
     .from(dataEntries)
-    .where(eq(dataEntries.is_deleted, false));
+    .where(
+      and(
+        inArray(dataEntries.measure_def_id, prismIds),
+        eq(dataEntries.is_deleted, false),
+      ),
+    );
   const rps = await db
     .select()
     .from(reportPeriods)
-    .where(isNotNull(reportPeriods.status_id));
+    .where(publishedPeriodCondition);
   const allSa = await db
     .select()
     .from(serviceAreas)
     .where(eq(serviceAreas.is_active, true));
-  const allResources = await db
-    .select()
-    .from(units)
-    .where(eq(units.is_virtual, false));
-  const allItems = await db
-    .select()
-    .from(managedListItems)
-    .where(eq(managedListItems.is_active, true));
-  const inputDefs = await db
-    .select()
-    .from(measureDefinitions)
-    .where(eq(measureDefinitions.is_active, true));
+
+  const { dataTypeNameById, itemsById } = await getValueResolutionContext(
+    prismIds,
+  );
 
   function findItem(id: number | null) {
-    return id ? allItems.find((m) => m.id === id) : undefined;
+    return id ? itemsById.get(id) : undefined;
   }
-
-  const itemsById = new Map(allItems.map((i) => [i.id, i.name]));
-  const dataTypeNameById = new Map(
-    inputDefs.map((d) => [d.id, itemsById.get(d.data_type_id) ?? null]),
-  );
 
   return Response.json(
     rps
       .filter((r) => entries.some((l) => l.report_period_id === r.id))
       .sort((a, b) => a.utility_id - b.utility_id)
       .map((urp) => {
-        const rpGens = allResources.filter((gen) =>
-          gen.period_entries?.some((pe) => pe.report_period_id === urp.id),
-        );
-        const reportType = findItem(urp.report_type_id)?.name;
+        const reportType = findItem(urp.report_type_id);
         return {
           ReportType: reportType,
           ReportPeriod: formatReportPeriodIso(urp.report_date, reportType),
@@ -63,29 +129,27 @@ export async function GET(req: Request) {
           Data: allSa
             .filter((sa) => sa.utility_id === urp.utility_id)
             .map((sa) =>
-              inputDefs.reduce(
+              measureDefs.reduce(
                 (acc, dl) => {
-                  const val = entries.find(
+                  const entry = entries.find(
                     (l) =>
                       l.measure_def_id === dl.id &&
                       l.report_period_id === urp.id &&
-                      rpGens.find(
-                        (g) =>
-                          g.id === l.unit_id &&
-                          g.service_area_id === sa.id,
-                      ),
+                      l.service_area_id === sa.id &&
+                      (transmissionFunctionId == null ||
+                        l.utility_function_id === transmissionFunctionId),
                   );
+                  const label = labelByName.get(dl.name) ?? dl.name;
                   return {
                     ...acc,
-                    ServiceAreaId: sa.id,
-                    [dl.name]: resolveEntryValue(
-                      val,
+                    [label]: resolveEntryValue(
+                      entry,
                       dataTypeNameById.get(dl.id) ?? null,
                       itemsById,
                     ),
                   };
                 },
-                {} as Record<string, unknown>,
+                { ServiceAreaId: sa.id } as Record<string, unknown>,
               ),
             ),
         };

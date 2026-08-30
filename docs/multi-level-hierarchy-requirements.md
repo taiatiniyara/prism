@@ -73,6 +73,68 @@ Dims vs grain — the split philosophy is deliberate (per #4): the 10 dimension 
 (NOT NULL, explicit **All** member — a real bucket), grain columns **locate** in a physical
 hierarchy (NULL above… means truthfully absent). Do not "unify" them.
 
+**Utility obligation counts only human-answerable shells (Eugene, 2026-08-25):** the
+utility-facing "requested" count = shells WHERE `is_calculated = false AND is_system_generated =
+false AND is_context_fed = false`. Engine-filled, system-generated, and context-fed shells are
+real addresses in the relevance balance but are **never part of what a utility is asked to
+answer** — they must not inflate requested counts or completeness denominators. Corollary: two
+denominators, never mixed — **utility completeness** (answered / human-answerable requested) is a
+*performance* metric; **calculated/context shell fill-rate** is an *engine/pipeline health*
+metric. The generator and the scorecard compute the utility count identically, from this rule.
+
+**431 — EUGENE RULED (synchronous, 2026-08-30):** measure 431 "Electricity Purchased" is **DERIVED
+(`conditional_default_off`)**, counts **16-off / 4-on / rest** — set by Eugene's direct synchronous
+ruling in #8's session after nine crossed-async-message flips proved the sessions structurally
+unable to terminate the thread themselves (every async device — settling messages, anchors,
+terminal commits, HEAD-alignment — became oscillation fuel). The ruling is exempt from all
+anchor/alignment mechanics: **no session commits any further 431 change for any reason; residual
+inconsistencies wait for the joint pass; reopening requires Eugene, synchronously.** All prior #8
+431-messages remain void. Saga's durable law: repo-state outranks message-state on contested async
+threads — and when even that oscillates, the escape clause is the human, synchronously.
+
+**Relevance standardisation — B-CLEAN RULED (Eugene + #8, 2026-08-26; supersedes the spans spec
+below per Eugene's descoping of transmission rating):** one period-keyed `measure_relevance` table
+is the uniform surface the shell generator reads (default-OFF/declare-to-enable). Transmission +
+tariff rows are hand-DECLARED; **generation rows are ENGINE-DERIVED from stint overlap** — stints
+stay the sole truth for generation (no second source: `source` discriminator, derived rows locked
+against hand-edits, regeneration on stint append/amend, verifier 1:1 invariant). B-override
+rejected (escape-hatch-on-evidence only). Criterion final form: **rich timeline state →
+stints/spans; yes/no or per-cell editorial declarations → measure_relevance.** Append-vs-amend +
+provenance semantics transfer unchanged.
+
+~~**Service-area capability declaration — SPANS RULED FINAL (Eugene, 2026-08-25):**~~ *(superseded
+2026-08-26 by the relevance standardisation above — retained for history:)* contextual
+shells (e.g. the Transmission slice) are gated on **declared** capability, never inferred from
+data (inference is circular and cannot bootstrap a new network). Storage = relational
+**capability spans** (`service_area_capabilities`: SA × capability × effective_from/to; non-overlap
++ ≤1 open, fiscal-year comparison per ADR 0004) — the ratified stint pattern, NOT period-keyed
+jsonb (`service_areas.report_periods` stays empty and retires with `units.period_entries`).
+Confirm-each-period UX = span operations (confirm no-op / change close+open). #8 owns
+capability-span semantics alongside unit stints — one temporal rulebook family.
+
+**IPP boundary rule (Eugene, 2026-08-25, data-confirmed 0/12 + 2/12 fills):** units provided by an
+IPP carry **output metrics only** for the off-taking utility (Rated Capacity / Generation /
+Downtime @ provider=IPP) — never consumable inputs (the "Fuel and Oil" subgroup): those are the
+IPP operator's costs, invisible to and unreportable by the off-taker. Encoded in the relevance
+verifier (consumables not expected where a technology is IPP-only for a utility, via
+`units.provider_id`). The general principle: **expectation follows the ownership boundary — a
+utility is only asked what it can actually know.**
+*Pending nuance (disposition open with Eugene, migration log `11c9010`):* **fuel** may legitimately
+cross the boundary under fuel-supply/pass-through arrangements (utility supplies fuel to its IPP)
+— two real CUC Fuel Oil @ IPP-diesel values (FY2022/23, ~28.4M/28.6M) are **soft-deleted and
+preserved**, explicitly NOT ruled invalid. If Eugene later rules them genuine: restore Fuel Oil @
+IPP and **narrow this rule to lube-oil-only**. Lube oil stays cleaned (0 fills anywhere —
+unambiguously operator O&M).
+
+**Cross-dimension conditional (structural invariant, banked 2026-08-25 from the Hours Worked
+290–292 case):** the four energy dimensions (provider / category / technology / asset_class)
+expand **only under `utility_function` = Generation**; under Transmission / Distribution /
+Ancillary Services every energy dim carries its **All** member — those dims *describe generation*,
+so a non-Generation slice with a pinned energy dim is structurally meaningless. The
+relevance/shell generator enforces this as an invariant, not per-measure config. Escape hatch per
+case law: a future measure genuinely needing energy-dim expansion under a non-Generation function
+is an **explicit Eugene decision on evidence**, never a silent allowance.
+
 ## 2. Requirements on the grain columns
 
 1. **Chain-consistency validation** (replaces the old exactly-one CHECK): a row's filled grain

@@ -1,0 +1,1 @@
+{"nodes": [{"id": "test_custom_kpi_contract", "label": "Custom KPI Create Request Contract Test", "file_type": "code", "source_file": "test/integration/api/custom-kpi/create-request.contract.test.ts", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}

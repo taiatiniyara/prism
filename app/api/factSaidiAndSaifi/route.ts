@@ -1,9 +1,9 @@
 import { db } from "@/db/connection";
 import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
 import { serviceAreas } from "@/db/schema/utility";
-import { reportPeriods } from "@/db/schema/reportPeriods";
+import { reportPeriods, publishedPeriodCondition } from "@/db/schema/reportPeriods";
 import { managedListItems } from "@/db/schema/managedLists";
-import { eq, and, isNotNull, inArray } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
 import { formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
 import {
@@ -13,6 +13,10 @@ import {
 
 const SAIDI_SAIFI_MEASURE_NAMES = [
   "Total Planned Interruptions Events",
+  "Total Planned Interruptions Customers Affected",
+  "Total Planned Interruptions Customer Minutes",
+  "Total Unplanned Interruptions Events",
+  "Total Unplanned Interruptions Customers Affected",
   "Total Unplanned Interruptions Customer Minutes",
 ] as const;
 
@@ -42,7 +46,7 @@ export async function GET(req: Request) {
   const rps = await db
     .select()
     .from(reportPeriods)
-    .where(isNotNull(reportPeriods.status_id));
+    .where(publishedPeriodCondition);
   const allSa = await db
     .select()
     .from(serviceAreas)

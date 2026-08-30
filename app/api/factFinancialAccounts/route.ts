@@ -2,13 +2,24 @@ import { db } from "@/db/connection";
 import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
 import { organisations } from "@/db/schema/utility";
 import { countries } from "@/db/schema/country";
-import { reportPeriods } from "@/db/schema/reportPeriods";
+import { reportPeriods, publishedPeriodCondition } from "@/db/schema/reportPeriods";
 import { managedListItems } from "@/db/schema/managedLists";
-import { eq, and, isNotNull } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
 import { formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
 import { resolveEntryValue } from "@/lib/legacy/entry-value";
 import { getAllExchangeRates } from "@/lib/exchange-rates";
+import {
+  multiplierFactor,
+  rollUpMultiplier,
+} from "@/lib/pbi/multiplier";
+
+// Power BI column labels for measures whose catalogue name drifted from the
+// legacy semantic-model name. Keyed by measure name.
+const FINANCIAL_COLUMN_LABELS: Record<string, string> = {
+  "Amortization Expenses": "Amortization Expense",
+  "Income Tax": "Income Taxes",
+};
 
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
@@ -22,7 +33,7 @@ export async function GET(req: Request) {
   const rps = await db
     .select()
     .from(reportPeriods)
-    .where(isNotNull(reportPeriods.status_id));
+    .where(publishedPeriodCondition);
   const allUtils = await db
     .select()
     .from(organisations)
@@ -60,47 +71,56 @@ export async function GET(req: Request) {
         const country = u ? countriesMap.get(u.country_id) : undefined;
         const currency = country ? findItem(country.currency_id)?.name : "USD";
         const fxRate = exchangeRates[currency ?? "USD"] ?? 1;
-        const dls = inputDefs
-          .filter((dl) =>
-            entries.some(
-              (l) => l.measure_def_id === dl.id && l.report_period_id === r.id,
-            ),
-          )
-          .reduce(
-            (acc, dl) => {
-              const v = entries.find(
-                (l) =>
-                  l.measure_def_id === dl.id && l.report_period_id === r.id,
-              );
-              const rawValue = resolveEntryValue(
-                v,
-                dataTypeNameById.get(dl.id) ?? null,
-                itemsById,
-              );
-              const numericValue =
-                typeof rawValue === "number" ? rawValue : null;
-              return {
-                ...acc,
-                [dl.name]: numericValue,
-                Unit: findItem(dl.unit_id)?.name,
-                Multiplier: "Ones",
-                [`${dl.name} USD`]:
-                  numericValue != null ? numericValue / fxRate : null,
-              };
-            },
-            {} as Record<string, unknown>,
-          );
-        const reportType = findItem(r.report_type_id)?.name;
-        return {
-          ReportType: reportType,
-          ReportPeriod: formatReportPeriodIso(r.report_date, reportType),
-          UtilityId: u?.id,
-          Utility: u?.acronym ?? "",
-          Currency: currency,
-          UsdExchangeRate: fxRate,
-          ...dls,
-        };
-      })
+      const dls = inputDefs
+        .filter((dl) =>
+          entries.some(
+            (l) => l.measure_def_id === dl.id && l.report_period_id === r.id,
+          ),
+        )
+        .reduce(
+          (acc, dl) => {
+            const v = entries.find(
+              (l) =>
+                l.measure_def_id === dl.id && l.report_period_id === r.id,
+            );
+            const rawValue = resolveEntryValue(
+              v,
+              dataTypeNameById.get(dl.id) ?? null,
+              itemsById,
+            );
+            const numericValue =
+              typeof rawValue === "number" ? rawValue : null;
+            const label = FINANCIAL_COLUMN_LABELS[dl.name] ?? dl.name;
+            const factor = multiplierFactor(v?.multiplier);
+            if (numericValue != null && v) acc.mults.add(v.multiplier);
+            return {
+              ...acc,
+              cols: {
+                ...acc.cols,
+                [label]: numericValue,
+                [`${label} USD`]:
+                  numericValue != null
+                    ? (numericValue * factor) / fxRate
+                    : null,
+              },
+            };
+          },
+          { cols: {} as Record<string, unknown>, mults: new Set<string>() },
+        );
+      const reportType = findItem(r.report_type_id)?.name;
+      return {
+        ReportType: reportType,
+        ReportPeriod: formatReportPeriodIso(r.report_date, reportType),
+        UtilityId: r.utility_id,
+        Utility: u?.acronym ?? "",
+        Currency: currency,
+        UsdExchangeRate: fxRate,
+        Multiplier: rollUpMultiplier(dls.mults),
+        // legacy spelling kept as an alias for models keyed on "Multipler"
+        Multipler: rollUpMultiplier(dls.mults),
+        ...dls.cols,
+      };
+    })
       .sort((a, b) => String(a.Utility).localeCompare(String(b.Utility))),
   );
 }

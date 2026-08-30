@@ -1,5 +1,5 @@
 import { db } from "@/db/connection";
-import { units } from "@/db/schema/utility";
+import { units, powerStations } from "@/db/schema/utility";
 import { managedListItems } from "@/db/schema/managedLists";
 import { user } from "@/db/schema/auth-schema";
 import { eq, asc } from "drizzle-orm";
@@ -22,6 +22,13 @@ export async function GET(req: Request) {
     .from(managedListItems)
     .where(eq(managedListItems.is_active, true));
 
+  // Units carry a nullable power_station_id; when it is absent, derive it from
+  // the unit's service area (a power station serves a single service area).
+  const allPowerStations = await db.select().from(powerStations);
+  const powerStationIdByServiceArea = new Map(
+    allPowerStations.map((ps) => [ps.service_area_id, ps.id]),
+  );
+
   const parentById = buildParentMap(allManagedItems);
 
   const users = await db.select({ id: user.id, name: user.name }).from(user);
@@ -36,7 +43,10 @@ export async function GET(req: Request) {
     resources.map((gen) => ({
       "Utility ID": gen.utility_id,
       "Service Area ID": gen.service_area_id,
-      "Power Station ID": gen.power_station_id ?? null,
+      "Power Station ID":
+        gen.power_station_id ??
+        powerStationIdByServiceArea.get(gen.service_area_id) ??
+        null,
       "Generator ID": gen.id,
       "Generator Name": gen.name,
       "Energy Provider": findItem(gen.provider_id)?.name,

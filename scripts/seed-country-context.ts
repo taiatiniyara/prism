@@ -38,6 +38,7 @@ type ParsedRow = {
   measure_def_id: number | null;
   period_year: number | null;
   value: string | null;
+  no_data_reason: string | null;
   source_date: Date | null;
   source_doc: string | null;
   source_url: string | null;
@@ -135,6 +136,10 @@ async function main() {
     const name = cellStr(cell.value);
     if (name) col[name.toLowerCase()] = c;
   });
+  // "measure_id" is the user-facing header for the metric; it maps to the DB column
+  // measure_def_id. Accept either.
+  if (col["measure_id"] != null && col["measure_def_id"] == null)
+    col["measure_def_id"] = col["measure_id"];
   const need = ["country_id", "measure_def_id", "period_year", "value"];
   for (const h of need)
     if (!(h in col)) throw new Error(`missing required column "${h}" in header row`);
@@ -158,6 +163,7 @@ async function main() {
       measure_def_id: cellNum(get("measure_def_id")) as number | null,
       period_year: cellNum(get("period_year")) as number | null,
       value: cellStr(get("value")),
+      no_data_reason: cellStr(get("no_data_reason"))?.toLowerCase() ?? null,
       source_date: cellDate(get("source_date")),
       source_doc: cellStr(get("source_doc")),
       source_url: cellStr(get("source_url")),
@@ -182,8 +188,24 @@ async function main() {
       );
     if (r.period_year == null || Number.isNaN(r.period_year))
       problems.push("period_year missing/non-numeric");
-    if (r.value == null) problems.push("value missing");
-    else if (r.measure_def_id != null && optionIdsByMeasure.has(r.measure_def_id)) {
+    // availability axis: a row carries a value XOR no_data_reason=not_available
+    if (r.no_data_reason != null && r.no_data_reason !== "not_available")
+      problems.push(
+        `no_data_reason "${r.no_data_reason}" invalid — use "not_available" or leave blank`,
+      );
+    const hasValue = r.value != null;
+    const hasReason = r.no_data_reason === "not_available";
+    if (hasValue && hasReason)
+      problems.push(
+        "row has BOTH a value and no_data_reason=not_available — use one or the other",
+      );
+    else if (!hasValue && !hasReason)
+      problems.push("row has neither a value nor no_data_reason=not_available");
+    else if (
+      hasValue &&
+      r.measure_def_id != null &&
+      optionIdsByMeasure.has(r.measure_def_id)
+    ) {
       const opts = optionIdsByMeasure.get(r.measure_def_id)!;
       const v = Number(r.value);
       if (!Number.isInteger(v) || !opts.has(v))
@@ -222,6 +244,7 @@ async function main() {
         measure_def_id: r.measure_def_id!,
         period_year: r.period_year!,
         value: r.value,
+        no_data_reason: r.no_data_reason as "not_available" | null,
         source_date: r.source_date,
         source_doc: r.source_doc,
         source_url: r.source_url,
@@ -236,6 +259,7 @@ async function main() {
         ],
         set: {
           value: r.value,
+          no_data_reason: r.no_data_reason as "not_available" | null,
           source_date: r.source_date,
           source_doc: r.source_doc,
           source_url: r.source_url,

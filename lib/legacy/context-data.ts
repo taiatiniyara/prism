@@ -17,6 +17,9 @@ export type ResolvedContextRow = {
   // country-keyed routes (Islands, Land Area) pick the latest figure deterministically.
   period_year: number;
   value: string | number | boolean | null;
+  // 'not_available' when the BMO stated the figure is unavailable for that year
+  // (value is then null); null otherwise. Answer-availability axis, mirrors data_entries.
+  no_data_reason: "not_available" | null;
 };
 
 /**
@@ -55,7 +58,8 @@ export async function getResolvedContextRows(
 
   const orgs = await db.select().from(organisations);
   const countryByUtil = new Map(orgs.map((o) => [o.id, o.country_id]));
-  const fyeByUtil = new Map(orgs.map((o) => [o.id, o.financial_year_end]));
+  const fyeMonthByUtil = new Map(orgs.map((o) => [o.id, o.fye_month]));
+  const fyeDayByUtil = new Map(orgs.map((o) => [o.id, o.fye_day]));
 
   const items = await db.select().from(managedListItems);
   const typeNameById = new Map(items.map((i) => [i.id, i.name]));
@@ -76,12 +80,19 @@ export async function getResolvedContextRows(
   };
 
   // index country_context by (country_id, measure_def_id) -> period_year desc
-  const byKey = new Map<string, { period_year: number; value: string | null }[]>();
+  const byKey = new Map<
+    string,
+    { period_year: number; value: string | null; no_data_reason: "not_available" | null }[]
+  >();
   for (const r of ctx) {
     if (!metricIds.has(r.measure_def_id)) continue;
     const k = `${r.country_id}|${r.measure_def_id}`;
     const arr = byKey.get(k) ?? [];
-    arr.push({ period_year: r.period_year, value: r.value });
+    arr.push({
+      period_year: r.period_year,
+      value: r.value,
+      no_data_reason: r.no_data_reason,
+    });
     byKey.set(k, arr);
   }
   for (const arr of byKey.values())
@@ -94,7 +105,8 @@ export async function getResolvedContextRows(
     const fy = fiscalYearForReportPeriod(
       rp.report_date,
       typeNameById.get(rp.report_type_id),
-      fyeByUtil.get(rp.utility_id),
+      fyeMonthByUtil.get(rp.utility_id),
+      fyeDayByUtil.get(rp.utility_id),
     );
     if (fy == null) continue;
     for (const d of defs) {
@@ -109,7 +121,8 @@ export async function getResolvedContextRows(
         measure_def_id: d.id,
         measureName: d.name,
         period_year: pick.period_year,
-        value: resolveValue(d.id, pick.value),
+        value: pick.no_data_reason ? null : resolveValue(d.id, pick.value),
+        no_data_reason: pick.no_data_reason,
       });
     }
   }
