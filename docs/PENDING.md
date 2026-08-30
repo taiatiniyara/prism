@@ -19,7 +19,7 @@ A row is *pending* if it has not cleared all the gates that apply to it. Docs-on
 - **Only one uncommitted file:** **#3's `calculator-engine-spec.md`** (active WIP, left for #3).
 - **Open PRs (2026-08-31): only `#77` human left** (parked by design) — **`#104` MERGED** (Eugene's data-availability amendment, fully reviewed). Dependabot PRs are **in active flux — Eugene's engineer is working them** (count changing; not pinned). Vuln triage complete/accepted.
 - **Cleared this session:** #8 schema-convention ruling (`7c01627`); #12 D2 API_KEY split merged (`167f080`); both sentinel-deletion confirmations (#2 views, #10 access); safe Dependabot subset merged.
-- **Awaiting Eugene — 2:** #2 medallion sample extract; **FYE for 3 placeholder utilities** (Vanuatu/Pitcairn/NZ — forward onboarding pre-req, no live impact today). *(#10 default-plan + entitlements ✅ RULED 2026-08-31 — see §3; #4 country-context history ✅ DONE 2026-08-25; subgroup-221 RULED 2026-08-20.)*
+- **Awaiting Eugene — 2:** #2 **tariff extract** (⚠ NOT the medallion reload — that's ✅ DONE, Load #15/PR #107, 20,407 shells, variance→0; only the **tariff** Standard/Lifeline migration still needs Eugene's tariff extract); **FYE for 3 placeholder utilities** (Vanuatu/Pitcairn/NZ — forward pre-req, no live impact). *(#10 default-plan+entitlements ✅ RULED 2026-08-31; #4 country-context ✅ DONE 2026-08-25; subgroup-221 RULED 2026-08-20.)*
 - **Applied DB changes today** (informational, all backed up): sentinel-chain deletion, `measure_definitions.description` drop, managed-lists vocab rename — plus the follow-on `units.category_id`/`type_id` DROP still owed by #2.
 
 ---
@@ -77,7 +77,7 @@ Legend: ✅ nothing pending · 📝 uncommitted · ⬆️ committed-not-pushed �
 | # | Stream | Code pending | DB apply pending | Waiting on | Verdict |
 |---|--------|--------------|------------------|-----------|---------|
 | 1 | Project mgt | — | — | — | ✅ |
-| 2 | Medallion migration | **context-fed pass** (subgroup-221 ruling): parts 1–2 **done** (`8d80cc6` — `is_context_fed` col + 16 flagged, applied to dev); remaining parts 3–4 = **loader extract guard** + **medallion §1.5 absolute-exclusion rule** | data **reload** via `migrate.ts` + `input_dl_def_mappings` regen; `is_context_fed` SQL **⚠ per-env run pending for prod** | ⏳ Eugene sample extract; context-fed pass parts 3–4 sequenced with next migration (non-blocking) | ⏳ paused |
+| 2 | Medallion migration | **data_entries reload ✅ DONE** (Load #15/PR #107, 20,407 shells, variance→0); remaining = **tariff** Standard/Lifeline migration (awaits Eugene tariff extract) + context-fed pass parts 3–4 (loader guard + medallion §1.5 rule) | `is_context_fed` SQL **⚠ per-env for prod** (see runbook) | ⏳ Eugene **tariff** extract; context-fed parts 3–4 non-blocking | 🟢 active |
 | 3 | Calculator engine | — (design + mockup approved) | schema tracer-bullets deferred | ⏳ #2 landing | ⏳ gated |
 | 4 | Schema for AI | — (energy-dim rename #68; clearing last spec WIP) | — | ✅ **RATIFIED 2026-07-28** (derive-not-store: technology leaf, category/asset-class derived) — hold lifted | ✅ |
 | 5 | BSC Builder | — (PR #35 merged; worktree clean) | — | ⏳ #2 `kpi_target` for Input-tracked targets (deferred) | ✅ / ⏳ deferred |
@@ -92,7 +92,7 @@ Legend: ✅ nothing pending · 📝 uncommitted · ⬆️ committed-not-pushed �
 
 **Net pending right now** (genuinely open items only):
 - **Human PRs:** none actionable — `#104` merged; only `#77` remains (parked by design). Dependabot in active flux (Eugene's engineer working them).
-- **Awaiting Eugene (2):** #2 medallion extract · FYE for 3 placeholder utilities (forward, no live impact today). *(#10 default-plan + entitlements ✅ ruled 2026-08-31.)*
+- **Awaiting Eugene (2):** #2 **tariff extract** (medallion reload ✅ done via PR #107; only tariff Standard/Lifeline remains) · FYE for 3 placeholder utilities (forward, no live impact). *(#10 ✅ ruled 2026-08-31.)*
 - **In-flight / owed:** #2 context-fed pass parts 3–4 (non-blocking) · #12 P2/D2 operator steps (env/Power BI/rotate) · #11 country-context form (USER-IMPACT r16) · a branch-triage pass over the ~15 un-PR'd `claude/*` branches.
 - **Prod apply debt:** the 🚀 **Cutover Runbook** below (idempotent SQL + seed + `verify-relevance` gate, all live on dev, per-env owed at prod migration).
 - **Deferred (nothing to queue today):** the unified relevance surface (`docs/measure-relevance-spec.md`) rides #2's ONE combined temporal-spans reimport migration (+ unit-activation stints, `btree_gist`).
@@ -177,7 +177,7 @@ Per [`USER-IMPACT.md`](USER-IMPACT.md) (new protocol, `5c2959e`, Eugene-directed
 
 | Stream | Decision needed | Blocks |
 |--------|-----------------|--------|
-| #2 | provide the real **sample data extract** | the medallion data reload (last step of the migration) |
+| #2 | provide the **tariff extract** (Standard/Lifeline) — the medallion `data_entries` reload is ✅ DONE (Load #15/PR #107); tariff is the remaining migration slice | the tariff migration pass |
 | ~~#10~~ | ✅ **RULED 2026-08-31 (Eugene):** **Default plan** = points to **Power BI's homepage** — a **placeholder**, DEV updates the specific PBI-homepage name/URL once it's built. **Member entitlements** = **electricity-only for now** (exclude non-electricity sectors); **PPA membership-type entitlements already provided** (use those). ⚠ **Correction: there is NO free `member` plan** — the earlier "free member plan" framing was wrong. → relayed to #10; unblocks their build. | *(cleared)* |
 | BMO/Eugene | **Set `financial_year_end` for 3 placeholder utilities** — **Vanuatu (46)**, **Pitcairn (51)**, **New Zealand (52)** — *before* they onboard any Financial-Year data. Forward-looking, **no live impact today** (all 3 carry 0 report periods; the other 10 null-FYE orgs are stray test rows). Without an FYE, FY-placement silently falls back to `report_date`-as-FY-end and mislabels their fiscal year (#2, verified 2026-08-28). Owner = whoever onboards them. | correct FY labelling if/when those 3 submit FY data |
 | #2/#4 | **PNG Power (util 20) missing Lubrication-Oil shells for its Natural Gas units** — verifier-surfaced candidate; assess add-or-exclude | shell-audit completeness for util 20 |
