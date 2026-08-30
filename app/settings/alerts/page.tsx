@@ -10,7 +10,6 @@ export default function AlertsPage() {
   const [cooldown, setCooldown] = useState(60);
 
   const fetchData = useCallback(async () => {
-    setLoading(true);
     try {
       const res = await fetch("/api/alerts");
       if (!res.ok) throw new Error("Failed");
@@ -20,7 +19,7 @@ export default function AlertsPage() {
     }
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => { void fetchData(); }, [fetchData]);
 
   const createRule = async () => {
     await fetch("/api/alerts", {

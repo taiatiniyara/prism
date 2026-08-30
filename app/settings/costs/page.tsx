@@ -20,7 +20,11 @@ export default function CostsPage() {
     }
   }, [days]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    void (async () => {
+      await fetchData();
+    })();
+  }, [fetchData]);
 
   const formatCost = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 

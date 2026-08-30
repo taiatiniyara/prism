@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo, useEffect, useCallback } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { Heading } from "../heading";
 import { cn } from "@/lib/utils";
 import { Input } from "../ui/input";
@@ -110,6 +110,12 @@ export default function DataTable<T extends DataTableRecord>(
     Record<string, ColumnFilter>
   >({});
   const [rows, setRows] = useState<T[]>(data);
+  const [prevData, setPrevData] = useState(data);
+
+  if (prevData !== data) {
+    setPrevData(data);
+    setRows(data);
+  }
   const [quickFilterValues, setQuickFilterValues] = useState<
     Record<string, string>
   >({});
@@ -161,10 +167,6 @@ export default function DataTable<T extends DataTableRecord>(
 
     return orderedColumns;
   }, [normalizedColumns, quickFilterColumns]);
-
-  useEffect(() => {
-    setRows(data);
-  }, [data]);
 
   function handleSort(column: keyof T) {
     if (sortColumn === column) {

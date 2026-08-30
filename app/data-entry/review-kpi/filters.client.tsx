@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -68,10 +68,12 @@ export default function ReviewKpiFiltersClient({
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [localContext, setLocalContext] = useState(context);
+  const [prevContext, setPrevContext] = useState(context);
 
-  useEffect(() => {
+  if (prevContext !== context) {
+    setPrevContext(context);
     setLocalContext(context);
-  }, [context]);
+  }
 
   const filteredKpiSubcategories = useMemo(() => {
     if (localContext.kpiCategoryId == null) {

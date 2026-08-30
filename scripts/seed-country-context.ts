@@ -26,7 +26,7 @@ import { db } from "@/db/connection";
 import { countries, countryContext } from "@/db/schema/country";
 import { measureDefinitions } from "@/db/schema/dataEntry";
 import { managedLists, managedListItems } from "@/db/schema/managedLists";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, sql } from "drizzle-orm";
 
 const COUNTRY_CONTEXT_SUBGROUP_ID = 221;
 const SHEET = "country_context";

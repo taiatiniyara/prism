@@ -43,7 +43,9 @@ export default function AuditLogsPage() {
   }, [actionFilter, actorFilter, page]);
 
   useEffect(() => {
-    fetchEvents();
+    void (async () => {
+      await fetchEvents();
+    })();
   }, [fetchEvents]);
 
   const toggleExpand = (id: number) => {

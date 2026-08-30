@@ -51,7 +51,9 @@ export default function ErrorLogsPage() {
   }, [severity, source]);
 
   useEffect(() => {
-    fetchErrors();
+    void (async () => {
+      await fetchErrors();
+    })();
   }, [fetchErrors]);
 
   const toggleExpand = (id: number) => {

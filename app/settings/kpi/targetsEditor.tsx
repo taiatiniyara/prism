@@ -114,29 +114,6 @@ export default function KpiTargetsEditor(props: {
     [props.kpis, selectedCategoryId, selectedSubcategoryId],
   );
 
-  useEffect(() => {
-    if (
-      selectedSubcategoryId != null &&
-      !filteredSubcategories.some((sub) => sub.id === selectedSubcategoryId)
-    ) {
-      setSelectedSubcategoryId(null);
-    }
-  }, [selectedSubcategoryId, filteredSubcategories]);
-
-  useEffect(() => {
-    const selectedStillVisible = filteredKpis.some(
-      (kpi) => String(kpi.id) === selectedKpiId,
-    );
-
-    if (selectedStillVisible) {
-      return;
-    }
-
-    const fallback = filteredKpis[0];
-    setSelectedKpiId(fallback ? String(fallback.id) : "");
-    setRows(parseTargetRows(fallback, props.utilityId));
-  }, [filteredKpis, props.utilityId, selectedKpiId]);
-
   const selectedKpi = useMemo(
     () => props.kpis.find((kpi) => String(kpi.id) === selectedKpiId),
     [props.kpis, selectedKpiId],
@@ -145,6 +122,33 @@ export default function KpiTargetsEditor(props: {
   const [rows, setRows] = useState<TargetRow[]>(
     parseTargetRows(selectedKpi, props.utilityId),
   );
+
+  useEffect(() => {
+    void (async () => {
+      if (
+        selectedSubcategoryId != null &&
+        !filteredSubcategories.some((sub) => sub.id === selectedSubcategoryId)
+      ) {
+        setSelectedSubcategoryId(null);
+      }
+    })();
+  }, [selectedSubcategoryId, filteredSubcategories]);
+
+  useEffect(() => {
+    void (async () => {
+      const selectedStillVisible = filteredKpis.some(
+        (kpi) => String(kpi.id) === selectedKpiId,
+      );
+
+      if (selectedStillVisible) {
+        return;
+      }
+
+      const fallback = filteredKpis[0];
+      setSelectedKpiId(fallback ? String(fallback.id) : "");
+      setRows(parseTargetRows(fallback, props.utilityId));
+    })();
+  }, [filteredKpis, props.utilityId, selectedKpiId]);
 
   const onCategoryChange = (value: string) => {
     const nextCategoryId = value === "all" ? null : Number(value);
