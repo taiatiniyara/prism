@@ -1,10 +1,12 @@
 import {
   boolean,
+  check,
   index,
   integer,
   jsonb,
   pgTable,
   serial,
+  smallint,
   text,
   timestamp,
   varchar,
@@ -54,7 +56,11 @@ export const organisations = pgTable(
     services_provided_id: integer("services_provided_id").references(
       () => managedListItems.id,
     ),
-    financial_year_end: varchar("financial_year_end", { length: 255 }),
+    // Canonical per-utility financial-year-end declaration, set at onboarding. NULL → the
+    // fiscal-year helper falls back to report_date. (Replaced the retired financial_year_end
+    // text field — #2 FYE cleanup, Eugene-approved 2026-08-30.)
+    fye_month: smallint("fye_month"),
+    fye_day: smallint("fye_day"),
     is_mth_reports_relevant_month: boolean("is_mth_report_relevant")
       .notNull()
       .default(false),
@@ -63,6 +69,14 @@ export const organisations = pgTable(
   },
   (table) => [
     index("organisation_idx").on(table.country_id, table.id, table.name),
+    check(
+      "chk_org_fye_month",
+      sql`${table.fye_month} IS NULL OR ${table.fye_month} BETWEEN 1 AND 12`,
+    ),
+    check(
+      "chk_org_fye_day",
+      sql`${table.fye_day} IS NULL OR ${table.fye_day} BETWEEN 1 AND 31`,
+    ),
   ],
 );
 export type Organisation = typeof organisations.$inferSelect & {

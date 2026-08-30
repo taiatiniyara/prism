@@ -1,0 +1,1 @@
+{"nodes": [{"id": "scorecard_client", "label": "Scorecard Client (fetchScorecard, saveScorecardDraft, saveScorecardConfig)", "file_type": "code", "source_file": "app/data-entry/balanced-scorecard/client.ts", "source_location": null, "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}

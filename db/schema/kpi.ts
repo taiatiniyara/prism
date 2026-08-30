@@ -1,19 +1,28 @@
+import { sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   index,
   integer,
   json,
+  numeric,
   pgTable,
   serial,
   text,
   timestamp,
+  uniqueIndex,
   uuid,
   varchar,
 } from "drizzle-orm/pg-core";
-import { dataEntries, DefinitionStatus, FormulaInput } from "./dataEntry";
+import {
+  dataEntries,
+  DefinitionStatus,
+  FormulaInput,
+} from "./dataEntry";
 import { reportPeriods } from "./reportPeriods";
 import { managedListItems } from "./managedLists";
-import { organisations } from "./utility";
+import { organisations, powerStations, serviceAreas, units } from "./utility";
+import { countries, subRegions } from "./country";
 import { user } from "./auth-schema";
 
 export interface KpiCalculationScopeSnapshot {
@@ -232,4 +241,118 @@ export const bsc = pgTable("bsc", {
 });
 export type Bsc = typeof bsc.$inferSelect;
 export type NewBsc = typeof bsc.$inferInsert;
+
+// KPI formula bindings live in ./formulaBinding (formula_binding / formula_binding_dimension).
+
+// Computed KPI actuals — the deterministic result of running a KPI formula
+// over data_entries at a given grain/address (region → subregion → country →
+// utility → area → station → unit). Value XOR no_data_reason (never both).
+export const kpiActual = pgTable(
+  "kpi_actual",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    kpi_def_id: integer("kpi_def_id")
+      .notNull()
+      .references(() => kpiDefinitions.id),
+    period_id: integer("period_id").notNull(),
+    utility_id: integer("utility_id").references(() => organisations.id),
+    country_id: integer("country_id").references(() => countries.id),
+    subregion_id: integer("subregion_id").references(() => subRegions.id),
+    region: text("region").notNull(),
+    service_area_id: integer("service_area_id").references(
+      () => serviceAreas.id,
+    ),
+    power_station_id: integer("power_station_id").references(
+      () => powerStations.id,
+    ),
+    unit_id: integer("unit_id").references(() => units.id),
+    provider_id: integer("provider_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    category_id: integer("category_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    technology_id: integer("technology_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    asset_class_id: integer("asset_class_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    customer_type_id: integer("customer_type_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    payment_mode_id: integer("payment_mode_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    consumption_band_id: integer("consumption_band_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    division_id: integer("division_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    gender_id: integer("gender_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    utility_function_id: integer("utility_function_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    value: numeric("value"),
+    no_data_reason: varchar("no_data_reason", { length: 32 }),
+    computed_at: timestamp("computed_at"),
+    formula_version: varchar("formula_version"),
+    owning_org_id: integer("owning_org_id").references(() => organisations.id),
+    updated_at: timestamp("updated_at"),
+    // Coarse, derived grain label — the finest address level populated.
+    grain_level: text("grain_level").generatedAlwaysAs(sql`
+CASE
+    WHEN (unit_id IS NOT NULL) THEN 'unit'::text
+    WHEN (power_station_id IS NOT NULL) THEN 'station'::text
+    WHEN (service_area_id IS NOT NULL) THEN 'area'::text
+    WHEN (utility_id IS NOT NULL) THEN 'utility'::text
+    WHEN (country_id IS NOT NULL) THEN 'country'::text
+    WHEN (subregion_id IS NOT NULL) THEN 'subregion'::text
+    ELSE 'region'::text
+END`),
+  },
+  (table) => [
+    index("ix_ka_grain").on(table.grain_level),
+    index("ix_ka_kpi_period").on(table.kpi_def_id, table.period_id),
+    // Unique physical address: kpi + period + full grain + all ten dimensions.
+    uniqueIndex("uq_ka_address").on(
+      table.kpi_def_id,
+      table.period_id,
+      table.utility_id,
+      table.country_id,
+      table.subregion_id,
+      table.region,
+      table.service_area_id,
+      table.power_station_id,
+      table.unit_id,
+      table.provider_id,
+      table.category_id,
+      table.technology_id,
+      table.asset_class_id,
+      table.customer_type_id,
+      table.payment_mode_id,
+      table.consumption_band_id,
+      table.division_id,
+      table.gender_id,
+      table.utility_function_id,
+    ),
+    check(
+      "chk_ka_grain_level",
+      sql`grain_level = ANY (ARRAY['unit'::text, 'station'::text, 'area'::text, 'utility'::text, 'country'::text, 'subregion'::text, 'region'::text])`,
+    ),
+    check(
+      "chk_ka_no_data_reason",
+      sql`(no_data_reason IS NULL) OR ((no_data_reason)::text = ANY ((ARRAY['not_available'::character varying, 'asserted_not_applicable'::character varying])::text[]))`,
+    ),
+    check(
+      "chk_ka_value_xor_nodata",
+      sql`(((value IS NOT NULL))::integer + ((no_data_reason IS NOT NULL))::integer) <= 1`,
+    ),
+  ],
+);
+export type KpiActual = typeof kpiActual.$inferSelect;
+export type NewKpiActual = typeof kpiActual.$inferInsert;
 

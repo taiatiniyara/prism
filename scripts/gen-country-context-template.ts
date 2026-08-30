@@ -6,7 +6,7 @@
  * Sheets:
  *   country_context    — the data sheet (headers only) — FILL THIS ONE
  *   instructions        — how to fill each column, with worked examples
- *   measures (lookup)   — measure_def_id -> name (the 16 Country Context measures, subgroup 221)
+ *   measures (lookup)   — measure_id -> name (the 16 Country Context measures, subgroup 221)
  *   countries (lookup)  — country_id (UN M49) -> name
  */
 import ExcelJS from "exceljs";
@@ -21,9 +21,10 @@ const COUNTRY_CONTEXT_SUBGROUP_ID = 221;
 const HEADERS = [
   "mig_id",
   "country_id",
-  "measure_def_id",
+  "measure_id",
   "period_year",
   "value",
+  "no_data_reason",
   "source_date",
   "source_doc",
   "source_url",
@@ -77,9 +78,10 @@ async function main() {
   const cols: [string, string][] = [
     ["mig_id", "Your own row reference for tracing (e.g. cc-001). Optional, not stored."],
     ["country_id", "REQUIRED. UN M49 code from the 'countries (lookup)' tab (e.g. Fiji = 242)."],
-    ["measure_def_id", "REQUIRED. The metric id from the 'measures (lookup)' tab (1..16, e.g. Population = 3)."],
+    ["measure_id", "REQUIRED. The metric id from the 'measures (lookup)' tab (1..16, e.g. Population = 3)."],
     ["period_year", "REQUIRED. The year the figure is FOR, e.g. 2024. One row per year — add a new row for each year of history."],
-    ["value", "REQUIRED. The figure as text (e.g. 935000 or 12.4). For the two OPTION measures (15 Fuel Supply Access, 16 Fuel Pricing Regulation) put the option_id from the 'options (lookup)' tab, NOT free text."],
+    ["value", "The figure as text (e.g. 935000 or 12.4). For the two OPTION measures (15 Fuel Supply Access, 16 Fuel Pricing Regulation) put the option_id from the 'options (lookup)' tab, NOT free text. Leave BLANK when the figure isn't available — instead set no_data_reason."],
+    ["no_data_reason", "Leave blank normally. If the figure is NOT AVAILABLE for that country/metric/year, leave 'value' blank and put not_available here. A row has EITHER a value OR no_data_reason=not_available, never both."],
     ["source_date", "Optional. Date of the source figure (e.g. 2024-06-30)."],
     ["source_doc", "Optional. Where it came from (e.g. National Statistics Office 2024 report)."],
     ["source_url", "Optional. Link to the source."],
@@ -94,15 +96,16 @@ async function main() {
   const c0 = allCountries.find((c) => c.name === "Fiji")?.id ?? allCountries[0]?.id ?? 242;
   const pop = measures.find((m) => m.name === "Population")?.id ?? 3;
   const gdp = measures.find((m) => m.name === "GDP Per Capita")?.id ?? 9;
-  wi.addRow(["cc-001", c0, pop, 2023, "920000", "2023-06-30", "Stats Office", "", ""]);
-  wi.addRow(["cc-002", c0, pop, 2024, "935000", "2024-06-30", "Stats Office", "", ""]);
-  wi.addRow(["cc-003", c0, gdp, 2024, "5600", "2024-06-30", "Stats Office", "", ""]);
+  wi.addRow(["cc-001", c0, pop, 2023, "920000", "", "2023-06-30", "Stats Office", "", ""]);
+  wi.addRow(["cc-002", c0, pop, 2024, "935000", "", "2024-06-30", "Stats Office", "", ""]);
+  wi.addRow(["cc-003", c0, gdp, 2024, "5600", "", "2024-06-30", "Stats Office", "", ""]);
+  wi.addRow(["cc-004", c0, gdp, 2022, "", "not_available", "", "", "", ""]);
   wi.getColumn(1).width = 16;
   wi.getColumn(2).width = 60;
 
   // 3) measures lookup
   const wm = wb.addWorksheet("measures (lookup)");
-  wm.addRow(["measure_def_id", "name"]).font = { bold: true };
+  wm.addRow(["measure_id", "name"]).font = { bold: true };
   for (const m of measures) wm.addRow([m.id, m.name]);
   wm.getColumn(1).width = 16;
   wm.getColumn(2).width = 34;
@@ -132,7 +135,7 @@ async function main() {
     .where(eq(measureDefinitions.measures_subgroup_id, COUNTRY_CONTEXT_SUBGROUP_ID))
     .orderBy(asc(measureDefinitions.id));
   const wo = wb.addWorksheet("options (lookup)");
-  wo.addRow(["measure_def_id", "measure_name", "option_id (put in value)", "option_label"]).font =
+  wo.addRow(["measure_id", "measure_name", "option_id (put in value)", "option_label"]).font =
     { bold: true };
   for (const m of optionMeasures) {
     if (m.dataType !== "option") continue;

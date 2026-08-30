@@ -6,6 +6,7 @@ export * from "./country";
 export * from "./custom-kpi-requests";
 export * from "./dataEntry";
 export * from "./devValidationBuilder";
+export * from "./formulaBinding";
 export * from "./error-log";
 export * from "./governance";
 export * from "./kpi";

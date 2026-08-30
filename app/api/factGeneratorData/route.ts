@@ -1,9 +1,9 @@
 import { db } from "@/db/connection";
 import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
 import { units } from "@/db/schema/utility";
-import { reportPeriods } from "@/db/schema/reportPeriods";
+import { reportPeriods, publishedPeriodCondition } from "@/db/schema/reportPeriods";
 import { managedListItems } from "@/db/schema/managedLists";
-import { eq, and, isNotNull, inArray } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
 import { formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
 import {
@@ -16,7 +16,27 @@ const GENERATOR_MEASURE_NAMES = [
   "Hours in Period",
   "Electricity Generated",
   "Electricity Sent to Grid",
+  "Rated Capacity",
+  "Fuel Oil",
+  "Lubrication Oil",
+  "Equipment Planned Downtime Hours",
+  "Equipment Unplanned Downtime Hours",
 ] as const;
+
+// Power BI column labels (measure name -> semantic-model column name).
+const GENERATOR_COLUMN_LABELS: Record<string, string> = {
+  "Electricity Generated": "GEN Electricity Generated",
+  "Rated Capacity": "GEN Installed Capacity",
+  "Equipment Planned Downtime Hours": "GEN Downtime Planned Hours",
+  "Equipment Unplanned Downtime Hours": "GEN Downtime Unplanned Hours",
+  "Lubrication Oil": "Oil for Lubrication",
+};
+
+// "Fuel Oil" is split by technology in the semantic model.
+const FUEL_OIL_LABEL_BY_TECHNOLOGY: Record<string, string> = {
+  Diesel: "Fuel Oil for Diesel Generators",
+  "Heavy Fuel": "Fuel Oil for Heavy Fuel Generators",
+};
 
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
@@ -46,7 +66,7 @@ export async function GET(req: Request) {
   const rps = await db
     .select()
     .from(reportPeriods)
-    .where(isNotNull(reportPeriods.status_id));
+    .where(publishedPeriodCondition);
   const allResources = await db
     .select()
     .from(units)
@@ -124,7 +144,13 @@ export async function GET(req: Request) {
               ...genEntries.reduce(
                 (acc, e) => {
                   const def = measureDefs.find((m) => m.id === e.measure_def_id);
-                  return { [def?.name ?? ""]: valueFor(e), ...acc };
+                  if (!def) return acc;
+                  const techName = findItem(g.technology_id)?.name ?? "";
+                  const label =
+                    def.name === "Fuel Oil"
+                      ? (FUEL_OIL_LABEL_BY_TECHNOLOGY[techName] ?? def.name)
+                      : (GENERATOR_COLUMN_LABELS[def.name] ?? def.name);
+                  return { [label]: valueFor(e), ...acc };
                 },
                 {} as Record<string, unknown>,
               ),
