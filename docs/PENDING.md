@@ -19,7 +19,7 @@ A row is *pending* if it has not cleared all the gates that apply to it. Docs-on
 - **Only one uncommitted file:** **#3's `calculator-engine-spec.md`** (active WIP, left for #3).
 - **Open PRs (2026-08-31): only `#77` human left** (parked by design) — **`#104` MERGED** (Eugene's data-availability amendment, fully reviewed). Dependabot PRs are **in active flux — Eugene's engineer is working them** (count changing; not pinned). Vuln triage complete/accepted.
 - **Cleared this session:** #8 schema-convention ruling (`7c01627`); #12 D2 API_KEY split merged (`167f080`); both sentinel-deletion confirmations (#2 views, #10 access); safe Dependabot subset merged.
-- **Awaiting Eugene — 2:** #2 **tariff extract** (⚠ NOT the medallion reload — that's ✅ DONE, Load #15/PR #107, 20,407 shells, variance→0; only the **tariff** Standard/Lifeline migration still needs Eugene's tariff extract); **FYE for 3 placeholder utilities** (Vanuatu/Pitcairn/NZ — forward pre-req, no live impact). *(#10 default-plan+entitlements ✅ RULED 2026-08-31; #4 country-context ✅ DONE 2026-08-25; subgroup-221 RULED 2026-08-20.)*
+- **Awaiting Eugene — 2:** **#2 imminent full-migration run (later today)** — Eugene's data inputs: **tariff (Standard/Lifeline) + 340/342 downtime-events** extracts bundled into one run, **+ a format call for the new-org onboarding step** (JSON vs xlsx tab; no-op if the run adds no new utilities). ⚠ the general medallion reload is ✅ DONE (PR #107). **FYE for 3 placeholder utilities** (Vanuatu/Pitcairn/NZ — forward pre-req, no live impact; FYE *column mechanism* fully landed PRs #159/#162, values still owed). *(#10 ✅ RULED 2026-08-31; #4 country-context ✅ DONE.)*
 - **Applied DB changes today** (informational, all backed up): sentinel-chain deletion, `measure_definitions.description` drop, managed-lists vocab rename — plus the follow-on `units.category_id`/`type_id` DROP still owed by #2.
 
 ---
@@ -77,7 +77,7 @@ Legend: ✅ nothing pending · 📝 uncommitted · ⬆️ committed-not-pushed �
 | # | Stream | Code pending | DB apply pending | Waiting on | Verdict |
 |---|--------|--------------|------------------|-----------|---------|
 | 1 | Project mgt | — | — | — | ✅ |
-| 2 | Medallion migration | **data_entries reload ✅ DONE** (Load #15/PR #107, 20,407 shells, variance→0); remaining = **tariff** Standard/Lifeline migration (awaits Eugene tariff extract) + context-fed pass parts 3–4 (loader guard + medallion §1.5 rule) | `is_context_fed` SQL **⚠ per-env for prod** (see runbook) | ⏳ Eugene **tariff** extract; context-fed parts 3–4 non-blocking | 🟢 active |
+| 2 | Medallion migration | **data_entries reload ✅ DONE** (Load #15/PR #107, 20,407 shells, variance→0). Remaining: **tariff + 340/342 downtime** migration (one imminent run today, awaits Eugene's extracts) + **new-org onboarding "step 0"** (defining; awaits Eugene's JSON-vs-xlsx format call) + context-fed pass parts 3–4 | per runbook (`is_context_fed` etc.) | ⏳ Eugene **tariff+340/342 extracts + new-org format** | 🟢 active |
 | 3 | Calculator engine | — (design + mockup approved) | schema tracer-bullets deferred | ⏳ #2 landing | ⏳ gated |
 | 4 | Schema for AI | — (energy-dim rename #68; clearing last spec WIP) | — | ✅ **RATIFIED 2026-07-28** (derive-not-store: technology leaf, category/asset-class derived) — hold lifted | ✅ |
 | 5 | BSC Builder | — (PR #35 merged; worktree clean) | — | ⏳ #2 `kpi_target` for Input-tracked targets (deferred) | ✅ / ⏳ deferred |
@@ -92,7 +92,7 @@ Legend: ✅ nothing pending · 📝 uncommitted · ⬆️ committed-not-pushed �
 
 **Net pending right now** (genuinely open items only):
 - **Human PRs:** none actionable — `#104` merged; only `#77` remains (parked by design). Dependabot in active flux (Eugene's engineer working them).
-- **Awaiting Eugene (2):** #2 **tariff extract** (medallion reload ✅ done via PR #107; only tariff Standard/Lifeline remains) · FYE for 3 placeholder utilities (forward, no live impact). *(#10 ✅ ruled 2026-08-31.)*
+- **Awaiting Eugene (2):** **#2 imminent full-migration run today** (tariff + 340/342 extracts + new-org onboarding format JSON-vs-xlsx; medallion reload already ✅ done) · FYE for 3 placeholder utilities (forward). *(#10 ✅ ruled 2026-08-31.)*
 - **In-flight / owed:** #2 context-fed pass parts 3–4 (non-blocking) · #12 P2/D2 operator steps (env/Power BI/rotate) · #11 country-context form (USER-IMPACT r16) · a branch-triage pass over the ~15 un-PR'd `claude/*` branches.
 - **Prod apply debt:** the 🚀 **Cutover Runbook** below (idempotent SQL + seed + `verify-relevance` gate, all live on dev, per-env owed at prod migration).
 - **Deferred (nothing to queue today):** the unified relevance surface (`docs/measure-relevance-spec.md`) rides #2's ONE combined temporal-spans reimport migration (+ unit-activation stints, `btree_gist`).
@@ -107,6 +107,7 @@ Legend: ✅ nothing pending · 📝 uncommitted · ⬆️ committed-not-pushed �
 > **📌 POLICY (Eugene via #1, effective 2026-08-31, no exceptions): git FIRST, then DB.** Code/migration must be **committed AND pushed** (ideally merged to main via PR) **before** any DDL/DML is applied to a real DB (dev or prod). Order is always (1) git, then (2) apply. Keeps the DB from drifting ahead of code. Being added to durable project instructions. *(Historically some entries below were applied ahead of their PR; that pattern is now disallowed going forward.)*
 
 Direct DML/DDL on the shared **dev** DB with no commit/PR (or applied ahead of a PR). Recorded so no session re-runs them and everyone knows the DB state:
+- **2026-08-31 (#2) — FYE cleanup fully landed** (PRs #159/#162): `report_periods.report_date` aligned to the canonical `fye_month`/`fye_day`; **text `financial_year_end` column DROPPED** (superseded by fye_month/day). Closes the FYE-column mechanism (the 3-placeholder-utilities item is separate — it's about *values*, still owed). Not Awaiting-Eugene.
 - **2026-08-26 (#3) — `formula_binding` + `formula_binding_dimension` tables added** (PR #135, applied to dev): durable 10-dim binding store behind the new unified KPI/calculated-measure formula builder (additive — new tab, legacy builders untouched). Prod-apply path TBD (see runbook step 12).
 - **2026-08-26 (#4) — `kpi_actual` shared table added** (`scripts/sql/2026-08-26-kpi-actual.sql`, applied to dev): ratified computed-KPI store (#8 grain + #3 write-path, `docs/kpi-actual-ddl-design.md`), early-landed for Eugene's calculator push. Additive/idempotent-guarded. Deferrals: `period_id` bare int (FK later), `owning_org_id` present but RLS policy not yet applied.
 - **2026-08-26 (#4) — Network Downtime Events 340/342 REACTIVATED** (`310584e`, is_active=true; Eugene reversal relayed via #2). Equipment events 330/332 + transmission 440 stay off (440 reactivates on sponsor demand). The 2026-08-25 deactivate script was edited to 330/332/440-only; new reactivate script added (runbook 5/5a).
@@ -177,7 +178,8 @@ Per [`USER-IMPACT.md`](USER-IMPACT.md) (new protocol, `5c2959e`, Eugene-directed
 
 | Stream | Decision needed | Blocks |
 |--------|-----------------|--------|
-| #2 | provide the **tariff extract** (Standard/Lifeline) — the medallion `data_entries` reload is ✅ DONE (Load #15/PR #107); tariff is the remaining migration slice | the tariff migration pass |
+| #2 | **data inputs for one imminent full-migration run (today):** **tariff (Standard/Lifeline)** + **340/342 downtime-events** extracts — the general medallion reload is ✅ DONE (PR #107), these are the remaining slices | the tariff + downtime-events migration pass |
+| #2 | **new-org onboarding format** — JSON vs xlsx tab (migration "step 0": create org + service_areas + report_periods for any NEW utilities before facts load; no-op if today's run adds none) | new-utility onboarding in the run |
 | ~~#10~~ | ✅ **RULED 2026-08-31 (Eugene):** **Default plan** = points to **Power BI's homepage** — a **placeholder**, DEV updates the specific PBI-homepage name/URL once it's built. **Member entitlements** = **electricity-only for now** (exclude non-electricity sectors); **PPA membership-type entitlements already provided** (use those). ⚠ **Correction: there is NO free `member` plan** — the earlier "free member plan" framing was wrong. → relayed to #10; unblocks their build. | *(cleared)* |
 | BMO/Eugene | **Set `financial_year_end` for 3 placeholder utilities** — **Vanuatu (46)**, **Pitcairn (51)**, **New Zealand (52)** — *before* they onboard any Financial-Year data. Forward-looking, **no live impact today** (all 3 carry 0 report periods; the other 10 null-FYE orgs are stray test rows). Without an FYE, FY-placement silently falls back to `report_date`-as-FY-end and mislabels their fiscal year (#2, verified 2026-08-28). Owner = whoever onboards them. | correct FY labelling if/when those 3 submit FY data |
 | #2/#4 | **PNG Power (util 20) missing Lubrication-Oil shells for its Natural Gas units** — verifier-surfaced candidate; assess add-or-exclude | shell-audit completeness for util 20 |
