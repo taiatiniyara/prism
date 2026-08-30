@@ -19,7 +19,7 @@ A row is *pending* if it has not cleared all the gates that apply to it. Docs-on
 - **Only one uncommitted file:** **#3's `calculator-engine-spec.md`** (active WIP, left for #3).
 - **Open PRs (2026-08-31): only `#77` human left** (parked by design) — **`#104` MERGED** (Eugene's data-availability amendment, fully reviewed). Dependabot PRs are **in active flux — Eugene's engineer is working them** (count changing; not pinned). Vuln triage complete/accepted.
 - **Cleared this session:** #8 schema-convention ruling (`7c01627`); #12 D2 API_KEY split merged (`167f080`); both sentinel-deletion confirmations (#2 views, #10 access); safe Dependabot subset merged.
-- **Awaiting Eugene — 3:** #2 medallion sample extract; #10 default-plan + member entitlements; **FYE for 3 placeholder utilities** (Vanuatu/Pitcairn/NZ — forward onboarding pre-req, no live impact today). *(#4 country-context history ✅ DONE — extract loaded to dev 2026-08-25, 1040 rows; subgroup-221 RULED 2026-08-20.)*
+- **Awaiting Eugene — 2:** #2 medallion sample extract; **FYE for 3 placeholder utilities** (Vanuatu/Pitcairn/NZ — forward onboarding pre-req, no live impact today). *(#10 default-plan + entitlements ✅ RULED 2026-08-31 — see §3; #4 country-context history ✅ DONE 2026-08-25; subgroup-221 RULED 2026-08-20.)*
 - **Applied DB changes today** (informational, all backed up): sentinel-chain deletion, `measure_definitions.description` drop, managed-lists vocab rename — plus the follow-on `units.category_id`/`type_id` DROP still owed by #2.
 
 ---
@@ -92,7 +92,7 @@ Legend: ✅ nothing pending · 📝 uncommitted · ⬆️ committed-not-pushed �
 
 **Net pending right now** (genuinely open items only):
 - **Human PRs:** none actionable — `#104` merged; only `#77` remains (parked by design). Dependabot in active flux (Eugene's engineer working them).
-- **Awaiting Eugene (3):** #2 medallion extract · #10 default-plan + member entitlements · FYE for 3 placeholder utilities (forward, no live impact today).
+- **Awaiting Eugene (2):** #2 medallion extract · FYE for 3 placeholder utilities (forward, no live impact today). *(#10 default-plan + entitlements ✅ ruled 2026-08-31.)*
 - **In-flight / owed:** #2 context-fed pass parts 3–4 (non-blocking) · #12 P2/D2 operator steps (env/Power BI/rotate) · #11 country-context form (USER-IMPACT r16) · a branch-triage pass over the ~15 un-PR'd `claude/*` branches.
 - **Prod apply debt:** the 🚀 **Cutover Runbook** below (idempotent SQL + seed + `verify-relevance` gate, all live on dev, per-env owed at prod migration).
 - **Deferred (nothing to queue today):** the unified relevance surface (`docs/measure-relevance-spec.md`) rides #2's ONE combined temporal-spans reimport migration (+ unit-activation stints, `btree_gist`).
@@ -178,7 +178,7 @@ Per [`USER-IMPACT.md`](USER-IMPACT.md) (new protocol, `5c2959e`, Eugene-directed
 | Stream | Decision needed | Blocks |
 |--------|-----------------|--------|
 | #2 | provide the real **sample data extract** | the medallion data reload (last step of the migration) |
-| #10 | **default-plan contents** + **member entitlements** (the free `member` plan's sector-scoped dashboard set; `member` is now association-agnostic — PPA→electricity, PWWA→water/sanitation) | tiered-access schema (no code until settled) |
+| ~~#10~~ | ✅ **RULED 2026-08-31 (Eugene):** **Default plan** = points to **Power BI's homepage** — a **placeholder**, DEV updates the specific PBI-homepage name/URL once it's built. **Member entitlements** = **electricity-only for now** (exclude non-electricity sectors); **PPA membership-type entitlements already provided** (use those). ⚠ **Correction: there is NO free `member` plan** — the earlier "free member plan" framing was wrong. → relayed to #10; unblocks their build. | *(cleared)* |
 | BMO/Eugene | **Set `financial_year_end` for 3 placeholder utilities** — **Vanuatu (46)**, **Pitcairn (51)**, **New Zealand (52)** — *before* they onboard any Financial-Year data. Forward-looking, **no live impact today** (all 3 carry 0 report periods; the other 10 null-FYE orgs are stray test rows). Without an FYE, FY-placement silently falls back to `report_date`-as-FY-end and mislabels their fiscal year (#2, verified 2026-08-28). Owner = whoever onboards them. | correct FY labelling if/when those 3 submit FY data |
 | #2/#4 | **PNG Power (util 20) missing Lubrication-Oil shells for its Natural Gas units** — verifier-surfaced candidate; assess add-or-exclude | shell-audit completeness for util 20 |
 | #4 | 🅿️ **CUC fuel pass-through disposition** — 2 soft-deleted Fuel Oil @ IPP values (Commonwealth Utilities Corp diesel: FY22 28,418,920.78 + FY23 28,559,079.00), preserved. **Eugene: "leave as-is for now"** — low-urgency, awaiting ruling on whether they're genuine fuel pass-through | reactivating or purging those 2 values |
