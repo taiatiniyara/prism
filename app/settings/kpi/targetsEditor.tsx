@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import readXlsxFile from "read-excel-file/browser";
+import { readSheet } from "read-excel-file/browser";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -313,7 +313,7 @@ export default function KpiTargetsEditor(props: {
     }
 
     try {
-      const rowsFromFile = await readXlsxFile(file, { sheet: "KPI Targets" });
+      const rowsFromFile = await readSheet(file, "KPI Targets");
       const headers = (rowsFromFile[0] ?? []).map((value) =>
         String(value ?? "")
           .trim()

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-import readXlsxFile from "read-excel-file/browser";
+import { readSheet } from "read-excel-file/browser";
 import { toast } from "sonner";
 import SubmitBtn from "@/components/submitBtn";
 import { Input } from "@/components/ui/input";
@@ -42,7 +42,7 @@ export default function ExcelUploadForm(props: ExcelUploadFormProps) {
           return;
         }
 
-        const rows = await readXlsxFile(file, { sheet: props.sheetName });
+        const rows = await readSheet(file, props.sheetName);
         if (!rows.length) {
           toast.error("The selected sheet has no data");
           return;

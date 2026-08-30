@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import readXlsxFile from "read-excel-file/browser";
+import { readSheet } from "read-excel-file/browser";
 import { Download, Upload } from "lucide-react";
 import { toast } from "sonner";
 
@@ -674,9 +674,7 @@ export default function EnterDataTemplatePanel({
   };
 
   const parseUploadRows = async (file: File) => {
-    const [headerRow, ...dataRows] = await readXlsxFile(file, {
-      sheet: SHEET_NAME,
-    });
+    const [headerRow, ...dataRows] = await readSheet(file, SHEET_NAME);
 
     if (!headerRow || headerRow.length === 0) {
       throw new Error("The selected worksheet is empty.");
