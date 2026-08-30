@@ -1,8 +1,8 @@
 import { db } from "@/db/connection";
 import { organisations } from "@/db/schema/utility";
 import { countries } from "@/db/schema/country";
-import { reportPeriods } from "@/db/schema/reportPeriods";
-import { eq, and, gt, isNotNull } from "drizzle-orm";
+import { reportPeriods, publishedPeriodCondition } from "@/db/schema/reportPeriods";
+import { eq, and, gt } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
 import { getCountryCoordinates } from "@/lib/legacy/country-coordinates";
 
@@ -28,7 +28,7 @@ export async function GET(req: Request) {
   const rps = await db
     .select({ utility_id: reportPeriods.utility_id })
     .from(reportPeriods)
-    .where(isNotNull(reportPeriods.status_id));
+    .where(publishedPeriodCondition);
 
   const utilityIdsWithRps = new Set(rps.map((r) => r.utility_id));
 

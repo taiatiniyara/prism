@@ -1,9 +1,9 @@
 import { db } from "@/db/connection";
 import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
 import { units } from "@/db/schema/utility";
-import { reportPeriods } from "@/db/schema/reportPeriods";
+import { reportPeriods, publishedPeriodCondition } from "@/db/schema/reportPeriods";
 import { managedListItems } from "@/db/schema/managedLists";
-import { eq, and, isNotNull, inArray } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
 import { formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
 import {
@@ -66,7 +66,7 @@ export async function GET(req: Request) {
   const rps = await db
     .select()
     .from(reportPeriods)
-    .where(isNotNull(reportPeriods.status_id));
+    .where(publishedPeriodCondition);
   const allResources = await db
     .select()
     .from(units)
