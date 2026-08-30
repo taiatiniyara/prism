@@ -19,4 +19,6 @@ Code goes into git **before** any change is applied to a real database. Never ru
 1. **git first** — schema/migration/code committed + pushed (PR-merged where possible)
 2. **then** apply the DB change (dev, then prod per the change's own script)
 
+**Exempt:** read-only work is not a "change" and is unrestricted — verification queries, pre-flight checks, `EXPLAIN`, `SELECT`, schema introspection. The rule governs writes only (migration / DDL / DML that alters data or structure).
+
 Rationale: a DB change with no committed code leaves the schema ahead of the code, so every session that pulls is out of sync with the live database. Git is the source of truth; the DB reflects it, never the reverse. (Set by Eugene 2026-08-24.)
