@@ -127,6 +127,8 @@ export async function GET(req: Request) {
               return {
                 ServiceAreaId: sa.id,
                 Multiplier: rollUpMultiplier(slice.mults),
+                // legacy spelling kept as an alias for models keyed on "Multipler"
+                Multipler: rollUpMultiplier(slice.mults),
                 ...slice.cols,
               };
             }),
