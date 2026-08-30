@@ -93,7 +93,7 @@ async function main() {
   }
 
   // DB-touching work — imported lazily so --dry-run needs no DATABASE_URL.
-  const { startLoad, finishLoad, reconcilePeriod, getAnomalies, getScorecardSummary } =
+  const { startLoad, finishLoad, reconcilePeriod, getAnomalies, getScorecardSummary, reconcileApprovalModelA } =
     await import("../lib/migration/loads");
   const { loadExtract } = await import("../lib/migration/load");
   const { db } = await import("../db/connection");
@@ -117,6 +117,15 @@ async function main() {
       `${result.shellsFailed} shell failures | ${result.valuesFilled} values filled, ` +
       `${result.noDataAnswers} no-data answers | ` +
       `${result.valuesFailed} value/no-data failures | ${result.skipped} skipped`,
+  );
+
+  // MODEL A (Eugene + #8, 2026-08-30): preserve p1 CEO-approval end-to-end. Shells of an Approved
+  // period inherit Approved(5); truly-empty shells → not_available (loader-derived). Runs before the
+  // scorecard so fill/calc lines reflect the reconciled statuses.
+  const approvalA = await reconcileApprovalModelA();
+  console.log(
+    `\nModel-A approval reconciliation: ${approvalA.lifted} shells lifted to Approved ` +
+      `(${approvalA.empties} empty → not_available) under CEO-approved periods.`,
   );
 
   if (control.rows.length > 0) {
