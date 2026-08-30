@@ -66,8 +66,8 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@testing-library/jest-dom": "^7.0.0",
-    "@testing-library/react": "^16.3.2",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
     "@types/node": "^20.19.39",
     "@types/node-cron": "^3.0.11",
     "@types/nodemailer": "^7.0.5",
@@ -76,14 +76,14 @@
     "@types/react-dom": "^19",
     "drizzle-kit": "^0.31.10",
     "eslint": "^10",
-    "eslint-config-next": "16.2.12",
+    "eslint-config-next": "16.3.3",
     "eslint-plugin-security": "^3.0.1",
     "jsdom": "^29.0.0",
     "shadcn": "^3.6.3",
     "tailwindcss": "^4",
-    "tsx": "^4.23.1",
+    "tsx": "^4.23.12",
     "typescript": "^5",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   },
   "overrides": {
     "postcss": "8.5.23",
