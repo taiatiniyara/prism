@@ -38,7 +38,11 @@ export default function KpiHealthPage() {
     }
   }, [statusFilter]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    void (async () => {
+      await fetchData();
+    })();
+  }, [fetchData]);
 
   const retryFailed = async () => {
     if (!data) return;

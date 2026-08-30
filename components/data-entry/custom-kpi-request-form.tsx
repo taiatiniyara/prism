@@ -189,7 +189,7 @@ export function CustomKpiRequestForm(props: {
     });
   }, [form.formulaExpression, selectedInputByToken]);
 
-  const formulaPreview = useMemo(() => {
+  const formulaPreview = (() => {
     const formulaExpression = form.formulaExpression.trim();
 
     if (formulaExpression.length === 0) {
@@ -249,7 +249,7 @@ export function CustomKpiRequestForm(props: {
       value: numericResult,
       message: "Preview result calculated from sample values.",
     };
-  }, [sampleInputValues, form.formulaExpression, formulaInputTokens]);
+  })();
 
   const insertFormulaTokenAtCursor = (token: string) => {
     const textarea = formulaTextareaRef.current;

@@ -65,17 +65,17 @@ export function AggregatedProcessingStatus({
   }, [reportPeriodId, serviceAreaId, unitId]);
 
   useEffect(() => {
-    if (!query) {
-      setLatestRun(null);
-      setLatestKpiAttempt(null);
-      setError(null);
-      setIsLoading(false);
-      return;
-    }
-
     let active = true;
 
-    const load = async () => {
+    void (async () => {
+      if (!query) {
+        setLatestRun(null);
+        setLatestKpiAttempt(null);
+        setError(null);
+        setIsLoading(false);
+        return;
+      }
+
       try {
         setIsLoading(true);
         const response = await fetch(
@@ -137,9 +137,7 @@ export function AggregatedProcessingStatus({
           setIsLoading(false);
         }
       }
-    };
-
-    void load();
+    })();
 
     return () => {
       active = false;

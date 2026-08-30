@@ -160,8 +160,10 @@ export default function DataEntryBreakdownPanel({
   }, [utility, reportPeriod, reportType, year, category, subcategory]);
 
   useEffect(() => {
-    setRows(null);
-    fetchBreakdown();
+    void (async () => {
+      setRows(null);
+      await fetchBreakdown();
+    })();
   }, [fetchBreakdown]);
 
   const totalV1 = rows?.reduce((sum, r) => sum + r.v1Count, 0) ?? 0;

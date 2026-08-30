@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -55,7 +55,13 @@ export function InputTagCard({
   // Local draft so renaming commits on blur/Enter (keeps the formula token +
   // this card's binding in sync) rather than on every keystroke.
   const [nameDraft, setNameDraft] = useState(card.variableName);
-  useEffect(() => setNameDraft(card.variableName), [card.variableName]);
+  const [prevVariableName, setPrevVariableName] = useState(card.variableName);
+
+  if (prevVariableName !== card.variableName) {
+    setPrevVariableName(card.variableName);
+    setNameDraft(card.variableName);
+  }
+
   const commitName = () => {
     const next = nameDraft.trim();
     if (next && next !== card.variableName) onRename(next);

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 import { DataEntryTariffPaymentModeGroupView } from "@/app/data-entry/types";
 
@@ -86,8 +86,10 @@ export default function TariffGroups({ groups }: TariffGroupsProps) {
   const [activeCustomerTypeByPaymentMode, setActiveCustomerTypeByPaymentMode] =
     useState<Record<number, number>>({});
   const [searchQuery, setSearchQuery] = useState("");
+  const [prevGroups, setPrevGroups] = useState(groups);
 
-  useEffect(() => {
+  if (prevGroups !== groups) {
+    setPrevGroups(groups);
     const storedPaymentId = selectStoredPaymentModeId(
       groups,
       fallbackPaymentModeId,
@@ -100,8 +102,7 @@ export default function TariffGroups({ groups }: TariffGroupsProps) {
     if (Object.keys(storedCustomerTypes).length > 0) {
       setActiveCustomerTypeByPaymentMode(storedCustomerTypes);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [groups]);
+  }
 
   if (groups.length === 0) {
     return (

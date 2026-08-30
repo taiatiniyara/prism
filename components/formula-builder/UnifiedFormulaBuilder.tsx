@@ -172,7 +172,8 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
       toast.error(`“${next}” is already used by another input.`);
       return;
     }
-    const re = new RegExp(`\\b${oldName}\\b`, "g");
+    const escapedName = oldName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`\\b${escapedName}\\b`, "g");
     setFormula((f) => f.replace(re, next));
     setCards((prev) =>
       prev.map((c) => (c.key === card.key ? { ...c, variableName: next } : c)),
