@@ -11,3 +11,14 @@ Multiple Claude Code sessions work on PRISM concurrently (the "PRISM 2" sidebar 
 - **Before a large refactor** on the main working tree, check the board for other active sessions touching the same files (uncommitted changes can clobber each other); prefer a git worktree for parallel edits.
 
 See the board's own Protocol section for full details.
+
+## Git before DB — NO EXCEPTIONS
+
+Code goes into git **before** any change is applied to a real database. Never run a migration / DDL / DML against any database (dev or prod) until the corresponding schema / migration / code is committed **and pushed** to git — ideally merged to `main` via PR. The order is always:
+
+1. **git first** — schema/migration/code committed + pushed (PR-merged where possible)
+2. **then** apply the DB change (dev, then prod per the change's own script)
+
+**Exempt:** read-only work is not a "change" and is unrestricted — verification queries, pre-flight checks, `EXPLAIN`, `SELECT`, schema introspection. The rule governs writes only (migration / DDL / DML that alters data or structure).
+
+Rationale: a DB change with no committed code leaves the schema ahead of the code, so every session that pulls is out of sync with the live database. Git is the source of truth; the DB reflects it, never the reverse. (Set by Eugene 2026-08-24.)
