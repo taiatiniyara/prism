@@ -23,7 +23,7 @@
     "git-push": "git add . && git commit -m 'Update' && git push"
   },
   "dependencies": {
-    "@ai-sdk/anthropic": "^3.0.82",
+    "@ai-sdk/anthropic": "^4.0.44",
     "@base-ui/react": "^1.6.0",
     "@radix-ui/react-alert-dialog": "^1.1.23",
     "@radix-ui/react-dropdown-menu": "^2.1.24",
@@ -32,7 +32,7 @@
     "@radix-ui/react-separator": "^1.1.15",
     "@radix-ui/react-slot": "^1.2.4",
     "@xyflow/react": "^12.11.2",
-    "ai": "^6.0.168",
+    "ai": "^7.0.85",
     "better-auth": "^1.6.11",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
@@ -75,7 +75,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "drizzle-kit": "^0.31.10",
-    "eslint": "^10",
+    "eslint": "^9",
     "eslint-config-next": "16.3.3",
     "eslint-plugin-security": "^4.0.1",
     "jsdom": "^30.0.1",
@@ -90,7 +90,7 @@
     "esbuild": "0.28.1",
     "hono": "4.12.27",
     "body-parser": "2.3.0",
-    "brace-expansion": "2.0.1",
+    "brace-expansion": ">=2.0.1",
     "sharp": "^0.35.3"
   }
 }
