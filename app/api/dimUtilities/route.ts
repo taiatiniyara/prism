@@ -36,9 +36,12 @@ export async function GET(req: Request) {
     allUtilities
       .filter((u) => utilityIdsWithRps.has(u.id))
       .map((u) => {
-        const fy = u.financial_year_end
-          ? new Date(u.financial_year_end)
-          : null;
+        // FY-end is a recurring month/day (organisations.fye_month/fye_day); the year is
+        // a display placeholder only (2024, matching the retired text field's convention).
+        const fy =
+          u.fye_month != null && u.fye_day != null
+            ? new Date(2024, u.fye_month - 1, u.fye_day)
+            : null;
         const fyIso =
           fy && !isNaN(fy.getTime()) ? fy.toISOString() : null;
         const countryName = allCountries.find(

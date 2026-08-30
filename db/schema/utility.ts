@@ -56,12 +56,9 @@ export const organisations = pgTable(
     services_provided_id: integer("services_provided_id").references(
       () => managedListItems.id,
     ),
-    // @deprecated fragile text field ("DD Mon 2024") — superseded by fye_month/fye_day below.
-    // Retired by #2 once fiscalYearForReportPeriod reads the numeric columns.
-    financial_year_end: varchar("financial_year_end", { length: 255 }),
     // Canonical per-utility financial-year-end declaration, set at onboarding. NULL → the
-    // fiscal-year helper falls back to report_date. Replaces financial_year_end (#2 FYE cleanup;
-    // Eugene-approved 2026-08-30).
+    // fiscal-year helper falls back to report_date. (Replaced the retired financial_year_end
+    // text field — #2 FYE cleanup, Eugene-approved 2026-08-30.)
     fye_month: smallint("fye_month"),
     fye_day: smallint("fye_day"),
     is_mth_reports_relevant_month: boolean("is_mth_report_relevant")
