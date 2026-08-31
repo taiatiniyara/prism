@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { evaluateKpiFormula } from "@/app/data-entry/kpi-worker/evaluator";
+import { safeEvaluateFormula } from "./safe-eval";
 
 const toTokenHash = (value: string): number => {
   let hash = 0;
@@ -73,16 +73,16 @@ export function TestHarness({
     }
     const variables: Record<string, number> = {};
     for (const n of variableNames) variables[n] = valueFor(n);
-    const evaluated = evaluateKpiFormula(clean, variables);
-    if (evaluated.status === "error") {
+    const evaluated = safeEvaluateFormula(clean, variables);
+    if (!evaluated.ok) {
       return {
         status: "error" as const,
-        message: evaluated.failureReason ?? "Unable to evaluate formula.",
+        message: evaluated.error,
       };
     }
     return {
       status: "ok" as const,
-      value: evaluated.value ?? null,
+      value: evaluated.value,
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [formula, variableNames, manual, baseValue, seed]);
