@@ -22,6 +22,7 @@
 | D-3 | `git checkout .` on the server **discards** any uncommitted state silently | Masks drift; no record of what was overwritten; can hide a compromise or a hotfix. | CIS 8 (audit) |
 | D-4 | `deploy.sh` does `git add . && git commit && git push` | Couples deploy with VCS; bare `git commit` (no `-m`) is interactive and will hang a non-interactive shell; auto-committing server state is backwards (server should be a consumer of `main`, not a producer). | change mgmt |
 | D-5 | One `SSH_PRIVATE_KEY` with **root** login | Broad blast radius; the CI secret is effectively root on the box. | CIS 4/5 |
+| D-6 | **Prod serves a weaker CSP than `next.config.ts`** — the Nginx proxy emits its own `Content-Security-Policy` on `prismdashboard.org` that re-allows `'unsafe-eval'` and bare `https:` wildcards in `script-src`/`style-src`/`connect-src`, and it's the *only* CSP header, so it overrides the hardened Next policy (which IS in force on `dev.prismdashboard.org`). The S1 CSP hardening is effectively **not protecting prod**. | ASVS 14.4.5 / 14.5.3; OWASP A05 |
 
 ## Proposed changes
 
@@ -116,6 +117,33 @@ Notes:
 
 Drop the `git add . && git commit && git push` tail entirely. Developers push to `main` from their workstation; the server only ever *consumes* `main`. If a one-shot manual deploy script is still wanted, it should mirror the workflow above (backup → migrate → build → reload → health check) and never write to git.
 
+### 5. Single-source the Content-Security-Policy (fixes D-6)
+
+**Verified 2026-08-25 (live response headers):** `dev.prismdashboard.org` returns the hardened Next CSP (`script-src 'self' 'unsafe-inline' https://app.powerbi.com` — no `unsafe-eval`), but `prismdashboard.org` (prod) returns a **single, weaker** proxy-set CSP:
+
+```
+script-src 'self' 'unsafe-inline' 'unsafe-eval' https: https://app.powerbi.com https://*.powerbi.com;
+style-src  'self' 'unsafe-inline' https:;
+connect-src 'self' https: wss: https://*.powerbi.com https://*.analysis.windows.net;
+```
+
+Because it is the only CSP header, the browser enforces **it** on prod — so `'unsafe-eval'` is allowed and `script-src`/`style-src`/`connect-src` accept **any** `https:` origin. That undoes the S1 hardening on production: XSS containment is materially weaker (a future XSS would be far more exploitable, and eval is re-enabled). Same divergence on `X-Frame-Options` (prod `SAMEORIGIN` vs Next `DENY`) and HSTS — all proxy-set on prod.
+
+**Root cause:** two header sources — `next.config.ts` `headers()` **and** an Nginx `add_header` — and on prod the proxy's weaker policy wins.
+
+**Fix — pick ONE source and make it the hardened policy:**
+
+- **Preferred — let Next own the security headers.** In the Nginx server block, remove the `add_header Content-Security-Policy …` (and any `X-Frame-Options`/CSP-like `add_header`) so Next's hardened headers pass through untouched, and ensure Nginx isn't stripping them (no `proxy_hide_header` on these). Next already emits CSP + HSTS + `X-Frame-Options: DENY` + `nosniff` via `next.config.ts`.
+- **Alternative — Nginx owns them** — then it MUST mirror the hardened policy **verbatim**: drop `'unsafe-eval'`, drop the bare `https:` wildcards from `script-src`/`style-src`/`connect-src`, set `X-Frame-Options: DENY`, and add `proxy_hide_header Content-Security-Policy;` so there is never a weak+strict duplicate. Keeping two hand-maintained copies invites drift — prefer the first option.
+
+**Verify after applying:**
+```bash
+curl -sD - -o /dev/null https://prismdashboard.org/ | grep -i content-security-policy
+# expect: NO 'unsafe-eval' and NO bare `https:` in script-src
+```
+
+**Owner:** infra/VPS (Nginx) — not an app-code change. #12 flags + specifies the target; whoever owns the proxy applies it.
+
 ## Suggested order
 
 1. Reconcile `ecosystem.config.js` name/port with reality (cheap, unblocks the health check).
@@ -123,5 +151,6 @@ Drop the `git add . && git commit && git push` tail entirely. Developers push to
 3. Stand up the `prism` service user; move the app to `/srv/prism/app`; repoint pm2 + the CI secret.
 4. Swap in the hardened workflow.
 5. Delete `db-push` from every deploy path.
+6. **Single-source the CSP** — remove the weaker proxy CSP so the hardened Next policy governs prod (D-6). Independent of the rest; can be done anytime and closes a live gap where the shipped hardening isn't actually protecting production.
 
-Items 2 + 5 are the highest priority — they close D-2, the one that can destroy production data during the schema churn.
+Items 2 + 5 are the highest priority — they close D-2, the one that can destroy production data during the schema churn. Item 6 is the next after those: quick (one Nginx block), no app change, and it makes the S1 CSP hardening real on prod.
