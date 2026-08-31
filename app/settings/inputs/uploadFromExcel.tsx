@@ -13,7 +13,6 @@ function parseExcelInputRow(row: Record<string, unknown>): ExcelMeasureDefinitio
     input_id: Number(row.input_id ?? 0),
     input_subcategory_id: Number(row.input_subcategory_id ?? 0),
     is_active: Boolean(row.is_active),
-    is_aggregated: Boolean(row.is_aggregated),
     is_calculated: Boolean(row.is_calculated),
     is_currency: Boolean(row.is_currency),
     is_kpi: Boolean(row.is_kpi),

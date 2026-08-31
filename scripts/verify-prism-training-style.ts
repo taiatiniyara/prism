@@ -50,7 +50,7 @@ async function main() {
       and(
         eq(measureDefinitions.is_active, true),
         eq(measureDefinitions.is_system_generated, false),
-        eq(measureDefinitions.is_aggregated, false),
+        eq(measureDefinitions.is_calculated, false),
         sql`lower(coalesce((select mli.name from managed_list_items mli where mli.id = ${measureDefinitions.measures_subgroup_id}), '')) <> 'country context'`,
       ),
     );
