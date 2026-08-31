@@ -561,6 +561,9 @@ const getGenerationMeasureDefinitions = async (): Promise<
       and(
         eq(measureDefinitions.is_active, true),
         eq(measureDefinitions.is_calculated, false),
+        // Country-context measures are BMO-entered, never utility-entered — keep them out of the
+        // utility generation-relevance picker even on this renamed-label fallback path.
+        eq(measureDefinitions.is_context_fed, false),
       ),
     )
     .orderBy(asc(measureDefinitions.sort_order), asc(measureDefinitions.name));
@@ -577,7 +580,13 @@ const getGenerationMeasureDefinitions = async (): Promise<
       sortOrder: measureDefinitions.sort_order,
     })
     .from(measureDefinitions)
-    .where(eq(measureDefinitions.is_calculated, false))
+    .where(
+      and(
+        eq(measureDefinitions.is_calculated, false),
+        // Country-context measures are BMO-entered, never utility-entered (see above).
+        eq(measureDefinitions.is_context_fed, false),
+      ),
+    )
     .orderBy(asc(measureDefinitions.sort_order), asc(measureDefinitions.name));
 };
 
