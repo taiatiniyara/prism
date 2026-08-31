@@ -1674,19 +1674,6 @@
       "norm_label": "reviewkpiconflictresponse"
     },
     {
-      "label": "ReviewKpiFilterContext",
-      "file_type": "code",
-      "source_file": "app/data-entry/review-kpi/types.ts",
-      "source_location": "L3",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "app_data_entry_review_kpi_types_reviewkpifiltercontext",
-      "community": 137,
-      "community_name": "review-kpi/types.ts",
-      "norm_label": "reviewkpifiltercontext"
-    },
-    {
       "label": "ReviewKpiFilterOption",
       "file_type": "code",
       "source_file": "app/data-entry/review-kpi/types.ts",
@@ -1789,19 +1776,6 @@
       "community": 137,
       "community_name": "review-kpi/types.ts",
       "norm_label": "updatereviewkpiinputpayload"
-    },
-    {
-      "label": "UseReviewKpiSyncOptions",
-      "file_type": "code",
-      "source_file": "app/data-entry/review-kpi/use-review-kpi-sync.ts",
-      "source_location": "L10",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "app_data_entry_review_kpi_use_review_kpi_sync_usereviewkpisyncoptions",
-      "community": 137,
-      "community_name": "review-kpi/types.ts",
-      "norm_label": "usereviewkpisyncoptions"
     },
     {
       "label": "InputCommentThreadProps",
@@ -2296,45 +2270,6 @@
       "community": 145,
       "community_name": "events/route.ts",
       "norm_label": "synclistener"
-    },
-    {
-      "label": "SyncStore",
-      "file_type": "code",
-      "source_file": "app/data-entry/review-kpi/sync-store.ts",
-      "source_location": "L7",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "app_data_entry_review_kpi_sync_store_syncstore",
-      "community": 145,
-      "community_name": "events/route.ts",
-      "norm_label": "syncstore"
-    },
-    {
-      "label": "SyncEventEnvelope",
-      "file_type": "code",
-      "source_file": "app/data-entry/review-kpi/types.ts",
-      "source_location": "L86",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "app_data_entry_review_kpi_types_synceventenvelope",
-      "community": 145,
-      "community_name": "events/route.ts",
-      "norm_label": "synceventenvelope"
-    },
-    {
-      "label": "SyncChannel",
-      "file_type": "code",
-      "source_file": "app/data-entry/review-kpi/use-review-kpi-sync.ts",
-      "source_location": "L20",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "app_data_entry_review_kpi_use_review_kpi_sync_syncchannel",
-      "community": 145,
-      "community_name": "events/route.ts",
-      "norm_label": "syncchannel"
     },
     {
       "label": "NewSidebarAccess",
@@ -8447,58 +8382,6 @@
       "norm_label": "performancekpi"
     },
     {
-      "label": "InputStatusData",
-      "file_type": "code",
-      "source_file": "lib/ai/data-service/review.ts",
-      "source_location": "L91",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "lib_ai_data_service_review_inputstatusdata",
-      "community": 6,
-      "community_name": "user.service.ts",
-      "norm_label": "inputstatusdata"
-    },
-    {
-      "label": "InputStatusItem",
-      "file_type": "code",
-      "source_file": "lib/ai/data-service/review.ts",
-      "source_location": "L85",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "lib_ai_data_service_review_inputstatusitem",
-      "community": 6,
-      "community_name": "user.service.ts",
-      "norm_label": "inputstatusitem"
-    },
-    {
-      "label": "ReviewQueueData",
-      "file_type": "code",
-      "source_file": "lib/ai/data-service/review.ts",
-      "source_location": "L16",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "lib_ai_data_service_review_reviewqueuedata",
-      "community": 6,
-      "community_name": "user.service.ts",
-      "norm_label": "reviewqueuedata"
-    },
-    {
-      "label": "ReviewQueueItem",
-      "file_type": "code",
-      "source_file": "lib/ai/data-service/review.ts",
-      "source_location": "L9",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "lib_ai_data_service_review_reviewqueueitem",
-      "community": 6,
-      "community_name": "user.service.ts",
-      "norm_label": "reviewqueueitem"
-    },
-    {
       "label": "TrendData",
       "file_type": "code",
       "source_file": "lib/ai/data-service/trends.ts",
@@ -9381,32 +9264,6 @@
       "community": 7,
       "community_name": "relevance/service.ts",
       "norm_label": "assetclassrelevance"
-    },
-    {
-      "label": "CacheEntry",
-      "file_type": "code",
-      "source_file": "lib/ai/cache.ts",
-      "source_location": "L2",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "lib_ai_cache_cacheentry",
-      "community": 72,
-      "community_name": "ai/types.ts",
-      "norm_label": "cacheentry"
-    },
-    {
-      "label": "CacheKey",
-      "file_type": "code",
-      "source_file": "lib/ai/cache.ts",
-      "source_location": "L1",
-      "_callable": true,
-      "_callable_class": true,
-      "_origin": "ast",
-      "id": "lib_ai_cache_cachekey",
-      "community": 72,
-      "community_name": "ai/types.ts",
-      "norm_label": "cachekey"
     },
     {
       "label": "GuardrailRule",
@@ -11502,6 +11359,58 @@
       "norm_label": "routeparams"
     },
     {
+      "label": "SyncStore",
+      "file_type": "code",
+      "source_file": "app/data-entry/review-kpi/sync-store.ts",
+      "source_location": "L7",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "app_data_entry_review_kpi_sync_store_syncstore",
+      "community": 92,
+      "community_name": "use-review-kpi-sync.ts",
+      "norm_label": "syncstore"
+    },
+    {
+      "label": "ReviewKpiFilterContext",
+      "file_type": "code",
+      "source_file": "app/data-entry/review-kpi/types.ts",
+      "source_location": "L3",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "app_data_entry_review_kpi_types_reviewkpifiltercontext",
+      "community": 92,
+      "community_name": "use-review-kpi-sync.ts",
+      "norm_label": "reviewkpifiltercontext"
+    },
+    {
+      "label": "SyncEventEnvelope",
+      "file_type": "code",
+      "source_file": "app/data-entry/review-kpi/types.ts",
+      "source_location": "L86",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "app_data_entry_review_kpi_types_synceventenvelope",
+      "community": 92,
+      "community_name": "use-review-kpi-sync.ts",
+      "norm_label": "synceventenvelope"
+    },
+    {
+      "label": "SyncChannel",
+      "file_type": "code",
+      "source_file": "app/data-entry/review-kpi/use-review-kpi-sync.ts",
+      "source_location": "L20",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "app_data_entry_review_kpi_use_review_kpi_sync_syncchannel",
+      "community": 92,
+      "community_name": "use-review-kpi-sync.ts",
+      "norm_label": "syncchannel"
+    },
+    {
       "label": "SyncStatus",
       "file_type": "code",
       "source_file": "app/data-entry/review-kpi/use-review-kpi-sync.ts",
@@ -11513,6 +11422,71 @@
       "community": 92,
       "community_name": "use-review-kpi-sync.ts",
       "norm_label": "syncstatus"
+    },
+    {
+      "label": "UseReviewKpiSyncOptions",
+      "file_type": "code",
+      "source_file": "app/data-entry/review-kpi/use-review-kpi-sync.ts",
+      "source_location": "L10",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "app_data_entry_review_kpi_use_review_kpi_sync_usereviewkpisyncoptions",
+      "community": 92,
+      "community_name": "use-review-kpi-sync.ts",
+      "norm_label": "usereviewkpisyncoptions"
+    },
+    {
+      "label": "InputStatusData",
+      "file_type": "code",
+      "source_file": "lib/ai/data-service/review.ts",
+      "source_location": "L91",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "lib_ai_data_service_review_inputstatusdata",
+      "community": 93,
+      "community_name": "listReviewKpiRows",
+      "norm_label": "inputstatusdata"
+    },
+    {
+      "label": "InputStatusItem",
+      "file_type": "code",
+      "source_file": "lib/ai/data-service/review.ts",
+      "source_location": "L85",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "lib_ai_data_service_review_inputstatusitem",
+      "community": 93,
+      "community_name": "listReviewKpiRows",
+      "norm_label": "inputstatusitem"
+    },
+    {
+      "label": "ReviewQueueData",
+      "file_type": "code",
+      "source_file": "lib/ai/data-service/review.ts",
+      "source_location": "L16",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "lib_ai_data_service_review_reviewqueuedata",
+      "community": 93,
+      "community_name": "listReviewKpiRows",
+      "norm_label": "reviewqueuedata"
+    },
+    {
+      "label": "ReviewQueueItem",
+      "file_type": "code",
+      "source_file": "lib/ai/data-service/review.ts",
+      "source_location": "L9",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "lib_ai_data_service_review_reviewqueueitem",
+      "community": 93,
+      "community_name": "listReviewKpiRows",
+      "norm_label": "reviewqueueitem"
     },
     {
       "label": "KpiFormulaEvaluationResult",
@@ -11710,6 +11684,32 @@
       "norm_label": "inputresult"
     },
     {
+      "label": "CacheEntry",
+      "file_type": "code",
+      "source_file": "lib/ai/cache.ts",
+      "source_location": "L2",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "lib_ai_cache_cacheentry",
+      "community": 99,
+      "community_name": "cache.ts",
+      "norm_label": "cacheentry"
+    },
+    {
+      "label": "CacheKey",
+      "file_type": "code",
+      "source_file": "lib/ai/cache.ts",
+      "source_location": "L1",
+      "_callable": true,
+      "_callable_class": true,
+      "_origin": "ast",
+      "id": "lib_ai_cache_cachekey",
+      "community": 99,
+      "community_name": "cache.ts",
+      "norm_label": "cachekey"
+    },
+    {
       "label": "getReviewKpiFilterOptions()",
       "file_type": "code",
       "source_file": "app/data-entry/review-kpi/service.ts",
@@ -11720,18 +11720,6 @@
       "community": 0,
       "community_name": "createToolMetadata",
       "norm_label": "getreviewkpifilteroptions()"
-    },
-    {
-      "label": "withCache()",
-      "file_type": "code",
-      "source_file": "lib/ai/cache.ts",
-      "source_location": "L16",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "lib_ai_cache_withcache",
-      "community": 0,
-      "community_name": "createToolMetadata",
-      "norm_label": "withcache()"
     },
     {
       "label": "compareKpisAcrossUtilities()",
@@ -11840,6 +11828,18 @@
       "community": 0,
       "community_name": "createToolMetadata",
       "norm_label": "getserviceareabreakdown()"
+    },
+    {
+      "label": "getAnomalyInsights()",
+      "file_type": "code",
+      "source_file": "lib/ai/data-service/anomalies.ts",
+      "source_location": "L34",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "lib_ai_data_service_anomalies_getanomalyinsights",
+      "community": 0,
+      "community_name": "createToolMetadata",
+      "norm_label": "getanomalyinsights()"
     },
     {
       "label": "getBenchmarkingData()",
@@ -12008,6 +12008,18 @@
       "community": 0,
       "community_name": "createToolMetadata",
       "norm_label": "getcustomkpistatus()"
+    },
+    {
+      "label": "getGovernanceAudit()",
+      "file_type": "code",
+      "source_file": "lib/ai/data-service/governance.ts",
+      "source_location": "L20",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "lib_ai_data_service_governance_getgovernanceaudit",
+      "community": 0,
+      "community_name": "createToolMetadata",
+      "norm_label": "getgovernanceaudit()"
     },
     {
       "label": "getDataQualityReport()",
@@ -17170,66 +17182,6 @@
       "norm_label": "parseoptionalsinceeventid()"
     },
     {
-      "label": "parseReviewKpiFilterContext()",
-      "file_type": "code",
-      "source_file": "app/api/data-entry/review-kpi/_lib/validators.ts",
-      "source_location": "L24",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "app_api_data_entry_review_kpi_lib_validators_parsereviewkpifiltercontext",
-      "community": 145,
-      "community_name": "events/route.ts",
-      "norm_label": "parsereviewkpifiltercontext()"
-    },
-    {
-      "label": "GET()",
-      "file_type": "code",
-      "source_file": "app/api/data-entry/review-kpi/route.ts",
-      "source_location": "L9",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "app_api_data_entry_review_kpi_route_get",
-      "community": 145,
-      "community_name": "events/route.ts",
-      "norm_label": "get()"
-    },
-    {
-      "label": "assertReviewKpiReadAccess()",
-      "file_type": "code",
-      "source_file": "app/data-entry/review-kpi/service.ts",
-      "source_location": "L73",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "app_data_entry_review_kpi_service_assertreviewkpireadaccess",
-      "community": 145,
-      "community_name": "events/route.ts",
-      "norm_label": "assertreviewkpireadaccess()"
-    },
-    {
-      "label": "sanitizeReviewKpiFilterContext()",
-      "file_type": "code",
-      "source_file": "app/data-entry/review-kpi/service.ts",
-      "source_location": "L105",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "app_data_entry_review_kpi_service_sanitizereviewkpifiltercontext",
-      "community": 145,
-      "community_name": "events/route.ts",
-      "norm_label": "sanitizereviewkpifiltercontext()"
-    },
-    {
-      "label": "toPositiveIntOrNull()",
-      "file_type": "code",
-      "source_file": "app/data-entry/review-kpi/service.ts",
-      "source_location": "L97",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "app_data_entry_review_kpi_service_topositiveintornull",
-      "community": 145,
-      "community_name": "events/route.ts",
-      "norm_label": "topositiveintornull()"
-    },
-    {
       "label": "getStore()",
       "file_type": "code",
       "source_file": "app/data-entry/review-kpi/sync-store.ts",
@@ -18058,6 +18010,42 @@
       "norm_label": "post()"
     },
     {
+      "label": "addReviewKpiCommentAction()",
+      "file_type": "code",
+      "source_file": "app/data-entry/review-kpi/actions.ts",
+      "source_location": "L41",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "app_data_entry_review_kpi_actions_addreviewkpicommentaction",
+      "community": 160,
+      "community_name": "review-kpi/service.ts",
+      "norm_label": "addreviewkpicommentaction()"
+    },
+    {
+      "label": "updateReviewKpiInputAction()",
+      "file_type": "code",
+      "source_file": "app/data-entry/review-kpi/actions.ts",
+      "source_location": "L33",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "app_data_entry_review_kpi_actions_updatereviewkpiinputaction",
+      "community": 160,
+      "community_name": "review-kpi/service.ts",
+      "norm_label": "updatereviewkpiinputaction()"
+    },
+    {
+      "label": "addReviewKpiInputComment()",
+      "file_type": "code",
+      "source_file": "app/data-entry/review-kpi/service.ts",
+      "source_location": "L911",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "app_data_entry_review_kpi_service_addreviewkpiinputcomment",
+      "community": 160,
+      "community_name": "review-kpi/service.ts",
+      "norm_label": "addreviewkpiinputcomment()"
+    },
+    {
       "label": "applyCustomKpiReviewDecision()",
       "file_type": "code",
       "source_file": "app/data-entry/review-kpi/service.ts",
@@ -18080,6 +18068,18 @@
       "community": 160,
       "community_name": "review-kpi/service.ts",
       "norm_label": "assertcustomkpirevieweraccess()"
+    },
+    {
+      "label": "assertReviewKpiReadAccess()",
+      "file_type": "code",
+      "source_file": "app/data-entry/review-kpi/service.ts",
+      "source_location": "L73",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "app_data_entry_review_kpi_service_assertreviewkpireadaccess",
+      "community": 160,
+      "community_name": "review-kpi/service.ts",
+      "norm_label": "assertreviewkpireadaccess()"
     },
     {
       "label": "assertReviewKpiWriteAccess()",
@@ -18130,6 +18130,18 @@
       "norm_label": "collectcommenterids()"
     },
     {
+      "label": "findLatestKpiResult()",
+      "file_type": "code",
+      "source_file": "app/data-entry/review-kpi/service.ts",
+      "source_location": "L776",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "app_data_entry_review_kpi_service_findlatestkpiresult",
+      "community": 160,
+      "community_name": "review-kpi/service.ts",
+      "norm_label": "findlatestkpiresult()"
+    },
+    {
       "label": "getActiveManagedListIdMap()",
       "file_type": "code",
       "source_file": "app/data-entry/review-kpi/service.ts",
@@ -18164,6 +18176,30 @@
       "community": 160,
       "community_name": "review-kpi/service.ts",
       "norm_label": "getcustomkpidecisionrequestorthrow()"
+    },
+    {
+      "label": "getCustomKpiPromotionRequestOrThrow()",
+      "file_type": "code",
+      "source_file": "app/data-entry/review-kpi/service.ts",
+      "source_location": "L1403",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "app_data_entry_review_kpi_service_getcustomkpipromotionrequestorthrow",
+      "community": 160,
+      "community_name": "review-kpi/service.ts",
+      "norm_label": "getcustomkpipromotionrequestorthrow()"
+    },
+    {
+      "label": "getReviewKpiDataEntryById()",
+      "file_type": "code",
+      "source_file": "app/data-entry/review-kpi/service.ts",
+      "source_location": "L699",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "app_data_entry_review_kpi_service_getreviewkpidataentrybyid",
+      "community": 160,
+      "community_name": "review-kpi/service.ts",
+      "norm_label": "getreviewkpidataentrybyid()"
     },
     {
       "label": "hasRoleAccess()",
@@ -18226,6 +18262,18 @@
       "norm_label": "normalizetext()"
     },
     {
+      "label": "promoteCustomKpiRequestVisibility()",
+      "file_type": "code",
+      "source_file": "app/data-entry/review-kpi/service.ts",
+      "source_location": "L1675",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "app_data_entry_review_kpi_service_promotecustomkpirequestvisibility",
+      "community": 160,
+      "community_name": "review-kpi/service.ts",
+      "norm_label": "promotecustomkpirequestvisibility()"
+    },
+    {
       "label": "resolveAndValidateKpiTaxonomy()",
       "file_type": "code",
       "source_file": "app/data-entry/review-kpi/service.ts",
@@ -18236,6 +18284,18 @@
       "community": 160,
       "community_name": "review-kpi/service.ts",
       "norm_label": "resolveandvalidatekpitaxonomy()"
+    },
+    {
+      "label": "resolveKpiDefIdForInput()",
+      "file_type": "code",
+      "source_file": "app/data-entry/review-kpi/service.ts",
+      "source_location": "L756",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "app_data_entry_review_kpi_service_resolvekpidefidforinput",
+      "community": 160,
+      "community_name": "review-kpi/service.ts",
+      "norm_label": "resolvekpidefidforinput()"
     },
     {
       "label": "resolveOverrideDecisionLineage()",
@@ -18308,6 +18368,18 @@
       "community": 160,
       "community_name": "review-kpi/service.ts",
       "norm_label": "toreviewinputvaluefromdataentry()"
+    },
+    {
+      "label": "updateReviewKpiInputValue()",
+      "file_type": "code",
+      "source_file": "app/data-entry/review-kpi/service.ts",
+      "source_location": "L825",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "app_data_entry_review_kpi_service_updatereviewkpiinputvalue",
+      "community": 160,
+      "community_name": "review-kpi/service.ts",
+      "norm_label": "updatereviewkpiinputvalue()"
     },
     {
       "label": "enqueueCustomKpiDecisionOutcomeEmail()",
@@ -25674,7 +25746,7 @@
       "_origin": "ast",
       "id": "app_api_data_entry_review_kpi_inputs_dataentryid_comments_route_post",
       "community": 32,
-      "community_name": "updateReviewKpiInputValue",
+      "community_name": "review-kpi/_lib/validators.ts",
       "norm_label": "post()"
     },
     {
@@ -25686,7 +25758,7 @@
       "_origin": "ast",
       "id": "app_api_data_entry_review_kpi_inputs_dataentryid_route_patch",
       "community": 32,
-      "community_name": "updateReviewKpiInputValue",
+      "community_name": "review-kpi/_lib/validators.ts",
       "norm_label": "patch()"
     },
     {
@@ -25698,7 +25770,7 @@
       "_origin": "ast",
       "id": "app_api_data_entry_review_kpi_lib_validators_parseaddcommentpayload",
       "community": 32,
-      "community_name": "updateReviewKpiInputValue",
+      "community_name": "review-kpi/_lib/validators.ts",
       "norm_label": "parseaddcommentpayload()"
     },
     {
@@ -25710,7 +25782,7 @@
       "_origin": "ast",
       "id": "app_api_data_entry_review_kpi_lib_validators_parsenumber",
       "community": 32,
-      "community_name": "updateReviewKpiInputValue",
+      "community_name": "review-kpi/_lib/validators.ts",
       "norm_label": "parsenumber()"
     },
     {
@@ -25722,8 +25794,20 @@
       "_origin": "ast",
       "id": "app_api_data_entry_review_kpi_lib_validators_parserequireduuid",
       "community": 32,
-      "community_name": "updateReviewKpiInputValue",
+      "community_name": "review-kpi/_lib/validators.ts",
       "norm_label": "parserequireduuid()"
+    },
+    {
+      "label": "parseReviewKpiFilterContext()",
+      "file_type": "code",
+      "source_file": "app/api/data-entry/review-kpi/_lib/validators.ts",
+      "source_location": "L24",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "app_api_data_entry_review_kpi_lib_validators_parsereviewkpifiltercontext",
+      "community": 32,
+      "community_name": "review-kpi/_lib/validators.ts",
+      "norm_label": "parsereviewkpifiltercontext()"
     },
     {
       "label": "parseUpdateInputPayload()",
@@ -25734,92 +25818,44 @@
       "_origin": "ast",
       "id": "app_api_data_entry_review_kpi_lib_validators_parseupdateinputpayload",
       "community": 32,
-      "community_name": "updateReviewKpiInputValue",
+      "community_name": "review-kpi/_lib/validators.ts",
       "norm_label": "parseupdateinputpayload()"
     },
     {
-      "label": "addReviewKpiCommentAction()",
+      "label": "GET()",
       "file_type": "code",
-      "source_file": "app/data-entry/review-kpi/actions.ts",
-      "source_location": "L41",
+      "source_file": "app/api/data-entry/review-kpi/route.ts",
+      "source_location": "L9",
       "_callable": true,
       "_origin": "ast",
-      "id": "app_data_entry_review_kpi_actions_addreviewkpicommentaction",
+      "id": "app_api_data_entry_review_kpi_route_get",
       "community": 32,
-      "community_name": "updateReviewKpiInputValue",
-      "norm_label": "addreviewkpicommentaction()"
+      "community_name": "review-kpi/_lib/validators.ts",
+      "norm_label": "get()"
     },
     {
-      "label": "updateReviewKpiInputAction()",
-      "file_type": "code",
-      "source_file": "app/data-entry/review-kpi/actions.ts",
-      "source_location": "L33",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "app_data_entry_review_kpi_actions_updatereviewkpiinputaction",
-      "community": 32,
-      "community_name": "updateReviewKpiInputValue",
-      "norm_label": "updatereviewkpiinputaction()"
-    },
-    {
-      "label": "addReviewKpiInputComment()",
+      "label": "sanitizeReviewKpiFilterContext()",
       "file_type": "code",
       "source_file": "app/data-entry/review-kpi/service.ts",
-      "source_location": "L911",
+      "source_location": "L105",
       "_callable": true,
       "_origin": "ast",
-      "id": "app_data_entry_review_kpi_service_addreviewkpiinputcomment",
+      "id": "app_data_entry_review_kpi_service_sanitizereviewkpifiltercontext",
       "community": 32,
-      "community_name": "updateReviewKpiInputValue",
-      "norm_label": "addreviewkpiinputcomment()"
+      "community_name": "review-kpi/_lib/validators.ts",
+      "norm_label": "sanitizereviewkpifiltercontext()"
     },
     {
-      "label": "findLatestKpiResult()",
+      "label": "toPositiveIntOrNull()",
       "file_type": "code",
       "source_file": "app/data-entry/review-kpi/service.ts",
-      "source_location": "L776",
+      "source_location": "L97",
       "_callable": true,
       "_origin": "ast",
-      "id": "app_data_entry_review_kpi_service_findlatestkpiresult",
+      "id": "app_data_entry_review_kpi_service_topositiveintornull",
       "community": 32,
-      "community_name": "updateReviewKpiInputValue",
-      "norm_label": "findlatestkpiresult()"
-    },
-    {
-      "label": "getReviewKpiDataEntryById()",
-      "file_type": "code",
-      "source_file": "app/data-entry/review-kpi/service.ts",
-      "source_location": "L699",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "app_data_entry_review_kpi_service_getreviewkpidataentrybyid",
-      "community": 32,
-      "community_name": "updateReviewKpiInputValue",
-      "norm_label": "getreviewkpidataentrybyid()"
-    },
-    {
-      "label": "resolveKpiDefIdForInput()",
-      "file_type": "code",
-      "source_file": "app/data-entry/review-kpi/service.ts",
-      "source_location": "L756",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "app_data_entry_review_kpi_service_resolvekpidefidforinput",
-      "community": 32,
-      "community_name": "updateReviewKpiInputValue",
-      "norm_label": "resolvekpidefidforinput()"
-    },
-    {
-      "label": "updateReviewKpiInputValue()",
-      "file_type": "code",
-      "source_file": "app/data-entry/review-kpi/service.ts",
-      "source_location": "L825",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "app_data_entry_review_kpi_service_updatereviewkpiinputvalue",
-      "community": 32,
-      "community_name": "updateReviewKpiInputValue",
-      "norm_label": "updatereviewkpiinputvalue()"
+      "community_name": "review-kpi/_lib/validators.ts",
+      "norm_label": "topositiveintornull()"
     },
     {
       "label": "PowerStationDnD()",
@@ -27490,6 +27526,54 @@
       "norm_label": "norm()"
     },
     {
+      "label": "describeFetchError()",
+      "file_type": "code",
+      "source_file": "app/migration/service.ts",
+      "source_location": "L401",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "app_migration_service_describefetcherror",
+      "community": 405,
+      "community_name": "retrieveInputDlDefMappings",
+      "norm_label": "describefetcherror()"
+    },
+    {
+      "label": "fetchLegacyMigEndpoint()",
+      "file_type": "code",
+      "source_file": "app/migration/service.ts",
+      "source_location": "L529",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "app_migration_service_fetchlegacymigendpoint",
+      "community": 405,
+      "community_name": "retrieveInputDlDefMappings",
+      "norm_label": "fetchlegacymigendpoint()"
+    },
+    {
+      "label": "retrieveInputDlDefMappings()",
+      "file_type": "code",
+      "source_file": "app/migration/service.ts",
+      "source_location": "L1440",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "app_migration_service_retrieveinputdldefmappings",
+      "community": 405,
+      "community_name": "retrieveInputDlDefMappings",
+      "norm_label": "retrieveinputdldefmappings()"
+    },
+    {
+      "label": "stringSimilarity()",
+      "file_type": "code",
+      "source_file": "app/migration/service.ts",
+      "source_location": "L9",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "app_migration_service_stringsimilarity",
+      "community": 405,
+      "community_name": "retrieveInputDlDefMappings",
+      "norm_label": "stringsimilarity()"
+    },
+    {
       "label": "GovernancePage()",
       "file_type": "code",
       "source_file": "app/settings/governance/page.tsx",
@@ -29086,30 +29170,6 @@
       "norm_label": "post()"
     },
     {
-      "label": "getCustomKpiPromotionRequestOrThrow()",
-      "file_type": "code",
-      "source_file": "app/data-entry/review-kpi/service.ts",
-      "source_location": "L1403",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "app_data_entry_review_kpi_service_getcustomkpipromotionrequestorthrow",
-      "community": 54,
-      "community_name": "decision/route.ts",
-      "norm_label": "getcustomkpipromotionrequestorthrow()"
-    },
-    {
-      "label": "promoteCustomKpiRequestVisibility()",
-      "file_type": "code",
-      "source_file": "app/data-entry/review-kpi/service.ts",
-      "source_location": "L1675",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "app_data_entry_review_kpi_service_promotecustomkpirequestvisibility",
-      "community": 54,
-      "community_name": "decision/route.ts",
-      "norm_label": "promotecustomkpirequestvisibility()"
-    },
-    {
       "label": "DataEntryBreakdownPanel()",
       "file_type": "code",
       "source_file": "app/migration/data-entry-breakdown-panel.tsx",
@@ -29482,42 +29542,6 @@
       "norm_label": "getincompletekpis()"
     },
     {
-      "label": "buildKpiWhereConditions()",
-      "file_type": "code",
-      "source_file": "app/data-entry/review-kpi/service.ts",
-      "source_location": "L397",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "app_data_entry_review_kpi_service_buildkpiwhereconditions",
-      "community": 6,
-      "community_name": "user.service.ts",
-      "norm_label": "buildkpiwhereconditions()"
-    },
-    {
-      "label": "getKpiVisibilityFilterForUser()",
-      "file_type": "code",
-      "source_file": "app/data-entry/review-kpi/service.ts",
-      "source_location": "L58",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "app_data_entry_review_kpi_service_getkpivisibilityfilterforuser",
-      "community": 6,
-      "community_name": "user.service.ts",
-      "norm_label": "getkpivisibilityfilterforuser()"
-    },
-    {
-      "label": "listReviewKpiRows()",
-      "file_type": "code",
-      "source_file": "app/data-entry/review-kpi/service.ts",
-      "source_location": "L458",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "app_data_entry_review_kpi_service_listreviewkpirows",
-      "community": 6,
-      "community_name": "user.service.ts",
-      "norm_label": "listreviewkpirows()"
-    },
-    {
       "label": "GetReportPeriods()",
       "file_type": "code",
       "source_file": "app/data-entry/service.ts",
@@ -29528,18 +29552,6 @@
       "community": 6,
       "community_name": "user.service.ts",
       "norm_label": "getreportperiods()"
-    },
-    {
-      "label": "getAnomalyInsights()",
-      "file_type": "code",
-      "source_file": "lib/ai/data-service/anomalies.ts",
-      "source_location": "L34",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "lib_ai_data_service_anomalies_getanomalyinsights",
-      "community": 6,
-      "community_name": "user.service.ts",
-      "norm_label": "getanomalyinsights()"
     },
     {
       "label": "formatPeriodDisplay()",
@@ -29650,18 +29662,6 @@
       "norm_label": "periodaccesspredicate()"
     },
     {
-      "label": "resolvePeriod()",
-      "file_type": "code",
-      "source_file": "lib/ai/data-service/common.ts",
-      "source_location": "L189",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "lib_ai_data_service_common_resolveperiod",
-      "community": 6,
-      "community_name": "user.service.ts",
-      "norm_label": "resolveperiod()"
-    },
-    {
       "label": "resolvePeriodId()",
       "file_type": "code",
       "source_file": "lib/ai/data-service/common.ts",
@@ -29710,18 +29710,6 @@
       "norm_label": "fetchmanagedlistitems()"
     },
     {
-      "label": "getGovernanceAudit()",
-      "file_type": "code",
-      "source_file": "lib/ai/data-service/governance.ts",
-      "source_location": "L20",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "lib_ai_data_service_governance_getgovernanceaudit",
-      "community": 6,
-      "community_name": "user.service.ts",
-      "norm_label": "getgovernanceaudit()"
-    },
-    {
       "label": "getKpiStatus()",
       "file_type": "code",
       "source_file": "lib/ai/data-service/kpi.ts",
@@ -29732,42 +29720,6 @@
       "community": 6,
       "community_name": "user.service.ts",
       "norm_label": "getkpistatus()"
-    },
-    {
-      "label": "getPerformanceSnapshot()",
-      "file_type": "code",
-      "source_file": "lib/ai/data-service/performance.ts",
-      "source_location": "L24",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "lib_ai_data_service_performance_getperformancesnapshot",
-      "community": 6,
-      "community_name": "user.service.ts",
-      "norm_label": "getperformancesnapshot()"
-    },
-    {
-      "label": "getInputStatus()",
-      "file_type": "code",
-      "source_file": "lib/ai/data-service/review.ts",
-      "source_location": "L98",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "lib_ai_data_service_review_getinputstatus",
-      "community": 6,
-      "community_name": "user.service.ts",
-      "norm_label": "getinputstatus()"
-    },
-    {
-      "label": "getReviewQueue()",
-      "file_type": "code",
-      "source_file": "lib/ai/data-service/review.ts",
-      "source_location": "L27",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "lib_ai_data_service_review_getreviewqueue",
-      "community": 6,
-      "community_name": "user.service.ts",
-      "norm_label": "getreviewqueue()"
     },
     {
       "label": "hasGlobalUtilityAccess()",
@@ -31376,54 +31328,6 @@
       "community": 7,
       "community_name": "relevance/service.ts",
       "norm_label": "deriveenergyclassbytechnology()"
-    },
-    {
-      "label": "clearRequestCache()",
-      "file_type": "code",
-      "source_file": "lib/ai/cache.ts",
-      "source_location": "L38",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "lib_ai_cache_clearrequestcache",
-      "community": 72,
-      "community_name": "ai/types.ts",
-      "norm_label": "clearrequestcache()"
-    },
-    {
-      "label": "invalidateCache()",
-      "file_type": "code",
-      "source_file": "lib/ai/cache.ts",
-      "source_location": "L42",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "lib_ai_cache_invalidatecache",
-      "community": 72,
-      "community_name": "ai/types.ts",
-      "norm_label": "invalidatecache()"
-    },
-    {
-      "label": "invalidateCacheByPrefix()",
-      "file_type": "code",
-      "source_file": "lib/ai/cache.ts",
-      "source_location": "L54",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "lib_ai_cache_invalidatecachebyprefix",
-      "community": 72,
-      "community_name": "ai/types.ts",
-      "norm_label": "invalidatecachebyprefix()"
-    },
-    {
-      "label": "pruneExpired()",
-      "file_type": "code",
-      "source_file": "lib/ai/cache.ts",
-      "source_location": "L7",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "lib_ai_cache_pruneexpired",
-      "community": 72,
-      "community_name": "ai/types.ts",
-      "norm_label": "pruneexpired()"
     },
     {
       "label": "validateToolAccess()",
@@ -33550,18 +33454,6 @@
       "norm_label": "tooltiptrigger()"
     },
     {
-      "label": "describeFetchError()",
-      "file_type": "code",
-      "source_file": "app/migration/service.ts",
-      "source_location": "L401",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "app_migration_service_describefetcherror",
-      "community": 90,
-      "community_name": "migration/service.ts",
-      "norm_label": "describefetcherror()"
-    },
-    {
       "label": "fetchJsonEndpoint()",
       "file_type": "code",
       "source_file": "app/migration/service.ts",
@@ -33572,18 +33464,6 @@
       "community": 90,
       "community_name": "migration/service.ts",
       "norm_label": "fetchjsonendpoint()"
-    },
-    {
-      "label": "fetchLegacyMigEndpoint()",
-      "file_type": "code",
-      "source_file": "app/migration/service.ts",
-      "source_location": "L529",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "app_migration_service_fetchlegacymigendpoint",
-      "community": 90,
-      "community_name": "migration/service.ts",
-      "norm_label": "fetchlegacymigendpoint()"
     },
     {
       "label": "fetchReportPeriodOptionsWithUtility()",
@@ -33706,18 +33586,6 @@
       "norm_label": "resolvetimeoutms()"
     },
     {
-      "label": "retrieveInputDlDefMappings()",
-      "file_type": "code",
-      "source_file": "app/migration/service.ts",
-      "source_location": "L1440",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "app_migration_service_retrieveinputdldefmappings",
-      "community": 90,
-      "community_name": "migration/service.ts",
-      "norm_label": "retrieveinputdldefmappings()"
-    },
-    {
       "label": "shouldTryInsecureParser()",
       "file_type": "code",
       "source_file": "app/migration/service.ts",
@@ -33728,18 +33596,6 @@
       "community": 90,
       "community_name": "migration/service.ts",
       "norm_label": "shouldtryinsecureparser()"
-    },
-    {
-      "label": "stringSimilarity()",
-      "file_type": "code",
-      "source_file": "app/migration/service.ts",
-      "source_location": "L9",
-      "_callable": true,
-      "_origin": "ast",
-      "id": "app_migration_service_stringsimilarity",
-      "community": 90,
-      "community_name": "migration/service.ts",
-      "norm_label": "stringsimilarity()"
     },
     {
       "label": "toLegacyMigBaseUrl()",
@@ -33934,6 +33790,90 @@
       "norm_label": "usereviewkpisync()"
     },
     {
+      "label": "buildKpiWhereConditions()",
+      "file_type": "code",
+      "source_file": "app/data-entry/review-kpi/service.ts",
+      "source_location": "L397",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "app_data_entry_review_kpi_service_buildkpiwhereconditions",
+      "community": 93,
+      "community_name": "listReviewKpiRows",
+      "norm_label": "buildkpiwhereconditions()"
+    },
+    {
+      "label": "getKpiVisibilityFilterForUser()",
+      "file_type": "code",
+      "source_file": "app/data-entry/review-kpi/service.ts",
+      "source_location": "L58",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "app_data_entry_review_kpi_service_getkpivisibilityfilterforuser",
+      "community": 93,
+      "community_name": "listReviewKpiRows",
+      "norm_label": "getkpivisibilityfilterforuser()"
+    },
+    {
+      "label": "listReviewKpiRows()",
+      "file_type": "code",
+      "source_file": "app/data-entry/review-kpi/service.ts",
+      "source_location": "L458",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "app_data_entry_review_kpi_service_listreviewkpirows",
+      "community": 93,
+      "community_name": "listReviewKpiRows",
+      "norm_label": "listreviewkpirows()"
+    },
+    {
+      "label": "resolvePeriod()",
+      "file_type": "code",
+      "source_file": "lib/ai/data-service/common.ts",
+      "source_location": "L189",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "lib_ai_data_service_common_resolveperiod",
+      "community": 93,
+      "community_name": "listReviewKpiRows",
+      "norm_label": "resolveperiod()"
+    },
+    {
+      "label": "getPerformanceSnapshot()",
+      "file_type": "code",
+      "source_file": "lib/ai/data-service/performance.ts",
+      "source_location": "L24",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "lib_ai_data_service_performance_getperformancesnapshot",
+      "community": 93,
+      "community_name": "listReviewKpiRows",
+      "norm_label": "getperformancesnapshot()"
+    },
+    {
+      "label": "getInputStatus()",
+      "file_type": "code",
+      "source_file": "lib/ai/data-service/review.ts",
+      "source_location": "L98",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "lib_ai_data_service_review_getinputstatus",
+      "community": 93,
+      "community_name": "listReviewKpiRows",
+      "norm_label": "getinputstatus()"
+    },
+    {
+      "label": "getReviewQueue()",
+      "file_type": "code",
+      "source_file": "lib/ai/data-service/review.ts",
+      "source_location": "L27",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "lib_ai_data_service_review_getreviewqueue",
+      "community": 93,
+      "community_name": "listReviewKpiRows",
+      "norm_label": "getreviewqueue()"
+    },
+    {
       "label": "upsertCalculatedKpiValue()",
       "file_type": "code",
       "source_file": "app/data-entry/kpi-worker/persistKpi.ts",
@@ -34040,6 +33980,66 @@
       "community": 96,
       "community_name": "repoint-formula-inputs-dimensions.ts",
       "norm_label": "repointinput()"
+    },
+    {
+      "label": "clearRequestCache()",
+      "file_type": "code",
+      "source_file": "lib/ai/cache.ts",
+      "source_location": "L38",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "lib_ai_cache_clearrequestcache",
+      "community": 99,
+      "community_name": "cache.ts",
+      "norm_label": "clearrequestcache()"
+    },
+    {
+      "label": "invalidateCache()",
+      "file_type": "code",
+      "source_file": "lib/ai/cache.ts",
+      "source_location": "L42",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "lib_ai_cache_invalidatecache",
+      "community": 99,
+      "community_name": "cache.ts",
+      "norm_label": "invalidatecache()"
+    },
+    {
+      "label": "invalidateCacheByPrefix()",
+      "file_type": "code",
+      "source_file": "lib/ai/cache.ts",
+      "source_location": "L54",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "lib_ai_cache_invalidatecachebyprefix",
+      "community": 99,
+      "community_name": "cache.ts",
+      "norm_label": "invalidatecachebyprefix()"
+    },
+    {
+      "label": "pruneExpired()",
+      "file_type": "code",
+      "source_file": "lib/ai/cache.ts",
+      "source_location": "L7",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "lib_ai_cache_pruneexpired",
+      "community": 99,
+      "community_name": "cache.ts",
+      "norm_label": "pruneexpired()"
+    },
+    {
+      "label": "withCache()",
+      "file_type": "code",
+      "source_file": "lib/ai/cache.ts",
+      "source_location": "L16",
+      "_callable": true,
+      "_origin": "ast",
+      "id": "lib_ai_cache_withcache",
+      "community": 99,
+      "community_name": "cache.ts",
+      "norm_label": "withcache()"
     },
     {
       "label": "advanced.ts",
@@ -38871,17 +38871,6 @@
       "norm_label": "events/route.ts"
     },
     {
-      "label": "review-kpi/route.ts",
-      "file_type": "code",
-      "source_file": "app/api/data-entry/review-kpi/route.ts",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "app_api_data_entry_review_kpi_route",
-      "community": 145,
-      "community_name": "events/route.ts",
-      "norm_label": "review-kpi/route.ts"
-    },
-    {
       "label": "sync-store.ts",
       "file_type": "code",
       "source_file": "app/data-entry/review-kpi/sync-store.ts",
@@ -38891,50 +38880,6 @@
       "community": 145,
       "community_name": "events/route.ts",
       "norm_label": "sync-store.ts"
-    },
-    {
-      "label": "filters.contract.test.ts",
-      "file_type": "code",
-      "source_file": "test/integration/data-entry/review-kpi/filters.contract.test.ts",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "test_integration_data_entry_review_kpi_filters_contract_test",
-      "community": 145,
-      "community_name": "events/route.ts",
-      "norm_label": "filters.contract.test.ts"
-    },
-    {
-      "label": "mocks",
-      "file_type": "code",
-      "source_file": "test/integration/data-entry/review-kpi/filters.contract.test.ts",
-      "source_location": "L3",
-      "_origin": "ast",
-      "id": "test_integration_data_entry_review_kpi_filters_contract_test_mocks",
-      "community": 145,
-      "community_name": "events/route.ts",
-      "norm_label": "mocks"
-    },
-    {
-      "label": "list.contract.test.ts",
-      "file_type": "code",
-      "source_file": "test/integration/data-entry/review-kpi/list.contract.test.ts",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "test_integration_data_entry_review_kpi_list_contract_test",
-      "community": 145,
-      "community_name": "events/route.ts",
-      "norm_label": "list.contract.test.ts"
-    },
-    {
-      "label": "mocks",
-      "file_type": "code",
-      "source_file": "test/integration/data-entry/review-kpi/list.contract.test.ts",
-      "source_location": "L3",
-      "_origin": "ast",
-      "id": "test_integration_data_entry_review_kpi_list_contract_test_mocks",
-      "community": 145,
-      "community_name": "events/route.ts",
-      "norm_label": "mocks"
     },
     {
       "label": "sync.integration.test.ts",
@@ -48140,7 +48085,7 @@
       "_origin": "ast",
       "id": "app_api_data_entry_review_kpi_inputs_dataentryid_comments_route",
       "community": 32,
-      "community_name": "updateReviewKpiInputValue",
+      "community_name": "review-kpi/_lib/validators.ts",
       "norm_label": "comments/route.ts"
     },
     {
@@ -48151,7 +48096,7 @@
       "_origin": "ast",
       "id": "app_api_data_entry_review_kpi_inputs_dataentryid_route",
       "community": 32,
-      "community_name": "updateReviewKpiInputValue",
+      "community_name": "review-kpi/_lib/validators.ts",
       "norm_label": "[dataentryid]/route.ts"
     },
     {
@@ -48162,8 +48107,63 @@
       "_origin": "ast",
       "id": "app_api_data_entry_review_kpi_lib_validators",
       "community": 32,
-      "community_name": "updateReviewKpiInputValue",
+      "community_name": "review-kpi/_lib/validators.ts",
       "norm_label": "review-kpi/_lib/validators.ts"
+    },
+    {
+      "label": "review-kpi/route.ts",
+      "file_type": "code",
+      "source_file": "app/api/data-entry/review-kpi/route.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "app_api_data_entry_review_kpi_route",
+      "community": 32,
+      "community_name": "review-kpi/_lib/validators.ts",
+      "norm_label": "review-kpi/route.ts"
+    },
+    {
+      "label": "filters.contract.test.ts",
+      "file_type": "code",
+      "source_file": "test/integration/data-entry/review-kpi/filters.contract.test.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "test_integration_data_entry_review_kpi_filters_contract_test",
+      "community": 32,
+      "community_name": "review-kpi/_lib/validators.ts",
+      "norm_label": "filters.contract.test.ts"
+    },
+    {
+      "label": "mocks",
+      "file_type": "code",
+      "source_file": "test/integration/data-entry/review-kpi/filters.contract.test.ts",
+      "source_location": "L3",
+      "_origin": "ast",
+      "id": "test_integration_data_entry_review_kpi_filters_contract_test_mocks",
+      "community": 32,
+      "community_name": "review-kpi/_lib/validators.ts",
+      "norm_label": "mocks"
+    },
+    {
+      "label": "list.contract.test.ts",
+      "file_type": "code",
+      "source_file": "test/integration/data-entry/review-kpi/list.contract.test.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "test_integration_data_entry_review_kpi_list_contract_test",
+      "community": 32,
+      "community_name": "review-kpi/_lib/validators.ts",
+      "norm_label": "list.contract.test.ts"
+    },
+    {
+      "label": "mocks",
+      "file_type": "code",
+      "source_file": "test/integration/data-entry/review-kpi/list.contract.test.ts",
+      "source_location": "L3",
+      "_origin": "ast",
+      "id": "test_integration_data_entry_review_kpi_list_contract_test_mocks",
+      "community": 32,
+      "community_name": "review-kpi/_lib/validators.ts",
+      "norm_label": "mocks"
     },
     {
       "label": "mutations.contract.test.ts",
@@ -48173,7 +48173,7 @@
       "_origin": "ast",
       "id": "test_integration_data_entry_review_kpi_mutations_contract_test",
       "community": 32,
-      "community_name": "updateReviewKpiInputValue",
+      "community_name": "review-kpi/_lib/validators.ts",
       "norm_label": "mutations.contract.test.ts"
     },
     {
@@ -48184,7 +48184,7 @@
       "_origin": "ast",
       "id": "test_integration_data_entry_review_kpi_mutations_contract_test_mocks",
       "community": 32,
-      "community_name": "updateReviewKpiInputValue",
+      "community_name": "review-kpi/_lib/validators.ts",
       "norm_label": "mocks"
     },
     {
@@ -51152,6 +51152,28 @@
       "norm_label": "verification"
     },
     {
+      "label": "react-d3-tree",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L53",
+      "_origin": "ast",
+      "id": "package_dependencies_react_d3_tree",
+      "community": 400,
+      "community_name": "react-d3-tree",
+      "norm_label": "react-d3-tree"
+    },
+    {
+      "label": "react-d3-tree",
+      "file_type": "concept",
+      "source_file": "package.json",
+      "source_location": "L53",
+      "_origin": "ast",
+      "id": "react_d3_tree",
+      "community": 400,
+      "community_name": "react-d3-tree",
+      "norm_label": "react-d3-tree"
+    },
+    {
       "label": "sync-prerequisite-tables.ts",
       "file_type": "code",
       "source_file": "scripts/sync-prerequisite-tables.ts",
@@ -53506,6 +53528,17 @@
       "norm_label": "lucide-react"
     },
     {
+      "label": "powerbi-client",
+      "file_type": "code",
+      "source_file": "package.json",
+      "source_location": "L49",
+      "_origin": "ast",
+      "id": "package_dependencies_powerbi_client",
+      "community": 52,
+      "community_name": "dependencies",
+      "norm_label": "powerbi-client"
+    },
+    {
       "label": "powerbi-client-react",
       "file_type": "code",
       "source_file": "package.json",
@@ -53537,17 +53570,6 @@
       "community": 52,
       "community_name": "dependencies",
       "norm_label": "@radix-ui/react-select"
-    },
-    {
-      "label": "react-d3-tree",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L53",
-      "_origin": "ast",
-      "id": "package_dependencies_react_d3_tree",
-      "community": 52,
-      "community_name": "dependencies",
-      "norm_label": "react-d3-tree"
     },
     {
       "label": "read-excel-file",
@@ -53627,6 +53649,17 @@
       "norm_label": "powerbi-client-react"
     },
     {
+      "label": "powerbi-client",
+      "file_type": "concept",
+      "source_file": "package.json",
+      "source_location": "L49",
+      "_origin": "ast",
+      "id": "powerbi_client",
+      "community": 52,
+      "community_name": "dependencies",
+      "norm_label": "powerbi-client"
+    },
+    {
       "label": "radix-ui",
       "file_type": "concept",
       "source_file": "package.json",
@@ -53647,17 +53680,6 @@
       "community": 52,
       "community_name": "dependencies",
       "norm_label": "@radix-ui/react-select"
-    },
-    {
-      "label": "react-d3-tree",
-      "file_type": "concept",
-      "source_file": "package.json",
-      "source_location": "L53",
-      "_origin": "ast",
-      "id": "react_d3_tree",
-      "community": 52,
-      "community_name": "dependencies",
-      "norm_label": "react-d3-tree"
     },
     {
       "label": "read-excel-file",
@@ -54516,17 +54538,6 @@
       "community": 6,
       "community_name": "user.service.ts",
       "norm_label": "performance.ts"
-    },
-    {
-      "label": "review.ts",
-      "file_type": "code",
-      "source_file": "lib/ai/data-service/review.ts",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "lib_ai_data_service_review",
-      "community": 6,
-      "community_name": "user.service.ts",
-      "norm_label": "review.ts"
     },
     {
       "label": "trends.ts",
@@ -55970,50 +55981,6 @@
       "norm_label": "prism 2 \u2014 kpi targets & actuals: time-series model (spec)"
     },
     {
-      "label": "cache.ts",
-      "file_type": "code",
-      "source_file": "lib/ai/cache.ts",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "lib_ai_cache",
-      "community": 72,
-      "community_name": "ai/types.ts",
-      "norm_label": "cache.ts"
-    },
-    {
-      "label": "CACHE_INVALIDATION",
-      "file_type": "code",
-      "source_file": "lib/ai/cache.ts",
-      "source_location": "L75",
-      "_origin": "ast",
-      "id": "lib_ai_cache_cache_invalidation",
-      "community": 72,
-      "community_name": "ai/types.ts",
-      "norm_label": "cache_invalidation"
-    },
-    {
-      "label": "CACHE_PREFIXES",
-      "file_type": "code",
-      "source_file": "lib/ai/cache.ts",
-      "source_location": "L62",
-      "_origin": "ast",
-      "id": "lib_ai_cache_cache_prefixes",
-      "community": 72,
-      "community_name": "ai/types.ts",
-      "norm_label": "cache_prefixes"
-    },
-    {
-      "label": "requestCache",
-      "file_type": "code",
-      "source_file": "lib/ai/cache.ts",
-      "source_location": "L4",
-      "_origin": "ast",
-      "id": "lib_ai_cache_requestcache",
-      "community": 72,
-      "community_name": "ai/types.ts",
-      "norm_label": "requestcache"
-    },
-    {
       "label": "guardrails.ts",
       "file_type": "code",
       "source_file": "lib/ai/guardrails.ts",
@@ -56067,17 +56034,6 @@
       "community": 72,
       "community_name": "ai/types.ts",
       "norm_label": "pii_patterns"
-    },
-    {
-      "label": "ai/index.ts",
-      "file_type": "code",
-      "source_file": "lib/ai/index.ts",
-      "source_location": "L1",
-      "_origin": "ast",
-      "id": "lib_ai_index",
-      "community": 72,
-      "community_name": "ai/types.ts",
-      "norm_label": "ai/index.ts"
     },
     {
       "label": "ai/types.ts",
@@ -58632,26 +58588,15 @@
       "norm_label": "use-review-kpi-sync.ts"
     },
     {
-      "label": "powerbi-client",
+      "label": "review.ts",
       "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L49",
+      "source_file": "lib/ai/data-service/review.ts",
+      "source_location": "L1",
       "_origin": "ast",
-      "id": "package_dependencies_powerbi_client",
+      "id": "lib_ai_data_service_review",
       "community": 93,
-      "community_name": "powerbi-client",
-      "norm_label": "powerbi-client"
-    },
-    {
-      "label": "powerbi-client",
-      "file_type": "concept",
-      "source_file": "package.json",
-      "source_location": "L49",
-      "_origin": "ast",
-      "id": "powerbi_client",
-      "community": 93,
-      "community_name": "powerbi-client",
-      "norm_label": "powerbi-client"
+      "community_name": "listReviewKpiRows",
+      "norm_label": "review.ts"
     },
     {
       "label": "kpi-worker/index.ts",
@@ -59334,6 +59279,61 @@
       "community": 98,
       "community_name": "Measure effective-dating spec (DRAFT)",
       "norm_label": "unit-lifecycle-spec.md"
+    },
+    {
+      "label": "cache.ts",
+      "file_type": "code",
+      "source_file": "lib/ai/cache.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "lib_ai_cache",
+      "community": 99,
+      "community_name": "cache.ts",
+      "norm_label": "cache.ts"
+    },
+    {
+      "label": "CACHE_INVALIDATION",
+      "file_type": "code",
+      "source_file": "lib/ai/cache.ts",
+      "source_location": "L75",
+      "_origin": "ast",
+      "id": "lib_ai_cache_cache_invalidation",
+      "community": 99,
+      "community_name": "cache.ts",
+      "norm_label": "cache_invalidation"
+    },
+    {
+      "label": "CACHE_PREFIXES",
+      "file_type": "code",
+      "source_file": "lib/ai/cache.ts",
+      "source_location": "L62",
+      "_origin": "ast",
+      "id": "lib_ai_cache_cache_prefixes",
+      "community": 99,
+      "community_name": "cache.ts",
+      "norm_label": "cache_prefixes"
+    },
+    {
+      "label": "requestCache",
+      "file_type": "code",
+      "source_file": "lib/ai/cache.ts",
+      "source_location": "L4",
+      "_origin": "ast",
+      "id": "lib_ai_cache_requestcache",
+      "community": 99,
+      "community_name": "cache.ts",
+      "norm_label": "requestcache"
+    },
+    {
+      "label": "ai/index.ts",
+      "file_type": "code",
+      "source_file": "lib/ai/index.ts",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "lib_ai_index",
+      "community": 99,
+      "community_name": "cache.ts",
+      "norm_label": "ai/index.ts"
     },
     {
       "label": "Input Definitions (DB Schema)",
@@ -64437,96 +64437,6 @@
       "id": "prismaireport_pii_filtering"
     },
     {
-      "label": "Create Tool Metadata (Common)",
-      "file_type": "code",
-      "source_file": "lib/ai/data-service/common.ts",
-      "source_location": null,
-      "source_url": null,
-      "captured_at": null,
-      "author": null,
-      "contributor": null,
-      "community": 6,
-      "norm_label": "create tool metadata (common)",
-      "_origin": "semantic",
-      "community_name": "user.service.ts",
-      "id": "createToolMetadata"
-    },
-    {
-      "label": "Get Severity Score (Common)",
-      "file_type": "code",
-      "source_file": "lib/ai/data-service/common.ts",
-      "source_location": null,
-      "source_url": null,
-      "captured_at": null,
-      "author": null,
-      "contributor": null,
-      "community": 6,
-      "norm_label": "get severity score (common)",
-      "_origin": "semantic",
-      "community_name": "user.service.ts",
-      "id": "getSeverityScore"
-    },
-    {
-      "label": "Has Global Utility Access",
-      "file_type": "code",
-      "source_file": "lib/user.service.ts",
-      "source_location": null,
-      "source_url": null,
-      "captured_at": null,
-      "author": null,
-      "contributor": null,
-      "community": 6,
-      "norm_label": "has global utility access",
-      "_origin": "semantic",
-      "community_name": "user.service.ts",
-      "id": "hasGlobalUtilityAccess"
-    },
-    {
-      "label": "List Review KPI Rows (Service)",
-      "file_type": "code",
-      "source_file": "app/data-entry/review-kpi/service.ts",
-      "source_location": null,
-      "source_url": null,
-      "captured_at": null,
-      "author": null,
-      "contributor": null,
-      "community": 6,
-      "norm_label": "list review kpi rows (service)",
-      "_origin": "semantic",
-      "community_name": "user.service.ts",
-      "id": "listReviewKpiRows"
-    },
-    {
-      "label": "Resolve Period (Common)",
-      "file_type": "code",
-      "source_file": "lib/ai/data-service/common.ts",
-      "source_location": null,
-      "source_url": null,
-      "captured_at": null,
-      "author": null,
-      "contributor": null,
-      "community": 6,
-      "norm_label": "resolve period (common)",
-      "_origin": "semantic",
-      "community_name": "user.service.ts",
-      "id": "resolvePeriod"
-    },
-    {
-      "label": "Resolve Period ID (Common)",
-      "file_type": "code",
-      "source_file": "lib/ai/data-service/common.ts",
-      "source_location": null,
-      "source_url": null,
-      "captured_at": null,
-      "author": null,
-      "contributor": null,
-      "community": 6,
-      "norm_label": "resolve period id (common)",
-      "_origin": "semantic",
-      "community_name": "user.service.ts",
-      "id": "resolvePeriodId"
-    },
-    {
       "label": "findItem Pattern (in-memory ID lookup in managedListItems array)",
       "file_type": "rationale",
       "source_file": null,
@@ -65005,6 +64915,96 @@
       "_origin": "semantic",
       "community_name": "migration/service.ts",
       "id": "sub_regions_table"
+    },
+    {
+      "label": "Create Tool Metadata (Common)",
+      "file_type": "code",
+      "source_file": "lib/ai/data-service/common.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 93,
+      "norm_label": "create tool metadata (common)",
+      "_origin": "semantic",
+      "community_name": "listReviewKpiRows",
+      "id": "createToolMetadata"
+    },
+    {
+      "label": "Get Severity Score (Common)",
+      "file_type": "code",
+      "source_file": "lib/ai/data-service/common.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 93,
+      "norm_label": "get severity score (common)",
+      "_origin": "semantic",
+      "community_name": "listReviewKpiRows",
+      "id": "getSeverityScore"
+    },
+    {
+      "label": "Has Global Utility Access",
+      "file_type": "code",
+      "source_file": "lib/user.service.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 93,
+      "norm_label": "has global utility access",
+      "_origin": "semantic",
+      "community_name": "listReviewKpiRows",
+      "id": "hasGlobalUtilityAccess"
+    },
+    {
+      "label": "List Review KPI Rows (Service)",
+      "file_type": "code",
+      "source_file": "app/data-entry/review-kpi/service.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 93,
+      "norm_label": "list review kpi rows (service)",
+      "_origin": "semantic",
+      "community_name": "listReviewKpiRows",
+      "id": "listReviewKpiRows"
+    },
+    {
+      "label": "Resolve Period (Common)",
+      "file_type": "code",
+      "source_file": "lib/ai/data-service/common.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 93,
+      "norm_label": "resolve period (common)",
+      "_origin": "semantic",
+      "community_name": "listReviewKpiRows",
+      "id": "resolvePeriod"
+    },
+    {
+      "label": "Resolve Period ID (Common)",
+      "file_type": "code",
+      "source_file": "lib/ai/data-service/common.ts",
+      "source_location": null,
+      "source_url": null,
+      "captured_at": null,
+      "author": null,
+      "contributor": null,
+      "community": 93,
+      "norm_label": "resolve period id (common)",
+      "_origin": "semantic",
+      "community_name": "listReviewKpiRows",
+      "id": "resolvePeriodId"
     }
   ],
   "links": [
@@ -68242,7 +68242,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/api/factCurrency/route.ts",
-      "source_location": "L79",
+      "source_location": "L78",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_api_factcurrency_route_get",
@@ -68374,7 +68374,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/api/factEmployee/route.ts",
-      "source_location": "L91",
+      "source_location": "L90",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_api_factemployee_route_get",
@@ -68398,7 +68398,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/api/factFinancialAccounts/route.ts",
-      "source_location": "L119",
+      "source_location": "L118",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_api_factfinancialaccounts_route_get",
@@ -68542,7 +68542,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/api/factGeneratorData/route.ts",
-      "source_location": "L130",
+      "source_location": "L129",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_api_factgeneratordata_route_get",
@@ -68554,7 +68554,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/api/factGeneratorData/route.ts",
-      "source_location": "L142",
+      "source_location": "L141",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_api_factgeneratordata_route_get",
@@ -68806,7 +68806,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/api/factLeadership/route.ts",
-      "source_location": "L86",
+      "source_location": "L85",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_api_factleadership_route_get",
@@ -68818,7 +68818,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/api/factMetering/route.ts",
-      "source_location": "L118",
+      "source_location": "L117",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_api_factmetering_route_get",
@@ -69022,7 +69022,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/api/factSaidiAndSaifi/route.ts",
-      "source_location": "L91",
+      "source_location": "L90",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_api_factsaidiandsaifi_route_get",
@@ -69034,19 +69034,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/api/factTariffStructure/route.ts",
-      "source_location": "L100",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "app_api_facttariffstructure_route_get",
-      "target": "lib_legacy_entry_value_resolveentryvalue"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "app/api/factTariffStructure/route.ts",
-      "source_location": "L107",
+      "source_location": "L106",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_api_facttariffstructure_route_get",
@@ -69058,7 +69046,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/api/factTariffStructure/route.ts",
-      "source_location": "L130",
+      "source_location": "L129",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_api_facttariffstructure_route_get",
@@ -69105,6 +69093,18 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
+      "source_file": "app/api/factTariffStructure/route.ts",
+      "source_location": "L99",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "app_api_facttariffstructure_route_get",
+      "target": "lib_legacy_entry_value_resolveentryvalue"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
       "source_file": "app/api/factTransmission/route.ts",
       "source_location": "L111",
       "weight": 1.0,
@@ -69130,7 +69130,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/api/factTransmission/route.ts",
-      "source_location": "L146",
+      "source_location": "L145",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_api_facttransmission_route_get",
@@ -69274,7 +69274,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/api/factUtilityCosts/route.ts",
-      "source_location": "L171",
+      "source_location": "L170",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_api_factutilitycosts_route_get",
@@ -218188,5 +218188,5 @@
       "source_file": "docs/prism-ai-report.html"
     }
   ],
-  "built_at_commit": "20fc377ef3a459145a91d747bbf0bfeafa652702"
+  "built_at_commit": "3d77a4c1d875a1a0efc72f887ae07e3d9abec041"
 }

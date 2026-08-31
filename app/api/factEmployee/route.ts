@@ -84,6 +84,7 @@ export async function GET(req: Request) {
       return {
         "Report Type": reportType?.name,
         "Report Period": reportDate,
+        ReportPeriodId: urp?.id,
         "Utility ID": urp?.utility_id,
         Division: "Employees",
         Gender: gender,

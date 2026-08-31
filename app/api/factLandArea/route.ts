@@ -20,6 +20,7 @@ export async function GET(req: Request) {
       return {
         Country: c.name,
         Area: val?.value ?? null,
+        ReportPeriodId: val?.report_period_id ?? null,
         Source: "unknown",
       };
     }),

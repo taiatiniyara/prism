@@ -21,6 +21,7 @@ export async function GET(req: Request) {
         Country: c.name,
         Islands: val?.value ?? null,
         Year: val?.period_year ?? null,
+        ReportPeriodId: val?.report_period_id ?? null,
         Source: "unknown",
       };
     }),

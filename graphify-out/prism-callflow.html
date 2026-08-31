@@ -60,7 +60,7 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
 <div class="container">
 
 <h1>prism — Complete Call Flow &amp; Architecture Documentation</h1>
-<p class="subtitle">Generated from graphify knowledge graph: 5434 nodes, 13173 edges, 408 communities. Commit: 3d77a4c</p>
+<p class="subtitle">Generated from graphify knowledge graph: 5434 nodes, 13173 edges, 405 communities. Commit: 20fc377</p>
 
 <div class="nav">
     <a href="#overview">Architecture Overview</a>
@@ -88,23 +88,23 @@ hr { border: none; border-top: 1px solid var(--border); margin: 40px 0; }
 
 %%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
 flowchart LR
-    EXTRACT_PIPELINE_5F350230("Extraction Pipeline<br/><small>10 nodes</small>")
+    EXTRACT_PIPELINE_5F350230("Extraction Pipeline<br/><small>8 nodes</small>")
     class EXTRACT_PIPELINE_5F350230 module;
-    BUILD_GRAPH_321CBB04("Graph Build<br/><small>1458 nodes</small>")
+    BUILD_GRAPH_321CBB04("Graph Build<br/><small>1464 nodes</small>")
     class BUILD_GRAPH_321CBB04 module;
-    ANALYSIS_CLUSTERING_C79796DA("Analysis &amp; Clustering<br/><small>77 nodes</small>")
+    ANALYSIS_CLUSTERING_C79796DA("Analysis &amp; Clustering<br/><small>76 nodes</small>")
     class ANALYSIS_CLUSTERING_C79796DA module;
     OUTPUTS_DOCS_ED82387C("Outputs &amp; Docs<br/><small>97 nodes</small>")
     class OUTPUTS_DOCS_ED82387C module;
     CLI_SKILLS_9964CBB8("CLI &amp; Skill Installers<br/><small>96 nodes</small>")
     class CLI_SKILLS_9964CBB8 module;
-    INGEST_CACHE_UPDATE_FF457338("Ingestion &amp; Updates<br/><small>154 nodes</small>")
+    INGEST_CACHE_UPDATE_FF457338("Ingestion &amp; Updates<br/><small>142 nodes</small>")
     class INGEST_CACHE_UPDATE_FF457338 module;
-    SERVE_API_35EC8E86("Serving API<br/><small>1088 nodes</small>")
+    SERVE_API_35EC8E86("Serving API<br/><small>1106 nodes</small>")
     class SERVE_API_35EC8E86 module;
     SECURITY_GLOBAL_5B9C6A04("Security &amp; Global Graph<br/><small>45 nodes</small>")
     class SECURITY_GLOBAL_5B9C6A04 module;
-    TESTS_FIXTURES_B84B1DCC("Tests &amp; Fixtures<br/><small>993 nodes</small>")
+    TESTS_FIXTURES_B84B1DCC("Tests &amp; Fixtures<br/><small>1009 nodes</small>")
     class TESTS_FIXTURES_B84B1DCC module;
     RELEVANCE_SERVICE_TS_8092928F("relevance/service.ts<br/><small>66 nodes</small>")
     class RELEVANCE_SERVICE_TS_8092928F module;
@@ -112,23 +112,23 @@ flowchart LR
     class NEW_BSC_SERVICE_TS_F06BD51D module;
     NEW_BSC_BUILDER_TSX_83184851("new-bsc-builder.tsx<br/><small>43 nodes</small>")
     class NEW_BSC_BUILDER_TSX_83184851 module;
-    REVIEW_KPI_TYPES_TS_6EFC5AD7("review-kpi/types.ts<br/><small>36 nodes</small>")
+    REVIEW_KPI_TYPES_TS_6EFC5AD7("review-kpi/types.ts<br/><small>38 nodes</small>")
     class REVIEW_KPI_TYPES_TS_6EFC5AD7 module;
     CHECKBOX_TSX_4D3F8B42("checkbox.tsx<br/><small>34 nodes</small>")
     class CHECKBOX_TSX_4D3F8B42 module;
-    OTHER_D0941E68("Other<br/><small>1180 nodes</small>")
+    OTHER_D0941E68("Other<br/><small>1153 nodes</small>")
     class OTHER_D0941E68 module;
     BUILD_GRAPH_321CBB04 -->|imports x487| SERVE_API_35EC8E86
-    SERVE_API_35EC8E86 -->|imports x402| BUILD_GRAPH_321CBB04
-    TESTS_FIXTURES_B84B1DCC -->|imports x202| SERVE_API_35EC8E86
-    OTHER_D0941E68 -->|imports x185| SERVE_API_35EC8E86
-    SERVE_API_35EC8E86 -->|imports x173| TESTS_FIXTURES_B84B1DCC
-    BUILD_GRAPH_321CBB04 -->|imports x163| TESTS_FIXTURES_B84B1DCC
-    TESTS_FIXTURES_B84B1DCC -->|imports x156| BUILD_GRAPH_321CBB04
-    OTHER_D0941E68 -->|imports x102| BUILD_GRAPH_321CBB04
-    BUILD_GRAPH_321CBB04 -->|contains x93| OTHER_D0941E68
-    OTHER_D0941E68 -->|imports x79| TESTS_FIXTURES_B84B1DCC
-    SERVE_API_35EC8E86 -->|calls x61| INGEST_CACHE_UPDATE_FF457338
+    SERVE_API_35EC8E86 -->|imports x404| BUILD_GRAPH_321CBB04
+    TESTS_FIXTURES_B84B1DCC -->|imports x210| SERVE_API_35EC8E86
+    SERVE_API_35EC8E86 -->|imports x187| TESTS_FIXTURES_B84B1DCC
+    OTHER_D0941E68 -->|imports x182| SERVE_API_35EC8E86
+    BUILD_GRAPH_321CBB04 -->|imports x164| TESTS_FIXTURES_B84B1DCC
+    TESTS_FIXTURES_B84B1DCC -->|imports x159| BUILD_GRAPH_321CBB04
+    OTHER_D0941E68 -->|imports x98| BUILD_GRAPH_321CBB04
+    BUILD_GRAPH_321CBB04 -->|contains x91| OTHER_D0941E68
+    ANALYSIS_CLUSTERING_C79796DA -->|calls x70| TESTS_FIXTURES_B84B1DCC
+    OTHER_D0941E68 -->|imports x65| TESTS_FIXTURES_B84B1DCC
     BUILD_GRAPH_321CBB04 -->|contains x61| INGEST_CACHE_UPDATE_FF457338
     classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
     classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
@@ -146,19 +146,19 @@ flowchart LR
     <h4>Architecture Layers</h4>
     <table style="width:100%;font-size:0.85rem;">
       <tr><th>Layer</th><th>Nodes</th><th>Communities</th></tr>
-      <tr><td>Extraction Pipeline</td><td>10</td><td><code>141, 400</code></td></tr><tr><td>Graph Build</td><td>1458</td><td><code>4, 16, 15, 40, 81, 90, 77, 48, 12, 166, 21, 76, 23, 19, 243, 51, 112, 31, 164, 66, 85, 33, 80, 37, 41, 52, 78, 82, 242, 65, 57, 58, 60, 63, 55, 73, 153, 170, 106, 84, 97, 110, 117, 291, 217, 336, 215, 115, 320, 325, 326, 327, 330, 333, 335, 337, 339, 341, 342, 343, 344, 345, 346, 347, 348, 350, 351, 352, 353, 354, 355, 356, 357, 358, 359, 360, 361, 362, 363, 364, 369, 393, 395, 407, 279</code></td></tr><tr><td>Analysis &amp; Clustering</td><td>77</td><td><code>0, 223, 189</code></td></tr><tr><td>Outputs &amp; Docs</td><td>97</td><td><code>98, 59, 130, 50, 135, 266, 241, 303, 304</code></td></tr><tr><td>CLI &amp; Skill Installers</td><td>96</td><td><code>234, 70, 95, 27, 157, 213, 239, 334, 258</code></td></tr><tr><td>Ingestion &amp; Updates</td><td>154</td><td><code>2, 10, 99, 108, 133, 142, 162, 177, 222, 349, 263</code></td></tr><tr><td>Serving API</td><td>1088</td><td><code>5, 1, 14, 9, 296, 64, 173, 13, 8, 20, 276, 28, 3, 30, 34, 62, 68, 169, 39, 87, 136, 83, 61, 46, 103, 102, 105, 118, 179, 197, 172, 313, 331, 281, 299, 384</code></td></tr><tr><td>Security &amp; Global Graph</td><td>45</td><td><code>75, 167, 191, 238, 240, 329, 340</code></td></tr><tr><td>Tests &amp; Fixtures</td><td>993</td><td><code>114, 6, 113, 286, 11, 143, 160, 72, 22, 128, 24, 109, 94, 18, 36, 32, 74, 246, 45, 47, 54, 298, 165, 25, 67, 79, 89, 91, 145, 338, 158, 332, 199, 224, 225, 306, 248, 249, 250, 370, 371, 372, 267, 268, 277, 300, 383, 385, 386, 387, 388</code></td></tr><tr><td>relevance/service.ts</td><td>66</td><td><code>7</code></td></tr><tr><td>new-bsc/service.ts</td><td>57</td><td><code>163</code></td></tr><tr><td>new-bsc-builder.tsx</td><td>43</td><td><code>245</code></td></tr><tr><td>review-kpi/types.ts</td><td>36</td><td><code>137</code></td></tr><tr><td>checkbox.tsx</td><td>34</td><td><code>231</code></td></tr><tr><td>Other</td><td>1180</td><td><code>56, 29, 26, 124, 232, 53, 38, 35, 42, 44, 111, 156, 93, 71, 92, 88, 86, 107, 134, 140, 49, 96, 120, 150, 69, 100, 101, 104, 154, 221, 116, 168, 17, 174, 209, 121, 122, 123, 125, 126, 129, 131, 132, 138, 178, 127, 139, 144, 147, 220, 233, 244, 321, 323, 146, 148, 149, 152, 247, 155, 159, 161, 307, 392, 394, 397, 401, 171, 175, 176, 180, 181, 182, 183, 184, 185, 186, 187, 190, 192, 193, 195, 196, 198, 200, 201, 203, 204, 205, 206, 207, 208, 322, 402, 403, 404, 210, 211, 212, 214, 216, 218, 219, 396, 405, 406, 43, 188, 226, 227, 228, 229, 230, 237, 251, 252, 253, 254, 255, 256, 257, 259, 271, 278, 284, 287, 290, 292, 293, 294, 295, 297, 305, 398, 119, 194, 202, 235, 236, 308, 309, 310, 311, 312, 314, 315, 316, 317, 318, 319, 324, 328, 365, 366, 367, 368, 390, 399, 151, 260, 261, 262, 264, 265, 269, 270, 272, 273, 274, 275, 280, 282, 283, 285, 288, 289, 301, 302, 373, 374, 375, 376, 377, 378, 379, 380, 381, 382, 389, 391</code></td></tr>
+      <tr><td>Extraction Pipeline</td><td>8</td><td><code>141</code></td></tr><tr><td>Graph Build</td><td>1464</td><td><code>4, 16, 15, 40, 81, 90, 77, 48, 12, 166, 21, 76, 23, 19, 243, 51, 112, 31, 164, 66, 85, 33, 80, 37, 41, 52, 78, 82, 242, 65, 57, 58, 60, 63, 55, 73, 153, 170, 106, 84, 97, 110, 117, 291, 217, 336, 215, 115, 320, 325, 326, 327, 330, 333, 335, 337, 339, 341, 342, 343, 344, 345, 346, 347, 348, 350, 351, 352, 353, 354, 355, 356, 357, 358, 359, 360, 361, 362, 363, 364, 369, 393, 395, 407, 93, 279</code></td></tr><tr><td>Analysis &amp; Clustering</td><td>76</td><td><code>0, 223, 189</code></td></tr><tr><td>Outputs &amp; Docs</td><td>97</td><td><code>98, 59, 130, 50, 135, 266, 241, 303, 304</code></td></tr><tr><td>CLI &amp; Skill Installers</td><td>96</td><td><code>234, 70, 95, 27, 157, 213, 239, 334, 258</code></td></tr><tr><td>Ingestion &amp; Updates</td><td>142</td><td><code>2, 10, 108, 133, 142, 162, 177, 222, 349, 263</code></td></tr><tr><td>Serving API</td><td>1106</td><td><code>5, 1, 14, 9, 296, 64, 173, 13, 8, 20, 276, 28, 3, 30, 34, 62, 68, 169, 39, 87, 136, 83, 32, 61, 46, 103, 102, 105, 118, 179, 197, 172, 313, 331, 281, 299, 384</code></td></tr><tr><td>Security &amp; Global Graph</td><td>45</td><td><code>75, 167, 191, 238, 240, 329, 340</code></td></tr><tr><td>Tests &amp; Fixtures</td><td>1009</td><td><code>6, 114, 113, 286, 11, 143, 72, 22, 128, 160, 24, 109, 145, 94, 18, 36, 54, 74, 246, 45, 47, 298, 165, 25, 67, 79, 89, 91, 338, 158, 332, 199, 224, 225, 306, 248, 249, 250, 370, 371, 372, 267, 268, 277, 300, 383, 385, 386, 387, 388</code></td></tr><tr><td>relevance/service.ts</td><td>66</td><td><code>7</code></td></tr><tr><td>new-bsc/service.ts</td><td>57</td><td><code>163</code></td></tr><tr><td>new-bsc-builder.tsx</td><td>43</td><td><code>245</code></td></tr><tr><td>review-kpi/types.ts</td><td>38</td><td><code>137</code></td></tr><tr><td>checkbox.tsx</td><td>34</td><td><code>231</code></td></tr><tr><td>Other</td><td>1153</td><td><code>56, 29, 26, 124, 232, 53, 38, 35, 42, 44, 111, 156, 71, 88, 86, 107, 134, 140, 49, 96, 120, 150, 69, 92, 100, 101, 104, 154, 221, 116, 168, 17, 174, 209, 121, 122, 123, 125, 126, 129, 131, 132, 138, 178, 127, 139, 144, 147, 220, 233, 244, 321, 323, 146, 148, 149, 152, 247, 155, 159, 161, 307, 392, 394, 397, 401, 171, 175, 176, 180, 181, 182, 183, 184, 185, 186, 187, 190, 192, 193, 195, 196, 198, 200, 201, 203, 204, 205, 206, 207, 208, 322, 402, 403, 404, 210, 211, 212, 214, 216, 218, 219, 396, 406, 43, 188, 226, 227, 228, 229, 230, 237, 251, 252, 253, 254, 255, 256, 257, 259, 271, 278, 284, 287, 290, 292, 293, 294, 295, 297, 305, 398, 119, 194, 202, 235, 236, 308, 309, 310, 311, 312, 314, 315, 316, 317, 318, 319, 324, 328, 365, 366, 367, 368, 390, 399, 151, 260, 261, 262, 264, 265, 269, 270, 272, 273, 274, 275, 280, 282, 283, 285, 288, 289, 301, 302, 373, 374, 375, 376, 377, 378, 379, 380, 381, 382, 389, 391</code></td></tr>
     </table>
   </div>
   <div class="card">
     <h4>Core Flow</h4>
-    <div class="arrow-chain">Extraction Pipeline -&gt; Graph Build -&gt; Serving API -&gt; Tests &amp; Fixtures -&gt; Other -&gt; Ingestion &amp; Updates -&gt; new-bsc/service.ts</div>
+    <div class="arrow-chain">Extraction Pipeline -&gt; Graph Build -&gt; Serving API -&gt; Tests &amp; Fixtures -&gt; Analysis &amp; Clustering -&gt; CLI &amp; Skill Installers -&gt; Other</div>
   </div>
 </div>
 <div class="grid">
   <div class="card">
     <h4>Graph Report Highlights</h4>
     <ul>
-      <li>5434 nodes · 13173 edges · 408 communities (279 shown, 129 thin omitted)</li>
+      <li>5434 nodes · 13173 edges · 405 communities (276 shown, 129 thin omitted)</li>
       <li>Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 259 edges (avg confidence: 0.8)</li>
       <li>Token cost: 0 input · 0 output</li>
       <li>1. `db` - 241 edges</li>
@@ -170,37 +170,35 @@ flowchart LR
 <hr>
 <!-- ====== 2. Extraction Pipeline ====== -->
 <h2 id="extract-pipeline">2. Extraction Pipeline</h2>
-<p>Extraction Pipeline groups implementation around gen, extract, templatets, scripts, mostly in scripts/gen-extract-template.ts, package.json. This section covers 10 nodes and 8 internal edges; the diagram shows only representative relationships to stay readable.</p>
+<p>Extraction Pipeline groups implementation around gen, extract, templatets, scripts, mostly in scripts/gen-extract-template.ts. This section covers 8 nodes and 7 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
 %%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
 flowchart LR
-    %% Section: Extraction Pipeline (10 nodes, 8 edges)
-    subgraph extract_pipeline_scripts_gen_extract_template_ts_b73f2bc5["scripts/gen-extract-template.ts"]
-        scripts_gen_extract_template_cols_c12fce5a("COLS<br/><small>scripts/gen-extract-template.ts</small>")
-        scripts_gen_extract_template_ex_empty_f182a138("EX_EMPTY<br/><small>scripts/gen-extract-template.ts</small>")
-        scripts_gen_extract_template_ex_filled_fc84a9a7("EX_FILLED<br/><small>scripts/gen-extract-template.ts</small>")
-        scripts_gen_extract_template_ex_sliced_85bbc6c7("EX_SLICED<br/><small>scripts/gen-extract-template.ts</small>")
-        scripts_gen_extract_template_arg_a3cebe9a("arg()<br/><small>scripts/gen-extract-template.ts</small>")
-        scripts_gen_extract_template_f05b130f("gen-extract-template.ts")
-        scripts_gen_extract_template_headers_0e9ec4c6("headers<br/><small>scripts/gen-extract-template.ts</small>")
-        scripts_gen_extract_template_main_7d6e74b1("main()<br/><small>scripts/gen-extract-template.ts</small>")
-    end
-    subgraph extract_pipeline_package_json_0af69cbd["package.json"]
-        package_dependencies_react_d3_tree_a8301d7b("react-d3-tree<br/><small>package.json</small>")
-        react_d3_tree_ce13a6c7("react-d3-tree<br/><small>package.json</small>")
-    end
-    package_dependencies_react_d3_tree_a8301d7b -->|imports| react_d3_tree_ce13a6c7
-    class scripts_gen_extract_template_cols_c12fce5a klass;
-    class scripts_gen_extract_template_ex_empty_f182a138 klass;
-    class scripts_gen_extract_template_ex_filled_fc84a9a7 klass;
-    class scripts_gen_extract_template_ex_sliced_85bbc6c7 klass;
-    class scripts_gen_extract_template_arg_a3cebe9a function;
+    %% Section: Extraction Pipeline (8 nodes, 7 edges)
+    scripts_gen_extract_template_f05b130f("gen-extract-template.ts")
+    scripts_gen_extract_template_arg_a3cebe9a("arg()<br/><small>scripts/gen-extract-template.ts</small>")
+    scripts_gen_extract_template_cols_c12fce5a("COLS<br/><small>scripts/gen-extract-template.ts</small>")
+    scripts_gen_extract_template_headers_0e9ec4c6("headers<br/><small>scripts/gen-extract-template.ts</small>")
+    scripts_gen_extract_template_ex_filled_fc84a9a7("EX_FILLED<br/><small>scripts/gen-extract-template.ts</small>")
+    scripts_gen_extract_template_ex_empty_f182a138("EX_EMPTY<br/><small>scripts/gen-extract-template.ts</small>")
+    scripts_gen_extract_template_ex_sliced_85bbc6c7("EX_SLICED<br/><small>scripts/gen-extract-template.ts</small>")
+    scripts_gen_extract_template_main_7d6e74b1("main()<br/><small>scripts/gen-extract-template.ts</small>")
+    scripts_gen_extract_template_f05b130f -->|contains| scripts_gen_extract_template_arg_a3cebe9a
+    scripts_gen_extract_template_f05b130f -->|contains| scripts_gen_extract_template_cols_c12fce5a
+    scripts_gen_extract_template_f05b130f -->|contains| scripts_gen_extract_template_headers_0e9ec4c6
+    scripts_gen_extract_template_f05b130f -->|contains| scripts_gen_extract_template_ex_filled_fc84a9a7
+    scripts_gen_extract_template_f05b130f -->|contains| scripts_gen_extract_template_ex_empty_f182a138
+    scripts_gen_extract_template_f05b130f -->|contains| scripts_gen_extract_template_ex_sliced_85bbc6c7
+    scripts_gen_extract_template_f05b130f -->|contains| scripts_gen_extract_template_main_7d6e74b1
     class scripts_gen_extract_template_f05b130f module;
+    class scripts_gen_extract_template_arg_a3cebe9a function;
+    class scripts_gen_extract_template_cols_c12fce5a klass;
     class scripts_gen_extract_template_headers_0e9ec4c6 function;
+    class scripts_gen_extract_template_ex_filled_fc84a9a7 klass;
+    class scripts_gen_extract_template_ex_empty_f182a138 klass;
+    class scripts_gen_extract_template_ex_sliced_85bbc6c7 klass;
     class scripts_gen_extract_template_main_7d6e74b1 function;
-    class package_dependencies_react_d3_tree_a8301d7b function;
-    class react_d3_tree_ce13a6c7 function;
     classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
     classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
     classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
@@ -286,22 +284,6 @@ flowchart LR
   <td>No direct outbound edge</td>
   <td>headers node in scripts/gen-extract-template.ts.</td>
 </tr>
-<tr>
-  <td>9</td>
-  <td><code>react-d3-tree</code><br><small style="color:var(--muted)">package.json</small></td>
-  <td><span class="tag tag-func">Function</span></td>
-  <td>External entry / no inbound edge</td>
-  <td><code>react-d3-tree</code><br><small style="color:var(--muted)">package.json</small></td>
-  <td>react-d3-tree node in package.json.</td>
-</tr>
-<tr>
-  <td>10</td>
-  <td><code>react-d3-tree</code><br><small style="color:var(--muted)">package.json</small></td>
-  <td><span class="tag tag-func">Function</span></td>
-  <td><code>react-d3-tree</code><br><small style="color:var(--muted)">package.json</small></td>
-  <td>No direct outbound edge</td>
-  <td>react-d3-tree node in package.json.</td>
-</tr>
 </table>
 
 <div class="grid">
@@ -310,24 +292,23 @@ flowchart LR
     <table style="width:100%;font-size:0.85rem;">
       <tr><th>File</th><th>Coverage</th></tr>
       <tr><td><code>scripts/gen-extract-template.ts</code></td><td>8 nodes</td></tr>
-<tr><td><code>package.json</code></td><td>2 nodes</td></tr>
     </table>
   </div>
   <div class="card">
     <h4>Design Notes</h4>
-    <p>This section comes from graphify community clustering. Relationship summary: contains x7, imports x1. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+    <p>This section comes from graphify community clustering. Relationship summary: contains x7. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
   </div>
 </div>
 <hr>
 
 <!-- ====== 3. Graph Build ====== -->
 <h2 id="build-graph">3. Graph Build</h2>
-<p>Graph Build groups implementation around schema, app, data, servicets, mostly in package.json, db/migrations/schema.ts, db/migrations/relations.ts. This section covers 1458 nodes and 2564 internal edges; the diagram shows only representative relationships to stay readable.</p>
+<p>Graph Build groups implementation around app, schema, data, servicets, mostly in package.json, db/migrations/schema.ts, db/migrations/relations.ts. This section covers 1464 nodes and 2576 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
 %%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
 flowchart LR
-    %% Section: Graph Build (1458 nodes, 2564 edges)
+    %% Section: Graph Build (1464 nodes, 2576 edges)
     subgraph build_graph_lib_role_guard_ts_c3f2eaad["lib/role-guard.ts"]
         lib_role_guard_getdefaultpageforrole_7fe4d4ec("getDefaultPageForRole()<br/><small>lib/role-guard.ts</small>")
         lib_role_guard_isroleallowedforroute_fb810ca6("isRoleAllowedForRoute()<br/><small>lib/role-guard.ts</small>")
@@ -360,7 +341,7 @@ flowchart LR
     proxy_proxy_eb598c8a -->|calls| lib_role_guard_getdefaultpageforrole_7fe4d4ec
     app_settings_sub_regions_page_subregionspage_76cd829c -->|calls| app_settings_sub_regions_service_allsubregions_6c6d17bd
     app_settings_kpi_custom_kpi_service_assertvalidc_70a9daf2 -->|calls| app_settings_kpi_custom_kpi_service_cantransitio_4e6e4c92
-    %% Omitted for readability: 1440 nodes, 0 edges
+    %% Omitted for readability: 1446 nodes, 0 edges
     class lib_role_guard_getdefaultpageforrole_7fe4d4ec function;
     class lib_role_guard_isroleallowedforroute_fb810ca6 api;
     class lib_role_guard_canaccessroute_0776f065 api;
@@ -647,10 +628,10 @@ flowchart LR
     <h4>Key Files</h4>
     <table style="width:100%;font-size:0.85rem;">
       <tr><th>File</th><th>Coverage</th></tr>
-      <tr><td><code>package.json</code></td><td>142 nodes</td></tr>
+      <tr><td><code>package.json</code></td><td>144 nodes</td></tr>
 <tr><td><code>db/migrations/schema.ts</code></td><td>77 nodes</td></tr>
 <tr><td><code>db/migrations/relations.ts</code></td><td>66 nodes</td></tr>
-<tr><td><code>app/migration/service.ts</code></td><td>48 nodes</td></tr>
+<tr><td><code>app/migration/service.ts</code></td><td>52 nodes</td></tr>
 <tr><td><code>db/schema/dataEntry.ts</code></td><td>32 nodes</td></tr>
 <tr><td><code>tsconfig.json</code></td><td>32 nodes</td></tr>
 <tr><td><code>docs/schema-redesign-medallion.md</code></td><td>30 nodes</td></tr>
@@ -659,21 +640,20 @@ flowchart LR
   </div>
   <div class="card">
     <h4>Design Notes</h4>
-    <p>This section comes from graphify community clustering. Relationship summary: contains x1097, imports x694, calls x313, imports x269. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+    <p>This section comes from graphify community clustering. Relationship summary: contains x1102, imports x695, calls x317, imports x269. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
   </div>
 </div>
 <hr>
 
 <!-- ====== 4. Analysis & Clustering ====== -->
 <h2 id="analysis-clustering">4. Analysis &amp; Clustering</h2>
-<p>Analysis &amp; Clustering groups implementation around data, service, advancedts, explaints, mostly in ai/data-service/advanced.ts, ai/data-service/explain.ts, ai/data-service/benchmarks.ts. This section covers 77 nodes and 165 internal edges; the diagram shows only representative relationships to stay readable.</p>
+<p>Analysis &amp; Clustering groups implementation around data, service, advancedts, explaints, mostly in ai/data-service/advanced.ts, ai/data-service/explain.ts, ai/data-service/benchmarks.ts. This section covers 76 nodes and 164 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
 %%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
 flowchart LR
-    %% Section: Analysis &amp; Clustering (77 nodes, 165 edges)
+    %% Section: Analysis &amp; Clustering (76 nodes, 164 edges)
     subgraph analysis_clustering_ai_data_service_advanced_ts_b2373eb1["ai/data-service/advanced.ts"]
-        lib_ai_data_service_advanced_66e897a4("advanced.ts")
         lib_ai_data_service_advanced_comparekpisacrossut_131b4da9("compareKpisAcrossUtilities()<br/><small>ai/data-service/advanced.ts</small>")
         lib_ai_data_service_advanced_generateexport_77643909("generateExport()<br/><small>ai/data-service/advanced.ts</small>")
         lib_ai_data_service_advanced_getcountryhierarchy_4537868f("getCountryHierarchy()<br/><small>ai/data-service/advanced.ts</small>")
@@ -686,16 +666,21 @@ flowchart LR
         lib_ai_data_service_analysis_getpeergroupanalysi_2f363eca("getPeerGroupAnalysis()<br/><small>ai/data-service/analysis.ts</small>")
         lib_ai_data_service_analysis_getserviceareabreak_8a2b5922("getServiceAreaBreakdown()<br/><small>ai/data-service/analysis.ts</small>")
     end
+    subgraph analysis_clustering_ai_data_service_powerbi_ts_c955e5cf["ai/data-service/powerbi.ts"]
+        lib_ai_data_service_powerbi_discoverdatasets_000b7ba1("discoverDatasets()<br/><small>ai/data-service/powerbi.ts</small>")
+        lib_ai_data_service_powerbi_discoverreport_7b894e81("discoverReport()<br/><small>ai/data-service/powerbi.ts</small>")
+        lib_ai_data_service_powerbi_discoverschema_5fb6a344("discoverSchema()<br/><small>ai/data-service/powerbi.ts</small>")
+    end
+    subgraph analysis_clustering_ai_data_service_benchmarks_t_fc985682["ai/data-service/benchmarks.ts"]
+        lib_ai_data_service_benchmarks_20f9b671("benchmarks.ts")
+        lib_ai_data_service_benchmarks_getexecutivediges_b1e314f5("getExecutiveDigest()<br/><small>ai/data-service/benchmarks.ts</small>")
+    end
     subgraph analysis_clustering_ai_tools_prism_native_ts_9bdda527["ai/tools/prism-native.ts"]
         lib_ai_tools_prism_native_d2d319b0("prism-native.ts")
         lib_ai_tools_prism_native_createprismnativetools_e29d7173("createPrismNativeTools()<br/><small>ai/tools/prism-native.ts</small>")
     end
-    lib_ai_data_service_anomalies_getanomalyinsights_4bfa5dba("getAnomalyInsights()<br/><small>ai/data-service/anomalies.ts</small>")
     lib_ai_data_service_benchmarking_getbenchmarking_b4043160("getBenchmarkingData()<br/><small>ai/data-service/benchmarking.ts</small>")
-    lib_ai_data_service_benchmarks_20f9b671("benchmarks.ts")
     lib_ai_data_service_common_createtoolmetadata_afd19da2("createToolMetadata()<br/><small>ai/data-service/common.ts</small>")
-    lib_ai_data_service_explain_4d56e6d6("explain.ts")
-    lib_ai_data_service_powerbi_discovervisuals_cad2fb2b("Discover Power BI Visuals<br/><small>ai/data-service/powerbi.ts</small>")
     lib_ai_data_service_advanced_comparekpisacrossut_131b4da9 -->|calls| lib_ai_data_service_common_createtoolmetadata_afd19da2
     lib_ai_data_service_advanced_generateexport_77643909 -->|calls| lib_ai_data_service_common_createtoolmetadata_afd19da2
     lib_ai_data_service_advanced_getcountryhierarchy_4537868f -->|calls| lib_ai_data_service_common_createtoolmetadata_afd19da2
@@ -705,10 +690,12 @@ flowchart LR
     lib_ai_data_service_analysis_compareperiods_166b8139 -->|calls| lib_ai_data_service_common_createtoolmetadata_afd19da2
     lib_ai_data_service_analysis_getpeergroupanalysi_2f363eca -->|calls| lib_ai_data_service_common_createtoolmetadata_afd19da2
     lib_ai_data_service_analysis_getserviceareabreak_8a2b5922 -->|calls| lib_ai_data_service_common_createtoolmetadata_afd19da2
-    lib_ai_data_service_anomalies_getanomalyinsights_4bfa5dba -->|calls| lib_ai_data_service_common_createtoolmetadata_afd19da2
     lib_ai_data_service_benchmarking_getbenchmarking_b4043160 -->|calls| lib_ai_data_service_common_createtoolmetadata_afd19da2
+    lib_ai_data_service_benchmarks_getexecutivediges_b1e314f5 -->|calls| lib_ai_data_service_common_createtoolmetadata_afd19da2
+    lib_ai_data_service_powerbi_discoverdatasets_000b7ba1 -->|calls| lib_ai_data_service_common_createtoolmetadata_afd19da2
+    lib_ai_data_service_powerbi_discoverreport_7b894e81 -->|calls| lib_ai_data_service_common_createtoolmetadata_afd19da2
+    lib_ai_data_service_powerbi_discoverschema_5fb6a344 -->|calls| lib_ai_data_service_common_createtoolmetadata_afd19da2
     lib_ai_tools_prism_native_createprismnativetools_e29d7173 -->|calls| lib_ai_data_service_benchmarking_getbenchmarking_b4043160
-    lib_ai_tools_prism_native_createprismnativetools_e29d7173 -->|calls| lib_ai_data_service_anomalies_getanomalyinsights_4bfa5dba
     lib_ai_tools_prism_native_createprismnativetools_e29d7173 -->|calls| lib_ai_data_service_analysis_getserviceareabreak_8a2b5922
     lib_ai_tools_prism_native_createprismnativetools_e29d7173 -->|calls| lib_ai_data_service_analysis_getpeergroupanalysi_2f363eca
     lib_ai_tools_prism_native_createprismnativetools_e29d7173 -->|calls| lib_ai_data_service_analysis_compareperiods_166b8139
@@ -717,11 +704,8 @@ flowchart LR
     lib_ai_tools_prism_native_createprismnativetools_e29d7173 -->|calls| lib_ai_data_service_advanced_comparekpisacrossut_131b4da9
     lib_ai_tools_prism_native_createprismnativetools_e29d7173 -->|calls| lib_ai_data_service_advanced_generateexport_77643909
     lib_ai_tools_prism_native_createprismnativetools_e29d7173 -->|calls| lib_ai_data_service_advanced_getcountryhierarchy_4537868f
-    lib_ai_data_service_advanced_66e897a4 -->|imports| lib_ai_data_service_common_createtoolmetadata_afd19da2
-    lib_ai_data_service_benchmarks_20f9b671 -->|imports| lib_ai_data_service_common_createtoolmetadata_afd19da2
-    lib_ai_data_service_explain_4d56e6d6 -->|imports| lib_ai_data_service_common_createtoolmetadata_afd19da2
-    %% Omitted for readability: 59 nodes, 10 edges
-    class lib_ai_data_service_advanced_66e897a4 module;
+    lib_ai_tools_prism_native_createprismnativetools_e29d7173 -->|calls| lib_ai_data_service_benchmarks_getexecutivediges_b1e314f5
+    %% Omitted for readability: 58 nodes, 17 edges
     class lib_ai_data_service_advanced_comparekpisacrossut_131b4da9 function;
     class lib_ai_data_service_advanced_generateexport_77643909 function;
     class lib_ai_data_service_advanced_getcountryhierarchy_4537868f function;
@@ -731,14 +715,15 @@ flowchart LR
     class lib_ai_data_service_analysis_compareperiods_166b8139 function;
     class lib_ai_data_service_analysis_getpeergroupanalysi_2f363eca function;
     class lib_ai_data_service_analysis_getserviceareabreak_8a2b5922 function;
+    class lib_ai_data_service_powerbi_discoverdatasets_000b7ba1 function;
+    class lib_ai_data_service_powerbi_discoverreport_7b894e81 function;
+    class lib_ai_data_service_powerbi_discoverschema_5fb6a344 function;
+    class lib_ai_data_service_benchmarks_20f9b671 module;
+    class lib_ai_data_service_benchmarks_getexecutivediges_b1e314f5 function;
     class lib_ai_tools_prism_native_d2d319b0 module;
     class lib_ai_tools_prism_native_createprismnativetools_e29d7173 function;
-    class lib_ai_data_service_anomalies_getanomalyinsights_4bfa5dba function;
     class lib_ai_data_service_benchmarking_getbenchmarking_b4043160 function;
-    class lib_ai_data_service_benchmarks_20f9b671 module;
     class lib_ai_data_service_common_createtoolmetadata_afd19da2 function;
-    class lib_ai_data_service_explain_4d56e6d6 module;
-    class lib_ai_data_service_powerbi_discovervisuals_cad2fb2b klass;
     classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
     classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
     classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
@@ -898,6 +883,14 @@ flowchart LR
 </tr>
 <tr>
   <td>18</td>
+  <td><code>withCache()</code><br><small style="color:var(--muted)">lib/ai/cache.ts</small></td>
+  <td><span class="tag tag-func">Function</span></td>
+  <td><code>compliance.ts</code><br><small style="color:var(--muted)">ai/data-service/compliance.ts</small><br><code>discoverDatasets()</code><br><small style="color:var(--muted)">ai/data-service/powerbi.ts</small><br><code>discoverReport()</code><br><small style="color:var(--muted)">ai/data-service/powerbi.ts</small><br>+7 more</td>
+  <td><code>pruneExpired()</code><br><small style="color:var(--muted)">lib/ai/cache.ts</small></td>
+  <td>Caches analysis results or computes cache keys.</td>
+</tr>
+<tr>
+  <td>19</td>
   <td><code>compareKpisAcrossUtilities()</code><br><small style="color:var(--muted)">ai/data-service/advanced.ts</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td><code>createPrismNativeTools()</code><br><small style="color:var(--muted)">ai/tools/prism-native.ts</small><br><code>prism-native.ts</code><br><small style="color:var(--muted)">ai/tools/prism-native.ts</small></td>
@@ -905,7 +898,7 @@ flowchart LR
   <td>compareKpisAcrossUtilities() node in ai/data-service/advanced.ts.</td>
 </tr>
 <tr>
-  <td>19</td>
+  <td>20</td>
   <td><code>generateExport()</code><br><small style="color:var(--muted)">ai/data-service/advanced.ts</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td><code>createPrismNativeTools()</code><br><small style="color:var(--muted)">ai/tools/prism-native.ts</small><br><code>prism-native.ts</code><br><small style="color:var(--muted)">ai/tools/prism-native.ts</small></td>
@@ -913,7 +906,7 @@ flowchart LR
   <td>Exports documentation data to a target format.</td>
 </tr>
 <tr>
-  <td>20</td>
+  <td>21</td>
   <td><code>getCountryHierarchy()</code><br><small style="color:var(--muted)">ai/data-service/advanced.ts</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td><code>createPrismNativeTools()</code><br><small style="color:var(--muted)">ai/tools/prism-native.ts</small><br><code>prism-native.ts</code><br><small style="color:var(--muted)">ai/tools/prism-native.ts</small></td>
@@ -921,7 +914,7 @@ flowchart LR
   <td>getCountryHierarchy() node in ai/data-service/advanced.ts.</td>
 </tr>
 <tr>
-  <td>21</td>
+  <td>22</td>
   <td><code>getKpiCorrelation()</code><br><small style="color:var(--muted)">ai/data-service/advanced.ts</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td><code>createPrismNativeTools()</code><br><small style="color:var(--muted)">ai/tools/prism-native.ts</small><br><code>prism-native.ts</code><br><small style="color:var(--muted)">ai/tools/prism-native.ts</small></td>
@@ -929,7 +922,7 @@ flowchart LR
   <td>getKpiCorrelation() node in ai/data-service/advanced.ts.</td>
 </tr>
 <tr>
-  <td>22</td>
+  <td>23</td>
   <td><code>getKpiTargets()</code><br><small style="color:var(--muted)">ai/data-service/advanced.ts</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td><code>createPrismNativeTools()</code><br><small style="color:var(--muted)">ai/tools/prism-native.ts</small><br><code>prism-native.ts</code><br><small style="color:var(--muted)">ai/tools/prism-native.ts</small></td>
@@ -937,7 +930,7 @@ flowchart LR
   <td>getKpiTargets() node in ai/data-service/advanced.ts.</td>
 </tr>
 <tr>
-  <td>23</td>
+  <td>24</td>
   <td><code>pearson()</code><br><small style="color:var(--muted)">ai/data-service/advanced.ts</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td><code>getKpiCorrelation()</code><br><small style="color:var(--muted)">ai/data-service/advanced.ts</small></td>
@@ -945,7 +938,7 @@ flowchart LR
   <td>pearson() node in ai/data-service/advanced.ts.</td>
 </tr>
 <tr>
-  <td>24</td>
+  <td>25</td>
   <td><code>comparePeriods()</code><br><small style="color:var(--muted)">ai/data-service/analysis.ts</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td><code>createPrismNativeTools()</code><br><small style="color:var(--muted)">ai/tools/prism-native.ts</small><br><code>prism-native.ts</code><br><small style="color:var(--muted)">ai/tools/prism-native.ts</small></td>
@@ -953,7 +946,7 @@ flowchart LR
   <td>comparePeriods() node in ai/data-service/analysis.ts.</td>
 </tr>
 <tr>
-  <td>25</td>
+  <td>26</td>
   <td><code>getPeerGroupAnalysis()</code><br><small style="color:var(--muted)">ai/data-service/analysis.ts</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td><code>createPrismNativeTools()</code><br><small style="color:var(--muted)">ai/tools/prism-native.ts</small><br><code>prism-native.ts</code><br><small style="color:var(--muted)">ai/tools/prism-native.ts</small></td>
@@ -961,20 +954,12 @@ flowchart LR
   <td>Orchestrates analysis and returns structured documentation data.</td>
 </tr>
 <tr>
-  <td>26</td>
+  <td>27</td>
   <td><code>getServiceAreaBreakdown()</code><br><small style="color:var(--muted)">ai/data-service/analysis.ts</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td><code>createPrismNativeTools()</code><br><small style="color:var(--muted)">ai/tools/prism-native.ts</small><br><code>prism-native.ts</code><br><small style="color:var(--muted)">ai/tools/prism-native.ts</small></td>
   <td><code>createToolMetadata()</code><br><small style="color:var(--muted)">ai/data-service/common.ts</small><br><code>getAccessibleReportPeriods()</code><br><small style="color:var(--muted)">ai/data-service/common.ts</small><br><code>hasGlobalUtilityAccess()</code><br><small style="color:var(--muted)">lib/user.service.ts</small><br>+2 more</td>
   <td>getServiceAreaBreakdown() node in ai/data-service/analysis.ts.</td>
-</tr>
-<tr>
-  <td>27</td>
-  <td><code>getAnomalyInsights()</code><br><small style="color:var(--muted)">ai/data-service/anomalies.ts</small></td>
-  <td><span class="tag tag-func">Function</span></td>
-  <td><code>createPrismNativeTools()</code><br><small style="color:var(--muted)">ai/tools/prism-native.ts</small><br><code>prism-native.ts</code><br><small style="color:var(--muted)">ai/tools/prism-native.ts</small></td>
-  <td><code>createToolMetadata()</code><br><small style="color:var(--muted)">ai/data-service/common.ts</small><br><code>getAccessibleReportPeriods()</code><br><small style="color:var(--muted)">ai/data-service/common.ts</small><br><code>hasGlobalUtilityAccess()</code><br><small style="color:var(--muted)">lib/user.service.ts</small></td>
-  <td>getAnomalyInsights() node in ai/data-service/anomalies.ts.</td>
 </tr>
 <tr>
   <td>28</td>
@@ -1019,7 +1004,7 @@ flowchart LR
   </div>
   <div class="card">
     <h4>Design Notes</h4>
-    <p>This section comes from graphify community clustering. Relationship summary: calls x81, contains x39, imports x38, relates x4. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+    <p>This section comes from graphify community clustering. Relationship summary: calls x82, contains x39, imports x36, relates x4. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
   </div>
 </div>
 <hr>
@@ -1734,12 +1719,12 @@ flowchart LR
 
 <!-- ====== 7. Ingestion & Updates ====== -->
 <h2 id="ingest-cache-update">7. Ingestion &amp; Updates</h2>
-<p>Ingestion &amp; Updates groups implementation around app, components, data, migration, mostly in app/migration/service.ts, components/ui/dropdown-menu.tsx, components/ui/alert-dialog.tsx. This section covers 154 nodes and 273 internal edges; the diagram shows only representative relationships to stay readable.</p>
+<p>Ingestion &amp; Updates groups implementation around app, components, data, migration, mostly in app/migration/service.ts, components/ui/dropdown-menu.tsx, components/ui/alert-dialog.tsx. This section covers 142 nodes and 256 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
 %%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
 flowchart LR
-    %% Section: Ingestion &amp; Updates (154 nodes, 273 edges)
+    %% Section: Ingestion &amp; Updates (142 nodes, 256 edges)
     subgraph ingest_cache_update_app_migration_service_ts_8d89b600["app/migration/service.ts"]
         app_migration_service_logmigrationstep_9e8f4ce4("logMigrationStep()<br/><small>app/migration/service.ts</small>")
         app_migration_service_purgealldataentryrecords_82f071d7("purgeAllDataEntryRecords()<br/><small>app/migration/service.ts</small>")
@@ -1786,7 +1771,7 @@ flowchart LR
     app_migration_buttons_eb66c35b -->|imports| app_migration_service_purgealldataentryrecords_82f071d7
     app_migration_buttons_eb66c35b -->|imports| app_migration_service_retrievemanagedlists_08104425
     app_migration_buttons_eb66c35b -->|imports| app_migration_service_retrievereportperiods_86381016
-    %% Omitted for readability: 136 nodes, 3 edges
+    %% Omitted for readability: 124 nodes, 3 edges
     class app_migration_service_logmigrationstep_9e8f4ce4 function;
     class app_migration_service_purgealldataentryrecords_82f071d7 function;
     class app_migration_service_deduplicatedataentries_22dac2f4 function;
@@ -2076,28 +2061,28 @@ flowchart LR
       <tr><td><code>app/migration/service.ts</code></td><td>28 nodes</td></tr>
 <tr><td><code>components/ui/dropdown-menu.tsx</code></td><td>16 nodes</td></tr>
 <tr><td><code>components/ui/alert-dialog.tsx</code></td><td>13 nodes</td></tr>
-<tr><td><code>lib/ai/cache.ts</code></td><td>11 nodes</td></tr>
 <tr><td><code>docs/data-entry-ux-requirements.md</code></td><td>10 nodes</td></tr>
 <tr><td><code>app/migration/buttons.tsx</code></td><td>9 nodes</td></tr>
 <tr><td><code>scripts/update-p2-ids.ts</code></td><td>8 nodes</td></tr>
 <tr><td><code>scripts/update-ids-to-p2.ts</code></td><td>6 nodes</td></tr>
+<tr><td><code>data-entry/enter-data/service.ts</code></td><td>5 nodes</td></tr>
     </table>
   </div>
   <div class="card">
     <h4>Design Notes</h4>
-    <p>This section comes from graphify community clustering. Relationship summary: calls x114, contains x81, imports x54, explains x7. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+    <p>This section comes from graphify community clustering. Relationship summary: calls x113, contains x71, imports x54, explains x7. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
   </div>
 </div>
 <hr>
 
 <!-- ====== 8. Serving API ====== -->
 <h2 id="serve-api">8. Serving API</h2>
-<p>Serving API groups implementation around app, api, routets, data, mostly in lib/ai/service.ts, new-bsc/_lib/validators.ts, app/migration/generators-sync.ts. This section covers 1088 nodes and 2890 internal edges; the diagram shows only representative relationships to stay readable.</p>
+<p>Serving API groups implementation around app, api, routets, data, mostly in lib/ai/service.ts, new-bsc/_lib/validators.ts, app/migration/generators-sync.ts. This section covers 1106 nodes and 2925 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
 %%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
 flowchart LR
-    %% Section: Serving API (1088 nodes, 2890 edges)
+    %% Section: Serving API (1106 nodes, 2925 edges)
     subgraph serve_api_api_dimCurrency_route_ts_250da610["api/dimCurrency/route.ts"]
         app_api_dimcurrency_route_get_fb16c72e("GET()<br/><small>api/dimCurrency/route.ts</small>")
         app_api_dimcurrency_route_getmanagedlistbyname_9192558f("getManagedListByName()<br/><small>api/dimCurrency/route.ts</small>")
@@ -2139,7 +2124,7 @@ flowchart LR
     app_api_dimenergytype_route_get_60baf0da -->|calls| app_api_dimenergytype_route_getmanagedlistbyname_1666fec4
     scripts_verify_pbi_feeds_ebc0ecdf -->|imports| app_api_dimcountry_route_get_8607a97e
     components_tables_data_table_update_form_2f87347a -->|imports| components_tables_data_table_create_form_e06cb837
-    %% Omitted for readability: 1070 nodes, 0 edges
+    %% Omitted for readability: 1088 nodes, 0 edges
     class app_api_dimcurrency_route_get_fb16c72e function;
     class app_api_dimcurrency_route_getmanagedlistbyname_9192558f function;
     class app_api_dimcustomerclass_route_get_25b021f2 function;
@@ -2351,7 +2336,7 @@ flowchart LR
   <td>22</td>
   <td><code>assertMigrationKey()</code><br><small style="color:var(--muted)">migration/prism-training/_lib.ts</small></td>
   <td><span class="tag tag-async">Async</span></td>
-  <td><code>GET()</code><br><small style="color:var(--muted)">migration/managed-lists/route.ts</small><br><code>GET()</code><br><small style="color:var(--muted)">api/dataEntries/route.ts</small><br><code>GET()</code><br><small style="color:var(--muted)">prism-training/[table]/route.ts</small><br>+43 more</td>
+  <td><code>GET()</code><br><small style="color:var(--muted)">api/measureDimensionApplicability/route.ts</small><br><code>GET()</code><br><small style="color:var(--muted)">migration/managed-lists/route.ts</small><br><code>GET()</code><br><small style="color:var(--muted)">api/units/route.ts</small><br>+43 more</td>
   <td>No direct outbound edge</td>
   <td>assertMigrationKey() node in migration/prism-training/_lib.ts.</td>
 </tr>
@@ -2438,7 +2423,7 @@ flowchart LR
   </div>
   <div class="card">
     <h4>Design Notes</h4>
-    <p>This section comes from graphify community clustering. Relationship summary: imports x829, contains x681, calls x680, imports x495. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+    <p>This section comes from graphify community clustering. Relationship summary: imports x837, calls x696, contains x688, imports x497. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
   </div>
 </div>
 <hr>
@@ -2792,12 +2777,12 @@ flowchart LR
 
 <!-- ====== 10. Tests & Fixtures ====== -->
 <h2 id="tests-fixtures">10. Tests &amp; Fixtures</h2>
-<p>Tests &amp; Fixtures groups implementation around data, entry, app, kpi, mostly in data-entry/enter-data/service.ts, data-entry/review-kpi/service.ts, lib/ai/types.ts. This section covers 993 nodes and 2125 internal edges; the diagram shows only representative relationships to stay readable.</p>
+<p>Tests &amp; Fixtures groups implementation around data, entry, app, kpi, mostly in data-entry/enter-data/service.ts, data-entry/review-kpi/service.ts, ai/data-service/common.ts. This section covers 1009 nodes and 2167 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
 %%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
 flowchart LR
-    %% Section: Tests &amp; Fixtures (993 nodes, 2125 edges)
+    %% Section: Tests &amp; Fixtures (1009 nodes, 2167 edges)
     subgraph tests_fixtures_lib_logging_logger_ts_e86ef6cc["lib/logging/logger.ts"]
         lib_logging_logger_getlogbuffer_5c6b8eb2("getLogBuffer()<br/><small>lib/logging/logger.ts</small>")
         lib_logging_logger_formatentry_d9fc5e8e("formatEntry()<br/><small>lib/logging/logger.ts</small>")
@@ -2836,7 +2821,7 @@ flowchart LR
     app_data_entry_enter_data_service_d7666079 -->|imports| app_data_entry_enter_data_services_aggregated_wo_2d0b5510
     app_data_entry_enter_data_services_aggregated_wo_2d0b5510 -->|imports| app_data_entry_kpi_worker_worker_runkpiworker_ceae44dd
     app_data_entry_enter_data_filters_client_6581cdbe -->|imports| app_data_entry_enter_data_service_d7666079
-    %% Omitted for readability: 975 nodes, 0 edges
+    %% Omitted for readability: 991 nodes, 0 edges
     class lib_logging_logger_getlogbuffer_5c6b8eb2 function;
     class lib_logging_logger_formatentry_d9fc5e8e function;
     class lib_logging_logger_log_16dfee25 function;
@@ -2878,243 +2863,243 @@ flowchart LR
 </tr>
 <tr>
   <td>1</td>
-  <td><code>AggregatedSkipReason</code><br><small style="color:var(--muted)">services/aggregated-worker/dependency-classifier.ts</small></td>
+  <td><code>GetReportPeriodsOptions</code><br><small style="color:var(--muted)">app/data-entry/service.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
-  <td><code>evaluator.ts</code><br><small style="color:var(--muted)">services/aggregated-worker/evaluator.ts</small><br><code>outcome-builder.ts</code><br><small style="color:var(--muted)">services/aggregated-worker/outcome-builder.ts</small></td>
+  <td><code>common.ts</code><br><small style="color:var(--muted)">ai/data-service/common.ts</small></td>
   <td>No direct outbound edge</td>
-  <td>AggregatedSkipReason node in services/aggregated-worker/dependency-classifier.ts.</td>
+  <td>GetReportPeriodsOptions node in app/data-entry/service.ts.</td>
 </tr>
 <tr>
   <td>2</td>
-  <td><code>DependencyClassification</code><br><small style="color:var(--muted)">services/aggregated-worker/dependency-classifier.ts</small></td>
+  <td><code>ReportPeriodDTO</code><br><small style="color:var(--muted)">app/data-entry/service.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
-  <td>External entry / no inbound edge</td>
+  <td><code>common.ts</code><br><small style="color:var(--muted)">ai/data-service/common.ts</small><br><code>reportPeriodTable.tsx</code><br><small style="color:var(--muted)">app/data-entry/reportPeriodTable.tsx</small><br><code>tenant-scoping.test.ts</code><br><small style="color:var(--muted)">unit/ai/tenant-scoping.test.ts</small></td>
   <td>No direct outbound edge</td>
-  <td>Builds dependency relationships and graph data.</td>
+  <td>ReportPeriodDTO node in app/data-entry/service.ts.</td>
 </tr>
 <tr>
   <td>3</td>
-  <td><code>EvaluationResult</code><br><small style="color:var(--muted)">services/aggregated-worker/evaluator.ts</small></td>
+  <td><code>UserStatus</code><br><small style="color:var(--muted)">db/schema/auth-schema.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
-  <td>External entry / no inbound edge</td>
+  <td><code>blocked-access-overlay.tsx</code><br><small style="color:var(--muted)">components/auth/blocked-access-overlay.tsx</small><br><code>service.ts</code><br><small style="color:var(--muted)">settings/users/service.ts</small><br><code>service.ts</code><br><small style="color:var(--muted)">app/migration/service.ts</small><br>+5 more</td>
   <td>No direct outbound edge</td>
-  <td>EvaluationResult node in services/aggregated-worker/evaluator.ts.</td>
+  <td>UserStatus node in db/schema/auth-schema.ts.</td>
 </tr>
 <tr>
   <td>4</td>
-  <td><code>AggregatedTargetOutcome</code><br><small style="color:var(--muted)">services/aggregated-worker/outcome-builder.ts</small></td>
+  <td><code>ComparePeriodsData</code><br><small style="color:var(--muted)">ai/data-service/analysis.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
-  <td><code>orchestrator.ts</code><br><small style="color:var(--muted)">services/aggregated-worker/orchestrator.ts</small><br><code>outcome-store.ts</code><br><small style="color:var(--muted)">services/aggregated-worker/outcome-store.ts</small></td>
+  <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
-  <td>AggregatedTargetOutcome node in services/aggregated-worker/outcome-builder.ts.</td>
+  <td>ComparePeriodsData node in ai/data-service/analysis.ts.</td>
 </tr>
 <tr>
   <td>5</td>
-  <td><code>AggregatedWorkerRunRecord</code><br><small style="color:var(--muted)">services/aggregated-worker/outcome-store.ts</small></td>
+  <td><code>PeerGroupData</code><br><small style="color:var(--muted)">ai/data-service/analysis.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
   <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
-  <td>AggregatedWorkerRunRecord node in services/aggregated-worker/outcome-store.ts.</td>
+  <td>PeerGroupData node in ai/data-service/analysis.ts.</td>
 </tr>
 <tr>
   <td>6</td>
-  <td><code>WorkerSnapshot</code><br><small style="color:var(--muted)">services/aggregated-worker/snapshot-builder.ts</small></td>
+  <td><code>PeerGroupItem</code><br><small style="color:var(--muted)">ai/data-service/analysis.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
-  <td><code>orchestrator.ts</code><br><small style="color:var(--muted)">services/aggregated-worker/orchestrator.ts</small></td>
+  <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
-  <td>WorkerSnapshot node in services/aggregated-worker/snapshot-builder.ts.</td>
+  <td>PeerGroupItem node in ai/data-service/analysis.ts.</td>
 </tr>
 <tr>
   <td>7</td>
-  <td><code>AggregatedWorkerScope</code><br><small style="color:var(--muted)">services/aggregated-worker/source-reader.ts</small></td>
+  <td><code>PeriodComparison</code><br><small style="color:var(--muted)">ai/data-service/analysis.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
-  <td><code>orchestrator.ts</code><br><small style="color:var(--muted)">services/aggregated-worker/orchestrator.ts</small><br><code>outcome-store.ts</code><br><small style="color:var(--muted)">services/aggregated-worker/outcome-store.ts</small><br><code>review-service.ts</code><br><small style="color:var(--muted)">services/aggregated-worker/review-service.ts</small><br>+3 more</td>
+  <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
-  <td>AggregatedWorkerScope node in services/aggregated-worker/source-reader.ts.</td>
+  <td>PeriodComparison node in ai/data-service/analysis.ts.</td>
 </tr>
 <tr>
   <td>8</td>
-  <td><code>SourceSnapshot</code><br><small style="color:var(--muted)">services/aggregated-worker/source-reader.ts</small></td>
+  <td><code>ServiceAreaBreakdown</code><br><small style="color:var(--muted)">ai/data-service/analysis.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
-  <td><code>snapshot-builder.ts</code><br><small style="color:var(--muted)">services/aggregated-worker/snapshot-builder.ts</small></td>
+  <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
-  <td>SourceSnapshot node in services/aggregated-worker/source-reader.ts.</td>
+  <td>ServiceAreaBreakdown node in ai/data-service/analysis.ts.</td>
 </tr>
 <tr>
   <td>9</td>
-  <td><code>VariableMapping</code><br><small style="color:var(--muted)">services/aggregated-worker/source-reader.ts</small></td>
+  <td><code>ServiceAreaBreakdownData</code><br><small style="color:var(--muted)">ai/data-service/analysis.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
   <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
-  <td>VariableMapping node in services/aggregated-worker/source-reader.ts.</td>
+  <td>ServiceAreaBreakdownData node in ai/data-service/analysis.ts.</td>
 </tr>
 <tr>
   <td>10</td>
-  <td><code>AggregatedFormulaTarget</code><br><small style="color:var(--muted)">services/aggregated-worker/target-selector.ts</small></td>
+  <td><code>AnomalyData</code><br><small style="color:var(--muted)">ai/data-service/anomalies.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
-  <td><code>aggregated-formulas.ts</code><br><small style="color:var(--muted)">test/fixtures/aggregated-formulas.ts</small></td>
+  <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
-  <td>AggregatedFormulaTarget node in services/aggregated-worker/target-selector.ts.</td>
+  <td>AnomalyData node in ai/data-service/anomalies.ts.</td>
 </tr>
 <tr>
   <td>11</td>
-  <td><code>FormulaInputCandidate</code><br><small style="color:var(--muted)">services/aggregated-worker/target-selector.ts</small></td>
+  <td><code>AnomalyRecord</code><br><small style="color:var(--muted)">ai/data-service/anomalies.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
   <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
-  <td>FormulaInputCandidate node in services/aggregated-worker/target-selector.ts.</td>
+  <td>AnomalyRecord node in ai/data-service/anomalies.ts.</td>
 </tr>
 <tr>
   <td>12</td>
-  <td><code>WriteTargetValueInput</code><br><small style="color:var(--muted)">services/aggregated-worker/target-writer.ts</small></td>
+  <td><code>WatchlistRecord</code><br><small style="color:var(--muted)">ai/data-service/anomalies.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
   <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
-  <td>WriteTargetValueInput node in services/aggregated-worker/target-writer.ts.</td>
+  <td>WatchlistRecord node in ai/data-service/anomalies.ts.</td>
 </tr>
 <tr>
   <td>13</td>
-  <td><code>GET()</code><br><small style="color:var(--muted)">data-entry/aggregated-runs/route.ts</small></td>
-  <td><span class="tag tag-func">Function</span></td>
+  <td><code>BenchmarkingData</code><br><small style="color:var(--muted)">ai/data-service/benchmarking.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
   <td>External entry / no inbound edge</td>
-  <td><code>getCurrentUser()</code><br><small style="color:var(--muted)">lib/user.service.ts</small><br><code>listAggregatedRuns()</code><br><small style="color:var(--muted)">services/aggregated-worker/review-service.ts</small><br><code>parseOptionalNumber()</code><br><small style="color:var(--muted)">data-entry/aggregated-runs/route.ts</small></td>
-  <td>GET() node in data-entry/aggregated-runs/route.ts.</td>
+  <td>No direct outbound edge</td>
+  <td>BenchmarkingData node in ai/data-service/benchmarking.ts.</td>
 </tr>
 <tr>
   <td>14</td>
-  <td><code>parseOptionalNumber()</code><br><small style="color:var(--muted)">data-entry/aggregated-runs/route.ts</small></td>
-  <td><span class="tag tag-func">Function</span></td>
-  <td><code>GET()</code><br><small style="color:var(--muted)">data-entry/aggregated-runs/route.ts</small></td>
+  <td><code>BenchmarkingRecord</code><br><small style="color:var(--muted)">ai/data-service/benchmarking.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
-  <td>parseOptionalNumber() node in data-entry/aggregated-runs/route.ts.</td>
+  <td>BenchmarkingRecord node in ai/data-service/benchmarking.ts.</td>
 </tr>
 <tr>
   <td>15</td>
-  <td><code>GET()</code><br><small style="color:var(--muted)">aggregated-runs/[runId]/route.ts</small></td>
-  <td><span class="tag tag-func">Function</span></td>
+  <td><code>CalculatedKpi</code><br><small style="color:var(--muted)">ai/data-service/calculator.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
   <td>External entry / no inbound edge</td>
-  <td><code>getAggregatedRunWithOutcomes()</code><br><small style="color:var(--muted)">services/aggregated-worker/review-service.ts</small><br><code>getCurrentUser()</code><br><small style="color:var(--muted)">lib/user.service.ts</small></td>
-  <td>GET() node in aggregated-runs/[runId]/route.ts.</td>
+  <td>No direct outbound edge</td>
+  <td>CalculatedKpi node in ai/data-service/calculator.ts.</td>
 </tr>
 <tr>
   <td>16</td>
-  <td><code>classifyDependencies()</code><br><small style="color:var(--muted)">services/aggregated-worker/dependency-classifier.ts</small></td>
-  <td><span class="tag tag-func">Function</span></td>
-  <td><code>evaluateTargetWithSnapshot()</code><br><small style="color:var(--muted)">services/aggregated-worker/orchestrator.ts</small><br><code>missing-dependency.test.ts</code><br><small style="color:var(--muted)">data-entry/aggregated-worker/missing-dependency.test.ts</small><br><code>orchestrator.ts</code><br><small style="color:var(--muted)">services/aggregated-worker/orchestrator.ts</small><br>+2 more</td>
-  <td><code>isPureAdditionFormula()</code><br><small style="color:var(--muted)">services/aggregated-worker/dependency-classifier.ts</small></td>
-  <td>classifyDependencies() node in services/aggregated-worker/dependency-classifier.ts.</td>
+  <td><code>CalculatorData</code><br><small style="color:var(--muted)">ai/data-service/calculator.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>CalculatorData node in ai/data-service/calculator.ts.</td>
 </tr>
 <tr>
   <td>17</td>
-  <td><code>isPureAdditionFormula()</code><br><small style="color:var(--muted)">services/aggregated-worker/dependency-classifier.ts</small></td>
-  <td><span class="tag tag-func">Function</span></td>
-  <td><code>classifyDependencies()</code><br><small style="color:var(--muted)">services/aggregated-worker/dependency-classifier.ts</small></td>
+  <td><code>AiDataServiceContext</code><br><small style="color:var(--muted)">ai/data-service/common.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
-  <td>isPureAdditionFormula() node in services/aggregated-worker/dependency-classifier.ts.</td>
+  <td>AiDataServiceContext node in ai/data-service/common.ts.</td>
 </tr>
 <tr>
   <td>18</td>
-  <td><code>escapeRegExp()</code><br><small style="color:var(--muted)">services/aggregated-worker/evaluator.ts</small></td>
-  <td><span class="tag tag-func">Function</span></td>
-  <td><code>evaluateFormula()</code><br><small style="color:var(--muted)">services/aggregated-worker/evaluator.ts</small></td>
+  <td><code>ResolvePeriodOptions</code><br><small style="color:var(--muted)">ai/data-service/common.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
-  <td>escapeRegExp() node in services/aggregated-worker/evaluator.ts.</td>
+  <td>ResolvePeriodOptions node in ai/data-service/common.ts.</td>
 </tr>
 <tr>
   <td>19</td>
-  <td><code>evaluateFormula()</code><br><small style="color:var(--muted)">services/aggregated-worker/evaluator.ts</small></td>
-  <td><span class="tag tag-func">Function</span></td>
-  <td><code>edge-cases.test.ts</code><br><small style="color:var(--muted)">data-entry/aggregated-worker/edge-cases.test.ts</small><br><code>evaluateTargetWithSnapshot()</code><br><small style="color:var(--muted)">services/aggregated-worker/orchestrator.ts</small><br><code>evaluation-error.test.ts</code><br><small style="color:var(--muted)">data-entry/aggregated-worker/evaluation-error.test.ts</small><br>+2 more</td>
-  <td><code>escapeRegExp()</code><br><small style="color:var(--muted)">services/aggregated-worker/evaluator.ts</small><br><code>isIdentifier()</code><br><small style="color:var(--muted)">services/aggregated-worker/evaluator.ts</small></td>
-  <td>evaluateFormula() node in services/aggregated-worker/evaluator.ts.</td>
+  <td><code>CompletenessBreakdownItem</code><br><small style="color:var(--muted)">ai/data-service/completeness.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>CompletenessBreakdownItem node in ai/data-service/completeness.ts.</td>
 </tr>
 <tr>
   <td>20</td>
-  <td><code>isIdentifier()</code><br><small style="color:var(--muted)">services/aggregated-worker/evaluator.ts</small></td>
-  <td><span class="tag tag-func">Function</span></td>
-  <td><code>evaluateFormula()</code><br><small style="color:var(--muted)">services/aggregated-worker/evaluator.ts</small></td>
+  <td><code>CompletenessData</code><br><small style="color:var(--muted)">ai/data-service/completeness.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
-  <td>isIdentifier() node in services/aggregated-worker/evaluator.ts.</td>
+  <td>CompletenessData node in ai/data-service/completeness.ts.</td>
 </tr>
 <tr>
   <td>21</td>
-  <td><code>buildInputDefVariableAliases()</code><br><small style="color:var(--muted)">services/aggregated-worker/orchestrator.ts</small></td>
-  <td><span class="tag tag-func">Function</span></td>
-  <td><code>runAggregatedWorker()</code><br><small style="color:var(--muted)">services/aggregated-worker/orchestrator.ts</small></td>
+  <td><code>CompletenessDimension</code><br><small style="color:var(--muted)">ai/data-service/completeness.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td><code>prism-native.ts</code><br><small style="color:var(--muted)">ai/tools/prism-native.ts</small></td>
   <td>No direct outbound edge</td>
-  <td>buildInputDefVariableAliases() node in services/aggregated-worker/orchestrator.ts.</td>
+  <td>CompletenessDimension node in ai/data-service/completeness.ts.</td>
 </tr>
 <tr>
   <td>22</td>
-  <td><code>buildTargetValueMap()</code><br><small style="color:var(--muted)">services/aggregated-worker/orchestrator.ts</small></td>
-  <td><span class="tag tag-func">Function</span></td>
-  <td><code>evaluateTargetWithSnapshot()</code><br><small style="color:var(--muted)">services/aggregated-worker/orchestrator.ts</small></td>
+  <td><code>ComplianceData</code><br><small style="color:var(--muted)">ai/data-service/compliance.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
-  <td>buildTargetValueMap() node in services/aggregated-worker/orchestrator.ts.</td>
+  <td>ComplianceData node in ai/data-service/compliance.ts.</td>
 </tr>
 <tr>
   <td>23</td>
-  <td><code>collectAllInputDefIds()</code><br><small style="color:var(--muted)">services/aggregated-worker/orchestrator.ts</small></td>
-  <td><span class="tag tag-func">Function</span></td>
-  <td><code>runAggregatedWorker()</code><br><small style="color:var(--muted)">services/aggregated-worker/orchestrator.ts</small></td>
+  <td><code>ComplianceIssue</code><br><small style="color:var(--muted)">ai/data-service/compliance.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
-  <td>collectAllInputDefIds() node in services/aggregated-worker/orchestrator.ts.</td>
+  <td>ComplianceIssue node in ai/data-service/compliance.ts.</td>
 </tr>
 <tr>
   <td>24</td>
-  <td><code>collectAllVariables()</code><br><small style="color:var(--muted)">services/aggregated-worker/orchestrator.ts</small></td>
-  <td><span class="tag tag-func">Function</span></td>
-  <td><code>runAggregatedWorker()</code><br><small style="color:var(--muted)">services/aggregated-worker/orchestrator.ts</small></td>
-  <td><code>extractFormulaVariables()</code><br><small style="color:var(--muted)">services/aggregated-worker/variable-parser.ts</small></td>
-  <td>collectAllVariables() node in services/aggregated-worker/orchestrator.ts.</td>
+  <td><code>ConfigurationData</code><br><small style="color:var(--muted)">ai/data-service/configuration.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Reads, resolves, or persists project configuration.</td>
 </tr>
 <tr>
   <td>25</td>
-  <td><code>evaluateTargetWithSnapshot()</code><br><small style="color:var(--muted)">services/aggregated-worker/orchestrator.ts</small></td>
-  <td><span class="tag tag-func">Function</span></td>
-  <td><code>runAggregatedWorker()</code><br><small style="color:var(--muted)">services/aggregated-worker/orchestrator.ts</small></td>
-  <td><code>buildTargetValueMap()</code><br><small style="color:var(--muted)">services/aggregated-worker/orchestrator.ts</small><br><code>classifyDependencies()</code><br><small style="color:var(--muted)">services/aggregated-worker/dependency-classifier.ts</small><br><code>evaluateFormula()</code><br><small style="color:var(--muted)">services/aggregated-worker/evaluator.ts</small><br>+1 more</td>
-  <td>evaluateTargetWithSnapshot() node in services/aggregated-worker/orchestrator.ts.</td>
+  <td><code>ConfigurationOption</code><br><small style="color:var(--muted)">ai/data-service/configuration.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>Reads, resolves, or persists project configuration.</td>
 </tr>
 <tr>
   <td>26</td>
-  <td><code>runAggregatedWorker()</code><br><small style="color:var(--muted)">services/aggregated-worker/orchestrator.ts</small></td>
-  <td><span class="tag tag-func">Function</span></td>
-  <td><code>recomputeCalculatedMeasuresNow()</code><br><small style="color:var(--muted)">settings/kpi/unified-formula-service.ts</small><br><code>runAggregatedWorkerAsync()</code><br><small style="color:var(--muted)">services/aggregated-worker/orchestrator.ts</small><br><code>unified-formula-service.ts</code><br><small style="color:var(--muted)">settings/kpi/unified-formula-service.ts</small></td>
-  <td><code>assertScopeAuthorization()</code><br><small style="color:var(--muted)">services/aggregated-worker/scope-auth.ts</small><br><code>buildCalculatedOutcome()</code><br><small style="color:var(--muted)">services/aggregated-worker/outcome-builder.ts</small><br><code>buildInputDefVariableAliases()</code><br><small style="color:var(--muted)">services/aggregated-worker/orchestrator.ts</small><br>+10 more</td>
-  <td>runAggregatedWorker() node in services/aggregated-worker/orchestrator.ts.</td>
+  <td><code>KpiDiagnostic</code><br><small style="color:var(--muted)">ai/data-service/diagnostics.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>KpiDiagnostic node in ai/data-service/diagnostics.ts.</td>
 </tr>
 <tr>
   <td>27</td>
-  <td><code>runAggregatedWorkerAsync()</code><br><small style="color:var(--muted)">services/aggregated-worker/orchestrator.ts</small></td>
-  <td><span class="tag tag-async">Async</span></td>
-  <td><code>service.ts</code><br><small style="color:var(--muted)">data-entry/enter-data/service.ts</small><br><code>updateDataEntryAvailabilityAction()</code><br><small style="color:var(--muted)">data-entry/enter-data/service.ts</small><br><code>updateDataEntryValueAction()</code><br><small style="color:var(--muted)">data-entry/enter-data/service.ts</small><br>+1 more</td>
-  <td><code>runAggregatedWorker()</code><br><small style="color:var(--muted)">services/aggregated-worker/orchestrator.ts</small><br><code>storeRunFailure()</code><br><small style="color:var(--muted)">services/aggregated-worker/outcome-store.ts</small><br><code>storeRunStart()</code><br><small style="color:var(--muted)">services/aggregated-worker/outcome-store.ts</small></td>
-  <td>runAggregatedWorkerAsync() node in services/aggregated-worker/orchestrator.ts.</td>
+  <td><code>KpiDiagnosticsData</code><br><small style="color:var(--muted)">ai/data-service/diagnostics.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>KpiDiagnosticsData node in ai/data-service/diagnostics.ts.</td>
 </tr>
 <tr>
   <td>28</td>
-  <td><code>upsertVariableValues()</code><br><small style="color:var(--muted)">services/aggregated-worker/orchestrator.ts</small></td>
-  <td><span class="tag tag-func">Function</span></td>
-  <td><code>runAggregatedWorker()</code><br><small style="color:var(--muted)">services/aggregated-worker/orchestrator.ts</small></td>
+  <td><code>GovernanceData</code><br><small style="color:var(--muted)">ai/data-service/governance.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
-  <td>upsertVariableValues() node in services/aggregated-worker/orchestrator.ts.</td>
+  <td>GovernanceData node in ai/data-service/governance.ts.</td>
 </tr>
 <tr>
   <td>29</td>
-  <td><code>buildCalculatedOutcome()</code><br><small style="color:var(--muted)">services/aggregated-worker/outcome-builder.ts</small></td>
-  <td><span class="tag tag-func">Function</span></td>
-  <td><code>orchestrator.ts</code><br><small style="color:var(--muted)">services/aggregated-worker/orchestrator.ts</small><br><code>runAggregatedWorker()</code><br><small style="color:var(--muted)">services/aggregated-worker/orchestrator.ts</small></td>
+  <td><code>GovernanceRecord</code><br><small style="color:var(--muted)">ai/data-service/governance.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
-  <td>buildCalculatedOutcome() node in services/aggregated-worker/outcome-builder.ts.</td>
+  <td>GovernanceRecord node in ai/data-service/governance.ts.</td>
 </tr>
 <tr>
   <td>30</td>
-  <td><code>buildSkippedOutcome()</code><br><small style="color:var(--muted)">services/aggregated-worker/outcome-builder.ts</small></td>
-  <td><span class="tag tag-func">Function</span></td>
-  <td><code>orchestrator.ts</code><br><small style="color:var(--muted)">services/aggregated-worker/orchestrator.ts</small><br><code>runAggregatedWorker()</code><br><small style="color:var(--muted)">services/aggregated-worker/orchestrator.ts</small><br><code>skip-preserves-existing-value.test.ts</code><br><small style="color:var(--muted)">data-entry/aggregated-worker/skip-preserves-existing-value.test.ts</small></td>
+  <td><code>DataQualityData</code><br><small style="color:var(--muted)">ai/data-service/insights.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
   <td>No direct outbound edge</td>
-  <td>buildSkippedOutcome() node in services/aggregated-worker/outcome-builder.ts.</td>
+  <td>DataQualityData node in ai/data-service/insights.ts.</td>
 </tr>
 </table>
 
@@ -3124,18 +3109,18 @@ flowchart LR
     <table style="width:100%;font-size:0.85rem;">
       <tr><th>File</th><th>Coverage</th></tr>
       <tr><td><code>data-entry/enter-data/service.ts</code></td><td>60 nodes</td></tr>
-<tr><td><code>data-entry/review-kpi/service.ts</code></td><td>38 nodes</td></tr>
+<tr><td><code>data-entry/review-kpi/service.ts</code></td><td>37 nodes</td></tr>
+<tr><td><code>ai/data-service/common.ts</code></td><td>21 nodes</td></tr>
 <tr><td><code>lib/ai/types.ts</code></td><td>18 nodes</td></tr>
 <tr><td><code>app/data-entry/types.ts</code></td><td>17 nodes</td></tr>
 <tr><td><code>lib/ai/rate-limit.ts</code></td><td>17 nodes</td></tr>
 <tr><td><code>components/data-entry/bsc-strategy-map.tsx</code></td><td>16 nodes</td></tr>
-<tr><td><code>ai/data-service/common.ts</code></td><td>16 nodes</td></tr>
 <tr><td><code>lib/logging/logger.ts</code></td><td>13 nodes</td></tr>
     </table>
   </div>
   <div class="card">
     <h4>Design Notes</h4>
-    <p>This section comes from graphify community clustering. Relationship summary: contains x677, imports x550, calls x434, imports x343. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+    <p>This section comes from graphify community clustering. Relationship summary: contains x686, imports x558, calls x448, imports x341. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
   </div>
 </div>
 <hr>
@@ -4216,13 +4201,14 @@ flowchart LR
 
 <!-- ====== 14. review-kpi/types.ts ====== -->
 <h2 id="review-kpi-types-ts">14. review-kpi/types.ts</h2>
-<p>review-kpi/types.ts groups implementation around review, kpi, data, entry, mostly in data-entry/review-kpi/types.ts, data-entry/review-kpi/filterContext.cookies.ts, data-entry/review-kpi/filters.client.tsx. This section covers 36 nodes and 54 internal edges; the diagram shows only representative relationships to stay readable.</p>
+<p>review-kpi/types.ts groups implementation around review, kpi, data, entry, mostly in data-entry/review-kpi/types.ts, data-entry/review-kpi/filterContext.cookies.ts, data-entry/review-kpi/filters.client.tsx. This section covers 38 nodes and 60 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
 %%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
 flowchart LR
-    %% Section: review-kpi/types.ts (36 nodes, 54 edges)
+    %% Section: review-kpi/types.ts (38 nodes, 60 edges)
     subgraph review_kpi_types_ts_data_entry_review_kpi_filter_bf0c5509["data-entry/review-kpi/filterContext.cookies.ts"]
+        app_data_entry_review_kpi_filtercontext_cookies_6ff91e2f("filterContext.cookies.ts")
         app_data_entry_review_kpi_filtercontext_cookies_f04034b7("saveReviewKpiFilterContextToCookies()<br/><small>data-entry/review-kpi/filterContext.cookies.ts</small>")
         app_data_entry_review_kpi_filtercontext_cookies_c66857b9("getReviewKpiFilterContextFromCookies()<br/><small>data-entry/review-kpi/filterContext.cookies.ts</small>")
         app_data_entry_review_kpi_filtercontext_cookies_b6f42a53("sanitizeReviewKpiFilterCookieContext()<br/><small>data-entry/review-kpi/filterContext.cookies.ts</small>")
@@ -4232,8 +4218,8 @@ flowchart LR
     subgraph review_kpi_types_ts_data_entry_review_kpi_filter_95c0bec2["data-entry/review-kpi/filters.client.tsx"]
         app_data_entry_review_kpi_filters_client_4908722e("filters.client.tsx")
         app_data_entry_review_kpi_filters_client_reviewk_31709c20("ReviewKpiFiltersClient()<br/><small>data-entry/review-kpi/filters.client.tsx</small>")
-        review_kpi_filters_4e0d7a5a("Review KPI Filter Client<br/><small>data-entry/review-kpi/filters.client.tsx</small>")
         app_data_entry_review_kpi_filters_client_applylo_8d758ac3("applyLocalFilterCascade()<br/><small>data-entry/review-kpi/filters.client.tsx</small>")
+        review_kpi_filters_4e0d7a5a("Review KPI Filter Client<br/><small>data-entry/review-kpi/filters.client.tsx</small>")
     end
     subgraph review_kpi_types_ts_data_entry_review_kpi_servic_df59e6a6["data-entry/review-kpi/service.ts"]
         app_data_entry_review_kpi_service_bootstraprevie_c93ead60("bootstrapReviewKpiContextAndOptions()<br/><small>data-entry/review-kpi/service.ts</small>")
@@ -4241,14 +4227,13 @@ flowchart LR
         app_data_entry_review_kpi_service_applyreviewkpi_8826d501("applyReviewKpiFilterCascade()<br/><small>data-entry/review-kpi/service.ts</small>")
         app_data_entry_review_kpi_service_sanitizereview_90e307aa("sanitizeReviewKpiContextAgainstOptions()<br/><small>data-entry/review-kpi/service.ts</small>")
     end
-    subgraph review_kpi_types_ts_data_entry_review_kpi_types_04f5f4cb["data-entry/review-kpi/types.ts"]
-        app_data_entry_review_kpi_types_addreviewkpicomm_234523a4("AddReviewKpiCommentPayload<br/><small>data-entry/review-kpi/types.ts</small>")
-        app_data_entry_review_kpi_types_updatereviewkpii_2414d45b("UpdateReviewKpiInputPayload<br/><small>data-entry/review-kpi/types.ts</small>")
-        app_data_entry_review_kpi_types_f30448d0("types.ts")
-    end
     subgraph review_kpi_types_ts_data_entry_review_kpi_action_1ee491c8["data-entry/review-kpi/actions.ts"]
         app_data_entry_review_kpi_actions_97e2dcbc("actions.ts")
         app_data_entry_review_kpi_actions_updatereviewkp_8a20ff45("updateReviewKpiFilterContextAction()<br/><small>data-entry/review-kpi/actions.ts</small>")
+    end
+    subgraph review_kpi_types_ts_data_entry_review_kpi_types_04f5f4cb["data-entry/review-kpi/types.ts"]
+        app_data_entry_review_kpi_types_addreviewkpicomm_234523a4("AddReviewKpiCommentPayload<br/><small>data-entry/review-kpi/types.ts</small>")
+        app_data_entry_review_kpi_types_reviewkpifilterc_ba3d4026("ReviewKpiFilterContext<br/><small>data-entry/review-kpi/types.ts</small>")
     end
     app_data_entry_review_kpi_actions_updatereviewkp_8a20ff45 -->|calls| app_data_entry_review_kpi_service_buildreviewkpi_db2deb3c
     app_data_entry_review_kpi_actions_updatereviewkp_8a20ff45 -->|calls| app_data_entry_review_kpi_service_applyreviewkpi_8826d501
@@ -4264,15 +4249,17 @@ flowchart LR
     app_data_entry_review_kpi_service_buildreviewkpi_db2deb3c -->|calls| app_data_entry_review_kpi_filtercontext_cookies_c66857b9
     review_kpi_filters_4e0d7a5a -->|calls| app_data_entry_review_kpi_actions_97e2dcbc
     app_data_entry_review_kpi_actions_97e2dcbc -->|imports| app_data_entry_review_kpi_types_addreviewkpicomm_234523a4
-    app_data_entry_review_kpi_actions_97e2dcbc -->|imports| app_data_entry_review_kpi_types_updatereviewkpii_2414d45b
+    app_data_entry_review_kpi_actions_97e2dcbc -->|imports| app_data_entry_review_kpi_types_reviewkpifilterc_ba3d4026
     app_data_entry_review_kpi_actions_97e2dcbc -->|imports| app_data_entry_review_kpi_filtercontext_cookies_f04034b7
     app_data_entry_review_kpi_actions_97e2dcbc -->|imports| app_data_entry_review_kpi_service_applyreviewkpi_8826d501
     app_data_entry_review_kpi_actions_97e2dcbc -->|imports| app_data_entry_review_kpi_service_buildreviewkpi_db2deb3c
-    app_data_entry_review_kpi_actions_97e2dcbc -->|imports| app_data_entry_review_kpi_types_f30448d0
+    app_data_entry_review_kpi_actions_97e2dcbc -->|imports| app_data_entry_review_kpi_filtercontext_cookies_6ff91e2f
+    app_data_entry_review_kpi_filtercontext_cookies_6ff91e2f -->|imports| app_data_entry_review_kpi_types_reviewkpifilterc_ba3d4026
     app_data_entry_review_kpi_filters_client_4908722e -->|imports| app_data_entry_review_kpi_actions_updatereviewkp_8a20ff45
+    app_data_entry_review_kpi_filters_client_4908722e -->|imports| app_data_entry_review_kpi_types_reviewkpifilterc_ba3d4026
     app_data_entry_review_kpi_filters_client_4908722e -->|imports| app_data_entry_review_kpi_actions_97e2dcbc
-    app_data_entry_review_kpi_filters_client_4908722e -->|imports| app_data_entry_review_kpi_types_f30448d0
-    %% Omitted for readability: 18 nodes, 0 edges
+    %% Omitted for readability: 20 nodes, 0 edges
+    class app_data_entry_review_kpi_filtercontext_cookies_6ff91e2f module;
     class app_data_entry_review_kpi_filtercontext_cookies_f04034b7 function;
     class app_data_entry_review_kpi_filtercontext_cookies_c66857b9 function;
     class app_data_entry_review_kpi_filtercontext_cookies_b6f42a53 function;
@@ -4280,17 +4267,16 @@ flowchart LR
     class app_data_entry_review_kpi_filtercontext_cookies_7d84e18f function;
     class app_data_entry_review_kpi_filters_client_4908722e entry;
     class app_data_entry_review_kpi_filters_client_reviewk_31709c20 entry;
-    class review_kpi_filters_4e0d7a5a entry;
     class app_data_entry_review_kpi_filters_client_applylo_8d758ac3 ui;
+    class review_kpi_filters_4e0d7a5a entry;
     class app_data_entry_review_kpi_service_bootstraprevie_c93ead60 function;
     class app_data_entry_review_kpi_service_buildreviewkpi_db2deb3c function;
     class app_data_entry_review_kpi_service_applyreviewkpi_8826d501 function;
     class app_data_entry_review_kpi_service_sanitizereview_90e307aa function;
-    class app_data_entry_review_kpi_types_addreviewkpicomm_234523a4 klass;
-    class app_data_entry_review_kpi_types_updatereviewkpii_2414d45b klass;
-    class app_data_entry_review_kpi_types_f30448d0 module;
     class app_data_entry_review_kpi_actions_97e2dcbc module;
     class app_data_entry_review_kpi_actions_updatereviewkp_8a20ff45 function;
+    class app_data_entry_review_kpi_types_addreviewkpicomm_234523a4 klass;
+    class app_data_entry_review_kpi_types_reviewkpifilterc_ba3d4026 klass;
     classDef entry fill:#422006,stroke:#fbbf24,color:#fde68a,stroke-width:1px;
     classDef api fill:#450a0a,stroke:#f87171,color:#fee2e2,stroke-width:1px;
     classDef async fill:#2e1065,stroke:#a78bfa,color:#ede9fe,stroke-width:1px;
@@ -4362,6 +4348,14 @@ flowchart LR
 </tr>
 <tr>
   <td>7</td>
+  <td><code>ReviewKpiFilterContext</code><br><small style="color:var(--muted)">data-entry/review-kpi/types.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td><code>actions.ts</code><br><small style="color:var(--muted)">data-entry/review-kpi/actions.ts</small><br><code>filterContext.cookies.ts</code><br><small style="color:var(--muted)">data-entry/review-kpi/filterContext.cookies.ts</small><br><code>filters.client.tsx</code><br><small style="color:var(--muted)">data-entry/review-kpi/filters.client.tsx</small><br>+5 more</td>
+  <td>No direct outbound edge</td>
+  <td>ReviewKpiFilterContext node in data-entry/review-kpi/types.ts.</td>
+</tr>
+<tr>
+  <td>8</td>
   <td><code>ReviewKpiFilterOption</code><br><small style="color:var(--muted)">data-entry/review-kpi/types.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
   <td><code>service.ts</code><br><small style="color:var(--muted)">data-entry/review-kpi/service.ts</small></td>
@@ -4369,15 +4363,15 @@ flowchart LR
   <td>ReviewKpiFilterOption node in data-entry/review-kpi/types.ts.</td>
 </tr>
 <tr>
-  <td>8</td>
+  <td>9</td>
   <td><code>ReviewKpiFilterOptions</code><br><small style="color:var(--muted)">data-entry/review-kpi/types.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
-  <td><code>filters.client.tsx</code><br><small style="color:var(--muted)">data-entry/review-kpi/filters.client.tsx</small><br><code>filters.client.tsx</code><br><small style="color:var(--muted)">data-entry/balanced-scorecard/filters.client.tsx</small><br><code>service.ts</code><br><small style="color:var(--muted)">data-entry/review-kpi/service.ts</small></td>
+  <td><code>filters.client.tsx</code><br><small style="color:var(--muted)">data-entry/balanced-scorecard/filters.client.tsx</small><br><code>filters.client.tsx</code><br><small style="color:var(--muted)">data-entry/review-kpi/filters.client.tsx</small><br><code>service.ts</code><br><small style="color:var(--muted)">data-entry/review-kpi/service.ts</small></td>
   <td>No direct outbound edge</td>
   <td>ReviewKpiFilterOptions node in data-entry/review-kpi/types.ts.</td>
 </tr>
 <tr>
-  <td>9</td>
+  <td>10</td>
   <td><code>ReviewKpiInputValue</code><br><small style="color:var(--muted)">data-entry/review-kpi/types.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
   <td><code>review-kpi-input-value.tsx</code><br><small style="color:var(--muted)">components/data-entry/review-kpi-input-value.tsx</small><br><code>review-kpi-row.tsx</code><br><small style="color:var(--muted)">components/data-entry/review-kpi-row.tsx</small><br><code>service.ts</code><br><small style="color:var(--muted)">data-entry/review-kpi/service.ts</small></td>
@@ -4385,7 +4379,7 @@ flowchart LR
   <td>ReviewKpiInputValue node in data-entry/review-kpi/types.ts.</td>
 </tr>
 <tr>
-  <td>10</td>
+  <td>11</td>
   <td><code>ReviewKpiPageViewModel</code><br><small style="color:var(--muted)">data-entry/review-kpi/types.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
   <td><code>review-kpi.ts</code><br><small style="color:var(--muted)">test/fixtures/review-kpi.ts</small><br><code>service.ts</code><br><small style="color:var(--muted)">data-entry/review-kpi/service.ts</small></td>
@@ -4393,7 +4387,7 @@ flowchart LR
   <td>Organizes documentation pages, navigation, or content lookup.</td>
 </tr>
 <tr>
-  <td>11</td>
+  <td>12</td>
   <td><code>ReviewKpiResult</code><br><small style="color:var(--muted)">data-entry/review-kpi/types.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
   <td>External entry / no inbound edge</td>
@@ -4401,7 +4395,7 @@ flowchart LR
   <td>ReviewKpiResult node in data-entry/review-kpi/types.ts.</td>
 </tr>
 <tr>
-  <td>12</td>
+  <td>13</td>
   <td><code>ReviewKpiResultStatus</code><br><small style="color:var(--muted)">data-entry/review-kpi/types.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
   <td>External entry / no inbound edge</td>
@@ -4409,7 +4403,7 @@ flowchart LR
   <td>ReviewKpiResultStatus node in data-entry/review-kpi/types.ts.</td>
 </tr>
 <tr>
-  <td>13</td>
+  <td>14</td>
   <td><code>SyncEventType</code><br><small style="color:var(--muted)">data-entry/review-kpi/types.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
   <td>External entry / no inbound edge</td>
@@ -4417,7 +4411,7 @@ flowchart LR
   <td>SyncEventType node in data-entry/review-kpi/types.ts.</td>
 </tr>
 <tr>
-  <td>14</td>
+  <td>15</td>
   <td><code>UpdateReviewKpiInputPayload</code><br><small style="color:var(--muted)">data-entry/review-kpi/types.ts</small></td>
   <td><span class="tag tag-class">Class</span></td>
   <td><code>actions.ts</code><br><small style="color:var(--muted)">data-entry/review-kpi/actions.ts</small></td>
@@ -4425,7 +4419,15 @@ flowchart LR
   <td>UpdateReviewKpiInputPayload node in data-entry/review-kpi/types.ts.</td>
 </tr>
 <tr>
-  <td>15</td>
+  <td>16</td>
+  <td><code>UseReviewKpiSyncOptions</code><br><small style="color:var(--muted)">data-entry/review-kpi/use-review-kpi-sync.ts</small></td>
+  <td><span class="tag tag-class">Class</span></td>
+  <td>External entry / no inbound edge</td>
+  <td>No direct outbound edge</td>
+  <td>UseReviewKpiSyncOptions node in data-entry/review-kpi/use-review-kpi-sync.ts.</td>
+</tr>
+<tr>
+  <td>17</td>
   <td><code>InputCommentThreadProps</code><br><small style="color:var(--muted)">components/data-entry/input-comment-thread.tsx</small></td>
   <td><span class="tag tag-hook">UI</span></td>
   <td>External entry / no inbound edge</td>
@@ -4433,7 +4435,7 @@ flowchart LR
   <td>InputCommentThreadProps node in components/data-entry/input-comment-thread.tsx.</td>
 </tr>
 <tr>
-  <td>16</td>
+  <td>18</td>
   <td><code>ReviewKpiInputValueProps</code><br><small style="color:var(--muted)">components/data-entry/review-kpi-input-value.tsx</small></td>
   <td><span class="tag tag-hook">UI</span></td>
   <td>External entry / no inbound edge</td>
@@ -4441,7 +4443,7 @@ flowchart LR
   <td>ReviewKpiInputValueProps node in components/data-entry/review-kpi-input-value.tsx.</td>
 </tr>
 <tr>
-  <td>17</td>
+  <td>19</td>
   <td><code>updateReviewKpiFilterContextAction()</code><br><small style="color:var(--muted)">data-entry/review-kpi/actions.ts</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td><code>filters.client.tsx</code><br><small style="color:var(--muted)">data-entry/review-kpi/filters.client.tsx</small><br><code>ReviewKpiFiltersClient()</code><br><small style="color:var(--muted)">data-entry/review-kpi/filters.client.tsx</small></td>
@@ -4449,7 +4451,7 @@ flowchart LR
   <td>updateReviewKpiFilterContextAction() node in data-entry/review-kpi/actions.ts.</td>
 </tr>
 <tr>
-  <td>18</td>
+  <td>20</td>
   <td><code>getReviewKpiFilterContextFromCookies()</code><br><small style="color:var(--muted)">data-entry/review-kpi/filterContext.cookies.ts</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td><code>buildReviewKpiFilterContextFromCookies()</code><br><small style="color:var(--muted)">data-entry/review-kpi/service.ts</small><br><code>service.ts</code><br><small style="color:var(--muted)">data-entry/review-kpi/service.ts</small></td>
@@ -4457,7 +4459,7 @@ flowchart LR
   <td>getReviewKpiFilterContextFromCookies() node in data-entry/review-kpi/filterContext.cookies.ts.</td>
 </tr>
 <tr>
-  <td>19</td>
+  <td>21</td>
   <td><code>parseNullableInt()</code><br><small style="color:var(--muted)">data-entry/review-kpi/filterContext.cookies.ts</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td><code>sanitizeReviewKpiFilterCookieContext()</code><br><small style="color:var(--muted)">data-entry/review-kpi/filterContext.cookies.ts</small></td>
@@ -4465,7 +4467,7 @@ flowchart LR
   <td>parseNullableInt() node in data-entry/review-kpi/filterContext.cookies.ts.</td>
 </tr>
 <tr>
-  <td>20</td>
+  <td>22</td>
   <td><code>sanitizeReviewKpiFilterCookieContext()</code><br><small style="color:var(--muted)">data-entry/review-kpi/filterContext.cookies.ts</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td><code>getReviewKpiFilterContextFromCookies()</code><br><small style="color:var(--muted)">data-entry/review-kpi/filterContext.cookies.ts</small><br><code>saveReviewKpiFilterContextToCookies()</code><br><small style="color:var(--muted)">data-entry/review-kpi/filterContext.cookies.ts</small></td>
@@ -4473,7 +4475,7 @@ flowchart LR
   <td>sanitizeReviewKpiFilterCookieContext() node in data-entry/review-kpi/filterContext.cookies.ts.</td>
 </tr>
 <tr>
-  <td>21</td>
+  <td>23</td>
   <td><code>saveReviewKpiFilterContextToCookies()</code><br><small style="color:var(--muted)">data-entry/review-kpi/filterContext.cookies.ts</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td><code>actions.ts</code><br><small style="color:var(--muted)">data-entry/review-kpi/actions.ts</small><br><code>updateReviewKpiFilterContextAction()</code><br><small style="color:var(--muted)">data-entry/review-kpi/actions.ts</small></td>
@@ -4481,7 +4483,7 @@ flowchart LR
   <td>saveReviewKpiFilterContextToCookies() node in data-entry/review-kpi/filterContext.cookies.ts.</td>
 </tr>
 <tr>
-  <td>22</td>
+  <td>24</td>
   <td><code>setReviewKpiFilterCookie()</code><br><small style="color:var(--muted)">data-entry/review-kpi/filterContext.cookies.ts</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td><code>saveReviewKpiFilterContextToCookies()</code><br><small style="color:var(--muted)">data-entry/review-kpi/filterContext.cookies.ts</small></td>
@@ -4489,7 +4491,7 @@ flowchart LR
   <td>setReviewKpiFilterCookie() node in data-entry/review-kpi/filterContext.cookies.ts.</td>
 </tr>
 <tr>
-  <td>23</td>
+  <td>25</td>
   <td><code>applyLocalFilterCascade()</code><br><small style="color:var(--muted)">data-entry/review-kpi/filters.client.tsx</small></td>
   <td><span class="tag tag-hook">UI</span></td>
   <td><code>ReviewKpiFiltersClient()</code><br><small style="color:var(--muted)">data-entry/review-kpi/filters.client.tsx</small></td>
@@ -4497,7 +4499,7 @@ flowchart LR
   <td>applyLocalFilterCascade() node in data-entry/review-kpi/filters.client.tsx.</td>
 </tr>
 <tr>
-  <td>24</td>
+  <td>26</td>
   <td><code>ReviewKpiFiltersClient()</code><br><small style="color:var(--muted)">data-entry/review-kpi/filters.client.tsx</small></td>
   <td><span class="tag tag-cmd">Entry</span></td>
   <td><code>filters.integration.test.tsx</code><br><small style="color:var(--muted)">data-entry/review-kpi/filters.integration.test.tsx</small><br><code>page.tsx</code><br><small style="color:var(--muted)">data-entry/review-kpi/page.tsx</small></td>
@@ -4505,7 +4507,7 @@ flowchart LR
   <td>ReviewKpiFiltersClient() node in data-entry/review-kpi/filters.client.tsx.</td>
 </tr>
 <tr>
-  <td>25</td>
+  <td>27</td>
   <td><code>applyReviewKpiFilterCascade()</code><br><small style="color:var(--muted)">data-entry/review-kpi/service.ts</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td><code>actions.ts</code><br><small style="color:var(--muted)">data-entry/review-kpi/actions.ts</small><br><code>updateReviewKpiFilterContextAction()</code><br><small style="color:var(--muted)">data-entry/review-kpi/actions.ts</small></td>
@@ -4513,7 +4515,7 @@ flowchart LR
   <td>applyReviewKpiFilterCascade() node in data-entry/review-kpi/service.ts.</td>
 </tr>
 <tr>
-  <td>26</td>
+  <td>28</td>
   <td><code>bootstrapReviewKpiContextAndOptions()</code><br><small style="color:var(--muted)">data-entry/review-kpi/service.ts</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td><code>getReviewKpiPageViewModel()</code><br><small style="color:var(--muted)">data-entry/review-kpi/service.ts</small><br><code>listReviewKpiRows()</code><br><small style="color:var(--muted)">data-entry/review-kpi/service.ts</small></td>
@@ -4521,7 +4523,7 @@ flowchart LR
   <td>bootstrapReviewKpiContextAndOptions() node in data-entry/review-kpi/service.ts.</td>
 </tr>
 <tr>
-  <td>27</td>
+  <td>29</td>
   <td><code>buildReviewKpiFilterContextFromCookies()</code><br><small style="color:var(--muted)">data-entry/review-kpi/service.ts</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td><code>actions.ts</code><br><small style="color:var(--muted)">data-entry/review-kpi/actions.ts</small><br><code>bootstrapReviewKpiContextAndOptions()</code><br><small style="color:var(--muted)">data-entry/review-kpi/service.ts</small><br><code>updateReviewKpiFilterContextAction()</code><br><small style="color:var(--muted)">data-entry/review-kpi/actions.ts</small></td>
@@ -4529,28 +4531,12 @@ flowchart LR
   <td>buildReviewKpiFilterContextFromCookies() node in data-entry/review-kpi/service.ts.</td>
 </tr>
 <tr>
-  <td>28</td>
+  <td>30</td>
   <td><code>sanitizeReviewKpiContextAgainstOptions()</code><br><small style="color:var(--muted)">data-entry/review-kpi/service.ts</small></td>
   <td><span class="tag tag-func">Function</span></td>
   <td><code>bootstrapReviewKpiContextAndOptions()</code><br><small style="color:var(--muted)">data-entry/review-kpi/service.ts</small></td>
   <td>No direct outbound edge</td>
   <td>sanitizeReviewKpiContextAgainstOptions() node in data-entry/review-kpi/service.ts.</td>
-</tr>
-<tr>
-  <td>29</td>
-  <td><code>ReportTypeSelect()</code><br><small style="color:var(--muted)">components/data-entry/filterSelectors.tsx</small></td>
-  <td><span class="tag tag-hook">UI</span></td>
-  <td><code>filters.client.tsx</code><br><small style="color:var(--muted)">data-entry/enter-data/filters.client.tsx</small><br><code>filters.client.tsx</code><br><small style="color:var(--muted)">data-entry/review-kpi/filters.client.tsx</small></td>
-  <td>No direct outbound edge</td>
-  <td>ReportTypeSelect() node in components/data-entry/filterSelectors.tsx.</td>
-</tr>
-<tr>
-  <td>30</td>
-  <td><code>ServiceAreaSelect()</code><br><small style="color:var(--muted)">components/data-entry/filterSelectors.tsx</small></td>
-  <td><span class="tag tag-hook">UI</span></td>
-  <td><code>filters.client.tsx</code><br><small style="color:var(--muted)">data-entry/enter-data/filters.client.tsx</small><br><code>filters.client.tsx</code><br><small style="color:var(--muted)">data-entry/review-kpi/filters.client.tsx</small></td>
-  <td><code>useTerm()</code><br><small style="color:var(--muted)">lib/terminology/useTerm.ts</small></td>
-  <td>ServiceAreaSelect() node in components/data-entry/filterSelectors.tsx.</td>
 </tr>
 </table>
 
@@ -4559,19 +4545,19 @@ flowchart LR
     <h4>Key Files</h4>
     <table style="width:100%;font-size:0.85rem;">
       <tr><th>File</th><th>Coverage</th></tr>
-      <tr><td><code>data-entry/review-kpi/types.ts</code></td><td>12 nodes</td></tr>
+      <tr><td><code>data-entry/review-kpi/types.ts</code></td><td>13 nodes</td></tr>
 <tr><td><code>data-entry/review-kpi/filterContext.cookies.ts</code></td><td>9 nodes</td></tr>
 <tr><td><code>data-entry/review-kpi/filters.client.tsx</code></td><td>5 nodes</td></tr>
 <tr><td><code>data-entry/review-kpi/service.ts</code></td><td>4 nodes</td></tr>
 <tr><td><code>data-entry/review-kpi/actions.ts</code></td><td>2 nodes</td></tr>
 <tr><td><code>components/data-entry/filterSelectors.tsx</code></td><td>2 nodes</td></tr>
+<tr><td><code>data-entry/review-kpi/use-review-kpi-sync.ts</code></td><td>1 nodes</td></tr>
 <tr><td><code>components/data-entry/input-comment-thread.tsx</code></td><td>1 nodes</td></tr>
-<tr><td><code>components/data-entry/review-kpi-input-value.tsx</code></td><td>1 nodes</td></tr>
     </table>
   </div>
   <div class="card">
     <h4>Design Notes</h4>
-    <p>This section comes from graphify community clustering. Relationship summary: contains x23, calls x13, imports x9, imports x5. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+    <p>This section comes from graphify community clustering. Relationship summary: contains x24, calls x13, imports x12, references x6. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
   </div>
 </div>
 <hr>
@@ -4934,12 +4920,12 @@ flowchart LR
 
 <!-- ====== 16. Other ====== -->
 <h2 id="other">16. Other</h2>
-<p>Other groups implementation around app, data, docs, scripts, mostly in settings/kpi/service.ts, app/migration/service.ts, data-entry/enter-data/templatePanel.tsx. This section covers 1180 nodes and 1364 internal edges; the diagram shows only representative relationships to stay readable.</p>
+<p>Other groups implementation around app, docs, data, scripts, mostly in settings/kpi/service.ts, data-entry/enter-data/templatePanel.tsx, app/migration/service.ts. This section covers 1153 nodes and 1319 internal edges; the diagram shows only representative relationships to stay readable.</p>
 
 <div class="mermaid">
 %%{init: {"theme": "dark", "themeVariables": {"fontSize": "15.0px", "fontFamily": "Segoe UI, system-ui, sans-serif", "primaryColor": "#1e293b", "primaryTextColor": "#e2e8f0", "primaryBorderColor": "#38bdf8", "secondaryColor": "#0f172a", "tertiaryColor": "#334155", "lineColor": "#64748b", "textColor": "#e2e8f0"}, "flowchart": {"htmlLabels": true, "curve": "basis", "nodeSpacing": 48, "rankSpacing": 64, "padding": 14, "diagramPadding": 10, "useMaxWidth": true}}}%%
 flowchart LR
-    %% Section: Other (1180 nodes, 1364 edges)
+    %% Section: Other (1153 nodes, 1319 edges)
     subgraph other_components_ai_chat_error_boundary_tsx_8cd3a314["components/ai/chat-error-boundary.tsx"]
         components_ai_chat_error_boundary_chaterrorbound_96da4f21("ChatErrorBoundary<br/><small>components/ai/chat-error-boundary.tsx</small>")
         components_ai_chat_error_boundary_chaterrorbound_e086204b("constructor()<br/><small>components/ai/chat-error-boundary.tsx</small>")
@@ -4975,7 +4961,7 @@ flowchart LR
     scripts_bulk_create_input_defs_main_ec803115 -->|calls| scripts_bulk_create_input_defs_fetchsource_e9251abc
     scripts_bulk_create_input_defs_main_ec803115 -->|calls| scripts_bulk_create_input_defs_slugify_f0f7be03
     scripts_bulk_create_input_defs_main_ec803115 -->|calls| scripts_bulk_create_input_defs_guesscategorysubc_e4a7f1b3
-    %% Omitted for readability: 1162 nodes, 0 edges
+    %% Omitted for readability: 1135 nodes, 0 edges
     class components_ai_chat_error_boundary_chaterrorbound_96da4f21 ui;
     class components_ai_chat_error_boundary_chaterrorbound_e086204b ui;
     class components_ai_chat_error_boundary_chaterrorbound_93d2b8cf ui;
@@ -5263,8 +5249,8 @@ flowchart LR
     <table style="width:100%;font-size:0.85rem;">
       <tr><th>File</th><th>Coverage</th></tr>
       <tr><td><code>settings/kpi/service.ts</code></td><td>37 nodes</td></tr>
-<tr><td><code>app/migration/service.ts</code></td><td>28 nodes</td></tr>
 <tr><td><code>data-entry/enter-data/templatePanel.tsx</code></td><td>26 nodes</td></tr>
+<tr><td><code>app/migration/service.ts</code></td><td>24 nodes</td></tr>
 <tr><td><code>data-entry/balanced-scorecard/types.ts</code></td><td>23 nodes</td></tr>
 <tr><td><code>docs/WORKSTREAMS.md</code></td><td>21 nodes</td></tr>
 <tr><td><code>docs/unit-lifecycle-spec.md</code></td><td>21 nodes</td></tr>
@@ -5274,7 +5260,7 @@ flowchart LR
   </div>
   <div class="card">
     <h4>Design Notes</h4>
-    <p>This section comes from graphify community clustering. Relationship summary: contains x828, calls x316, imports x91, imports x46. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
+    <p>This section comes from graphify community clustering. Relationship summary: contains x820, calls x291, imports x87, imports x46. The diagram prioritizes high-confidence calls or usage relationships; the table keeps the broader node inventory.</p>
   </div>
 </div>
 <hr>
@@ -5314,7 +5300,7 @@ flowchart LR
       <tr><td>Nodes</td><td>5434</td></tr>
       <tr><td>Edges</td><td>13173</td></tr>
       <tr><td>Hyperedges</td><td>2</td></tr>
-      <tr><td>Communities</td><td>408</td></tr>
+      <tr><td>Communities</td><td>405</td></tr>
       <tr><td>Documented Sections</td><td>15</td></tr>
     </table>
   </div>
@@ -5330,7 +5316,7 @@ flowchart LR
 
 <div style="text-align:center; padding:40px 0; color: var(--muted); font-size:0.9rem;">
   <p>prism — Architecture Documentation</p>
-  <p>Generated: 2026-08-31 01:18 UTC · graphify callflow-html</p>
+  <p>Generated: 2026-08-31 12:52 UTC · graphify callflow-html</p>
 </div>
 
 </div><!-- .container -->

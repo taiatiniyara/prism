@@ -111,6 +111,7 @@ export async function GET(req: Request) {
       return {
         ReportType: reportType,
         ReportPeriod: formatReportPeriodIso(r.report_date, reportType),
+        ReportPeriodId: r.id,
         UtilityId: r.utility_id,
         Utility: u?.acronym ?? "",
         Currency: currency,

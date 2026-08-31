@@ -74,6 +74,7 @@ export async function GET(req: Request) {
       const reportType = findItem(rp?.report_type_id ?? null)?.name;
       return {
         Date: formatReportPeriodIso(rp?.report_date ?? null, reportType),
+        ReportPeriodId: rp?.id,
         CurrencyCode: country ? findItem(country.currency_id)?.name : undefined,
         "Local to USD Conversion Rate": resolveEntryValue(
           l,

@@ -69,6 +69,7 @@ export async function GET(req: Request) {
       return {
         ReportType: reportType,
         ReportPeriod: formatReportPeriodIso(urp.report_date, reportType, u?.fye_month, u?.fye_day),
+        ReportPeriodId: urp.id,
         CountryId: country?.id,
         Country: country?.name,
         AlphaCode2: country?.iso_code_alpha2,

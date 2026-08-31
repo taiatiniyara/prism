@@ -79,6 +79,7 @@ export async function GET(req: Request) {
         urp?.report_date ?? null,
         reportType?.name,
       ),
+      ReportPeriodId: urp?.id,
       UtilityId: urp?.utility_id,
       Utility: utility?.name ?? "",
       Position: POSITION_BY_MEASURE[name] ?? name,

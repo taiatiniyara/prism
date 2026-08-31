@@ -162,6 +162,7 @@ export async function GET(req: Request) {
       return {
         "Report Type": reportType,
         "Report Period": reportDate,
+        ReportPeriodId: urp.id,
         UtilityId: urp.utility_id,
         Data: data,
       };

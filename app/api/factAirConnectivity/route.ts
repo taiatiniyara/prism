@@ -62,6 +62,7 @@ export async function GET(req: Request) {
       return {
         "Report Type": reportType,
         "Report Period": formatReportPeriodIso(urp.report_date, reportType, u?.fye_month, u?.fye_day),
+        ReportPeriodId: urp.id,
         Country: country?.name,
         "Air Connectivity": iata?.value ?? null,
         "Air Connectivity per 1000 people": acp?.value ?? null,

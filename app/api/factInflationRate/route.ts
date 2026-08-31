@@ -52,6 +52,7 @@ export async function GET(req: Request) {
       return {
         "Report Type": reportType,
         "Report Period": formatReportPeriodIso(urp.report_date, reportType, u?.fye_month, u?.fye_day),
+        ReportPeriodId: urp.id,
         Country: country?.name,
         "Inflation Rate": cc?.value ?? null,
         Source: "unknown",

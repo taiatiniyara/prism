@@ -97,6 +97,7 @@ export async function GET(req: Request) {
         return {
           ReportType: reportType,
           ReportPeriod: formatReportPeriodIso(urp.report_date, reportType),
+          ReportPeriodId: urp.id,
           UtilityId: urp.utility_id,
           Data: allSa
             .filter((sa) => sa.utility_id === urp.utility_id)

@@ -125,6 +125,7 @@ export async function GET(req: Request) {
         const reportType = findItem(urp.report_type_id)?.name;
         return {
           "Utility Report Period ID": urp.id,
+          ReportPeriodId: urp.id,
           "Report Type": reportType,
           "Report Date": formatReportPeriodIso(urp.report_date, reportType),
           "Utility ID": urp.utility_id,
