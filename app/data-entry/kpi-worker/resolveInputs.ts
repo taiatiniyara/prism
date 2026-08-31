@@ -235,55 +235,102 @@ export const resolveFormulaInputValues = async (
   const variables: Record<string, number> = {};
   const missingVariables: string[] = [];
 
+  // strict: authoritative match — an All-binding matches the All-member (or
+  // legacy null) aggregate row only.
+  const strict = (
+    actual: number | null,
+    bound: number | null | undefined,
+    allMember: number,
+    scopeValue: number | null = null,
+  ) => matchDimension(actual, bound ?? null, scopeValue, allMember);
+
+  // detail: an All-binding (with no pinning scope value) matches ANY member on
+  // that dimension — the member slices as well as All-member/null on the dims
+  // that aren't broken down — so the sum is the dimension rollup across all
+  // present members. Reached ONLY when no authoritative All-member aggregate
+  // row was found (rule 1), so this never adds a full aggregate to its own
+  // detail. (Partial-aggregate-plus-detail coexistence is caught by #4's
+  // Σ-members-vs-All verifier, not resolved here.)
+  const detail = (
+    actual: number | null,
+    bound: number | null | undefined,
+    allMember: number,
+    scopeValue: number | null = null,
+  ) => {
+    if (scopeValue == null && bound != null && bound === allMember) {
+      return true;
+    }
+    return matchDimension(actual, bound ?? null, scopeValue, allMember);
+  };
+
+  type SourceRow = (typeof byInputDef extends Map<number, infer V>
+    ? V
+    : never)[number];
+
+  const matchesAll = (
+    c: SourceRow,
+    formulaInput: FormulaInput,
+    match: typeof strict,
+  ): boolean =>
+    match(c.energyProviderId, formulaInput.provider_id, ALL_MEMBER.provider_id) &&
+    match(c.energyTypeId, formulaInput.category_id, ALL_MEMBER.category_id) &&
+    match(c.energySourceId, formulaInput.technology_id, ALL_MEMBER.technology_id) &&
+    match(c.unitTypeId, formulaInput.asset_class_id, ALL_MEMBER.asset_class_id) &&
+    match(c.customerTypeId, formulaInput.customer_type_id, ALL_MEMBER.customer_type_id, request.scope.customerTypeId ?? null) &&
+    match(c.paymentModeId, formulaInput.payment_mode_id, ALL_MEMBER.payment_mode_id, request.scope.paymentModeId ?? null) &&
+    match(c.consumptionBandId, formulaInput.consumption_band_id, ALL_MEMBER.consumption_band_id) &&
+    match(c.divisionId, formulaInput.division_id, ALL_MEMBER.division_id) &&
+    match(c.genderId, formulaInput.gender_id, ALL_MEMBER.gender_id) &&
+    match(c.utilityFunctionId, formulaInput.utility_function_id, ALL_MEMBER.utility_function_id);
+
   for (const formulaInput of formulaInputs) {
     const sourceRows = byInputDef.get(formulaInput.measure_def_id) ?? [];
-    const m = (
-      actual: number | null,
-      bound: number | null | undefined,
-      allMember: number,
-      scopeValue: number | null = null,
-    ) => matchDimension(actual, bound ?? null, scopeValue, allMember);
-    const candidates = sourceRows.filter(
-      (c) =>
-        m(c.energyProviderId, formulaInput.provider_id, ALL_MEMBER.provider_id) &&
-        m(c.energyTypeId, formulaInput.category_id, ALL_MEMBER.category_id) &&
-        m(c.energySourceId, formulaInput.technology_id, ALL_MEMBER.technology_id) &&
-        m(c.unitTypeId, formulaInput.asset_class_id, ALL_MEMBER.asset_class_id) &&
-        m(c.customerTypeId, formulaInput.customer_type_id, ALL_MEMBER.customer_type_id, request.scope.customerTypeId ?? null) &&
-        m(c.paymentModeId, formulaInput.payment_mode_id, ALL_MEMBER.payment_mode_id, request.scope.paymentModeId ?? null) &&
-        m(c.consumptionBandId, formulaInput.consumption_band_id, ALL_MEMBER.consumption_band_id) &&
-        m(c.divisionId, formulaInput.division_id, ALL_MEMBER.division_id) &&
-        m(c.genderId, formulaInput.gender_id, ALL_MEMBER.gender_id) &&
-        m(c.utilityFunctionId, formulaInput.utility_function_id, ALL_MEMBER.utility_function_id),
-    );
     const inputAggLevelId =
       strataMap.get(formulaInput.measure_def_id) ?? null;
+    const grainRollup = shouldRollup(request.kpiAggLevelId, inputAggLevelId);
 
-    if (shouldRollup(request.kpiAggLevelId, inputAggLevelId)) {
-      const rollup = sumRollupValues(candidates);
-      if (!rollup.hasValue) {
-        missingVariables.push(formulaInput.variable_name);
-        continue;
-      }
+    // Dimension resolution follows the ruled "All-row else sum of detail"
+    // preference (#8, grounded in PR #104 aggregate-vs-breakdown + §4.6):
+    //   1. authoritative All-member aggregate row exists → USE it
+    //   2. else genuine member slices exist → SUM them (dimension rollup)
+    //   3. else missing.
+    // One source is ever consulted, never added across, so a mandatory All row
+    // coexisting with an optional (possibly partial) breakdown never
+    // double-counts or gets understated by a partial sum.
+    let value: number | null = null;
 
-      variables[formulaInput.variable_name] = rollup.sum;
-      continue;
+    // Rule 1 — authoritative aggregate (preserves prior grain-rollup behaviour).
+    const strictCandidates = sourceRows.filter((c) =>
+      matchesAll(c, formulaInput, strict),
+    );
+    if (grainRollup) {
+      const rollup = sumRollupValues(strictCandidates);
+      if (rollup.hasValue) value = rollup.sum;
+    } else {
+      // A scope can hold several copies of a row (blank placeholders, legacy
+      // imports); take the first that actually carries a number.
+      value =
+        strictCandidates
+          .map((candidate) => asNumber(candidate.value))
+          .find((v) => v != null) ?? null;
     }
 
-    // A scope can hold several copies of a row (blank placeholders, legacy
-    // imports); take the first candidate that actually carries a number
-    // rather than failing on a blank one.
-    const numeric =
-      candidates
-        .map((candidate) => asNumber(candidate.value))
-        .find((value) => value != null) ?? null;
+    // Rule 2 — no aggregate row: dimension rollup = sum the detail slices.
+    if (value == null) {
+      const detailCandidates = sourceRows.filter((c) =>
+        matchesAll(c, formulaInput, detail),
+      );
+      const rollup = sumRollupValues(detailCandidates);
+      if (rollup.hasValue) value = rollup.sum;
+    }
 
-    if (numeric == null) {
+    // Rule 3 — missing.
+    if (value == null) {
       missingVariables.push(formulaInput.variable_name);
       continue;
     }
 
-    variables[formulaInput.variable_name] = numeric;
+    variables[formulaInput.variable_name] = value;
   }
 
   return {
