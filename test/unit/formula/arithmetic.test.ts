@@ -78,6 +78,14 @@ describe("evaluateArithmetic — fail-closed (never coerce / eval)", () => {
     );
   });
 
+  it("rejects inherited object members used as bare identifiers", () => {
+    // constructor/toString/valueOf/__proto__ exist on {} via the prototype
+    // chain but are not OWN properties, so they must not resolve as variables.
+    for (const name of ["constructor", "toString", "valueOf", "__proto__", "hasOwnProperty"]) {
+      expect(() => evaluateArithmetic(name, {})).toThrow(FormulaError);
+    }
+  });
+
   it("throws (not NaN) on a non-finite result (division by zero)", () => {
     expect(() => evaluateArithmetic("a / b", { a: 1, b: 0 })).toThrow(
       FormulaError,

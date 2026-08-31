@@ -142,8 +142,14 @@ export function evaluateArithmetic(
         next();
         return Number(head);
       }
-      // identifier → variable substitution
+      // identifier → variable substitution. Only OWN properties count, so
+      // inherited object members (constructor, toString, __proto__, …) are
+      // never resolvable as variables — explicit belt-and-suspenders on top
+      // of the numeric-value check below.
       next();
+      if (!Object.hasOwn(variables, head)) {
+        throw new FormulaError(`No numeric value for "${head}".`, "value");
+      }
       const value = variables[head];
       if (typeof value !== "number" || !Number.isFinite(value)) {
         throw new FormulaError(`No numeric value for "${head}".`, "value");
