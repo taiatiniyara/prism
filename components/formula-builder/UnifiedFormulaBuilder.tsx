@@ -367,8 +367,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                 onCheckedChange={(c) => setOnlyWithoutFormula(c === true)}
               />
               <span className="max-w-[8.5rem] leading-snug">
-                Show only {activeMode === "kpi" ? "KPIs" : "measures"} without a
-                formula
+                filter for calculations that have no formulas
               </span>
             </Label>
           </div>
@@ -386,12 +385,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
         <CardContent className="space-y-4">
           <div className="flex items-start justify-between gap-4">
             <div>
-              <h2 className="text-base font-bold">
-                {selectedTargetId != null
-                  ? (targetsById.get(selectedTargetId)?.name ??
-                    "Untitled")
-                  : "Select a target to begin"}
-              </h2>
+              <p className="text-sm font-bold">Build formula</p>
             </div>
             {activeMode === "kpi" && (
               <div className="flex flex-col items-end gap-1.5">
@@ -417,21 +411,11 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                     />
                   </span>
                 </button>
-                <span className="text-muted-foreground max-w-44 text-right text-[10.5px]">
-                  Informational in Phase 1 — KPI definitions already publish to
-                  the dashboard.
-                </span>
               </div>
             )}
           </div>
 
           <div>
-            <div className="mb-1.5 flex items-baseline gap-3">
-              <Label className="text-xs">Formula</Label>
-              <span className="text-muted-foreground text-xs">
-                Each variable has its own dimension context in the inputs below.
-              </span>
-            </div>
             <FormulaEditor
               formula={formula}
               onChange={handleFormulaChange}
