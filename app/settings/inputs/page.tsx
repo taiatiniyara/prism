@@ -172,9 +172,8 @@ export default async function InputsSettingsPage(props: {
 
         <TabsContent value="new-formula-builder">
           <SectionContainer>
-            <p className="mb-4 text-sm text-muted-foreground">
-              Build or re-build Calculated Measures or KPIs formulas and
-              update existing values if needed.
+            <p className="mb-4 text-sm font-bold">
+              Build or re-build Calculated Measures or KPIs formulas
             </p>
             <UnifiedFormulaBuilder
               data={unifiedMeasureData}

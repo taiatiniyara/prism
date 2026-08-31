@@ -200,8 +200,11 @@ export function FormulaEditor({
           />
         ) : tokens.length === 0 ? (
           <p className="text-muted-foreground font-sans text-sm">
-            Type a variable name or use the operators below. A new name creates
-            its input card; an existing name links to it.
+            Enter your variables here and use the operators below to build your
+            formula. Each time you enter a new Variable name, it creates a
+            distinct card in the Inputs section below, where you can link your
+            Variable to an actual input measure and define the specific slice of
+            that input measure that is needed in your formula.
           </p>
         ) : (
           <div className="flex flex-wrap items-center gap-1.5">
