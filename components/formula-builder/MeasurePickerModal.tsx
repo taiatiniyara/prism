@@ -10,7 +10,6 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
 import type { MeasureCatalogueItem } from "./types";
 
@@ -128,7 +127,7 @@ export function MeasurePickerModal({
 
           <div className="flex">
             {/* group tree */}
-            <ScrollArea className="h-[320px] w-56 shrink-0 border-r">
+            <div className="h-[360px] w-56 shrink-0 overflow-y-auto border-r">
               <div className="p-2">
                 <button
                   type="button"
@@ -191,10 +190,10 @@ export function MeasurePickerModal({
                   );
                 })}
               </div>
-            </ScrollArea>
+            </div>
 
             {/* results */}
-            <ScrollArea className="h-[320px] flex-1">
+            <div className="h-[360px] flex-1 overflow-y-auto">
               <div className="space-y-1 p-2">
                 {results.length === 0 && (
                   <p className="text-muted-foreground px-2 py-6 text-center text-sm">
@@ -225,7 +224,7 @@ export function MeasurePickerModal({
                   </button>
                 ))}
               </div>
-            </ScrollArea>
+            </div>
           </div>
         </div>
       </DialogContent>
