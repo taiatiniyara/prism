@@ -17,8 +17,7 @@ const INPUTS = {
 
 async function main() {
   const def = await pool.query(
-    `select i.id, i.name, i.variable_name, i.is_active, i.is_aggregated,
-            al.name as strata, u.name as unit, c.name as category, sc.name as subcategory
+    `select i.id, i.name, i.variable_name, i.is_active,             al.name as strata, u.name as unit, c.name as category, sc.name as subcategory
      from measure_definitions  i
      left join managed_list_items al on al.id = i.strata_id
      left join managed_list_items u on u.id = i.unit_id

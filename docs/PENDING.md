@@ -17,7 +17,7 @@ A row is *pending* if it has not cleared all the gates that apply to it. Docs-on
 
 - **Tree clean and in sync with `origin/main`.** ⚠ deps changed → run `npm install` after your next pull.
 - **Only one uncommitted file:** **#3's `calculator-engine-spec.md`** (active WIP, left for #3).
-- **Open PRs (2026-08-31): only `#77` human left** (parked by design) — **`#104` MERGED** (Eugene's data-availability amendment, fully reviewed). Dependabot PRs are **in active flux — Eugene's engineer is working them** (count changing; not pinned). Vuln triage complete/accepted.
+- **Open PRs (2026-08-31c): 1 human** — `#179` (#2 new-org onboarding step, mergeable/ready). `#198` (retire `is_aggregated`) **merged @14:52** + column dropped on dev; #77 & #104 also merged. Dependabot in active flux (Eugene's engineer working them).
 - **Cleared this session:** #8 schema-convention ruling (`7c01627`); #12 D2 API_KEY split merged (`167f080`); both sentinel-deletion confirmations (#2 views, #10 access); safe Dependabot subset merged.
 - **Awaiting Eugene — 2:** **#2 imminent full-migration run (later today)** — Eugene's data inputs: **tariff (Standard/Lifeline) + 340/342 downtime-events** extracts bundled into one run, **+ (if the run adds new utilities) author the new-org onboarding workbook** (3-sheet Excel — format decided + step BUILT PR #179; skip if no new utilities). ⚠ the general medallion reload is ✅ DONE (PR #107). **FYE for 3 placeholder utilities** (Vanuatu/Pitcairn/NZ — forward pre-req, no live impact; FYE *column mechanism* fully landed PRs #159/#162, values still owed). *(#10 ✅ RULED 2026-08-31; #4 country-context ✅ DONE.)*
 - **Applied DB changes today** (informational, all backed up): sentinel-chain deletion, `measure_definitions.description` drop, managed-lists vocab rename — plus the follow-on `units.category_id`/`type_id` DROP still owed by #2.
@@ -41,14 +41,19 @@ A row is *pending* if it has not cleared all the gates that apply to it. Docs-on
 | `C:/Users/eugen/prism` | `main` | see above |
 | `C:/Users/eugen/prism-bsc` | `feat/bsc-input-kpi-picker` | **clean; fully merged** into `main` (PR #35). Nothing pending. Branch has no upstream but no unmerged commits either — safe to leave or delete. |
 
-### Open PRs (re-scan 2026-08-31)
+### Open PRs (re-scan 2026-08-31b)
 > Method: full `gh pr list --state open` each refresh (pings are additive, not a substitute — see the Lesson in §4).
 
-**Human PRs: only `#77` left** — `#104` **MERGED 2026-08-31** (squash `1a72763`, by Eugene at his direction) after full review (#8/#3/#4 all endorsed); the data-availability §3.1.1 dimension-aware-obligation amendment is now on main. Earlier nudge also cleared #113/#76/#83.
-- `#77` [#11] **Access Plans (Tiered Access) DEV/BMO form — PROTOTYPE.** 🅿️ **Deliberately parked (review artifact), NOT stuck** — mock-backed click-through, on hold since 2026-07-28 pending Eugene's UX sign-off. Matures toward merge only when **both** (a) Eugene approves the UX **and** (b) #10/#2 land the real `plan`/`plan_version`/`plan_entitlement` DDL so #11 can rebind from mock to real tables. Do not treat as backlog to clear.
+**1 human PR open:**
+- `#179` [#2] **new-organisation onboarding step (`--new-orgs`)** — migration "step 0": onboard new orgs / service_areas / report_periods before the data-entries load. Mergeable, not draft. **Should merge before the imminent migration run** if that run adds new utilities (git-first: code on main before any new-org DB inserts).
+
+*(Cleared: `#198` retire `is_aggregated` **MERGED @14:52** + dev drop [dup of `is_calculated`; `is_context_fed` KEPT — not a dup]; `#77` Access Plans prototype **merged** [was parked; landed]; `#104` merged; earlier nudge cleared #113/#76/#83.)*
 
 **Dependabot PRs — ⚠ IN ACTIVE FLUX (2026-08-31): Eugene's engineer is merging/updating them directly**, so the count is changing minute-to-minute (was 12, dropping) — **not pinning a number here.** Vuln posture unchanged (triage complete/accepted, nothing prod-reachable — see note below). Re-scan for the live list rather than trusting a recorded count.
-> **Dependabot/vuln note:** #8 reported the vuln count spiking 4→24 (2026-08-24); #12's PR #119 (`51d5f8e`, merged) addressed it (npm audit fix, prod count 14→5). ✅ **#12's dependency triage is COMPLETE (accepted-residual):** the 5 prod residuals (exceljs/react-d3-tree/uuid — uuid advisory needs a `buf` arg neither passes; brace-expansion/minimatch — DoS needs untrusted glob input no user-facing path exposes) are **non-reachable**, documented in #119's notes. Fully clearing them would need breaking major bumps (e.g. exceljs) for non-reachable advisories — **not done deliberately; Eugene's call only if zero-alert is wanted.** No DB/runtime change from #119. **Update (2026-08-28):** vuln alert count now **9 (3 high)**, down from 24. ✅ **#12 CONFIRMED the 3 high are all the same package — `brace-expansion`** (3 DoS advisory variants: GHSA-rgw5-rvv9-x895 / GHSA-mh99-v99m-4gvg / GHSA-3jxr-9vmj-r5cp), **inside the accepted-residual set, not new.** Dependabot labels them "runtime" scope (brace-expansion is in the prod tree via minimatch) but they are **not runtime-reachable** — a DoS needs attacker-controlled glob/brace input and no user-facing path passes that. Verdict unchanged: nothing reachable. **Optional cheap win (not urgent):** bumping the `brace-expansion` override (pinned 2.0.1) to a patched version could clear all 3 without breakage if a patch exists — check next time deps are touched.
+> **Vuln alerts (live re-scan 2026-09-01): 7 open — 2 high / 3 med / 2 low, across 2 packages:**
+> - **4 × `brace-expansion`** (2 high, 1 med, 1 low) — the **accepted-residual, non-reachable** set #12 triaged (DoS needs attacker-controlled glob/brace input no user-facing path passes). ✅ **A patch now exists (`2.1.4`)** — bumping the override (pinned `2.0.1`→`2.1.4`) clears all 4 with no breakage. This is #12's "cheap win," now confirmed doable.
+> - **3 × `hono`** (2 med, 1 low, **dev-scope** — not production runtime) — **NEW since #12's triage** (memo() SSR retention / Language-Middleware DoS / Proxy-Helper header leak). → flagged to #12 to assess.
+> *(History: count spiked 4→24 on 2026-08-24, cut to single digits by #12's PR #119 hygiene; earlier "5 prod residuals" all accepted non-reachable.)*
 
 ⚠ **main's deps changed again (#119: `package.json`+lock) → run `npm install` after your next pull.**
 
@@ -91,13 +96,13 @@ Legend: ✅ nothing pending · 📝 uncommitted · ⬆️ committed-not-pushed �
 | 15 | Pending tracker | ✅ `PENDING.md` merged (PR #71); refresh 2 landed in `6cda722`; refresh 3 uncommitted in-place | — | — | ✅ |
 
 **Net pending right now** (genuinely open items only):
-- **Human PRs:** none actionable — `#104` merged; only `#77` remains (parked by design). Dependabot in active flux (Eugene's engineer working them).
+- **Human PRs: 1 open** — `#179` (#2 new-org onboarding step, ready — merge before the run if it adds new utilities). *(#198 retire `is_aggregated` merged @14:52 + dev drop; #77 & #104 merged.)* Dependabot in active flux (Eugene's engineer working them).
 - **Awaiting Eugene (2):** **#2 imminent full-migration run today** (tariff + 340/342 extracts + new-org workbook *if* new utilities [step built PR #179]; medallion reload already ✅ done) · FYE for 3 placeholder utilities (forward). *(#10 ✅ ruled 2026-08-31.)*
 - **In-flight / owed:** #2 context-fed pass parts 3–4 (non-blocking) · #12 P2/D2 operator steps (env/Power BI/rotate) · #11 country-context form (USER-IMPACT r16) · a branch-triage pass over the ~15 un-PR'd `claude/*` branches.
 - **Prod apply debt:** the 🚀 **Cutover Runbook** below (idempotent SQL + seed + `verify-relevance` gate, all live on dev, per-env owed at prod migration).
 - **Deferred (nothing to queue today):** the unified relevance surface (`docs/measure-relevance-spec.md`) rides #2's ONE combined temporal-spans reimport migration (+ unit-activation stints, `btree_gist`).
 
-> ✅ **Closed — NOT pending** (recorded for history only; do not re-surface): **431 = DERIVED, Eugene-ruled terminal 2026-08-30** (`e92f75d`/#153, locked, no further changes) · **relevance cluster fully sealed** (2026-08-28) · **#104 merged** (2026-08-31) · **#4 "shells requested excludes is_calculated" captured** in spec + #2 `reconcilePeriod` · **vuln triage complete/accepted**. These live in the spec / recently-applied log, not the pending list.
+> *Settled design decisions (431 mode, relevance cluster, etc.) are recorded in the spec and are NOT tracked here — this list is open items only.*
 
 `npm install` after pull.
 
@@ -107,6 +112,8 @@ Legend: ✅ nothing pending · 📝 uncommitted · ⬆️ committed-not-pushed �
 > **📌 POLICY (Eugene via #1, effective 2026-08-31, no exceptions): git FIRST, then DB.** Code/migration must be **committed AND pushed** (ideally merged to main via PR) **before** any DDL/DML is applied to a real DB (dev or prod). Order is always (1) git, then (2) apply. Keeps the DB from drifting ahead of code. Being added to durable project instructions. *(Historically some entries below were applied ahead of their PR; that pattern is now disallowed going forward.)*
 
 Direct DML/DDL on the shared **dev** DB with no commit/PR (or applied ahead of a PR). Recorded so no session re-runs them and everyone knows the DB state:
+- **2026-08-31 (#2/#3) — `measure_definitions.is_aggregated` column DROPPED** (PR #198, merged 14:52 + dev drop): duplicate of `is_calculated` (both mean "computed → excluded from manual entry"); the split caused a calc-measure compute bug. **`is_calculated` still governs the exclusion, so behaviour is unchanged** → **no USER-IMPACT row** (redundant flag removed, not a distinct field — unlike `units.is_aggregated` r12). Note: `is_context_fed` was KEPT (not a dup). git-first order honoured (PR merged, then drop).
+- **2026-08-31 (#2) — measure_definitions 13/14 renamed** (PR #196, applied to dev): → "IATA Air Connectivity per 1000 People" / "IATA Air Connectivity per Unit GDP". Coordinated code shipped same PR (fact route + 2 name-matching mapping scripts). Name correction only → **no USER-IMPACT row** (cf. country-name / Ancillary spelling fixes). Prod rename coordinated with the code.
 - **2026-08-31 (#2) — FYE cleanup fully landed** (PRs #159/#162): `report_periods.report_date` aligned to the canonical `fye_month`/`fye_day`; **text `financial_year_end` column DROPPED** (superseded by fye_month/day). Closes the FYE-column mechanism (the 3-placeholder-utilities item is separate — it's about *values*, still owed). Not Awaiting-Eugene.
 - **2026-08-26 (#3) — `formula_binding` + `formula_binding_dimension` tables added** (PR #135, applied to dev): durable 10-dim binding store behind the new unified KPI/calculated-measure formula builder (additive — new tab, legacy builders untouched). Prod-apply path TBD (see runbook step 12).
 - **2026-08-26 (#4) — `kpi_actual` shared table added** (`scripts/sql/2026-08-26-kpi-actual.sql`, applied to dev): ratified computed-KPI store (#8 grain + #3 write-path, `docs/kpi-actual-ddl-design.md`), early-landed for Eugene's calculator push. Additive/idempotent-guarded. Deferrals: `period_id` bare int (FK later), `owning_org_id` present but RLS policy not yet applied.
@@ -208,7 +215,7 @@ echo "## local branches merged per gh (prune candidates):" && for b in $(git for
 
 > **⚠ Lesson (2026-08-05):** ping-driven incremental updates keep the DB-change/journey-audit sections fresh but **silently miss new PRs/branches nobody pinged about** — the open-PR count drifted from a real 21 down to a stale "10." **Every refresh MUST re-run the full `gh pr list` + branch-ahead scan (§4)**, not just fold in pings. Pings are additive, not a substitute for the scan.
 
-> **⚠ Standing rule (2026-08-30): contested async facts anchor to the authoritative DOCUMENT TEXT at `main` HEAD — not messages, and not even commit subjects.** When a fact flip-flops across crossed cross-session messages (measure 431's mode flipped ≥4× in two days), record what the **file content at HEAD** actually says and cite the spec section. **A commit subject can lie** — `7386b1d`'s subject claimed "431 = unconditional" while the spec file it touched said `conditional_default_off` (derived); the file content wins. If the repo itself carries contradictory "FINAL/LOCKED/TERMINAL" declarations, that is an **unresolved inter-stream dispute** — record the HEAD text, note the conflict, and **surface it to Eugene** rather than flipping the tracker with each ping. Reopen only via a synchronous edit to the authoritative doc, never a queued message.
+> **⚠ Standing rule (2026-08-30): contested async facts anchor to the authoritative DOCUMENT TEXT at `main` HEAD — not messages, and not even commit subjects.** When a fact flip-flops across crossed cross-session messages, record what the **file content at HEAD** actually says and cite the spec section — a commit *subject* can contradict the file it commits (seen in practice), and the file content wins. If the repo itself carries contradictory "FINAL/LOCKED" declarations, that's an **unresolved inter-stream dispute** — record the HEAD text, note the conflict, and **surface it to Eugene** rather than flipping the tracker with each ping. Reopen only via a synchronous edit to the authoritative doc, never a queued message.
 
 ---
 

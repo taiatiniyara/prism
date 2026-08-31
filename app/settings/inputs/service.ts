@@ -375,7 +375,6 @@ export interface ExcelMeasureDefinition {
   input_id: number;
   input_subcategory_id: number;
   is_active: boolean;
-  is_aggregated: boolean;
   is_calculated: boolean;
   is_currency: boolean;
   is_kpi: boolean;
@@ -417,7 +416,6 @@ export async function UpdateMeasureDefinitionFromExcel(
     measures_subgroup_id: item.input_subcategory_id,
     strata_id: item.strata_id,
     is_active: item.is_active,
-    is_aggregated: item.is_aggregated,
     is_calculated: item.is_calculated,
     is_currency: item.is_currency,
     is_kpi: item.is_kpi,

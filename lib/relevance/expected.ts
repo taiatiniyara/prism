@@ -238,10 +238,67 @@ export async function measureClassification(): Promise<Row[]> {
     GROUP BY 1, str.id ORDER BY str.id`);
 }
 
+/** Dimension-rollup consistency (data quality). For a measure that stores BOTH a stored
+ * All-member aggregate row AND member slices on `utility_function` — currently only 291 "Hours
+ * Worked Actual", the ratified Path-B design (utility total + functional breakdown) — a cell
+ * where the stored All total and the SUM of its filled member slices DISAGREE is surfaced for
+ * BMO review. The stored All stays AUTHORITATIVE for compute (the resolver's "All-row else sum
+ * of detail" rule, kpi-worker resolveInputs; §3.1.1/#104) — this check does NOT change any value;
+ * it only FLAGS that a utility's entered breakdown does not reconcile with its entered total.
+ * warn, not error. Only fires where both the All and ≥1 slice are filled (numeric), so it never
+ * flags the common slice-only or all-only measures. */
+export async function dimensionRollupConsistency(): Promise<Finding> {
+  const rows = await run(sql`
+    WITH uf_all AS (
+      SELECT mli.id FROM managed_list_items mli
+      JOIN managed_lists ml ON ml.id = mli.list_id
+      WHERE ml.name ILIKE '%function%' AND mli.name = 'All' LIMIT 1
+    ),
+    mixed AS (
+      -- measures that store BOTH an All-member aggregate AND ≥1 member slice on utility_function
+      SELECT measure_def_id FROM data_entries
+      WHERE is_deleted = false
+      GROUP BY 1
+      HAVING bool_or(utility_function_id = (SELECT id FROM uf_all))
+         AND bool_or(utility_function_id <> (SELECT id FROM uf_all))
+    ),
+    agg AS (
+      SELECT de.measure_def_id, de.report_period_id, rp.utility_id,
+             sum(de.value_numeric) FILTER (WHERE de.utility_function_id = (SELECT id FROM uf_all)) AS all_val,
+             sum(de.value_numeric) FILTER (WHERE de.utility_function_id <> (SELECT id FROM uf_all)) AS slice_sum,
+             count(*) FILTER (WHERE de.utility_function_id = (SELECT id FROM uf_all) AND de.value_numeric IS NOT NULL) AS all_filled,
+             count(*) FILTER (WHERE de.utility_function_id <> (SELECT id FROM uf_all) AND de.value_numeric IS NOT NULL) AS slice_filled
+      FROM data_entries de
+      JOIN report_periods rp ON rp.id = de.report_period_id
+      WHERE de.is_deleted = false AND de.measure_def_id IN (SELECT measure_def_id FROM mixed)
+      -- roll up the utility_function axis only; the remaining address dims stay grouped
+      GROUP BY de.measure_def_id, de.report_period_id, rp.utility_id, de.service_area_id, de.unit_id,
+               de.provider_id, de.category_id, de.technology_id, de.asset_class_id,
+               de.customer_type_id, de.payment_mode_id, de.consumption_band_id, de.division_id, de.gender_id
+    )
+    SELECT a.measure_def_id AS measure, md.name, a.utility_id, a.report_period_id AS period_id,
+           a.all_val, a.slice_sum, (a.all_val - a.slice_sum) AS diff
+    FROM agg a
+    JOIN measure_definitions md ON md.id = a.measure_def_id
+    WHERE a.all_filled > 0 AND a.slice_filled > 0
+      AND abs(a.all_val - a.slice_sum) > 0.01
+    ORDER BY measure, a.utility_id, a.report_period_id`);
+  return {
+    check: "dimension-rollup consistency",
+    severity: "warn",
+    ok: rows.length === 0,
+    summary:
+      "cells where a stored All-member total and the sum of its filled member slices disagree (All stays authoritative; flagged for BMO review)",
+    count: rows.length,
+    rows,
+  };
+}
+
 export async function runGenerativeChecks(): Promise<Finding[]> {
   return Promise.all([
     missingUtilityLevelShells(),
     generationCoverageDiff(),
     serviceAreaCoverage(),
+    dimensionRollupConsistency(),
   ]);
 }
