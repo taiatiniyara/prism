@@ -171,6 +171,7 @@ export async function getUnifiedFormulaBuilderData(
       name: kpiDefinitions.name,
       formula: kpiDefinitions.formula,
       formula_inputs: kpiDefinitions.formula_inputs,
+      is_descriptive: kpiDefinitions.is_descriptive,
     })
     .from(kpiDefinitions)
     .where(eq(kpiDefinitions.is_active, true))
@@ -180,6 +181,7 @@ export async function getUnifiedFormulaBuilderData(
     name: r.name,
     formula: r.formula ?? null,
     hasFormula: !!(r.formula && r.formula.trim()),
+    isDescriptive: r.is_descriptive ?? false,
     existingCards:
       cardsByOwner.get(`kpi:${r.id}`) ??
       cardsFromLegacyJson(r.formula_inputs, measureById),
@@ -206,6 +208,7 @@ export async function getUnifiedFormulaBuilderData(
     name: r.name,
     formula: r.formula ?? null,
     hasFormula: !!(r.formula && r.formula.trim()),
+    isDescriptive: false, // calculated measures are numeric by definition
     existingCards:
       cardsByOwner.get(`measure:${r.id}`) ??
       cardsFromLegacyJson(r.formula_inputs, measureById),

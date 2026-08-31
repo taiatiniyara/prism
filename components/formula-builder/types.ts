@@ -129,6 +129,10 @@ export interface TargetOption {
   name: string;
   formula: string | null;
   hasFormula: boolean;
+  /** kpi_definitions.is_descriptive — intent flag: this KPI publishes an entered
+   *  value by reference and is never numerically computed. Always false for
+   *  calculated-measure targets. */
+  isDescriptive: boolean;
   /** rehydrated tag cards from formula_binding (fallback to legacy JSON) */
   existingCards: TagCardState[];
 }

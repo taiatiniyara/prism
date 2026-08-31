@@ -95,10 +95,12 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     [cards],
   );
 
-  // Descriptive projection: any variable bound to a categorical (option/text/
-  // boolean) measure means this KPI publishes an entered value by reference —
+  // Descriptive projection: this KPI publishes an entered value by reference —
   // it is never numerically computed, so Compute-now is not offered (it would
-  // always fail "missing inputs"). Derivable, no stored flag (#8 ruling).
+  // always fail "missing inputs"). Belt-and-braces per #4: the intent flag
+  // (kpi_definitions.is_descriptive) OR the structural guard (any bound input
+  // is a categorical option/text/boolean measure — the numeric evaluator must
+  // never run on one of those).
   const descriptiveInputs = useMemo(
     () =>
       cards
@@ -111,7 +113,11 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
         ),
     [cards, measuresById],
   );
-  const isDescriptiveProjection = descriptiveInputs.length > 0;
+  const targetIsDescriptive =
+    selectedTargetId != null &&
+    (targetsById.get(selectedTargetId)?.isDescriptive ?? false);
+  const isDescriptiveProjection =
+    targetIsDescriptive || descriptiveInputs.length > 0;
 
   // distinct colour per variable, shared by its formula token and its card
   const variableColors = useMemo(() => {
@@ -574,11 +580,18 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
           {activeMode === "kpi" && isDescriptiveProjection && (
             <p className="text-muted-foreground rounded-md border border-dashed px-3 py-2 text-xs">
               <b className="text-foreground">Descriptive KPI</b> — this publishes
-              the entered value of{" "}
-              <b className="text-foreground">{descriptiveInputs[0]?.name}</b> (a{" "}
-              {descriptiveInputs[0]?.dataTypeName} measure). It isn&rsquo;t
-              numerically computed, so there&rsquo;s nothing to Compute — just{" "}
-              <b className="text-foreground">Save</b> the reference.
+              an entered value by reference
+              {descriptiveInputs[0] ? (
+                <>
+                  {" "}
+                  (
+                  <b className="text-foreground">{descriptiveInputs[0].name}</b>,
+                  a {descriptiveInputs[0].dataTypeName} measure)
+                </>
+              ) : null}
+              . It isn&rsquo;t numerically computed, so there&rsquo;s nothing to
+              Compute — just <b className="text-foreground">Save</b> the
+              reference.
             </p>
           )}
 
