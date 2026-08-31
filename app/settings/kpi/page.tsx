@@ -398,7 +398,7 @@ export default async function KpiSettingsPage() {
   return (
     <div className="mx-auto w-full max-w-350 space-y-6 pb-8 sm:space-y-8">
       <Tabs
-        defaultValue="definitions"
+        defaultValue={isDevRole ? "new-formula-builder" : "definitions"}
         className="space-y-4"
       >
         <TabsList className="h-auto flex-wrap justify-start gap-2 p-1">
