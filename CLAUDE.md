@@ -22,3 +22,16 @@ Code goes into git **before** any change is applied to a real database. Never ru
 **Exempt:** read-only work is not a "change" and is unrestricted — verification queries, pre-flight checks, `EXPLAIN`, `SELECT`, schema introspection. The rule governs writes only (migration / DDL / DML that alters data or structure).
 
 Rationale: a DB change with no committed code leaves the schema ahead of the code, so every session that pulls is out of sync with the live database. Git is the source of truth; the DB reflects it, never the reverse. (Set by Eugene 2026-08-24.)
+
+## Verify against ORIGIN, not the local checkout
+
+The source of truth for repo state is **`origin`**, never the local checkout. In this shared multi-session tree the working directory is routinely checked out on someone else's feature branch, left dirty, or tens of commits behind — so the local `main` ref, `HEAD`, and the working tree all **lie** about "what is in the repo." Verifying against them is the root of every recurring false "divergence" alarm.
+
+Before asserting anything about what is or isn't in the repo:
+
+1. **`git fetch origin` first** — always, every time.
+2. **Compare only against `origin/*` refs** (`origin/main`), never bare `main` / `HEAD` / the working tree.
+   - "Is X in the repo?" → `git merge-base --is-ancestor <sha-or-branch> origin/main`.
+   - **Never** `git log origin/main..main` — that silently reads your STALE local `main`.
+
+**Canonical tool — use it instead of hand-rolling git:** `scripts/repo-truth.sh` fetches origin, then reports strictly against `origin/main` (summary, `<commit>` membership, or `--file PATH`). It removes the checkout-relative commands that cause the false alarms. (Set by Eugene 2026-09-01.)
