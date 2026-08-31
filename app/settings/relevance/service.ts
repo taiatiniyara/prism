@@ -408,7 +408,7 @@ const getMeasureDefinitionsForStructure = async (
     .where(
       and(
         eq(measureDefinitions.is_active, true),
-        eq(measureDefinitions.is_aggregated, false),
+        eq(measureDefinitions.is_calculated, false),
         or(
           eq(measureDefinitions.measures_subgroup_id, structureManagedListItem.id),
           eq(measureDefinitions.measures_group_id, structureManagedListItem.id),
@@ -560,7 +560,7 @@ const getGenerationMeasureDefinitions = async (): Promise<
     .where(
       and(
         eq(measureDefinitions.is_active, true),
-        eq(measureDefinitions.is_aggregated, false),
+        eq(measureDefinitions.is_calculated, false),
       ),
     )
     .orderBy(asc(measureDefinitions.sort_order), asc(measureDefinitions.name));
@@ -577,7 +577,7 @@ const getGenerationMeasureDefinitions = async (): Promise<
       sortOrder: measureDefinitions.sort_order,
     })
     .from(measureDefinitions)
-    .where(eq(measureDefinitions.is_aggregated, false))
+    .where(eq(measureDefinitions.is_calculated, false))
     .orderBy(asc(measureDefinitions.sort_order), asc(measureDefinitions.name));
 };
 

@@ -83,7 +83,6 @@ export const measureDefinitions = pgTable("measure_definitions", {
   valid_range_min: numeric("valid_range_min"),
   valid_range_max: numeric("valid_range_max"),
   is_currency: boolean("is_currency").default(false).notNull(),
-  is_aggregated: boolean("is_aggregated").default(false).notNull(),
   strata_id: integer("strata_id").references(() => managedListItems.id),
   is_active: boolean("is_active").default(true).notNull(),
   is_mandatory: boolean("is_mandatory").default(false).notNull(),

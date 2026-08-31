@@ -299,7 +299,6 @@ async function main() {
             unit_id: unitId,
             data_type_id: 82, // number
             is_currency: unitId === 92,
-            is_aggregated: false,
             is_active: true,
             is_mandatory: false,
             is_system_generated: false,

@@ -11,7 +11,7 @@ async function main() {
     SELECT i.id, i.name, i.variable_name,
            nullif(trim(i.description), '') AS current_description,
            nullif(trim(i.formula), '') AS formula,
-           i.is_calculated, i.is_aggregated, i.is_mandatory, i.is_currency, i.is_descriptive,
+           i.is_calculated, i.is_mandatory, i.is_currency, i.is_descriptive,
            c.name AS category, s.name AS subcategory,
            u.name AS unit, dt.name AS data_type, al.name AS strata,
            i.valid_range_min, i.valid_range_max,
