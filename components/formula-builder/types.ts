@@ -118,6 +118,9 @@ export interface MeasureCatalogueItem {
   strataId: number | null;
   groupName: string | null;
   subgroupName: string | null;
+  /** Data-type name (e.g. "numeric", "option", "text", "boolean"). Categorical
+   *  types mean this measure is descriptive — not numerically computable. */
+  dataTypeName: string | null;
   applicableDims: MeasureApplicableDim[];
 }
 

@@ -112,6 +112,7 @@ export async function getUnifiedFormulaBuilderData(
     strataId: m.strata_id ?? null,
     groupName: resolveManagedListName(nameById, m.measures_group_id, null),
     subgroupName: resolveManagedListName(nameById, m.measures_subgroup_id, null),
+    dataTypeName: resolveManagedListName(nameById, m.data_type_id, null),
     applicableDims: scopeByMeasure.get(m.id) ?? [],
   }));
   const measureById = new Map(measures.map((m) => [m.id, m]));
