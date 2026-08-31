@@ -3,6 +3,7 @@
 import { type ReactNode, useMemo, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { isCategoricalDataType } from "@/lib/formula/descriptive-projection";
 import {
   saveUnifiedFormula,
   recomputeKpiNow,
@@ -93,6 +94,24 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     () => cards.map((c) => c.variableName),
     [cards],
   );
+
+  // Descriptive projection: any variable bound to a categorical (option/text/
+  // boolean) measure means this KPI publishes an entered value by reference —
+  // it is never numerically computed, so Compute-now is not offered (it would
+  // always fail "missing inputs"). Derivable, no stored flag (#8 ruling).
+  const descriptiveInputs = useMemo(
+    () =>
+      cards
+        .map((c) =>
+          c.measureDefId != null ? measuresById.get(c.measureDefId) : undefined,
+        )
+        .filter(
+          (m): m is MeasureCatalogueItem =>
+            !!m && isCategoricalDataType(m.dataTypeName),
+        ),
+    [cards, measuresById],
+  );
+  const isDescriptiveProjection = descriptiveInputs.length > 0;
 
   // distinct colour per variable, shared by its formula token and its card
   const variableColors = useMemo(() => {
@@ -536,7 +555,9 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
               variant="outline"
               onClick={handleCompute}
               disabled={
-                isComputing || (activeMode === "kpi" && selectedTargetId == null)
+                isComputing ||
+                (activeMode === "kpi" && selectedTargetId == null) ||
+                (activeMode === "kpi" && isDescriptiveProjection)
               }
             >
               {isComputing
@@ -549,6 +570,17 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
               {activeMeasureCount} measures available
             </span>
           </div>
+
+          {activeMode === "kpi" && isDescriptiveProjection && (
+            <p className="text-muted-foreground rounded-md border border-dashed px-3 py-2 text-xs">
+              <b className="text-foreground">Descriptive KPI</b> — this publishes
+              the entered value of{" "}
+              <b className="text-foreground">{descriptiveInputs[0]?.name}</b> (a{" "}
+              {descriptiveInputs[0]?.dataTypeName} measure). It isn&rsquo;t
+              numerically computed, so there&rsquo;s nothing to Compute — just{" "}
+              <b className="text-foreground">Save</b> the reference.
+            </p>
+          )}
 
           {recompute && (
             <div className="bg-muted/30 rounded-lg border p-3">
