@@ -51,12 +51,12 @@ export async function GET(req: Request) {
       const acp = ctxRows.find(
         (r) =>
           r.report_period_id === urp.id && r.country_id === (country?.id ?? -1) &&
-          r.measureName === "Air Connectivity per 1000 People",
+          r.measureName === "IATA Air Connectivity per 1000 People",
       );
       const acg = ctxRows.find(
         (r) =>
           r.report_period_id === urp.id && r.country_id === (country?.id ?? -1) &&
-          r.measureName === "Air Connectivity per Unit GDP",
+          r.measureName === "IATA Air Connectivity per Unit GDP",
       );
       const reportType = findItem(urp.report_type_id)?.name;
       return {
