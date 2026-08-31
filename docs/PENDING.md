@@ -97,7 +97,7 @@ Legend: ✅ nothing pending · 📝 uncommitted · ⬆️ committed-not-pushed �
 - **Prod apply debt:** the 🚀 **Cutover Runbook** below (idempotent SQL + seed + `verify-relevance` gate, all live on dev, per-env owed at prod migration).
 - **Deferred (nothing to queue today):** the unified relevance surface (`docs/measure-relevance-spec.md`) rides #2's ONE combined temporal-spans reimport migration (+ unit-activation stints, `btree_gist`).
 
-> ✅ **Closed — NOT pending** (recorded for history only; do not re-surface): **431 = DERIVED, Eugene-ruled terminal 2026-08-30** (`e92f75d`/#153, locked, no further changes) · **relevance cluster fully sealed** (2026-08-28) · **#104 merged** (2026-08-31) · **#4 "shells requested excludes is_calculated" captured** in spec + #2 `reconcilePeriod` · **vuln triage complete/accepted**. These live in the spec / recently-applied log, not the pending list.
+> *Settled design decisions (431 mode, relevance cluster, etc.) are recorded in the spec and are NOT tracked here — this list is open items only.*
 
 `npm install` after pull.
 
@@ -209,7 +209,7 @@ echo "## local branches merged per gh (prune candidates):" && for b in $(git for
 
 > **⚠ Lesson (2026-08-05):** ping-driven incremental updates keep the DB-change/journey-audit sections fresh but **silently miss new PRs/branches nobody pinged about** — the open-PR count drifted from a real 21 down to a stale "10." **Every refresh MUST re-run the full `gh pr list` + branch-ahead scan (§4)**, not just fold in pings. Pings are additive, not a substitute for the scan.
 
-> **⚠ Standing rule (2026-08-30): contested async facts anchor to the authoritative DOCUMENT TEXT at `main` HEAD — not messages, and not even commit subjects.** When a fact flip-flops across crossed cross-session messages (measure 431's mode flipped ≥4× in two days), record what the **file content at HEAD** actually says and cite the spec section. **A commit subject can lie** — `7386b1d`'s subject claimed "431 = unconditional" while the spec file it touched said `conditional_default_off` (derived); the file content wins. If the repo itself carries contradictory "FINAL/LOCKED/TERMINAL" declarations, that is an **unresolved inter-stream dispute** — record the HEAD text, note the conflict, and **surface it to Eugene** rather than flipping the tracker with each ping. Reopen only via a synchronous edit to the authoritative doc, never a queued message.
+> **⚠ Standing rule (2026-08-30): contested async facts anchor to the authoritative DOCUMENT TEXT at `main` HEAD — not messages, and not even commit subjects.** When a fact flip-flops across crossed cross-session messages, record what the **file content at HEAD** actually says and cite the spec section — a commit *subject* can contradict the file it commits (seen in practice), and the file content wins. If the repo itself carries contradictory "FINAL/LOCKED" declarations, that's an **unresolved inter-stream dispute** — record the HEAD text, note the conflict, and **surface it to Eugene** rather than flipping the tracker with each ping. Reopen only via a synchronous edit to the authoritative doc, never a queued message.
 
 ---
 
