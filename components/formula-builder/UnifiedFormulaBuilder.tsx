@@ -309,36 +309,36 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
       {/* target selector */}
       <Card>
         <CardContent className="space-y-3">
-          <div>
-            <Label className="text-xs">What are you building?</Label>
-            <div className="mt-1 flex w-fit items-center gap-1 rounded-md border p-1">
-              <button
-                type="button"
-                onClick={() => handleModeSwitch("measure")}
-                className={cn(
-                  "rounded px-3 py-1 text-sm font-medium transition",
-                  activeMode === "measure"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted",
-                )}
-              >
-                Calculated Measures
-              </button>
-              <button
-                type="button"
-                onClick={() => handleModeSwitch("kpi")}
-                className={cn(
-                  "rounded px-3 py-1 text-sm font-medium transition",
-                  activeMode === "kpi"
-                    ? "bg-primary text-primary-foreground"
-                    : "text-muted-foreground hover:bg-muted",
-                )}
-              >
-                KPIs
-              </button>
+          <div className="flex flex-wrap items-end gap-4">
+            <div>
+              <Label className="text-xs">What are you building?</Label>
+              <div className="mt-1 flex w-fit items-center gap-1 rounded-md border p-1">
+                <button
+                  type="button"
+                  onClick={() => handleModeSwitch("measure")}
+                  className={cn(
+                    "rounded px-3 py-1 text-sm font-medium transition",
+                    activeMode === "measure"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted",
+                  )}
+                >
+                  Calculated Measures
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleModeSwitch("kpi")}
+                  className={cn(
+                    "rounded px-3 py-1 text-sm font-medium transition",
+                    activeMode === "kpi"
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted",
+                  )}
+                >
+                  KPIs
+                </button>
+              </div>
             </div>
-          </div>
-          <div className="flex flex-wrap items-end justify-between gap-3">
             <div className="min-w-64 flex-1">
               <Label className="text-xs">
                 {activeMode === "kpi" ? "KPI to build" : "Calculated measure to build"}
@@ -361,12 +361,15 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                 allowEscapeKeyPropagation={false}
               />
             </div>
-            <Label className="text-muted-foreground flex items-center gap-2 text-xs">
+            <Label className="text-muted-foreground flex items-center gap-2 pb-1.5 text-xs">
               <Checkbox
                 checked={onlyWithoutFormula}
                 onCheckedChange={(c) => setOnlyWithoutFormula(c === true)}
               />
-              Show only {activeMode === "kpi" ? "KPIs" : "measures"} without a formula
+              <span className="max-w-[8.5rem] leading-snug">
+                Show only {activeMode === "kpi" ? "KPIs" : "measures"} without a
+                formula
+              </span>
             </Label>
           </div>
           {justSaved && (
