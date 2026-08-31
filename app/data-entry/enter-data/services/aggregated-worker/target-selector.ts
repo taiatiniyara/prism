@@ -95,7 +95,10 @@ export const selectAggregatedFormulaTargets = async (): Promise<
     .where(
       and(
         eq(measureDefinitions.is_active, true),
-        eq(measureDefinitions.is_aggregated, true),
+        // Calculated measures are flagged is_calculated (set by the formula
+        // builder). This replaced the legacy is_aggregated flag — the two
+        // meant the same thing; is_aggregated is being retired (#2).
+        eq(measureDefinitions.is_calculated, true),
         isNotNull(measureDefinitions.formula),
         ne(sql`trim(${measureDefinitions.formula})`, ""),
       ),
