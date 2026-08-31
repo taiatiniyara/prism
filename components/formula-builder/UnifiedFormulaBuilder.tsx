@@ -570,7 +570,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                 ? "Computing…"
                 : activeMode === "kpi"
                   ? "Compute now"
-                  : "Compute calculated measures"}
+                  : "Apply to previous and current periods"}
             </Button>
             <span className="text-muted-foreground ml-auto text-xs">
               {activeMeasureCount} measures available
