@@ -33,6 +33,9 @@ import {
   type TargetOption,
 } from "./types";
 
+type ResultSortCol = "period" | "status" | "value" | "reason";
+type ResultSortState = { col: ResultSortCol; dir: "asc" | "desc" };
+
 let cardKeySeq = 0;
 const nextCardKey = () => `card_${Date.now().toString(36)}_${cardKeySeq++}`;
 
@@ -70,6 +73,49 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
   const [justSaved, setJustSaved] = useState(false);
   const [isSaving, startSave] = useTransition();
   const [isComputing, startCompute] = useTransition();
+
+  // Recompute-results table sort. Period ascending is the default; clicking a
+  // header sorts by that column (toggling asc/desc on repeat clicks).
+  const [resultSort, setResultSort] = useState<{
+    col: ResultSortCol;
+    dir: "asc" | "desc";
+  }>({ col: "period", dir: "asc" });
+  const toggleResultSort = (col: ResultSortCol) =>
+    setResultSort((s) =>
+      s.col === col
+        ? { col, dir: s.dir === "asc" ? "desc" : "asc" }
+        : { col, dir: "asc" },
+    );
+  const sortedByPeriod = useMemo(() => {
+    if (!recompute) return [];
+    const numOrNull = (v?: string) => {
+      if (v == null || v === "") return null;
+      const n = Number(v);
+      return Number.isFinite(n) ? n : null;
+    };
+    const mul = resultSort.dir === "asc" ? 1 : -1;
+    return [...recompute.byPeriod].sort((a, b) => {
+      let cmp = 0;
+      if (resultSort.col === "period") {
+        cmp = a.reportPeriodId - b.reportPeriodId;
+      } else if (resultSort.col === "value") {
+        const na = numOrNull(a.value);
+        const nb = numOrNull(b.value);
+        // Empty values ("—") always sort last, regardless of direction.
+        if (na == null && nb == null) cmp = 0;
+        else if (na == null) return 1;
+        else if (nb == null) return -1;
+        else cmp = na - nb;
+      } else if (resultSort.col === "status") {
+        cmp = (a.status ?? "").localeCompare(b.status ?? "");
+      } else {
+        cmp = (a.reason ?? "").localeCompare(b.reason ?? "");
+      }
+      // Stable tiebreak by period so equal keys keep a deterministic order.
+      if (cmp === 0) return a.reportPeriodId - b.reportPeriodId;
+      return cmp * mul;
+    });
+  }, [recompute, resultSort]);
 
   const measuresById = useMemo(() => {
     const m = new Map<number, MeasureCatalogueItem>();
@@ -718,15 +764,38 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                 <table className="w-full text-xs">
                   <thead>
                     <tr className="text-muted-foreground text-left">
-                      <th className="py-1 pr-3 font-medium">Period</th>
-                      <th className="py-1 pr-3 font-medium">Status</th>
-                      <th className="py-1 pr-3 font-medium">Value</th>
-                      <th className="py-1 font-medium">Reason</th>
+                      <SortableTh
+                        label="Period"
+                        col="period"
+                        sort={resultSort}
+                        onSort={toggleResultSort}
+                        className="pr-3"
+                      />
+                      <SortableTh
+                        label="Status"
+                        col="status"
+                        sort={resultSort}
+                        onSort={toggleResultSort}
+                        className="pr-3"
+                      />
+                      <SortableTh
+                        label="Value"
+                        col="value"
+                        sort={resultSort}
+                        onSort={toggleResultSort}
+                        className="pr-3"
+                      />
+                      <SortableTh
+                        label="Reason"
+                        col="reason"
+                        sort={resultSort}
+                        onSort={toggleResultSort}
+                      />
                     </tr>
                   </thead>
                   <tbody>
-                    {recompute.byPeriod.map((r, i) => (
-                      <tr key={i} className="border-t">
+                    {sortedByPeriod.map((r) => (
+                      <tr key={r.reportPeriodId} className="border-t">
                         <td className="py-1 pr-3 tabular-nums">
                           {r.reportPeriodId}
                         </td>
@@ -764,6 +833,48 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
         onPick={handlePickMeasure}
       />
     </div>
+  );
+}
+
+function SortableTh({
+  label,
+  col,
+  sort,
+  onSort,
+  className,
+}: {
+  label: string;
+  col: ResultSortCol;
+  sort: ResultSortState;
+  onSort: (col: ResultSortCol) => void;
+  className?: string;
+}) {
+  const active = sort.col === col;
+  return (
+    <th
+      className={cn("py-1 font-medium", className)}
+      aria-sort={
+        active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"
+      }
+    >
+      <button
+        type="button"
+        onClick={() => onSort(col)}
+        className="hover:text-foreground -mx-1 flex items-center gap-1 rounded px-1 font-medium"
+        title={`Sort by ${label}`}
+      >
+        {label}
+        <span
+          aria-hidden
+          className={cn(
+            "text-[9px] leading-none",
+            active ? "opacity-90" : "opacity-30",
+          )}
+        >
+          {active ? (sort.dir === "asc" ? "▲" : "▼") : "▲"}
+        </span>
+      </button>
+    </th>
   );
 }
 
