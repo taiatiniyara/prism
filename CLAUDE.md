@@ -14,14 +14,16 @@ See the board's own Protocol section for full details.
 
 ## Git before DB — NO EXCEPTIONS
 
-Code goes into git **before** any change is applied to a real database. Never run a migration / DDL / DML against any database (dev or prod) until the corresponding schema / migration / code is committed **and pushed** to git — ideally merged to `main` via PR. The order is always:
+Code goes into git **before** any change is applied to the database. Never run a migration / DDL / DML against the p2 database until the corresponding schema / migration / code is committed **and pushed** to git — ideally merged to `main` via PR. The order is always:
 
 1. **git first** — schema/migration/code committed + pushed (PR-merged where possible)
-2. **then** apply the DB change (dev, then prod per the change's own script)
+2. **then** apply the DB change to the p2 database
+
+**One instance — no "prod cutover":** p2 runs on a **single** database (the `.env` / Supabase instance). There is **no separate p2 production database** — at launch, production URLs are simply repointed to this instance, so the DB you change **is** the future prod. Do **not** frame changes as "dev only" or defer them to a "prod cutover", and don't write `Per-env (dev, then prod)` headers; a write applied here is applied, period. (`prismdashboard.org` today is the **legacy p1** system — the migration's data *source*, not a p2 prod target.)
 
 **Exempt:** read-only work is not a "change" and is unrestricted — verification queries, pre-flight checks, `EXPLAIN`, `SELECT`, schema introspection. The rule governs writes only (migration / DDL / DML that alters data or structure).
 
-Rationale: a DB change with no committed code leaves the schema ahead of the code, so every session that pulls is out of sync with the live database. Git is the source of truth; the DB reflects it, never the reverse. (Set by Eugene 2026-08-24.)
+Rationale: a DB change with no committed code leaves the schema ahead of the code, so every session that pulls is out of sync with the live database. Git is the source of truth; the DB reflects it, never the reverse. (Set by Eugene 2026-08-24; single-instance clarification added 2026-09-01.)
 
 ## Verify against ORIGIN, not the local checkout
 
