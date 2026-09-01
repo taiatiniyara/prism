@@ -19,6 +19,9 @@ describe("kpi roll-up inclusion filters", () => {
         divisionId: null,
         genderId: null,
         utilityFunctionId: null,
+        grainAreaId: null,
+        grainStationId: null,
+        grainUnitId: null,
       },
       {
         value: "5",
@@ -34,6 +37,9 @@ describe("kpi roll-up inclusion filters", () => {
         divisionId: null,
         genderId: null,
         utilityFunctionId: null,
+        grainAreaId: null,
+        grainStationId: null,
+        grainUnitId: null,
       },
       {
         value: "9",
@@ -49,6 +55,9 @@ describe("kpi roll-up inclusion filters", () => {
         divisionId: null,
         genderId: null,
         utilityFunctionId: null,
+        grainAreaId: null,
+        grainStationId: null,
+        grainUnitId: null,
       },
     ]);
 

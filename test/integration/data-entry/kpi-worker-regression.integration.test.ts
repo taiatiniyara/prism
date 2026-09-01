@@ -21,6 +21,9 @@ describe("kpi worker regression coverage", () => {
         divisionId: null,
         genderId: null,
         utilityFunctionId: null,
+        grainAreaId: null,
+        grainStationId: null,
+        grainUnitId: null,
       },
       {
         value: "3",
@@ -36,6 +39,9 @@ describe("kpi worker regression coverage", () => {
         divisionId: null,
         genderId: null,
         utilityFunctionId: null,
+        grainAreaId: null,
+        grainStationId: null,
+        grainUnitId: null,
       },
     ]);
     expect(rollup.sum).toBe(5);

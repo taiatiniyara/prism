@@ -19,6 +19,9 @@ describe("KPI roll-up rules", () => {
         divisionId: null,
         genderId: null,
         utilityFunctionId: null,
+        grainAreaId: null,
+        grainStationId: null,
+        grainUnitId: null,
       },
       {
         value: "5.5",
@@ -34,6 +37,9 @@ describe("KPI roll-up rules", () => {
         divisionId: null,
         genderId: null,
         utilityFunctionId: null,
+        grainAreaId: null,
+        grainStationId: null,
+        grainUnitId: null,
       },
       {
         value: "ignored",
@@ -49,6 +55,9 @@ describe("KPI roll-up rules", () => {
         divisionId: null,
         genderId: null,
         utilityFunctionId: null,
+        grainAreaId: null,
+        grainStationId: null,
+        grainUnitId: null,
       },
     ]);
 
