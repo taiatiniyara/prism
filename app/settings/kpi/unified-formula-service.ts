@@ -182,10 +182,17 @@ export async function getUnifiedFormulaBuilderData(
     formula: r.formula ?? null,
     hasFormula: !!(r.formula && r.formula.trim()),
     isDescriptive: r.is_descriptive ?? false,
+    isTrackedAsKpi: false,
     existingCards:
       cardsByOwner.get(`kpi:${r.id}`) ??
       cardsFromLegacyJson(r.formula_inputs, measureById),
   }));
+
+  // Active KPI names — a calculated measure "is tracked as a KPI" when an
+  // active companion KPI of the same name exists (Track-as-KPI pass-through).
+  const activeKpiNames = new Set(
+    kpiRows.map((r) => r.name.trim().toLowerCase()),
+  );
 
   // Calculated measures = is_calculated measures (e.g. Total Costs, Profit).
   const measureTargetRows = await db
@@ -209,6 +216,7 @@ export async function getUnifiedFormulaBuilderData(
     formula: r.formula ?? null,
     hasFormula: !!(r.formula && r.formula.trim()),
     isDescriptive: false, // calculated measures are numeric by definition
+    isTrackedAsKpi: activeKpiNames.has(r.name.trim().toLowerCase()),
     existingCards:
       cardsByOwner.get(`measure:${r.id}`) ??
       cardsFromLegacyJson(r.formula_inputs, measureById),
@@ -350,6 +358,111 @@ export async function saveUnifiedFormula(
             is_calculated: true,
           })
           .where(eq(measureDefinitions.id, payload.ownerId));
+
+        // Track as KPI: publish this calculated measure as a companion KPI
+        // that references it by a single-variable pass-through ("compute once,
+        // reference many" — the measure computes; the KPI publishes its value).
+        // Linked by name; created/reactivated when on, deactivated when off.
+        const [measureRow] = await tx
+          .select({
+            name: measureDefinitions.name,
+            variableName: measureDefinitions.variable_name,
+            isCurrency: measureDefinitions.is_currency,
+          })
+          .from(measureDefinitions)
+          .where(eq(measureDefinitions.id, payload.ownerId))
+          .limit(1);
+
+        if (measureRow) {
+          const [companion] = await tx
+            .select({ id: kpiDefinitions.id })
+            .from(kpiDefinitions)
+            .where(eq(kpiDefinitions.name, measureRow.name))
+            .limit(1);
+
+          if (!payload.trackAsKpi) {
+            if (companion) {
+              await tx
+                .update(kpiDefinitions)
+                .set({ is_active: false })
+                .where(eq(kpiDefinitions.id, companion.id));
+            }
+          } else {
+            const passVar = /^[A-Za-z_][A-Za-z0-9_]*$/.test(
+              measureRow.variableName ?? "",
+            )
+              ? (measureRow.variableName as string)
+              : `source_measure_${payload.ownerId}`;
+            const passFormula = passVar;
+            const passInputs: FormulaInput[] = [
+              (() => {
+                const fi: FormulaInput = {
+                  measure_def_id: payload.ownerId,
+                  variable_name: passVar,
+                };
+                for (const d of DIMENSIONS) {
+                  (fi as unknown as Record<string, number>)[d.field] =
+                    d.allMember;
+                }
+                return fi;
+              })(),
+            ];
+
+            let companionId: number;
+            if (companion) {
+              await tx
+                .update(kpiDefinitions)
+                .set({
+                  formula: passFormula,
+                  formula_inputs: passInputs,
+                  is_currency: measureRow.isCurrency,
+                  is_active: true,
+                })
+                .where(eq(kpiDefinitions.id, companion.id));
+              companionId = companion.id;
+            } else {
+              const insertedKpi = await tx
+                .insert(kpiDefinitions)
+                .values({
+                  name: measureRow.name,
+                  formula: passFormula,
+                  formula_inputs: passInputs,
+                  is_currency: measureRow.isCurrency,
+                })
+                .returning({ id: kpiDefinitions.id });
+              companionId = insertedKpi[0].id;
+            }
+
+            // Rewrite the companion KPI's formula_binding (one pass-through
+            // input = the measure, every dimension All-member).
+            await tx
+              .delete(formulaBinding)
+              .where(
+                and(
+                  eq(formulaBinding.owner_kind, "kpi"),
+                  eq(formulaBinding.owner_id, companionId),
+                ),
+              );
+            const [insertedBinding] = await tx
+              .insert(formulaBinding)
+              .values({
+                owner_kind: "kpi",
+                owner_id: companionId,
+                variable_name: passVar,
+                input_measure_def_id: payload.ownerId,
+                grain_mode: "inherit",
+                sort_order: 0,
+              })
+              .returning({ id: formulaBinding.id });
+            await tx.insert(formulaBindingDimension).values(
+              DIMENSIONS.map((d) => ({
+                binding_id: insertedBinding.id,
+                dimension_key: d.field,
+                member_id: ALL_MEMBER_BY_FIELD[d.field],
+              })),
+            );
+          }
+        }
       }
     });
   } catch (e) {
