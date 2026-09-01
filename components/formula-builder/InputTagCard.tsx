@@ -75,7 +75,10 @@ export function InputTagCard({
   return (
     <div
       className={cn(
-        "bg-card mt-3 overflow-hidden rounded-xl border",
+        // No overflow-hidden: the dimension-binding popovers (esp. the bottom-
+        // row cells like Division/Gender) open downward and must escape the
+        // card instead of being clipped.
+        "bg-card mt-3 rounded-xl border",
         measureMissing && "border-destructive/60",
       )}
     >

@@ -496,7 +496,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
       </Card>
 
       {/* inputs = tag cards */}
-      <Card>
+      <Card className="overflow-visible">
         <CardContent className="space-y-1">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <p className="text-sm font-bold">Inputs — a tag card per variable</p>
