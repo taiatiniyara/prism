@@ -31,6 +31,7 @@ components:
     - name: AI / Chatbot
     - name: Context
     - name: Countries
+    - name: CountryContext
     - name: Data Entry
     - name: DataEntries
     - name: Development
@@ -403,6 +404,17 @@ paths:
       tags:
         - Countries
       summary: Get countries
+      security:
+        - migrationKeyAuth: []
+      x-auth: Requires x-migration-key header
+      responses:
+        '200':
+          description: Success
+  /api/countryContext:
+    get:
+      tags:
+        - CountryContext
+      summary: Get countryContext
       security:
         - migrationKeyAuth: []
       x-auth: Requires x-migration-key header
