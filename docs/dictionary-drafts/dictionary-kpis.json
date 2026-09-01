@@ -1,0 +1,2194 @@
+[
+ {
+  "id": 4,
+  "name": "Air Connectivity per 1000 People",
+  "category": "Country and Utility Context",
+  "subcategory": "Air Connectivity",
+  "unit": "% per 1000 persons",
+  "formula": "air_connectivity_per_1000_people",
+  "definition": "A country-context indicator that expresses national air connectivity relative to population size, reported per 1,000 persons. It is taken directly from the reported air connectivity per 1,000 people figure, which scales the country's air connectivity score by its population. A higher value indicates that residents have relatively more scheduled air links per person, which typically eases logistics for fuel, spare parts and specialist staff. This describes the utility's operating environment, not utility performance.",
+  "synonyms": [
+   "air connectivity per capita",
+   "population-adjusted air connectivity",
+   "air links per 1,000 population"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 5,
+  "name": "Air Connectivity per Unit GDP",
+  "category": "Country and Utility Context",
+  "subcategory": "Air Connectivity",
+  "unit": "% per unit GDP",
+  "formula": "air_connectivity_per_unit_gdp",
+  "definition": "A country-context indicator that expresses national air connectivity relative to the size of the economy, reported per unit of GDP. It is taken directly from the reported air connectivity per unit GDP figure, which scales the country's air connectivity score by gross domestic product. A higher value indicates the country is better connected by air than its economic size alone would suggest. This describes the utility's operating environment, not utility performance.",
+  "synonyms": [
+   "GDP-adjusted air connectivity",
+   "air connectivity relative to economy size",
+   "economy-scaled air connectivity"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 3,
+  "name": "IATA Air Connectivity Score",
+  "category": "Country and Utility Context",
+  "subcategory": "Air Connectivity",
+  "unit": "Air Connectivity Score",
+  "formula": "iata_air_connectivity_score",
+  "definition": "A country-context indicator recording the IATA Air Connectivity Index score, a composite measure of how well a country is connected to the global air transport network. It is taken directly from the reported IATA air connectivity score, which weights available seat capacity by the size and importance of destination airports served. A higher score indicates more frequent and further-reaching air links, which matters for island utilities that depend on air freight for urgent parts and technical support. This describes the utility's operating environment, not utility performance.",
+  "synonyms": [
+   "IATA connectivity index",
+   "air connectivity index",
+   "aviation connectivity score"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 14,
+  "name": "Access to Electricity",
+  "category": "Country and Utility Context",
+  "subcategory": "Economy",
+  "unit": "%",
+  "formula": "access_to_electricity",
+  "definition": "A country-context indicator measuring the share of the national population with access to electricity, expressed as a percentage. It is taken directly from the reported access-to-electricity figure, typically the proportion of the population living in electrified premises. A higher value means fewer unserved households and, for the utility, a more saturated market where growth comes from consumption rather than new connections. This describes the utility's operating environment, not utility performance, although utility grid-extension programmes influence it over time.",
+  "synonyms": [
+   "electrification rate",
+   "electricity access rate",
+   "household electrification",
+   "population electrified"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 11,
+  "name": "GDP per Capita",
+  "category": "Country and Utility Context",
+  "subcategory": "Economy",
+  "unit": "Currency",
+  "formula": "gdp_per_capita",
+  "definition": "A country-context indicator measuring gross domestic product per person, expressed in currency. It is taken directly from the reported GDP per capita figure, which divides national GDP by population. A higher value generally indicates greater customer affordability, higher electricity demand per household and stronger capacity to pay cost-reflective tariffs. This describes the utility's operating environment, not utility performance.",
+  "synonyms": [
+   "income per capita",
+   "per-capita GDP",
+   "national income per person"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 12,
+  "name": "Inflation Rate",
+  "category": "Country and Utility Context",
+  "subcategory": "Economy",
+  "unit": "%",
+  "formula": "inflation_rate",
+  "definition": "A country-context indicator measuring the annual rate of change in consumer prices, expressed as a percentage. It is taken directly from the reported national inflation rate. Higher inflation erodes the real value of fixed tariffs and increases pressure on utility input costs such as labour, materials and fuel. This describes the utility's operating environment, not utility performance, and should be considered when comparing cost and tariff trends across years.",
+  "synonyms": [
+   "CPI inflation",
+   "consumer price inflation",
+   "annual price change"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 13,
+  "name": "Unemployment Rate",
+  "category": "Country and Utility Context",
+  "subcategory": "Economy",
+  "unit": "%",
+  "formula": "unemployment_rate",
+  "definition": "A country-context indicator measuring the share of the labour force that is unemployed, expressed as a percentage. It is taken directly from the reported national unemployment rate. A higher value signals weaker household purchasing power, which can affect electricity sales growth, arrears and disconnection rates. This describes the utility's operating environment, not utility performance.",
+  "synonyms": [
+   "jobless rate",
+   "labour force unemployment",
+   "national unemployment"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 22,
+  "name": "USD Exchange Rate",
+  "category": "Country and Utility Context",
+  "subcategory": "Foreign Exchange",
+  "unit": "Number",
+  "formula": "usd_exchange_rate",
+  "definition": "A country-context indicator recording the exchange rate between the local currency and the United States dollar, expressed as a number of local currency units per USD. It is taken directly from the reported USD exchange rate for the period. A weakening local currency (more units per USD) raises the local cost of imported fuel, plant and spare parts, which are usually priced in USD. This describes the utility's operating environment, not utility performance, and is used to convert financial KPIs to a common currency for regional comparison.",
+  "synonyms": [
+   "FX rate",
+   "local currency per US dollar",
+   "currency conversion rate",
+   "USD FX rate"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 15,
+  "name": "Fuel Pricing Regulation",
+  "category": "Country and Utility Context",
+  "subcategory": "Fuel",
+  "unit": "Units N/A",
+  "formula": "fuel_pricing_regulation",
+  "definition": "A country-context descriptor recording how fuel prices are regulated in the country; it is categorical and has no numeric unit. It is taken directly from the reported fuel pricing regulation entry, which describes whether and how government or a regulator controls fuel prices. Regulated fuel pricing can dampen or delay the pass-through of world oil price movements into utility generation costs and tariffs. This describes the utility's operating environment, not utility performance.",
+  "synonyms": [
+   "fuel price regulation regime",
+   "fuel price control",
+   "petroleum pricing framework"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 18,
+  "name": "Fuel Supply Access",
+  "category": "Country and Utility Context",
+  "subcategory": "Fuel",
+  "unit": "Units N/A",
+  "formula": "fuel_supply_access",
+  "definition": "A country-context descriptor recording how the country and utility access fuel supplies; it is categorical and has no numeric unit. It is taken directly from the reported fuel supply access entry, which typically covers supply arrangements, import routes and any constraints on fuel availability. Constrained or long supply chains increase fuel security risk and holding costs for diesel-dependent island utilities. This describes the utility's operating environment, not utility performance.",
+  "synonyms": [
+   "fuel supply arrangements",
+   "fuel availability",
+   "fuel supply chain access"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 2,
+  "name": "Islands",
+  "category": "Country and Utility Context",
+  "subcategory": "Geography",
+  "unit": "Islands",
+  "formula": "islands",
+  "definition": "A country-context indicator recording the number of islands in the country, expressed as a count. It is taken directly from the reported islands figure. A higher number of islands generally implies more dispersed, fragmented service territories with separate island grids, higher logistics costs and duplicated generation assets. This describes the utility's operating environment, not utility performance, and is important context when comparing cost and reliability KPIs across utilities.",
+  "synonyms": [
+   "island count",
+   "number of islands",
+   "islands served"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 1,
+  "name": "Land Area",
+  "category": "Country and Utility Context",
+  "subcategory": "Geography",
+  "unit": "km2",
+  "formula": "land_area",
+  "definition": "A country-context indicator recording the total land area of the country, expressed in square kilometres (km2). It is taken directly from the reported land area figure. Larger or more dispersed land areas typically mean longer network lengths per customer and higher delivery costs, while very small land areas concentrate demand. This describes the utility's operating environment, not utility performance.",
+  "synonyms": [
+   "country land area",
+   "territory size",
+   "surface area"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 10,
+  "name": "Average Household Size",
+  "category": "Country and Utility Context",
+  "subcategory": "Population",
+  "unit": "Persons per Household",
+  "formula": "average_household_size",
+  "definition": "A country-context indicator measuring the average number of persons per household. It is taken directly from the reported average household size, which is typically national population divided by the number of households. Larger households tend to consume more electricity per connection, which affects per-customer consumption comparisons between countries. This describes the utility's operating environment, not utility performance.",
+  "synonyms": [
+   "persons per household",
+   "mean household size",
+   "household occupancy"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 9,
+  "name": "Households",
+  "category": "Country and Utility Context",
+  "subcategory": "Population",
+  "unit": "Households",
+  "formula": "households",
+  "definition": "A country-context indicator recording the total number of households in the country, expressed as a count. It is taken directly from the reported households figure, usually from census or national statistics. It indicates the potential residential customer base and, compared against customer counts, helps gauge remaining electrification headroom. This describes the utility's operating environment, not utility performance.",
+  "synonyms": [
+   "household count",
+   "number of households",
+   "dwellings"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 6,
+  "name": "Population",
+  "category": "Country and Utility Context",
+  "subcategory": "Population",
+  "unit": "Persons",
+  "formula": "population",
+  "definition": "A country-context indicator recording the total national population, expressed in persons. It is taken directly from the reported population figure, usually from census or national statistics. Population is the key scaling denominator for per-capita comparisons across utilities of very different sizes. This describes the utility's operating environment, not utility performance.",
+  "synonyms": [
+   "national population",
+   "resident population",
+   "population count"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 8,
+  "name": "Rural Population",
+  "category": "Country and Utility Context",
+  "subcategory": "Population",
+  "unit": "%",
+  "formula": "rural_population",
+  "definition": "A country-context indicator measuring the share of the national population living in rural areas, expressed as a percentage. It is taken directly from the reported rural population percentage. A higher rural share generally implies more dispersed demand, longer distribution lines per customer and higher costs to serve. This describes the utility's operating environment, not utility performance.",
+  "synonyms": [
+   "rural population share",
+   "percentage rural",
+   "rural share of population"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 7,
+  "name": "Urban Population",
+  "category": "Country and Utility Context",
+  "subcategory": "Population",
+  "unit": "%",
+  "formula": "urban_population",
+  "definition": "A country-context indicator measuring the share of the national population living in urban areas, expressed as a percentage. It is taken directly from the reported urban population percentage. A higher urban share generally means denser, cheaper-to-serve demand concentrated around main centres. This describes the utility's operating environment, not utility performance.",
+  "synonyms": [
+   "urban population share",
+   "percentage urban",
+   "urbanisation rate"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 17,
+  "name": "Accounting Standards",
+  "category": "Country and Utility Context",
+  "subcategory": "Utility Context",
+  "unit": "Units N/A",
+  "formula": "accounting_standards",
+  "definition": "A utility-context descriptor recording which accounting standards the utility follows in preparing its financial statements; it is categorical and has no numeric unit. It is taken directly from the reported accounting standards entry, for example IFRS or a national equivalent. Knowing the standard in use matters when comparing financial KPIs, because measurement of items such as depreciation, revaluation and provisions differs between frameworks. This describes reporting context, not utility performance.",
+  "synonyms": [
+   "financial reporting standards",
+   "reporting framework",
+   "GAAP basis",
+   "accounting framework"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 16,
+  "name": "Electricity Regulation",
+  "category": "Country and Utility Context",
+  "subcategory": "Utility Context",
+  "unit": "Units N/A",
+  "formula": "electricity_regulation",
+  "definition": "A country-context descriptor recording how the electricity sector is regulated in the country; it is categorical and has no numeric unit. It is taken directly from the reported electricity regulation entry, typically covering whether an independent regulator exists and how tariffs are set. The regulatory regime shapes tariff levels, cost recovery and investment incentives, so it is essential context for financial and tariff comparisons. This describes the utility's operating environment, not utility performance.",
+  "synonyms": [
+   "regulatory framework",
+   "electricity sector regulation",
+   "tariff regulation regime"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 21,
+  "name": "Feeder Type",
+  "category": "Country and Utility Context",
+  "subcategory": "Utility Context",
+  "unit": "Units N/A",
+  "formula": "feeder_type",
+  "definition": "A utility-context descriptor recording the predominant type of distribution feeders operated by the utility; it is categorical and has no numeric unit. It is taken directly from the reported feeder type entry, typically distinguishing overhead from underground construction. Feeder type strongly influences fault exposure and reliability results, since overhead lines are more vulnerable to weather, vegetation and salt spray, while underground cables cost more but fail less often. This is context for interpreting reliability and cost KPIs, not a performance measure in itself.",
+  "synonyms": [
+   "feeder construction type",
+   "overhead versus underground",
+   "distribution line type"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 20,
+  "name": "Ownership Type",
+  "category": "Country and Utility Context",
+  "subcategory": "Utility Context",
+  "unit": "Units N/A",
+  "formula": "entity_ownership_type",
+  "definition": "A utility-context descriptor recording the ownership structure of the utility; it is categorical and has no numeric unit. It is taken directly from the reported entity ownership type, for example state-owned enterprise, government department, private company or cooperative. Ownership shapes governance, commercial incentives and access to capital, and is useful context when comparing efficiency and financial KPIs across utilities. This describes the utility's institutional setting, not its performance.",
+  "synonyms": [
+   "entity ownership",
+   "ownership structure",
+   "corporate ownership type"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 19,
+  "name": "Power Quality Standards",
+  "category": "Country and Utility Context",
+  "subcategory": "Utility Context",
+  "unit": "Units N/A",
+  "formula": "power_quality_standards",
+  "definition": "A utility-context descriptor recording which power quality standards the utility applies, such as voltage and frequency limits; it is categorical and has no numeric unit. It is taken directly from the reported power quality standards entry. The standards in force determine what counts as acceptable supply quality and therefore affect how reliability and quality-of-supply results should be compared between utilities. This is context for interpretation, not a performance measure in itself.",
+  "synonyms": [
+   "quality of supply standards",
+   "voltage and frequency standards",
+   "supply quality code"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 29,
+  "name": "Duty on Fuel and Lube Oil",
+  "category": "Financial",
+  "subcategory": "Cost Breakdown",
+  "unit": "%",
+  "formula": "apportioned_cost_duty_and_taxes_fuel__oil",
+  "definition": "Measures import duty and taxes levied on fuel and lubricating oil as a share of the utility's cost base, expressed as a percentage. It is sourced directly from the utility-reported apportioned cost of duty and taxes on fuel and lubricating oil, presented alongside the other cost-breakdown categories. A high share indicates that government fiscal charges on fuel imports form a material part of the cost of supply, which the utility cannot reduce through operational efficiency. For diesel-dependent Pacific utilities, changes in national duty policy can move this figure independently of any change in utility performance.",
+  "synonyms": [
+   "Fuel and lubricant duties and taxes",
+   "Fuel duty share of costs",
+   "Apportioned fuel and oil taxes"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 23,
+  "name": "Fuel Expenditure",
+  "category": "Financial",
+  "subcategory": "Cost Breakdown",
+  "unit": "%",
+  "formula": "om_costs_fuel__oil / service_total_costs",
+  "definition": "Measures spending on fuel and oil as a proportion of the utility's total costs, expressed as a percentage. Calculated as fuel and oil operating costs divided by total service costs. A high share signals heavy exposure to imported fuel prices, which is typical of diesel-dependent Pacific systems, while a falling share often reflects growing renewable generation or lower world fuel prices rather than cost control. Because fuel is purchased in foreign currency, exchange-rate movements can shift this ratio independently of operational performance.",
+  "synonyms": [
+   "Fuel cost share",
+   "Fuel and oil expenditure ratio",
+   "Fuel cost as a share of total costs"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 30,
+  "name": "Generation Labor Costs",
+  "category": "Financial",
+  "subcategory": "Cost Breakdown",
+  "unit": "%",
+  "formula": "om_costs_generation / service_total_costs",
+  "definition": "Measures the cost of the generation function as a share of the utility's total costs, expressed as a percentage. In the current formula it is calculated as generation operations and maintenance costs divided by total service costs. A high share points to a cost structure dominated by power production, while a low share suggests costs sit mainly in networks, retail or overheads. Comparisons across utilities should allow for differences in generation mix, since diesel-heavy fleets carry structurally higher generation costs than hydro or solar systems.",
+  "synonyms": [
+   "Generation labour cost share",
+   "Generation staff cost ratio",
+   "Generation payroll share of costs"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 24,
+  "name": "Generation O&M Costs",
+  "category": "Financial",
+  "subcategory": "Cost Breakdown",
+  "unit": "%",
+  "formula": "om_costs_generation / service_total_costs",
+  "definition": "Measures generation operations and maintenance spending as a proportion of the utility's total costs, expressed as a percentage. Calculated as generation O&M costs divided by total service costs. A high share indicates that running and maintaining power stations dominates the cost base, which may reflect an ageing or diesel-heavy fleet; a low share suggests costs are concentrated in networks or overheads. Differences in generation mix and plant age mean this ratio should be read alongside fuel expenditure rather than in isolation.",
+  "synonyms": [
+   "Generation O&M cost share",
+   "Generation operations and maintenance ratio",
+   "Generation opex share"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 32,
+  "name": "Other Duty and Taxes",
+  "category": "Financial",
+  "subcategory": "Cost Breakdown",
+  "unit": "%",
+  "formula": "apportioned_cost_duty_and_taxes_others / service_total_costs",
+  "definition": "Measures duty and taxes other than those on fuel and lubricating oil as a share of the utility's total costs, expressed as a percentage. Calculated as apportioned other duty and taxes divided by total service costs. A high share indicates that government fiscal charges beyond fuel duties form a material part of the cost of supply. These charges are set by government policy rather than utility management, so they reflect the fiscal environment more than operating efficiency.",
+  "synonyms": [
+   "Other duties and taxes share",
+   "Non-fuel duty and tax ratio",
+   "Other fiscal charges share of costs"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 28,
+  "name": "Other Expenditure",
+  "category": "Financial",
+  "subcategory": "Cost Breakdown",
+  "unit": "%",
+  "formula": "service_other_operating_expenses / service_total_costs",
+  "definition": "Measures other operating expenses as a proportion of the utility's total costs, expressed as a percentage. Calculated as other operating expenses divided by total service costs. A high share can indicate significant administrative, insurance or miscellaneous costs that are not captured in the fuel, labour or O&M categories, and may warrant closer scrutiny of overheads. Inconsistent classification of costs between utilities can distort cross-utility comparison of this residual category.",
+  "synonyms": [
+   "Other operating expenses share",
+   "Other opex ratio",
+   "Miscellaneous expenditure share"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 27,
+  "name": "Other Labor Expenditure",
+  "category": "Financial",
+  "subcategory": "Cost Breakdown",
+  "unit": "%",
+  "formula": "staff_costs_other_labor_expenditure / service_total_costs",
+  "definition": "Measures labour costs outside the core generation, transmission and distribution functions as a share of the utility's total costs, expressed as a percentage. Calculated as other labour expenditure divided by total service costs. A high share suggests a large administrative or support workforce relative to the technical front line, which can indicate overstaffing in overhead functions. Small Pacific utilities often carry proportionally higher support-staff costs because fixed corporate functions are spread over a small customer base.",
+  "synonyms": [
+   "Other labour cost share",
+   "Support staff cost ratio",
+   "Non-technical labour share of costs"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 25,
+  "name": "Power Purchase Costs",
+  "category": "Financial",
+  "subcategory": "Cost Breakdown",
+  "unit": "%",
+  "formula": "power_purchase_costs / service_total_costs",
+  "definition": "Measures the cost of electricity purchased from third parties, such as independent power producers, as a share of the utility's total costs, expressed as a percentage. Calculated as power purchase costs divided by total service costs. A rising share typically reflects growing reliance on IPPs or rooftop-solar buy-back arrangements rather than own generation, and shifts cost exposure from fuel markets to contract terms. The ratio says nothing about whether purchased power is cheaper or dearer than self-generation, so it should be read alongside generation cost KPIs.",
+  "synonyms": [
+   "IPP purchase cost share",
+   "Purchased power expenditure ratio",
+   "Power purchase share of total costs"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 31,
+  "name": "Transmission and Distribution Labor Costs",
+  "category": "Financial",
+  "subcategory": "Cost Breakdown",
+  "unit": "%",
+  "formula": "( staff_costs_transmission + staff_costs_distribution ) service_total_costs",
+  "definition": "Measures the labour cost of the network functions as a share of the utility's total costs, expressed as a percentage. Calculated as the sum of transmission staff costs and distribution staff costs divided by total service costs. A high share indicates a labour-intensive network operation, which may reflect dispersed island grids that require large field crews, while a very low share could signal under-resourced maintenance. Geography drives much of the variation across Pacific utilities, so like-for-like comparison should consider network length and island dispersion.",
+  "synonyms": [
+   "Network labour cost share",
+   "T&D staff cost ratio",
+   "Lines labour share of costs"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 26,
+  "name": "Transmission and Distribution O&M Costs",
+  "category": "Financial",
+  "subcategory": "Cost Breakdown",
+  "unit": "%",
+  "formula": "( om_costs_transmission + om_costs_distribution ) / service_total_costs",
+  "definition": "Measures operations and maintenance spending on the transmission and distribution networks as a proportion of the utility's total costs, expressed as a percentage. Calculated as the sum of transmission O&M costs and distribution O&M costs divided by total service costs. A high share indicates that network upkeep dominates the cost base, while a persistently low share may point to deferred maintenance that later surfaces as reliability problems. Cyclone exposure and salt-air corrosion mean Pacific networks often require structurally higher maintenance spending than continental systems.",
+  "synonyms": [
+   "Network O&M cost share",
+   "T&D maintenance expenditure ratio",
+   "Wires opex share"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 36,
+  "name": "Operating Cost Covered by Subsidies",
+  "category": "Financial",
+  "subcategory": "Efficiency",
+  "unit": "%",
+  "formula": "service_government_subsidies / ( service_cost_of_sales + service_other_operating_expenses - service_bad_debt_expense + service_income_tax )",
+  "definition": "Measures how much of the utility's operating cost base is funded by government subsidies, expressed as a percentage. Calculated as government subsidies received divided by the sum of cost of sales and other operating expenses, less bad debt expense, plus income tax. A high percentage indicates heavy dependence on government support to keep operating, while a figure near zero indicates the utility funds its operations from its own revenue. Subsidies can mask poor cost recovery or below-cost tariffs, so this KPI should be read together with Operating Cost Recovery when judging financial sustainability.",
+  "synonyms": [
+   "Subsidy dependence ratio",
+   "Government subsidy coverage of operating costs",
+   "Subsidy-to-operating-cost ratio"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 34,
+  "name": "Operating Cost Recovery",
+  "category": "Financial",
+  "subcategory": "Efficiency",
+  "unit": "%",
+  "formula": "service_revenue / ( service_cost_of_sales + service_other_operating_expenses - service_bad_debt_expense + service_income_tax )",
+  "definition": "Measures the extent to which revenue from operations covers the utility's operating costs, expressed as a percentage. Calculated as service revenue divided by the sum of cost of sales and other operating expenses, less bad debt expense, plus income tax. A value at or above 100% means tariff and other operating revenue fully covers operating costs, while a value below 100% signals dependence on subsidies or borrowing to sustain operations. For Pacific state-owned utilities, sustained below-100% recovery usually reflects tariffs set below cost rather than short-term cost shocks.",
+  "synonyms": [
+   "Cost recovery ratio",
+   "Operating cost coverage",
+   "Revenue-to-operating-cost ratio"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 35,
+  "name": "Operating Ratio",
+  "category": "Financial",
+  "subcategory": "Efficiency",
+  "unit": "%",
+  "formula": "( service_cost_of_sales + service_other_operating_expenses ) / service_revenue",
+  "definition": "Measures operating expenses as a percentage of operating revenue, indicating how much of each unit of revenue is absorbed by the cost of operations. Calculated as the sum of cost of sales and other operating expenses divided by service revenue. Lower is better: a ratio below 100% means the utility earns more from operations than it spends, and the PPA target is 70% against a Pacific regional average of 78%. Because many Pacific utilities operate under regulated tariffs and receive government support, a favourable ratio can reflect subsidised inputs or recent tariff resets as much as underlying efficiency.",
+  "synonyms": [
+   "Operating expense ratio",
+   "Opex-to-revenue ratio",
+   "Cost-to-income ratio"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 38,
+  "name": "Current Ratio",
+  "category": "Financial",
+  "subcategory": "Liquidity",
+  "unit": "Ratio",
+  "formula": "service_total_current_assets / service_total_current_liabilities",
+  "definition": "Measures the utility's short-term liquidity, expressed as a ratio of what it owns to what it owes within the year. Calculated as total current assets divided by total current liabilities. A ratio above 1.0 indicates the utility can meet its near-term obligations from near-term resources, while a ratio below 1.0 signals potential cash-flow stress; a very high ratio may indicate idle cash or slow-moving inventory. For Pacific utilities, large fuel stock holdings and overdue government receivables can inflate current assets without genuinely improving liquidity.",
+  "synonyms": [
+   "Working capital ratio",
+   "Liquidity ratio",
+   "Current assets to current liabilities"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 37,
+  "name": "Debtor Days",
+  "category": "Financial",
+  "subcategory": "Liquidity",
+  "unit": "Days",
+  "formula": "service_trade_receivables / service_revenue * 365",
+  "definition": "Measures the average number of days the utility takes to collect payment from its customers after billing. Calculated as trade receivables divided by service revenue, multiplied by 365. A low figure indicates effective billing and collection, while a high figure ties up working capital and increases bad-debt risk; utilities typically aim for collection within one to two billing cycles. In the Pacific, unpaid government and state-agency accounts are a common driver of high debtor days, so the figure can reflect public-sector payment discipline as much as the utility's own collection effort.",
+  "synonyms": [
+   "Days sales outstanding (DSO)",
+   "Average collection period",
+   "Receivables days",
+   "Collection period"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 42,
+  "name": "EBITDA Margin",
+  "category": "Financial",
+  "subcategory": "Profitability",
+  "unit": "%",
+  "formula": "( service_revenue - service_other_income - service_cost_of_sales - service_other_operating_expenses ) / service_revenue",
+  "definition": "Measures earnings before interest, tax, depreciation and amortisation as a percentage of revenue, indicating the cash-generating capacity of core operations. Calculated as service revenue less other income, cost of sales and other operating expenses, divided by service revenue. A higher margin means more revenue is retained after cash operating costs and is available to fund debt service, tax and capital investment; a low or negative margin signals that tariffs are not covering day-to-day operating costs. Because it excludes depreciation, a healthy EBITDA margin can coexist with an inability to fund asset replacement, which matters for capital-hungry island grids.",
+  "synonyms": [
+   "EBITDA-to-revenue ratio",
+   "Cash operating margin",
+   "Underlying operating margin"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 43,
+  "name": "EBIT Margin",
+  "category": "Financial",
+  "subcategory": "Profitability",
+  "unit": "%",
+  "formula": "( service_revenue + service_other_income - service_cost_of_sales - service_other_operating_expenses - service_depreciation_expense - service_amortization_expenses ) / service_revenue",
+  "definition": "Measures earnings before interest and tax as a percentage of revenue, showing operating profitability after the cost of consuming assets. Calculated as service revenue plus other income, less cost of sales, other operating expenses, depreciation and amortisation, divided by service revenue. A higher margin indicates operations generate a genuine surplus after providing for asset wear, while a negative margin means tariffs do not cover the full economic cost of supply. Where asset registers are outdated or assets are grant-funded, understated depreciation can flatter this margin for Pacific utilities.",
+  "synonyms": [
+   "Operating margin",
+   "Operating profit margin",
+   "EBIT-to-revenue ratio"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 44,
+  "name": "Profit Margin",
+  "category": "Financial",
+  "subcategory": "Profitability",
+  "unit": "%",
+  "formula": "service_profit / service_revenue",
+  "definition": "Measures net profit as a percentage of revenue, showing how much of each unit of revenue remains after all costs. Calculated as service profit divided by service revenue. A positive margin indicates the utility is financially self-sustaining and able to fund reinvestment, while a persistent negative margin signals reliance on government support or accumulating losses. Government subsidies and community service obligations can distort the margin for Pacific state-owned utilities, so it should be read alongside the subsidy-coverage KPIs.",
+  "synonyms": [
+   "Net profit margin",
+   "Net margin",
+   "Return on sales"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 40,
+  "name": "Return on Assets",
+  "category": "Financial",
+  "subcategory": "Profitability",
+  "unit": "%",
+  "formula": "service_profit / service_total_assets",
+  "definition": "Measures how effectively the utility uses its asset base to generate profit, expressed as a percentage. Calculated as service profit divided by total assets. A higher return indicates assets are being worked productively, while a low or negative return suggests underused capacity, below-cost tariffs or an inflated asset base. Grant-funded and donor-funded assets are common in the Pacific and enlarge the denominator without a matching revenue obligation, which can depress reported returns relative to utilities that debt-fund their assets.",
+  "synonyms": [
+   "ROA",
+   "Return on total assets",
+   "Asset productivity ratio"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 41,
+  "name": "Return on Equity",
+  "category": "Financial",
+  "subcategory": "Profitability",
+  "unit": "%",
+  "formula": "service_profit / service_total_equity",
+  "definition": "Measures the profit generated on the owners' investment in the utility, expressed as a percentage. Calculated as service profit divided by total equity. A higher return indicates the utility is creating value for its shareholder, typically the government for Pacific utilities, while a low or negative return means the owner's capital is being eroded. Because equity can be distorted by asset revaluations, accumulated losses or government capital injections, the ratio should be interpreted alongside return on assets and gearing.",
+  "synonyms": [
+   "ROE",
+   "Return on shareholders' funds",
+   "Return on net worth"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 109,
+  "name": "Customer Sales",
+  "category": "Financial",
+  "subcategory": "Revenue Breakdown",
+  "unit": "Currency",
+  "formula": "service_revenue",
+  "definition": "Measures the utility's total revenue from the sale of electricity services to customers, expressed in local currency. It is taken directly from reported service revenue rather than derived from other inputs. Growth in customer sales reflects some combination of tariff levels, customer numbers and consumption, so it indicates scale rather than efficiency or profitability. Local-currency reporting means cross-utility comparison requires conversion at consistent exchange rates and is sensitive to inflation.",
+  "synonyms": [
+   "Service revenue",
+   "Electricity sales revenue",
+   "Operating revenue",
+   "Turnover"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 39,
+  "name": "Debt to Equity Ratio",
+  "category": "Financial",
+  "subcategory": "Solvency",
+  "unit": "Ratio",
+  "formula": "service_total_liabilities / service_total_equity",
+  "definition": "Measures the utility's financial leverage, expressed as a ratio of what it owes to the owners' stake in the business. Calculated as total liabilities divided by total equity, a broader basis than definitions that use interest-bearing debt only. A higher ratio indicates greater reliance on borrowed or owed funds and higher financial risk, while a low ratio indicates a conservatively funded balance sheet with headroom to borrow for capital works. For Pacific state-owned utilities, concessional and government-guaranteed loans can make high gearing less risky than the raw ratio suggests.",
+  "synonyms": [
+   "Gearing ratio",
+   "Leverage ratio",
+   "D/E ratio",
+   "Liabilities-to-equity ratio"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 135,
+  "name": "10,000 kWh",
+  "category": "Financial",
+  "subcategory": "Tariff Structure",
+  "unit": "Currency",
+  "formula": null,
+  "definition": "Reports the amount a customer would be billed for consuming 10,000 kWh in a period under the utility's prevailing tariff, expressed in local currency at service-area level. It is compiled from the utility's published tariff structure rather than calculated from a formula, and represents a large commercial or industrial consumption level. Comparing billed amounts at standard consumption points shows how tariff design treats large consumers, who often cross-subsidise smaller users. As a regulated local-currency price it reflects tariff policy and subsidy settings rather than utility efficiency, and cross-utility comparison requires currency conversion.",
+  "synonyms": [
+   "Bill at 10,000 kWh",
+   "Large-user tariff benchmark",
+   "Indicative 10,000 kWh charge"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 133,
+  "name": "1,000 kWh",
+  "category": "Financial",
+  "subcategory": "Tariff Structure",
+  "unit": "Currency",
+  "formula": null,
+  "definition": "Reports the amount a customer would be billed for consuming 1,000 kWh in a period under the utility's prevailing tariff, expressed in local currency at service-area level. It is compiled from the utility's published tariff structure rather than calculated from a formula, and represents a large household or small commercial consumption level. Comparing billed amounts at standard consumption points allows tariff levels and block structures to be benchmarked across utilities. As a regulated local-currency price it reflects tariff policy and subsidy settings rather than utility efficiency, and cross-utility comparison requires currency conversion.",
+  "synonyms": [
+   "Bill at 1,000 kWh",
+   "Tariff benchmark 1,000 kWh",
+   "Indicative 1,000 kWh charge"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 130,
+  "name": "100 kWh",
+  "category": "Financial",
+  "subcategory": "Tariff Structure",
+  "unit": "Currency",
+  "formula": null,
+  "definition": "Reports the amount a customer would be billed for consuming 100 kWh in a period under the utility's prevailing tariff, expressed in local currency at service-area level. It is compiled from the utility's published tariff structure rather than calculated from a formula, and represents a low-consumption household. Comparing billed amounts at standard consumption points shows how affordable basic electricity use is under each utility's tariff design. As a regulated local-currency price it reflects tariff policy and subsidy settings rather than utility efficiency, and cross-utility comparison requires currency conversion.",
+  "synonyms": [
+   "Bill at 100 kWh",
+   "Small-user tariff benchmark",
+   "Indicative 100 kWh charge"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 131,
+  "name": "200 kWh",
+  "category": "Financial",
+  "subcategory": "Tariff Structure",
+  "unit": "Currency",
+  "formula": null,
+  "definition": "Reports the amount a customer would be billed for consuming 200 kWh in a period under the utility's prevailing tariff, expressed in local currency at service-area level. It is compiled from the utility's published tariff structure rather than calculated from a formula, and represents a typical household consumption level in many Pacific markets. Comparing billed amounts at standard consumption points allows residential tariff levels to be benchmarked across the region. As a regulated local-currency price it reflects tariff policy and subsidy settings rather than utility efficiency, and cross-utility comparison requires currency conversion.",
+  "synonyms": [
+   "Bill at 200 kWh",
+   "Typical household tariff benchmark",
+   "Indicative 200 kWh charge"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 134,
+  "name": "5,000 kWh",
+  "category": "Financial",
+  "subcategory": "Tariff Structure",
+  "unit": "Currency",
+  "formula": null,
+  "definition": "Reports the amount a customer would be billed for consuming 5,000 kWh in a period under the utility's prevailing tariff, expressed in local currency at service-area level. It is compiled from the utility's published tariff structure rather than calculated from a formula, and represents a commercial-scale consumption level. Comparing billed amounts at standard consumption points shows how tariff design treats business consumers relative to households. As a regulated local-currency price it reflects tariff policy and subsidy settings rather than utility efficiency, and cross-utility comparison requires currency conversion.",
+  "synonyms": [
+   "Bill at 5,000 kWh",
+   "Commercial tariff benchmark",
+   "Indicative 5,000 kWh charge"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 132,
+  "name": "500 kWh",
+  "category": "Financial",
+  "subcategory": "Tariff Structure",
+  "unit": "Currency",
+  "formula": null,
+  "definition": "Reports the amount a customer would be billed for consuming 500 kWh in a period under the utility's prevailing tariff, expressed in local currency at service-area level. It is compiled from the utility's published tariff structure rather than calculated from a formula, and represents a high-consumption household or very small business. Comparing billed amounts at standard consumption points allows tariff levels and block structures to be benchmarked across utilities. As a regulated local-currency price it reflects tariff policy and subsidy settings rather than utility efficiency, and cross-utility comparison requires currency conversion.",
+  "synonyms": [
+   "Bill at 500 kWh",
+   "Tariff benchmark 500 kWh",
+   "Indicative 500 kWh charge"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 128,
+  "name": "Lifeline 120 kWh",
+  "category": "Financial",
+  "subcategory": "Tariff Structure",
+  "unit": "Currency",
+  "formula": null,
+  "definition": "Reports the amount a customer would be billed for consuming 120 kWh in a period under the utility's lifeline tariff, the subsidised rate offered to low-consumption households, expressed in local currency at service-area level. It is compiled from the utility's published tariff structure rather than calculated from a formula. Comparing lifeline bills at standard consumption points shows how much protection each utility's tariff design gives low-income customers. Because lifeline rates are a social-policy instrument, a low figure reflects deliberate cross-subsidy or government support rather than low cost of supply.",
+  "synonyms": [
+   "Lifeline tariff bill at 120 kWh",
+   "Subsidised low-use bill (120 kWh)",
+   "Social tariff benchmark 120 kWh"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 129,
+  "name": "Lifeline 180 kWh",
+  "category": "Financial",
+  "subcategory": "Tariff Structure",
+  "unit": "Currency",
+  "formula": null,
+  "definition": "Reports the amount a customer would be billed for consuming 180 kWh in a period under the utility's lifeline tariff, the subsidised rate offered to low-consumption households, expressed in local currency at service-area level. It is compiled from the utility's published tariff structure rather than calculated from a formula. This point sits at the upper end of typical lifeline thresholds, so it shows how the subsidised rate tapers as household consumption approaches the standard tariff. Because lifeline rates are a social-policy instrument, a low figure reflects deliberate cross-subsidy or government support rather than low cost of supply.",
+  "synonyms": [
+   "Lifeline tariff bill at 180 kWh",
+   "Subsidised low-use bill (180 kWh)",
+   "Social tariff benchmark 180 kWh"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 127,
+  "name": "Lifeline 60 kWh",
+  "category": "Financial",
+  "subcategory": "Tariff Structure",
+  "unit": "Currency",
+  "formula": null,
+  "definition": "Reports the amount a customer would be billed for consuming 60 kWh in a period under the utility's lifeline tariff, the subsidised rate offered to low-consumption households, expressed in local currency at service-area level. It is compiled from the utility's published tariff structure rather than calculated from a formula. This point represents very basic electricity use, so it is the clearest indicator of affordability for the poorest connected households. Because lifeline rates are a social-policy instrument, a low figure reflects deliberate cross-subsidy or government support rather than low cost of supply.",
+  "synonyms": [
+   "Lifeline tariff bill at 60 kWh",
+   "Subsidised low-use bill (60 kWh)",
+   "Social tariff benchmark 60 kWh"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 54,
+  "name": "Are Ministers appointed to the Board",
+  "category": "Governance",
+  "subcategory": "Appointments",
+  "unit": "Units N/A",
+  "formula": "are_ministers_appointed_to_the_board",
+  "definition": "Records whether government ministers sit as directors on the utility's board, captured as a Yes/No response in the PPA governance questionnaire. It reflects the degree of separation between the state's ownership role and the utility's commercial direction. A No response is generally regarded as better practice, since direct ministerial membership can blur policy, regulatory and ownership roles and weaken the board's commercial independence. When aggregated across utilities, responses are reported as the share of participating utilities with ministers on their boards.",
+  "synonyms": [
+   "Ministerial board appointments",
+   "Ministers as directors indicator",
+   "Political appointees on the board"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 55,
+  "name": "Are Ministers or public servants representing the line/sector Ministry appointed to the Board",
+  "category": "Governance",
+  "subcategory": "Appointments",
+  "unit": "Units N/A",
+  "formula": "are_linesector_ministers_or_public_servants_appointed_to_the_board",
+  "definition": "Records whether ministers or public servants from the line or sector ministry responsible for energy sit on the utility's board, captured as a Yes/No response in the PPA governance questionnaire. It reflects whether the body that sets sector policy also participates directly in the utility's governance. A No response is generally regarded as better practice, because line-ministry representation on the board can create conflicts between the ministry's policy and regulatory functions and the utility's commercial interests. When aggregated across utilities, responses are reported as the share of participating utilities with such appointments.",
+  "synonyms": [
+   "Line ministry board representation",
+   "Sector ministry appointees on the board",
+   "Shareholding ministry directors indicator"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 48,
+  "name": "Is a Commercial mandate implemented",
+  "category": "Governance",
+  "subcategory": "Commercial Focus",
+  "unit": "Units N/A",
+  "formula": "is_a_commercial_mandate_implemented",
+  "definition": "Records whether the utility's commercial mandate is actually applied in practice, captured as a Yes/No response in the PPA governance questionnaire. It goes a step beyond having a mandate on paper, asking whether the utility genuinely operates on commercial principles such as cost-reflective pricing and accountability for financial results. A Yes response indicates the state-owned utility is run as a business rather than as an extension of government administration. Implementation is self-assessed, so responses may be more favourable than independent review would suggest.",
+  "synonyms": [
+   "Commercial mandate implementation",
+   "Commercial operation in practice",
+   "Commercialisation implementation indicator"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 47,
+  "name": "Is a Commercial mandate in place",
+  "category": "Governance",
+  "subcategory": "Commercial Focus",
+  "unit": "Units N/A",
+  "formula": "is_a_commercial_mandate_in_place",
+  "definition": "Records whether the utility has a formal mandate to operate on commercial principles, typically set out in its establishing legislation, statement of corporate intent or ownership policy, captured as a Yes/No response in the PPA governance questionnaire. A Yes response indicates the owner has formally directed the utility to pursue commercial objectives, which underpins cost recovery and financial sustainability. Having a mandate in place does not guarantee it is followed, so this item is paired with a separate question on implementation. When aggregated across utilities, responses are reported as the share of participating utilities with a mandate in place.",
+  "synonyms": [
+   "Commercial mandate adoption",
+   "Formal commercial objectives",
+   "SOE commercial mandate indicator"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 46,
+  "name": "Is a Code of Conduct implemented",
+  "category": "Governance",
+  "subcategory": "Conduct",
+  "unit": "Units N/A",
+  "formula": "is_a_code_of_conduct_implemented",
+  "definition": "Records whether the utility's code of conduct is actively applied, for example through staff training, sign-off and enforcement of breaches, captured as a Yes/No response in the PPA governance questionnaire. It distinguishes utilities that operationalise their ethics framework from those where the code exists only as a document. A Yes response indicates stronger integrity practices, which support procurement discipline and reduce fraud and conflict-of-interest risk. Implementation is self-assessed, so responses reflect the utility's own judgement rather than an independent audit.",
+  "synonyms": [
+   "Code of conduct implementation",
+   "Ethics code enforcement",
+   "Code of conduct in practice"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 45,
+  "name": "Is a Code of Conduct in place",
+  "category": "Governance",
+  "subcategory": "Conduct",
+  "unit": "Units N/A",
+  "formula": "is_a_code_of_conduct_in_place",
+  "definition": "Records whether the utility has adopted a formal code of conduct governing the behaviour of its directors and staff, captured as a Yes/No response in the PPA governance questionnaire. A code of conduct sets expectations on ethics, conflicts of interest and use of company resources, and is a baseline element of good corporate governance. A Yes response indicates the foundation is in place, though a separate questionnaire item tests whether the code is actually implemented. When aggregated across utilities, responses are reported as the share of participating utilities with a code in place.",
+  "synonyms": [
+   "Code of conduct adoption",
+   "Ethics code established",
+   "Corporate code of conduct indicator"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 50,
+  "name": "Does the CEOs performance contract include annual reviews",
+  "category": "Governance",
+  "subcategory": "Performance",
+  "unit": "Units N/A",
+  "formula": "does_the_ceos_performance_contract_include_annual_reviews",
+  "definition": "Records whether the chief executive's performance contract provides for formal annual performance reviews, captured as a Yes/No response in the PPA governance questionnaire. Annual reviews give the board a regular, structured opportunity to hold the CEO accountable against agreed targets and to link remuneration or renewal to results. A Yes response indicates a stronger executive accountability cycle than a contract that is only assessed at expiry. The item records whether reviews are provided for, not whether they are conducted rigorously.",
+  "synonyms": [
+   "Annual CEO performance review",
+   "Yearly chief executive appraisal",
+   "CEO review cycle indicator"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 49,
+  "name": "Is the CEO on a performance contract",
+  "category": "Governance",
+  "subcategory": "Performance",
+  "unit": "Units N/A",
+  "formula": "is_the_ceo_on_a_performance_contract",
+  "definition": "Records whether the utility's chief executive is employed under a contract with defined performance targets, captured as a Yes/No response in the PPA governance questionnaire. A performance contract links the CEO's tenure and incentives to agreed operational and financial results, giving the board a concrete accountability mechanism. A Yes response is regarded as good practice for state-owned utilities, where executive accountability can otherwise be diluted by political appointment processes. When aggregated across utilities, responses are reported as the share of participating utilities whose CEOs are on performance contracts.",
+  "synonyms": [
+   "CEO performance agreement",
+   "Chief executive performance contract indicator",
+   "Executive accountability contract"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 52,
+  "name": "Does the Strategic Plan include three or more years of forecasts",
+  "category": "Governance",
+  "subcategory": "Planning",
+  "unit": "Units N/A",
+  "formula": "does_the_strategic_plan_include_three_or_more_years_of_forecasts",
+  "definition": "Records whether the utility's strategic plan contains financial and operational forecasts covering at least three years, captured as a Yes/No response in the PPA governance questionnaire. Multi-year forecasting shows the utility is planning investment, tariffs and financing over a horizon that matches the long-lived nature of power assets. A Yes response indicates more mature planning than a plan limited to a single budget year. Forecast quality is not tested by this item, only whether the forward horizon exists.",
+  "synonyms": [
+   "Multi-year forecast indicator",
+   "Three-year planning horizon",
+   "Forward forecasts in corporate plan"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 51,
+  "name": "Has a Strategic Plan been adopted",
+  "category": "Governance",
+  "subcategory": "Planning",
+  "unit": "Units N/A",
+  "formula": "has_a_strategic_plan_been_adopted",
+  "definition": "Records whether the utility's board has formally adopted a strategic plan, captured as a Yes/No response in the PPA governance questionnaire. A board-adopted plan sets the utility's objectives, investment priorities and performance targets, and provides the reference point against which management and annual reports can be assessed. A Yes response indicates the basic planning discipline is in place; separate items test the plan's forecasting depth and implementation. When aggregated across utilities, responses are reported as the share of participating utilities with an adopted plan.",
+  "synonyms": [
+   "Strategic plan adoption",
+   "Corporate plan in place",
+   "Board-approved business plan indicator"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 53,
+  "name": "Is the Strategic Plan implemented",
+  "category": "Governance",
+  "subcategory": "Planning",
+  "unit": "Units N/A",
+  "formula": "is_the_strategic_plan_implemented",
+  "definition": "Records whether the utility's strategic plan is actively used to direct operations and investment, captured as a Yes/No response in the PPA governance questionnaire. Implementation means the plan's targets flow into budgets, work programmes and management reporting rather than sitting on a shelf. A Yes response indicates the utility closes the loop between planning and execution, which is where many governance frameworks fail in practice. Implementation is self-assessed, so responses may overstate the plan's day-to-day influence.",
+  "synonyms": [
+   "Strategic plan execution",
+   "Corporate plan implementation indicator",
+   "Plan-to-budget alignment"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 58,
+  "name": "Does the Annual Report disclose performance relative to the Strategic Plan",
+  "category": "Governance",
+  "subcategory": "Reporting",
+  "unit": "Units N/A",
+  "formula": "does_the_annual_report_disclose_performance_relative_to_the_strategic_plan",
+  "definition": "Records whether the utility's annual report presents actual performance against the targets in its strategic plan, captured as a Yes/No response in the PPA governance questionnaire. Plan-versus-actual disclosure lets the owner, regulator and public judge whether the utility is delivering on its stated objectives, closing the accountability loop between planning and reporting. A Yes response indicates a higher standard of transparency than financial statements alone. When aggregated across utilities, responses are reported as the share of participating utilities making this disclosure.",
+  "synonyms": [
+   "Performance disclosure against plan",
+   "Plan-versus-actual reporting",
+   "Strategic plan accountability reporting"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 57,
+  "name": "Is the Annual Report audited",
+  "category": "Governance",
+  "subcategory": "Reporting",
+  "unit": "Units N/A",
+  "formula": "is_the_annual_report_audited",
+  "definition": "Records whether the financial statements in the utility's annual report are subject to independent audit, captured as a Yes/No response in the PPA governance questionnaire. An external audit provides assurance that reported financial results fairly present the utility's position, which underpins the credibility of every financial KPI in the benchmarking programme. A Yes response is a baseline expectation for state-owned enterprises and lenders alike, and a No response materially weakens confidence in the utility's reported data. The item does not distinguish between clean, qualified or delayed audit opinions.",
+  "synonyms": [
+   "Audited financial statements indicator",
+   "External audit of annual report",
+   "Statutory audit indicator"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 56,
+  "name": "Is the Annual Report completed within four months of the end of the reporting year",
+  "category": "Governance",
+  "subcategory": "Reporting",
+  "unit": "Units N/A",
+  "formula": "is_the_annual_report_completed_within_four_months_of_the_end_of_the_reporting_year",
+  "definition": "Records whether the utility completes its annual report within four months of the financial year end, captured as a Yes/No response in the PPA governance questionnaire. Timely reporting indicates disciplined financial close processes and gives the owner, lenders and regulators current information for decision-making. A Yes response reflects good practice; long delays, which are common among Pacific state-owned enterprises, reduce the usefulness of the report and often signal capacity constraints in the finance function or a backlog at the national audit office. When aggregated across utilities, responses are reported as the share of participating utilities reporting on time.",
+  "synonyms": [
+   "Annual report timeliness",
+   "Four-month reporting deadline indicator",
+   "Timely financial reporting"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 83,
+  "name": "Administrative Employees Female %",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "formula": "administrative_employees_female / administrative_employees_total",
+  "definition": "The share of the utility's administrative workforce who are women, expressed as a percentage. Calculated as the number of female administrative employees divided by the total number of administrative employees. A higher value indicates greater female representation in the division, and the KPI supports the PPA's gender-representation reporting. In small divisions the percentage can swing sharply with a single hire or departure.",
+  "synonyms": [
+   "women in administration (%)",
+   "female share of administration staff",
+   "administration gender ratio (female)"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 82,
+  "name": "Administrative Employees Male %",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "formula": "administrative_employees_male / administrative_employees_total",
+  "definition": "The share of the utility's administrative workforce who are men, expressed as a percentage. Calculated as the number of male administrative employees divided by the total number of administrative employees. A higher value indicates greater male representation in the division; read together with the female percentage, the two shares account for the whole division. In small divisions the percentage can swing sharply with a single hire or departure.",
+  "synonyms": [
+   "men in administration (%)",
+   "male share of administration staff",
+   "administration gender ratio (male)"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 81,
+  "name": "Administrative Employees Total",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "Employees",
+  "formula": "administrative_employees_female + administrative_employees_male",
+  "definition": "The total number of employees in the utility's administrative division, expressed as a headcount. Calculated as the sum of female and male administrative employees. Higher totals generally reflect a larger utility or a larger administrative function, so the figure is best read alongside overall workforce size and customer numbers. This is a headcount rather than a full-time-equivalent measure, so part-time staff count the same as full-time staff.",
+  "synonyms": [
+   "administration headcount",
+   "admin staff numbers",
+   "administrative workforce size"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 65,
+  "name": "Employees Female %",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "formula": "( employees_female / employees_total ) * 100",
+  "definition": "The share of the utility's total workforce who are women, expressed as a percentage. Calculated as the number of female employees divided by total employees, multiplied by 100. A higher value indicates greater female representation across the utility, and this is a headline indicator in the PPA's gender-representation reporting. At small utilities the figure can move noticeably with a handful of hires or departures.",
+  "synonyms": [
+   "female workforce share",
+   "women in workforce (%)",
+   "workforce gender balance (female)",
+   "female staff ratio"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 64,
+  "name": "Employees Male %",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "formula": "( employees_male / employees_total ) * 100",
+  "definition": "The share of the utility's total workforce who are men, expressed as a percentage. Calculated as the number of male employees divided by total employees, multiplied by 100. A higher value indicates greater male representation; read together with the female percentage, the two shares account for the whole workforce. At small utilities the figure can move noticeably with a handful of hires or departures.",
+  "synonyms": [
+   "male workforce share",
+   "men in workforce (%)",
+   "workforce gender balance (male)",
+   "male staff ratio"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 68,
+  "name": "Executive Employees Female %",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "formula": "executive_employees_female / executive_employees_total",
+  "definition": "The share of the utility's executive workforce who are women, expressed as a percentage. Calculated as the number of female executive employees divided by the total number of executive employees. A higher value indicates greater female representation in the division, and the KPI supports the PPA's gender-representation reporting. In small divisions the percentage can swing sharply with a single hire or departure.",
+  "synonyms": [
+   "women in executive team (%)",
+   "female share of executive team staff",
+   "executive team gender ratio (female)"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 67,
+  "name": "Executive Employees Male %",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "formula": "executive_employees_male / executive_employees_total",
+  "definition": "The share of the utility's executive workforce who are men, expressed as a percentage. Calculated as the number of male executive employees divided by the total number of executive employees. A higher value indicates greater male representation in the division; read together with the female percentage, the two shares account for the whole division. In small divisions the percentage can swing sharply with a single hire or departure.",
+  "synonyms": [
+   "men in executive team (%)",
+   "male share of executive team staff",
+   "executive team gender ratio (male)"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 66,
+  "name": "Executive Employees Total",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "Employees",
+  "formula": "executive_employees_female + executive_employees_male",
+  "definition": "The total number of employees in the utility's executive division, expressed as a headcount. Calculated as the sum of female and male executive employees. Higher totals generally reflect a larger utility or a larger executive function, so the figure is best read alongside overall workforce size and customer numbers. This is a headcount rather than a full-time-equivalent measure, so part-time staff count the same as full-time staff.",
+  "synonyms": [
+   "executive headcount",
+   "senior management numbers",
+   "executive team size"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 74,
+  "name": "Finance Employees Female %",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "formula": "finance_employees_female / finance_employees_total",
+  "definition": "The share of the utility's finance workforce who are women, expressed as a percentage. Calculated as the number of female finance employees divided by the total number of finance employees. A higher value indicates greater female representation in the division, and the KPI supports the PPA's gender-representation reporting. In small divisions the percentage can swing sharply with a single hire or departure.",
+  "synonyms": [
+   "women in finance (%)",
+   "female share of finance staff",
+   "finance gender ratio (female)"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 73,
+  "name": "Finance Employees Male %",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "formula": "finance_employees_male / finance_employees_total",
+  "definition": "The share of the utility's finance workforce who are men, expressed as a percentage. Calculated as the number of male finance employees divided by the total number of finance employees. A higher value indicates greater male representation in the division; read together with the female percentage, the two shares account for the whole division. In small divisions the percentage can swing sharply with a single hire or departure.",
+  "synonyms": [
+   "men in finance (%)",
+   "male share of finance staff",
+   "finance gender ratio (male)"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 72,
+  "name": "Finance Employees Total",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "Employees",
+  "formula": "finance_employees_female + finance_employees_male",
+  "definition": "The total number of employees in the utility's finance division, expressed as a headcount. Calculated as the sum of female and male finance employees. Higher totals generally reflect a larger utility or a larger finance function, so the figure is best read alongside overall workforce size and customer numbers. This is a headcount rather than a full-time-equivalent measure, so part-time staff count the same as full-time staff.",
+  "synonyms": [
+   "finance headcount",
+   "finance staff numbers",
+   "finance division workforce"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 60,
+  "name": "Gender of Utility 2nd in command",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "Units N/A",
+  "formula": "gender_of_2ic",
+  "definition": "A categorical indicator recording the gender of the utility's second-in-command, typically the deputy CEO or equivalent; it has no numeric unit. Reported directly by the utility rather than calculated from other inputs. Across the region it shows female representation in the most senior deputy roles and supports the PPA's reporting on gender representation in leadership. As a single-person attribute, it changes only when the post-holder changes.",
+  "synonyms": [
+   "deputy CEO gender",
+   "second-in-command gender",
+   "gender of deputy chief executive"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 59,
+  "name": "Gender of Utility CEO",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "Units N/A",
+  "formula": "gender_of_ceo",
+  "definition": "A categorical indicator recording the gender of the utility's chief executive officer; it has no numeric unit. Reported directly by the utility rather than calculated from other inputs. Across the region it shows how many Pacific utilities are led by women and supports the PPA's reporting on gender representation in senior leadership. As a single-person attribute, it changes only when the CEO changes.",
+  "synonyms": [
+   "CEO gender",
+   "gender of chief executive",
+   "female CEO indicator"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 77,
+  "name": "HR Employees Female %",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "formula": "human_resource_employees_female / human_resource_employees_total",
+  "definition": "The share of the utility's human resources workforce who are women, expressed as a percentage. Calculated as the number of female human resources employees divided by the total number of human resources employees. A higher value indicates greater female representation in the division, and the KPI supports the PPA's gender-representation reporting. In small divisions the percentage can swing sharply with a single hire or departure.",
+  "synonyms": [
+   "women in HR (%)",
+   "female share of HR staff",
+   "HR gender ratio (female)"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 76,
+  "name": "HR Employees Male %",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "formula": "human_resource_employees_male / human_resource_employees_total",
+  "definition": "The share of the utility's human resources workforce who are men, expressed as a percentage. Calculated as the number of male human resources employees divided by the total number of human resources employees. A higher value indicates greater male representation in the division; read together with the female percentage, the two shares account for the whole division. In small divisions the percentage can swing sharply with a single hire or departure.",
+  "synonyms": [
+   "men in HR (%)",
+   "male share of HR staff",
+   "HR gender ratio (male)"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 75,
+  "name": "HR Employees Total",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "Employees",
+  "formula": "human_resource_employees_female + human_resource_employees_male",
+  "definition": "The total number of employees in the utility's human resources division, expressed as a headcount. Calculated as the sum of female and male human resources employees. Higher totals generally reflect a larger utility or a larger human resources function, so the figure is best read alongside overall workforce size and customer numbers. This is a headcount rather than a full-time-equivalent measure, so part-time staff count the same as full-time staff.",
+  "synonyms": [
+   "HR headcount",
+   "human resources staff numbers",
+   "HR division workforce"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 86,
+  "name": "ICT Employees Female %",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "formula": "ict_employees_female / ict_employees_total",
+  "definition": "The share of the utility's ICT workforce who are women, expressed as a percentage. Calculated as the number of female ICT employees divided by the total number of ICT employees. A higher value indicates greater female representation in the division, and the KPI supports the PPA's gender-representation reporting. In small divisions the percentage can swing sharply with a single hire or departure.",
+  "synonyms": [
+   "women in ICT (%)",
+   "female share of ICT staff",
+   "ICT gender ratio (female)"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 85,
+  "name": "ICT Employees Male %",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "formula": "ict_employees_male / ict_employees_total",
+  "definition": "The share of the utility's ICT workforce who are men, expressed as a percentage. Calculated as the number of male ICT employees divided by the total number of ICT employees. A higher value indicates greater male representation in the division; read together with the female percentage, the two shares account for the whole division. In small divisions the percentage can swing sharply with a single hire or departure.",
+  "synonyms": [
+   "men in ICT (%)",
+   "male share of ICT staff",
+   "ICT gender ratio (male)"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 84,
+  "name": "ICT Employees Total",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "Employees",
+  "formula": "ict_employees_female + ict_employees_male",
+  "definition": "The total number of employees in the utility's ICT division, expressed as a headcount. Calculated as the sum of female and male ICT employees. Higher totals generally reflect a larger utility or a larger ICT function, so the figure is best read alongside overall workforce size and customer numbers. This is a headcount rather than a full-time-equivalent measure, so part-time staff count the same as full-time staff.",
+  "synonyms": [
+   "ICT headcount",
+   "IT staff numbers",
+   "ICT division workforce"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 89,
+  "name": "Other Divisions Employees Female %",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "formula": "other_employees_female / other_employees_total",
+  "definition": "The share of the utility's 'other divisions' workforce who are women, expressed as a percentage. Calculated as the number of female 'other' employees divided by the total number of 'other' employees. A higher value indicates greater female representation in these roles, and the KPI supports the PPA's gender-representation reporting. In small divisions the percentage can swing sharply with a single hire or departure.",
+  "synonyms": [
+   "women in other divisions (%)",
+   "female share of other divisions staff",
+   "other divisions gender ratio (female)"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 88,
+  "name": "Other Divisions Employees Male %",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "formula": "other_employees_male / other_employees_total",
+  "definition": "The share of the utility's 'other divisions' workforce who are men, expressed as a percentage. Calculated as the number of male 'other' employees divided by the total number of 'other' employees. A higher value indicates greater male representation in these roles; read together with the female percentage, the two shares account for the whole group. In small divisions the percentage can swing sharply with a single hire or departure.",
+  "synonyms": [
+   "men in other divisions (%)",
+   "male share of other divisions staff",
+   "other divisions gender ratio (male)"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 87,
+  "name": "Other Divisions Employees Total",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "Employees",
+  "formula": "other_employees_female + other_employees_male",
+  "definition": "The total number of employees who do not fall within any of the named divisions (administrative, executive, finance, human resources, ICT, PR/marketing/customer service, procurement or technical), expressed as a headcount. Calculated as the sum of female and male 'other' employees. Higher totals generally reflect a larger utility or a larger residual function, so the figure is best read alongside overall workforce size and customer numbers. This is a headcount rather than a full-time-equivalent measure, so part-time staff count the same as full-time staff.",
+  "synonyms": [
+   "other divisions headcount",
+   "unclassified staff numbers",
+   "other staff total"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 80,
+  "name": "PR Marketing and CustService Employees Female %",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "formula": "pr_marketing_and_customer_service_employees_female / pr_marketing_and_customer_service_employees_total",
+  "definition": "The share of the utility's PR, marketing and customer service workforce who are women, expressed as a percentage. Calculated as the number of female PR, marketing and customer service employees divided by the total number of PR, marketing and customer service employees. A higher value indicates greater female representation in the division, and the KPI supports the PPA's gender-representation reporting. In small divisions the percentage can swing sharply with a single hire or departure.",
+  "synonyms": [
+   "women in customer service and marketing (%)",
+   "female share of customer service and marketing staff",
+   "customer service and marketing gender ratio (female)"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 79,
+  "name": "PR Marketing and CustService Employees Male %",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "formula": "pr_marketing_and_customer_service_employees_male / pr_marketing_and_customer_service_employees_total",
+  "definition": "The share of the utility's PR, marketing and customer service workforce who are men, expressed as a percentage. Calculated as the number of male PR, marketing and customer service employees divided by the total number of PR, marketing and customer service employees. A higher value indicates greater male representation in the division; read together with the female percentage, the two shares account for the whole division. In small divisions the percentage can swing sharply with a single hire or departure.",
+  "synonyms": [
+   "men in customer service and marketing (%)",
+   "male share of customer service and marketing staff",
+   "customer service and marketing gender ratio (male)"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 78,
+  "name": "PR Marketing and CustService Employees Total",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "Employees",
+  "formula": "pr_marketing_and_customer_service_employees_female + pr_marketing_and_customer_service_employees_male",
+  "definition": "The total number of employees in the utility's PR, marketing and customer service division, expressed as a headcount. Calculated as the sum of female and male PR, marketing and customer service employees. Higher totals generally reflect a larger utility or a larger PR, marketing and customer service function, so the figure is best read alongside overall workforce size and customer numbers. This is a headcount rather than a full-time-equivalent measure, so part-time staff count the same as full-time staff.",
+  "synonyms": [
+   "PR and marketing headcount",
+   "customer service staff numbers",
+   "customer-facing staff total"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 92,
+  "name": "Procurement Employees Female %",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "formula": "procurement_employees_female / procurement_employees_total",
+  "definition": "The share of the utility's procurement workforce who are women, expressed as a percentage. Calculated as the number of female procurement employees divided by the total number of procurement employees. A higher value indicates greater female representation in the division, and the KPI supports the PPA's gender-representation reporting. In small divisions the percentage can swing sharply with a single hire or departure.",
+  "synonyms": [
+   "women in procurement (%)",
+   "female share of procurement staff",
+   "procurement gender ratio (female)"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 91,
+  "name": "Procurement Employees Male %",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "formula": "procurement_employees_male / procurement_employees_total",
+  "definition": "The share of the utility's procurement workforce who are men, expressed as a percentage. Calculated as the number of male procurement employees divided by the total number of procurement employees. A higher value indicates greater male representation in the division; read together with the female percentage, the two shares account for the whole division. In small divisions the percentage can swing sharply with a single hire or departure.",
+  "synonyms": [
+   "men in procurement (%)",
+   "male share of procurement staff",
+   "procurement gender ratio (male)"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 90,
+  "name": "Procurement Employees Total",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "Employees",
+  "formula": "procurement_employees_female + procurement_employees_male",
+  "definition": "The total number of employees in the utility's procurement division, expressed as a headcount. Calculated as the sum of female and male procurement employees. Higher totals generally reflect a larger utility or a larger procurement function, so the figure is best read alongside overall workforce size and customer numbers. This is a headcount rather than a full-time-equivalent measure, so part-time staff count the same as full-time staff.",
+  "synonyms": [
+   "procurement headcount",
+   "purchasing staff numbers",
+   "supply chain staff total"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 71,
+  "name": "Technical Employees Female %",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "formula": "technical_employees_female / technical_employees_total",
+  "definition": "The share of the utility's technical workforce who are women, expressed as a percentage. Calculated as the number of female technical employees divided by the total number of technical employees. A higher value indicates greater female representation in the division, and the KPI supports the PPA's gender-representation reporting. In small divisions the percentage can swing sharply with a single hire or departure.",
+  "synonyms": [
+   "women in technical (%)",
+   "female share of technical staff",
+   "technical gender ratio (female)"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 70,
+  "name": "Technical Employees Male %",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "%",
+  "formula": "technical_employees_male / technical_employees_total",
+  "definition": "The share of the utility's technical workforce who are men, expressed as a percentage. Calculated as the number of male technical employees divided by the total number of technical employees. A higher value indicates greater male representation in the division; read together with the female percentage, the two shares account for the whole division. In small divisions the percentage can swing sharply with a single hire or departure.",
+  "synonyms": [
+   "men in technical (%)",
+   "male share of technical staff",
+   "technical gender ratio (male)"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 69,
+  "name": "Technical Employees Total",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "Employees",
+  "formula": "technical_employees_female + technical_employees_male",
+  "definition": "The total number of employees in the utility's technical division, expressed as a headcount. Calculated as the sum of female and male technical employees. Higher totals generally reflect a larger utility or a larger technical function, so the figure is best read alongside overall workforce size and customer numbers. This is a headcount rather than a full-time-equivalent measure, so part-time staff count the same as full-time staff.",
+  "synonyms": [
+   "technical headcount",
+   "engineering and technical staff numbers",
+   "technical workforce size"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 63,
+  "name": "Total Employees",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "Employees",
+  "formula": "employees_male + employees_female",
+  "definition": "The utility's total workforce, expressed as a headcount of employees. Calculated as the sum of male and female employees. A larger workforce generally reflects a larger utility; on its own it says little about efficiency, so it is normally read alongside customer numbers and labour productivity. This is a headcount rather than a full-time-equivalent measure, so part-time staff count the same as full-time staff.",
+  "synonyms": [
+   "total headcount",
+   "workforce size",
+   "total staff complement",
+   "number of employees"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 62,
+  "name": "Total Employees Female",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "Employees",
+  "formula": "administrative_employees_female + executive_employees_female + finance_employees_female + human_resource_employees_female + ict_employees_female + other_employees_female + pr_marketing_and_customer_service_employees_female + procurement_employees_female + technical_employees_female",
+  "definition": "The total number of female employees across the utility, expressed as a headcount. Calculated as the sum of female employees across the administrative, executive, finance, human resources, ICT, other, PR/marketing/customer service, procurement and technical divisions. A higher count reflects stronger female participation in the workforce, and the figure feeds the utility-wide female percentage used in the PPA's gender-representation reporting.",
+  "synonyms": [
+   "female headcount",
+   "total women employed",
+   "female staff count"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 61,
+  "name": "Total Employees Male",
+  "category": "Human Resources",
+  "subcategory": "Gender",
+  "unit": "Employees",
+  "formula": "administrative_employees_male + executive_employees_male + finance_employees_male + ict_employees_male + other_employees_male + pr_marketing_and_customer_service_employees_male + procurement_employees_male + technical_employees_male",
+  "definition": "The total number of male employees across the utility, expressed as a headcount. Calculated as the sum of male employees across the administrative, executive, finance, ICT, other, PR/marketing/customer service, procurement and technical divisions. A higher count simply reflects a larger male workforce and is best read alongside the female count and total headcount. Note that, as currently defined, the formula omits male human resources employees, so the figure may slightly understate the true total.",
+  "synonyms": [
+   "male headcount",
+   "total men employed",
+   "male staff count"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 145,
+  "name": "FTE Paid Hours - Conventional Generation",
+  "category": "Human Resources",
+  "subcategory": "Productivity",
+  "unit": "Hours",
+  "formula": "hours_paid__conventional_generation / standard_work_hours__conventional_generation",
+  "definition": "The size of the utility's conventional (thermal) generation workforce expressed as full-time-equivalent (FTE) staff, based on hours paid. Calculated as total hours paid in conventional (thermal) generation divided by the standard work hours of one full-time employee, which converts paid hours into an equivalent number of full-time staff. Higher values indicate a larger paid labour input to conventional (thermal) generation. Because paid hours include annual leave, sick leave and public holidays, this measure normally sits above the corresponding FTE Worked Hours; the gap shows how much paid time is not spent working.",
+  "synonyms": [
+   "conventional generation FTEs (paid hours)",
+   "paid full-time-equivalent conventional generation staff",
+   "conventional generation paid-hours FTE"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 142,
+  "name": "FTE Paid Hours - Distribution",
+  "category": "Human Resources",
+  "subcategory": "Productivity",
+  "unit": "Hours",
+  "formula": "hours_paid__distribution / standard_work_hours__distribution",
+  "definition": "The size of the utility's distribution workforce expressed as full-time-equivalent (FTE) staff, based on hours paid. Calculated as total hours paid in distribution divided by the standard work hours of one full-time employee, which converts paid hours into an equivalent number of full-time staff. Higher values indicate a larger paid labour input to distribution. Because paid hours include annual leave, sick leave and public holidays, this measure normally sits above the corresponding FTE Worked Hours; the gap shows how much paid time is not spent working.",
+  "synonyms": [
+   "distribution FTEs (paid hours)",
+   "paid full-time-equivalent distribution staff",
+   "distribution paid-hours FTE"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 143,
+  "name": "FTE Paid Hours - Other Electrical",
+  "category": "Human Resources",
+  "subcategory": "Productivity",
+  "unit": "Hours",
+  "formula": "hours_paid__other_electrical / standard_work_hours__other_electrical",
+  "definition": "The size of the utility's other electrical activities workforce expressed as full-time-equivalent (FTE) staff, based on hours paid. Calculated as total hours paid in other electrical activities divided by the standard work hours of one full-time employee, which converts paid hours into an equivalent number of full-time staff. Higher values indicate a larger paid labour input to other electrical activities. Because paid hours include annual leave, sick leave and public holidays, this measure normally sits above the corresponding FTE Worked Hours; the gap shows how much paid time is not spent working.",
+  "synonyms": [
+   "other electrical FTEs (paid hours)",
+   "paid full-time-equivalent other electrical staff",
+   "other electrical paid-hours FTE"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 140,
+  "name": "FTE Paid Hours - Renewable Generation",
+  "category": "Human Resources",
+  "subcategory": "Productivity",
+  "unit": "Hours",
+  "formula": "hours_paid__renewable_generation / standard_work_hours__renewable_generation",
+  "definition": "The size of the utility's renewable generation workforce expressed as full-time-equivalent (FTE) staff, based on hours paid. Calculated as total hours paid in renewable generation divided by the standard work hours of one full-time employee, which converts paid hours into an equivalent number of full-time staff. Higher values indicate a larger paid labour input to renewable generation. Because paid hours include annual leave, sick leave and public holidays, this measure normally sits above the corresponding FTE Worked Hours; the gap shows how much paid time is not spent working.",
+  "synonyms": [
+   "renewable generation FTEs (paid hours)",
+   "paid full-time-equivalent renewable generation staff",
+   "renewable generation paid-hours FTE"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 141,
+  "name": "FTE Paid Hours - Transmission",
+  "category": "Human Resources",
+  "subcategory": "Productivity",
+  "unit": "Hours",
+  "formula": "hours_paid__transmission / standard_work_hours__transmission",
+  "definition": "The size of the utility's transmission workforce expressed as full-time-equivalent (FTE) staff, based on hours paid. Calculated as total hours paid in transmission divided by the standard work hours of one full-time employee, which converts paid hours into an equivalent number of full-time staff. Higher values indicate a larger paid labour input to transmission. Because paid hours include annual leave, sick leave and public holidays, this measure normally sits above the corresponding FTE Worked Hours; the gap shows how much paid time is not spent working.",
+  "synonyms": [
+   "transmission FTEs (paid hours)",
+   "paid full-time-equivalent transmission staff",
+   "transmission paid-hours FTE"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 144,
+  "name": "FTE Worked Hours - Conventional Generation",
+  "category": "Human Resources",
+  "subcategory": "Productivity",
+  "unit": "Hours",
+  "formula": "hours_worked__conventional_generation / standard_work_hours__conventional_generation",
+  "definition": "The size of the utility's conventional (thermal) generation workforce expressed as full-time-equivalent (FTE) staff, based on hours actually worked. Calculated as total hours worked in conventional (thermal) generation divided by the standard work hours of one full-time employee, which converts raw hours into an equivalent number of full-time staff. Higher values indicate more labour effort applied to conventional (thermal) generation, whether from more staff or more overtime. Because it is built from worked hours it excludes leave and other paid non-working time; compare it with the corresponding FTE Paid Hours measure to see that gap.",
+  "synonyms": [
+   "conventional generation FTEs (worked hours)",
+   "full-time-equivalent conventional generation staff",
+   "conventional generation worked-hours FTE"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 137,
+  "name": "FTE Worked Hours - Distribution",
+  "category": "Human Resources",
+  "subcategory": "Productivity",
+  "unit": "Hours",
+  "formula": "hours_worked__distribution / standard_work_hours__distribution",
+  "definition": "The size of the utility's distribution workforce expressed as full-time-equivalent (FTE) staff, based on hours actually worked. Calculated as total hours worked in distribution divided by the standard work hours of one full-time employee, which converts raw hours into an equivalent number of full-time staff. Higher values indicate more labour effort applied to distribution, whether from more staff or more overtime. Because it is built from worked hours it excludes leave and other paid non-working time; compare it with the corresponding FTE Paid Hours measure to see that gap.",
+  "synonyms": [
+   "distribution FTEs (worked hours)",
+   "full-time-equivalent distribution staff",
+   "distribution worked-hours FTE"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 139,
+  "name": "FTE Worked Hours - Other Electrical",
+  "category": "Human Resources",
+  "subcategory": "Productivity",
+  "unit": "Hours",
+  "formula": "hours_worked__other_electrical / standard_work_hours__other_electrical",
+  "definition": "The size of the utility's other electrical activities workforce expressed as full-time-equivalent (FTE) staff, based on hours actually worked. Calculated as total hours worked in other electrical activities divided by the standard work hours of one full-time employee, which converts raw hours into an equivalent number of full-time staff. Higher values indicate more labour effort applied to other electrical activities, whether from more staff or more overtime. Because it is built from worked hours it excludes leave and other paid non-working time; compare it with the corresponding FTE Paid Hours measure to see that gap.",
+  "synonyms": [
+   "other electrical FTEs (worked hours)",
+   "full-time-equivalent other electrical staff",
+   "other electrical worked-hours FTE"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 136,
+  "name": "FTE Worked Hours - Renewable Generation",
+  "category": "Human Resources",
+  "subcategory": "Productivity",
+  "unit": "Hours",
+  "formula": "hours_worked__renewable_generation / standard_work_hours__renewable_generation",
+  "definition": "The size of the utility's renewable generation workforce expressed as full-time-equivalent (FTE) staff, based on hours actually worked. Calculated as total hours worked in renewable generation divided by the standard work hours of one full-time employee, which converts raw hours into an equivalent number of full-time staff. Higher values indicate more labour effort applied to renewable generation, whether from more staff or more overtime. Because it is built from worked hours it excludes leave and other paid non-working time; compare it with the corresponding FTE Paid Hours measure to see that gap.",
+  "synonyms": [
+   "renewable generation FTEs (worked hours)",
+   "full-time-equivalent renewable generation staff",
+   "renewable generation worked-hours FTE"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 138,
+  "name": "FTE Worked Hours - Transmission",
+  "category": "Human Resources",
+  "subcategory": "Productivity",
+  "unit": "Hours",
+  "formula": "hours_worked__transmission / standard_work_hours__transmission",
+  "definition": "The size of the utility's transmission workforce expressed as full-time-equivalent (FTE) staff, based on hours actually worked. Calculated as total hours worked in transmission divided by the standard work hours of one full-time employee, which converts raw hours into an equivalent number of full-time staff. Higher values indicate more labour effort applied to transmission, whether from more staff or more overtime. Because it is built from worked hours it excludes leave and other paid non-working time; compare it with the corresponding FTE Paid Hours measure to see that gap.",
+  "synonyms": [
+   "transmission FTEs (worked hours)",
+   "full-time-equivalent transmission staff",
+   "transmission worked-hours FTE"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 93,
+  "name": "Labor Productivity",
+  "category": "Human Resources",
+  "subcategory": "Productivity",
+  "unit": "Customers/Employee",
+  "formula": null,
+  "definition": "Measures workforce productivity as the number of customers served per employee. Calculated as the utility's total customer connections divided by its total number of employees. A higher value indicates each employee supports more customers, which generally signals a leaner, more productive workforce. Utilities serving many small, dispersed island grids naturally need more staff per customer, so comparisons are fairest between utilities of similar scale and geography.",
+  "synonyms": [
+   "customers per employee",
+   "staff productivity ratio",
+   "workforce productivity",
+   "customer-to-staff ratio"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 94,
+  "name": "Lost Time Injury Duration Rate",
+  "category": "Human Resources",
+  "subcategory": "Safety",
+  "unit": "Incidents/Million Hours",
+  "formula": "hours_lost_to_work_related_injuries * 8 / employees_total",
+  "definition": "Measures the amount of working time lost to work-related injuries, indicating how severe those injuries are; the source records the unit as incidents per million hours. Calculated as the hours lost to work-related injuries multiplied by eight and divided by the total number of employees. A lower value is better, indicating injuries cost less working time per employee. Note that the recorded unit does not match the per-employee formula, so confirm the intended basis before comparing across utilities.",
+  "synonyms": [
+   "LTIDR",
+   "injury severity rate",
+   "lost time severity rate",
+   "injury duration rate"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 95,
+  "name": "Lost Time Injury Frequency Rate",
+  "category": "Human Resources",
+  "subcategory": "Safety",
+  "unit": "Incidents/Million Hours",
+  "formula": "( number_of_work_related_injuries / ( hours_worked__conventional_generation + hours_worked__renewable_generation + hours_worked__network + hours_worked__other_electrical ) ) * 1000000",
+  "definition": "Measures how often work-related injuries occur relative to the hours the workforce actually works, expressed as incidents per million hours worked. Calculated as the number of work-related injuries divided by the sum of hours worked across conventional generation, renewable generation, network and other electrical functions, multiplied by one million. A lower rate is better, indicating fewer injuries for the labour effort expended. At small Pacific utilities a single injury can move the rate substantially, so multi-year trends are more informative than single-year values.",
+  "synonyms": [
+   "LTIFR",
+   "lost time injury rate",
+   "injury frequency rate per million hours worked"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 111,
+  "name": "Customer Consumption",
+  "category": "Operational",
+  "subcategory": "Distribution",
+  "unit": "MWh",
+  "formula": "electricity_sold_to_customers",
+  "definition": "Measures the total volume of electricity sold to customers over the period, expressed in megawatt-hours (MWh). It is taken directly from the reported electricity sold to customers, i.e. metered and billed energy delivered. Higher values reflect a larger or more energy-intensive customer base; trends over time indicate demand growth or decline. Because it counts only billed energy, it excludes network losses and unbilled consumption, so it will always sit below energy sent out.",
+  "synonyms": [
+   "electricity sales",
+   "units sold",
+   "energy sales",
+   "billed consumption",
+   "kWh sales"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 110,
+  "name": "Customer Count",
+  "category": "Operational",
+  "subcategory": "Distribution",
+  "unit": "Customers",
+  "formula": "electricity_customers_metered_connections",
+  "definition": "Measures the total number of electricity customers served by the utility, expressed as a count of customers. It is taken directly from the reported number of metered customer connections. A higher or growing count indicates an expanding customer base and is the key denominator for per-customer KPIs such as SAIDI, SAIFI and consumption per customer. Note that it counts metered connections rather than people, so one connection may serve a multi-person household or a large commercial site.",
+  "synonyms": [
+   "customer numbers",
+   "metered connections",
+   "connection count",
+   "consumer accounts"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 116,
+  "name": "Customers per Distribution Employee",
+  "category": "Operational",
+  "subcategory": "Distribution",
+  "unit": "Customers/Employee",
+  "formula": "electricity_customers_metered_connections / fte_employees_in_distribution",
+  "definition": "Measures distribution workforce productivity as the number of customers served per full-time-equivalent distribution employee. It is calculated by dividing the number of metered customer connections by the number of FTE employees working in the distribution function. A higher value indicates a leaner distribution operation relative to the customer base. Small island utilities naturally score lower because minimum staffing is needed regardless of scale, and outsourced distribution work can inflate the ratio without a true efficiency gain.",
+  "synonyms": [
+   "distribution staff productivity",
+   "connections per distribution FTE",
+   "customers per lineworker"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 115,
+  "name": "Distribution O&M Cost per km",
+  "category": "Operational",
+  "subcategory": "Distribution",
+  "unit": "Cost/km",
+  "formula": "om_costs_distribution / distribution_network_length",
+  "definition": "Measures the operations and maintenance cost intensity of the distribution network, expressed as cost per kilometre of network. It is calculated by dividing distribution O&M costs by the total length of the distribution network. A lower value suggests more cost-efficient network maintenance, though comparisons should allow for terrain, overhead versus underground construction and network age. A persistently very low value may indicate under-maintenance rather than efficiency, so it is best read alongside reliability KPIs.",
+  "synonyms": [
+   "distribution maintenance cost per km",
+   "network O&M unit cost",
+   "O&M cost per circuit kilometre"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 114,
+  "name": "Distribution Reliability",
+  "category": "Operational",
+  "subcategory": "Distribution",
+  "unit": "%",
+  "formula": "distribution_network_unplanned_downtime_events / distribution_network_length * 100",
+  "definition": "Measures the fault rate of the distribution network, expressed as unplanned outage events per 100 kilometres of network. It is calculated by dividing the number of unplanned distribution network downtime events by the distribution network length and multiplying by 100. A lower value indicates a more reliable network with fewer faults per kilometre; a higher value points to asset condition, vegetation or weather exposure problems. Because it normalises by network length rather than customers affected, it complements rather than replaces SAIDI and SAIFI.",
+  "synonyms": [
+   "distribution fault rate",
+   "faults per 100 km",
+   "unplanned outage rate",
+   "feeder fault frequency"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 112,
+  "name": "Network Delivery Losses",
+  "category": "Operational",
+  "subcategory": "Distribution",
+  "unit": "%",
+  "formula": "( electricity_generated - station_auxilliary_usage - electricity_sold_to_customers ) / electricity_generated",
+  "definition": "Measures the share of energy entering the network that is lost before being billed to customers, expressed as a percentage. It is calculated as electricity generated minus station auxiliary usage minus electricity sold to customers, divided by electricity generated. A lower value is better: it means less energy is lost to technical causes (line and transformer losses) and non-technical causes (theft, metering and billing errors) combined. This KPI does not separate technical from non-technical losses, so a high figure warrants further investigation into which component dominates.",
+  "synonyms": [
+   "system losses",
+   "T&D losses",
+   "transmission and distribution losses",
+   "network losses",
+   "energy losses"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 113,
+  "name": "Transformer Utilization Factor",
+  "category": "Operational",
+  "subcategory": "Distribution",
+  "unit": "%",
+  "formula": "distribution_average_transformer_load / distribution_total_transformer_capacity",
+  "definition": "Measures how heavily the utility's distribution transformer fleet is loaded, expressed as a percentage. It is calculated by dividing the average load on distribution transformers by the total installed transformer capacity. A higher value indicates better utilisation of transformer assets, while a very high value leaves little headroom for demand growth or contingencies; a low value suggests over-sized or under-used capacity. Because it uses average load, it can mask individual transformers that are overloaded at peak times.",
+  "synonyms": [
+   "transformer loading",
+   "transformer capacity utilisation",
+   "average transformer load factor"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 108,
+  "name": "Storage Efficiency",
+  "category": "Operational",
+  "subcategory": "Energy Storage",
+  "unit": "%",
+  "formula": null,
+  "definition": "Measures the round-trip efficiency of an energy storage system, expressed as a percentage. It is the ratio of energy discharged from the storage system to the energy supplied into it, with the shortfall lost in charging, conversion and standby. A higher value is better, meaning less energy is wasted for every unit cycled through the battery or other storage plant. Results depend on how the system is operated, so efficiencies are only strictly comparable over similar duty cycles.",
+  "synonyms": [
+   "round-trip efficiency",
+   "battery efficiency",
+   "storage round-trip losses",
+   "charge-discharge efficiency"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 106,
+  "name": "Engine Oil Consumption",
+  "category": "Operational",
+  "subcategory": "Generation",
+  "unit": "kWh/litre",
+  "formula": "( oil_for_generators ) / ( electricity_generated",
+  "definition": "Measures how much electricity is generated for each litre of engine fuel oil consumed by generators, expressed in kWh per litre. It relates the volume of oil supplied to generators to the electricity they generate over the same period. A higher value indicates more efficient conversion, i.e. more units generated per litre of oil; note that in kWh/litre form, higher is better, unlike litres-per-kWh measures where lower is better. Results vary with engine loading, so comparisons are most meaningful between similar duty cycles and machine types.",
+  "synonyms": [
+   "specific fuel consumption",
+   "units generated per litre",
+   "fuel efficiency of generation",
+   "kWh per litre"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 101,
+  "name": "Generation Labor Productivity",
+  "category": "Operational",
+  "subcategory": "Generation",
+  "unit": "MWh/Employee",
+  "formula": "( electricity_generated ) / fte_employees_in_generation",
+  "definition": "Measures the productivity of the generation workforce, expressed as megawatt-hours generated per full-time-equivalent generation employee. It is calculated by dividing total electricity generated by the number of FTE employees working in the generation function. A higher value indicates a leaner generation operation relative to output. Comparisons should allow for plant mix, since hydro and solar plants need far fewer operating staff per MWh than diesel stations, and for any outsourced O&M that removes staff from the count.",
+  "synonyms": [
+   "MWh per generation employee",
+   "generation staff productivity",
+   "output per generation FTE"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 102,
+  "name": "Generation O&M Costs per MWh",
+  "category": "Operational",
+  "subcategory": "Generation",
+  "unit": "Cost/MWh",
+  "formula": "om_costs_generation / electricity_generated",
+  "definition": "Measures the operations and maintenance cost intensity of generation, expressed as cost per megawatt-hour generated. It is calculated by dividing generation O&M costs by total electricity generated. A lower value indicates more cost-efficient plant operation, though fuel type, plant age and unit size strongly influence achievable levels. A very low value sustained over several years can signal deferred maintenance rather than genuine efficiency, so it should be read alongside availability and forced outage KPIs.",
+  "synonyms": [
+   "generation O&M unit cost",
+   "O&M cost per unit generated",
+   "generation maintenance cost per MWh"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 98,
+  "name": "Generator Availability Factor",
+  "category": "Operational",
+  "subcategory": "Generation",
+  "unit": "%",
+  "formula": "( hours_in_period - ( downtime_planned_duration + downtime_unplanned_duration ) / hours_in_period",
+  "definition": "Measures the share of hours in the period during which generating plant was available to run, expressed as a percentage. It is calculated by subtracting planned and unplanned downtime hours from the total hours in the period and dividing the result by the total hours in the period. A higher value is better, indicating plant is ready to generate when needed; unlike capacity factor, it measures readiness to run rather than actual output, so a plant can be highly available but lightly used. Low availability points to excessive maintenance outages or forced outages and should be read with the planned and forced outage indicators.",
+  "synonyms": [
+   "plant availability",
+   "availability factor",
+   "generator uptime",
+   "equipment availability factor"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 97,
+  "name": "Generator Capacity Factor",
+  "category": "Operational",
+  "subcategory": "Generation",
+  "unit": "%",
+  "formula": "electricity_generated / installed_capacity",
+  "definition": "Measures actual electricity generated as a share of the maximum that could have been generated if the plant had run at full installed capacity for the whole period, expressed as a percentage. It is calculated by dividing electricity generated by the energy equivalent of installed capacity over the period. A higher value indicates fuller utilisation of installed plant; unlike availability factor, it reflects how much the plant actually ran, not merely whether it was ready to run. Low capacity factors are normal for peaking and standby units and for variable renewables, so comparisons should be made within plant types.",
+  "synonyms": [
+   "plant factor",
+   "capacity utilisation factor",
+   "plant capacity factor",
+   "load factor of plant"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 99,
+  "name": "Generator Forced Outage Indicator",
+  "category": "Operational",
+  "subcategory": "Generation",
+  "unit": "%",
+  "formula": "downtime_unplanned_duration / ( hours_in_period * active_generators )",
+  "definition": "Measures the share of potential generator operating hours lost to unplanned (forced) outages, expressed as a percentage. It is calculated by dividing total unplanned downtime hours by the total hours in the period multiplied by the number of active generators. A lower value is better: forced outages are unexpected failures, so a high value signals poor plant condition, maintenance quality or fuel problems. It complements the planned outage indicator, which covers scheduled maintenance downtime instead.",
+  "synonyms": [
+   "forced outage factor",
+   "unplanned outage rate",
+   "FOF",
+   "forced outage rate"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 100,
+  "name": "Generator Planned Outage Indicator",
+  "category": "Operational",
+  "subcategory": "Generation",
+  "unit": "%",
+  "formula": "downtime_planned_duration / ( hours_in_period * count_active_generators )",
+  "definition": "Measures the share of potential generator operating hours lost to planned outages such as scheduled maintenance and overhauls, expressed as a percentage. It is calculated by dividing total planned downtime hours by the total hours in the period multiplied by the number of active generators. A lower value means less plant time committed to scheduled work, but very low values over several years may indicate maintenance is being deferred rather than avoided. It complements the forced outage indicator, which captures unexpected failures.",
+  "synonyms": [
+   "planned outage factor",
+   "scheduled outage rate",
+   "POF",
+   "maintenance outage factor"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 104,
+  "name": "IPP Generation",
+  "category": "Operational",
+  "subcategory": "Generation",
+  "unit": "%",
+  "formula": "electricity_generated / electricity_generated",
+  "definition": "Measures the share of total grid electricity that is generated by independent power producers (IPPs) rather than by the utility's own plant, expressed as a percentage. It is calculated by dividing electricity generated by IPPs by total electricity generated from all sources. A higher value indicates greater reliance on purchased power, which shifts the utility's cost structure from fuel and O&M towards power purchase agreements. It is a structural indicator rather than a good/bad measure, but it is essential context when comparing generation cost and efficiency KPIs.",
+  "synonyms": [
+   "IPP share of generation",
+   "purchased power share",
+   "independent power producer share",
+   "non-utility generation share"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 96,
+  "name": "Load Factor",
+  "category": "Operational",
+  "subcategory": "Generation",
+  "unit": "%",
+  "formula": "electricity_demand_average_load / electricity_demand_peak_load",
+  "definition": "Measures how evenly electricity demand is spread over the period, expressed as a percentage. It is calculated by dividing average load by peak load. A higher value indicates a flatter demand profile, meaning generation and network assets sized for the peak are used more fully throughout the day and year; a low value means capacity sits idle outside short peaks. Note the distinction from capacity factor: load factor describes the shape of demand, whereas capacity factor describes how hard the generating plant actually ran.",
+  "synonyms": [
+   "system load factor",
+   "demand load factor",
+   "average-to-peak ratio"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 107,
+  "name": "Lubrication Oil Consumption",
+  "category": "Operational",
+  "subcategory": "Generation",
+  "unit": "kWh/litre",
+  "formula": "( electricity_generated / oil_for_lubrication ) * 1000",
+  "definition": "Measures how much electricity is generated for each litre of lubrication oil consumed, expressed in kWh per litre. It is calculated by dividing electricity generated by the volume of lubricating oil used, scaled by 1,000 to convert to kWh per litre. A higher value is better, indicating engines are consuming less lube oil per unit generated; a falling trend often gives early warning of engine wear, ring or seal problems. Comparisons are most meaningful between similar engine types and duty cycles.",
+  "synonyms": [
+   "lube oil consumption",
+   "specific lube oil consumption",
+   "kWh per litre of lube oil",
+   "SLOC"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 105,
+  "name": "Renewable Energy to Grid",
+  "category": "Operational",
+  "subcategory": "Generation",
+  "unit": "%",
+  "formula": "electricity_generated / electricity_generated",
+  "definition": "Measures the share of grid electricity supplied from renewable sources such as hydro, solar, wind and biomass, expressed as a percentage. It is calculated by dividing electricity generated from renewable sources by total electricity generated from all sources. A higher value indicates lower dependence on imported fossil fuel and progress towards national renewable energy targets. High shares of variable renewables can, however, increase the need for storage and grid stability measures, so the figure is best read alongside reliability KPIs.",
+  "synonyms": [
+   "renewable energy share",
+   "RE penetration",
+   "renewables share of generation",
+   "renewable energy fraction"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 103,
+  "name": "Station Usage/Station Auxiliaries",
+  "category": "Operational",
+  "subcategory": "Generation",
+  "unit": "%",
+  "formula": "station_auxilliary_usage / electricity_generated",
+  "definition": "Measures the share of generated electricity consumed by the power station itself, expressed as a percentage. It is calculated by dividing station auxiliary usage — energy used for pumps, fans, cooling, fuel handling, lighting and other in-station loads — by total electricity generated. A lower value is better, since energy used within the station is not available for sale. Persistently high station usage points to inefficient auxiliary plant or units running at poor load points.",
+  "synonyms": [
+   "auxiliary consumption",
+   "station service power",
+   "in-house load",
+   "parasitic load",
+   "works power"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 123,
+  "name": "Planned SAIDI",
+  "category": "Operational",
+  "subcategory": "Interruptions",
+  "unit": "Minutes/Customer",
+  "formula": "total_planned_interruptions_customer_duration / total_planned_interruptions_customers_affected",
+  "definition": "Measures the average duration of planned supply interruptions experienced by customers over the year, expressed in minutes per customer. It is calculated by dividing the total customer-minutes of planned interruptions by the number of customers affected by those interruptions. A lower value is better, indicating that scheduled work such as maintenance and connections is completed with less supply-off time per customer; momentary interruptions of under one minute are excluded. Note that dividing by customers affected, rather than total customers served as in the classic SAIDI convention, makes this closer to an average outage duration for affected customers, so treat cross-utility comparisons with care.",
+  "synonyms": [
+   "planned System Average Interruption Duration Index",
+   "scheduled outage duration index",
+   "planned interruption minutes per customer"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 124,
+  "name": "Planned SAIFI",
+  "category": "Operational",
+  "subcategory": "Interruptions",
+  "unit": "Events/Customer",
+  "formula": "total_planned_interruptions_events / total_planned_interruptions_customers_affected",
+  "definition": "Measures how often customers experience planned supply interruptions over the year, expressed as interruption events per customer. It is calculated by dividing the total number of planned interruption events by the number of customers affected by those interruptions. A lower value is better, indicating scheduled work is bundled efficiently so customers are interrupted less often; momentary interruptions of under one minute are excluded. Note that dividing by customers affected, rather than total customers served as in the classic SAIFI convention, alters the result, so treat cross-utility comparisons with care.",
+  "synonyms": [
+   "planned System Average Interruption Frequency Index",
+   "scheduled interruption frequency",
+   "planned outages per customer"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 125,
+  "name": "Unplanned SAIDI",
+  "category": "Operational",
+  "subcategory": "Interruptions",
+  "unit": "Minutes/Customer",
+  "formula": null,
+  "definition": "Measures the average total duration of unplanned (forced) supply interruptions per customer served per year, expressed in minutes per customer. Following the standard SAIDI convention, it is the sum of customer-minutes of sustained unplanned interruptions divided by the total number of customers served, with momentary interruptions of under one minute excluded. A lower value is better, indicating customers lose supply for less time due to faults, equipment failures and weather events. It is the headline network reliability measure and is best read alongside unplanned SAIFI to distinguish long-but-rare from short-but-frequent outages.",
+  "synonyms": [
+   "unplanned System Average Interruption Duration Index",
+   "forced outage SAIDI",
+   "customer minutes lost",
+   "CML"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 126,
+  "name": "Unplanned SAIFI",
+  "category": "Operational",
+  "subcategory": "Interruptions",
+  "unit": "Events/Customer",
+  "formula": null,
+  "definition": "Measures how often the average customer experiences an unplanned (forced) sustained supply interruption per year, expressed as interruption events per customer. Following the standard SAIFI convention, it is the total number of sustained unplanned customer interruptions divided by the total number of customers served, with momentary interruptions of under one minute excluded. A lower value is better, indicating faults and failures interrupt customers less frequently. Read together with unplanned SAIDI: SAIFI shows how often outages occur, SAIDI shows how long they last in total.",
+  "synonyms": [
+   "unplanned System Average Interruption Frequency Index",
+   "forced outage SAIFI",
+   "customer interruptions per year",
+   "fault interruption frequency"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 117,
+  "name": "Transmission Network Losses",
+  "category": "Operational",
+  "subcategory": "Transmission",
+  "unit": "%",
+  "formula": "( electricity_generated - station_auxilliary_usage - transmission_electricity_sold_to_customers - electricity_sold_to_customers ) / ( electricity_generated - station_auxilliary_usage )",
+  "definition": "Measures the share of energy entering the transmission network that is lost before delivery, expressed as a percentage. It is calculated as electricity sent out (generation less station auxiliary usage) minus energy delivered from transmission and energy sold to customers, divided by electricity sent out. A lower value is better, indicating less energy dissipated in transmission lines and substation transformers; transmission losses are predominantly technical rather than theft-related. Comparisons should allow for network length, voltage levels and load, which strongly influence achievable loss levels.",
+  "synonyms": [
+   "transmission losses",
+   "grid transmission losses",
+   "HV network losses",
+   "transmission technical losses"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 118,
+  "name": "Transmission Reliability",
+  "category": "Operational",
+  "subcategory": "Transmission",
+  "unit": "Outages/100km",
+  "formula": "( ( transmission_network_planned_downtime_events + transmission_network_unplanned_downtime_events ) / transmission_network_length ) * 100",
+  "definition": "Measures the outage rate of the transmission network, expressed as outage events per 100 kilometres of network. It is calculated by adding planned and unplanned transmission network downtime events, dividing by transmission network length, and multiplying by 100. A lower value indicates a more reliable transmission system with fewer outages per kilometre. Because it combines planned and unplanned events, a high value may reflect a heavy maintenance programme rather than poor asset condition, so it is best read with the planned and unplanned transmission SAIDI/SAIFI measures.",
+  "synonyms": [
+   "transmission outage rate",
+   "transmission faults per 100 km",
+   "line outage frequency",
+   "grid outage rate"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 119,
+  "name": "Transmission SAIDI Planned",
+  "category": "Operational",
+  "subcategory": "Transmission",
+  "unit": "Minutes/Customer",
+  "formula": null,
+  "definition": "Measures the average duration of planned supply interruptions originating in the transmission network, expressed in minutes per customer per year. Following the SAIDI convention, it is the total customer-minutes of sustained planned transmission-caused interruptions divided by customers served, with momentary interruptions of under one minute excluded. A lower value is better, indicating scheduled transmission work is carried out with less customer supply-off time. Because single transmission outages can affect very large numbers of customers, one major planned outage can dominate the annual figure.",
+  "synonyms": [
+   "planned transmission interruption duration",
+   "transmission scheduled outage SAIDI",
+   "planned transmission minutes lost per customer"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 120,
+  "name": "Transmission SAIDI Unplanned",
+  "category": "Operational",
+  "subcategory": "Transmission",
+  "unit": "Minutes/Customer",
+  "formula": null,
+  "definition": "Measures the average duration of unplanned (forced) supply interruptions originating in the transmission network, expressed in minutes per customer per year. Following the SAIDI convention, it is the total customer-minutes of sustained unplanned transmission-caused interruptions divided by customers served, with momentary interruptions of under one minute excluded. A lower value is better, indicating transmission faults cost customers less supply-off time. Transmission events are rarer than distribution faults but affect many customers at once, so this measure can be volatile from year to year.",
+  "synonyms": [
+   "unplanned transmission interruption duration",
+   "transmission forced outage SAIDI",
+   "transmission fault minutes lost per customer"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 121,
+  "name": "Transmission SAIFI Planned",
+  "category": "Operational",
+  "subcategory": "Transmission",
+  "unit": "Events/Customer",
+  "formula": null,
+  "definition": "Measures how often customers experience planned supply interruptions originating in the transmission network, expressed as interruption events per customer per year. Following the SAIFI convention, it is the total number of sustained planned transmission-caused customer interruptions divided by customers served, with momentary interruptions of under one minute excluded. A lower value is better, indicating scheduled transmission work interrupts customers less often. Values are typically much lower than distribution SAIFI because transmission outages are less frequent, though each affects many customers.",
+  "synonyms": [
+   "planned transmission interruption frequency",
+   "transmission scheduled outage SAIFI",
+   "planned transmission interruptions per customer"
+  ],
+  "definition_status": "draft"
+ },
+ {
+  "id": 122,
+  "name": "Transmission SAIFI Unplanned",
+  "category": "Operational",
+  "subcategory": "Transmission",
+  "unit": "Events/Customer",
+  "formula": null,
+  "definition": "Measures how often customers experience unplanned (forced) supply interruptions originating in the transmission network, expressed as interruption events per customer per year. Following the SAIFI convention, it is the total number of sustained unplanned transmission-caused customer interruptions divided by customers served, with momentary interruptions of under one minute excluded. A lower value is better, indicating transmission faults interrupt customers less frequently. Because single transmission events can interrupt a large share of all customers simultaneously, one severe event can dominate the annual figure.",
+  "synonyms": [
+   "unplanned transmission interruption frequency",
+   "transmission forced outage SAIFI",
+   "transmission fault interruptions per customer"
+  ],
+  "definition_status": "draft"
+ }
+]

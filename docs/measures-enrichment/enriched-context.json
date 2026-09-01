@@ -1,0 +1,170 @@
+[
+  {
+    "id": 1,
+    "name": "Land Area",
+    "definition": "The total land area of the country, expressed in square kilometres (km2). This describes the physical operating environment a utility works within rather than any aspect of its performance, and is a driver of network reach and geographic dispersion. Source it from the national statistics office or lands department, using the latest official figure for the reporting fiscal year. Record the total national land area, not the utility's service-area footprint, and exclude ocean and exclusive economic zone area.",
+    "synonyms": ["Total land area", "Country land area", "Surface area"],
+    "alternative_names": { "Area (km2)": "Land Area", "Total Land Area": "Land Area" },
+    "definition_status": "draft"
+  },
+  {
+    "id": 2,
+    "name": "Islands",
+    "definition": "The number of islands making up the country, expressed as a count. It characterises the geographic operating environment and the dispersion challenge a utility faces in serving scattered populations, rather than utility performance itself. Source it from the national statistics office or census. Definitions vary between total islands, inhabited islands and islands served by an electricity grid, so use the official census count and note which basis applies.",
+    "synonyms": ["Number of islands", "Island count", "Inhabited islands"],
+    "alternative_names": { "Number of Islands": "Islands", "Island Count": "Islands" },
+    "definition_status": "draft"
+  },
+  {
+    "id": 3,
+    "name": "Population",
+    "definition": "The total resident population of the country, expressed as a count of persons. This is a national environmental context figure describing the market a utility operates within, not the utility's own customer base or served population. Source it from the latest census or the national statistics office mid-year estimate for the reporting fiscal year. Do not confuse national population with the utility's served population or connected customers, which are typically a subset.",
+    "synonyms": ["Total population", "National population", "Resident population"],
+    "alternative_names": { "Total Population": "Population", "National Population": "Population" },
+    "definition_status": "draft"
+  },
+  {
+    "id": 4,
+    "name": "Urban Population",
+    "definition": "The share of the national population living in urban areas, expressed as a percentage and stored as a ratio between 0 and 1. It describes the settlement pattern of the operating environment, which shapes network density and cost to serve, rather than utility performance. Source it from the census urban/rural classification via the national statistics office. Note that it is stored as a ratio but displayed as a percentage, and that the definition of \"urban\" is country-specific.",
+    "synonyms": ["Urban share", "Percentage urban", "Urbanisation rate"],
+    "alternative_names": { "Urbanisation Rate": "Urban Population", "% Urban": "Urban Population" },
+    "definition_status": "draft"
+  },
+  {
+    "id": 5,
+    "name": "Rural Population",
+    "definition": "The share of the national population living in rural areas, expressed as a percentage and stored as a ratio between 0 and 1. It is the complement of the urban share and describes the dispersed-settlement context that raises the cost of extending and maintaining electricity supply. Source it from the census urban/rural classification via the national statistics office. It is stored as a ratio but displayed as a percentage, and the rural definition is country-specific.",
+    "synonyms": ["Rural share", "Percentage rural", "Non-urban population"],
+    "alternative_names": { "% Rural": "Rural Population", "Rural Share": "Rural Population" },
+    "definition_status": "draft"
+  },
+  {
+    "id": 8,
+    "name": "Access to Electricity",
+    "definition": "The share of the population (or households) with access to electricity, expressed as a percentage and stored as a ratio between 0 and 1. It is a national environmental indicator of electrification and unmet demand, not a measure of an individual utility's connection performance. Source it from the census, the national statistics office, or international series such as the World Bank / SE4ALL Tracking framework, for the reporting fiscal year. It is stored as a ratio but displayed as a percentage, and population-based versus household-based definitions can differ materially.",
+    "synonyms": ["Electrification rate", "Electricity access rate", "Access rate"],
+    "alternative_names": { "Electrification Rate": "Access to Electricity", "Electricity Access Rate": "Access to Electricity" },
+    "definition_status": "draft"
+  },
+  {
+    "id": 9,
+    "name": "GDP Per Capita",
+    "definition": "Gross domestic product divided by total population, expressed in currency, giving average national economic output per person. It characterises the economic operating environment and household ability to pay, not utility performance. Source it from the national statistics office, central bank or IMF figures for the reporting fiscal year. Be explicit about whether the figure is nominal or real, in current or constant prices, and in which currency, as vintage and basis materially affect comparability.",
+    "synonyms": ["GDP per head", "Income per capita", "Per capita GDP"],
+    "alternative_names": { "GDP/capita": "GDP Per Capita", "Per Capita GDP": "GDP Per Capita" },
+    "definition_status": "draft"
+  },
+  {
+    "id": 10,
+    "name": "Inflation Rate",
+    "definition": "The annual rate of consumer price inflation, expressed as a percentage. It describes the macroeconomic environment that drives the utility's input costs and the real value of tariffs, rather than utility performance. Source it from the national statistics office consumer price index or the central bank for the reporting fiscal year. Note whether the figure is a period-average or end-of-period rate and the CPI base year used.",
+    "synonyms": ["CPI inflation", "Consumer price inflation", "Price inflation"],
+    "alternative_names": { "CPI Inflation": "Inflation Rate", "Consumer Price Inflation": "Inflation Rate" },
+    "definition_status": "draft"
+  },
+  {
+    "id": 11,
+    "name": "Unemployment Rate",
+    "definition": "The share of the labour force that is unemployed and seeking work, expressed as a percentage. It is a macroeconomic environment indicator relevant to household incomes and demand, not a utility performance measure. Source it from the national labour force survey or statistics office for the reporting fiscal year, ideally on the standard ILO definition. Interpret with care in Pacific economies, where large informal and subsistence sectors mean headline rates can understate labour under-utilisation.",
+    "synonyms": ["Jobless rate", "Labour force unemployment", "Unemployment"],
+    "alternative_names": { "Jobless Rate": "Unemployment Rate", "Rate of Unemployment": "Unemployment Rate" },
+    "definition_status": "draft"
+  },
+  {
+    "id": 12,
+    "name": "IATA Air Connectivity Score",
+    "definition": "The country's air connectivity index score as published by IATA, recorded on an index scale (typically ranging up to around 200) rather than a true percentage despite the stored unit. It is a proxy for the country's remoteness and the ease of moving people, parts and specialists, which shapes a utility's logistics and maintenance costs rather than its performance. Source it from the IATA air connectivity index for the relevant year. Treat it as an index, not a percentage, when interpreting or charting the value.",
+    "synonyms": ["Air connectivity index", "IATA connectivity score", "Connectivity index"],
+    "alternative_names": { "Air Connectivity Index": "IATA Air Connectivity Score", "IATA Connectivity Index": "IATA Air Connectivity Score" },
+    "definition_status": "draft"
+  },
+  {
+    "id": 13,
+    "name": "Air Connectivity per 1000 People",
+    "definition": "Air connectivity normalised by population, expressed as a ratio per 1,000 people. It scales the country's air-transport connectivity to the size of its population so that connectivity can be compared across countries of different sizes, describing the logistics environment rather than utility performance. It is derived from the underlying air connectivity figure and the national population from the statistics office. Ensure the connectivity source and population vintage align to the same reporting year.",
+    "synonyms": ["Connectivity per 1000 population", "Air connectivity per capita", "Per-capita air connectivity"],
+    "alternative_names": { "Air Connectivity per 1,000 People": "Air Connectivity per 1000 People", "Connectivity per 1000 Population": "Air Connectivity per 1000 People" },
+    "definition_status": "draft"
+  },
+  {
+    "id": 14,
+    "name": "Air Connectivity per Unit GDP",
+    "definition": "Air connectivity normalised by the size of the economy, expressed as a ratio per unit of GDP. It relates the country's air-transport connectivity to its economic output, describing the trade and logistics environment a utility operates within rather than utility performance. It is derived from the underlying air connectivity figure and GDP from the national statistics office or central bank. Keep the connectivity, GDP currency and vintage consistent with the same reporting year.",
+    "synonyms": ["Connectivity per unit GDP", "Air connectivity to GDP ratio", "GDP-adjusted air connectivity"],
+    "alternative_names": { "Air Connectivity to GDP": "Air Connectivity per Unit GDP", "Connectivity per GDP": "Air Connectivity per Unit GDP" },
+    "definition_status": "draft"
+  },
+  {
+    "id": 15,
+    "name": "Fuel Supply Access",
+    "definition": "A categorical descriptor of how the country obtains its fuel supply for power generation, selected from a defined option list rather than a numeric value. It characterises the fuel-logistics environment, such as whether fuel is imported directly, sourced through a distributor, or subject to supply constraints, and is a context attribute rather than a performance measure. Record the option that best reflects the arrangement in place for the reporting fiscal year. Because it is a coded category, ensure the option definitions are applied consistently across utilities.",
+    "synonyms": ["Fuel access arrangement", "Fuel supply arrangement", "Fuel sourcing"],
+    "alternative_names": { "Fuel Access": "Fuel Supply Access", "Fuel Supply Arrangement": "Fuel Supply Access" },
+    "definition_status": "draft"
+  },
+  {
+    "id": 16,
+    "name": "Fuel Pricing Regulation",
+    "definition": "A categorical descriptor of the fuel-pricing regime in the country, selected from a defined option list rather than a numeric value. It captures whether fuel prices are regulated, market-determined or subsidised, describing a policy environment that shapes a utility's generation costs rather than its performance. Record the option that applies for the reporting fiscal year. As a coded category, its option definitions should be applied consistently across countries and years.",
+    "synonyms": ["Fuel price regime", "Fuel price regulation", "Fuel pricing regime"],
+    "alternative_names": { "Fuel Price Regulation": "Fuel Pricing Regulation", "Fuel Price Regime": "Fuel Pricing Regulation" },
+    "definition_status": "draft"
+  },
+  {
+    "id": 50,
+    "name": "Utility Ownership Type",
+    "definition": "A categorical classification of how the utility is owned, selected from a defined option list, such as state-owned enterprise, government department, private company or public-private partnership. It is a utility-level context attribute that frames how other results should be interpreted, not a performance measure. Record the classification that applies to the reporting entity for the fiscal year from the utility's corporate profile. Apply the option definitions consistently so ownership types are comparable across utilities.",
+    "synonyms": ["Ownership type", "Ownership structure", "Ownership model"],
+    "alternative_names": { "Ownership Type": "Utility Ownership Type", "Ownership Structure": "Utility Ownership Type" },
+    "definition_status": "draft"
+  },
+  {
+    "id": 51,
+    "name": "Accounting Standards",
+    "definition": "A categorical descriptor of the accounting framework the utility reports its financial statements under, selected from a defined option list, such as IFRS, IPSAS or a local GAAP. It is a utility-level context attribute that affects how financial measures should be compared, rather than a performance measure. Record the framework applied to the reporting fiscal year from the utility's audited financial statements. Apply the option definitions consistently, as differing standards can affect the comparability of reported financial figures.",
+    "synonyms": ["Accounting framework", "Financial reporting standard", "Reporting standard"],
+    "alternative_names": { "Accounting Framework": "Accounting Standards", "Financial Reporting Standards": "Accounting Standards" },
+    "definition_status": "draft"
+  },
+  {
+    "id": 52,
+    "name": "Power Quality Standards",
+    "definition": "A categorical descriptor of the power-quality standard or regime the utility operates to, selected from a defined option list. It is a utility-level context attribute describing the technical benchmark for voltage and supply quality, rather than a measure of quality actually delivered. Record the standard in force for the reporting fiscal year from the utility's technical or regulatory documentation. Apply the option definitions consistently so the regime, not the outcome, is being captured.",
+    "synonyms": ["Power quality standard", "Supply quality standard", "Quality of supply standard"],
+    "alternative_names": { "Power Quality Standard": "Power Quality Standards", "Quality of Supply Standard": "Power Quality Standards" },
+    "definition_status": "draft"
+  },
+  {
+    "id": 53,
+    "name": "Electricity Regulation",
+    "definition": "A categorical descriptor of the electricity-sector regulatory arrangement that applies to the utility, selected from a defined option list, such as an independent regulator, a line ministry or self-regulation. It is a utility-level context attribute framing the oversight environment, not a performance measure. Record the arrangement in place for the reporting fiscal year from the utility's regulatory documentation. Apply the option definitions consistently across utilities and years.",
+    "synonyms": ["Regulatory arrangement", "Electricity sector regulation", "Regulatory regime"],
+    "alternative_names": { "Regulatory Regime": "Electricity Regulation", "Electricity Sector Regulation": "Electricity Regulation" },
+    "definition_status": "draft"
+  },
+  {
+    "id": 54,
+    "name": "Feeder Type",
+    "definition": "A categorical descriptor of the predominant feeder type in the utility's distribution network, selected from a defined option list, such as overhead versus underground or urban versus rural feeders. It is a utility-level context attribute describing network configuration, which influences reliability and cost, rather than a performance measure. Record the classification that best represents the network for the reporting fiscal year from the utility's network records. Apply the option definitions consistently so feeder types are comparable across utilities.",
+    "synonyms": ["Feeder classification", "Distribution feeder type", "Feeder configuration"],
+    "alternative_names": { "Feeder Classification": "Feeder Type", "Distribution Feeder Type": "Feeder Type" },
+    "definition_status": "draft"
+  },
+  {
+    "id": 6,
+    "name": "Households",
+    "definition": "The total number of households in the country, expressed as a count. It is a national environmental context figure describing the potential connection base, not the utility's own customer accounts. Source it from the latest census or the national statistics office for the reporting fiscal year. Do not equate national households with the utility's connected customers or metered accounts, which are typically fewer.",
+    "synonyms": ["Number of households", "Total households", "Household count"],
+    "alternative_names": { "Total Households": "Households", "Number of Households": "Households" },
+    "definition_status": "draft"
+  },
+  {
+    "id": 7,
+    "name": "Average Household Size",
+    "definition": "The average number of persons per household, expressed as a ratio of persons per household. It is a demographic context indicator of the operating environment, relevant to per-connection consumption, rather than a utility performance measure. Source it from the census, or derive it as national population divided by number of households, for the reporting fiscal year. Ensure the population and household figures used share the same vintage so the ratio is internally consistent.",
+    "synonyms": ["Persons per household", "Mean household size", "Average family size"],
+    "alternative_names": { "Persons per Household": "Average Household Size", "Mean Household Size": "Average Household Size" },
+    "definition_status": "draft"
+  }
+]

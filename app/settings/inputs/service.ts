@@ -1,0 +1,1184 @@
+"use server";
+
+import { DataTableFormResponse } from "@/components/tables/data-table-create-form";
+import { db } from "@/db/connection";
+import {
+  FormulaInput,
+  MeasureDefinition,
+  MeasureDefinitionAlternativeNames,
+  inputDlDefMappings,
+  measureDefinitions,
+} from "@/db/schema/dataEntry";
+import { managedListItems, managedLists } from "@/db/schema/managedLists";
+import {
+  createVariableName,
+  deriveMeasureVariableName,
+} from "@/lib/formatters";
+import { and, asc, eq, ilike, inArray, or } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
+import { GetAllManagedListItems } from "../managed-lists/service";
+import {
+  buildManagedListNameMap,
+  resolveManagedListName,
+} from "@/lib/managed-list-utils";
+
+export interface InputFormulaOption {
+  id: number;
+  name: string;
+  variable_name: string | null;
+  unit: string | null;
+  formula: string | null;
+  formula_inputs: FormulaInput[] | null;
+  is_active: boolean;
+}
+
+export interface ManagedDimensionOption {
+  id: number;
+  name: string;
+}
+
+export interface InputFormulaBuilderData {
+  inputs: InputFormulaOption[];
+  energyProviderOptions: ManagedDimensionOption[];
+  energyTypeOptions: ManagedDimensionOption[];
+  energySourceOptions: ManagedDimensionOption[];
+  previewContextLabel: string | null;
+}
+
+export interface SaveInputFormulaPayload {
+  inputId: number;
+  formula: string;
+  formulaInputs: FormulaInput[];
+}
+
+interface CreateMeasureDefinitionPayload {
+  name: string;
+  sort_order?: string | number | null;
+  alternative_names?: MeasureDefinitionAlternativeNames | string | null;
+  data_type_id: string | number;
+  measures_group_id: string | number;
+  measures_subgroup_id: string | number;
+  unit_id: string | number;
+}
+
+interface UpdateMeasureDefinitionPayload {
+  id: string | number;
+  name?: string;
+  sort_order?: string | number;
+  alternative_names?: MeasureDefinitionAlternativeNames | string | null;
+  data_type_id?: string | number;
+  measures_group_id?: string | number;
+  measures_subgroup_id?: string | number;
+  unit_id?: string | number;
+  is_active?: boolean;
+}
+
+const parseAlternativeNames = (
+  raw: MeasureDefinitionAlternativeNames | string | null | undefined,
+): MeasureDefinitionAlternativeNames | null => {
+  if (raw == null) {
+    return null;
+  }
+
+  if (typeof raw === "object") {
+    const normalizedEntries = Object.entries(raw)
+      .map(([key, value]) => [key.trim(), value] as const)
+      .filter(([key]) => key.length > 0)
+      .map(([key, value]) => {
+        if (typeof value !== "string") {
+          throw new Error("Alternative names values must be strings.");
+        }
+
+        const normalizedValue = value.trim();
+        if (!normalizedValue) {
+          throw new Error("Alternative names values cannot be empty strings.");
+        }
+
+        return [key, normalizedValue] as const;
+      });
+
+    if (normalizedEntries.length === 0) {
+      return null;
+    }
+
+    return Object.fromEntries(normalizedEntries);
+  }
+
+  const trimmed = raw.trim();
+  if (!trimmed) {
+    return null;
+  }
+
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(trimmed);
+  } catch {
+    throw new Error(
+      'Alternative names must be valid JSON, e.g. {"41":"Solar output"}.',
+    );
+  }
+
+  if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+    throw new Error("Alternative names must be a JSON object.");
+  }
+
+  const normalizedEntries = Object.entries(parsed)
+    .map(([key, value]) => [key.trim(), value] as const)
+    .filter(([key]) => key.length > 0)
+    .map(([key, value]) => {
+      if (typeof value !== "string") {
+        throw new Error("Alternative names values must be strings.");
+      }
+
+      const normalizedValue = value.trim();
+      if (!normalizedValue) {
+        throw new Error("Alternative names values cannot be empty strings.");
+      }
+
+      return [key, normalizedValue] as const;
+    });
+
+  if (normalizedEntries.length === 0) {
+    return null;
+  }
+
+  return Object.fromEntries(normalizedEntries);
+};
+
+export async function GetAllMeasureDefinitions(): Promise<MeasureDefinition[]> {
+  const ml = await GetAllManagedListItems();
+  const managedListNamesById = buildManagedListNameMap(ml);
+  const list = await db
+    .select()
+    .from(measureDefinitions)
+    .orderBy(measureDefinitions.name);
+  const returnList: MeasureDefinition[] = list.map((item) => ({
+    ...item,
+    category:
+      resolveManagedListName(managedListNamesById, item.measures_group_id, null) ||
+      "Unknown",
+    data_type:
+      resolveManagedListName(managedListNamesById, item.data_type_id, null) ||
+      "Unknown",
+    subcategory:
+      resolveManagedListName(managedListNamesById, item.measures_subgroup_id, null) ||
+      "Unknown",
+    unit:
+      resolveManagedListName(managedListNamesById, item.unit_id, null) ||
+      "Unknown",
+  }));
+  return returnList;
+}
+
+export async function CreateMeasureDefinition(
+  data: CreateMeasureDefinitionPayload,
+): Promise<DataTableFormResponse<MeasureDefinition>> {
+  const name = data.name?.trim();
+  if (!name) {
+    return {
+      success: false,
+      message: "Input name is required",
+    };
+  }
+
+  const toNumber = (value: string | number) => Number(value);
+  let alternativeNames: MeasureDefinitionAlternativeNames | null = null;
+
+  try {
+    alternativeNames = parseAlternativeNames(data.alternative_names);
+  } catch (error) {
+    return {
+      success: false,
+      message: (error as Error).message,
+    };
+  }
+
+  const unitId = toNumber(data.unit_id);
+  const [unitRow] = Number.isNaN(unitId)
+    ? []
+    : await db
+        .select({ name: managedListItems.name })
+        .from(managedListItems)
+        .where(eq(managedListItems.id, unitId))
+        .limit(1);
+
+  const payload = {
+    name,
+    sort_order:
+      data.sort_order == null || data.sort_order === ""
+        ? 0
+        : Number(data.sort_order),
+    variable_name: deriveMeasureVariableName(name, unitRow?.name ?? null),
+    alternative_names: alternativeNames,
+    data_type_id: toNumber(data.data_type_id),
+    measures_group_id: toNumber(data.measures_group_id),
+    measures_subgroup_id: toNumber(data.measures_subgroup_id),
+    unit_id: toNumber(data.unit_id),
+    is_active: true,
+  };
+
+  const hasInvalidId = [
+    payload.sort_order,
+    payload.data_type_id,
+    payload.measures_group_id,
+    payload.measures_subgroup_id,
+    payload.unit_id,
+  ].some((id) => Number.isNaN(id));
+
+  if (hasInvalidId) {
+    return {
+      success: false,
+      message: "Please select valid managed-list values before submitting.",
+    };
+  }
+
+  const existing = await db
+    .select({ id: measureDefinitions.id })
+    .from(measureDefinitions)
+    .where(ilike(measureDefinitions.name, name))
+    .limit(1);
+
+  if (existing.length > 0) {
+    return {
+      success: false,
+      message: "An input definition with this name already exists.",
+    };
+  }
+
+  const [result] = await db
+    .insert(measureDefinitions)
+    .values(payload)
+    .returning();
+
+  revalidatePath("/settings/inputs");
+
+  return {
+    success: true,
+    message: "Input definition created successfully",
+    data: result,
+  };
+}
+
+export async function UpdateMeasureDefinition(
+  data: Partial<UpdateMeasureDefinitionPayload>,
+): Promise<DataTableFormResponse<MeasureDefinition>> {
+  const id = Number(data.id);
+  if (Number.isNaN(id)) {
+    return {
+      success: false,
+      message: "Invalid input definition id.",
+    };
+  }
+
+  const patch: Partial<MeasureDefinition> = {};
+
+  if (typeof data.name === "string") {
+    const trimmedName = data.name.trim();
+    if (!trimmedName) {
+      return {
+        success: false,
+        message: "Input name is required.",
+      };
+    }
+
+    const duplicate = await db
+      .select({ id: measureDefinitions.id })
+      .from(measureDefinitions)
+      .where(ilike(measureDefinitions.name, trimmedName));
+
+    if (duplicate.some((item) => item.id !== id)) {
+      return {
+        success: false,
+        message: "An input definition with this name already exists.",
+      };
+    }
+
+    patch.name = trimmedName;
+    // variable_name is deliberately NOT re-derived on rename: formulas reference
+    // the token, so it is derived once at creation and then frozen.
+  }
+
+  if (data.alternative_names !== undefined) {
+    try {
+      patch.alternative_names = parseAlternativeNames(data.alternative_names);
+    } catch (error) {
+      return {
+        success: false,
+        message: (error as Error).message,
+      };
+    }
+  }
+
+  const assignNumericField = (
+    key: keyof Pick<
+      UpdateMeasureDefinitionPayload,
+      | "data_type_id"
+      | "measures_group_id"
+      | "measures_subgroup_id"
+      | "unit_id"
+      | "sort_order"
+    >,
+  ) => {
+    if (data[key] == null || data[key] === "") {
+      return;
+    }
+    const value = Number(data[key]);
+    if (Number.isNaN(value)) {
+      throw new Error(`Invalid value for ${String(key)}`);
+    }
+    patch[key] = value;
+  };
+
+  try {
+    assignNumericField("sort_order");
+    assignNumericField("data_type_id");
+    assignNumericField("measures_group_id");
+    assignNumericField("measures_subgroup_id");
+    assignNumericField("unit_id");
+  } catch (error) {
+    return {
+      success: false,
+      message: (error as Error).message,
+    };
+  }
+
+  if (typeof data.is_active === "boolean") {
+    patch.is_active = data.is_active;
+  }
+
+  if (Object.keys(patch).length === 0) {
+    return {
+      success: false,
+      message: "No valid fields provided for update.",
+    };
+  }
+
+  const [result] = await db
+    .update(measureDefinitions)
+    .set(patch)
+    .where(eq(measureDefinitions.id, id))
+    .returning();
+
+  revalidatePath("/settings/inputs");
+
+  return {
+    success: true,
+    message: "Input definition updated successfully",
+    data: result,
+  };
+}
+
+export interface ExcelMeasureDefinition {
+  strata_id: number;
+  data_type_id: number;
+  input_category_id: number;
+  input_id: number;
+  input_subcategory_id: number;
+  is_active: boolean;
+  is_calculated: boolean;
+  is_currency: boolean;
+  is_mandatory: boolean;
+  is_system_generated: boolean;
+  name: string;
+  unit_id: number;
+  valid_polarity_id: number;
+  valid_range_max: number;
+  valid_range_min: number;
+  valid_trend_id: number;
+  variable_name: string;
+}
+
+export async function UpdateMeasureDefinitionFromExcel(
+  data: ExcelMeasureDefinition[],
+) {
+  const existing = await db.select().from(measureDefinitions);
+  const filteredExisting = data.filter(
+    (item) =>
+      !existing.some(
+        (e) =>
+          e.id === item.input_id ||
+          e.name.toLowerCase() === item.name.toLowerCase(),
+      ),
+  );
+  const createList: MeasureDefinition[] = filteredExisting.map((item) => ({
+    id: item.input_id,
+    name: item.name,
+    sort_order: 0,
+    alternative_names: null,
+    definition: null,
+    synonyms: null,
+    definition_status: null,
+    option_list_id: null,
+    data_type_id: item.data_type_id,
+    measures_group_id: item.input_category_id,
+    measures_subgroup_id: item.input_subcategory_id,
+    strata_id: item.strata_id,
+    is_active: item.is_active,
+    is_calculated: item.is_calculated,
+    is_currency: item.is_currency,
+    is_mandatory: item.is_mandatory,
+    is_system_generated: item.is_system_generated,
+    is_apportionable: false,
+    is_context_fed: false,
+    effective_from: null,
+    unit_id: item.unit_id,
+    valid_polarity_id: item.valid_polarity_id,
+    valid_range_max:
+      item.valid_range_max == null ? null : String(item.valid_range_max),
+    valid_range_min:
+      item.valid_range_min == null ? null : String(item.valid_range_min),
+    valid_trend_id: item.valid_trend_id,
+    variable_name: createVariableName(item.name),
+    formula: null,
+    formula_inputs: null,
+    updated_at: new Date(),
+  }));
+  if (createList.length > 0) {
+    try {
+      await db.insert(measureDefinitions).values(createList);
+    } catch (error) {
+      console.error("Error inserting input definitions from Excel:", error);
+      throw new Error("Failed to insert input definitions from Excel");
+    }
+  }
+
+  revalidatePath("/settings/inputs");
+}
+
+export async function GetInputFormulaBuilderData(): Promise<InputFormulaBuilderData> {
+  const managedListsItems = await db.select().from(managedListItems);
+  const managedListNamesById = buildManagedListNameMap(managedListsItems);
+
+  const inputs = await db
+    .select({
+      id: measureDefinitions.id,
+      name: measureDefinitions.name,
+      variable_name: measureDefinitions.variable_name,
+      unitId: measureDefinitions.unit_id,
+      formula: measureDefinitions.formula,
+      formula_inputs: measureDefinitions.formula_inputs,
+      is_active: measureDefinitions.is_active,
+    })
+    .from(measureDefinitions)
+    .orderBy(asc(measureDefinitions.name));
+
+  const energyProviderRows = await db
+    .select({
+      id: managedListItems.id,
+      name: managedListItems.name,
+    })
+    .from(managedListItems)
+    .leftJoin(managedLists, eq(managedListItems.list_id, managedLists.id))
+    .where(
+      and(
+        eq(managedListItems.is_active, true),
+        or(
+          ilike(managedLists.name, "%energy provider%"),
+          ilike(managedLists.name, "%energy providers%"),
+        ),
+      ),
+    )
+    .orderBy(asc(managedListItems.name));
+
+  const energySourceRows = await db
+    .select({
+      id: managedListItems.id,
+      name: managedListItems.name,
+    })
+    .from(managedListItems)
+    .leftJoin(managedLists, eq(managedListItems.list_id, managedLists.id))
+    .where(
+      and(
+        eq(managedListItems.is_active, true),
+        or(
+          ilike(managedLists.name, "%energy source%"),
+          ilike(managedLists.name, "%energy sources%"),
+        ),
+      ),
+    )
+    .orderBy(asc(managedListItems.name));
+
+  const energyTypeRows = await db
+    .select({
+      id: managedListItems.id,
+      name: managedListItems.name,
+    })
+    .from(managedListItems)
+    .leftJoin(managedLists, eq(managedListItems.list_id, managedLists.id))
+    .where(
+      and(
+        eq(managedListItems.is_active, true),
+        or(
+          ilike(managedLists.name, "%energy type%"),
+          ilike(managedLists.name, "%energy types%"),
+        ),
+      ),
+    )
+    .orderBy(asc(managedListItems.name));
+
+  return {
+    inputs: inputs.map((item) => ({
+      id: item.id,
+      name: item.name,
+      variable_name: item.variable_name,
+      unit: resolveManagedListName(managedListNamesById, item.unitId, null),
+      formula: item.formula,
+      formula_inputs: item.formula_inputs,
+      is_active: item.is_active,
+    })),
+    energyProviderOptions: energyProviderRows,
+    energyTypeOptions: energyTypeRows,
+    energySourceOptions: energySourceRows,
+    previewContextLabel: "Preview uses sample values.",
+  };
+}
+
+export async function SaveInputFormula(payload: SaveInputFormulaPayload) {
+  const formula = payload.formula.trim();
+
+  if (!payload.inputId || Number.isNaN(payload.inputId)) {
+    return {
+      success: false,
+      message: "Please choose an input definition first.",
+    };
+  }
+  if (!formula) {
+    return { success: false, message: "Formula is required." };
+  }
+
+  const containsSelfReference = payload.formulaInputs.some(
+    (item) => item.measure_def_id === payload.inputId,
+  );
+  if (containsSelfReference) {
+    return {
+      success: false,
+      message: "An input formula cannot reference itself.",
+    };
+  }
+
+  try {
+    await db
+      .update(measureDefinitions)
+      .set({
+        formula,
+        formula_inputs: payload.formulaInputs,
+        is_calculated: true,
+      })
+      .where(eq(measureDefinitions.id, payload.inputId));
+  } catch (error) {
+    console.error("Failed to save input formula:", error);
+    return {
+      success: false,
+      message:
+        "Unable to save formula. It may exceed current database limits. Please shorten it and try again.",
+    };
+  }
+
+  revalidatePath("/settings/inputs");
+  return { success: true, message: "Input formula saved successfully." };
+}
+
+export async function getInputsBySubcategory(
+  subcategoryId: number,
+): Promise<MeasureDefinition[]> {
+  const inputs = await db
+    .select()
+    .from(measureDefinitions)
+    .where(eq(measureDefinitions.measures_subgroup_id, subcategoryId));
+  return inputs;
+}
+
+export interface TrainingDataLabelDefinition {
+  id: number;
+  name: string;
+  variable_name: string | null;
+  category_id: number;
+  category_name: string | null;
+  subcategory_id: number;
+  subcategory_name: string | null;
+  unit_id: number;
+  data_type_id: number;
+  strata_id: number;
+}
+
+export interface InputDlMapCandidate {
+  trainingDlDefId: number;
+  trainingDlLegacyId: string;
+  trainingSourceId: number | null;
+  trainingName: string;
+  trainingVariableName: string | null;
+  score: number;
+  confidence: "high" | "medium" | "low";
+  reasons: string[];
+}
+
+export interface InputDlMapRow {
+  inputId: number;
+  inputName: string;
+  inputVariableName: string | null;
+  savedTrainingDlDefId: number | null;
+  savedConfidence: string | null;
+  bestCandidate: InputDlMapCandidate | null;
+  alternatives: InputDlMapCandidate[];
+}
+
+export interface InputDlMapBuilderResult {
+  rows: InputDlMapRow[];
+  trainingDataLabels: TrainingDataLabelDefinition[];
+  persistedMappings: {
+    trainingDlDefId: number;
+    inputId: number;
+    inputName: string;
+  }[];
+  stats: {
+    inputsTotal: number;
+    trainingDlDefsTotal: number;
+    mappedHigh: number;
+    mappedMedium: number;
+    mappedLow: number;
+    unmapped: number;
+  };
+  source: {
+    baseUrl: string;
+    endpoint: string;
+    error?: string;
+  };
+}
+
+export interface SaveInputDlMappingItem {
+  inputId: number;
+  candidate: InputDlMapCandidate | null;
+}
+
+export interface SaveInputDlMappingsPayload {
+  items: SaveInputDlMappingItem[];
+}
+
+interface SavedInputDlMapping {
+  inputDefId: number;
+  trainingDlDefId: number;
+  trainingDlLegacyId: string;
+  trainingSourceId: number | null;
+  trainingDlName: string;
+  trainingVariableName: string | null;
+  score: number;
+  confidence: string;
+  reasons: string[];
+}
+
+const normalize = (value: string | null | undefined) =>
+  (value ?? "").trim().toLowerCase().replace(/\s+/g, " ");
+
+const confidenceFromScore = (
+  score: number,
+): InputDlMapCandidate["confidence"] => {
+  if (score >= 70) return "high";
+  if (score >= 40) return "medium";
+  return "low";
+};
+
+function scoreMapping(
+  input: MeasureDefinition,
+  training: TrainingDataLabelDefinition,
+): InputDlMapCandidate {
+  const reasons: string[] = [];
+  let score = 0;
+
+  const inputVarNorm = normalize(input.variable_name).replace(/[_\s-]+/g, "");
+  const trainingVarNorm = normalize(training.variable_name).replace(
+    /[_\s-]+/g,
+    "",
+  );
+
+  if (
+    input.variable_name &&
+    training.variable_name &&
+    inputVarNorm === trainingVarNorm
+  ) {
+    score += 60;
+    reasons.push("variable_name match");
+  } else if (
+    inputVarNorm &&
+    trainingVarNorm &&
+    (inputVarNorm.includes(trainingVarNorm) ||
+      trainingVarNorm.includes(inputVarNorm))
+  ) {
+    score += 35;
+    reasons.push("partial variable_name match");
+  }
+
+  const inputNameNorm = normalize(input.name);
+  const trainingNameNorm = normalize(training.name);
+
+  if (inputNameNorm === trainingNameNorm) {
+    score += 30;
+    reasons.push("name match");
+  } else {
+    const inputWords = new Set(
+      inputNameNorm.split(/\s+/).filter((w) => w.length > 1),
+    );
+    const trainingWords = new Set(
+      trainingNameNorm.split(/\s+/).filter((w) => w.length > 1),
+    );
+
+    if (inputWords.size > 0 && trainingWords.size > 0) {
+      const intersection = [...inputWords].filter((w) => trainingWords.has(w));
+      const union = new Set([...inputWords, ...trainingWords]);
+      const jaccard = intersection.length / union.size;
+
+      if (jaccard >= 0.8) {
+        score += 20;
+        reasons.push("strong word overlap");
+      } else if (jaccard >= 0.5) {
+        score += 12;
+        reasons.push("moderate word overlap");
+      } else if (
+        inputNameNorm.includes(trainingNameNorm) ||
+        trainingNameNorm.includes(inputNameNorm)
+      ) {
+        score += 8;
+        reasons.push("substring match");
+      }
+    }
+  }
+
+  if (input.measures_group_id === training.category_id) {
+    score += 10;
+    reasons.push("category match");
+  }
+  if (input.measures_subgroup_id === training.subcategory_id) {
+    score += 10;
+    reasons.push("subcategory match");
+  }
+  if (input.unit_id === training.unit_id) {
+    score += 5;
+    reasons.push("unit match");
+  }
+  if (input.data_type_id === training.data_type_id) {
+    score += 5;
+    reasons.push("data_type match");
+  }
+
+  if (
+    input.strata_id != null &&
+    training.strata_id != null &&
+    input.strata_id === training.strata_id
+  ) {
+    score += 5;
+    reasons.push("strata match");
+  }
+
+  return {
+    trainingDlDefId: training.id,
+    trainingDlLegacyId: String(training.id),
+    trainingSourceId: null,
+    trainingName: training.name,
+    trainingVariableName: training.variable_name,
+    score,
+    confidence: confidenceFromScore(score),
+    reasons,
+  };
+}
+
+async function fetchTrainingDataLabelDefinitions() {
+  const baseUrl = process.env.PRISM_TRAINING_API_BASE_URL?.replace(/\/$/, "");
+  if (!baseUrl) {
+    throw new Error(
+      "PRISM_TRAINING_API_BASE_URL is not configured in prism environment.",
+    );
+  }
+
+  const endpoint = baseUrl.endsWith("/api")
+    ? `${baseUrl}/migration/dlDef`
+    : `${baseUrl}/api/migration/dlDef`;
+  const migrationKey = process.env.PRISM_TRAINING_MIGRATION_KEY;
+
+  const params = new URLSearchParams({
+    limit: "10000",
+    includeAggregated: "false",
+    includeInactive: "false",
+  });
+
+  const response = await fetch(`${endpoint}?${params.toString()}`, {
+    headers: migrationKey
+      ? {
+          "x-migration-key": migrationKey,
+        }
+      : undefined,
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new Error(
+      `Failed pulling data-label-definitions (${response.status}).`,
+    );
+  }
+
+  const rawRows = (await response.json()) as unknown[];
+  const rows: TrainingDataLabelDefinition[] = (
+    Array.isArray(rawRows) ? rawRows : []
+  )
+    .filter((r): r is unknown[] => Array.isArray(r))
+    .map((r) => ({
+      id: Number(r[1]) || 0,
+      name: String(r[2] ?? ""),
+      variable_name: r[3] != null ? String(r[3]) : null,
+      category_id: Number(r[9]) || 0,
+      subcategory_id: Number(r[10]) || 0,
+      unit_id: Number(r[18]) || 0,
+      data_type_id: Number(r[19]) || 0,
+      strata_id: Number(r[27]) || 0,
+      category_name: r[41] != null ? String(r[41]) : null,
+      subcategory_name: r[42] != null ? String(r[42]) : null,
+    }));
+
+  return {
+    baseUrl,
+    endpoint,
+    data: rows,
+  };
+}
+
+async function fetchSavedInputDlMappings(): Promise<SavedInputDlMapping[]> {
+  try {
+    const rows = await db.select().from(inputDlDefMappings);
+    return rows.map((row) => ({
+      inputDefId: row.measure_def_id,
+      trainingDlDefId: row.training_dl_def_id,
+      trainingDlLegacyId: row.training_dl_legacy_id,
+      trainingSourceId: row.training_source_id,
+      trainingDlName: row.training_dl_name,
+      trainingVariableName: row.training_variable_name,
+      score: row.score,
+      confidence: row.confidence,
+      reasons: Array.isArray(row.reasons) ? row.reasons : [],
+    }));
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "";
+    if (
+      message.includes("input_dl_def_mappings") ||
+      message.includes("does not exist")
+    ) {
+      // Allow preview mode before DB migration creates the mappings table.
+      return [];
+    }
+    throw error;
+  }
+}
+
+export async function BuildInputDlMappingCandidates(): Promise<InputDlMapBuilderResult> {
+  const [inputs, savedMappings] = await Promise.all([
+    db.select().from(measureDefinitions).orderBy(asc(measureDefinitions.id)),
+    fetchSavedInputDlMappings(),
+  ]);
+
+  let training: {
+    baseUrl: string;
+    endpoint: string;
+    data: TrainingDataLabelDefinition[];
+    error?: string;
+  };
+
+  try {
+    training = await fetchTrainingDataLabelDefinitions();
+  } catch (error) {
+    console.error("[map-builder] failed to fetch training data labels:", error);
+    const baseUrl = process.env.PRISM_TRAINING_API_BASE_URL ?? "";
+    const endpoint = baseUrl
+      ? `${baseUrl.replace(/\/$/, "")}/api/migration/dlDef`
+      : "PRISM_TRAINING_API_BASE_URL not configured";
+
+    training = {
+      baseUrl,
+      endpoint,
+      data: [],
+      error:
+        error instanceof Error
+          ? error.message
+          : "Unknown error fetching training labels",
+    };
+  }
+
+  const trainingById = new Map(training.data.map((dl) => [dl.id, dl]));
+  const inputById = new Map(inputs.map((input) => [input.id, input]));
+  const savedByInputId = new Map(savedMappings.map((m) => [m.inputDefId, m]));
+
+  const persistedMappings = savedMappings
+    .map((mapping) => {
+      const input = inputById.get(mapping.inputDefId);
+      if (!input) {
+        return null;
+      }
+
+      return {
+        trainingDlDefId: mapping.trainingDlDefId,
+        inputId: mapping.inputDefId,
+        inputName: input.name,
+      };
+    })
+    .filter(
+      (
+        row,
+      ): row is {
+        trainingDlDefId: number;
+        inputId: number;
+        inputName: string;
+      } => row !== null,
+    );
+
+  const rows: InputDlMapRow[] = inputs.map((input) => {
+    const ranked = training.data
+      .map((dl) => scoreMapping(input, dl))
+      .filter((candidate) => candidate.score > 0)
+      .sort((a, b) => b.score - a.score)
+      .slice(0, 5);
+
+    const saved = savedByInputId.get(input.id);
+    if (
+      saved &&
+      !ranked.some((r) => r.trainingDlDefId === saved.trainingDlDefId)
+    ) {
+      const trainingRow = trainingById.get(saved.trainingDlDefId);
+      if (trainingRow) {
+        ranked.push(scoreMapping(input, trainingRow));
+      } else {
+        ranked.push({
+          trainingDlDefId: saved.trainingDlDefId,
+          trainingDlLegacyId: saved.trainingDlLegacyId,
+          trainingSourceId: saved.trainingSourceId,
+          trainingName: saved.trainingDlName,
+          trainingVariableName: saved.trainingVariableName,
+          score: saved.score,
+          confidence:
+            saved.confidence === "high" ||
+            saved.confidence === "medium" ||
+            saved.confidence === "low"
+              ? saved.confidence
+              : "low",
+          reasons: saved.reasons,
+        });
+      }
+    }
+
+    ranked.sort((a, b) => b.score - a.score);
+
+    return {
+      inputId: input.id,
+      inputName: input.name,
+      inputVariableName: input.variable_name,
+      savedTrainingDlDefId: saved?.trainingDlDefId ?? null,
+      savedConfidence: saved?.confidence ?? null,
+      bestCandidate: ranked[0] ?? null,
+      alternatives: ranked.slice(1),
+    };
+  });
+
+  const stats = rows.reduce(
+    (acc, row) => {
+      if (!row.bestCandidate) {
+        acc.unmapped += 1;
+      } else if (row.bestCandidate.confidence === "high") {
+        acc.mappedHigh += 1;
+      } else if (row.bestCandidate.confidence === "medium") {
+        acc.mappedMedium += 1;
+      } else {
+        acc.mappedLow += 1;
+      }
+      return acc;
+    },
+    {
+      inputsTotal: rows.length,
+      trainingDlDefsTotal: training.data.length,
+      mappedHigh: 0,
+      mappedMedium: 0,
+      mappedLow: 0,
+      unmapped: 0,
+    },
+  );
+
+  return {
+    rows,
+    trainingDataLabels: training.data,
+    persistedMappings,
+    stats,
+    source: {
+      baseUrl: training.baseUrl,
+      endpoint: training.endpoint,
+      error: training.error,
+    },
+  };
+}
+
+export async function SaveInputDlMappings(
+  payload: SaveInputDlMappingsPayload,
+): Promise<{ success: boolean; message: string; savedCount: number }> {
+  const items = payload.items.filter((item) => item.candidate !== null);
+
+  if (items.length === 0) {
+    return {
+      success: false,
+      message: "No mappings selected to save.",
+      savedCount: 0,
+    };
+  }
+
+  const inputIds = items.map((item) => item.inputId);
+  const existingInputs = await db
+    .select({ id: measureDefinitions.id })
+    .from(measureDefinitions)
+    .where(inArray(measureDefinitions.id, inputIds));
+
+  const existingSet = new Set(existingInputs.map((item) => item.id));
+  const validItems = items.filter((item) => existingSet.has(item.inputId));
+
+  if (validItems.length === 0) {
+    return {
+      success: false,
+      message: "Selected mappings reference missing inputs.",
+      savedCount: 0,
+    };
+  }
+
+  const training = await fetchTrainingDataLabelDefinitions();
+  const trainingBySuffix = new Map<string, TrainingDataLabelDefinition[]>();
+  for (const dl of training.data) {
+    const suffix = dl.id.toString().slice(-3).padStart(3, "0");
+    const existing = trainingBySuffix.get(suffix) ?? [];
+    existing.push(dl);
+    trainingBySuffix.set(suffix, existing);
+  }
+
+  const now = new Date();
+  let insertedCount = 0;
+
+  await db.transaction(async (tx) => {
+    for (const item of validItems) {
+      const candidate = item.candidate!;
+      const suffix = candidate.trainingDlDefId
+        .toString()
+        .slice(-3)
+        .padStart(3, "0");
+      const matchedBySuffix = trainingBySuffix.get(suffix) ?? [];
+
+      const mappedCandidates: InputDlMapCandidate[] =
+        matchedBySuffix.length > 0
+          ? matchedBySuffix.map((dl) => ({
+              trainingDlDefId: dl.id,
+              trainingDlLegacyId: String(dl.id),
+              trainingSourceId: null,
+              trainingName: dl.name,
+              trainingVariableName: dl.variable_name,
+              score: candidate.score,
+              confidence: candidate.confidence,
+              reasons: [...candidate.reasons, `same id suffix (${suffix})`],
+            }))
+          : [candidate];
+
+      for (const mapped of mappedCandidates) {
+        const inserted = await tx
+          .insert(inputDlDefMappings)
+          .values({
+            measure_def_id: item.inputId,
+            training_dl_def_id: mapped.trainingDlDefId,
+            training_dl_legacy_id: mapped.trainingDlLegacyId,
+            training_source_id: mapped.trainingSourceId,
+            training_dl_name: mapped.trainingName,
+            training_variable_name: mapped.trainingVariableName,
+            score: mapped.score,
+            confidence: mapped.confidence,
+            reasons: mapped.reasons,
+            is_auto: false,
+            is_approved: true,
+            approved_at: now,
+            updated_at: now,
+          })
+          .onConflictDoNothing({
+            target: [
+              inputDlDefMappings.measure_def_id,
+              inputDlDefMappings.training_dl_def_id,
+            ],
+          })
+          .returning({ id: inputDlDefMappings.id });
+
+        insertedCount += inserted.length;
+      }
+    }
+  });
+
+  revalidatePath("/settings/inputs");
+
+  return {
+    success: true,
+    message: `Saved ${insertedCount} mappings across ${validItems.length} input(s).`,
+    savedCount: insertedCount,
+  };
+}
+
+export async function AutoAcceptHighInputDlMappings(): Promise<{
+  success: boolean;
+  message: string;
+  savedCount: number;
+}> {
+  const result = await BuildInputDlMappingCandidates();
+
+  const highItems: SaveInputDlMappingItem[] = result.rows
+    .filter(
+      (row) =>
+        row.bestCandidate?.confidence === "high" && row.bestCandidate !== null,
+    )
+    .map((row) => ({
+      inputId: row.inputId,
+      candidate: row.bestCandidate,
+    }));
+
+  if (highItems.length === 0) {
+    return {
+      success: true,
+      message: "No high-confidence mappings to auto-accept.",
+      savedCount: 0,
+    };
+  }
+
+  const now = new Date();
+  let insertedCount = 0;
+  await db.transaction(async (tx) => {
+    for (const item of highItems) {
+      const candidate = item.candidate!;
+
+      const inserted = await tx
+        .insert(inputDlDefMappings)
+        .values({
+          measure_def_id: item.inputId,
+          training_dl_def_id: candidate.trainingDlDefId,
+          training_dl_legacy_id: candidate.trainingDlLegacyId,
+          training_source_id: candidate.trainingSourceId,
+          training_dl_name: candidate.trainingName,
+          training_variable_name: candidate.trainingVariableName,
+          score: candidate.score,
+          confidence: candidate.confidence,
+          reasons: candidate.reasons,
+          is_auto: true,
+          is_approved: true,
+          approved_at: now,
+          updated_at: now,
+        })
+        .onConflictDoNothing({
+          target: [
+            inputDlDefMappings.measure_def_id,
+            inputDlDefMappings.training_dl_def_id,
+          ],
+        })
+        .returning({ id: inputDlDefMappings.id });
+
+      insertedCount += inserted.length;
+    }
+  });
+
+  revalidatePath("/settings/inputs");
+
+  return {
+    success: true,
+    message: `Auto-accepted ${insertedCount} high-confidence mappings.`,
+    savedCount: insertedCount,
+  };
+}

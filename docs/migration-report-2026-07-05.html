@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRISM Migration &amp; Status Fix Report — July 5, 2026</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 960px; margin: 0 auto; padding: 20px; color: #1e293b; background: #f8fafc; line-height: 1.6; }
+  h1 { border-bottom: 3px solid #334155; padding-bottom: 8px; }
+  h2 { color: #334155; margin-top: 32px; border-bottom: 1px solid #cbd5e1; padding-bottom: 4px; }
+  table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+  th, td { border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; font-size: 14px; }
+  th { background: #e2e8f0; font-weight: 600; }
+  tr:hover { background: #f1f5f9; }
+  .good { color: #16a34a; font-weight: 600; }
+  .warn { color: #d97706; font-weight: 600; }
+  .code { font-family: 'Cascadia Code', 'Consolas', monospace; font-size: 13px; background: #1e293b; color: #e2e8f0; padding: 2px 6px; border-radius: 3px; }
+  .file { font-family: 'Cascadia Code', 'Consolas', monospace; font-size: 12px; color: #6366f1; }
+  .section { background: #fff; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px 20px; margin: 16px 0; }
+  .tag { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+  .tag-schema { background: #dbeafe; color: #1d4ed8; }
+  .tag-service { background: #fce7f3; color: #be185d; }
+  .tag-ui { background: #d1fae5; color: #047857; }
+  .tag-script { background: #fef3c7; color: #92400e; }
+  .tag-data { background: #e0e7ff; color: #4338ca; }
+  ul { margin: 8px 0; padding-left: 20px; }
+  li { margin: 4px 0; }
+</style>
+</head>
+<body>
+
+<h1>PRISM Migration &amp; Data Entry Status Fix Report</h1>
+<p><strong>Date:</strong> July 5, 2026 &nbsp;|&nbsp; <strong>Apps:</strong> prism (Drizzle + PostgreSQL), prism-training (Prisma + MariaDB)</p>
+
+<div class="section">
+<h2>Summary of Changes</h2>
+<table>
+<tr><th>Area</th><th>Files Changed</th><th>Description</th></tr>
+<tr>
+  <td><span class="tag tag-service">Service</span></td>
+  <td><span class="file">app/data-entry/service.ts</span></td>
+  <td>Rewrote Requested/Completed counting to prism-training formula; added MAX guard; removed <span class="code">is_virtual=false</span> and <span class="code">is_aggregated=false</span> filters; fixed <span class="code">"operation"</span> → <span class="code">"operational"</span> scoped defs bug</td>
+</tr>
+<tr>
+  <td><span class="tag tag-ui">UI</span></td>
+  <td><span class="file">app/data-entry/reportPeriodTable.tsx</span></td>
+  <td>Progress bar now includes Reviewed + Approved + Endorsed (was only Entered + Not_Available)</td>
+</tr>
+<tr>
+  <td><span class="tag tag-schema">Schema</span></td>
+  <td><span class="file">db/schema/dataEntry.ts</span></td>
+  <td>Reordered <span class="code">DataEntryStatus</span> keys to match DTO (Not_Available moved to end); aligned colors</td>
+</tr>
+<tr>
+  <td><span class="tag tag-service">Service</span></td>
+  <td><span class="file">app/migration/service.ts</span></td>
+  <td>Fixed <span class="code">mapStatus()</span> — legacy 7 (Uploaded) → Entered (3), legacy 5 → Reviewed (4), legacy 6 → Approved (5)</td>
+</tr>
+<tr>
+  <td><span class="tag tag-ui">UI</span></td>
+  <td><span class="file">app/migration/page.tsx</span><br><span class="file">app/migration/history.tsx</span></td>
+  <td>Added MigrationHistory component with migration log table; wrapped in Suspense</td>
+</tr>
+</table>
+</div>
+
+<div class="section">
+<h2>Bugs Fixed</h2>
+<table>
+<tr><th>#</th><th>Bug</th><th>Fix</th><th>Impact</th></tr>
+<tr>
+  <td>1</td>
+  <td><span class="code">status_legacy_id=7</span> (Uploaded) mapped to Endorsed (6)</td>
+  <td>Changed to Entered (3) — "Uploaded" means data was submitted</td>
+  <td class="good">20K entries correctly Entered instead of Endorsed</td>
+</tr>
+<tr>
+  <td>2</td>
+  <td>Energy resource <span class="code">period_entries</span> had key <span class="code">utility_report_period_id</span></td>
+  <td>Remapped to <span class="code">report_period_id</span> across all 501 ERs</td>
+  <td class="good">Generation expected counts included in Requested</td>
+</tr>
+<tr>
+  <td>3</td>
+  <td><span class="code">"operation"</span> didn't match managed list item <span class="code">"Operational"</span></td>
+  <td>Changed filter to <span class="code">"operational"</span></td>
+  <td class="good">358 scoped input defs correctly counted per SA</td>
+</tr>
+<tr>
+  <td>4</td>
+  <td><span class="code">is_virtual=false</span> filtered out 370 ASPA gen entries</td>
+  <td>Removed virtual filter from ERs; entries now counted</td>
+  <td class="good">Completed ≤ Requested for all utilities</td>
+</tr>
+<tr>
+  <td>5</td>
+  <td>Progress bar only showed <span class="code">Entered + Not_Available</span></td>
+  <td>Added Reviewed + Approved + Endorsed</td>
+  <td class="good">Progress % reflects all completed statuses</td>
+</tr>
+<tr>
+  <td>6</td>
+  <td><span class="code">DataEntryStatus</span> column order misaligned with DTO</td>
+  <td>Moved Not_Available to last position</td>
+  <td class="good">Table columns display correct values</td>
+</tr>
+</table>
+</div>
+
+<div class="section">
+<h2>Data Migrations Run</h2>
+<table>
+<tr><th>Step</th><th>Script / Action</th><th>Result</th></tr>
+<tr>
+  <td>Relevance tables</td>
+  <td><span class="file">scripts/migrate-relevance-tables.ts</span></td>
+  <td>Created <span class="code">tariff_relevance</span> / <span class="code">transmission_relevance</span>; dropped old <span class="code">generation_relevance</span> / <span class="code">generation_toggle_relevance</span></td>
+</tr>
+<tr>
+  <td>Input defs &amp; mappings</td>
+  <td><span class="file">scripts/bulk-create-input-defs.ts</span></td>
+  <td class="good">456 unmapped training DL defs → 445 name-matched + 11 new defs created; 568 total mappings</td>
+</tr>
+<tr>
+  <td>Service areas &amp; energy resources</td>
+  <td><span class="file">scripts/sync-prerequisite-tables.ts</span></td>
+  <td class="good">92 service areas + 501 energy resources synced from production API</td>
+</tr>
+<tr>
+  <td>Data entries</td>
+  <td><span class="file">scripts/migrate-data-entries.ts</span></td>
+  <td class="good">~25K entries migrated from prism-training; 22,766 operations across 13 pages; proper FK references</td>
+</tr>
+<tr>
+  <td>Period entries fix</td>
+  <td><span class="file">scripts/fix-er-period-entries.ts</span></td>
+  <td class="good">501 ERs: <span class="code">utility_report_period_id</span> → <span class="code">report_period_id</span></td>
+</tr>
+<tr>
+  <td>Generation relevance</td>
+  <td><span class="file">scripts/sync-generation-relevance.ts</span></td>
+  <td class="good">44,850 <span class="code">input_relevance</span> rows synced from production; 274 pages from /generationRelevance API</td>
+</tr>
+<tr>
+  <td>ER period cleanup</td>
+  <td><span class="file">scripts/clean-er-periods.ts</span></td>
+  <td>17 ERs fixed; 137 invalid period entries removed; keys normalized</td>
+</tr>
+</table>
+</div>
+
+<div class="section">
+<h2>Database State — Before vs After</h2>
+<table>
+<tr><th>Table / Metric</th><th>Before</th><th>After</th></tr>
+<tr><td>data_entries (total)</td><td>4,426</td><td class="good">~25,000</td></tr>
+<tr><td>measure_definitions  (active)</td><td>192</td><td class="good">460</td></tr>
+<tr><td>input definitions with mappings</td><td>112</td><td class="good">568 (100%)</td></tr>
+<tr><td>service_areas</td><td>0</td><td class="good">92</td></tr>
+<tr><td>energy_resources</td><td>0</td><td class="good">501</td></tr>
+<tr><td>input_relevance rows</td><td>9</td><td class="good">44,850</td></tr>
+<tr><td>energy_resource_type_relevance</td><td>0</td><td>0 (API returned different shape)</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>Verification — All Utilities Pass</h2>
+<table>
+<tr><th>Check</th><th>Result</th></tr>
+<tr><td>Completed ≤ Requested (all report periods)</td><td class="good">PASS — 0 violations across all utilities</td></tr>
+<tr><td>Entered status distribution</td><td class="good">Most entries Entered (20K+), not Endorsed</td></tr>
+<tr><td>Service area FKs on data entries</td><td class="good">92 SAs populated, FKs set</td></tr>
+<tr><td>Energy resource FKs on data entries</td><td class="good">501 ERs populated, FKs set</td></tr>
+<tr><td>Period entries key format</td><td class="good">All <span class="code">report_period_id</span>; 17 ERs cleaned of invalid period refs</td></tr>
+</table>
+</div>
+
+<div class="section">
+<h2>Remaining Items</h2>
+<ul>
+  <li><strong>input_relevance for non-generation defs</strong> — Currently only generation defs have relevance data. Tariff/transmission relevance filtering not yet integrated into the counting formula.</li>
+  <li><strong>Virtual generator entries</strong> — Some data entries reference virtual ERs. These are counted in Completed but excluded from generation count (prism-training filters <span class="code">is_virtual=false</span>). The MAX guard handles the gap.</li>
+  <li><strong>Migration history</strong> — Available at <span class="code">/migration</span> via the new MigrationHistory table component.</li>
+</ul>
+</div>
+
+<p style="color:#94a3b8; font-size:12px; margin-top:32px;">Generated by OpenCode &middot; PRISM Migration Session &middot; July 5, 2026</p>
+
+</body>
+</html>

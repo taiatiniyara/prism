@@ -1,0 +1,116 @@
+"use server";
+
+import { DataTableFormResponse } from "@/components/tables/data-table-create-form";
+import { db } from "@/db/connection";
+import { managedListItems } from "@/db/schema/managedLists";
+import {
+  NewReportPeriod,
+  reportPeriods,
+  ReportPeriod,
+} from "@/db/schema/reportPeriods";
+import { units, organisations } from "@/db/schema/utility";
+import { and, desc, eq, lt } from "drizzle-orm";
+import { revalidatePath } from "next/cache";
+
+export async function AllReportPeriods() {
+  const query = db
+    .select()
+    .from(reportPeriods)
+    .orderBy(reportPeriods.report_date)
+    .leftJoin(organisations, eq(reportPeriods.utility_id, organisations.id))
+    .leftJoin(
+      managedListItems,
+      eq(reportPeriods.report_type_id, managedListItems.id),
+    );
+  const list = await query;
+  return list.map((item) => ({
+    ...item.report_periods,
+    utility: item.organisations?.acronym ?? item.organisations?.name,
+    report_type: item.managed_list_items?.name,
+  }));
+}
+
+export async function CreateReportPeriod(
+  data: NewReportPeriod,
+): Promise<DataTableFormResponse<ReportPeriod>> {
+  const [rp] = await db.insert(reportPeriods).values(data).returning();
+
+  const [prevRp] = await db
+    .select()
+    .from(reportPeriods)
+    .where(
+      and(
+        eq(reportPeriods.utility_id, rp.utility_id),
+        lt(reportPeriods.report_date, rp.report_date),
+      ),
+    )
+    .orderBy(desc(reportPeriods.report_date))
+    .limit(1);
+
+  if (prevRp) {
+    const unitsList = await db
+      .select()
+      .from(units)
+      .where(eq(units.utility_id, rp.utility_id));
+
+    for (const resource of unitsList) {
+      const prevEntry = resource.period_entries.find(
+        (pe) => pe.report_period_id === prevRp.id,
+      );
+      if (!prevEntry) continue;
+
+      const hasNewEntry = resource.period_entries.some(
+        (pe) => pe.report_period_id === rp.id,
+      );
+      if (hasNewEntry) continue;
+
+      const newPeriodEntries = [
+        ...resource.period_entries,
+        {
+          report_period_id: rp.id,
+          capacity_mw: prevEntry.capacity_mw,
+          is_active: prevEntry.is_active,
+        },
+      ];
+
+      await db
+        .update(units)
+        .set({ period_entries: newPeriodEntries })
+        .where(eq(units.id, resource.id));
+    }
+  }
+
+  revalidatePath("/settings/report-periods");
+  return {
+    success: true,
+    message: "Report period created successfully",
+    data: rp,
+  };
+}
+
+export async function UpdateReportPeriod(
+  data: Partial<ReportPeriod>,
+): Promise<DataTableFormResponse<ReportPeriod>> {
+  const [upd] = await db
+    .update(reportPeriods)
+    .set(data)
+    .where(eq(reportPeriods.id, data.id!))
+    .returning();
+  revalidatePath("/settings/report-periods");
+  return {
+    success: true,
+    message: "Report period updated successfully",
+    data: upd,
+  };
+}
+
+export async function DeleteReportPeriod(
+  id: number,
+): Promise<DataTableFormResponse<ReportPeriod>> {
+  await db.delete(reportPeriods).where(eq(reportPeriods.id, id));
+  revalidatePath("/settings/report-periods");
+  return {
+    success: true,
+    message: "Report period deleted successfully",
+  };
+}

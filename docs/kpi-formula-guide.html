@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRISM 2 — How KPI Formulas Work</title>
+<style>
+  :root {
+    --ink: #1d2f38;
+    --paper: #fbfaf7;
+    --panel: #f4f2ec;
+    --line: #e0dbd0;
+    --teal: #0e7c86;
+    --teal-deep: #0a565e;
+    --teal-tint: #e7f2f2;
+    --copper: #b4581f;
+    --copper-tint: #f8ede3;
+    --muted: #5d6e76;
+    --good: #1a7f4b;
+    --good-tint: #e9f4ec;
+    --bad: #b3382e;
+    --bad-tint: #f9ebe9;
+    --warn-tint: #fdf3df;
+    --warn-edge: #d99a2b;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--paper);
+    color: var(--ink);
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    font-size: 16.5px;
+    line-height: 1.62;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 3.2rem 1.4rem 5rem; }
+  h1, h2, h3 {
+    font-family: "Palatino Linotype", Palatino, Georgia, serif;
+    line-height: 1.2;
+    text-wrap: balance;
+    color: var(--ink);
+  }
+  h1 { font-size: 2.35rem; font-weight: 700; margin: 0.4rem 0 0.6rem; }
+  h2 { font-size: 1.55rem; font-weight: 700; margin: 0 0 0.9rem; }
+  h3 { font-size: 1.12rem; font-weight: 700; margin: 1.4rem 0 0.5rem; }
+  p { max-width: 68ch; margin: 0.75rem 0; }
+  section { margin-top: 3.4rem; }
+  .eyebrow {
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--teal);
+    margin: 0 0 0.2rem;
+  }
+  .lede { font-size: 1.13rem; color: var(--muted); max-width: 62ch; }
+  .kicker {
+    display: flex; gap: 0.6rem; align-items: baseline;
+    border-bottom: 2px solid var(--ink);
+    padding-bottom: 1.2rem; margin-bottom: 0.4rem;
+  }
+  code, .mono {
+    font-family: Consolas, "Cascadia Code", ui-monospace, monospace;
+    font-size: 0.88em;
+  }
+  code {
+    background: var(--panel);
+    border: 1px solid var(--line);
+    border-radius: 4px;
+    padding: 0.08rem 0.35rem;
+    white-space: nowrap;
+  }
+  .formula-line {
+    background: #22333c;
+    color: #eef3f0;
+    border-radius: 8px;
+    padding: 0.9rem 1.1rem;
+    font-family: Consolas, ui-monospace, monospace;
+    font-size: 0.95rem;
+    overflow-x: auto;
+    margin: 0.9rem 0;
+  }
+  .formula-line .v-ren { color: #8fd6ae; font-weight: 600; }
+  .formula-line .v-fos { color: #e8b98a; font-weight: 600; }
+  .formula-line .v-op { color: #9db4bd; }
+
+  /* Cards */
+  .trio { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.9rem; margin: 1.4rem 0; }
+  @media (max-width: 700px) { .trio { grid-template-columns: 1fr; } }
+  .card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 1rem 1.1rem;
+  }
+  .card .num {
+    display: inline-block;
+    font-family: "Palatino Linotype", Georgia, serif;
+    font-size: 1.5rem; font-weight: 700;
+    color: var(--teal);
+  }
+  .card h3 { margin: 0.1rem 0 0.4rem; }
+  .card p { font-size: 0.92rem; margin: 0.3rem 0 0; color: #3c4d55; }
+
+  /* Ladder */
+  .ladder { margin: 1.6rem 0 0.6rem; display: flex; flex-direction: column; align-items: stretch; }
+  .rung {
+    display: grid;
+    grid-template-columns: 2.4rem 1fr auto;
+    gap: 0.9rem;
+    align-items: center;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 9px;
+    padding: 0.65rem 1rem;
+  }
+  .rung .lv {
+    font-family: "Palatino Linotype", Georgia, serif;
+    font-size: 1.25rem; font-weight: 700; color: var(--teal);
+    text-align: center;
+  }
+  .rung .name { font-weight: 650; }
+  .rung .ex { display: block; font-size: 0.85rem; color: var(--muted); font-weight: 400; }
+  .rung-arrow {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.82rem;
+    padding: 0.18rem 0;
+  }
+  .rung-arrow::before { content: "▲ "; color: var(--teal); }
+  .chip {
+    font-size: 0.72rem; font-weight: 700;
+    letter-spacing: 0.05em;
+    padding: 0.22rem 0.6rem;
+    border-radius: 99px;
+    white-space: nowrap;
+  }
+  .chip.ok   { background: var(--teal-tint); color: var(--teal-deep); }
+  .chip.plan { background: var(--warn-tint); color: #8a5f13; }
+  .chip.auto { background: var(--panel); color: var(--muted); border: 1px solid var(--line); }
+  .entry-note {
+    margin-top: 0.55rem;
+    background: var(--copper-tint);
+    border: 1px dashed var(--copper);
+    border-radius: 9px;
+    padding: 0.6rem 1rem;
+    font-size: 0.92rem;
+    color: #7c3f13;
+  }
+
+  /* Panels */
+  .panel {
+    border-radius: 10px;
+    padding: 1rem 1.2rem;
+    margin: 1.2rem 0;
+    border: 1px solid var(--line);
+    background: #fff;
+  }
+  .panel.warn { background: var(--warn-tint); border-color: var(--warn-edge); }
+  .panel.warn h3 { margin-top: 0; }
+  .panel p:first-child { margin-top: 0; }
+  .panel p:last-child { margin-bottom: 0; }
+
+  /* Compare (right vs wrong) */
+  .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 0.9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .compare { grid-template-columns: 1fr; } }
+  .compare .side { border-radius: 10px; padding: 1rem 1.1rem; }
+  .compare .side.good { background: var(--good-tint); border: 1px solid #bcd9c6; }
+  .compare .side.bad  { background: var(--bad-tint);  border: 1px solid #e3bcb7; }
+  .compare .verdict { font-weight: 700; font-size: 0.8rem; letter-spacing: 0.08em; text-transform: uppercase; }
+  .compare .good .verdict { color: var(--good); }
+  .compare .bad .verdict { color: var(--bad); }
+  .compare .math {
+    font-family: Consolas, ui-monospace, monospace;
+    font-size: 0.9rem;
+    margin: 0.5rem 0;
+    font-variant-numeric: tabular-nums;
+  }
+  .compare p { font-size: 0.9rem; margin: 0.4rem 0 0; }
+
+  /* Tables */
+  .tbl-scroll { overflow-x: auto; margin: 1rem 0; border: 1px solid var(--line); border-radius: 10px; background: #fff; }
+  table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }
+  th {
+    text-align: left;
+    font-size: 0.74rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0.6rem 0.85rem;
+    border-bottom: 2px solid var(--line);
+    background: var(--panel);
+    white-space: nowrap;
+  }
+  td { padding: 0.55rem 0.85rem; border-bottom: 1px solid #eeebe3; vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  td.n { text-align: right; font-variant-numeric: tabular-nums; font-family: Consolas, ui-monospace, monospace; font-size: 0.88rem; }
+  th.n { text-align: right; }
+  tr.bucket-ren td { background: #eef6f0; }
+  tr.bucket-fos td { background: #f7f1e9; }
+  tr.total-row td { border-top: 2px solid var(--line); font-weight: 650; background: #fff; }
+  .tag {
+    display: inline-block;
+    font-size: 0.74rem; font-weight: 650;
+    padding: 0.12rem 0.5rem;
+    border-radius: 99px;
+    white-space: nowrap;
+  }
+  .tag.ren { background: #d9edde; color: #14603a; }
+  .tag.fos { background: #f0e0cd; color: #7c4a12; }
+  .tag.ipp { background: #e3e6f5; color: #3b4691; }
+  .tag.util { background: #e8e8e8; color: #4c565c; }
+
+  /* Ingredient binding cards */
+  .binding {
+    display: grid;
+    grid-template-columns: minmax(190px, auto) 1fr;
+    gap: 0.2rem 1.1rem;
+    background: #fff;
+    border: 1px solid var(--line);
+    border-left: 4px solid var(--teal);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    margin: 0.6rem 0;
+    font-size: 0.93rem;
+    align-items: baseline;
+  }
+  .binding .vn { font-family: Consolas, ui-monospace, monospace; font-weight: 700; font-size: 0.88rem; color: var(--teal-deep); }
+  .binding.fos { border-left-color: var(--copper); }
+  .binding.fos .vn { color: var(--copper); }
+  .binding .src { color: #3c4d55; }
+  .binding .filters { grid-column: 2; font-size: 0.85rem; color: var(--muted); }
+  .binding .filters b { color: var(--ink); font-weight: 650; }
+  @media (max-width: 640px) { .binding { grid-template-columns: 1fr; } .binding .filters { grid-column: 1; } }
+
+  /* Pipeline steps */
+  .steps { counter-reset: step; margin: 1.4rem 0; padding: 0; list-style: none; }
+  .steps > li {
+    counter-increment: step;
+    position: relative;
+    padding: 0 0 1.3rem 2.9rem;
+    border-left: 2px solid var(--line);
+    margin-left: 1rem;
+  }
+  .steps > li:last-child { border-left-color: transparent; padding-bottom: 0; }
+  .steps > li::before {
+    content: counter(step);
+    position: absolute;
+    left: -1.05rem; top: -0.15rem;
+    width: 2rem; height: 2rem;
+    border-radius: 50%;
+    background: var(--teal);
+    color: #fff;
+    font-weight: 700;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.95rem;
+  }
+  .steps h3 { margin: 0 0 0.3rem; }
+  .steps p { margin: 0.3rem 0; font-size: 0.95rem; }
+
+  /* Result strip */
+  .results { display: grid; grid-template-columns: repeat(3, 1fr); gap: 0.9rem; margin: 1.2rem 0; }
+  @media (max-width: 700px) { .results { grid-template-columns: 1fr; } }
+  .result {
+    background: #fff; border: 1px solid var(--line); border-radius: 10px;
+    padding: 0.85rem 1rem; text-align: center;
+  }
+  .result .where { font-size: 0.78rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); font-weight: 700; }
+  .result .val { font-family: "Palatino Linotype", Georgia, serif; font-size: 1.9rem; font-weight: 700; color: var(--teal-deep); font-variant-numeric: tabular-nums; }
+  .result .sub { font-size: 0.82rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+  /* Checklist */
+  .checklist { list-style: none; padding: 0; margin: 1rem 0; max-width: 72ch; }
+  .checklist li {
+    padding: 0.55rem 0 0.55rem 2.1rem;
+    position: relative;
+    border-bottom: 1px solid #eeebe3;
+    font-size: 0.97rem;
+  }
+  .checklist li::before {
+    content: "✓";
+    position: absolute; left: 0.3rem; top: 0.5rem;
+    color: var(--good); font-weight: 700;
+  }
+  .footer-note { margin-top: 3.5rem; padding-top: 1.2rem; border-top: 1px solid var(--line); color: var(--muted); font-size: 0.85rem; }
+  a { color: var(--teal-deep); }
+</style>
+</head>
+<body>
+
+
+<div class="wrap">
+
+<p class="eyebrow">PRISM 2 · Benchmarking Engine</p>
+<div class="kicker"><h1>How KPI formulas work — a plain-language guide</h1></div>
+<p class="lede">For the person responsible for KPI correctness: how to write a formula, how to point it at different energy providers and sources, and how to choose which level of the hierarchy the answer is computed for.</p>
+
+<!-- ============ 1. THREE DECLARATIONS ============ -->
+<section>
+  <p class="eyebrow">Part 1</p>
+  <h2>Every KPI is three declarations, not one</h2>
+  <p>When you define a KPI you are not just writing a formula. You are handing the calculator three separate pieces of information, and each answers a different question:</p>
+
+  <div class="trio">
+    <div class="card">
+      <span class="num">1</span>
+      <h3>The recipe</h3>
+      <p><em>How do the numbers combine?</em> One line of arithmetic written with named ingredients — only <code>+</code> <code>−</code> <code>×</code> <code>÷</code> and brackets. There is no “SUM” function; summing happens automatically (Part 3).</p>
+    </div>
+    <div class="card">
+      <span class="num">2</span>
+      <h3>The ingredient list</h3>
+      <p><em>Where does each name in the recipe get its number?</em> Each ingredient names one data item <strong>plus optional filters</strong> — energy provider, energy source, energy type. This is where multi-source formulas are expressed.</p>
+    </div>
+    <div class="card">
+      <span class="num">3</span>
+      <h3>The output level</h3>
+      <p><em>Which rung of the ladder does the answer belong to?</em> Equipment, Power Station, Grid, Utility, Country… This tells the calculator how far to add things up <strong>before</strong> it applies the recipe.</p>
+    </div>
+  </div>
+
+  <p>Here is a complete definition for <strong>Renewable Share of Generation</strong>, the example used throughout this guide:</p>
+
+  <div class="formula-line"><span class="v-ren">generation_renewable</span> <span class="v-op">÷ (</span><span class="v-ren">generation_renewable</span> <span class="v-op">+</span> <span class="v-fos">generation_conventional</span><span class="v-op">) × 100</span></div>
+
+  <div class="binding">
+    <span class="vn">generation_renewable</span>
+    <span class="src">reads the data item <strong>Electricity Generated</strong></span>
+    <span class="filters">Filters — Provider: <b>any</b> · Source: <b>any</b> · Type: <b>Renewable</b></span>
+  </div>
+  <div class="binding fos">
+    <span class="vn">generation_conventional</span>
+    <span class="src">reads the data item <strong>Electricity Generated</strong></span>
+    <span class="filters">Filters — Provider: <b>any</b> · Source: <b>any</b> · Type: <b>Conventional</b></span>
+  </div>
+
+  <p>Notice that <strong>both ingredients read the same data item</strong>. What makes them different numbers is the filter — and what keeps them apart in the recipe is that each filter combination has its <strong>own distinct name</strong>. That is the single most important rule in this guide: the calculator matches numbers to ingredients purely by name. Two ingredients with the same name collide, and the formula silently computes nonsense.</p>
+</section>
+
+<!-- ============ 2. THE LADDER ============ -->
+<section>
+  <p class="eyebrow">Part 2</p>
+  <h2>The seven-level ladder</h2>
+  <p>Every data row in PRISM lives somewhere on this ladder. Operational data is mostly entered at the very bottom — one row per generator, per fuel — and every level above is built by <strong>adding up the rows beneath it</strong>. Reading from the top:</p>
+
+  <div class="ladder">
+    <div class="rung"><span class="lv">7</span><span class="name">Region <span class="ex">Oceania — all PPA member utilities</span></span><span class="chip auto">rolled up automatically</span></div>
+    <div class="rung-arrow">adds up into</div>
+    <div class="rung"><span class="lv">6</span><span class="name">Subregion <span class="ex">Melanesia · Micronesia · Polynesia</span></span><span class="chip auto">rolled up automatically</span></div>
+    <div class="rung-arrow">adds up into</div>
+    <div class="rung"><span class="lv">5</span><span class="name">Country <span class="ex">Fiji</span></span><span class="chip ok">pickable output level</span></div>
+    <div class="rung-arrow">adds up into</div>
+    <div class="rung"><span class="lv">4</span><span class="name">Organisation / Utility <span class="ex">the whole utility, all grids</span></span><span class="chip ok">pickable output level</span></div>
+    <div class="rung-arrow">adds up into</div>
+    <div class="rung"><span class="lv">3</span><span class="name">Grid / Service Area <span class="ex">the Viti Levu network</span></span><span class="chip ok">pickable output level</span></div>
+    <div class="rung-arrow">adds up into</div>
+    <div class="rung"><span class="lv">2</span><span class="name">Power Station <span class="ex">Kinoya Power Station — all its units</span></span><span class="chip plan">not yet pickable — see Part 7</span></div>
+    <div class="rung-arrow">adds up into</div>
+    <div class="rung"><span class="lv">1</span><span class="name">Equipment <span class="ex">a single generator — Kinoya G1</span></span><span class="chip ok">pickable output level</span></div>
+  </div>
+  <div class="entry-note">⚡ Generation data is <strong>entered here</strong>, at level 1: each row is tagged with its generator (which implies its power station and grid), its energy source, and its provider.</div>
+
+  <p>Two things to hold onto:</p>
+  <p><strong>You define the formula once.</strong> The same recipe and ingredient list serve every level. Choosing the output level does not change the formula — it changes how many rows are added up before the recipe runs.</p>
+  <p><strong>Levels 6 and 7 need nothing from you.</strong> The locked design decision is that the reporting layer produces Subregion and Region answers by adding up the same ingredients across countries and re-applying your stored recipe. The same rule applies to time: monthly ingredients are added into the financial year first, and the recipe is applied to the yearly sums — the system never averages twelve monthly percentages.</p>
+</section>
+
+<!-- ============ 3. GOLDEN RULE ============ -->
+<section>
+  <p class="eyebrow">Part 3</p>
+  <h2>The golden rule: add up the ingredients, then apply the recipe</h2>
+  <p>This is the rule that makes one formula correct at every level, and it is worth seeing with real numbers. Suppose two stations report fuel efficiency (kWh generated per litre of fuel):</p>
+
+  <div class="tbl-scroll"><table>
+    <tr><th>Station</th><th class="n">Generated (kWh)</th><th class="n">Fuel used (L)</th><th class="n">Efficiency</th></tr>
+    <tr><td>Station A (small)</td><td class="n">10,000</td><td class="n">3,000</td><td class="n">3.33 kWh/L</td></tr>
+    <tr><td>Station B (large)</td><td class="n">90,000</td><td class="n">20,000</td><td class="n">4.50 kWh/L</td></tr>
+  </table></div>
+
+  <p>What is the efficiency of the two stations combined?</p>
+
+  <div class="compare">
+    <div class="side bad">
+      <span class="verdict">✗ Wrong — average the answers</span>
+      <div class="math">(3.33 + 4.50) ÷ 2 = <strong>3.92 kWh/L</strong></div>
+      <p>This treats the small station as if it mattered as much as one nine times its size. The error grows with every level you climb.</p>
+    </div>
+    <div class="side good">
+      <span class="verdict">✓ Right — add ingredients, then divide</span>
+      <div class="math">(10,000 + 90,000) ÷ (3,000 + 20,000) = <strong>4.35 kWh/L</strong></div>
+      <p>Each station influences the answer in proportion to its actual size. This is what the calculator does, at every level, always.</p>
+    </div>
+  </div>
+
+  <p>So when you see a KPI defined as a ratio or a percentage, remember: the division is applied <strong>after</strong> the summing, once, at the output level you chose. That is also why the recipe never contains a “SUM” — the ladder does the summing for you.</p>
+</section>
+
+<!-- ============ 4. FILTERS ============ -->
+<section>
+  <p class="eyebrow">Part 4</p>
+  <h2>Telling the formula about providers, sources and types</h2>
+  <p>Every equipment-level row carries three labels alongside its number:</p>
+
+  <div class="tbl-scroll"><table>
+    <tr><th>Label</th><th>What it says</th><th>Examples</th></tr>
+    <tr><td><strong>Energy provider</strong></td><td>Who owns the generation</td><td><span class="tag util">Utility-owned</span> <span class="tag ipp">IPP</span></td></tr>
+    <tr><td><strong>Energy source</strong></td><td>What fuel or resource</td><td>Diesel · HFO · Hydro · Solar · Wind</td></tr>
+    <tr><td><strong>Energy type</strong></td><td>The family the source belongs to</td><td><span class="tag fos">Conventional</span> <span class="tag ren">Renewable</span></td></tr>
+  </table></div>
+
+  <p><strong>Type is never entered — it is derived.</strong> Every source belongs to exactly one type (Diesel → Conventional; Hydro, Solar, Wind → Renewable), so a filter of <em>Type = Renewable</em> automatically covers every renewable source, including ones added in the future. Filter by type when you mean the family; filter by source only when the KPI is genuinely about one fuel.</p>
+
+  <h3>One data item, many ingredients</h3>
+  <p>To use the same data item several ways in one recipe, you create one named ingredient per filter combination — the same pantry item scooped through different sieves. An IPP share KPI, for example:</p>
+
+  <div class="formula-line"><span class="v-ren">generation_ipp</span> <span class="v-op">÷ (</span><span class="v-ren">generation_ipp</span> <span class="v-op">+</span> <span class="v-fos">generation_utility</span><span class="v-op">) × 100</span></div>
+  <div class="binding">
+    <span class="vn">generation_ipp</span>
+    <span class="src">Electricity Generated</span>
+    <span class="filters">Filters — Provider: <b>IPP</b> · Source: <b>any</b> · Type: <b>any</b></span>
+  </div>
+  <div class="binding fos">
+    <span class="vn">generation_utility</span>
+    <span class="src">Electricity Generated</span>
+    <span class="filters">Filters — Provider: <b>Utility-owned</b> · Source: <b>any</b> · Type: <b>any</b></span>
+  </div>
+
+  <div class="panel warn">
+    <h3>⚠ “Blank” does not mean “everything”</h3>
+    <p>In the engine today, leaving a filter blank means <em>“match rows that carry no label at all”</em> — not <em>“match every row”</em>. Equipment-level rows always carry labels, so an unfiltered ingredient pointed at equipment data finds <strong>nothing</strong>, and the KPI fails with “missing input”.</p>
+    <p>Until an explicit “Any” option exists (recommended to the dev team — Part 7), express <em>total</em> by adding the filtered parts in the recipe, exactly as the two examples above do: <code>generation_renewable + generation_conventional</code> covers everything, because every source is either one or the other.</p>
+  </div>
+</section>
+
+<!-- ============ 5. WORKED EXAMPLE ============ -->
+<section>
+  <p class="eyebrow">Part 5</p>
+  <h2>Worked example: from generator rows to a grid-level KPI</h2>
+  <p><strong>KPI:</strong> Renewable Share of Generation · <strong>Output level:</strong> Grid / Service Area (level 3) · June 2026. The Viti Levu grid has four generating units that reported this month:</p>
+
+  <div class="tbl-scroll"><table>
+    <tr><th>Unit (level 1)</th><th>Power station (level 2)</th><th>Source</th><th>Type (derived)</th><th>Provider</th><th class="n">Generated (MWh)</th></tr>
+    <tr class="bucket-fos"><td>Kinoya G1</td><td>Kinoya PS</td><td>Diesel</td><td><span class="tag fos">Conventional</span></td><td><span class="tag util">Utility</span></td><td class="n">6,200</td></tr>
+    <tr class="bucket-fos"><td>Kinoya G2</td><td>Kinoya PS</td><td>Diesel</td><td><span class="tag fos">Conventional</span></td><td><span class="tag util">Utility</span></td><td class="n">4,800</td></tr>
+    <tr class="bucket-ren"><td>Wailoa U1</td><td>Wailoa Hydro</td><td>Hydro</td><td><span class="tag ren">Renewable</span></td><td><span class="tag util">Utility</span></td><td class="n">7,500</td></tr>
+    <tr class="bucket-ren"><td>Qeleloa Solar</td><td>Qeleloa Farm</td><td>Solar</td><td><span class="tag ren">Renewable</span></td><td><span class="tag ipp">IPP</span></td><td class="n">1,500</td></tr>
+  </table></div>
+
+  <p>The calculator works through four steps:</p>
+  <ol class="steps">
+    <li>
+      <h3>Gather</h3>
+      <p>Collect every row for the data items the ingredients name, within the scope being calculated — here, the Viti Levu grid for June 2026. All four rows qualify.</p>
+    </li>
+    <li>
+      <h3>Filter into buckets — one per ingredient</h3>
+      <p><span class="mono" style="color:var(--teal-deep); font-weight:700">generation_renewable</span> (Type = Renewable) takes the green rows: Wailoa 7,500 and Qeleloa 1,500.<br>
+      <span class="mono" style="color:var(--copper); font-weight:700">generation_conventional</span> (Type = Conventional) takes the amber rows: Kinoya 6,200 and 4,800.</p>
+    </li>
+    <li>
+      <h3>Add up each bucket to the output level</h3>
+      <p>The KPI's output level (Grid, level 3) is above the data's level (Equipment, level 1), so each bucket is summed: <span class="mono">generation_renewable = 9,000</span> · <span class="mono">generation_conventional = 11,000</span>.</p>
+    </li>
+    <li>
+      <h3>Apply the recipe — once</h3>
+      <p><span class="mono">9,000 ÷ (9,000 + 11,000) × 100 = <strong>45%</strong></span>. The division happens after the summing, never before.</p>
+    </li>
+  </ol>
+
+  <h3>The same definition, climbing the ladder</h3>
+  <p>Now suppose the utility's other grid, Vanua Levu, reported 1,000 MWh renewable and 3,000 MWh conventional. Nothing about the KPI definition changes — only how far the buckets are summed before the recipe runs:</p>
+
+  <div class="results">
+    <div class="result"><span class="where">Viti Levu grid</span><div class="val">45.0%</div><span class="sub">9,000 ÷ 20,000</span></div>
+    <div class="result"><span class="where">Vanua Levu grid</span><div class="val">25.0%</div><span class="sub">1,000 ÷ 4,000</span></div>
+    <div class="result"><span class="where">Whole utility</span><div class="val">41.7%</div><span class="sub">10,000 ÷ 24,000</span></div>
+  </div>
+
+  <p>Note the utility answer is <strong>41.7%, not 35%</strong> (the average of 45 and 25) — the big grid rightly dominates. If you ever spot a published multi-level KPI where the higher level equals the plain average of the lower ones, that is a red flag worth investigating.</p>
+</section>
+
+<!-- ============ 6. SPEC SHEET ============ -->
+<section>
+  <p class="eyebrow">Part 6</p>
+  <h2>What you write down: the KPI spec sheet</h2>
+  <p>You do not need to touch the database to own formula correctness. For each KPI, hand the team a spec sheet with these six fields — it maps one-to-one onto what the engine stores:</p>
+
+  <div class="tbl-scroll"><table>
+    <tr><th style="width:32%">Field</th><th>Renewable Share of Generation (filled in)</th></tr>
+    <tr><td><strong>Question it answers</strong></td><td>What share of electricity generated came from renewable sources?</td></tr>
+    <tr><td><strong>Output level</strong></td><td>Grid / Service Area (level 3)</td></tr>
+    <tr><td><strong>Unit</strong></td><td>%</td></tr>
+    <tr><td><strong>Recipe</strong></td><td><span class="mono">generation_renewable ÷ (generation_renewable + generation_conventional) × 100</span></td></tr>
+    <tr><td><strong>Ingredient list</strong></td><td>
+      <span class="mono">generation_renewable</span> = Electricity Generated · Provider any · Source any · <strong>Type Renewable</strong><br>
+      <span class="mono">generation_conventional</span> = Electricity Generated · Provider any · Source any · <strong>Type Conventional</strong>
+    </td></tr>
+    <tr><td><strong>Hand-checked answer</strong></td><td>Viti Levu, June 2026: expect <strong>45%</strong> (9,000 ÷ 20,000)</td></tr>
+  </table></div>
+
+  <h3>Correctness checklist — run it on every formula</h3>
+  <ul class="checklist">
+    <li>Every name in the recipe appears in the ingredient list — and <strong>no two ingredients share a name</strong>.</li>
+    <li>Each ingredient's three filters are written out explicitly, even when they are "any".</li>
+    <li>"Total across everything" is expressed as a sum of filtered parts (e.g. renewable + conventional), never as a blank filter.</li>
+    <li>The output level is chosen deliberately — it is the level the <em>question</em> is asked at, not the level the data is entered at.</li>
+    <li>The unit matches the recipe's direction (kWh per litre is not litres per kWh — this exact inversion is live in one current KPI).</li>
+    <li>The sheet includes one hand-computed answer from real data, to compare against the engine's first output.</li>
+  </ul>
+</section>
+
+<!-- ============ 7. WATCH-OUTS ============ -->
+<section>
+  <p class="eyebrow">Part 7</p>
+  <h2>Current-state watch-outs</h2>
+  <p>Found while verifying the engine's behaviour against the live definitions — the first two affect published numbers today.</p>
+
+  <div class="tbl-scroll"><table>
+    <tr><th style="width:34%">Issue</th><th>What it means for you</th></tr>
+    <tr>
+      <td><strong>Two live KPIs break the naming rule</strong></td>
+      <td><em>IPP Generation</em> and <em>Renewable Energy to Grid</em> currently use the same ingredient name for numerator and denominator with no filters — so each computes a number divided by itself: <strong>always 100%</strong>. They need re-authoring using the pattern in Part 4.</td>
+    </tr>
+    <tr>
+      <td><strong>One stored answer per KPI per period</strong></td>
+      <td>Today the results table keeps a single value per KPI per reporting period — it has no column saying <em>which</em> station or grid the value belongs to. A KPI computed for two grids overwrites itself. The planned reporting layer fixes this (results keyed by level and place); until then, treat sub-utility KPI values with caution.</td>
+    </tr>
+    <tr>
+      <td><strong>Power Station is not yet a pickable level</strong></td>
+      <td>The system knows which station each generator belongs to, but level 2 is not currently offered as a KPI output level. Spec sheets can still be written against it — flag them so the dev team wires in the level.</td>
+    </tr>
+    <tr>
+      <td><strong>No "Any" filter option yet</strong></td>
+      <td>Worth requesting: an explicit "Any" choice per filter, so totals stop depending on the sum-of-parts workaround (and on every source being correctly assigned to a type).</td>
+    </tr>
+  </table></div>
+</section>
+
+<p class="footer-note">PRISM 2 KPI formula guide · prepared July 2026 · Companion to the gold-layer design decisions (Q2: roll-ups always sum ingredients and re-apply the stored recipe; never average ratios). Example figures are illustrative, not reported data.</p>
+
+</div>
+
+</body>
+</html>

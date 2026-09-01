@@ -1,0 +1,317 @@
+[
+ {
+  "id": 29,
+  "name": "Duty on Fuel and Lube Oil",
+  "definition": "Measures import duty and taxes levied on fuel and lubricating oil as a share of the utility's cost base, expressed as a percentage. It is sourced directly from the utility-reported apportioned cost of duty and taxes on fuel and lubricating oil, presented alongside the other cost-breakdown categories. A high share indicates that government fiscal charges on fuel imports form a material part of the cost of supply, which the utility cannot reduce through operational efficiency. For diesel-dependent Pacific utilities, changes in national duty policy can move this figure independently of any change in utility performance.",
+  "synonyms": ["Fuel and lubricant duties and taxes", "Fuel duty share of costs", "Apportioned fuel and oil taxes"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 23,
+  "name": "Fuel Expenditure",
+  "definition": "Measures spending on fuel and oil as a proportion of the utility's total costs, expressed as a percentage. Calculated as fuel and oil operating costs divided by total service costs. A high share signals heavy exposure to imported fuel prices, which is typical of diesel-dependent Pacific systems, while a falling share often reflects growing renewable generation or lower world fuel prices rather than cost control. Because fuel is purchased in foreign currency, exchange-rate movements can shift this ratio independently of operational performance.",
+  "synonyms": ["Fuel cost share", "Fuel and oil expenditure ratio", "Fuel cost as a share of total costs"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 30,
+  "name": "Generation Labor Costs",
+  "definition": "Measures the cost of the generation function as a share of the utility's total costs, expressed as a percentage. In the current formula it is calculated as generation operations and maintenance costs divided by total service costs. A high share points to a cost structure dominated by power production, while a low share suggests costs sit mainly in networks, retail or overheads. Comparisons across utilities should allow for differences in generation mix, since diesel-heavy fleets carry structurally higher generation costs than hydro or solar systems.",
+  "synonyms": ["Generation labour cost share", "Generation staff cost ratio", "Generation payroll share of costs"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 24,
+  "name": "Generation O&M Costs",
+  "definition": "Measures generation operations and maintenance spending as a proportion of the utility's total costs, expressed as a percentage. Calculated as generation O&M costs divided by total service costs. A high share indicates that running and maintaining power stations dominates the cost base, which may reflect an ageing or diesel-heavy fleet; a low share suggests costs are concentrated in networks or overheads. Differences in generation mix and plant age mean this ratio should be read alongside fuel expenditure rather than in isolation.",
+  "synonyms": ["Generation O&M cost share", "Generation operations and maintenance ratio", "Generation opex share"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 32,
+  "name": "Other Duty and Taxes",
+  "definition": "Measures duty and taxes other than those on fuel and lubricating oil as a share of the utility's total costs, expressed as a percentage. Calculated as apportioned other duty and taxes divided by total service costs. A high share indicates that government fiscal charges beyond fuel duties form a material part of the cost of supply. These charges are set by government policy rather than utility management, so they reflect the fiscal environment more than operating efficiency.",
+  "synonyms": ["Other duties and taxes share", "Non-fuel duty and tax ratio", "Other fiscal charges share of costs"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 28,
+  "name": "Other Expenditure",
+  "definition": "Measures other operating expenses as a proportion of the utility's total costs, expressed as a percentage. Calculated as other operating expenses divided by total service costs. A high share can indicate significant administrative, insurance or miscellaneous costs that are not captured in the fuel, labour or O&M categories, and may warrant closer scrutiny of overheads. Inconsistent classification of costs between utilities can distort cross-utility comparison of this residual category.",
+  "synonyms": ["Other operating expenses share", "Other opex ratio", "Miscellaneous expenditure share"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 27,
+  "name": "Other Labor Expenditure",
+  "definition": "Measures labour costs outside the core generation, transmission and distribution functions as a share of the utility's total costs, expressed as a percentage. Calculated as other labour expenditure divided by total service costs. A high share suggests a large administrative or support workforce relative to the technical front line, which can indicate overstaffing in overhead functions. Small Pacific utilities often carry proportionally higher support-staff costs because fixed corporate functions are spread over a small customer base.",
+  "synonyms": ["Other labour cost share", "Support staff cost ratio", "Non-technical labour share of costs"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 25,
+  "name": "Power Purchase Costs",
+  "definition": "Measures the cost of electricity purchased from third parties, such as independent power producers, as a share of the utility's total costs, expressed as a percentage. Calculated as power purchase costs divided by total service costs. A rising share typically reflects growing reliance on IPPs or rooftop-solar buy-back arrangements rather than own generation, and shifts cost exposure from fuel markets to contract terms. The ratio says nothing about whether purchased power is cheaper or dearer than self-generation, so it should be read alongside generation cost KPIs.",
+  "synonyms": ["IPP purchase cost share", "Purchased power expenditure ratio", "Power purchase share of total costs"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 31,
+  "name": "Transmission and Distribution Labor Costs",
+  "definition": "Measures the labour cost of the network functions as a share of the utility's total costs, expressed as a percentage. Calculated as the sum of transmission staff costs and distribution staff costs divided by total service costs. A high share indicates a labour-intensive network operation, which may reflect dispersed island grids that require large field crews, while a very low share could signal under-resourced maintenance. Geography drives much of the variation across Pacific utilities, so like-for-like comparison should consider network length and island dispersion.",
+  "synonyms": ["Network labour cost share", "T&D staff cost ratio", "Lines labour share of costs"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 26,
+  "name": "Transmission and Distribution O&M Costs",
+  "definition": "Measures operations and maintenance spending on the transmission and distribution networks as a proportion of the utility's total costs, expressed as a percentage. Calculated as the sum of transmission O&M costs and distribution O&M costs divided by total service costs. A high share indicates that network upkeep dominates the cost base, while a persistently low share may point to deferred maintenance that later surfaces as reliability problems. Cyclone exposure and salt-air corrosion mean Pacific networks often require structurally higher maintenance spending than continental systems.",
+  "synonyms": ["Network O&M cost share", "T&D maintenance expenditure ratio", "Wires opex share"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 36,
+  "name": "Operating Cost Covered by Subsidies",
+  "definition": "Measures how much of the utility's operating cost base is funded by government subsidies, expressed as a percentage. Calculated as government subsidies received divided by the sum of cost of sales and other operating expenses, less bad debt expense, plus income tax. A high percentage indicates heavy dependence on government support to keep operating, while a figure near zero indicates the utility funds its operations from its own revenue. Subsidies can mask poor cost recovery or below-cost tariffs, so this KPI should be read together with Operating Cost Recovery when judging financial sustainability.",
+  "synonyms": ["Subsidy dependence ratio", "Government subsidy coverage of operating costs", "Subsidy-to-operating-cost ratio"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 34,
+  "name": "Operating Cost Recovery",
+  "definition": "Measures the extent to which revenue from operations covers the utility's operating costs, expressed as a percentage. Calculated as service revenue divided by the sum of cost of sales and other operating expenses, less bad debt expense, plus income tax. A value at or above 100% means tariff and other operating revenue fully covers operating costs, while a value below 100% signals dependence on subsidies or borrowing to sustain operations. For Pacific state-owned utilities, sustained below-100% recovery usually reflects tariffs set below cost rather than short-term cost shocks.",
+  "synonyms": ["Cost recovery ratio", "Operating cost coverage", "Revenue-to-operating-cost ratio"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 35,
+  "name": "Operating Ratio",
+  "definition": "Measures operating expenses as a percentage of operating revenue, indicating how much of each unit of revenue is absorbed by the cost of operations. Calculated as the sum of cost of sales and other operating expenses divided by service revenue. Lower is better: a ratio below 100% means the utility earns more from operations than it spends, and the PPA target is 70% against a Pacific regional average of 78%. Because many Pacific utilities operate under regulated tariffs and receive government support, a favourable ratio can reflect subsidised inputs or recent tariff resets as much as underlying efficiency.",
+  "synonyms": ["Operating expense ratio", "Opex-to-revenue ratio", "Cost-to-income ratio"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 38,
+  "name": "Current Ratio",
+  "definition": "Measures the utility's short-term liquidity, expressed as a ratio of what it owns to what it owes within the year. Calculated as total current assets divided by total current liabilities. A ratio above 1.0 indicates the utility can meet its near-term obligations from near-term resources, while a ratio below 1.0 signals potential cash-flow stress; a very high ratio may indicate idle cash or slow-moving inventory. For Pacific utilities, large fuel stock holdings and overdue government receivables can inflate current assets without genuinely improving liquidity.",
+  "synonyms": ["Working capital ratio", "Liquidity ratio", "Current assets to current liabilities"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 37,
+  "name": "Debtor Days",
+  "definition": "Measures the average number of days the utility takes to collect payment from its customers after billing. Calculated as trade receivables divided by service revenue, multiplied by 365. A low figure indicates effective billing and collection, while a high figure ties up working capital and increases bad-debt risk; utilities typically aim for collection within one to two billing cycles. In the Pacific, unpaid government and state-agency accounts are a common driver of high debtor days, so the figure can reflect public-sector payment discipline as much as the utility's own collection effort.",
+  "synonyms": ["Days sales outstanding (DSO)", "Average collection period", "Receivables days", "Collection period"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 42,
+  "name": "EBITDA Margin",
+  "definition": "Measures earnings before interest, tax, depreciation and amortisation as a percentage of revenue, indicating the cash-generating capacity of core operations. Calculated as service revenue less other income, cost of sales and other operating expenses, divided by service revenue. A higher margin means more revenue is retained after cash operating costs and is available to fund debt service, tax and capital investment; a low or negative margin signals that tariffs are not covering day-to-day operating costs. Because it excludes depreciation, a healthy EBITDA margin can coexist with an inability to fund asset replacement, which matters for capital-hungry island grids.",
+  "synonyms": ["EBITDA-to-revenue ratio", "Cash operating margin", "Underlying operating margin"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 43,
+  "name": "EBIT Margin",
+  "definition": "Measures earnings before interest and tax as a percentage of revenue, showing operating profitability after the cost of consuming assets. Calculated as service revenue plus other income, less cost of sales, other operating expenses, depreciation and amortisation, divided by service revenue. A higher margin indicates operations generate a genuine surplus after providing for asset wear, while a negative margin means tariffs do not cover the full economic cost of supply. Where asset registers are outdated or assets are grant-funded, understated depreciation can flatter this margin for Pacific utilities.",
+  "synonyms": ["Operating margin", "Operating profit margin", "EBIT-to-revenue ratio"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 44,
+  "name": "Profit Margin",
+  "definition": "Measures net profit as a percentage of revenue, showing how much of each unit of revenue remains after all costs. Calculated as service profit divided by service revenue. A positive margin indicates the utility is financially self-sustaining and able to fund reinvestment, while a persistent negative margin signals reliance on government support or accumulating losses. Government subsidies and community service obligations can distort the margin for Pacific state-owned utilities, so it should be read alongside the subsidy-coverage KPIs.",
+  "synonyms": ["Net profit margin", "Net margin", "Return on sales"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 40,
+  "name": "Return on Assets",
+  "definition": "Measures how effectively the utility uses its asset base to generate profit, expressed as a percentage. Calculated as service profit divided by total assets. A higher return indicates assets are being worked productively, while a low or negative return suggests underused capacity, below-cost tariffs or an inflated asset base. Grant-funded and donor-funded assets are common in the Pacific and enlarge the denominator without a matching revenue obligation, which can depress reported returns relative to utilities that debt-fund their assets.",
+  "synonyms": ["ROA", "Return on total assets", "Asset productivity ratio"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 41,
+  "name": "Return on Equity",
+  "definition": "Measures the profit generated on the owners' investment in the utility, expressed as a percentage. Calculated as service profit divided by total equity. A higher return indicates the utility is creating value for its shareholder, typically the government for Pacific utilities, while a low or negative return means the owner's capital is being eroded. Because equity can be distorted by asset revaluations, accumulated losses or government capital injections, the ratio should be interpreted alongside return on assets and gearing.",
+  "synonyms": ["ROE", "Return on shareholders' funds", "Return on net worth"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 109,
+  "name": "Customer Sales",
+  "definition": "Measures the utility's total revenue from the sale of electricity services to customers, expressed in local currency. It is taken directly from reported service revenue rather than derived from other inputs. Growth in customer sales reflects some combination of tariff levels, customer numbers and consumption, so it indicates scale rather than efficiency or profitability. Local-currency reporting means cross-utility comparison requires conversion at consistent exchange rates and is sensitive to inflation.",
+  "synonyms": ["Service revenue", "Electricity sales revenue", "Operating revenue", "Turnover"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 39,
+  "name": "Debt to Equity Ratio",
+  "definition": "Measures the utility's financial leverage, expressed as a ratio of what it owes to the owners' stake in the business. Calculated as total liabilities divided by total equity, a broader basis than definitions that use interest-bearing debt only. A higher ratio indicates greater reliance on borrowed or owed funds and higher financial risk, while a low ratio indicates a conservatively funded balance sheet with headroom to borrow for capital works. For Pacific state-owned utilities, concessional and government-guaranteed loans can make high gearing less risky than the raw ratio suggests.",
+  "synonyms": ["Gearing ratio", "Leverage ratio", "D/E ratio", "Liabilities-to-equity ratio"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 135,
+  "name": "10,000 kWh",
+  "definition": "Reports the amount a customer would be billed for consuming 10,000 kWh in a period under the utility's prevailing tariff, expressed in local currency at service-area level. It is compiled from the utility's published tariff structure rather than calculated from a formula, and represents a large commercial or industrial consumption level. Comparing billed amounts at standard consumption points shows how tariff design treats large consumers, who often cross-subsidise smaller users. As a regulated local-currency price it reflects tariff policy and subsidy settings rather than utility efficiency, and cross-utility comparison requires currency conversion.",
+  "synonyms": ["Bill at 10,000 kWh", "Large-user tariff benchmark", "Indicative 10,000 kWh charge"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 133,
+  "name": "1,000 kWh",
+  "definition": "Reports the amount a customer would be billed for consuming 1,000 kWh in a period under the utility's prevailing tariff, expressed in local currency at service-area level. It is compiled from the utility's published tariff structure rather than calculated from a formula, and represents a large household or small commercial consumption level. Comparing billed amounts at standard consumption points allows tariff levels and block structures to be benchmarked across utilities. As a regulated local-currency price it reflects tariff policy and subsidy settings rather than utility efficiency, and cross-utility comparison requires currency conversion.",
+  "synonyms": ["Bill at 1,000 kWh", "Tariff benchmark 1,000 kWh", "Indicative 1,000 kWh charge"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 130,
+  "name": "100 kWh",
+  "definition": "Reports the amount a customer would be billed for consuming 100 kWh in a period under the utility's prevailing tariff, expressed in local currency at service-area level. It is compiled from the utility's published tariff structure rather than calculated from a formula, and represents a low-consumption household. Comparing billed amounts at standard consumption points shows how affordable basic electricity use is under each utility's tariff design. As a regulated local-currency price it reflects tariff policy and subsidy settings rather than utility efficiency, and cross-utility comparison requires currency conversion.",
+  "synonyms": ["Bill at 100 kWh", "Small-user tariff benchmark", "Indicative 100 kWh charge"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 131,
+  "name": "200 kWh",
+  "definition": "Reports the amount a customer would be billed for consuming 200 kWh in a period under the utility's prevailing tariff, expressed in local currency at service-area level. It is compiled from the utility's published tariff structure rather than calculated from a formula, and represents a typical household consumption level in many Pacific markets. Comparing billed amounts at standard consumption points allows residential tariff levels to be benchmarked across the region. As a regulated local-currency price it reflects tariff policy and subsidy settings rather than utility efficiency, and cross-utility comparison requires currency conversion.",
+  "synonyms": ["Bill at 200 kWh", "Typical household tariff benchmark", "Indicative 200 kWh charge"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 134,
+  "name": "5,000 kWh",
+  "definition": "Reports the amount a customer would be billed for consuming 5,000 kWh in a period under the utility's prevailing tariff, expressed in local currency at service-area level. It is compiled from the utility's published tariff structure rather than calculated from a formula, and represents a commercial-scale consumption level. Comparing billed amounts at standard consumption points shows how tariff design treats business consumers relative to households. As a regulated local-currency price it reflects tariff policy and subsidy settings rather than utility efficiency, and cross-utility comparison requires currency conversion.",
+  "synonyms": ["Bill at 5,000 kWh", "Commercial tariff benchmark", "Indicative 5,000 kWh charge"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 132,
+  "name": "500 kWh",
+  "definition": "Reports the amount a customer would be billed for consuming 500 kWh in a period under the utility's prevailing tariff, expressed in local currency at service-area level. It is compiled from the utility's published tariff structure rather than calculated from a formula, and represents a high-consumption household or very small business. Comparing billed amounts at standard consumption points allows tariff levels and block structures to be benchmarked across utilities. As a regulated local-currency price it reflects tariff policy and subsidy settings rather than utility efficiency, and cross-utility comparison requires currency conversion.",
+  "synonyms": ["Bill at 500 kWh", "Tariff benchmark 500 kWh", "Indicative 500 kWh charge"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 128,
+  "name": "Lifeline 120 kWh",
+  "definition": "Reports the amount a customer would be billed for consuming 120 kWh in a period under the utility's lifeline tariff, the subsidised rate offered to low-consumption households, expressed in local currency at service-area level. It is compiled from the utility's published tariff structure rather than calculated from a formula. Comparing lifeline bills at standard consumption points shows how much protection each utility's tariff design gives low-income customers. Because lifeline rates are a social-policy instrument, a low figure reflects deliberate cross-subsidy or government support rather than low cost of supply.",
+  "synonyms": ["Lifeline tariff bill at 120 kWh", "Subsidised low-use bill (120 kWh)", "Social tariff benchmark 120 kWh"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 129,
+  "name": "Lifeline 180 kWh",
+  "definition": "Reports the amount a customer would be billed for consuming 180 kWh in a period under the utility's lifeline tariff, the subsidised rate offered to low-consumption households, expressed in local currency at service-area level. It is compiled from the utility's published tariff structure rather than calculated from a formula. This point sits at the upper end of typical lifeline thresholds, so it shows how the subsidised rate tapers as household consumption approaches the standard tariff. Because lifeline rates are a social-policy instrument, a low figure reflects deliberate cross-subsidy or government support rather than low cost of supply.",
+  "synonyms": ["Lifeline tariff bill at 180 kWh", "Subsidised low-use bill (180 kWh)", "Social tariff benchmark 180 kWh"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 127,
+  "name": "Lifeline 60 kWh",
+  "definition": "Reports the amount a customer would be billed for consuming 60 kWh in a period under the utility's lifeline tariff, the subsidised rate offered to low-consumption households, expressed in local currency at service-area level. It is compiled from the utility's published tariff structure rather than calculated from a formula. This point represents very basic electricity use, so it is the clearest indicator of affordability for the poorest connected households. Because lifeline rates are a social-policy instrument, a low figure reflects deliberate cross-subsidy or government support rather than low cost of supply.",
+  "synonyms": ["Lifeline tariff bill at 60 kWh", "Subsidised low-use bill (60 kWh)", "Social tariff benchmark 60 kWh"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 54,
+  "name": "Are Ministers appointed to the Board",
+  "definition": "Records whether government ministers sit as directors on the utility's board, captured as a Yes/No response in the PPA governance questionnaire. It reflects the degree of separation between the state's ownership role and the utility's commercial direction. A No response is generally regarded as better practice, since direct ministerial membership can blur policy, regulatory and ownership roles and weaken the board's commercial independence. When aggregated across utilities, responses are reported as the share of participating utilities with ministers on their boards.",
+  "synonyms": ["Ministerial board appointments", "Ministers as directors indicator", "Political appointees on the board"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 55,
+  "name": "Are Ministers or public servants representing the line/sector Ministry appointed to the Board",
+  "definition": "Records whether ministers or public servants from the line or sector ministry responsible for energy sit on the utility's board, captured as a Yes/No response in the PPA governance questionnaire. It reflects whether the body that sets sector policy also participates directly in the utility's governance. A No response is generally regarded as better practice, because line-ministry representation on the board can create conflicts between the ministry's policy and regulatory functions and the utility's commercial interests. When aggregated across utilities, responses are reported as the share of participating utilities with such appointments.",
+  "synonyms": ["Line ministry board representation", "Sector ministry appointees on the board", "Shareholding ministry directors indicator"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 48,
+  "name": "Is a Commercial mandate implemented",
+  "definition": "Records whether the utility's commercial mandate is actually applied in practice, captured as a Yes/No response in the PPA governance questionnaire. It goes a step beyond having a mandate on paper, asking whether the utility genuinely operates on commercial principles such as cost-reflective pricing and accountability for financial results. A Yes response indicates the state-owned utility is run as a business rather than as an extension of government administration. Implementation is self-assessed, so responses may be more favourable than independent review would suggest.",
+  "synonyms": ["Commercial mandate implementation", "Commercial operation in practice", "Commercialisation implementation indicator"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 47,
+  "name": "Is a Commercial mandate in place",
+  "definition": "Records whether the utility has a formal mandate to operate on commercial principles, typically set out in its establishing legislation, statement of corporate intent or ownership policy, captured as a Yes/No response in the PPA governance questionnaire. A Yes response indicates the owner has formally directed the utility to pursue commercial objectives, which underpins cost recovery and financial sustainability. Having a mandate in place does not guarantee it is followed, so this item is paired with a separate question on implementation. When aggregated across utilities, responses are reported as the share of participating utilities with a mandate in place.",
+  "synonyms": ["Commercial mandate adoption", "Formal commercial objectives", "SOE commercial mandate indicator"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 46,
+  "name": "Is a Code of Conduct implemented",
+  "definition": "Records whether the utility's code of conduct is actively applied, for example through staff training, sign-off and enforcement of breaches, captured as a Yes/No response in the PPA governance questionnaire. It distinguishes utilities that operationalise their ethics framework from those where the code exists only as a document. A Yes response indicates stronger integrity practices, which support procurement discipline and reduce fraud and conflict-of-interest risk. Implementation is self-assessed, so responses reflect the utility's own judgement rather than an independent audit.",
+  "synonyms": ["Code of conduct implementation", "Ethics code enforcement", "Code of conduct in practice"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 45,
+  "name": "Is a Code of Conduct in place",
+  "definition": "Records whether the utility has adopted a formal code of conduct governing the behaviour of its directors and staff, captured as a Yes/No response in the PPA governance questionnaire. A code of conduct sets expectations on ethics, conflicts of interest and use of company resources, and is a baseline element of good corporate governance. A Yes response indicates the foundation is in place, though a separate questionnaire item tests whether the code is actually implemented. When aggregated across utilities, responses are reported as the share of participating utilities with a code in place.",
+  "synonyms": ["Code of conduct adoption", "Ethics code established", "Corporate code of conduct indicator"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 50,
+  "name": "Does the CEOs performance contract include annual reviews",
+  "definition": "Records whether the chief executive's performance contract provides for formal annual performance reviews, captured as a Yes/No response in the PPA governance questionnaire. Annual reviews give the board a regular, structured opportunity to hold the CEO accountable against agreed targets and to link remuneration or renewal to results. A Yes response indicates a stronger executive accountability cycle than a contract that is only assessed at expiry. The item records whether reviews are provided for, not whether they are conducted rigorously.",
+  "synonyms": ["Annual CEO performance review", "Yearly chief executive appraisal", "CEO review cycle indicator"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 49,
+  "name": "Is the CEO on a performance contract",
+  "definition": "Records whether the utility's chief executive is employed under a contract with defined performance targets, captured as a Yes/No response in the PPA governance questionnaire. A performance contract links the CEO's tenure and incentives to agreed operational and financial results, giving the board a concrete accountability mechanism. A Yes response is regarded as good practice for state-owned utilities, where executive accountability can otherwise be diluted by political appointment processes. When aggregated across utilities, responses are reported as the share of participating utilities whose CEOs are on performance contracts.",
+  "synonyms": ["CEO performance agreement", "Chief executive performance contract indicator", "Executive accountability contract"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 52,
+  "name": "Does the Strategic Plan include three or more years of forecasts",
+  "definition": "Records whether the utility's strategic plan contains financial and operational forecasts covering at least three years, captured as a Yes/No response in the PPA governance questionnaire. Multi-year forecasting shows the utility is planning investment, tariffs and financing over a horizon that matches the long-lived nature of power assets. A Yes response indicates more mature planning than a plan limited to a single budget year. Forecast quality is not tested by this item, only whether the forward horizon exists.",
+  "synonyms": ["Multi-year forecast indicator", "Three-year planning horizon", "Forward forecasts in corporate plan"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 51,
+  "name": "Has a Strategic Plan been adopted",
+  "definition": "Records whether the utility's board has formally adopted a strategic plan, captured as a Yes/No response in the PPA governance questionnaire. A board-adopted plan sets the utility's objectives, investment priorities and performance targets, and provides the reference point against which management and annual reports can be assessed. A Yes response indicates the basic planning discipline is in place; separate items test the plan's forecasting depth and implementation. When aggregated across utilities, responses are reported as the share of participating utilities with an adopted plan.",
+  "synonyms": ["Strategic plan adoption", "Corporate plan in place", "Board-approved business plan indicator"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 53,
+  "name": "Is the Strategic Plan implemented",
+  "definition": "Records whether the utility's strategic plan is actively used to direct operations and investment, captured as a Yes/No response in the PPA governance questionnaire. Implementation means the plan's targets flow into budgets, work programmes and management reporting rather than sitting on a shelf. A Yes response indicates the utility closes the loop between planning and execution, which is where many governance frameworks fail in practice. Implementation is self-assessed, so responses may overstate the plan's day-to-day influence.",
+  "synonyms": ["Strategic plan execution", "Corporate plan implementation indicator", "Plan-to-budget alignment"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 58,
+  "name": "Does the Annual Report disclose performance relative to the Strategic Plan",
+  "definition": "Records whether the utility's annual report presents actual performance against the targets in its strategic plan, captured as a Yes/No response in the PPA governance questionnaire. Plan-versus-actual disclosure lets the owner, regulator and public judge whether the utility is delivering on its stated objectives, closing the accountability loop between planning and reporting. A Yes response indicates a higher standard of transparency than financial statements alone. When aggregated across utilities, responses are reported as the share of participating utilities making this disclosure.",
+  "synonyms": ["Performance disclosure against plan", "Plan-versus-actual reporting", "Strategic plan accountability reporting"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 57,
+  "name": "Is the Annual Report audited",
+  "definition": "Records whether the financial statements in the utility's annual report are subject to independent audit, captured as a Yes/No response in the PPA governance questionnaire. An external audit provides assurance that reported financial results fairly present the utility's position, which underpins the credibility of every financial KPI in the benchmarking programme. A Yes response is a baseline expectation for state-owned enterprises and lenders alike, and a No response materially weakens confidence in the utility's reported data. The item does not distinguish between clean, qualified or delayed audit opinions.",
+  "synonyms": ["Audited financial statements indicator", "External audit of annual report", "Statutory audit indicator"],
+  "definition_status": "draft"
+ },
+ {
+  "id": 56,
+  "name": "Is the Annual Report completed within four months of the end of the reporting year",
+  "definition": "Records whether the utility completes its annual report within four months of the financial year end, captured as a Yes/No response in the PPA governance questionnaire. Timely reporting indicates disciplined financial close processes and gives the owner, lenders and regulators current information for decision-making. A Yes response reflects good practice; long delays, which are common among Pacific state-owned enterprises, reduce the usefulness of the report and often signal capacity constraints in the finance function or a backlog at the national audit office. When aggregated across utilities, responses are reported as the share of participating utilities reporting on time.",
+  "synonyms": ["Annual report timeliness", "Four-month reporting deadline indicator", "Timely financial reporting"],
+  "definition_status": "draft"
+ }
+]
