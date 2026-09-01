@@ -3,35 +3,23 @@ import { and, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import { db } from "@/db/connection";
 import type { FormulaInput } from "@/db/schema/dataEntry";
 import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
-import { ALL_MEMBER } from "@/lib/data-entry/dimensions";
 import { managedListItems } from "@/db/schema/managedLists";
 import { countryContext } from "@/db/schema/country";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { organisations } from "@/db/schema/utility";
 
+import {
+  asNumber,
+  pickInputValue,
+  selectGrainCandidates,
+  strataShouldRollup,
+} from "./dimension-rollup";
+import type { RollupCandidate } from "./dimension-rollup";
 import { normalizeFormulaInput } from "./normalizeFormulaInput";
 import type { KpiWorkerScope } from "./types";
 
-export interface RollupCandidate {
-  value: string | null;
-  isDeleted: boolean;
-  isRelevant: boolean;
-  energyProviderId: number | null;
-  energyTypeId: number | null;
-  energySourceId: number | null;
-  unitTypeId: number | null;
-  customerTypeId: number | null;
-  paymentModeId: number | null;
-  consumptionBandId: number | null;
-  divisionId: number | null;
-  genderId: number | null;
-  utilityFunctionId: number | null;
-  // Sub-utility grain chain (unit → power station → service area → utility).
-  // Distinct from the tag dimensions above; used for grain rollup, not slicing.
-  grainAreaId: number | null;
-  grainStationId: number | null;
-  grainUnitId: number | null;
-}
+export type { RollupCandidate } from "./dimension-rollup";
+export { sumRollupValues } from "./dimension-rollup";
 
 export interface ResolveInputsRequest {
   formulaInputs: FormulaInput[];
@@ -43,77 +31,6 @@ export interface ResolvedFormulaInputs {
   variables: Record<string, number>;
   missingVariables: string[];
 }
-
-/**
- * Medallion dimension match (doc §0.4). A binding is authoritative and exact,
- * except that an All-member binding also matches legacy NULL-tagged rows during
- * the transition. An unbound dimension falls back to the evaluation scope (for
- * the dims the scope carries) and otherwise to the All member.
- *
- * `actual === allMember || actual == null` is a strict superset of the old
- * "require NULL" rule: All-member ids don't exist on un-migrated rows, so this
- * returns identical candidates on today's NULL-tagged data and resolves
- * correctly once rows carry explicit All-member ids.
- */
-const matchDimension = (
-  actual: number | null,
-  bound: number | null,
-  scopeValue: number | null,
-  allMember: number,
-): boolean => {
-  if (bound != null) {
-    return bound === allMember
-      ? actual === allMember || actual == null
-      : actual === bound;
-  }
-  if (scopeValue != null) {
-    return actual === scopeValue || actual === allMember || actual == null;
-  }
-  return actual === allMember || actual == null;
-};
-
-const asNumber = (value: string | null): number | null => {
-  if (value == null) {
-    return null;
-  }
-
-  const numeric = Number(value);
-  return Number.isFinite(numeric) ? numeric : null;
-};
-
-export const sumRollupValues = (
-  rows: RollupCandidate[],
-): { sum: number; hasValue: boolean } => {
-  let sum = 0;
-  let hasValue = false;
-
-  for (const row of rows) {
-    if (row.isDeleted || !row.isRelevant) {
-      continue;
-    }
-
-    const numeric = asNumber(row.value);
-    if (numeric == null) {
-      continue;
-    }
-
-    sum += numeric;
-    hasValue = true;
-  }
-
-  return { sum, hasValue };
-};
-
-const shouldRollup = (
-  kpiAggLevelId: number | null,
-  inputAggLevelId: number | null,
-): boolean => {
-  if (kpiAggLevelId == null || inputAggLevelId == null) {
-    return false;
-  }
-
-  return kpiAggLevelId > inputAggLevelId;
-};
 
 export const resolveFormulaInputValues = async (
   request: ResolveInputsRequest,
@@ -335,54 +252,6 @@ export const resolveFormulaInputValues = async (
   const variables: Record<string, number> = {};
   const missingVariables: string[] = [];
 
-  // strict: authoritative match — an All-binding matches the All-member (or
-  // legacy null) aggregate row only.
-  const strict = (
-    actual: number | null,
-    bound: number | null | undefined,
-    allMember: number,
-    scopeValue: number | null = null,
-  ) => matchDimension(actual, bound ?? null, scopeValue, allMember);
-
-  // detail: an All-binding (with no pinning scope value) matches ANY member on
-  // that dimension — the member slices as well as All-member/null on the dims
-  // that aren't broken down — so the sum is the dimension rollup across all
-  // present members. Reached ONLY when no authoritative All-member aggregate
-  // row was found (rule 1), so this never adds a full aggregate to its own
-  // detail. (Partial-aggregate-plus-detail coexistence is caught by #4's
-  // Σ-members-vs-All verifier, not resolved here.)
-  const detail = (
-    actual: number | null,
-    bound: number | null | undefined,
-    allMember: number,
-    scopeValue: number | null = null,
-  ) => {
-    if (scopeValue == null && bound != null && bound === allMember) {
-      return true;
-    }
-    return matchDimension(actual, bound ?? null, scopeValue, allMember);
-  };
-
-  type SourceRow = (typeof byInputDef extends Map<number, infer V>
-    ? V
-    : never)[number];
-
-  const matchesAll = (
-    c: SourceRow,
-    formulaInput: FormulaInput,
-    match: typeof strict,
-  ): boolean =>
-    match(c.energyProviderId, formulaInput.provider_id, ALL_MEMBER.provider_id) &&
-    match(c.energyTypeId, formulaInput.category_id, ALL_MEMBER.category_id) &&
-    match(c.energySourceId, formulaInput.technology_id, ALL_MEMBER.technology_id) &&
-    match(c.unitTypeId, formulaInput.asset_class_id, ALL_MEMBER.asset_class_id) &&
-    match(c.customerTypeId, formulaInput.customer_type_id, ALL_MEMBER.customer_type_id, request.scope.customerTypeId ?? null) &&
-    match(c.paymentModeId, formulaInput.payment_mode_id, ALL_MEMBER.payment_mode_id, request.scope.paymentModeId ?? null) &&
-    match(c.consumptionBandId, formulaInput.consumption_band_id, ALL_MEMBER.consumption_band_id) &&
-    match(c.divisionId, formulaInput.division_id, ALL_MEMBER.division_id) &&
-    match(c.genderId, formulaInput.gender_id, ALL_MEMBER.gender_id) &&
-    match(c.utilityFunctionId, formulaInput.utility_function_id, ALL_MEMBER.utility_function_id);
-
   for (const formulaInput of formulaInputs) {
     // Context-fed inputs resolve from country_context (the national figure for
     // the period's country), not from the dimensioned data_entries rows above.
@@ -400,96 +269,35 @@ export const resolveFormulaInputValues = async (
     const sourceRows = byInputDef.get(formulaInput.measure_def_id) ?? [];
     const inputAggLevelId =
       strataMap.get(formulaInput.measure_def_id) ?? null;
-    const strataRollup = shouldRollup(request.kpiAggLevelId, inputAggLevelId);
-
-    // Grain rollup (sub-utility chain). Rank each row by its finest populated
-    // grain column: unit(3) > station(2) > area(1) > utility-aggregate(0).
-    // Prefer the authoritative target-level (utility) row; else Σ the COARSEST
-    // single level present below target — never mixing levels, which would
-    // double count (#8's invariant; #4's "prefer the aggregate, never add
-    // across"). Only runs when the target is the utility (rollUpGrain).
-    const subRank = (c: SourceRow): number =>
-      c.grainUnitId != null
-        ? 3
-        : c.grainStationId != null
-          ? 2
-          : c.grainAreaId != null
-            ? 1
-            : 0;
-
-    let candidateRows = sourceRows;
-    let grainSummed = false;
-    if (rollUpGrain && sourceRows.length > 0) {
-      const aggregateRows = sourceRows.filter((c) => subRank(c) === 0);
-      if (aggregateRows.length > 0) {
-        // Authoritative utility-level aggregate present → use it; never add the
-        // finer breakdown on top.
-        candidateRows = aggregateRows;
-      } else {
-        const finerRanks = [
-          ...new Set(sourceRows.map(subRank).filter((rank) => rank > 0)),
-        ].sort((a, b) => a - b);
-        const coarsest = finerRanks[0];
-        candidateRows = sourceRows.filter((c) => subRank(c) === coarsest);
-        grainSummed = true;
-        if (finerRanks.length > 1) {
-          // Invariant violation: a period holds rows at more than one
-          // sub-utility level for the same measure. Roll up the coarsest level
-          // only and flag it — mixing levels is the one place Σ could double
-          // count. (No such measure exists in current data; defensive.)
-          console.warn(
-            `[kpi-worker] measure ${formulaInput.measure_def_id} period ${request.scope.reportPeriodId}: mixed grain levels ${finerRanks.join(",")} — rolled up coarsest (${coarsest}) only`,
-          );
-        }
-      }
-    }
-
-    // Any grain rollup implies summing across grain cells (each area/station
-    // carries its own total); the strata rollup keeps its prior behaviour.
-    // NOTE (additivity): §4.6 requires formula inputs to be additive bases
-    // (ratios are computed at the formula step, never summed). Every measure
-    // that triggers grain-Σ in current data is additive (counts/MWh/hours/…);
-    // there is no per-measure additivity flag yet. #4 owns adding an
-    // `is_additive` / `aggregation_method` column; once it lands, refuse the
-    // sum for non-additive measures here instead of relying on that invariant.
-    const grainRollup = strataRollup || grainSummed;
-
-    // Dimension resolution follows the ruled "All-row else sum of detail"
-    // preference (#8, grounded in PR #104 aggregate-vs-breakdown + §4.6):
-    //   1. authoritative All-member aggregate row exists → USE it
-    //   2. else genuine member slices exist → SUM them (dimension rollup)
-    //   3. else missing.
-    // One source is ever consulted, never added across, so a mandatory All row
-    // coexisting with an optional (possibly partial) breakdown never
-    // double-counts or gets understated by a partial sum.
-    let value: number | null = null;
-
-    // Rule 1 — authoritative aggregate (preserves prior grain-rollup behaviour).
-    const strictCandidates = candidateRows.filter((c) =>
-      matchesAll(c, formulaInput, strict),
+    const strataRollup = strataShouldRollup(
+      request.kpiAggLevelId,
+      inputAggLevelId,
     );
-    if (grainRollup) {
-      const rollup = sumRollupValues(strictCandidates);
-      if (rollup.hasValue) value = rollup.sum;
-    } else {
-      // A scope can hold several copies of a row (blank placeholders, legacy
-      // imports); take the first that actually carries a number.
-      value =
-        strictCandidates
-          .map((candidate) => asNumber(candidate.value))
-          .find((v) => v != null) ?? null;
-    }
 
-    // Rule 2 — no aggregate row: dimension rollup = sum the detail slices.
-    if (value == null) {
-      const detailCandidates = candidateRows.filter((c) =>
-        matchesAll(c, formulaInput, detail),
+    // Grain rollup (sub-utility chain): prefer the authoritative utility-level
+    // row, else Σ the coarsest single level present below target.
+    const grain = selectGrainCandidates(sourceRows, rollUpGrain);
+    if (grain.mixedLevels.length > 0) {
+      console.warn(
+        `[kpi-worker] measure ${formulaInput.measure_def_id} period ${request.scope.reportPeriodId}: mixed grain levels ${grain.mixedLevels.join(",")} — rolled up coarsest only`,
       );
-      const rollup = sumRollupValues(detailCandidates);
-      if (rollup.hasValue) value = rollup.sum;
     }
 
-    // Rule 3 — missing.
+    // Any grain rollup implies summing across grain cells; the strata rollup
+    // keeps its prior behaviour. (§4.6 additivity — formula inputs are additive
+    // bases; ratios are formed at the formula step, never summed.)
+    const grainRollup = strataRollup || grain.summed;
+
+    const value = pickInputValue({
+      candidateRows: grain.candidates,
+      binding: formulaInput,
+      scope: {
+        customerTypeId: request.scope.customerTypeId ?? null,
+        paymentModeId: request.scope.paymentModeId ?? null,
+      },
+      grainRollup,
+    });
+
     if (value == null) {
       missingVariables.push(formulaInput.variable_name);
       continue;
