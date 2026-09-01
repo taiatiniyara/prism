@@ -231,3 +231,70 @@ export function evaluateArithmetic(
   }
   return result;
 }
+
+const escapeRegExp = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * Evaluate an arithmetic formula whose variable names may contain spaces or
+ * other characters the grammar's identifier rule rejects (e.g. a formula
+ * authored as `"Operating Expenses + Administrative Expenses"`).
+ *
+ * Each key in `variables` is rewritten — longest key first, on word
+ * boundaries, so `"Operating Expenses"` is substituted before `"Operating"`
+ * and `XY` before `X` — to a safe `__vN` token, then the result runs through
+ * the strict `evaluateArithmetic` core. Keys that are already valid slug
+ * identifiers pass straight through. Fail-closed and eval-free, exactly like
+ * the core.
+ */
+export function evaluateArithmeticWithAliases(
+  formula: string,
+  variables: Record<string, number>,
+): number {
+  if (typeof formula !== "string") {
+    throw new FormulaError("Formula must be a string.", "syntax");
+  }
+
+  const aliasKeys = Object.keys(variables).filter(
+    (key) => !IDENTIFIER_RE.test(key),
+  );
+
+  if (aliasKeys.length === 0) {
+    return evaluateArithmetic(formula, variables);
+  }
+
+  // Longest first so a name that is a prefix of another is replaced last.
+  aliasKeys.sort((a, b) => b.length - a.length);
+
+  let rewritten = formula;
+  const safeVariables: Record<string, number> = {};
+
+  // Slug keys carry through unchanged.
+  for (const [key, value] of Object.entries(variables)) {
+    if (IDENTIFIER_RE.test(key)) {
+      safeVariables[key] = value;
+    }
+  }
+
+  aliasKeys.forEach((key, index) => {
+    if (!/[A-Za-z]/.test(key)) {
+      // A "variable" that is punctuation only (e.g. "+") would rewrite the
+      // formula's operators — refuse it rather than silently corrupt.
+      throw new FormulaError(
+        `Invalid formula variable name "${key}".`,
+        "syntax",
+      );
+    }
+    const safeName = `__alias_${index}`;
+    const startsWord = /^\w/.test(key);
+    const endsWord = /\w$/.test(key);
+    const pattern = new RegExp(
+      `${startsWord ? "\\b" : ""}${escapeRegExp(key)}${endsWord ? "\\b" : ""}`,
+      "g",
+    );
+    rewritten = rewritten.replace(pattern, safeName);
+    safeVariables[safeName] = variables[key];
+  });
+
+  return evaluateArithmetic(rewritten, safeVariables);
+}

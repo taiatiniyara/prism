@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   analyzeFormula,
   evaluateArithmetic,
+  evaluateArithmeticWithAliases,
   FormulaError,
   MAX_EXPRESSION_DEPTH,
   MAX_FORMULA_LENGTH,
@@ -144,6 +145,53 @@ describe("analyzeFormula — variables", () => {
       "revenue",
       "costs",
     ]);
+  });
+});
+
+describe("evaluateArithmeticWithAliases — multi-word variable names", () => {
+  it("evaluates a formula whose variables contain spaces", () => {
+    expect(
+      evaluateArithmeticWithAliases(
+        "Operating Expenses + Administrative Expenses",
+        { "Operating Expenses": 100, "Administrative Expenses": 25 },
+      ),
+    ).toBe(125);
+  });
+
+  it("substitutes the longer name first (prefix collision)", () => {
+    expect(
+      evaluateArithmeticWithAliases("Total Income - Other Income", {
+        "Total Income": 900,
+        "Other Income": 100,
+      }),
+    ).toBe(800);
+  });
+
+  it("mixes slug and multi-word names", () => {
+    expect(
+      evaluateArithmeticWithAliases("rate * Units Sold", {
+        rate: 0.5,
+        "Units Sold": 40,
+      }),
+    ).toBe(20);
+  });
+
+  it("passes straight through when every key is a slug", () => {
+    expect(evaluateArithmeticWithAliases("a + b", { a: 2, b: 3 })).toBe(5);
+  });
+
+  it("still throws on an unknown variable", () => {
+    expect(() =>
+      evaluateArithmeticWithAliases("Known Value + mystery", {
+        "Known Value": 1,
+      }),
+    ).toThrow(FormulaError);
+  });
+
+  it("refuses a punctuation-only variable name", () => {
+    expect(() =>
+      evaluateArithmeticWithAliases("a + b", { a: 1, "+": 2, b: 3 }),
+    ).toThrow(FormulaError);
   });
 });
 
