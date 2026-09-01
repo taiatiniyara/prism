@@ -1,6 +1,7 @@
 import {
   boolean,
   check,
+  date,
   integer,
   pgTable,
   serial,
@@ -74,7 +75,10 @@ export const countryContext = pgTable(
     // the most recent period_year <= it (carry-forward as a read rule, not stored dup).
     period_year: integer("period_year").notNull(),
     // Provenance stays native (BMO-cited): source_date / source_doc / source_url.
-    source_date: timestamp("source_date"),
+    // source_date is a calendar DATE (the date of the source figure) — no time-of-day is meaningful,
+    // so it's a `date` column (was `timestamp`; converted 2026-09-01). mode:"date" keeps the JS Date
+    // shape for callers. (updated_date below stays a timestamp — it's an audit "last modified".)
+    source_date: date("source_date", { mode: "date" }),
     source_doc: varchar("source_doc", { length: 500 }),
     source_url: varchar("source_url", { length: 500 }),
     value: varchar("value", { length: 1000 }),
