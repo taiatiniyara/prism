@@ -177,17 +177,25 @@ export async function getUnifiedFormulaBuilderData(
     .from(kpiDefinitions)
     .where(eq(kpiDefinitions.is_active, true))
     .orderBy(asc(kpiDefinitions.name));
-  const kpiTargets: TargetOption[] = kpiRows.map((r) => ({
-    id: r.id,
-    name: r.name,
-    formula: r.formula ?? null,
-    hasFormula: !!(r.formula && r.formula.trim()),
-    isDescriptive: r.is_descriptive ?? false,
-    isTrackedAsKpi: false,
-    existingCards:
+  const kpiTargets: TargetOption[] = kpiRows.map((r) => {
+    const existingCards =
       cardsByOwner.get(`kpi:${r.id}`) ??
-      cardsFromLegacyJson(r.formula_inputs, measureById),
-  }));
+      cardsFromLegacyJson(r.formula_inputs, measureById);
+    return {
+      id: r.id,
+      name: r.name,
+      formula: r.formula ?? null,
+      hasFormula: !!(r.formula && r.formula.trim()),
+      isProperlyConfigured: isTargetConfigured(
+        r.formula,
+        existingCards,
+        measureById,
+      ),
+      isDescriptive: r.is_descriptive ?? false,
+      isTrackedAsKpi: false,
+      existingCards,
+    };
+  });
 
   // Active KPI names — a calculated measure "is tracked as a KPI" when an
   // active companion KPI of the same name exists (Track-as-KPI pass-through).
@@ -211,17 +219,25 @@ export async function getUnifiedFormulaBuilderData(
       ),
     )
     .orderBy(asc(measureDefinitions.name));
-  const measureTargets: TargetOption[] = measureTargetRows.map((r) => ({
-    id: r.id,
-    name: r.name,
-    formula: r.formula ?? null,
-    hasFormula: !!(r.formula && r.formula.trim()),
-    isDescriptive: false, // calculated measures are numeric by definition
-    isTrackedAsKpi: activeKpiNames.has(r.name.trim().toLowerCase()),
-    existingCards:
+  const measureTargets: TargetOption[] = measureTargetRows.map((r) => {
+    const existingCards =
       cardsByOwner.get(`measure:${r.id}`) ??
-      cardsFromLegacyJson(r.formula_inputs, measureById),
-  }));
+      cardsFromLegacyJson(r.formula_inputs, measureById);
+    return {
+      id: r.id,
+      name: r.name,
+      formula: r.formula ?? null,
+      hasFormula: !!(r.formula && r.formula.trim()),
+      isProperlyConfigured: isTargetConfigured(
+        r.formula,
+        existingCards,
+        measureById,
+      ),
+      isDescriptive: false, // calculated measures are numeric by definition
+      isTrackedAsKpi: activeKpiNames.has(r.name.trim().toLowerCase()),
+      existingCards,
+    };
+  });
 
   return { mode, kpiTargets, measureTargets, measures, dimMembers };
 }
@@ -254,6 +270,36 @@ function cardsFromLegacyJson(
       dims,
     };
   });
+}
+
+/**
+ * A target has a WORKING, properly-configured formula when: it has a formula
+ * string, every variable in that formula is bound to an input card, and every
+ * bound card resolves to a CURRENT active measure. Returns false for empty
+ * formulas AND for broken ones — e.g. the legacy KPIs whose formula_inputs
+ * still point at pre-migration measure ids that no longer exist (dangling
+ * bindings needing repair / repointing). Used by the "needs setup or repair"
+ * filter so those broken targets surface alongside the formula-less ones.
+ */
+function isTargetConfigured(
+  formula: string | null | undefined,
+  cards: TagCardState[],
+  measureById: Map<number, MeasureCatalogueItem>,
+): boolean {
+  const trimmed = (formula ?? "").trim();
+  if (!trimmed) return false;
+
+  const formulaVars = new Set(trimmed.match(/[A-Za-z_][A-Za-z0-9_]*/g) ?? []);
+  const cardVars = new Set(cards.map((c) => c.variableName));
+  for (const variable of formulaVars) {
+    if (!cardVars.has(variable)) return false; // a formula variable with no binding
+  }
+  for (const card of cards) {
+    if (card.measureDefId == null || !measureById.has(card.measureDefId)) {
+      return false; // dangling / unresolvable input measure
+    }
+  }
+  return true;
 }
 
 // ---------------------------------------------------------------------------
