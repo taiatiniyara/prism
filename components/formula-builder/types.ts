@@ -133,6 +133,10 @@ export interface TargetOption {
    *  value by reference and is never numerically computed. Always false for
    *  calculated-measure targets. */
   isDescriptive: boolean;
+  /** MEASURE targets only: an active companion KPI (same name) already exists —
+   *  i.e. this calculated measure is currently published as a KPI. Always false
+   *  for KPI targets. */
+  isTrackedAsKpi: boolean;
   /** rehydrated tag cards from formula_binding (fallback to legacy JSON) */
   existingCards: TagCardState[];
 }
@@ -154,6 +158,10 @@ export interface SavePayload {
   ownerId: number;
   formula: string;
   cards: TagCardState[];
+  /** MEASURE mode only: also publish this calculated measure as a KPI (a
+   *  companion kpi_definition that references the measure by a single-variable
+   *  pass-through — "compute once, reference many"). */
+  trackAsKpi?: boolean;
 }
 
 export interface SaveResult {

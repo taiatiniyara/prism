@@ -64,7 +64,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
   const [formula, setFormula] = useState("");
   const [cards, setCards] = useState<TagCardState[]>([]);
   const [onlyWithoutFormula, setOnlyWithoutFormula] = useState(false);
-  const [trackAsKpi, setTrackAsKpi] = useState(activeMode === "kpi");
+  const [trackAsKpi, setTrackAsKpi] = useState(false);
   const [pickerCardKey, setPickerCardKey] = useState<string | null>(null);
   const [recompute, setRecompute] = useState<RecomputeResult | null>(null);
   const [justSaved, setJustSaved] = useState(false);
@@ -159,6 +159,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     setSelectedTargetId(id);
     setFormula(target?.formula ?? "");
     setCards(target?.existingCards.map((c) => ({ ...c })) ?? []);
+    setTrackAsKpi(target?.isTrackedAsKpi ?? false);
     setRecompute(null);
     setJustSaved(false);
   };
@@ -172,7 +173,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     setRecompute(null);
     setJustSaved(false);
     setOnlyWithoutFormula(false);
-    setTrackAsKpi(next === "kpi");
+    setTrackAsKpi(false);
   };
 
   const updateCard = (key: string, next: TagCardState) =>
@@ -277,6 +278,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
       ownerId: selectedTargetId,
       formula: formula.trim(),
       cards,
+      trackAsKpi: activeMode === "measure" ? trackAsKpi : undefined,
     };
     startSave(() => {
       void (async () => {
@@ -412,7 +414,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
             <div>
               <p className="text-sm font-bold">Build formula</p>
             </div>
-            {activeMode === "kpi" && (
+            {activeMode === "measure" && (
               <div className="flex flex-col items-end gap-1.5">
                 <button
                   type="button"
@@ -436,6 +438,10 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                     />
                   </span>
                 </button>
+                <span className="text-muted-foreground max-w-52 text-right text-[10.5px] leading-snug">
+                  Also publish this measure as a KPI (a companion KPI that
+                  references it — computed once, on Save).
+                </span>
               </div>
             )}
           </div>
