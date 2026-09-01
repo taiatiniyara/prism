@@ -15,8 +15,6 @@ function parseExcelInputRow(row: Record<string, unknown>): ExcelMeasureDefinitio
     is_active: Boolean(row.is_active),
     is_calculated: Boolean(row.is_calculated),
     is_currency: Boolean(row.is_currency),
-    is_kpi: Boolean(row.is_kpi),
-    is_kpi_input: Boolean(row.is_kpi_input),
     is_mandatory: Boolean(row.is_mandatory),
     is_system_generated: Boolean(row.is_system_generated),
     name: String(row.name ?? ""),

@@ -303,8 +303,6 @@ async function main() {
             is_mandatory: false,
             is_system_generated: false,
             is_calculated: false,
-            is_kpi: false,
-            is_kpi_input: false,
             sort_order: 0,
           })
           .returning({ id: measureDefinitions.id });

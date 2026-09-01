@@ -743,10 +743,12 @@ export async function GetKpiFormulaBuilderData(): Promise<KpiFormulaBuilderData>
     })
     .from(measureDefinitions)
     .where(
-      and(
-        eq(measureDefinitions.is_active, true),
-        eq(measureDefinitions.is_kpi_input, true),
-      ),
+      // KPI formula inputs = ALL active measures (raw, context, AND computed). A computed measure is
+      // a valid formula input (compute once, reference many — e.g. Total Costs in "Cost per kWh");
+      // is_calculated is a manual-ENTRY guard only, not a formula-input filter, and context measures
+      // are valid denominators. Matches the unified builder's input catalogue. (Replaced the retired
+      // measure_definitions.is_kpi_input flag — Eugene 2026-09-01.)
+      eq(measureDefinitions.is_active, true),
     )
     .orderBy(asc(measureDefinitions.name));
 

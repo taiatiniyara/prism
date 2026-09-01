@@ -97,8 +97,6 @@ export const measureDefinitions = pgTable("measure_definitions", {
   is_context_fed: boolean("is_context_fed").default(false).notNull(),
   is_system_generated: boolean("is_system_generated").default(false).notNull(),
   is_calculated: boolean("is_calculated").default(false).notNull(),
-  is_kpi: boolean("is_kpi").default(false).notNull(),
-  is_kpi_input: boolean("is_kpi_input").default(false).notNull(),
   // Measure-level "birth date": the measure exists (and can be shelled) only from this
   // fiscal year onward. Compared by fiscal year: a period is in scope when
   // fy(period) >= fy(effective_from). NULL = always valid. This is the coarse,
