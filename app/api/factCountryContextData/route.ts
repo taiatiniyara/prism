@@ -48,7 +48,7 @@ export async function GET(req: Request) {
   }
 
   return Response.json(
-    rps.map((urp) => {
+    rps.flatMap((urp) => {
       const u = uMap.get(urp.utility_id);
       const country = u ? cMap.get(u.country_id) : undefined;
       const ccData = ctxRows
@@ -65,18 +65,24 @@ export async function GET(req: Request) {
           }),
           {} as Record<string, unknown>,
         );
+      // Only publish periods that actually carry country-context data. Empty
+      // periods (e.g. fiscal years with no country_context row yet) must not
+      // surface as null-valued rows to Power BI.
+      if (Object.keys(ccData).length === 0) return [];
       const reportType = findItem(urp.report_type_id)?.name;
-      return {
-        ReportType: reportType,
-        ReportPeriod: formatReportPeriodIso(urp.report_date, reportType, u?.fye_month, u?.fye_day),
-        ReportPeriodId: urp.id,
-        CountryId: country?.id,
-        Country: country?.name,
-        AlphaCode2: country?.iso_code_alpha2,
-        AlphaCode3: country?.iso_code_alpha3,
-        UtilityId: u?.id,
-        ...ccData,
-      };
+      return [
+        {
+          ReportType: reportType,
+          ReportPeriod: formatReportPeriodIso(urp.report_date, reportType, u?.fye_month, u?.fye_day),
+          ReportPeriodId: urp.id,
+          CountryId: country?.id,
+          Country: country?.name,
+          AlphaCode2: country?.iso_code_alpha2,
+          AlphaCode3: country?.iso_code_alpha3,
+          UtilityId: u?.id,
+          ...ccData,
+        },
+      ];
     }),
   );
 }
