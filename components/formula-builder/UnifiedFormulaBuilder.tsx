@@ -119,6 +119,22 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
   const isDescriptiveProjection =
     targetIsDescriptive || descriptiveInputs.length > 0;
 
+  // Pass-through KPI: a KPI whose formula is a single variable bound to one
+  // COMPUTED measure (e.g. a Track-as-KPI companion) — it just MIRRORS that
+  // measure, and the measure's own compute publishes it (via "Apply to
+  // previous and current periods"), so "Compute now" here has no purpose.
+  // (A pass-through of a raw/context measure still needs its own compute, so we
+  // only hide it for computed-measure mirrors.)
+  const passThroughMeasure = useMemo(() => {
+    if (activeMode !== "kpi") return undefined;
+    if (cards.length !== 1) return undefined;
+    if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(formula.trim())) return undefined;
+    const measureId = cards[0]?.measureDefId;
+    const measure = measureId != null ? measuresById.get(measureId) : undefined;
+    return measure?.isCalculated ? measure : undefined;
+  }, [activeMode, cards, formula, measuresById]);
+  const isPassThroughKpi = passThroughMeasure != null;
+
   // distinct colour per variable, shared by its formula token and its card
   const variableColors = useMemo(() => {
     const map: Record<string, string> = {};
@@ -562,42 +578,58 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
             >
               {isSaving ? "Saving…" : "Save"}
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              onClick={handleCompute}
-              disabled={
-                isComputing ||
-                (activeMode === "kpi" && selectedTargetId == null) ||
-                (activeMode === "kpi" && isDescriptiveProjection)
-              }
-            >
-              {isComputing
-                ? "Computing…"
-                : activeMode === "kpi"
-                  ? "Compute now"
-                  : "Apply to previous and current periods"}
-            </Button>
+            {!(activeMode === "kpi" && isPassThroughKpi) && (
+              <Button
+                type="button"
+                variant="outline"
+                onClick={handleCompute}
+                disabled={
+                  isComputing ||
+                  (activeMode === "kpi" && selectedTargetId == null) ||
+                  (activeMode === "kpi" && isDescriptiveProjection)
+                }
+              >
+                {isComputing
+                  ? "Computing…"
+                  : activeMode === "kpi"
+                    ? "Compute now"
+                    : "Apply to previous and current periods"}
+              </Button>
+            )}
             <span className="text-muted-foreground ml-auto text-xs">
               {activeMeasureCount} measures available
             </span>
           </div>
 
-          {activeMode === "kpi" && isDescriptiveProjection && (
+          {activeMode === "kpi" &&
+            isDescriptiveProjection &&
+            !isPassThroughKpi && (
+              <p className="text-muted-foreground rounded-md border border-dashed px-3 py-2 text-xs">
+                <b className="text-foreground">Descriptive KPI</b> — this
+                publishes an entered value by reference
+                {descriptiveInputs[0] ? (
+                  <>
+                    {" "}
+                    (
+                    <b className="text-foreground">
+                      {descriptiveInputs[0].name}
+                    </b>
+                    , a {descriptiveInputs[0].dataTypeName} measure)
+                  </>
+                ) : null}
+                . It isn&rsquo;t numerically computed, so there&rsquo;s nothing
+                to Compute — just <b className="text-foreground">Save</b> the
+                reference.
+              </p>
+            )}
+
+          {activeMode === "kpi" && isPassThroughKpi && (
             <p className="text-muted-foreground rounded-md border border-dashed px-3 py-2 text-xs">
-              <b className="text-foreground">Descriptive KPI</b> — this publishes
-              an entered value by reference
-              {descriptiveInputs[0] ? (
-                <>
-                  {" "}
-                  (
-                  <b className="text-foreground">{descriptiveInputs[0].name}</b>,
-                  a {descriptiveInputs[0].dataTypeName} measure)
-                </>
-              ) : null}
-              . It isn&rsquo;t numerically computed, so there&rsquo;s nothing to
-              Compute — just <b className="text-foreground">Save</b> the
-              reference.
+              <b className="text-foreground">Pass-through KPI</b> — this mirrors{" "}
+              <b className="text-foreground">{passThroughMeasure?.name}</b>. It
+              publishes automatically when that measure is computed, so
+              there&rsquo;s nothing to compute here — just{" "}
+              <b className="text-foreground">Save</b>.
             </p>
           )}
 

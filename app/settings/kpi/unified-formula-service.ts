@@ -113,6 +113,7 @@ export async function getUnifiedFormulaBuilderData(
     groupName: resolveManagedListName(nameById, m.measures_group_id, null),
     subgroupName: resolveManagedListName(nameById, m.measures_subgroup_id, null),
     dataTypeName: resolveManagedListName(nameById, m.data_type_id, null),
+    isCalculated: m.is_calculated ?? false,
     applicableDims: scopeByMeasure.get(m.id) ?? [],
   }));
   const measureById = new Map(measures.map((m) => [m.id, m]));
@@ -481,9 +482,82 @@ export async function saveUnifiedFormula(
 // Compute now
 // ---------------------------------------------------------------------------
 
+/** measure_def_ids a KPI/measure formula_inputs cache references (both keys). */
+function inputMeasureIds(
+  formulaInputs: FormulaInput[] | null | undefined,
+): number[] {
+  return (formulaInputs ?? [])
+    .map((fi) => {
+      const raw = fi as FormulaInput & {
+        measure_def_id?: unknown;
+        input_def_id?: unknown;
+      };
+      const id = raw.measure_def_id ?? raw.input_def_id;
+      return typeof id === "number" ? id : null;
+    })
+    .filter((id): id is number => id != null);
+}
+
+async function allReportPeriodIds(explicit?: number[]): Promise<number[]> {
+  if (explicit && explicit.length) return explicit;
+  const rows = await db
+    .select({ id: reportPeriods.id })
+    .from(reportPeriods)
+    .orderBy(asc(reportPeriods.id));
+  return rows.map((r) => r.id);
+}
+
+/** Compute just the calculated-measure VALUES (aggregated worker per period);
+ *  no downstream KPI publish — callers add that when they want end-to-end. */
+async function computeCalculatedMeasureValues(
+  periodIds: number[],
+): Promise<{ calculated: number; skipped: number; errors: number }> {
+  const user = await getCurrentUser();
+  let calculated = 0;
+  let skipped = 0;
+  let errors = 0;
+  for (const reportPeriodId of periodIds) {
+    try {
+      const { outcomes } = await runAggregatedWorker(user, { reportPeriodId });
+      for (const o of outcomes) {
+        if (o.status === "calculated") calculated += 1;
+        else skipped += 1;
+      }
+    } catch {
+      errors += 1;
+    }
+  }
+  return { calculated, skipped, errors };
+}
+
 export async function recomputeKpiNow(
   kpiDefId: number,
 ): Promise<RecomputeResult> {
+  // Self-sufficient standalone compute: if this KPI references any COMPUTED
+  // (is_calculated) measure, refresh those measures first so the KPI reads
+  // fresh upstream values — no "compute the measures first" ordering needed.
+  const [kpi] = await db
+    .select({ formula_inputs: kpiDefinitions.formula_inputs })
+    .from(kpiDefinitions)
+    .where(eq(kpiDefinitions.id, kpiDefId))
+    .limit(1);
+  const inputIds = inputMeasureIds(kpi?.formula_inputs);
+  if (inputIds.length) {
+    const computedInputs = await db
+      .select({ id: measureDefinitions.id })
+      .from(measureDefinitions)
+      .where(
+        and(
+          inArray(measureDefinitions.id, inputIds),
+          eq(measureDefinitions.is_calculated, true),
+        ),
+      );
+    if (computedInputs.length) {
+      // Refresh the upstream measure VALUES only — not the whole dependent-KPI
+      // fan-out (that belongs to the calculated-measures button).
+      await computeCalculatedMeasureValues(await allReportPeriodIds());
+    }
+  }
   return engineRecomputeKpiNow({ kpiDefIds: [kpiDefId] });
 }
 
@@ -505,30 +579,47 @@ export async function recomputeCalculatedMeasuresNow(
   skipped: number;
   errors: number;
 }> {
-  const user = await getCurrentUser();
-  let periodIds = reportPeriodIds ?? [];
-  if (!periodIds.length) {
-    const rows = await db
-      .select({ id: reportPeriods.id })
-      .from(reportPeriods)
-      .orderBy(asc(reportPeriods.id));
-    periodIds = rows.map((r) => r.id);
+  const periodIds = await allReportPeriodIds(reportPeriodIds);
+  const { calculated, skipped, errors } =
+    await computeCalculatedMeasureValues(periodIds);
+
+  // Publish downstream KPIs end-to-end: the aggregated worker's own KPI trigger
+  // runs at the caller's org scope only, so recompute every KPI that references
+  // a calculated measure per-utility here (companion pass-through KPIs from
+  // Track-as-KPI + real KPIs like Cost-per-Customer). engineRecomputeKpiNow
+  // iterates report periods, which are utility-specific.
+  try {
+    const calcMeasures = await db
+      .select({ id: measureDefinitions.id })
+      .from(measureDefinitions)
+      .where(eq(measureDefinitions.is_calculated, true));
+    const calcIds = new Set(calcMeasures.map((m) => m.id));
+    if (calcIds.size) {
+      const activeKpis = await db
+        .select({
+          id: kpiDefinitions.id,
+          formula_inputs: kpiDefinitions.formula_inputs,
+        })
+        .from(kpiDefinitions)
+        .where(eq(kpiDefinitions.is_active, true));
+      const dependentKpiIds = activeKpis
+        .filter((k) =>
+          inputMeasureIds(k.formula_inputs).some((id) => calcIds.has(id)),
+        )
+        .map((k) => k.id);
+      if (dependentKpiIds.length) {
+        await engineRecomputeKpiNow({
+          kpiDefIds: dependentKpiIds,
+          reportPeriodIds: periodIds,
+        });
+      }
+    }
+  } catch {
+    // Downstream KPI publish is best-effort; the measure values are already
+    // written. Surface nothing extra — the KPI compute has its own reporting.
   }
 
-  let calculated = 0;
-  let skipped = 0;
-  let errors = 0;
-  for (const reportPeriodId of periodIds) {
-    try {
-      const { outcomes } = await runAggregatedWorker(user, { reportPeriodId });
-      for (const o of outcomes) {
-        if (o.status === "calculated") calculated += 1;
-        else skipped += 1;
-      }
-    } catch {
-      errors += 1;
-    }
-  }
   revalidatePath("/settings/inputs");
+  revalidatePath("/settings/kpi");
   return { periods: periodIds.length, calculated, skipped, errors };
 }
