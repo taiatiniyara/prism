@@ -14,7 +14,6 @@ export default async function CountryContextPage() {
       columns={[
         "country_name",
         "measure_def_name",
-        "period_year",
         "value",
         "source_date",
         "source_doc",
@@ -35,7 +34,6 @@ export default async function CountryContextPage() {
             })),
           },
           { key: "measure_def_id", type: "number" },
-          { key: "period_year", type: "number" },
           { key: "value", type: "text" },
           { key: "source_date", type: "date" },
           { key: "source_doc", type: "text" },

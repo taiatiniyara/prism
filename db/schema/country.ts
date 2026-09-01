@@ -69,16 +69,13 @@ export const countryContext = pgTable(
     // cycle — same approach as reportPeriods.status_id. Renamed from the legacy
     // `dl_def_id` (which wrongly FK'd managed_list_items) by the 2026-08-23 repoint.
     measure_def_id: integer("measure_def_id").notNull(),
-    // Annual time-series key — the reporting YEAR this figure is for (e.g. 2024).
-    // A BMO annual update = a new row per (country, metric, year); history preserved.
-    // Reads join to a submission by (country_id, the submission's fiscal year), using
-    // the most recent period_year <= it (carry-forward as a read rule, not stored dup).
-    period_year: integer("period_year").notNull(),
-    // Provenance stays native (BMO-cited): source_date / source_doc / source_url.
-    // source_date is a calendar DATE (the date of the source figure) — no time-of-day is meaningful,
-    // so it's a `date` column (was `timestamp`; converted 2026-09-01). mode:"date" keeps the JS Date
-    // shape for callers. (updated_date below stays a timestamp — it's an audit "last modified".)
-    source_date: date("source_date", { mode: "date" }),
+    // Provenance doubles as the time-series key (2026-09-01, period_year removed):
+    // source_date is the calendar DATE of the BMO-cited source figure. A BMO update =
+    // a new row per (country, metric, source date); history preserved. Reads carry
+    // forward the most recent source_date strictly BEFORE a report period's report_date
+    // (as-of read rule, not stored dup). mode:"date" keeps the JS Date shape.
+    // (updated_date below stays a timestamp — it's an audit "last modified".)
+    source_date: date("source_date", { mode: "date" }).notNull(),
     source_doc: varchar("source_doc", { length: 500 }),
     source_url: varchar("source_url", { length: 500 }),
     value: varchar("value", { length: 1000 }),
@@ -91,11 +88,11 @@ export const countryContext = pgTable(
     updated_date: timestamp("updated_date").defaultNow().notNull(),
   },
   (table) => [
-    // one value per country per metric per year (the time-series key)
-    unique("uq_country_context_metric_year").on(
+    // one value per country per metric per source date (the time-series key)
+    unique("uq_country_context_metric_source").on(
       table.country_id,
       table.measure_def_id,
-      table.period_year,
+      table.source_date,
     ),
     // controlled vocabulary for the availability axis (per Eugene: null | not_available)
     check(

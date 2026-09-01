@@ -95,7 +95,9 @@ export async function GET(req: Request) {
     // dimension (not period-keyed): take the latest available figure
     const val = contextRows
       .filter((cc) => cc.country_id === country.id)
-      .sort((a, b) => b.period_year - a.period_year)[0]?.value;
+      .sort(
+        (a, b) => b.source_date.getTime() - a.source_date.getTime(),
+      )[0]?.value;
     return {
       Country: COUNTRY_DISPLAY_NAMES[country.name] ?? country.name,
       "ISO 3166 Alpha-2": country.iso_code_alpha2.toUpperCase(),

@@ -1,16 +1,18 @@
 /**
- * Standalone country-context seed loader (Option 2, 2026-08-23).
+ * Standalone country-context seed loader (Option 2, 2026-08-23; source-date key 2026-09-01).
  *
  * Loads historical national annual figures into the country_context table
- * (country × metric × period_year). NOT part of the data_entries flush-and-reload —
+ * (country × metric × source_date). NOT part of the data_entries flush-and-reload —
  * country_context is the source of truth for national reference data, read into the
  * Power BI fact shape at query time by getResolvedContextRows (the carry-forward bridge).
  *
  * File format (sheet "country_context", or the first sheet):
- *   mig_id | country_id | measure_def_id | period_year | value | source_date | source_doc | source_url | updated_by
+ *   mig_id | country_id | measure_def_id | source_date | value | source_doc | source_url | updated_by
  *   - country_id     = UN M49, must exist in countries
  *   - measure_def_id = a "Country Context" measure (measure_definitions, subgroup 221; ids 1..16)
- *   - period_year    = the reporting YEAR the figure is for (e.g. 2024)
+ *   - source_date    = REQUIRED. Date of the source figure — the time-series key; a new
+ *                      row per (country, metric, source date). Reads carry forward the
+ *                      latest source_date strictly before a report period's report date.
  *   - value          = text, stored as-is
  *   - mig_id         = per-row trace reference (not stored; used in the report only)
  *
@@ -18,7 +20,7 @@
  *   node --env-file=.env --import tsx scripts/seed-country-context.ts <file.xlsx> [--dry-run]
  *
  * --dry-run validates (FK-checks + required fields) and reports bad rows WITHOUT writing.
- * A real run upserts idempotently on (country_id, measure_def_id, period_year) — re-running
+ * A real run upserts idempotently on (country_id, measure_def_id, source_date) — re-running
  * the same file changes nothing. Prints a rows-in / inserted / updated / skipped tally.
  */
 import ExcelJS from "exceljs";
@@ -36,7 +38,6 @@ type ParsedRow = {
   mig_id: string | null;
   country_id: number | null;
   measure_def_id: number | null;
-  period_year: number | null;
   value: string | null;
   no_data_reason: string | null;
   source_date: Date | null;
@@ -140,7 +141,7 @@ async function main() {
   // measure_def_id. Accept either.
   if (col["measure_id"] != null && col["measure_def_id"] == null)
     col["measure_def_id"] = col["measure_id"];
-  const need = ["country_id", "measure_def_id", "period_year", "value"];
+  const need = ["country_id", "measure_def_id", "source_date", "value"];
   for (const h of need)
     if (!(h in col)) throw new Error(`missing required column "${h}" in header row`);
 
@@ -161,7 +162,6 @@ async function main() {
       mig_id: cellStr(get("mig_id")),
       country_id: cellNum(get("country_id")) as number | null,
       measure_def_id: cellNum(get("measure_def_id")) as number | null,
-      period_year: cellNum(get("period_year")) as number | null,
       value: cellStr(get("value")),
       no_data_reason: cellStr(get("no_data_reason"))?.toLowerCase() ?? null,
       source_date: cellDate(get("source_date")),
@@ -186,8 +186,8 @@ async function main() {
       problems.push(
         `measure_def_id ${r.measure_def_id} not a Country Context measure (subgroup ${COUNTRY_CONTEXT_SUBGROUP_ID})`,
       );
-    if (r.period_year == null || Number.isNaN(r.period_year))
-      problems.push("period_year missing/non-numeric");
+    if (r.source_date == null || isNaN(r.source_date.getTime()))
+      problems.push("source_date missing/invalid (required — it is the time-series key)");
     // availability axis: a row carries a value XOR no_data_reason=not_available
     if (r.no_data_reason != null && r.no_data_reason !== "not_available")
       problems.push(
@@ -242,10 +242,9 @@ async function main() {
       .values({
         country_id: r.country_id!,
         measure_def_id: r.measure_def_id!,
-        period_year: r.period_year!,
         value: r.value,
         no_data_reason: r.no_data_reason as "not_available" | null,
-        source_date: r.source_date,
+        source_date: r.source_date!,
         source_doc: r.source_doc,
         source_url: r.source_url,
         updated_by: r.updated_by,
@@ -255,12 +254,12 @@ async function main() {
         target: [
           countryContext.country_id,
           countryContext.measure_def_id,
-          countryContext.period_year,
+          countryContext.source_date,
         ],
         set: {
           value: r.value,
           no_data_reason: r.no_data_reason as "not_available" | null,
-          source_date: r.source_date,
+          source_date: r.source_date!,
           source_doc: r.source_doc,
           source_url: r.source_url,
           updated_by: r.updated_by,

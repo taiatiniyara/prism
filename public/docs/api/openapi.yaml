@@ -48,6 +48,7 @@ components:
     - name: Organisations
     - name: Power BI
     - name: PowerStations
+    - name: ReportPeriods
     - name: ServiceAreas
     - name: Settings
     - name: System
@@ -2355,6 +2356,17 @@ paths:
       responses:
         '200':
           description: Success
+  /api/reportPeriods:
+    get:
+      tags:
+        - ReportPeriods
+      summary: Get reportPeriods
+      security:
+        - migrationKeyAuth: []
+      x-auth: Requires x-migration-key header
+      responses:
+        '200':
+          description: Success
   /api/security/overview:
     get:
       tags:
@@ -2587,11 +2599,12 @@ paths:
       tags:
         - Users
       summary: Get users
-      x-auth: No authentication required
+      security:
+        - migrationKeyAuth: []
+      x-auth: Requires x-migration-key header
       responses:
-        '401':
-          description: Unauthorized
-      security: []
+        '200':
+          description: Success
   /api/webhooks/email/replies:
     post:
       tags:

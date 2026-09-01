@@ -1,13 +1,10 @@
 import { db } from "@/db/connection";
 import { user, roles } from "@/db/schema/auth-schema";
 import { organisations } from "@/db/schema/utility";
-import { authorizeSensitiveApiKey } from "../service";
+import { assertMigrationKey } from "../migration/prism-training/_lib";
 
 export async function GET(req: Request) {
-  const authorize = await authorizeSensitiveApiKey(req);
-  if (authorize.success === false) {
-    return Response.json({ message: authorize.message }, { status: 401 });
-  }
+  assertMigrationKey(req);
 
   const users = await db
     .select({
@@ -20,7 +17,9 @@ export async function GET(req: Request) {
     .from(user)
     .limit(1000);
 
-  const allRoles = await db.select({ id: roles.id, name: roles.name }).from(roles);
+  const allRoles = await db
+    .select({ id: roles.id, name: roles.name })
+    .from(roles);
   const allOrgs = await db
     .select({ id: organisations.id, name: organisations.name })
     .from(organisations)
@@ -31,7 +30,9 @@ export async function GET(req: Request) {
   return Response.json(
     users.map((u) => {
       const role = allRoles.find((r) => r.id === u.role_id);
-      const org = u.organisation_id ? orgById.get(u.organisation_id) : undefined;
+      const org = u.organisation_id
+        ? orgById.get(u.organisation_id)
+        : undefined;
       return {
         "User ID": u.id,
         Name: u.name,

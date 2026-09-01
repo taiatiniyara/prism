@@ -73,13 +73,12 @@ export const countryContext = pgTable("country_context", {
 	id: serial().primaryKey().notNull(),
 	countryId: integer("country_id").notNull(),
 	measureDefId: integer("measure_def_id").notNull(),
-	sourceDate: timestamp("source_date", { mode: 'string' }),
+	sourceDate: date("source_date", { mode: 'date' }).notNull(),
 	sourceDoc: varchar("source_doc", { length: 500 }),
 	sourceUrl: varchar("source_url", { length: 500 }),
 	value: varchar({ length: 1000 }),
 	updatedBy: varchar("updated_by", { length: 255 }),
 	updatedDate: timestamp("updated_date", { mode: 'string' }).defaultNow().notNull(),
-	periodYear: integer("period_year").notNull(),
 	noDataReason: varchar("no_data_reason", { length: 32 }),
 }, (table) => [
 	foreignKey({
@@ -92,7 +91,7 @@ export const countryContext = pgTable("country_context", {
 			foreignColumns: [measureDefinitions.id],
 			name: "country_context_measure_def_id_fk"
 		}),
-	unique("uq_country_context_metric_year").on(table.countryId, table.measureDefId, table.periodYear),
+	unique("uq_country_context_metric_source").on(table.countryId, table.measureDefId, table.sourceDate),
 	check("chk_cc_no_data_reason", sql`(no_data_reason IS NULL) OR ((no_data_reason)::text = 'not_available'::text)`),
 	check("chk_cc_value_xor_nodata", sql`(((value IS NOT NULL))::integer + ((no_data_reason IS NOT NULL))::integer) <= 1`),
 ]);
