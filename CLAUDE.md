@@ -37,3 +37,7 @@ Before asserting anything about what is or isn't in the repo:
    - **Never** `git log origin/main..main` — that silently reads your STALE local `main`.
 
 **Canonical tool — use it instead of hand-rolling git:** `scripts/repo-truth.sh` fetches origin, then reports strictly against `origin/main` (summary, `<commit>` membership, or `--file PATH`). It removes the checkout-relative commands that cause the false alarms. (Set by Eugene 2026-09-01.)
+
+## Compact your notes at end of day
+
+At the end of each working day, compact your own notes — chiefly your `docs/WORKSTREAMS.md` row (and any stream working notes). The board is a **dashboard, not a daily log**: collapse resolved/settled items into a one-line summary or drop them, remove closed-item lists and superseded back-and-forth, and keep only **current state, open items, and durable decisions** (each with its PR/commit ref). Edit only your own section. This keeps the board legible and stops it drifting into an unreadable transcript. (Set by Eugene 2026-09-01.)
