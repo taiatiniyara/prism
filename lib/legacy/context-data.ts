@@ -28,9 +28,9 @@ export type ResolvedContextRow = {
  * source_date), written by the BMO. Power BI still consumes the utility ×
  * report-period fact shape, so this bridge EXPANDS country_context onto every
  * report period AT READ TIME — no per-utility duplication is stored. For each
- * (report period, metric) it carries forward the latest source_date strictly
+ * (report period, metric) it carries forward the latest source_date at or
  * BEFORE that period's report_date (as-of rule: only figures known by the report
- * date are used). `subgroupId` scopes which measure_definitions are the
+ * date are used; a figure with source_date equal to the report date applies too). `subgroupId` scopes which measure_definitions are the
  * country-context metrics (221 = "Country Context"); their names are the keys the
  * fact routes match on.
  */
@@ -103,8 +103,8 @@ export async function getResolvedContextRows(
     for (const d of defs) {
       const arr = byKey.get(`${countryId}|${d.id}`);
       if (!arr) continue;
-      // carry-forward: latest source_date strictly before the report date
-      const pick = arr.find((x) => x.source_date.getTime() < rp.report_date.getTime());
+      // carry-forward: latest source_date at or before the report date
+      const pick = arr.find((x) => x.source_date.getTime() <= rp.report_date.getTime());
       if (!pick) continue;
       out.push({
         report_period_id: rp.id,
