@@ -5,6 +5,9 @@ import type { FormulaInput } from "@/db/schema/dataEntry";
 import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
 import { ALL_MEMBER } from "@/lib/data-entry/dimensions";
 import { managedListItems } from "@/db/schema/managedLists";
+import { countryContext } from "@/db/schema/country";
+import { reportPeriods } from "@/db/schema/reportPeriods";
+import { organisations } from "@/db/schema/utility";
 
 import { normalizeFormulaInput } from "./normalizeFormulaInput";
 import type { KpiWorkerScope } from "./types";
@@ -129,6 +132,7 @@ export const resolveFormulaInputValues = async (
     .select({
       id: measureDefinitions.id,
       strataId: measureDefinitions.strata_id,
+      isContextFed: measureDefinitions.is_context_fed,
     })
     .from(measureDefinitions)
     .where(inArray(measureDefinitions.id, inputDefIds));
@@ -137,11 +141,90 @@ export const resolveFormulaInputValues = async (
     inputDefs.map((row) => [row.id, row.strataId]),
   );
 
+  const contextFedIds = new Set<number>(
+    inputDefs.filter((row) => row.isContextFed).map((row) => row.id),
+  );
+
+  // Context-fed inputs (measure_definitions.is_context_fed) are NATIONAL
+  // reference figures kept in country_context (country × metric × source_date),
+  // never in data_entries. Resolve them the way the Power BI bridge does
+  // (lib/legacy/context-data.ts): map the period → its utility's country, then
+  // carry forward the latest source_date at or before the period's report_date
+  // (as-of rule). These figures are dimensionless, so no dimension/grain match
+  // applies — every utility in a country resolves to the same national value.
+  const contextValueByDef = new Map<number, number | null>();
+  if (contextFedIds.size > 0) {
+    const [rp] = await db
+      .select({
+        utilityId: reportPeriods.utility_id,
+        reportDate: reportPeriods.report_date,
+      })
+      .from(reportPeriods)
+      .where(eq(reportPeriods.id, request.scope.reportPeriodId))
+      .limit(1);
+
+    const [org] = rp
+      ? await db
+          .select({ countryId: organisations.country_id })
+          .from(organisations)
+          .where(eq(organisations.id, rp.utilityId))
+          .limit(1)
+      : [];
+
+    const countryId = org?.countryId ?? null;
+    if (rp && countryId != null) {
+      const reportTime = rp.reportDate.getTime();
+      const ctxRows = await db
+        .select({
+          measureId: countryContext.measure_def_id,
+          sourceDate: countryContext.source_date,
+          value: countryContext.value,
+          noDataReason: countryContext.no_data_reason,
+        })
+        .from(countryContext)
+        .where(
+          and(
+            eq(countryContext.country_id, countryId),
+            inArray(countryContext.measure_def_id, [...contextFedIds]),
+          ),
+        );
+
+      // Carry-forward: latest source_date at or before the report date, per metric.
+      const best = new Map<
+        number,
+        { time: number; value: string | null; noData: string | null }
+      >();
+      for (const row of ctxRows) {
+        const time = row.sourceDate.getTime();
+        if (time > reportTime) continue;
+        const cur = best.get(row.measureId);
+        if (!cur || time > cur.time) {
+          best.set(row.measureId, {
+            time,
+            value: row.value,
+            noData: row.noDataReason,
+          });
+        }
+      }
+      for (const [measureId, pick] of best) {
+        contextValueByDef.set(
+          measureId,
+          pick.noData ? null : asNumber(pick.value),
+        );
+      }
+    }
+  }
+
+  // Only non-context inputs are read from the dimensioned data_entries table.
+  const regularInputDefIds = inputDefIds.filter(
+    (id) => !contextFedIds.has(id),
+  );
+
   const scopeConditions: Array<
     ReturnType<typeof eq> | ReturnType<typeof isNull>
   > = [
     eq(dataEntries.report_period_id, request.scope.reportPeriodId),
-    inArray(dataEntries.measure_def_id, inputDefIds),
+    inArray(dataEntries.measure_def_id, regularInputDefIds),
     eq(dataEntries.is_deleted, false),
     eq(dataEntries.is_relevant, true),
   ];
@@ -170,31 +253,34 @@ export const resolveFormulaInputValues = async (
   // per-input below against the formula_input binding — falling back to the
   // evaluation scope — so they are no longer pre-filtered in SQL here.
 
-  const rows = await db
-    .select({
-      inputDefId: dataEntries.measure_def_id,
-      // Prefer the typed numeric column; fall back to the legacy `value`
-      // varchar for rows not yet migrated to value_numeric (§4.8).
-      value: sql<
-        string | null
-      >`coalesce(${dataEntries.value_numeric}::text, ${dataEntries.value})`,
-      isDeleted: dataEntries.is_deleted,
-      isRelevant: dataEntries.is_relevant,
-      energyProviderId: dataEntries.provider_id,
-      energySourceId: dataEntries.technology_id,
-      unitTypeId: dataEntries.asset_class_id,
-      customerTypeId: dataEntries.customer_type_id,
-      paymentModeId: dataEntries.payment_mode_id,
-      consumptionBandId: dataEntries.consumption_band_id,
-      divisionId: dataEntries.division_id,
-      genderId: dataEntries.gender_id,
-      utilityFunctionId: dataEntries.utility_function_id,
-    })
-    .from(dataEntries)
-    .where(and(...scopeConditions))
-    // Newest first, so the single-value path below deterministically prefers
-    // the most recently updated row when a scope holds several copies.
-    .orderBy(desc(dataEntries.updatedAt));
+  const rows =
+    regularInputDefIds.length === 0
+      ? []
+      : await db
+          .select({
+            inputDefId: dataEntries.measure_def_id,
+            // Prefer the typed numeric column; fall back to the legacy `value`
+            // varchar for rows not yet migrated to value_numeric (§4.8).
+            value: sql<
+              string | null
+            >`coalesce(${dataEntries.value_numeric}::text, ${dataEntries.value})`,
+            isDeleted: dataEntries.is_deleted,
+            isRelevant: dataEntries.is_relevant,
+            energyProviderId: dataEntries.provider_id,
+            energySourceId: dataEntries.technology_id,
+            unitTypeId: dataEntries.asset_class_id,
+            customerTypeId: dataEntries.customer_type_id,
+            paymentModeId: dataEntries.payment_mode_id,
+            consumptionBandId: dataEntries.consumption_band_id,
+            divisionId: dataEntries.division_id,
+            genderId: dataEntries.gender_id,
+            utilityFunctionId: dataEntries.utility_function_id,
+          })
+          .from(dataEntries)
+          .where(and(...scopeConditions))
+          // Newest first, so the single-value path below deterministically
+          // prefers the most recently updated row when a scope holds copies.
+          .orderBy(desc(dataEntries.updatedAt));
 
   const energySourceIds = [
     ...new Set(
@@ -284,6 +370,19 @@ export const resolveFormulaInputValues = async (
     match(c.utilityFunctionId, formulaInput.utility_function_id, ALL_MEMBER.utility_function_id);
 
   for (const formulaInput of formulaInputs) {
+    // Context-fed inputs resolve from country_context (the national figure for
+    // the period's country), not from the dimensioned data_entries rows above.
+    if (contextFedIds.has(formulaInput.measure_def_id)) {
+      const contextValue =
+        contextValueByDef.get(formulaInput.measure_def_id) ?? null;
+      if (contextValue == null) {
+        missingVariables.push(formulaInput.variable_name);
+        continue;
+      }
+      variables[formulaInput.variable_name] = contextValue;
+      continue;
+    }
+
     const sourceRows = byInputDef.get(formulaInput.measure_def_id) ?? [];
     const inputAggLevelId =
       strataMap.get(formulaInput.measure_def_id) ?? null;
