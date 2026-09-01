@@ -745,7 +745,10 @@ export async function GetKpiFormulaBuilderData(): Promise<KpiFormulaBuilderData>
     .where(
       and(
         eq(measureDefinitions.is_active, true),
-        eq(measureDefinitions.is_kpi_input, true),
+        // KPI formula inputs = all active, non-computed, non-context-fed measures.
+        // (Replaced the retired measure_definitions.is_kpi_input flag — Eugene 2026-09-01.)
+        eq(measureDefinitions.is_calculated, false),
+        eq(measureDefinitions.is_context_fed, false),
       ),
     )
     .orderBy(asc(measureDefinitions.name));

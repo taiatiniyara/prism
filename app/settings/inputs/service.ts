@@ -377,8 +377,6 @@ export interface ExcelMeasureDefinition {
   is_active: boolean;
   is_calculated: boolean;
   is_currency: boolean;
-  is_kpi: boolean;
-  is_kpi_input: boolean;
   is_mandatory: boolean;
   is_system_generated: boolean;
   name: string;
@@ -418,8 +416,6 @@ export async function UpdateMeasureDefinitionFromExcel(
     is_active: item.is_active,
     is_calculated: item.is_calculated,
     is_currency: item.is_currency,
-    is_kpi: item.is_kpi,
-    is_kpi_input: item.is_kpi_input,
     is_mandatory: item.is_mandatory,
     is_system_generated: item.is_system_generated,
     is_apportionable: false,
