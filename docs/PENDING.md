@@ -50,10 +50,10 @@ A row is *pending* if it has not cleared all the gates that apply to it. Docs-on
 *(Cleared: `#198` retire `is_aggregated` **MERGED @14:52** + dev drop [dup of `is_calculated`; `is_context_fed` KEPT — not a dup]; `#77` Access Plans prototype **merged** [was parked; landed]; `#104` merged; earlier nudge cleared #113/#76/#83.)*
 
 **Dependabot PRs — ⚠ IN ACTIVE FLUX (2026-08-31): Eugene's engineer is merging/updating them directly**, so the count is changing minute-to-minute (was 12, dropping) — **not pinning a number here.** Vuln posture unchanged (triage complete/accepted, nothing prod-reachable — see note below). Re-scan for the live list rather than trusting a recorded count.
-> **Vuln alerts (live re-scan 2026-09-01): 7 open — 2 high / 3 med / 2 low, across 2 packages:**
-> - **4 × `brace-expansion`** (2 high, 1 med, 1 low) — the **accepted-residual, non-reachable** set #12 triaged (DoS needs attacker-controlled glob/brace input no user-facing path passes). ✅ **A patch now exists (`2.1.4`)** — bumping the override (pinned `2.0.1`→`2.1.4`) clears all 4 with no breakage. This is #12's "cheap win," now confirmed doable.
-> - **3 × `hono`** (2 med, 1 low, **dev-scope** — not production runtime) — **NEW since #12's triage** (memo() SSR retention / Language-Middleware DoS / Proxy-Helper header leak). → flagged to #12 to assess.
-> *(History: count spiked 4→24 on 2026-08-24, cut to single digits by #12's PR #119 hygiene; earlier "5 prod residuals" all accepted non-reachable.)*
+> **Vuln alerts (2026-09-01, #12-triaged): 7 open, none production-reachable.**
+> - **4 × `brace-expansion`** (2 high, 1 med, 1 low) — accepted-residual/non-reachable. **Fix planned:** pin the override `2.0.1`→`2.1.4` (it's `>=2.0.1`, so a fresh install resolves the patch but the lockfile still has an old one — pin + `npm install`). **Folded into the engineer's in-flight dep work (#190–192)**; if not, #12 opens a small override-bump PR *after* those land (avoid lockfile conflicts). Clears all 4.
+> - **3 × `hono`** (2 med, 1 low) — ✅ **ACCEPTED, no fix (dev-scope, zero prod exposure):** #12 verified `npm ls hono --omit=dev` = 0 — hono is transitive under `shadcn` (devDep) → MCP sdk → `@hono/node-server`; PRISM runs no hono server, so the SSR-retention / lang-middleware-DoS / proxy-header advisories are unreachable.
+> *(History: spiked 4→24 on 2026-08-24, cut to single digits by #12's PR #119.)*
 
 ⚠ **main's deps changed again (#119: `package.json`+lock) → run `npm install` after your next pull.**
 
