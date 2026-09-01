@@ -5,7 +5,6 @@ import { reportPeriods, publishedPeriodCondition } from "@/db/schema/reportPerio
 import { managedListItems } from "@/db/schema/managedLists";
 import { eq, and } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
-import { formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
 import { getResolvedContextRows } from "@/lib/legacy/context-data";
 
 // Power BI column labels for the country-context measures (measure name ->
@@ -70,10 +69,17 @@ export async function GET(req: Request) {
       // surface as null-valued rows to Power BI.
       if (Object.keys(ccData).length === 0) return [];
       const reportType = findItem(urp.report_type_id)?.name;
+      // Emit the report period's own date exactly as stored in report_periods
+      // (the column is a naive timestamp; format its local components so the
+      // value matches the table, with no time/timezone artifacts).
+      const d = typeof urp.report_date === "string" ? new Date(urp.report_date) : urp.report_date;
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, "0");
+      const day = String(d.getDate()).padStart(2, "0");
       return [
         {
           ReportType: reportType,
-          ReportPeriod: formatReportPeriodIso(urp.report_date, reportType, u?.fye_month, u?.fye_day),
+          ReportPeriod: `${y}-${m}-${day}`,
           ReportPeriodId: urp.id,
           CountryId: country?.id,
           Country: country?.name,
