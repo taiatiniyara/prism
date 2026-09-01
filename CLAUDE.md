@@ -37,3 +37,11 @@ Before asserting anything about what is or isn't in the repo:
    - **Never** `git log origin/main..main` — that silently reads your STALE local `main`.
 
 **Canonical tool — use it instead of hand-rolling git:** `scripts/repo-truth.sh` fetches origin, then reports strictly against `origin/main` (summary, `<commit>` membership, or `--file PATH`). It removes the checkout-relative commands that cause the false alarms. (Set by Eugene 2026-09-01.)
+
+## Never let a PR wipe the repo
+
+On 2026-09-01 PR #213 (a one-line docs change) deleted the **entire repo** — 1551 files incl. the `WORKSTREAMS.md` / `STREAM-ACTIVITY.md` boards — because it was built in a `git worktree add --no-checkout` / partial-stage worktree: the commit recorded a tree of only the staged file, so every other file counted as deleted, and the merge applied that. Recovered by revert, but hugely disruptive. Two hard rules + one guard:
+
+1. **Never build a commit in a `--no-checkout` or otherwise partial working tree.** Use a **full** checkout so the commit's tree is complete. The slower checkout is worth it.
+2. **Before merging ANY PR — especially "docs-only" — verify the diff scope.** `gh pr diff <n> --stat` (or `git diff --stat origin/main <branch>`); a small change touching hundreds/thousands of files must never merge.
+3. **Enforced by the pre-commit hook** (`.githooks/pre-commit`; live in `.git/hooks`): it blocks any commit that deletes ≥30% of the tree (override for genuine mass removals: `git commit --no-verify`). Activate on a fresh clone with `git config core.hooksPath .githooks`. (Set by Eugene 2026-09-01.)
