@@ -314,6 +314,61 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     });
   };
 
+  // Save & Compute: persist the formula, then immediately compute so prior +
+  // current period values reflect it (a bare Save computes nothing). Skipped
+  // for targets where compute has no purpose (descriptive / pass-through) — the
+  // button isn't shown there.
+  const handleSaveAndCompute = () => {
+    if (selectedTargetId == null) {
+      toast.error("Choose a target first.");
+      return;
+    }
+    if (!canSave) {
+      toast.error(validationErrors[0]);
+      return;
+    }
+    const targetId = selectedTargetId;
+    const payload: SavePayload = {
+      mode: activeMode,
+      ownerId: targetId,
+      formula: formula.trim(),
+      cards,
+      trackAsKpi: activeMode === "measure" ? trackAsKpi : undefined,
+    };
+    startSave(() => {
+      void (async () => {
+        const res = await saveUnifiedFormula(payload);
+        if (!res.ok) {
+          toast.error(res.error ?? "Save failed.");
+          return;
+        }
+        setJustSaved(true);
+        if (activeMode === "measure") {
+          const c = await recomputeCalculatedMeasuresNow();
+          if (c.errors > 0) {
+            toast.warning(
+              `Saved ✓ · computed ${c.calculated} value(s) across ${c.periods} period(s); ${c.errors} errored.`,
+            );
+          } else {
+            toast.success(
+              `Saved ✓ · computed ${c.calculated} value(s) across ${c.periods} period(s) (${c.skipped} skipped).`,
+            );
+          }
+        } else {
+          const c = await recomputeKpiNow(targetId);
+          setRecompute(c);
+          if (c.failed > 0) {
+            toast.warning(
+              `Saved ✓ · recomputed ${c.processed}, ${c.failed} failed.`,
+            );
+          } else {
+            toast.success(`Saved ✓ · recomputed ${c.processed} period(s).`);
+          }
+        }
+      })();
+    });
+  };
+
   const handleCompute = () => {
     startCompute(() => {
       void (async () => {
@@ -579,11 +634,25 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
           <div className="flex flex-wrap items-center gap-2">
             <Button
               type="button"
+              variant="outline"
               onClick={handleSave}
-              disabled={isSaving || !canSave}
+              disabled={isSaving || isComputing || !canSave}
             >
               {isSaving ? "Saving…" : "Save"}
             </Button>
+            {!(
+              activeMode === "kpi" &&
+              (isPassThroughKpi || isDescriptiveProjection)
+            ) && (
+              <Button
+                type="button"
+                onClick={handleSaveAndCompute}
+                disabled={isSaving || isComputing || !canSave}
+                title="Save the formula and immediately compute it across all prior and current periods"
+              >
+                {isSaving || isComputing ? "Working…" : "Save & Compute"}
+              </Button>
+            )}
             {!(activeMode === "kpi" && isPassThroughKpi) && (
               <Button
                 type="button"
