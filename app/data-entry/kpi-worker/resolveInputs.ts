@@ -26,6 +26,11 @@ export interface RollupCandidate {
   divisionId: number | null;
   genderId: number | null;
   utilityFunctionId: number | null;
+  // Sub-utility grain chain (unit → power station → service area → utility).
+  // Distinct from the tag dimensions above; used for grain rollup, not slicing.
+  grainAreaId: number | null;
+  grainStationId: number | null;
+  grainUnitId: number | null;
 }
 
 export interface ResolveInputsRequest {
@@ -229,9 +234,19 @@ export const resolveFormulaInputValues = async (
     eq(dataEntries.is_relevant, true),
   ];
 
-  if (request.scope.serviceAreaId == null) {
-    scopeConditions.push(isNull(dataEntries.service_area_id));
-  } else {
+  // Grain axis (sub-utility chain: unit → power station → service area →
+  // utility). The KPI target grain is set by the scope: a pinned unit or
+  // service area targets that level; otherwise the target is the utility, and we
+  // roll the sub-utility rows up to it in JS below (§4.6 grain rollup, ruled by
+  // #8 + #4: prefer the authoritative target-level row, else Σ the coarsest
+  // single level present below target — never mixing levels). For the utility
+  // target we therefore fetch ALL sub-utility rows here (no null-only filter)
+  // and pick the grain level per input; the pinned-scope cases keep their exact
+  // filters so their behaviour is unchanged.
+  const rollUpGrain =
+    request.scope.serviceAreaId == null && request.scope.unitId == null;
+
+  if (request.scope.serviceAreaId != null) {
     // Include global rows (null service area) as fallback for utility-level inputs.
     scopeConditions.push(
       or(
@@ -241,12 +256,8 @@ export const resolveFormulaInputValues = async (
     );
   }
 
-  if (request.scope.unitId == null) {
-    scopeConditions.push(isNull(dataEntries.unit_id));
-  } else {
-    scopeConditions.push(
-      eq(dataEntries.unit_id, request.scope.unitId),
-    );
+  if (request.scope.unitId != null) {
+    scopeConditions.push(eq(dataEntries.unit_id, request.scope.unitId));
   }
 
   // customer_type / payment_mode (and the other dimensions) are matched
@@ -275,6 +286,9 @@ export const resolveFormulaInputValues = async (
             divisionId: dataEntries.division_id,
             genderId: dataEntries.gender_id,
             utilityFunctionId: dataEntries.utility_function_id,
+            grainAreaId: dataEntries.service_area_id,
+            grainStationId: dataEntries.power_station_id,
+            grainUnitId: dataEntries.unit_id,
           })
           .from(dataEntries)
           .where(and(...scopeConditions))
@@ -386,7 +400,59 @@ export const resolveFormulaInputValues = async (
     const sourceRows = byInputDef.get(formulaInput.measure_def_id) ?? [];
     const inputAggLevelId =
       strataMap.get(formulaInput.measure_def_id) ?? null;
-    const grainRollup = shouldRollup(request.kpiAggLevelId, inputAggLevelId);
+    const strataRollup = shouldRollup(request.kpiAggLevelId, inputAggLevelId);
+
+    // Grain rollup (sub-utility chain). Rank each row by its finest populated
+    // grain column: unit(3) > station(2) > area(1) > utility-aggregate(0).
+    // Prefer the authoritative target-level (utility) row; else Σ the COARSEST
+    // single level present below target — never mixing levels, which would
+    // double count (#8's invariant; #4's "prefer the aggregate, never add
+    // across"). Only runs when the target is the utility (rollUpGrain).
+    const subRank = (c: SourceRow): number =>
+      c.grainUnitId != null
+        ? 3
+        : c.grainStationId != null
+          ? 2
+          : c.grainAreaId != null
+            ? 1
+            : 0;
+
+    let candidateRows = sourceRows;
+    let grainSummed = false;
+    if (rollUpGrain && sourceRows.length > 0) {
+      const aggregateRows = sourceRows.filter((c) => subRank(c) === 0);
+      if (aggregateRows.length > 0) {
+        // Authoritative utility-level aggregate present → use it; never add the
+        // finer breakdown on top.
+        candidateRows = aggregateRows;
+      } else {
+        const finerRanks = [
+          ...new Set(sourceRows.map(subRank).filter((rank) => rank > 0)),
+        ].sort((a, b) => a - b);
+        const coarsest = finerRanks[0];
+        candidateRows = sourceRows.filter((c) => subRank(c) === coarsest);
+        grainSummed = true;
+        if (finerRanks.length > 1) {
+          // Invariant violation: a period holds rows at more than one
+          // sub-utility level for the same measure. Roll up the coarsest level
+          // only and flag it — mixing levels is the one place Σ could double
+          // count. (No such measure exists in current data; defensive.)
+          console.warn(
+            `[kpi-worker] measure ${formulaInput.measure_def_id} period ${request.scope.reportPeriodId}: mixed grain levels ${finerRanks.join(",")} — rolled up coarsest (${coarsest}) only`,
+          );
+        }
+      }
+    }
+
+    // Any grain rollup implies summing across grain cells (each area/station
+    // carries its own total); the strata rollup keeps its prior behaviour.
+    // NOTE (additivity): §4.6 requires formula inputs to be additive bases
+    // (ratios are computed at the formula step, never summed). Every measure
+    // that triggers grain-Σ in current data is additive (counts/MWh/hours/…);
+    // there is no per-measure additivity flag yet. #4 owns adding an
+    // `is_additive` / `aggregation_method` column; once it lands, refuse the
+    // sum for non-additive measures here instead of relying on that invariant.
+    const grainRollup = strataRollup || grainSummed;
 
     // Dimension resolution follows the ruled "All-row else sum of detail"
     // preference (#8, grounded in PR #104 aggregate-vs-breakdown + §4.6):
@@ -399,7 +465,7 @@ export const resolveFormulaInputValues = async (
     let value: number | null = null;
 
     // Rule 1 — authoritative aggregate (preserves prior grain-rollup behaviour).
-    const strictCandidates = sourceRows.filter((c) =>
+    const strictCandidates = candidateRows.filter((c) =>
       matchesAll(c, formulaInput, strict),
     );
     if (grainRollup) {
@@ -416,7 +482,7 @@ export const resolveFormulaInputValues = async (
 
     // Rule 2 — no aggregate row: dimension rollup = sum the detail slices.
     if (value == null) {
-      const detailCandidates = sourceRows.filter((c) =>
+      const detailCandidates = candidateRows.filter((c) =>
         matchesAll(c, formulaInput, detail),
       );
       const rollup = sumRollupValues(detailCandidates);
