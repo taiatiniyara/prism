@@ -133,6 +133,10 @@ export interface TargetOption {
   name: string;
   formula: string | null;
   hasFormula: boolean;
+  /** A working formula: present, every variable bound, and every bound input
+   *  resolves to a CURRENT active measure. False for empty formulas AND for
+   *  broken ones (dangling legacy bindings needing repair/repointing). */
+  isProperlyConfigured: boolean;
   /** kpi_definitions.is_descriptive — intent flag: this KPI publishes an entered
    *  value by reference and is never numerically computed. Always false for
    *  calculated-measure targets. */

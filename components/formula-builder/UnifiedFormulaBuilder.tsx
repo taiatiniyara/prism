@@ -85,7 +85,9 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
 
   const filteredTargets = useMemo(
     () =>
-      targets.filter((t) => (onlyWithoutFormula ? !t.hasFormula : true)),
+      targets.filter((t) =>
+        onlyWithoutFormula ? !t.isProperlyConfigured : true,
+      ),
     [targets, onlyWithoutFormula],
   );
 
@@ -393,7 +395,11 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                 onValueChange={handleSelectTarget}
                 options={filteredTargets.map((t) => ({
                   value: String(t.id),
-                  label: t.hasFormula ? t.name : `${t.name} — no formula`,
+                  label: t.isProperlyConfigured
+                    ? t.name
+                    : t.hasFormula
+                      ? `${t.name} — needs repair`
+                      : `${t.name} — no formula`,
                 }))}
                 placeholder={
                   activeMode === "kpi" ? "Select a KPI…" : "Select a measure…"
@@ -410,7 +416,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                 onCheckedChange={(c) => setOnlyWithoutFormula(c === true)}
               />
               <span className="max-w-[8.5rem] leading-snug">
-                filter for calculations that have no formulas
+                filter for calculations that need setup or repair
               </span>
             </Label>
           </div>
