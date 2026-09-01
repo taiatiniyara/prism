@@ -121,6 +121,10 @@ export interface MeasureCatalogueItem {
   /** Data-type name (e.g. "numeric", "option", "text", "boolean"). Categorical
    *  types mean this measure is descriptive — not numerically computable. */
   dataTypeName: string | null;
+  /** measure_definitions.is_calculated — this measure is itself computed by a
+   *  formula (e.g. Total Costs). A KPI that just mirrors a computed measure is
+   *  published when that measure is computed, so it needs no compute of its own. */
+  isCalculated: boolean;
   applicableDims: MeasureApplicableDim[];
 }
 
