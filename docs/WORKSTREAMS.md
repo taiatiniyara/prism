@@ -203,7 +203,7 @@ This file is read and written by multiple concurrent Claude Code sessions (the "
 - **Owner:** PRISM 2 #15 pending-tracker
 - **Depends on:** nothing · **Blocks:** nothing (read-only across all streams)
 - **Scope:** maintain [docs/PENDING.md](PENDING.md) — the always-current dashboard of what is *pending* across every stream (uncommitted → committed → pushed → merged → DB-applied) so Eugene doesn't have to keep asking. Reads git/`gh`/the board; does not do feature work.
-- **Last update 2026-07-27:** created the tracker. Snapshot at creation: no feature work unmerged/unpushed (all human PRs merged; only 13 Dependabot PRs #37–#49 open); `main` 1 behind `origin` (PR #70); 4 uncommitted files in the main tree (docs #8/#3 + board + one cosmetic `powerStationDnD.tsx` nit). Real backlog is *decisions on Eugene* (see PENDING.md §3), not code. **Other streams:** ping #15 (or just update your board row) when you commit/push/merge/apply-DB and it'll be reflected on the next refresh.
+- **Last update 2026-09-01:** mature + actively maintained; [docs/PENDING.md](PENDING.md) is the live dashboard (open items only — settled decisions live in specs, not the tracker). Conventions in force: verify vs `origin` via `scripts/repo-truth.sh`; single `.env` DB = future prod (no prod-cutover apply step); git-first. **Other streams:** ping #15 on commit/push/merge/DB-apply — or just update your own board row — and it's reflected on the next refresh.
 
 ---
 
