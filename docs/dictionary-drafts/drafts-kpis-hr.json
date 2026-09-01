@@ -1,0 +1,524 @@
+[
+  {
+    "id": 83,
+    "name": "Administrative Employees Female %",
+    "definition": "The share of the utility's administrative workforce who are women, expressed as a percentage. Calculated as the number of female administrative employees divided by the total number of administrative employees. A higher value indicates greater female representation in the division, and the KPI supports the PPA's gender-representation reporting. In small divisions the percentage can swing sharply with a single hire or departure.",
+    "synonyms": [
+      "women in administration (%)",
+      "female share of administration staff",
+      "administration gender ratio (female)"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 82,
+    "name": "Administrative Employees Male %",
+    "definition": "The share of the utility's administrative workforce who are men, expressed as a percentage. Calculated as the number of male administrative employees divided by the total number of administrative employees. A higher value indicates greater male representation in the division; read together with the female percentage, the two shares account for the whole division. In small divisions the percentage can swing sharply with a single hire or departure.",
+    "synonyms": [
+      "men in administration (%)",
+      "male share of administration staff",
+      "administration gender ratio (male)"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 81,
+    "name": "Administrative Employees Total",
+    "definition": "The total number of employees in the utility's administrative division, expressed as a headcount. Calculated as the sum of female and male administrative employees. Higher totals generally reflect a larger utility or a larger administrative function, so the figure is best read alongside overall workforce size and customer numbers. This is a headcount rather than a full-time-equivalent measure, so part-time staff count the same as full-time staff.",
+    "synonyms": [
+      "administration headcount",
+      "admin staff numbers",
+      "administrative workforce size"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 65,
+    "name": "Employees Female %",
+    "definition": "The share of the utility's total workforce who are women, expressed as a percentage. Calculated as the number of female employees divided by total employees, multiplied by 100. A higher value indicates greater female representation across the utility, and this is a headline indicator in the PPA's gender-representation reporting. At small utilities the figure can move noticeably with a handful of hires or departures.",
+    "synonyms": [
+      "female workforce share",
+      "women in workforce (%)",
+      "workforce gender balance (female)",
+      "female staff ratio"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 64,
+    "name": "Employees Male %",
+    "definition": "The share of the utility's total workforce who are men, expressed as a percentage. Calculated as the number of male employees divided by total employees, multiplied by 100. A higher value indicates greater male representation; read together with the female percentage, the two shares account for the whole workforce. At small utilities the figure can move noticeably with a handful of hires or departures.",
+    "synonyms": [
+      "male workforce share",
+      "men in workforce (%)",
+      "workforce gender balance (male)",
+      "male staff ratio"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 68,
+    "name": "Executive Employees Female %",
+    "definition": "The share of the utility's executive workforce who are women, expressed as a percentage. Calculated as the number of female executive employees divided by the total number of executive employees. A higher value indicates greater female representation in the division, and the KPI supports the PPA's gender-representation reporting. In small divisions the percentage can swing sharply with a single hire or departure.",
+    "synonyms": [
+      "women in executive team (%)",
+      "female share of executive team staff",
+      "executive team gender ratio (female)"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 67,
+    "name": "Executive Employees Male %",
+    "definition": "The share of the utility's executive workforce who are men, expressed as a percentage. Calculated as the number of male executive employees divided by the total number of executive employees. A higher value indicates greater male representation in the division; read together with the female percentage, the two shares account for the whole division. In small divisions the percentage can swing sharply with a single hire or departure.",
+    "synonyms": [
+      "men in executive team (%)",
+      "male share of executive team staff",
+      "executive team gender ratio (male)"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 66,
+    "name": "Executive Employees Total",
+    "definition": "The total number of employees in the utility's executive division, expressed as a headcount. Calculated as the sum of female and male executive employees. Higher totals generally reflect a larger utility or a larger executive function, so the figure is best read alongside overall workforce size and customer numbers. This is a headcount rather than a full-time-equivalent measure, so part-time staff count the same as full-time staff.",
+    "synonyms": [
+      "executive headcount",
+      "senior management numbers",
+      "executive team size"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 74,
+    "name": "Finance Employees Female %",
+    "definition": "The share of the utility's finance workforce who are women, expressed as a percentage. Calculated as the number of female finance employees divided by the total number of finance employees. A higher value indicates greater female representation in the division, and the KPI supports the PPA's gender-representation reporting. In small divisions the percentage can swing sharply with a single hire or departure.",
+    "synonyms": [
+      "women in finance (%)",
+      "female share of finance staff",
+      "finance gender ratio (female)"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 73,
+    "name": "Finance Employees Male %",
+    "definition": "The share of the utility's finance workforce who are men, expressed as a percentage. Calculated as the number of male finance employees divided by the total number of finance employees. A higher value indicates greater male representation in the division; read together with the female percentage, the two shares account for the whole division. In small divisions the percentage can swing sharply with a single hire or departure.",
+    "synonyms": [
+      "men in finance (%)",
+      "male share of finance staff",
+      "finance gender ratio (male)"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 72,
+    "name": "Finance Employees Total",
+    "definition": "The total number of employees in the utility's finance division, expressed as a headcount. Calculated as the sum of female and male finance employees. Higher totals generally reflect a larger utility or a larger finance function, so the figure is best read alongside overall workforce size and customer numbers. This is a headcount rather than a full-time-equivalent measure, so part-time staff count the same as full-time staff.",
+    "synonyms": [
+      "finance headcount",
+      "finance staff numbers",
+      "finance division workforce"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 60,
+    "name": "Gender of Utility 2nd in command",
+    "definition": "A categorical indicator recording the gender of the utility's second-in-command, typically the deputy CEO or equivalent; it has no numeric unit. Reported directly by the utility rather than calculated from other inputs. Across the region it shows female representation in the most senior deputy roles and supports the PPA's reporting on gender representation in leadership. As a single-person attribute, it changes only when the post-holder changes.",
+    "synonyms": [
+      "deputy CEO gender",
+      "second-in-command gender",
+      "gender of deputy chief executive"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 59,
+    "name": "Gender of Utility CEO",
+    "definition": "A categorical indicator recording the gender of the utility's chief executive officer; it has no numeric unit. Reported directly by the utility rather than calculated from other inputs. Across the region it shows how many Pacific utilities are led by women and supports the PPA's reporting on gender representation in senior leadership. As a single-person attribute, it changes only when the CEO changes.",
+    "synonyms": [
+      "CEO gender",
+      "gender of chief executive",
+      "female CEO indicator"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 77,
+    "name": "HR Employees Female %",
+    "definition": "The share of the utility's human resources workforce who are women, expressed as a percentage. Calculated as the number of female human resources employees divided by the total number of human resources employees. A higher value indicates greater female representation in the division, and the KPI supports the PPA's gender-representation reporting. In small divisions the percentage can swing sharply with a single hire or departure.",
+    "synonyms": [
+      "women in HR (%)",
+      "female share of HR staff",
+      "HR gender ratio (female)"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 76,
+    "name": "HR Employees Male %",
+    "definition": "The share of the utility's human resources workforce who are men, expressed as a percentage. Calculated as the number of male human resources employees divided by the total number of human resources employees. A higher value indicates greater male representation in the division; read together with the female percentage, the two shares account for the whole division. In small divisions the percentage can swing sharply with a single hire or departure.",
+    "synonyms": [
+      "men in HR (%)",
+      "male share of HR staff",
+      "HR gender ratio (male)"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 75,
+    "name": "HR Employees Total",
+    "definition": "The total number of employees in the utility's human resources division, expressed as a headcount. Calculated as the sum of female and male human resources employees. Higher totals generally reflect a larger utility or a larger human resources function, so the figure is best read alongside overall workforce size and customer numbers. This is a headcount rather than a full-time-equivalent measure, so part-time staff count the same as full-time staff.",
+    "synonyms": [
+      "HR headcount",
+      "human resources staff numbers",
+      "HR division workforce"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 86,
+    "name": "ICT Employees Female %",
+    "definition": "The share of the utility's ICT workforce who are women, expressed as a percentage. Calculated as the number of female ICT employees divided by the total number of ICT employees. A higher value indicates greater female representation in the division, and the KPI supports the PPA's gender-representation reporting. In small divisions the percentage can swing sharply with a single hire or departure.",
+    "synonyms": [
+      "women in ICT (%)",
+      "female share of ICT staff",
+      "ICT gender ratio (female)"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 85,
+    "name": "ICT Employees Male %",
+    "definition": "The share of the utility's ICT workforce who are men, expressed as a percentage. Calculated as the number of male ICT employees divided by the total number of ICT employees. A higher value indicates greater male representation in the division; read together with the female percentage, the two shares account for the whole division. In small divisions the percentage can swing sharply with a single hire or departure.",
+    "synonyms": [
+      "men in ICT (%)",
+      "male share of ICT staff",
+      "ICT gender ratio (male)"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 84,
+    "name": "ICT Employees Total",
+    "definition": "The total number of employees in the utility's ICT division, expressed as a headcount. Calculated as the sum of female and male ICT employees. Higher totals generally reflect a larger utility or a larger ICT function, so the figure is best read alongside overall workforce size and customer numbers. This is a headcount rather than a full-time-equivalent measure, so part-time staff count the same as full-time staff.",
+    "synonyms": [
+      "ICT headcount",
+      "IT staff numbers",
+      "ICT division workforce"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 89,
+    "name": "Other Divisions Employees Female %",
+    "definition": "The share of the utility's 'other divisions' workforce who are women, expressed as a percentage. Calculated as the number of female 'other' employees divided by the total number of 'other' employees. A higher value indicates greater female representation in these roles, and the KPI supports the PPA's gender-representation reporting. In small divisions the percentage can swing sharply with a single hire or departure.",
+    "synonyms": [
+      "women in other divisions (%)",
+      "female share of other divisions staff",
+      "other divisions gender ratio (female)"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 88,
+    "name": "Other Divisions Employees Male %",
+    "definition": "The share of the utility's 'other divisions' workforce who are men, expressed as a percentage. Calculated as the number of male 'other' employees divided by the total number of 'other' employees. A higher value indicates greater male representation in these roles; read together with the female percentage, the two shares account for the whole group. In small divisions the percentage can swing sharply with a single hire or departure.",
+    "synonyms": [
+      "men in other divisions (%)",
+      "male share of other divisions staff",
+      "other divisions gender ratio (male)"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 87,
+    "name": "Other Divisions Employees Total",
+    "definition": "The total number of employees who do not fall within any of the named divisions (administrative, executive, finance, human resources, ICT, PR/marketing/customer service, procurement or technical), expressed as a headcount. Calculated as the sum of female and male 'other' employees. Higher totals generally reflect a larger utility or a larger residual function, so the figure is best read alongside overall workforce size and customer numbers. This is a headcount rather than a full-time-equivalent measure, so part-time staff count the same as full-time staff.",
+    "synonyms": [
+      "other divisions headcount",
+      "unclassified staff numbers",
+      "other staff total"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 80,
+    "name": "PR Marketing and CustService Employees Female %",
+    "definition": "The share of the utility's PR, marketing and customer service workforce who are women, expressed as a percentage. Calculated as the number of female PR, marketing and customer service employees divided by the total number of PR, marketing and customer service employees. A higher value indicates greater female representation in the division, and the KPI supports the PPA's gender-representation reporting. In small divisions the percentage can swing sharply with a single hire or departure.",
+    "synonyms": [
+      "women in customer service and marketing (%)",
+      "female share of customer service and marketing staff",
+      "customer service and marketing gender ratio (female)"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 79,
+    "name": "PR Marketing and CustService Employees Male %",
+    "definition": "The share of the utility's PR, marketing and customer service workforce who are men, expressed as a percentage. Calculated as the number of male PR, marketing and customer service employees divided by the total number of PR, marketing and customer service employees. A higher value indicates greater male representation in the division; read together with the female percentage, the two shares account for the whole division. In small divisions the percentage can swing sharply with a single hire or departure.",
+    "synonyms": [
+      "men in customer service and marketing (%)",
+      "male share of customer service and marketing staff",
+      "customer service and marketing gender ratio (male)"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 78,
+    "name": "PR Marketing and CustService Employees Total",
+    "definition": "The total number of employees in the utility's PR, marketing and customer service division, expressed as a headcount. Calculated as the sum of female and male PR, marketing and customer service employees. Higher totals generally reflect a larger utility or a larger PR, marketing and customer service function, so the figure is best read alongside overall workforce size and customer numbers. This is a headcount rather than a full-time-equivalent measure, so part-time staff count the same as full-time staff.",
+    "synonyms": [
+      "PR and marketing headcount",
+      "customer service staff numbers",
+      "customer-facing staff total"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 92,
+    "name": "Procurement Employees Female %",
+    "definition": "The share of the utility's procurement workforce who are women, expressed as a percentage. Calculated as the number of female procurement employees divided by the total number of procurement employees. A higher value indicates greater female representation in the division, and the KPI supports the PPA's gender-representation reporting. In small divisions the percentage can swing sharply with a single hire or departure.",
+    "synonyms": [
+      "women in procurement (%)",
+      "female share of procurement staff",
+      "procurement gender ratio (female)"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 91,
+    "name": "Procurement Employees Male %",
+    "definition": "The share of the utility's procurement workforce who are men, expressed as a percentage. Calculated as the number of male procurement employees divided by the total number of procurement employees. A higher value indicates greater male representation in the division; read together with the female percentage, the two shares account for the whole division. In small divisions the percentage can swing sharply with a single hire or departure.",
+    "synonyms": [
+      "men in procurement (%)",
+      "male share of procurement staff",
+      "procurement gender ratio (male)"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 90,
+    "name": "Procurement Employees Total",
+    "definition": "The total number of employees in the utility's procurement division, expressed as a headcount. Calculated as the sum of female and male procurement employees. Higher totals generally reflect a larger utility or a larger procurement function, so the figure is best read alongside overall workforce size and customer numbers. This is a headcount rather than a full-time-equivalent measure, so part-time staff count the same as full-time staff.",
+    "synonyms": [
+      "procurement headcount",
+      "purchasing staff numbers",
+      "supply chain staff total"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 71,
+    "name": "Technical Employees Female %",
+    "definition": "The share of the utility's technical workforce who are women, expressed as a percentage. Calculated as the number of female technical employees divided by the total number of technical employees. A higher value indicates greater female representation in the division, and the KPI supports the PPA's gender-representation reporting. In small divisions the percentage can swing sharply with a single hire or departure.",
+    "synonyms": [
+      "women in technical (%)",
+      "female share of technical staff",
+      "technical gender ratio (female)"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 70,
+    "name": "Technical Employees Male %",
+    "definition": "The share of the utility's technical workforce who are men, expressed as a percentage. Calculated as the number of male technical employees divided by the total number of technical employees. A higher value indicates greater male representation in the division; read together with the female percentage, the two shares account for the whole division. In small divisions the percentage can swing sharply with a single hire or departure.",
+    "synonyms": [
+      "men in technical (%)",
+      "male share of technical staff",
+      "technical gender ratio (male)"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 69,
+    "name": "Technical Employees Total",
+    "definition": "The total number of employees in the utility's technical division, expressed as a headcount. Calculated as the sum of female and male technical employees. Higher totals generally reflect a larger utility or a larger technical function, so the figure is best read alongside overall workforce size and customer numbers. This is a headcount rather than a full-time-equivalent measure, so part-time staff count the same as full-time staff.",
+    "synonyms": [
+      "technical headcount",
+      "engineering and technical staff numbers",
+      "technical workforce size"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 63,
+    "name": "Total Employees",
+    "definition": "The utility's total workforce, expressed as a headcount of employees. Calculated as the sum of male and female employees. A larger workforce generally reflects a larger utility; on its own it says little about efficiency, so it is normally read alongside customer numbers and labour productivity. This is a headcount rather than a full-time-equivalent measure, so part-time staff count the same as full-time staff.",
+    "synonyms": [
+      "total headcount",
+      "workforce size",
+      "total staff complement",
+      "number of employees"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 62,
+    "name": "Total Employees Female",
+    "definition": "The total number of female employees across the utility, expressed as a headcount. Calculated as the sum of female employees across the administrative, executive, finance, human resources, ICT, other, PR/marketing/customer service, procurement and technical divisions. A higher count reflects stronger female participation in the workforce, and the figure feeds the utility-wide female percentage used in the PPA's gender-representation reporting.",
+    "synonyms": [
+      "female headcount",
+      "total women employed",
+      "female staff count"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 61,
+    "name": "Total Employees Male",
+    "definition": "The total number of male employees across the utility, expressed as a headcount. Calculated as the sum of male employees across the administrative, executive, finance, ICT, other, PR/marketing/customer service, procurement and technical divisions. A higher count simply reflects a larger male workforce and is best read alongside the female count and total headcount. Note that, as currently defined, the formula omits male human resources employees, so the figure may slightly understate the true total.",
+    "synonyms": [
+      "male headcount",
+      "total men employed",
+      "male staff count"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 145,
+    "name": "FTE Paid Hours - Conventional Generation",
+    "definition": "The size of the utility's conventional (thermal) generation workforce expressed as full-time-equivalent (FTE) staff, based on hours paid. Calculated as total hours paid in conventional (thermal) generation divided by the standard work hours of one full-time employee, which converts paid hours into an equivalent number of full-time staff. Higher values indicate a larger paid labour input to conventional (thermal) generation. Because paid hours include annual leave, sick leave and public holidays, this measure normally sits above the corresponding FTE Worked Hours; the gap shows how much paid time is not spent working.",
+    "synonyms": [
+      "conventional generation FTEs (paid hours)",
+      "paid full-time-equivalent conventional generation staff",
+      "conventional generation paid-hours FTE"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 142,
+    "name": "FTE Paid Hours - Distribution",
+    "definition": "The size of the utility's distribution workforce expressed as full-time-equivalent (FTE) staff, based on hours paid. Calculated as total hours paid in distribution divided by the standard work hours of one full-time employee, which converts paid hours into an equivalent number of full-time staff. Higher values indicate a larger paid labour input to distribution. Because paid hours include annual leave, sick leave and public holidays, this measure normally sits above the corresponding FTE Worked Hours; the gap shows how much paid time is not spent working.",
+    "synonyms": [
+      "distribution FTEs (paid hours)",
+      "paid full-time-equivalent distribution staff",
+      "distribution paid-hours FTE"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 143,
+    "name": "FTE Paid Hours - Other Electrical",
+    "definition": "The size of the utility's other electrical activities workforce expressed as full-time-equivalent (FTE) staff, based on hours paid. Calculated as total hours paid in other electrical activities divided by the standard work hours of one full-time employee, which converts paid hours into an equivalent number of full-time staff. Higher values indicate a larger paid labour input to other electrical activities. Because paid hours include annual leave, sick leave and public holidays, this measure normally sits above the corresponding FTE Worked Hours; the gap shows how much paid time is not spent working.",
+    "synonyms": [
+      "other electrical FTEs (paid hours)",
+      "paid full-time-equivalent other electrical staff",
+      "other electrical paid-hours FTE"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 140,
+    "name": "FTE Paid Hours - Renewable Generation",
+    "definition": "The size of the utility's renewable generation workforce expressed as full-time-equivalent (FTE) staff, based on hours paid. Calculated as total hours paid in renewable generation divided by the standard work hours of one full-time employee, which converts paid hours into an equivalent number of full-time staff. Higher values indicate a larger paid labour input to renewable generation. Because paid hours include annual leave, sick leave and public holidays, this measure normally sits above the corresponding FTE Worked Hours; the gap shows how much paid time is not spent working.",
+    "synonyms": [
+      "renewable generation FTEs (paid hours)",
+      "paid full-time-equivalent renewable generation staff",
+      "renewable generation paid-hours FTE"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 141,
+    "name": "FTE Paid Hours - Transmission",
+    "definition": "The size of the utility's transmission workforce expressed as full-time-equivalent (FTE) staff, based on hours paid. Calculated as total hours paid in transmission divided by the standard work hours of one full-time employee, which converts paid hours into an equivalent number of full-time staff. Higher values indicate a larger paid labour input to transmission. Because paid hours include annual leave, sick leave and public holidays, this measure normally sits above the corresponding FTE Worked Hours; the gap shows how much paid time is not spent working.",
+    "synonyms": [
+      "transmission FTEs (paid hours)",
+      "paid full-time-equivalent transmission staff",
+      "transmission paid-hours FTE"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 144,
+    "name": "FTE Worked Hours - Conventional Generation",
+    "definition": "The size of the utility's conventional (thermal) generation workforce expressed as full-time-equivalent (FTE) staff, based on hours actually worked. Calculated as total hours worked in conventional (thermal) generation divided by the standard work hours of one full-time employee, which converts raw hours into an equivalent number of full-time staff. Higher values indicate more labour effort applied to conventional (thermal) generation, whether from more staff or more overtime. Because it is built from worked hours it excludes leave and other paid non-working time; compare it with the corresponding FTE Paid Hours measure to see that gap.",
+    "synonyms": [
+      "conventional generation FTEs (worked hours)",
+      "full-time-equivalent conventional generation staff",
+      "conventional generation worked-hours FTE"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 137,
+    "name": "FTE Worked Hours - Distribution",
+    "definition": "The size of the utility's distribution workforce expressed as full-time-equivalent (FTE) staff, based on hours actually worked. Calculated as total hours worked in distribution divided by the standard work hours of one full-time employee, which converts raw hours into an equivalent number of full-time staff. Higher values indicate more labour effort applied to distribution, whether from more staff or more overtime. Because it is built from worked hours it excludes leave and other paid non-working time; compare it with the corresponding FTE Paid Hours measure to see that gap.",
+    "synonyms": [
+      "distribution FTEs (worked hours)",
+      "full-time-equivalent distribution staff",
+      "distribution worked-hours FTE"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 139,
+    "name": "FTE Worked Hours - Other Electrical",
+    "definition": "The size of the utility's other electrical activities workforce expressed as full-time-equivalent (FTE) staff, based on hours actually worked. Calculated as total hours worked in other electrical activities divided by the standard work hours of one full-time employee, which converts raw hours into an equivalent number of full-time staff. Higher values indicate more labour effort applied to other electrical activities, whether from more staff or more overtime. Because it is built from worked hours it excludes leave and other paid non-working time; compare it with the corresponding FTE Paid Hours measure to see that gap.",
+    "synonyms": [
+      "other electrical FTEs (worked hours)",
+      "full-time-equivalent other electrical staff",
+      "other electrical worked-hours FTE"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 136,
+    "name": "FTE Worked Hours - Renewable Generation",
+    "definition": "The size of the utility's renewable generation workforce expressed as full-time-equivalent (FTE) staff, based on hours actually worked. Calculated as total hours worked in renewable generation divided by the standard work hours of one full-time employee, which converts raw hours into an equivalent number of full-time staff. Higher values indicate more labour effort applied to renewable generation, whether from more staff or more overtime. Because it is built from worked hours it excludes leave and other paid non-working time; compare it with the corresponding FTE Paid Hours measure to see that gap.",
+    "synonyms": [
+      "renewable generation FTEs (worked hours)",
+      "full-time-equivalent renewable generation staff",
+      "renewable generation worked-hours FTE"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 138,
+    "name": "FTE Worked Hours - Transmission",
+    "definition": "The size of the utility's transmission workforce expressed as full-time-equivalent (FTE) staff, based on hours actually worked. Calculated as total hours worked in transmission divided by the standard work hours of one full-time employee, which converts raw hours into an equivalent number of full-time staff. Higher values indicate more labour effort applied to transmission, whether from more staff or more overtime. Because it is built from worked hours it excludes leave and other paid non-working time; compare it with the corresponding FTE Paid Hours measure to see that gap.",
+    "synonyms": [
+      "transmission FTEs (worked hours)",
+      "full-time-equivalent transmission staff",
+      "transmission worked-hours FTE"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 93,
+    "name": "Labor Productivity",
+    "definition": "Measures workforce productivity as the number of customers served per employee. Calculated as the utility's total customer connections divided by its total number of employees. A higher value indicates each employee supports more customers, which generally signals a leaner, more productive workforce. Utilities serving many small, dispersed island grids naturally need more staff per customer, so comparisons are fairest between utilities of similar scale and geography.",
+    "synonyms": [
+      "customers per employee",
+      "staff productivity ratio",
+      "workforce productivity",
+      "customer-to-staff ratio"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 94,
+    "name": "Lost Time Injury Duration Rate",
+    "definition": "Measures the amount of working time lost to work-related injuries, indicating how severe those injuries are; the source records the unit as incidents per million hours. Calculated as the hours lost to work-related injuries multiplied by eight and divided by the total number of employees. A lower value is better, indicating injuries cost less working time per employee. Note that the recorded unit does not match the per-employee formula, so confirm the intended basis before comparing across utilities.",
+    "synonyms": [
+      "LTIDR",
+      "injury severity rate",
+      "lost time severity rate",
+      "injury duration rate"
+    ],
+    "definition_status": "draft"
+  },
+  {
+    "id": 95,
+    "name": "Lost Time Injury Frequency Rate",
+    "definition": "Measures how often work-related injuries occur relative to the hours the workforce actually works, expressed as incidents per million hours worked. Calculated as the number of work-related injuries divided by the sum of hours worked across conventional generation, renewable generation, network and other electrical functions, multiplied by one million. A lower rate is better, indicating fewer injuries for the labour effort expended. At small Pacific utilities a single injury can move the rate substantially, so multi-year trends are more informative than single-year values.",
+    "synonyms": [
+      "LTIFR",
+      "lost time injury rate",
+      "injury frequency rate per million hours worked"
+    ],
+    "definition_status": "draft"
+  }
+]

@@ -1,0 +1,324 @@
+[
+  {
+    "id": 1451,
+    "variable_name": "fte_employees_in_distribution",
+    "definition": "The number of full-time equivalent (FTE) employees engaged in the utility's distribution function for the reporting year. Include permanent full-time and part-time employees on the utility's payroll, converted to full-time equivalents (two half-time staff = 1 FTE); exclude contractors and consultants. Feeds the Customers per Distribution Employee KPI. Report FTE, not headcount — a part-time employee counts as a fraction of an FTE.",
+    "synonyms": ["distribution staff (fte)", "full-time equivalent distribution employees", "distribution workforce", "network staff fte"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1450,
+    "variable_name": "fte_employees_in_generation",
+    "definition": "The number of full-time equivalent (FTE) employees engaged in the utility's generation function for the reporting year. Include permanent full-time and part-time employees on the utility's payroll, converted to full-time equivalents (two half-time staff = 1 FTE); exclude contractors and consultants. Feeds the Generation Labor Productivity KPI. Staff who split their time across functions should be apportioned so that each person's FTE is counted only once across divisions.",
+    "synonyms": ["generation staff (fte)", "full-time equivalent generation employees", "power station workforce", "generation staffing level"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1452,
+    "variable_name": "fte_employees_in_transmission",
+    "definition": "The number of full-time equivalent (FTE) employees engaged in the utility's transmission function for the reporting year. Include permanent full-time and part-time employees on the utility's payroll, converted to full-time equivalents (two half-time staff = 1 FTE); exclude contractors and consultants. Utilities that do not operate a separate transmission network should leave this blank rather than repeating distribution staff here.",
+    "synonyms": ["transmission staff (fte)", "full-time equivalent transmission employees", "transmission workforce", "grid staff fte"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1421,
+    "variable_name": "administrative_employees_female",
+    "definition": "The number of female employees working in the utility's administrative division, reported as a headcount of employees at the end of the reporting year. Include permanent full-time and part-time employees on the utility's payroll; exclude contractors, consultants and vacant positions. Feeds the Administrative Employees Female %, Administrative Employees Total, Total Employees Female and IPP Generation KPIs, and supports the PPA's reporting of gender representation by division. This is a headcount, not an FTE figure — count each person once regardless of hours worked.",
+    "synonyms": ["female admin staff", "women in administration", "admin headcount (female)", "female administrative personnel"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1420,
+    "variable_name": "administrative_employees_male",
+    "definition": "The number of male employees working in the utility's administrative division, reported as a headcount of employees at the end of the reporting year. Include permanent full-time and part-time employees on the utility's payroll; exclude contractors, consultants and vacant positions. Feeds the Administrative Employees Male %, Administrative Employees Total and Total Employees Male KPIs, and supports the PPA's reporting of gender representation by division. This is a headcount, not an FTE figure — count each person once regardless of hours worked.",
+    "synonyms": ["male admin staff", "men in administration", "admin headcount (male)", "male administrative personnel"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1422,
+    "variable_name": "administrative_employees_total",
+    "definition": "The total number of employees in the utility's administrative division, in employees. It is calculated automatically as the sum of the reported male and female administrative employee counts, so no separate entry is required. Feeds the Administrative Employees Female % and Administrative Employees Male % KPIs. If the total looks wrong, correct the underlying male and female counts rather than this value.",
+    "synonyms": ["admin headcount", "administration staff count", "total administrative workforce", "admin division employees"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1430,
+    "variable_name": "employees_female",
+    "definition": "The total number of female employees across the whole utility, in employees. It is calculated by summing the female headcounts reported for each division (executive, technical, finance, procurement, human resources, PR/marketing/customer service, administrative, ICT and other), so no separate entry is required. Feeds the Employees Female % and Total Employees KPIs, which underpin the PPA's utility-wide gender-representation reporting. Ensure each employee is assigned to exactly one division so this total does not double-count anyone.",
+    "synonyms": ["total female staff", "women employees", "female workforce", "female headcount"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1429,
+    "variable_name": "employees_male",
+    "definition": "The total number of male employees across the whole utility, in employees. It is calculated by summing the male headcounts reported for each division (executive, technical, finance, procurement, human resources, PR/marketing/customer service, administrative, ICT and other), so no separate entry is required. Feeds the Employees Male % and Total Employees KPIs, which underpin the PPA's utility-wide gender-representation reporting. Ensure each employee is assigned to exactly one division so this total does not double-count anyone.",
+    "synonyms": ["total male staff", "men employees", "male workforce", "male headcount"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1403,
+    "variable_name": "executive_employees_female",
+    "definition": "The number of female employees in the utility's executive division (the senior leadership team), reported as a headcount of employees at the end of the reporting year. Include permanent full-time and part-time employees on the utility's payroll; exclude contractors, consultants, board members who are not employees, and vacant positions. Feeds the Executive Employees Female %, Executive Employees Total and Total Employees Female KPIs, and supports the PPA's reporting of gender representation by division. This is a headcount, not an FTE figure.",
+    "synonyms": ["women in executive management", "female executives", "female senior management headcount", "women in leadership"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1402,
+    "variable_name": "executive_employees_male",
+    "definition": "The number of male employees in the utility's executive division (the senior leadership team), reported as a headcount of employees at the end of the reporting year. Include permanent full-time and part-time employees on the utility's payroll; exclude contractors, consultants, board members who are not employees, and vacant positions. Feeds the Executive Employees Male %, Executive Employees Total and Total Employees Male KPIs, and supports the PPA's reporting of gender representation by division. This is a headcount, not an FTE figure.",
+    "synonyms": ["men in executive management", "male executives", "male senior management headcount", "men in leadership"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1404,
+    "variable_name": "executive_employees_total",
+    "definition": "The total number of employees in the utility's executive division (the senior leadership team), in employees. It is calculated automatically as the sum of the reported male and female executive employee counts, so no separate entry is required. Feeds the Executive Employees Female % and Executive Employees Male % KPIs. If the total looks wrong, correct the underlying male and female counts rather than this value.",
+    "synonyms": ["executive headcount", "senior management team size", "executive staff count", "leadership team headcount"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1409,
+    "variable_name": "finance_employees_female",
+    "definition": "The number of female employees in the utility's finance division, reported as a headcount of employees at the end of the reporting year. Include permanent full-time and part-time employees on the utility's payroll; exclude contractors, consultants and vacant positions. Feeds the Finance Employees Female %, Finance Employees Total and Total Employees Female KPIs, and supports the PPA's reporting of gender representation by division. This is a headcount, not an FTE figure.",
+    "synonyms": ["female finance staff", "women in finance", "finance department female headcount", "female accounting staff"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1408,
+    "variable_name": "finance_employees_male",
+    "definition": "The number of male employees in the utility's finance division, reported as a headcount of employees at the end of the reporting year. Include permanent full-time and part-time employees on the utility's payroll; exclude contractors, consultants and vacant positions. Feeds the Finance Employees Female %, Finance Employees Male %, Finance Employees Total and Total Employees Male KPIs, and supports the PPA's reporting of gender representation by division. This is a headcount, not an FTE figure.",
+    "synonyms": ["male finance staff", "men in finance", "finance department male headcount", "male accounting staff"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1410,
+    "variable_name": "finance_employees_total",
+    "definition": "The total number of employees in the utility's finance division, in employees. It is calculated automatically as the sum of the reported male and female finance employee counts, so no separate entry is required. Feeds the Finance Employees Female % and Finance Employees Male % KPIs. If the total looks wrong, correct the underlying male and female counts rather than this value.",
+    "synonyms": ["finance headcount", "finance staff count", "finance department workforce", "accounting staff total"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1401,
+    "variable_name": "gender_of_2ic",
+    "definition": "Records the gender of the utility's second-in-command — typically the Deputy CEO, Chief Operating Officer or most senior executive reporting directly to the CEO — as at the end of the reporting year; this is a gender value, not a number. Report the person actually occupying the role at year end, including an acting incumbent if the position is filled in an acting capacity. Feeds the Gender of Utility 2nd in command KPI, part of the PPA's reporting of gender representation in utility leadership.",
+    "synonyms": ["deputy ceo gender", "second-in-command gender", "coo gender", "deputy chief executive gender"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1400,
+    "variable_name": "gender_of_ceo",
+    "definition": "Records the gender of the utility's Chief Executive Officer (or equivalent most senior executive, such as a General Manager) as at the end of the reporting year; this is a gender value, not a number. Report the person actually occupying the role at year end, including an acting CEO if the position is filled in an acting capacity. Feeds the Gender of Utility CEO KPI, part of the PPA's reporting of gender representation in utility leadership.",
+    "synonyms": ["ceo gender", "chief executive gender", "general manager gender", "utility head gender"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1415,
+    "variable_name": "human_resource_employees_female",
+    "definition": "The number of female employees in the utility's human resources division, reported as a headcount of employees at the end of the reporting year. Include permanent full-time and part-time employees on the utility's payroll; exclude contractors, consultants and vacant positions. Feeds the HR Employees Female %, HR Employees Total and Total Employees Female KPIs, and supports the PPA's reporting of gender representation by division. This is a headcount, not an FTE figure.",
+    "synonyms": ["female hr staff", "women in human resources", "hr department female headcount", "female personnel officers"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1414,
+    "variable_name": "human_resource_employees_male",
+    "definition": "The number of male employees in the utility's human resources division, reported as a headcount of employees at the end of the reporting year. Include permanent full-time and part-time employees on the utility's payroll; exclude contractors, consultants and vacant positions. Feeds the HR Employees Male % and HR Employees Total KPIs, and supports the PPA's reporting of gender representation by division. This is a headcount, not an FTE figure.",
+    "synonyms": ["male hr staff", "men in human resources", "hr department male headcount", "male personnel officers"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1416,
+    "variable_name": "human_resource_employees_total",
+    "definition": "The total number of employees in the utility's human resources division, in employees. It is calculated as the sum of the reported male and female human resources employee counts, so no separate entry is required. Feeds the HR Employees Female % and HR Employees Male % KPIs. If the total looks wrong, correct the underlying male and female counts rather than this value.",
+    "synonyms": ["hr headcount", "human resources staff count", "hr department workforce", "personnel department total"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1424,
+    "variable_name": "ict_employees_female",
+    "definition": "The number of female employees in the utility's ICT (information and communication technology) division, reported as a headcount of employees at the end of the reporting year. Include permanent full-time and part-time employees on the utility's payroll; exclude contractors, consultants and vacant positions. Feeds the ICT Employees Female %, ICT Employees Total and Total Employees Female KPIs, and supports the PPA's reporting of gender representation by division. This is a headcount, not an FTE figure.",
+    "synonyms": ["female ict staff", "women in it", "it department female headcount", "female technology staff"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1423,
+    "variable_name": "ict_employees_male",
+    "definition": "The number of male employees in the utility's ICT (information and communication technology) division, reported as a headcount of employees at the end of the reporting year. Include permanent full-time and part-time employees on the utility's payroll; exclude contractors, consultants and vacant positions. Feeds the ICT Employees Male %, ICT Employees Total and Total Employees Male KPIs, and supports the PPA's reporting of gender representation by division. This is a headcount, not an FTE figure.",
+    "synonyms": ["male ict staff", "men in it", "it department male headcount", "male technology staff"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1425,
+    "variable_name": "ict_employees_total",
+    "definition": "The total number of employees in the utility's ICT (information and communication technology) division, in employees. It is calculated as the sum of the reported male and female ICT employee counts, so no separate entry is required. Feeds the ICT Employees Female % and ICT Employees Male % KPIs. If the total looks wrong, correct the underlying male and female counts rather than this value.",
+    "synonyms": ["ict headcount", "it staff count", "ict department workforce", "technology staff total"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1427,
+    "variable_name": "other_employees_female",
+    "definition": "The number of female employees in divisions not covered by the named categories (executive, technical, finance, procurement, human resources, PR/marketing/customer service, administrative and ICT), reported as a headcount of employees at the end of the reporting year. Include permanent full-time and part-time employees on the utility's payroll; exclude contractors, consultants and vacant positions, and do not repeat anyone already counted in a named division. Feeds the Other Divisions Employees Female %, Other Divisions Employees Total and Total Employees Female KPIs, and supports the PPA's reporting of gender representation by division. This is a headcount, not an FTE figure.",
+    "synonyms": ["female staff in other divisions", "women in other departments", "other divisions female headcount", "unclassified female staff"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1426,
+    "variable_name": "other_employees_male",
+    "definition": "The number of male employees in divisions not covered by the named categories (executive, technical, finance, procurement, human resources, PR/marketing/customer service, administrative and ICT), reported as a headcount of employees at the end of the reporting year. Include permanent full-time and part-time employees on the utility's payroll; exclude contractors, consultants and vacant positions, and do not repeat anyone already counted in a named division. Feeds the Other Divisions Employees Male %, Other Divisions Employees Total and Total Employees Male KPIs, and supports the PPA's reporting of gender representation by division. This is a headcount, not an FTE figure.",
+    "synonyms": ["male staff in other divisions", "men in other departments", "other divisions male headcount", "unclassified male staff"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1428,
+    "variable_name": "other_employees_total",
+    "definition": "The total number of employees in divisions not covered by the named categories (executive, technical, finance, procurement, human resources, PR/marketing/customer service, administrative and ICT), in employees. It is calculated as the sum of the reported male and female counts for these other divisions, so no separate entry is required. Feeds the Other Divisions Employees Female % and Other Divisions Employees Male % KPIs. If the total looks wrong, correct the underlying male and female counts rather than this value.",
+    "synonyms": ["other divisions headcount", "other departments staff count", "residual divisions workforce", "other staff total"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1418,
+    "variable_name": "pr_marketing_and_customer_service_employees_female",
+    "definition": "The number of female employees in the utility's public relations, marketing and customer service division, reported as a headcount of employees at the end of the reporting year. Include permanent full-time and part-time employees on the utility's payroll, including call-centre and front-counter customer service staff; exclude contractors, consultants and vacant positions. Feeds the PR Marketing and CustService Employees Female %, PR Marketing and CustService Employees Total and Total Employees Female KPIs, and supports the PPA's reporting of gender representation by division. This is a headcount, not an FTE figure.",
+    "synonyms": ["female customer service staff", "women in pr and marketing", "customer care female headcount", "female communications staff"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1417,
+    "variable_name": "pr_marketing_and_customer_service_employees_male",
+    "definition": "The number of male employees in the utility's public relations, marketing and customer service division, reported as a headcount of employees at the end of the reporting year. Include permanent full-time and part-time employees on the utility's payroll, including call-centre and front-counter customer service staff; exclude contractors, consultants and vacant positions. Feeds the PR Marketing and CustService Employees Male %, PR Marketing and CustService Employees Total and Total Employees Male KPIs, and supports the PPA's reporting of gender representation by division. This is a headcount, not an FTE figure.",
+    "synonyms": ["male customer service staff", "men in pr and marketing", "customer care male headcount", "male communications staff"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1419,
+    "variable_name": "pr_marketing_and_customer_service_employees_total",
+    "definition": "The total number of employees in the utility's public relations, marketing and customer service division, in employees. It is calculated as the sum of the reported male and female counts for this division, so no separate entry is required. Feeds the PR Marketing and CustService Employees Female % and PR Marketing and CustService Employees Male % KPIs. If the total looks wrong, correct the underlying male and female counts rather than this value.",
+    "synonyms": ["customer service headcount", "pr and marketing staff count", "customer care workforce", "communications staff total"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1412,
+    "variable_name": "procurement_employees_female",
+    "definition": "The number of female employees in the utility's procurement division (purchasing and supply chain), reported as a headcount of employees at the end of the reporting year. Include permanent full-time and part-time employees on the utility's payroll; exclude contractors, consultants and vacant positions. Feeds the Procurement Employees Female %, Procurement Employees Total and Total Employees Female KPIs, and supports the PPA's reporting of gender representation by division. This is a headcount, not an FTE figure.",
+    "synonyms": ["female procurement staff", "women in purchasing", "supply chain female headcount", "female stores and purchasing staff"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1411,
+    "variable_name": "procurement_employees_male",
+    "definition": "The number of male employees in the utility's procurement division (purchasing and supply chain), reported as a headcount of employees at the end of the reporting year. Include permanent full-time and part-time employees on the utility's payroll; exclude contractors, consultants and vacant positions. Feeds the Procurement Employees Male %, Procurement Employees Total and Total Employees Male KPIs, and supports the PPA's reporting of gender representation by division. This is a headcount, not an FTE figure.",
+    "synonyms": ["male procurement staff", "men in purchasing", "supply chain male headcount", "male stores and purchasing staff"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1413,
+    "variable_name": "procurement_employees_total",
+    "definition": "The total number of employees in the utility's procurement division (purchasing and supply chain), in employees. It is calculated as the sum of the reported male and female procurement employee counts, so no separate entry is required. Feeds the Procurement Employees Female % and Procurement Employees Male % KPIs. If the total looks wrong, correct the underlying male and female counts rather than this value.",
+    "synonyms": ["procurement headcount", "purchasing staff count", "supply chain workforce", "stores and procurement total"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1406,
+    "variable_name": "technical_employees_female",
+    "definition": "The number of female employees in the utility's technical division (engineering, generation, network operations and similar technical roles), reported as a headcount of employees at the end of the reporting year. Include permanent full-time and part-time employees on the utility's payroll, including apprentices and tradespeople; exclude contractors, consultants and vacant positions. Feeds the Technical Employees Female %, Technical Employees Total and Total Employees Female KPIs, and supports the PPA's reporting of gender representation by division. This is a headcount, not an FTE figure.",
+    "synonyms": ["female technical staff", "women in engineering and operations", "technical division female headcount", "female field and engineering staff"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1405,
+    "variable_name": "technical_employees_male",
+    "definition": "The number of male employees in the utility's technical division (engineering, generation, network operations and similar technical roles), reported as a headcount of employees at the end of the reporting year. Include permanent full-time and part-time employees on the utility's payroll, including apprentices and tradespeople; exclude contractors, consultants and vacant positions. Feeds the Technical Employees Male %, Technical Employees Total and Total Employees Male KPIs, and supports the PPA's reporting of gender representation by division. This is a headcount, not an FTE figure.",
+    "synonyms": ["male technical staff", "men in engineering and operations", "technical division male headcount", "male field and engineering staff"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1407,
+    "variable_name": "technical_employees_total",
+    "definition": "The total number of employees in the utility's technical division (engineering, generation, network operations and similar technical roles), in employees. It is calculated as the sum of the reported male and female technical employee counts, so no separate entry is required. Feeds the Technical Employees Female % and Technical Employees Male % KPIs. If the total looks wrong, correct the underlying male and female counts rather than this value.",
+    "synonyms": ["technical headcount", "technical staff count", "engineering and operations workforce", "technical division total"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1453,
+    "variable_name": "hours_lost_to_work_related_injuries",
+    "definition": "The total number of scheduled work hours lost during the reporting year because of work-related injuries, in hours. Count hours that the utility's own employees were rostered to work but could not because of a lost-time injury; exclude contractor injuries and absences unrelated to workplace injury. Feeds the Lost Time Injury Duration Rate KPI. Include hours lost during the reporting year even where the injury itself occurred in an earlier year.",
+    "synonyms": ["lost time injury hours", "hours lost to ltis", "injury downtime hours", "lost work hours from accidents"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1454,
+    "variable_name": "number_of_work_related_injuries",
+    "definition": "The number of work-related injury incidents recorded during the reporting year, in incidents. Count injuries to the utility's own employees arising out of or in the course of work that resulted in lost work time; exclude contractor injuries and first-aid-only cases that caused no lost time. Feeds the Lost Time Injury Frequency Rate KPI. Record each qualifying incident once, in the year it occurred.",
+    "synonyms": ["lost time injuries", "lti count", "workplace injury count", "occupational injuries", "recordable injuries"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1476,
+    "variable_name": "hours_paid__distribution",
+    "definition": "The total number of hours paid to employees in the utility's distribution division during the reporting year, in hours. Include all remunerated hours for employees on the utility's payroll — ordinary time, overtime and paid leave such as annual and sick leave; exclude contractor hours. Feeds the FTE Paid Hours - Distribution and FTE Worked Hours - Distribution KPIs. Paid hours are normally higher than worked hours because they include paid leave and public holidays.",
+    "synonyms": ["distribution payroll hours", "paid hours (distribution)", "total remunerated hours - distribution", "distribution paid labour hours"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1477,
+    "variable_name": "hours_paid__other_electrical",
+    "definition": "The total number of hours paid to employees in the utility's other electrical functions — electrical activities outside generation, transmission and distribution — during the reporting year, in hours. Include all remunerated hours for employees on the utility's payroll — ordinary time, overtime and paid leave such as annual and sick leave; exclude contractor hours. Feeds the FTE Paid Hours - Other Electrical KPI. Paid hours are normally higher than worked hours because they include paid leave and public holidays.",
+    "synonyms": ["other electrical payroll hours", "paid hours (other electrical)", "total remunerated hours - other electrical", "other electrical paid labour hours"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 8,
+    "variable_name": "hours_paid__transmission",
+    "definition": "The total number of hours paid to employees in the utility's transmission division during the reporting year, in hours. Include all remunerated hours for employees on the utility's payroll — ordinary time, overtime and paid leave such as annual and sick leave; exclude contractor hours. Feeds the FTE Paid Hours - Transmission and FTE Worked Hours - Transmission KPIs. Paid hours are normally higher than worked hours because they include paid leave and public holidays.",
+    "synonyms": ["transmission payroll hours", "paid hours (transmission)", "total remunerated hours - transmission", "transmission paid labour hours"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1472,
+    "variable_name": "hours_worked__distribution",
+    "definition": "The total number of hours actually worked by employees in the utility's distribution division during the reporting year, in hours. Include ordinary time and overtime actually worked by employees on the utility's payroll; exclude paid leave, public holidays and contractor hours. Feeds the FTE Worked Hours - Distribution KPI and the Lost Time Injury Frequency Rate. Do not report paid hours here — leave and holidays are paid but not worked.",
+    "synonyms": ["actual hours worked (distribution)", "distribution man-hours", "distribution productive hours", "worked labour hours - distribution"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 1473,
+    "variable_name": "hours_worked__other_electrical",
+    "definition": "The total number of hours actually worked by employees in the utility's other electrical functions — electrical activities outside generation, transmission and distribution — during the reporting year, in hours. Include ordinary time and overtime actually worked by employees on the utility's payroll; exclude paid leave, public holidays and contractor hours. Feeds the FTE Worked Hours - Other Electrical KPI and the Lost Time Injury Frequency Rate. Do not report paid hours here — leave and holidays are paid but not worked.",
+    "synonyms": ["actual hours worked (other electrical)", "other electrical man-hours", "other electrical productive hours", "worked labour hours - other electrical"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 7,
+    "variable_name": "hours_worked__transmission",
+    "definition": "The total number of hours actually worked by employees in the utility's transmission division during the reporting year, in hours. Include ordinary time and overtime actually worked by employees on the utility's payroll; exclude paid leave, public holidays and contractor hours. Feeds the FTE Worked Hours - Transmission KPI. Do not report paid hours here — leave and holidays are paid but not worked.",
+    "synonyms": ["actual hours worked (transmission)", "transmission man-hours", "transmission productive hours", "worked labour hours - transmission"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 14,
+    "variable_name": "standard_work_hours__distribution",
+    "definition": "The standard annual work hours for one full-time employee in the utility's distribution division, in hours. Report the contracted or rostered hours a single full-time employee is expected to work in the year (for example, standard weekly hours multiplied by the number of working weeks), not the division-wide total and not hours actually worked or paid. Feeds the FTE Paid Hours - Distribution and FTE Worked Hours - Distribution KPIs, where it is the divisor that converts total hours into FTEs. A common error is entering the division's total hours instead of the per-employee standard.",
+    "synonyms": ["standard annual hours (distribution)", "contracted hours per fte", "normal working hours - distribution", "rostered full-time hours"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 16,
+    "variable_name": "standard_work_hours__other_electrical",
+    "definition": "The standard annual work hours for one full-time employee in the utility's other electrical functions — electrical activities outside generation, transmission and distribution — in hours. Report the contracted or rostered hours a single full-time employee is expected to work in the year (for example, standard weekly hours multiplied by the number of working weeks), not the function-wide total and not hours actually worked or paid. Feeds the FTE Paid Hours - Other Electrical and FTE Worked Hours - Other Electrical KPIs, where it is the divisor that converts total hours into FTEs. A common error is entering the total hours for the function instead of the per-employee standard.",
+    "synonyms": ["standard annual hours (other electrical)", "contracted hours per fte", "normal working hours - other electrical", "rostered full-time hours"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 17,
+    "variable_name": "standard_work_hours__renewable_generation",
+    "definition": "The standard annual work hours for one full-time employee in the utility's renewable generation function, in hours. Report the contracted or rostered hours a single full-time employee is expected to work in the year (for example, standard weekly hours multiplied by the number of working weeks), not the function-wide total and not hours actually worked or paid. Feeds the FTE Paid Hours - Renewable Generation and FTE Worked Hours - Renewable Generation KPIs, where it is the divisor that converts total hours into FTEs. A common error is entering the total hours for the function instead of the per-employee standard.",
+    "synonyms": ["standard annual hours (renewable generation)", "contracted hours per fte", "normal working hours - renewables", "rostered full-time hours"],
+    "definition_status": "draft"
+  },
+  {
+    "id": 15,
+    "variable_name": "standard_work_hours__transmission",
+    "definition": "The standard annual work hours for one full-time employee in the utility's transmission division, in hours. Report the contracted or rostered hours a single full-time employee is expected to work in the year (for example, standard weekly hours multiplied by the number of working weeks), not the division-wide total and not hours actually worked or paid. Feeds the FTE Paid Hours - Transmission and FTE Worked Hours - Transmission KPIs, where it is the divisor that converts total hours into FTEs. A common error is entering the division's total hours instead of the per-employee standard.",
+    "synonyms": ["standard annual hours (transmission)", "contracted hours per fte", "normal working hours - transmission", "rostered full-time hours"],
+    "definition_status": "draft"
+  }
+]

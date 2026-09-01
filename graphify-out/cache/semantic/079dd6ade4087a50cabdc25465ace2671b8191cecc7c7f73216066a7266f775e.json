@@ -1,0 +1,1 @@
+{"nodes": [{"id": "external-registrations_service_AcceptExternalRegistration", "label": "AcceptExternalRegistration", "file_type": "code", "source_file": "app/settings/external-registrations/service.ts", "source_location": "function:AcceptExternalRegistration", "source_url": null, "captured_at": null, "author": null, "contributor": null}], "edges": [], "hyperedges": []}

@@ -1,0 +1,20 @@
+import { getCurrentUser, hasGlobalUtilityAccess } from "@/lib/user.service";
+import UtilityRelevanceSection from "./utilityRelevance";
+import DevRelevanceSection from "./devRelevance";
+
+type RelevanceSearchParams = {
+  report_period_id?: string;
+  service_area_id?: string;
+};
+
+export default async function RelevanceSettingsPage(props: {
+  searchParams?: Promise<RelevanceSearchParams>;
+}) {
+  const searchParams = await Promise.resolve(props.searchParams);
+  const user = await getCurrentUser();
+
+  if (user && !hasGlobalUtilityAccess(user)) {
+    return <UtilityRelevanceSection searchParams={searchParams} />;
+  }
+  return <DevRelevanceSection isDevUser={user?.role === "DEV"} />;
+}

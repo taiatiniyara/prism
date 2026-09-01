@@ -1,0 +1,34 @@
+name: "Deploy to VPS"
+
+on:
+  push:
+    branches: ["main"]
+    paths-ignore:
+      # Coordination docs / markdown never affect the running app — skip the VPS
+      # deploy for docs-only pushes (e.g. #15's PENDING.md / USER-IMPACT.md updates).
+      # A mixed code+docs push still deploys; the VPS picks up any skipped docs on
+      # the next code deploy's `git pull`.
+      - "docs/**"
+      - "**.md"
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.2.5
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            set -e
+            export NVM_DIR="$HOME/.nvm"
+            [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+            cd /root/prism
+            git checkout .
+            git clean -fd
+            git pull
+            npm ci
+            npm run build
+            pm2 restart prism-v2 --update-env
