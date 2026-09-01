@@ -4,32 +4,24 @@ import { DragEvent, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import {
+  DND_TOKEN_KEY,
+  formulaVariables,
+  isIdentifierToken,
+  isNumericToken,
+  OPERATOR_SET,
+  OPERATORS,
+  tokenizeFormula,
+} from "./formula-tokens";
 
-/** Operators for the unified builder. WHERE/AND/OR are intentionally dropped —
- *  per-variable dimension scope now lives in the tag cards, not the formula. */
-export const OPERATORS = ["+", "-", "*", "/", "(", ")"] as const;
-export const DND_TOKEN_KEY = "application/x-prism-formula-token";
-
-const OPERATOR_SET = new Set<string>(OPERATORS);
-const isIdentifierToken = (token: string): boolean =>
-  /^[A-Za-z_][A-Za-z0-9_]*$/.test(token);
-const isNumericToken = (token: string): boolean =>
-  /^-?\d+(\.\d+)?$/.test(token);
-export const tokenizeFormula = (text: string): string[] =>
-  text.match(/"[^"]*"|'[^']*'|\S+/g) ?? [];
-
-/** Unique variable identifiers referenced by a formula, in first-seen order. */
-export const formulaVariables = (formula: string): string[] => {
-  const ids = formula.match(/[A-Za-z_][A-Za-z0-9_]*/g) ?? [];
-  const seen = new Set<string>();
-  const out: string[] = [];
-  for (const id of ids) {
-    if (OPERATOR_SET.has(id) || seen.has(id)) continue;
-    seen.add(id);
-    out.push(id);
-  }
-  return out;
-};
+// Re-exported for existing importers (UnifiedFormulaBuilder). New code should
+// import these from "./formula-tokens" directly.
+export {
+  DND_TOKEN_KEY,
+  formulaVariables,
+  OPERATORS,
+  tokenizeFormula,
+} from "./formula-tokens";
 
 const OP_GLYPH: Record<string, string> = {
   "+": "+",
