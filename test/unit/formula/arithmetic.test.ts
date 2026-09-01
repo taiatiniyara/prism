@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  analyzeFormula,
   evaluateArithmetic,
   FormulaError,
   MAX_EXPRESSION_DEPTH,
@@ -115,5 +116,53 @@ describe("evaluateArithmetic — DoS bounds", () => {
     const depth = 10;
     const nested = "(".repeat(depth) + "a + b" + ")".repeat(depth);
     expect(evaluateArithmetic(nested, { a: 2, b: 3 })).toBe(5);
+  });
+});
+
+describe("analyzeFormula — variables", () => {
+  it("returns distinct identifiers in first-seen order", () => {
+    expect(analyzeFormula("b + a + b * (a - c)").variables).toEqual([
+      "b",
+      "a",
+      "c",
+    ]);
+  });
+
+  it("excludes numeric literals", () => {
+    expect(analyzeFormula("a + 2.5 * 3").variables).toEqual(["a"]);
+  });
+
+  it("is empty for a formula with no variables", () => {
+    expect(analyzeFormula("1 + 2").variables).toEqual([]);
+    expect(analyzeFormula("").variables).toEqual([]);
+  });
+
+  it("still surfaces identifiers from a formula the tokenizer rejects", () => {
+    // a broken KPI formula must still report its intended inputs so the
+    // "needs setup or repair" check can flag the unbound variable.
+    expect(analyzeFormula("revenue @ costs").variables).toEqual([
+      "revenue",
+      "costs",
+    ]);
+  });
+});
+
+describe("analyzeFormula — isPureAddition", () => {
+  const truthTable: Array<[string, boolean]> = [
+    ["a + b + c", true],
+    ["(a + b) + c", true],
+    ["a + 2 + b", true],
+    ["a", true],
+    ["a - b", false],
+    ["-a + b", false],
+    ["a + b * 2", false],
+    ["a / b + c", false],
+    ["", false],
+    ["   ", false],
+    ["1 + 2", true],
+    ["a + @", false],
+  ];
+  it.each(truthTable)("%j → %s", (formula, expected) => {
+    expect(analyzeFormula(formula).isPureAddition).toBe(expected);
   });
 });

@@ -57,6 +57,68 @@ function tokenize(expr: string): string[] {
   return tokens;
 }
 
+const IDENTIFIER_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
+const NUMBER_RE = /^\d+(?:\.\d+)?$/;
+
+export interface FormulaAnalysis {
+  /** Distinct variable identifiers referenced by the formula, first-seen order. */
+  variables: string[];
+  /**
+   * True when the formula is a bare sum of variables / numbers (only `+`,
+   * parens, identifiers and numeric literals — no `- * /`). Callers use this to
+   * decide whether a missing input can be zero-filled (an additive term
+   * contributes 0) rather than failing the whole computation.
+   */
+  isPureAddition: boolean;
+}
+
+/**
+ * Describe a formula's shape without evaluating it: which variables it names and
+ * whether it is pure addition. The single "structure of a formula" query —
+ * every ad-hoc identifier regex and `isPureAdditionFormula` copy should
+ * delegate here.
+ *
+ * Tolerant by design: a formula the tokenizer rejects still yields its
+ * identifier-shaped tokens (so a broken KPI formula still surfaces its intended
+ * variables to the "needs repair" check), and `isPureAddition` is `false` for
+ * anything that does not cleanly tokenize.
+ */
+export function analyzeFormula(formula: string): FormulaAnalysis {
+  const text = typeof formula === "string" ? formula : "";
+
+  let tokens: string[] | null = null;
+  try {
+    tokens = tokenize(text.trim());
+  } catch {
+    tokens = null;
+  }
+
+  const seen = new Set<string>();
+  const variables: string[] = [];
+  const rawIds = tokens ?? (text.match(/[A-Za-z_][A-Za-z0-9_]*/g) ?? []);
+  for (const tok of rawIds) {
+    if (!IDENTIFIER_RE.test(tok) || seen.has(tok)) {
+      continue;
+    }
+    seen.add(tok);
+    variables.push(tok);
+  }
+
+  let isPureAddition = false;
+  if (tokens !== null) {
+    let hasValue = false;
+    isPureAddition = tokens.every((tok) => {
+      if (IDENTIFIER_RE.test(tok) || NUMBER_RE.test(tok)) {
+        hasValue = true;
+        return true;
+      }
+      return tok === "+" || tok === "(" || tok === ")";
+    }) && hasValue;
+  }
+
+  return { variables, isPureAddition };
+}
+
 /**
  * Evaluate a pure-arithmetic formula. Throws `FormulaError` on any problem
  * (syntax, unknown/missing variable, non-finite result). Returns a finite
