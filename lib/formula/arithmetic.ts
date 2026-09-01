@@ -1,13 +1,24 @@
 /**
- * Eval-free arithmetic formula evaluator — the single source of truth for
- * evaluating PRISM formula expressions on both the client (Test harness) and
- * the server (kpi-worker). It replaces `new Function(...)` so no code path
- * depends on `'unsafe-eval'` (client CSP) or exposes a server-side eval
- * surface.
+ * Eval-free arithmetic formula evaluator — the one thing that evaluates or
+ * inspects an `arithmetic`-kind PRISM formula. Everything delegates here:
+ *  - `kpi-worker/evaluator.ts` (KPI compute) — via `evaluateArithmetic`
+ *  - `aggregated-worker/evaluator.ts` (calculated-measure compute) — via
+ *    `evaluateArithmeticWithAliases` (multi-word variable names)
+ *  - `components/formula-builder/safe-eval.ts` (the Test harness) — via
+ *    `evaluateArithmetic`
+ *  - `analyzeFormula` — the one "which variables / is it pure addition" query,
+ *    used by both workers and the builder in place of ad-hoc regexes.
  *
- * The formula language the builder produces is pure arithmetic: variables,
- * numeric literals, `+ - * / ( )`, and unary +/-. This is a deliberately
- * tiny recursive-descent evaluator over exactly that grammar.
+ * It replaces `new Function(...)` so no code path depends on `'unsafe-eval'`
+ * (client CSP) or exposes a server-side eval surface.
+ *
+ * The formula language is pure arithmetic: variables, numeric literals,
+ * `+ - * / ( )`, and unary +/-. A deliberately tiny recursive-descent
+ * evaluator over exactly that grammar.
+ *
+ * Scope boundary: this module owns the `arithmetic` formula kind only. The
+ * named built-in kinds (spec §4.6.3, first is `block_tariff`) dispatch
+ * elsewhere and do not pass through here.
  *
  * Design guarantees (security-reviewed with #12):
  *  - FAIL-CLOSED: any character/token/identifier outside the arithmetic
@@ -288,6 +299,7 @@ export function evaluateArithmeticWithAliases(
     const safeName = `__alias_${index}`;
     const startsWord = /^\w/.test(key);
     const endsWord = /\w$/.test(key);
+    // eslint-disable-next-line security/detect-non-literal-regexp -- key is escaped via escapeRegExp
     const pattern = new RegExp(
       `${startsWord ? "\\b" : ""}${escapeRegExp(key)}${endsWord ? "\\b" : ""}`,
       "g",
