@@ -8,7 +8,6 @@ export * from "./dataEntry";
 export * from "./devValidationBuilder";
 export * from "./formulaBinding";
 export * from "./error-log";
-export * from "./governance";
 export * from "./kpi";
 export * from "./managedLists";
 export * from "./measureDimensionScope";
