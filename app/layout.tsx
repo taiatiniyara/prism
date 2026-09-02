@@ -5,7 +5,7 @@ import Sidebar from "@/components/layout/sidebar";
 import { getSession } from "@/lib/session.service";
 import { Toaster } from "sonner";
 import { Suspense } from "react";
-import { IBM_Plex_Sans } from "next/font/google";
+import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import Footer from "@/components/layout/footer";
 import BlockedAccessOverlay from "@/components/auth/blocked-access-overlay";
 import { FloatingChatbot } from "@/components/ai/floating-chatbot";
@@ -24,6 +24,14 @@ const plexSans = IBM_Plex_Sans({
   variable: "--font-sans",
 });
 
+// IBM Plex Mono — wired to the --font-mono token (previously pointed at an
+// unloaded var). Used for ids, codes, formulas and other data cells.
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-geist-mono",
+});
+
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
@@ -38,7 +46,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={plexSans.variable}>
+    <html lang="en" className={`${plexSans.variable} ${plexMono.variable}`}>
       <body
         className={`${plexSans.className} font-sans flex h-screen flex-col overflow-hidden text-slate-900`}
       >
