@@ -6,6 +6,7 @@ import {
   type DataEntrySelectOption,
 } from "@/components/data-entry/dataEntrySelect";
 import { ManagedListItem } from "@/db/schema/managedLists";
+import { byIdAsc, isAllSentinelName } from "@/lib/managed-lists";
 import { useEffect, useState } from "react";
 import { Skeleton } from "../ui/skeleton";
 
@@ -59,26 +60,17 @@ export default function DataTableManagedListInput(props: {
             if (!item.is_active) {
               continue;
             }
-
-            const normalizedName = item.name.trim().toLowerCase();
-            const isAllLikeOption =
-              normalizedName === "all" ||
-              normalizedName === "all options" ||
-              normalizedName.startsWith("all ");
-
-            if (isAllLikeOption) {
+            // Hide only the aggregate "All …" sentinel, not real items that
+            // merely contain "all" (Small, Allied, …).
+            if (isAllSentinelName(item.name)) {
               continue;
             }
-
             merged.set(item.id, item);
           }
         }
 
-        setList(
-          Array.from(merged.values()).sort((a, b) =>
-            a.name.localeCompare(b.name),
-          ),
-        );
+        // Order by id ascending (the intended logical order), not alphabetical.
+        setList(Array.from(merged.values()).sort(byIdAsc));
       })
       .catch(() => {
         if (!isCancelled) {

@@ -2,6 +2,7 @@
 
 import { GetAllManagedLists } from "@/app/settings/managed-lists/service";
 import { ManagedListItem } from "@/db/schema/managedLists";
+import { byIdAsc, isAllSentinelName } from "@/lib/managed-lists";
 import { useEffect, useState } from "react";
 import {
   DataEntrySelect,
@@ -34,7 +35,9 @@ export default function DataEntryManagedListInput(props: {
 
         const items = res?.[0]?.items ?? [];
         setList(
-          items.filter((i) => !i.name.includes("All") && i.is_active === true),
+          items
+            .filter((i) => i.is_active === true && !isAllSentinelName(i.name))
+            .sort(byIdAsc),
         );
       })
       .catch(() => {
