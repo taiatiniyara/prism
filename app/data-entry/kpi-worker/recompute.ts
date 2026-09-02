@@ -5,9 +5,7 @@ import { kpiDefinitions } from "@/db/schema/kpi";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { organisations } from "@/db/schema/utility";
 
-import { evaluateKpiFormula } from "./evaluator";
-import { upsertCalculatedKpiValue } from "./persistKpi";
-import { resolveFormulaInputValues } from "./resolveInputs";
+import { computeKpiTarget } from "./compute-kpi-target";
 import { resolveKpiTargetsByIds } from "./resolveTargets";
 import type { KpiWorkerScope } from "./types";
 
@@ -30,12 +28,16 @@ export interface RecomputeKpiNowResult {
 }
 
 /**
- * Manual "Compute now" recompute path. Reruns the existing resolve → evaluate →
- * persist pipeline for a chosen set of KPIs across a chosen set of report
- * periods, without the data-entry trigger. Runs sequentially (single-user
- * manual action) and isolates each (target × period) so one failure does not
- * abort the batch. Reuses the worker internals verbatim — no resolution or
- * evaluation logic is reimplemented here.
+ * Manual "Compute now" recompute path. Reruns the shared `computeKpiTarget`
+ * pipeline for a chosen set of KPIs across a chosen set of report periods,
+ * without the data-entry trigger. Runs sequentially (single-user manual
+ * action) and isolates each (target × period) so one failure does not abort
+ * the batch. Uses the SAME per-target compute step as the triggered worker —
+ * including the additive-formula zero-fill — so a KPI can never compute to a
+ * number on save and `missing-input` here (or vice versa).
+ *
+ * Not shared with the worker: attempt-row tracking and the scope lock. Those
+ * are the worker's concern; a manual batch recompute is a single-user action.
  */
 export async function recomputeKpiNow(
   args: RecomputeKpiNowArgs,
@@ -127,68 +129,37 @@ export async function recomputeKpiNow(
       targetCache.set(cacheKey, targets);
     }
 
-    // 5 & 6. For each (target × period): resolve inputs → evaluate → persist,
-    // wrapped in try/catch so a single failure doesn't abort the batch.
+    // For each (target × period): the shared compute step, wrapped in
+    // try/catch so a single failure doesn't abort the batch.
     for (const target of targets) {
+      const scope: KpiWorkerScope = {
+        reportPeriodId: period.id,
+        organizationId: period.utilityId,
+        serviceAreaId: null,
+        unitId: null,
+        customerTypeId: null,
+        paymentModeId: null,
+      };
+
       try {
-        const scope: KpiWorkerScope = {
-          reportPeriodId: period.id,
-          organizationId: period.utilityId,
-          serviceAreaId: null,
-          unitId: null,
-          customerTypeId: null,
-          paymentModeId: null,
-        };
-
-        const resolvedInputs = await resolveFormulaInputValues({
-          formulaInputs: target.formulaInputs,
-          kpiAggLevelId: target.strataId,
-          scope,
-        });
-
-        // No isPureAdditionFormula zero-fill here (that helper is private to
-        // worker.ts): treat any missing input as a failure with a reason.
-        if (resolvedInputs.missingVariables.length > 0) {
+        const outcome = await computeKpiTarget({ target, scope });
+        if (outcome.status === "ok") {
+          result.processed += 1;
+          result.byPeriod.push({
+            reportPeriodId: period.id,
+            kpiDefId: target.kpiDefId,
+            status: "ok",
+            value: outcome.value,
+          });
+        } else {
           result.failed += 1;
           result.byPeriod.push({
             reportPeriodId: period.id,
             kpiDefId: target.kpiDefId,
             status: "failed",
-            reason: `Missing formula inputs: ${resolvedInputs.missingVariables.join(", ")}`,
+            reason: outcome.reason,
           });
-          continue;
         }
-
-        const evaluation = evaluateKpiFormula(
-          target.formula,
-          resolvedInputs.variables,
-        );
-        if (evaluation.status === "error") {
-          result.failed += 1;
-          result.byPeriod.push({
-            reportPeriodId: period.id,
-            kpiDefId: target.kpiDefId,
-            status: "failed",
-            reason: evaluation.failureReason ?? "Formula evaluation failed.",
-          });
-          continue;
-        }
-
-        await upsertCalculatedKpiValue({
-          reportPeriodId: period.id,
-          kpiDefId: target.kpiDefId,
-          actualValue: evaluation.value!,
-          formulaVersion: target.formulaVersion,
-          targetValue: target.targetValue,
-        });
-
-        result.processed += 1;
-        result.byPeriod.push({
-          reportPeriodId: period.id,
-          kpiDefId: target.kpiDefId,
-          status: "ok",
-          value: evaluation.value,
-        });
       } catch (error) {
         result.failed += 1;
         result.byPeriod.push({
