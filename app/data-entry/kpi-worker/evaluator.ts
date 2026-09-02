@@ -3,12 +3,13 @@ import { evaluateArithmetic, FormulaError } from "@/lib/formula/arithmetic";
 
 export type FormulaVariableValue = string | number | null | undefined;
 
-export interface KpiFormulaEvaluationResult {
-  status: "ok" | "error";
-  value?: string;
-  failureType?: KpiCalculationFailureType;
-  failureReason?: string;
-}
+export type KpiFormulaEvaluationResult =
+  | { status: "ok"; value: string }
+  | {
+      status: "error";
+      failureType: KpiCalculationFailureType;
+      failureReason: string;
+    };
 
 const toFiniteNumber = (value: FormulaVariableValue): number | null => {
   if (value == null) {

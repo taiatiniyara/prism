@@ -53,13 +53,13 @@
 <body>
 <div class="container">
 <h1>prism API Reference</h1>
-<p class="subtitle">Auto-generated from 137 route files &middot; 156 endpoints &middot; 30 tag groups</p>
+<p class="subtitle">Auto-generated from 136 route files &middot; 154 endpoints &middot; 31 tag groups</p>
 <div class="stats">
 <span class="stat"><strong>DELETE</strong> 3</span>
-<span class="stat"><strong>GET</strong> 119</span>
+<span class="stat"><strong>GET</strong> 118</span>
 <span class="stat"><strong>PATCH</strong> 3</span>
-<span class="stat"><strong>POST</strong> 23</span>
-<span class="stat"><strong>PUT</strong> 8</span>
+<span class="stat"><strong>POST</strong> 21</span>
+<span class="stat"><strong>PUT</strong> 9</span>
 </div>
 <div class="filter"><input type="text" id="filter" placeholder="Filter endpoints..." oninput="filterEndpoints(this.value)"></div>
 
@@ -1016,52 +1016,6 @@
 <div class="endpoint">
   <div class="ep-header" onclick="this.classList.toggle('open')">
     <span class="method" style="background:#22c55e">GET</span>
-    <span class="ep-path">/api/data-entry/governance</span>
-    <span class="ep-arrow">&#9654;</span>
-  </div>
-  <div class="ep-body">
-    <p style="margin:0 0 8px">Get governance data and validation rules</p>
-    <div class="ep-meta">
-      <span><strong>Auth:</strong> Session (Better Auth)</span>
-    </div>
-    
-    
-    <div style="margin-top:8px">
-      <strong>Responses:</strong>
-      <div class="status-list" style="margin-top:4px">
-        <span class="status-code status-4xx">401 Unauthorized</span>
-<span class="status-code status-4xx">403 Forbidden</span>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="endpoint">
-  <div class="ep-header" onclick="this.classList.toggle('open')">
-    <span class="method" style="background:#3b82f6">POST</span>
-    <span class="ep-path">/api/data-entry/governance</span>
-    <span class="ep-arrow">&#9654;</span>
-  </div>
-  <div class="ep-body">
-    <p style="margin:0 0 8px">Save governance data</p>
-    <div class="ep-meta">
-      <span><strong>Auth:</strong> Session (Better Auth)</span>
-    </div>
-    
-    
-    <div style="margin-top:8px">
-      <strong>Responses:</strong>
-      <div class="status-list" style="margin-top:4px">
-        <span class="status-code status-4xx">401 Unauthorized</span>
-<span class="status-code status-4xx">403 Forbidden</span>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="endpoint">
-  <div class="ep-header" onclick="this.classList.toggle('open')">
-    <span class="method" style="background:#22c55e">GET</span>
     <span class="ep-path">/api/data-entry/kpi-worker/status</span>
     <span class="ep-arrow">&#9654;</span>
   </div>
@@ -1202,50 +1156,6 @@
 <span class="status-code status-4xx">401 Unauthorized</span>
 <span class="status-code status-4xx">403 Forbidden</span>
 <span class="status-code status-5xx">500 Error</span>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="endpoint">
-  <div class="ep-header" onclick="this.classList.toggle('open')">
-    <span class="method" style="background:#22c55e">GET</span>
-    <span class="ep-path">/api/data-entry/utility-context</span>
-    <span class="ep-arrow">&#9654;</span>
-  </div>
-  <div class="ep-body">
-    <p style="margin:0 0 8px">Get data entry utility context (scope, report periods, filters)</p>
-    <div class="ep-meta">
-      <span><strong>Auth:</strong> Session (Better Auth)</span>
-    </div>
-    
-    
-    <div style="margin-top:8px">
-      <strong>Responses:</strong>
-      <div class="status-list" style="margin-top:4px">
-        <span class="status-code status-4xx">401 Unauthorized</span>
-      </div>
-    </div>
-  </div>
-</div>
-
-<div class="endpoint">
-  <div class="ep-header" onclick="this.classList.toggle('open')">
-    <span class="method" style="background:#3b82f6">POST</span>
-    <span class="ep-path">/api/data-entry/utility-context</span>
-    <span class="ep-arrow">&#9654;</span>
-  </div>
-  <div class="ep-body">
-    <p style="margin:0 0 8px">Save data entry utility context</p>
-    <div class="ep-meta">
-      <span><strong>Auth:</strong> Session (Better Auth)</span>
-    </div>
-    
-    
-    <div style="margin-top:8px">
-      <strong>Responses:</strong>
-      <div class="status-list" style="margin-top:4px">
-        <span class="status-code status-4xx">401 Unauthorized</span>
       </div>
     </div>
   </div>
@@ -2430,6 +2340,58 @@
       <strong>Responses:</strong>
       <div class="status-list" style="margin-top:4px">
         <span class="status-code status-4xx">401 Unauthorized</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="tag-group" data-tag="Form-overrides">
+<h2 class="tag-title">Form-overrides</h2>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#22c55e">GET</span>
+    <span class="ep-path">/api/form-overrides</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">Get form overrides</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> Session (Better Auth)</span>
+    </div>
+    
+    
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-4xx">401 Unauthorized</span>
+<span class="status-code status-4xx">403 Forbidden</span>
+<span class="status-code status-5xx">500 Error</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#f59e0b">PUT</span>
+    <span class="ep-path">/api/form-overrides</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">Update form overrides</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> Session (Better Auth)</span>
+    </div>
+    
+    <div class="ep-meta"><span><strong>Body:</strong> JSON body</span></div>
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-4xx">401 Unauthorized</span>
+<span class="status-code status-4xx">403 Forbidden</span>
+<span class="status-code status-5xx">500 Error</span>
       </div>
     </div>
   </div>

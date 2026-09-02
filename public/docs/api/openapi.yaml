@@ -37,6 +37,7 @@ components:
     - name: Development
     - name: Dimensions
     - name: Facts
+    - name: Form-overrides
     - name: KPIs
     - name: KpiDefinitions
     - name: Logging
@@ -910,31 +911,6 @@ paths:
           description: Conflict
         '500':
           description: Internal Server Error
-  /api/data-entry/governance:
-    get:
-      tags:
-        - Data Entry
-      summary: Get governance data and validation rules
-      security:
-        - sessionAuth: []
-      x-auth: Requires valid Better Auth session (getCurrentUser)
-      responses:
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
-    post:
-      tags:
-        - Data Entry
-      summary: Save governance data
-      security:
-        - sessionAuth: []
-      x-auth: Requires valid Better Auth session (getCurrentUser)
-      responses:
-        '401':
-          description: Unauthorized
-        '403':
-          description: Forbidden
   /api/data-entry/kpi-worker/status:
     get:
       tags:
@@ -1088,27 +1064,6 @@ paths:
           description: Forbidden
         '500':
           description: Internal Server Error
-  /api/data-entry/utility-context:
-    get:
-      tags:
-        - Data Entry
-      summary: "Get data entry utility context (scope, report periods, filters)"
-      security:
-        - sessionAuth: []
-      x-auth: Requires valid Better Auth session (getCurrentUser)
-      responses:
-        '401':
-          description: Unauthorized
-    post:
-      tags:
-        - Data Entry
-      summary: Save data entry utility context
-      security:
-        - sessionAuth: []
-      x-auth: Requires valid Better Auth session (getCurrentUser)
-      responses:
-        '401':
-          description: Unauthorized
   /api/data-pipeline/stats:
     get:
       tags:
@@ -1704,6 +1659,41 @@ paths:
       responses:
         '401':
           description: Unauthorized
+  /api/form-overrides:
+    get:
+      tags:
+        - Form-overrides
+      summary: Get form overrides
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal Server Error
+    put:
+      tags:
+        - Form-overrides
+      summary: Update form overrides
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      requestBody:
+        description: JSON body
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '500':
+          description: Internal Server Error
   /api/getAzureAccessToken:
     get:
       tags:

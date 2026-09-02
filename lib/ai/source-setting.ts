@@ -1,22 +1,19 @@
 import { db } from "@/db/connection";
 import { appSettings } from "@/db/schema/appSettings";
 import { eq } from "drizzle-orm";
+import {
+  AI_PRIMARY_SOURCE_KEY,
+  DEFAULT_AI_PRIMARY_SOURCE,
+  type AiPrimarySource,
+} from "./source-setting-constants";
 
-/** Which data source the AI treats as primary; the other is the secondary/fallback. */
-export type AiPrimarySource = "webapp" | "powerbi";
-
-export const AI_PRIMARY_SOURCE_KEY = "ai_primary_source";
-/** Default preserves the historical policy (Power BI primary) when unset. */
-export const DEFAULT_AI_PRIMARY_SOURCE: AiPrimarySource = "powerbi";
-
-export const AI_SOURCE_LABELS: Record<AiPrimarySource, string> = {
-  webapp: "PRISM Web App",
-  powerbi: "Power BI",
-};
-
-export function secondaryOf(primary: AiPrimarySource): AiPrimarySource {
-  return primary === "webapp" ? "powerbi" : "webapp";
-}
+export {
+  AI_PRIMARY_SOURCE_KEY,
+  AI_SOURCE_LABELS,
+  DEFAULT_AI_PRIMARY_SOURCE,
+  secondaryOf,
+  type AiPrimarySource,
+} from "./source-setting-constants";
 
 /**
  * Read the configured AI primary source. Defensive: if the app_settings table

@@ -161,22 +161,32 @@ export const calculateKpis = async (
         missingVariables = resolved.missingVariables;
 
         const evaluation = evaluateKpiFormula(def.formula, variables);
-        result = {
-          value: evaluation.value ?? null,
-          status: evaluation.status,
-          failure_reason: evaluation.failureReason,
-        };
+        result =
+          evaluation.status === "error"
+            ? {
+                value: null,
+                status: "error" as const,
+                failure_reason: evaluation.failureReason,
+              }
+            : { value: evaluation.value, status: "ok" as const };
 
         // Scenario / what-if analysis
         if (options.hypothetical_values && Object.keys(options.hypothetical_values).length > 0) {
           const scenarioVars = { ...variables, ...options.hypothetical_values };
           const scenarioEval = evaluateKpiFormula(def.formula, scenarioVars);
-          scenario = {
-            value: scenarioEval.value ?? null,
-            status: scenarioEval.status,
-            failure_reason: scenarioEval.failureReason,
-            hypothetical_values: options.hypothetical_values,
-          };
+          scenario =
+            scenarioEval.status === "error"
+              ? {
+                  value: null,
+                  status: "error" as const,
+                  failure_reason: scenarioEval.failureReason,
+                  hypothetical_values: options.hypothetical_values,
+                }
+              : {
+                  value: scenarioEval.value,
+                  status: "ok" as const,
+                  hypothetical_values: options.hypothetical_values,
+                };
         }
 
         // Sensitivity analysis
@@ -190,7 +200,7 @@ export const calculateKpis = async (
             return {
               pct_change: pct,
               new_value: Math.round(newVal * 100) / 100,
-              kpi_result: evaled.value ?? null,
+              kpi_result: evaled.status === "error" ? null : evaled.value,
             };
           });
           sensitivity = {

@@ -15,7 +15,7 @@ import {
   AI_SOURCE_LABELS,
   secondaryOf,
   type AiPrimarySource,
-} from "@/lib/ai/source-setting";
+} from "@/lib/ai/source-setting-constants";
 import { updateAiPrimarySource } from "./service";
 
 export default function AiSettingsForm({
