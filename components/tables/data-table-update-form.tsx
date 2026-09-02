@@ -29,6 +29,7 @@ import { FaEdit, FaSave } from "react-icons/fa";
 import DataTableManagedListInput from "./data-table-managed-list-input";
 import BooleanFormInput from "./boolean-form-input";
 import InputAlternativeNamesEditor from "./input-alternative-names-editor";
+import { Checkbox } from "../ui/checkbox";
 
 export interface DataTableUpdateFormField<T> {
   key: keyof T;
@@ -73,6 +74,20 @@ function updateField<T>(
         defaultValue={Boolean(field.value)}
         disabled={field.disabled}
       />
+    );
+  }
+  if (field.type === "checkbox") {
+    // Bind the checked state to the record's current value (was falling through
+    // to a plain <Input> whose defaultValue set the value attr, not `checked`).
+    return (
+      <Label className="flex justify-start border p-3 shadow rounded-lg">
+        <Checkbox
+          disabled={field.disabled}
+          name={field.key as string}
+          defaultChecked={Boolean(field.value)}
+        />
+        Yes
+      </Label>
     );
   }
   if (field.type === "select") {
