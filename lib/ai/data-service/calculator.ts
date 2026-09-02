@@ -3,6 +3,7 @@ import { kpiDefinitions } from "@/db/schema/kpi";
 import { eq, and, like, or, inArray } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
 import { evaluateKpiFormula } from "@/app/data-entry/kpi-worker/evaluator";
+import { loadFormulaInputsFromBindings } from "@/app/data-entry/kpi-worker/formula-bindings";
 import { resolveFormulaInputValues } from "@/app/data-entry/kpi-worker/resolveInputs";
 import type { FormulaInput } from "@/db/schema/dataEntry";
 import type { KpiWorkerScope } from "@/app/data-entry/kpi-worker/types";
@@ -136,10 +137,19 @@ export const calculateKpis = async (
     };
   }
 
+  // formula_binding is the source of truth for a formula's inputs; fall back to
+  // the legacy formula_inputs JSON for KPIs still awaiting the manual rebuild.
+  const bindingInputs = await loadFormulaInputsFromBindings(
+    "kpi",
+    defs.map((d) => d.id),
+  );
+
   const calculated: CalculatedKpi[] = [];
 
   for (const def of defs) {
-    const formulaInputs = (def.formulaInputs ?? []) as FormulaInput[];
+    const formulaInputs =
+      bindingInputs.get(def.id) ??
+      ((def.formulaInputs ?? []) as FormulaInput[]);
     let variables: Record<string, number> = {};
     let missingVariables: string[] = [];
     let scenario: CalculatedKpi["scenario"] = undefined;
