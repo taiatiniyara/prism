@@ -206,6 +206,12 @@ export default function FormOverridesProvider({
             type="button"
             title="Toggle label editing (Alt+E)"
             onClick={toggleActive}
+            // Keep an open radix modal from dismissing when the button is used:
+            // stop the pointerdown reaching radix's outside-detection, and prevent
+            // the button taking focus (focus leaving the modal also dismisses it).
+            // Neither stops the button's own click, so the toggle still fires.
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.preventDefault()}
             style={{
               position: "fixed",
               right: 16,
