@@ -162,37 +162,22 @@ const prepareMessages = (
   return trimmed;
 };
 
-const isThinkingModel = (modelName: string): boolean =>
-  /^claude-sonnet-4/i.test(modelName);
-
 const getModelConfig = (fallback: boolean) => {
   const modelName = fallback ? AI_MODELS.fallback : AI_MODELS.primary;
-  const thinking = isThinkingModel(modelName);
 
-  const baseConfig = {
+  // Extended thinking is DISABLED. With multi-step tool use it produced empty final
+  // answers on data questions: after a tool call, the post-tool step yielded no text
+  // (Anthropic reasoning needs thinking-block continuity across tool steps, which the
+  // SDK/adaptive-thinking config wasn't preserving). Meta questions answered in one
+  // step, so only tool-using data questions broke — matching the logs, and the pre-
+  // thinking behaviour that answered data questions fine. A normal tool-using
+  // generation is reliable. Re-enable thinking only once thinking+tools is verified.
+  return {
     model: anthropic(modelName),
     modelName,
-    // Output budget is a CEILING, not a target — the model only spends what it needs,
-    // so a higher cap costs nothing extra on short answers. The old 8000 was too tight
-    // for the reasoning model: on data questions the summarized reasoning consumed the
-    // whole budget and the final answer was truncated to empty ("model output limits").
-    // 32000 leaves ample room for reasoning + a full data answer.
-    maxOutputTokens: thinking ? 32000 : 2500,
-    ...(thinking ? {} : { temperature: fallback ? 0.3 : 0.4 }),
-  };
-
-  return {
-    ...baseConfig,
-    providerOptions: thinking
-      ? {
-          anthropic: {
-            // "low" effort keeps the reasoning proportionate so it doesn't crowd out
-            // the answer (it was medium; data queries produced very long chains).
-            thinking: { type: "adaptive" as const, display: "summarized" as const },
-            effort: "low" as const,
-          },
-        }
-      : undefined,
+    maxOutputTokens: 6000, // ample for a full data answer without a reasoning budget
+    temperature: fallback ? 0.3 : 0.4,
+    providerOptions: undefined,
   };
 };
 
