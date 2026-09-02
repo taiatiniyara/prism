@@ -213,7 +213,7 @@ export function FormulaEditor({
                   onDrop={(e) => handleDropOnChip(e, index)}
                   onDoubleClick={openTextMode}
                   className={cn(
-                    "inline-flex cursor-grab items-center gap-1 rounded-md px-1.5 py-0.5 font-semibold active:cursor-grabbing",
+                    "group inline-flex cursor-grab items-center gap-1 rounded-md px-1.5 py-0.5 font-semibold active:cursor-grabbing",
                     isVar &&
                       (variableColors?.[token] ??
                         "bg-accent text-accent-foreground/90 dark:bg-accent"),
@@ -223,9 +223,26 @@ export function FormulaEditor({
                   )}
                 >
                   {isOp ? (
-                    <span className="px-0.5 text-base">
-                      {OP_GLYPH[token] ?? token}
-                    </span>
+                    <>
+                      <span className="px-0.5 text-base">
+                        {OP_GLYPH[token] ?? token}
+                      </span>
+                      {/* Operators get the same remove control as variables,
+                          revealed on hover/focus so the operator row stays
+                          uncluttered. */}
+                      <button
+                        type="button"
+                        aria-label={`Remove ${OP_GLYPH[token] ?? token} operator`}
+                        title="Remove operator"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeTokenAtIndex(index);
+                        }}
+                        className="text-destructive/70 hover:text-destructive font-bold opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+                      >
+                        &times;
+                      </button>
+                    </>
                   ) : (
                     <>
                       <span>{token}</span>
