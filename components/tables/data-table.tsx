@@ -88,6 +88,9 @@ interface DataTableProps<T extends DataTableRecord> {
       }[],
     ) => Promise<{ success: boolean; message: string }>;
   };
+  // Master/detail: highlight + select a row on click (e.g. pick a parent list).
+  onRowClick?: (row: T) => void;
+  selectedRowId?: string | number | null;
 }
 
 type SortDirection = "asc" | "desc" | null;
@@ -113,6 +116,8 @@ export default function DataTable<T extends DataTableRecord>(
     createFormProps,
     updateFormProps,
     reorderRowsProps,
+    onRowClick,
+    selectedRowId,
   } = props;
   const formId = useFormId();
   // Columns live under a separate namespace so a column key can't collide with
@@ -1061,11 +1066,18 @@ export default function DataTable<T extends DataTableRecord>(
                       setDraggedRowId(null);
                       setDragOverRowId(null);
                     }}
+                    onClick={
+                      onRowClick ? () => onRowClick(record) : undefined
+                    }
                     className={cn(
                       "group transition-colors hover:bg-muted/40",
                       draggedRowId === record.id && "opacity-60",
                       dragOverRowId === record.id && "bg-muted/70",
                       canReorderRows && "cursor-move",
+                      onRowClick && "cursor-pointer",
+                      selectedRowId != null &&
+                        selectedRowId === record.id &&
+                        "bg-primary/10 hover:bg-primary/15",
                     )}
                   >
                     {reorderRowsProps && (
