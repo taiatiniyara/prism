@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Loader2, Search } from "lucide-react";
 import { MeasureScopeRow, saveMeasureDimensionScope } from "./service";
+import { DIMENSIONS } from "@/components/formula-builder/types";
 import { useState, useMemo } from "react";
 
 interface MeasureDimensionScopeEditorProps {
@@ -14,16 +15,13 @@ interface MeasureDimensionScopeEditorProps {
   allDimensions: readonly string[];
 }
 
-const DIMENSION_LABELS: Record<string, string> = {
-  provider: "Provider",
-  category: "Type",
-  technology: "Source",
-  customer_type: "Customer",
-  payment_mode: "Payment",
-  consumption_band: "Band",
-  division: "Division",
-  gender: "Gender",
-};
+// Standardised PRISM 2 dimension names, driven by the single source of truth
+// (DIMENSIONS.scopeKey === measure_dimension_scope.dimension). Keeps the editor
+// headers (Category / Technology / Asset Class / Consumption Band / …) in step
+// with the formula builder instead of showing the raw codes (type/source/…).
+const DIMENSION_LABELS: Record<string, string> = Object.fromEntries(
+  DIMENSIONS.map((d) => [d.scopeKey, d.label]),
+);
 
 export default function MeasureDimensionScopeEditor({
   rows,
