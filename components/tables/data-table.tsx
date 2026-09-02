@@ -902,8 +902,8 @@ export default function DataTable<T extends DataTableRecord>(
         </div>
       </div>
 
-      <div className="p-2">
-        {quickFilters && quickFilters.length > 0 && (
+      {quickFilters && quickFilters.length > 0 && (
+        <div className="px-2 pb-2">
           <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
             {quickFilters.map((filter) => {
               const key = String(filter.column);
@@ -961,8 +961,8 @@ export default function DataTable<T extends DataTableRecord>(
               );
             })}
           </div>
-        )}
-      </div>
+        </div>
+      )}
       {/* Table */}
       <div
         className={cn(

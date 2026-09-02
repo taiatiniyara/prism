@@ -11,6 +11,7 @@ import {
   type CSSProperties,
   type DragEvent,
   type HTMLAttributes,
+  type PointerEvent as ReactPointerEvent,
   type ReactNode,
 } from "react";
 import { usePathname } from "next/navigation";
@@ -196,8 +197,29 @@ export default function FormOverridesProvider({
   const [active, setActive] = useState(false); // label-edit mode
   const [reorderActive, setReorderActive] = useState(false); // drag-reorder mode
   const [widthActive, setWidthActive] = useState(false); // field-width mode
+  // Draggable position of the DEV toolbar (per-viewer, localStorage). null = the
+  // default bottom-right anchor. The toolbar only renders once canEdit is true
+  // (post-fetch, client-side), so this initializer never causes a hydration diff.
+  const [uiPos, setUiPos] = useState<{ top: number; left: number } | null>(
+    () => {
+      if (typeof window === "undefined") return null;
+      try {
+        const raw = window.localStorage.getItem("prism-dev-tools-pos");
+        return raw ? (JSON.parse(raw) as { top: number; left: number }) : null;
+      } catch {
+        return null;
+      }
+    },
+  );
   const overridesRef = useRef<FormOverrideMap>({});
   const editingRef = useRef<Editing | null>(null);
+  const dragState = useRef<{
+    startX: number;
+    startY: number;
+    startTop: number;
+    startLeft: number;
+    latest: { top: number; left: number };
+  } | null>(null);
 
   useEffect(() => {
     overridesRef.current = overrides;
@@ -352,6 +374,51 @@ export default function FormOverridesProvider({
     setWidthActive((w) => !w);
   }, [commitEdit]);
 
+  // Drag the toolbar via pointer capture (no window listeners; the handle keeps
+  // receiving move/up even when the pointer leaves it).
+  const onDragStart = useCallback((e: ReactPointerEvent<HTMLElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const el = e.currentTarget.parentElement as HTMLElement | null;
+    if (!el) return;
+    const rect = el.getBoundingClientRect();
+    dragState.current = {
+      startX: e.clientX,
+      startY: e.clientY,
+      startTop: rect.top,
+      startLeft: rect.left,
+      latest: { top: rect.top, left: rect.left },
+    };
+    e.currentTarget.setPointerCapture(e.pointerId);
+  }, []);
+
+  const onDragMove = useCallback((e: ReactPointerEvent<HTMLElement>) => {
+    const d = dragState.current;
+    if (!d) return;
+    const top = Math.min(
+      Math.max(0, d.startTop + (e.clientY - d.startY)),
+      window.innerHeight - 44,
+    );
+    const left = Math.min(
+      Math.max(0, d.startLeft + (e.clientX - d.startX)),
+      window.innerWidth - 60,
+    );
+    d.latest = { top, left };
+    setUiPos({ top, left });
+  }, []);
+
+  const onDragEnd = useCallback(() => {
+    const latest = dragState.current?.latest;
+    dragState.current = null;
+    if (latest) {
+      try {
+        localStorage.setItem("prism-dev-tools-pos", JSON.stringify(latest));
+      } catch {
+        /* ignore */
+      }
+    }
+  }, []);
+
   // Alt+E (labels) / Alt+R (reorder) / Alt+W (width) — work even while a modal is
   // open (a click on a floating button counts as an outside-interaction and would
   // close a modal; the buttons themselves are also made modal-safe below).
@@ -456,17 +523,44 @@ export default function FormOverridesProvider({
           data-form-overrides-ui
           style={{
             position: "fixed",
-            right: 16,
-            bottom: 96,
+            ...(uiPos
+              ? { top: uiPos.top, left: uiPos.left }
+              : { right: 16, bottom: 96 }),
             zIndex: 2147483000,
             pointerEvents: "auto",
             display: "flex",
             flexDirection: "column",
-            alignItems: "flex-end",
-            gap: 8,
+            alignItems: "stretch",
+            gap: 6,
           }}
         >
           <style>{EDIT_CSS}</style>
+          {/* Drag handle — move the whole DEV toolbar anywhere; position persists. */}
+          <div
+            onPointerDown={onDragStart}
+            onPointerMove={onDragMove}
+            onPointerUp={onDragEnd}
+            title="Drag to move the DEV tools"
+            style={{
+              cursor: "move",
+              userSelect: "none",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              gap: 6,
+              padding: "3px 8px",
+              borderRadius: 8,
+              border: "1px solid #334155",
+              background: "#1e293b",
+              color: "#94a3b8",
+              fontSize: 11,
+              fontWeight: 600,
+              letterSpacing: "0.03em",
+              boxShadow: "0 6px 20px -8px rgba(0,0,0,.5)",
+            }}
+          >
+            ⠿ DEV TOOLS
+          </div>
           <button
             type="button"
             title="Toggle field width — click a field to switch full/half (Alt+W)"
