@@ -837,6 +837,9 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
         }}
         measures={data.measures}
         onPick={handlePickMeasure}
+        variableName={
+          cards.find((c) => c.key === pickerCardKey)?.variableName ?? null
+        }
       />
     </div>
   );
