@@ -58,6 +58,36 @@ export const resolveLabel = (
   fallback: string,
 ): string => map[formId]?.[fieldKey]?.label ?? fallback;
 
+// Sort field/column keys by their DEV override order. Keys without an explicit
+// order keep their original position (stable sort on the original index), so a
+// form with no reordering renders exactly as the code declares it.
+export const orderKeys = (
+  map: FormOverrideMap,
+  formId: string,
+  keys: string[],
+): string[] => {
+  const fields = map[formId];
+  if (!fields) return keys;
+  return keys
+    .map((key, index) => ({ key, index, order: fields[key]?.order ?? index }))
+    .sort((a, b) => a.order - b.order || a.index - b.index)
+    .map((e) => e.key);
+};
+
+// Persist a full ordering as explicit order=0..n-1 on every key (so the sort is
+// unambiguous), preserving any existing label overrides.
+export const setFieldOrder = (
+  map: FormOverrideMap,
+  formId: string,
+  orderedKeys: string[],
+): FormOverrideMap => {
+  const next: FormOverrideMap = { ...map, [formId]: { ...map[formId] } };
+  orderedKeys.forEach((key, index) => {
+    next[formId][key] = { ...next[formId][key], order: index };
+  });
+  return next;
+};
+
 // Immutably set/clear one field's override, pruning empties so the store stays lean.
 export const setFieldOverride = (
   map: FormOverrideMap,

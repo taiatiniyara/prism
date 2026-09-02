@@ -8,26 +8,98 @@ import {
   useMemo,
   useRef,
   useState,
+  type CSSProperties,
+  type DragEvent,
+  type HTMLAttributes,
   type ReactNode,
 } from "react";
 import { usePathname } from "next/navigation";
 
 import {
+  orderKeys,
   resolveLabel,
+  setFieldOrder,
   setFieldOverride,
   type FormOverrideMap,
 } from "@/lib/form-overrides";
 
 interface FormOverridesContextValue {
   getLabel: (formId: string, fieldKey: string, fallback: string) => string;
+  orderedKeys: (formId: string, keys: string[]) => string[];
+  reorder: (formId: string, orderedKeys: string[]) => void;
+  reorderActive: boolean;
 }
 
 const FormOverridesContext = createContext<FormOverridesContextValue>({
   getLabel: (_formId, _fieldKey, fallback) => fallback,
+  orderedKeys: (_formId, keys) => keys,
+  reorder: () => {},
+  reorderActive: false,
 });
 
 // Consumed by DataTable forms + column headers.
 export const useFormOverrides = () => useContext(FormOverridesContext);
+
+// Drag-to-reorder helper for a list of keyed items (form fields, columns). While
+// reorder mode is on it returns spreadable drag handlers per key; otherwise it's
+// inert and just returns the items in their DEV-ordered sequence.
+export function useReorderableList<T>(
+  formId: string,
+  items: T[],
+  keyOf: (item: T) => string,
+): {
+  ordered: T[];
+  dragProps: (key: string) => HTMLAttributes<HTMLElement> & { draggable?: boolean };
+} {
+  const { orderedKeys, reorder, reorderActive } = useFormOverrides();
+  const [overKey, setOverKey] = useState<string | null>(null);
+  const dragKey = useRef<string | null>(null);
+
+  const order = orderedKeys(formId, items.map(keyOf));
+  const byKey = new Map(items.map((it) => [keyOf(it), it]));
+  const ordered = order
+    .map((k) => byKey.get(k))
+    .filter((it): it is T => it !== undefined);
+
+  const dragProps = (key: string) => {
+    if (!reorderActive) return {};
+    return {
+      draggable: true,
+      style:
+        overKey === key
+          ? { outline: "2px solid #6366f1", background: "#eef2ff" }
+          : undefined,
+      onDragStart: (e: DragEvent) => {
+        dragKey.current = key;
+        e.dataTransfer.effectAllowed = "move";
+      },
+      onDragOver: (e: DragEvent) => {
+        if (!dragKey.current) return;
+        e.preventDefault();
+        if (overKey !== key) setOverKey(key);
+      },
+      onDrop: (e: DragEvent) => {
+        e.preventDefault();
+        const from = dragKey.current;
+        dragKey.current = null;
+        setOverKey(null);
+        if (!from || from === key) return;
+        const next = order.slice();
+        const fromIdx = next.indexOf(from);
+        if (fromIdx === -1) return;
+        next.splice(fromIdx, 1);
+        next.splice(next.indexOf(key), 0, from);
+        reorder(formId, next);
+      },
+      onDragEnd: () => {
+        dragKey.current = null;
+        setOverKey(null);
+      },
+    };
+  };
+
+  return { ordered, dragProps };
+}
 
 // formId = the settings route path (stable, one DataTable per page in practice).
 export const useFormId = (): string => usePathname() || "/";
@@ -38,6 +110,9 @@ const EDIT_CSS = `
 body[data-form-edit="on"] [data-form-field-key]{outline:1px dashed #f59e0b !important;outline-offset:2px;cursor:text !important;}
 body[data-form-edit="on"] [data-form-field-key][contenteditable="true"]{outline:2px solid #f59e0b !important;background:#fffbeb !important;border-radius:3px;}
 body[data-form-edit="on"] [data-form-overrides-ui] [data-form-field-key]{outline:none !important;cursor:auto !important;}
+body[data-form-reorder="on"] [draggable="true"]{cursor:grab !important;outline:1px dashed #6366f1 !important;outline-offset:3px;border-radius:4px;}
+body[data-form-reorder="on"] [draggable="true"]:active{cursor:grabbing !important;}
+body[data-form-reorder="on"] [data-form-overrides-ui] [draggable="true"]{outline:none !important;cursor:pointer !important;}
 `;
 
 interface Editing {
@@ -48,6 +123,21 @@ interface Editing {
   original: string;
 }
 
+// Shared style for the two floating DEV toggles (amber = labels, indigo = reorder).
+const toggleStyle = (on: boolean, onColor: string): CSSProperties => ({
+  pointerEvents: "auto",
+  padding: "8px 12px",
+  borderRadius: 10,
+  border: "1px solid #334155",
+  background: on ? onColor : "#0f172a",
+  color: on ? "#0f172a" : "#f8fafc",
+  fontSize: 13,
+  fontWeight: 600,
+  boxShadow: "0 6px 20px -8px rgba(0,0,0,.5)",
+  cursor: "pointer",
+  whiteSpace: "nowrap",
+});
+
 export default function FormOverridesProvider({
   children,
 }: {
@@ -55,7 +145,8 @@ export default function FormOverridesProvider({
 }) {
   const [overrides, setOverrides] = useState<FormOverrideMap>({});
   const [canEdit, setCanEdit] = useState(false);
-  const [active, setActive] = useState(false);
+  const [active, setActive] = useState(false); // label-edit mode
+  const [reorderActive, setReorderActive] = useState(false); // drag-reorder mode
   const overridesRef = useRef<FormOverrideMap>({});
   const editingRef = useRef<Editing | null>(null);
 
@@ -82,9 +173,18 @@ export default function FormOverridesProvider({
     document.body.setAttribute("data-form-edit", active ? "on" : "off");
   }, [active]);
 
+  useEffect(() => {
+    document.body.setAttribute("data-form-reorder", reorderActive ? "on" : "off");
+  }, [reorderActive]);
+
   const getLabel = useCallback(
     (formId: string, fieldKey: string, fallback: string) =>
       resolveLabel(overrides, formId, fieldKey, fallback),
+    [overrides],
+  );
+
+  const orderedKeys = useCallback(
+    (formId: string, keys: string[]) => orderKeys(overrides, formId, keys),
     [overrides],
   );
 
@@ -96,6 +196,12 @@ export default function FormOverridesProvider({
       body: JSON.stringify({ overrides: next }),
     }).catch(() => {});
   }, []);
+
+  const reorder = useCallback(
+    (formId: string, keys: string[]) =>
+      persist(setFieldOrder(overridesRef.current, formId, keys)),
+    [persist],
+  );
 
   // Finish the in-place edit: save the new text (or revert on cancel).
   const commitEdit = useCallback(
@@ -125,24 +231,37 @@ export default function FormOverridesProvider({
     [persist],
   );
 
+  // The two modes are mutually exclusive so their affordances never overlap.
   const toggleActive = useCallback(() => {
     if (editingRef.current) commitEdit(true);
+    setReorderActive(false);
     setActive((a) => !a);
   }, [commitEdit]);
 
-  // Alt+E toggles edit mode — works even while a modal/sheet is open (a click on
-  // the floating button would count as an outside-interaction and close a modal).
+  const toggleReorder = useCallback(() => {
+    if (editingRef.current) commitEdit(true);
+    setActive(false);
+    setReorderActive((r) => !r);
+  }, [commitEdit]);
+
+  // Alt+E (labels) / Alt+R (reorder) — work even while a modal/sheet is open (a
+  // click on a floating button counts as an outside-interaction and would close
+  // a modal; the buttons themselves are also made modal-safe below).
   useEffect(() => {
     if (!canEdit) return;
     const onKey = (e: KeyboardEvent) => {
-      if (e.altKey && (e.key === "e" || e.key === "E")) {
+      if (!e.altKey) return;
+      if (e.key === "e" || e.key === "E") {
         e.preventDefault();
         toggleActive();
+      } else if (e.key === "r" || e.key === "R") {
+        e.preventDefault();
+        toggleReorder();
       }
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [canEdit, toggleActive]);
+  }, [canEdit, toggleActive, toggleReorder]);
 
   // Click a labelled element (while editing) → edit it in place.
   useEffect(() => {
@@ -190,44 +309,52 @@ export default function FormOverridesProvider({
   }, [active, commitEdit]);
 
   const value = useMemo<FormOverridesContextValue>(
-    () => ({ getLabel }),
-    [getLabel],
+    () => ({ getLabel, orderedKeys, reorder, reorderActive }),
+    [getLabel, orderedKeys, reorder, reorderActive],
   );
 
   return (
     <FormOverridesContext.Provider value={value}>
       {children}
       {canEdit && (
-        // pointer-events:auto keeps the toggle clickable even when a radix modal
+        // pointer-events:auto keeps the toggles clickable even when a radix modal
         // sets `pointer-events:none` on the background.
-        <div data-form-overrides-ui style={{ pointerEvents: "auto" }}>
+        <div
+          data-form-overrides-ui
+          style={{
+            position: "fixed",
+            right: 16,
+            bottom: 96,
+            zIndex: 2147483000,
+            pointerEvents: "auto",
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "flex-end",
+            gap: 8,
+          }}
+        >
           <style>{EDIT_CSS}</style>
+          <button
+            type="button"
+            title="Toggle field reordering (Alt+R)"
+            onClick={toggleReorder}
+            // Keep an open radix modal from dismissing when a button is used: stop
+            // the pointerdown reaching radix's outside-detection, and prevent the
+            // button taking focus (focus leaving the modal also dismisses it).
+            // Neither stops the button's own click, so the toggle still fires.
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.preventDefault()}
+            style={toggleStyle(reorderActive, "#6366f1")}
+          >
+            {reorderActive ? "✓ Reordering · Alt+R" : "⇅ Reorder fields · Alt+R"}
+          </button>
           <button
             type="button"
             title="Toggle label editing (Alt+E)"
             onClick={toggleActive}
-            // Keep an open radix modal from dismissing when the button is used:
-            // stop the pointerdown reaching radix's outside-detection, and prevent
-            // the button taking focus (focus leaving the modal also dismisses it).
-            // Neither stops the button's own click, so the toggle still fires.
             onPointerDown={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.preventDefault()}
-            style={{
-              position: "fixed",
-              right: 16,
-              bottom: 96,
-              zIndex: 2147483000,
-              pointerEvents: "auto",
-              padding: "8px 12px",
-              borderRadius: 10,
-              border: "1px solid #334155",
-              background: active ? "#f59e0b" : "#0f172a",
-              color: active ? "#0f172a" : "#f8fafc",
-              fontSize: 13,
-              fontWeight: 600,
-              boxShadow: "0 6px 20px -8px rgba(0,0,0,.5)",
-              cursor: "pointer",
-            }}
+            style={toggleStyle(active, "#f59e0b")}
           >
             {active ? "✓ Editing labels · Alt+E" : "✎ Edit labels · Alt+E"}
           </button>

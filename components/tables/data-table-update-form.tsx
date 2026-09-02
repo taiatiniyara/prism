@@ -33,6 +33,7 @@ import { Checkbox } from "../ui/checkbox";
 import {
   useFormId,
   useFormOverrides,
+  useReorderableList,
 } from "../dev/form-overrides-provider";
 
 export interface DataTableUpdateFormField<T> {
@@ -180,6 +181,11 @@ export default function DataTableUpdateForm<T>(
 ) {
   const formId = useFormId();
   const { getLabel } = useFormOverrides();
+  const { ordered, dragProps } = useReorderableList(
+    formId,
+    props.fields,
+    (f) => String(f.key),
+  );
   return (
     <Sheet>
       <SheetTrigger className="flex gap-1 font-bold text-xs items-center cursor-pointer text-slate-500 hover:text-slate-900 transition-colors py-2">
@@ -212,10 +218,11 @@ export default function DataTableUpdateForm<T>(
           }}
           className="px-4 space-y-4"
         >
-          {props.fields.map((field, index) => (
+          {ordered.map((field, index) => (
             <div
               className="space-y-1"
               key={`${String(field.key)}-${index}`}
+              {...dragProps(String(field.key))}
             >
               <Label
                 htmlFor={field.key as string}
