@@ -53,4 +53,21 @@ if [ "${total:-0}" -gt 20 ] && [ "${deleted:-0}" -gt 0 ]; then
   fi
 fi
 
+# Advisory (never blocks): flag committing on what looks like an OLD/stale branch
+# before it wastes a redo. Fires only on a branch whose tip has NO commits beyond
+# origin/main AND is behind it — i.e. your first commit is landing on a branch that
+# was NOT cut from current origin/main (often a reused/already-merged branch).
+if git merge-base --is-ancestor HEAD origin/main 2>/dev/null; then
+  behind="$(git rev-list --count HEAD..origin/main 2>/dev/null || echo 0)"
+  if [ "${behind:-0}" -gt 0 ]; then
+    echo "-------------------------------------------------------------------"
+    echo "  [branch] '$branch' has NO commits beyond origin/main and is $behind behind it."
+    echo "  If this is a NEW change you may be on an old/merged branch. Start fresh:"
+    echo "      git fetch origin && git switch -c my-change origin/main"
+    echo "  Advisory only (not blocked) — catches committing on a stale branch"
+    echo "  before you have to redo it on a fresh one."
+    echo "-------------------------------------------------------------------"
+  fi
+fi
+
 exit 0
