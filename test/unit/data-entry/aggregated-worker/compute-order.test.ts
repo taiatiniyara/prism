@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 
-import { resolveComputeOrder } from "@/app/data-entry/enter-data/services/aggregated-worker/compute-order";
+import {
+  resolveComputeOrder,
+  wouldCreateCycle,
+} from "@/app/data-entry/enter-data/services/aggregated-worker/compute-order";
 
 describe("resolveComputeOrder", () => {
   it("returns an acyclic set unchanged (stable by id) when there are no edges", () => {
@@ -64,5 +67,34 @@ describe("resolveComputeOrder", () => {
     ]);
     expect(result.order).toEqual([1]);
     expect(result.cyclic).toEqual([2, 3, 4]);
+  });
+});
+
+describe("wouldCreateCycle", () => {
+  const others = [
+    { id: 20, inputIds: [101] }, // Total Costs ← raw inputs
+    { id: 30, inputIds: [20, 102] }, // Profit ← Total Costs
+  ];
+
+  it("false when the new edit only reads raw measures", () => {
+    expect(wouldCreateCycle(20, [101, 102], others)).toBe(false);
+  });
+
+  it("false when it reads another calculated measure acyclically", () => {
+    // a new measure 40 that reads Profit — fine
+    expect(wouldCreateCycle(40, [30], others)).toBe(false);
+  });
+
+  it("true when the edit makes Total Costs read Profit (which reads it)", () => {
+    expect(wouldCreateCycle(20, [30], others)).toBe(true);
+  });
+
+  it("true for a direct self-cycle via a chain", () => {
+    expect(
+      wouldCreateCycle(1, [2], [
+        { id: 2, inputIds: [3] },
+        { id: 3, inputIds: [1] },
+      ]),
+    ).toBe(true);
   });
 });

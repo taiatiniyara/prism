@@ -79,3 +79,18 @@ export const resolveComputeOrder = (nodes: ComputeNode[]): ComputeOrder => {
 
   return { order, cyclic };
 };
+
+/**
+ * Would giving node `id` the inputs `inputIds` put it in a dependency cycle,
+ * given the rest of the graph (`others`)? Used by the save path to reject a
+ * formula edit before it is written.
+ */
+export const wouldCreateCycle = (
+  id: number,
+  inputIds: number[],
+  others: ComputeNode[],
+): boolean =>
+  resolveComputeOrder([
+    ...others.filter((n) => n.id !== id),
+    { id, inputIds },
+  ]).cyclic.includes(id);
