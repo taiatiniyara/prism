@@ -29,6 +29,12 @@ export default async function OrganisationsSettingsPage() {
             type: "text",
           },
           {
+            key: "acronym",
+            type: "text",
+            required: false,
+            className: "uppercase",
+          },
+          {
             key: "country_id",
             type: "select",
             selectList: countries.map((country) => ({
@@ -83,6 +89,12 @@ export default async function OrganisationsSettingsPage() {
           {
             key: "name",
             type: "text",
+          },
+          {
+            key: "acronym",
+            type: "text",
+            required: false,
+            className: "uppercase",
           },
           {
             key: "country_id",

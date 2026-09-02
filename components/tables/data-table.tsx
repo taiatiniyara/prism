@@ -61,6 +61,7 @@ interface DataTableProps<T extends DataTableRecord> {
       type: FieldType;
       required?: boolean;
       disabled?: boolean;
+      className?: string;
       selectList?: {
         label: string;
         value: string | number;
