@@ -632,13 +632,27 @@ async function allReportPeriodIds(explicit?: number[]): Promise<number[]> {
 
 /** Compute just the calculated-measure VALUES (aggregated worker per period);
  *  no downstream KPI publish — callers add that when they want end-to-end. */
+const AGG_SKIP_REASON_TEXT: Record<string, string> = {
+  "missing-value": "Missing input value",
+  "unknown-variable": "Unknown variable in formula",
+  "evaluation-error": "Formula evaluation error",
+};
+
 async function computeCalculatedMeasureValues(
   periodIds: number[],
-): Promise<{ calculated: number; skipped: number; errors: number }> {
+  focusMeasureId?: number,
+): Promise<{
+  calculated: number;
+  skipped: number;
+  errors: number;
+  // Per-period status FOR the focus measure (drives the builder's reason table).
+  byPeriod: RecomputeResult["byPeriod"];
+}> {
   const user = await getCurrentUser();
   let calculated = 0;
   let skipped = 0;
   let errors = 0;
+  const byPeriod: RecomputeResult["byPeriod"] = [];
   for (const reportPeriodId of periodIds) {
     try {
       const { outcomes } = await runAggregatedWorker(user, { reportPeriodId });
@@ -646,11 +660,45 @@ async function computeCalculatedMeasureValues(
         if (o.status === "calculated") calculated += 1;
         else skipped += 1;
       }
-    } catch {
+      if (focusMeasureId != null) {
+        const o = outcomes.find((x) => x.inputDefId === focusMeasureId);
+        if (!o) {
+          byPeriod.push({
+            reportPeriodId,
+            kpiDefId: focusMeasureId,
+            status: "failed",
+            reason: "Not computed this period (no data / dependency missing).",
+          });
+        } else if (o.status === "calculated") {
+          byPeriod.push({
+            reportPeriodId,
+            kpiDefId: focusMeasureId,
+            status: "ok",
+            value: o.calculatedValue,
+          });
+        } else {
+          byPeriod.push({
+            reportPeriodId,
+            kpiDefId: focusMeasureId,
+            status: "failed",
+            reason:
+              AGG_SKIP_REASON_TEXT[o.reason ?? ""] ?? o.reason ?? "Skipped.",
+          });
+        }
+      }
+    } catch (error) {
       errors += 1;
+      if (focusMeasureId != null) {
+        byPeriod.push({
+          reportPeriodId,
+          kpiDefId: focusMeasureId,
+          status: "failed",
+          reason: `Worker error: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      }
     }
   }
-  return { calculated, skipped, errors };
+  return { calculated, skipped, errors, byPeriod };
 }
 
 export async function recomputeKpiNow(
@@ -696,15 +744,17 @@ export async function recomputeAllKpis(): Promise<RecomputeResult> {
  */
 export async function recomputeCalculatedMeasuresNow(
   reportPeriodIds?: number[],
+  focusMeasureId?: number,
 ): Promise<{
   periods: number;
   calculated: number;
   skipped: number;
   errors: number;
+  byPeriod: RecomputeResult["byPeriod"];
 }> {
   const periodIds = await allReportPeriodIds(reportPeriodIds);
-  const { calculated, skipped, errors } =
-    await computeCalculatedMeasureValues(periodIds);
+  const { calculated, skipped, errors, byPeriod } =
+    await computeCalculatedMeasureValues(periodIds, focusMeasureId);
 
   // Publish downstream KPIs end-to-end: the aggregated worker's own KPI trigger
   // runs at the caller's org scope only, so recompute every KPI that references
@@ -744,5 +794,5 @@ export async function recomputeCalculatedMeasuresNow(
 
   revalidatePath("/settings/inputs");
   revalidatePath("/settings/kpi");
-  return { periods: periodIds.length, calculated, skipped, errors };
+  return { periods: periodIds.length, calculated, skipped, errors, byPeriod };
 }

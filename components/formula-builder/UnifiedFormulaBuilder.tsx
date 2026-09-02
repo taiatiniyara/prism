@@ -433,7 +433,15 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
         }
         setJustSaved(true);
         if (activeMode === "measure") {
-          const c = await recomputeCalculatedMeasuresNow();
+          const c = await recomputeCalculatedMeasuresNow(
+            undefined,
+            selectedTargetId ?? undefined,
+          );
+          setRecompute({
+            processed: c.byPeriod.filter((p) => p.status === "ok").length,
+            failed: c.byPeriod.filter((p) => p.status !== "ok").length,
+            byPeriod: c.byPeriod,
+          });
           if (c.errors > 0) {
             toast.warning(
               `Saved ✓ · computed ${c.calculated} value(s) across ${c.periods} period(s); ${c.errors} errored.`,
@@ -463,8 +471,17 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
       void (async () => {
         if (activeMode === "measure") {
           // Batch: compute ALL calculated measures across all periods
-          // (the aggregated worker is fixpoint over the whole set).
-          const res = await recomputeCalculatedMeasuresNow();
+          // (the aggregated worker is fixpoint over the whole set); the reason
+          // table below shows the SELECTED measure's per-period status.
+          const res = await recomputeCalculatedMeasuresNow(
+            undefined,
+            selectedTargetId ?? undefined,
+          );
+          setRecompute({
+            processed: res.byPeriod.filter((p) => p.status === "ok").length,
+            failed: res.byPeriod.filter((p) => p.status !== "ok").length,
+            byPeriod: res.byPeriod,
+          });
           if (res.errors > 0) {
             toast.warning(
               `Computed ${res.calculated} value(s) across ${res.periods} period(s); ${res.errors} period(s) errored.`,
