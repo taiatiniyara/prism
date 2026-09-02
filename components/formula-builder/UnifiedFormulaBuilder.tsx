@@ -15,7 +15,8 @@ import { isCategoricalDataType } from "@/lib/formula/descriptive-projection";
 import {
   saveUnifiedFormula,
   recomputeKpiNow,
-  recomputeCalculatedMeasuresNow,
+  planCalculatedMeasureCompute,
+  computeCalculatedMeasureChunk,
   updateTargetUom,
 } from "@/app/settings/kpi/unified-formula-service";
 import { Button } from "@/components/ui/button";
@@ -79,6 +80,11 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
   const [trackAsKpi, setTrackAsKpi] = useState(false);
   const [pickerCardKey, setPickerCardKey] = useState<string | null>(null);
   const [recompute, setRecompute] = useState<RecomputeResult | null>(null);
+  // Chunked calculated-measure compute progress ("period X of N"). null = idle.
+  const [computeProgress, setComputeProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
   const [justSaved, setJustSaved] = useState(false);
   // Inline UoM edits, keyed by target id, so the harness's format-adjusted
   // preview reflects a just-changed unit before a reload.
@@ -371,6 +377,61 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     });
 
   // --- actions ------------------------------------------------------------
+
+  // Chunked calculated-measure recompute. The aggregated worker is a per-period
+  // fixpoint, so computing all ~140 periods in one server-action call blows past
+  // the gateway timeout (the old bug: the browser saw nothing while the compute
+  // finished server-side). Instead: enumerate periods once, then compute a small
+  // slice per request — updating "period X of N" and streaming each slice's
+  // per-period reasons into the table below. Returns the final totals for the toast.
+  const CHUNK_SIZE = 8;
+  const runChunkedMeasureCompute = async (): Promise<{
+    total: number;
+    calculated: number;
+    skipped: number;
+    errors: number;
+  }> => {
+    const focusId = selectedTargetId ?? undefined;
+    const plan = await planCalculatedMeasureCompute();
+    const total = plan.periodIds.length;
+    setRecompute({ processed: 0, failed: 0, byPeriod: [] });
+    if (total === 0) {
+      setComputeProgress(null);
+      return { total: 0, calculated: 0, skipped: 0, errors: 0 };
+    }
+    setComputeProgress({ done: 0, total });
+    const accum: RecomputeResult["byPeriod"] = [];
+    let calculated = 0;
+    let skipped = 0;
+    let errors = 0;
+    let done = 0;
+    for (let i = 0; i < plan.periodIds.length; i += CHUNK_SIZE) {
+      const chunk = plan.periodIds.slice(i, i + CHUNK_SIZE);
+      const isLast = i + CHUNK_SIZE >= plan.periodIds.length;
+      const c = await computeCalculatedMeasureChunk({
+        periodIds: chunk,
+        focusMeasureId: focusId,
+        dependentKpiIds: plan.dependentKpiIds,
+        revalidate: isLast,
+      });
+      calculated += c.calculated;
+      skipped += c.skipped;
+      errors += c.errors;
+      if (c.byPeriod.length) accum.push(...c.byPeriod);
+      done += chunk.length;
+      setComputeProgress({ done, total });
+      // Stream partial results into the reason table as each slice lands.
+      const snapshot = [...accum];
+      setRecompute({
+        processed: snapshot.filter((p) => p.status === "ok").length,
+        failed: snapshot.filter((p) => p.status !== "ok").length,
+        byPeriod: snapshot,
+      });
+    }
+    setComputeProgress(null);
+    return { total, calculated, skipped, errors };
+  };
+
   const handleSave = () => {
     if (selectedTargetId == null) {
       toast.error("Choose a target first.");
@@ -424,87 +485,73 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
       cards,
       trackAsKpi: activeMode === "measure" ? trackAsKpi : undefined,
     };
-    startSave(() => {
-      void (async () => {
-        const res = await saveUnifiedFormula(payload);
-        if (!res.ok) {
-          toast.error(res.error ?? "Save failed.");
-          return;
-        }
-        setJustSaved(true);
-        if (activeMode === "measure") {
-          const c = await recomputeCalculatedMeasuresNow(
-            undefined,
-            selectedTargetId ?? undefined,
+    startSave(async () => {
+      const res = await saveUnifiedFormula(payload);
+      if (!res.ok) {
+        toast.error(res.error ?? "Save failed.");
+        return;
+      }
+      setJustSaved(true);
+      if (activeMode === "measure") {
+        // Chunked async-with-progress: never a single >1-min request.
+        const c = await runChunkedMeasureCompute();
+        if (c.total === 0) {
+          toast.warning("Saved ✓ · no report periods to compute.");
+        } else if (c.errors > 0) {
+          toast.warning(
+            `Saved ✓ · computed ${c.calculated} value(s) across ${c.total} period(s); ${c.errors} period(s) errored.`,
           );
-          setRecompute({
-            processed: c.byPeriod.filter((p) => p.status === "ok").length,
-            failed: c.byPeriod.filter((p) => p.status !== "ok").length,
-            byPeriod: c.byPeriod,
-          });
-          if (c.errors > 0) {
-            toast.warning(
-              `Saved ✓ · computed ${c.calculated} value(s) across ${c.periods} period(s); ${c.errors} errored.`,
-            );
-          } else {
-            toast.success(
-              `Saved ✓ · computed ${c.calculated} value(s) across ${c.periods} period(s) (${c.skipped} skipped).`,
-            );
-          }
         } else {
-          const c = await recomputeKpiNow(targetId);
-          setRecompute(c);
-          if (c.failed > 0) {
-            toast.warning(
-              `Saved ✓ · recomputed ${c.processed}, ${c.failed} failed.`,
-            );
-          } else {
-            toast.success(`Saved ✓ · recomputed ${c.processed} period(s).`);
-          }
+          toast.success(
+            `Saved ✓ · computed ${c.calculated} value(s) across ${c.total} period(s) (${c.skipped} skipped).`,
+          );
         }
-      })();
+      } else {
+        const c = await recomputeKpiNow(targetId);
+        setRecompute(c);
+        if (c.failed > 0) {
+          toast.warning(
+            `Saved ✓ · recomputed ${c.processed}, ${c.failed} failed.`,
+          );
+        } else {
+          toast.success(`Saved ✓ · recomputed ${c.processed} period(s).`);
+        }
+      }
     });
   };
 
   const handleCompute = () => {
-    startCompute(() => {
-      void (async () => {
-        if (activeMode === "measure") {
-          // Batch: compute ALL calculated measures across all periods
-          // (the aggregated worker is fixpoint over the whole set); the reason
-          // table below shows the SELECTED measure's per-period status.
-          const res = await recomputeCalculatedMeasuresNow(
-            undefined,
-            selectedTargetId ?? undefined,
+    startCompute(async () => {
+      if (activeMode === "measure") {
+        // Batch: compute ALL calculated measures across all periods (the
+        // aggregated worker is a fixpoint over the whole set), chunked per
+        // period so no single request exceeds the gateway timeout; the reason
+        // table below streams the SELECTED measure's per-period status.
+        const res = await runChunkedMeasureCompute();
+        if (res.total === 0) {
+          toast.warning("No report periods to compute.");
+        } else if (res.errors > 0) {
+          toast.warning(
+            `Computed ${res.calculated} value(s) across ${res.total} period(s); ${res.errors} period(s) errored.`,
           );
-          setRecompute({
-            processed: res.byPeriod.filter((p) => p.status === "ok").length,
-            failed: res.byPeriod.filter((p) => p.status !== "ok").length,
-            byPeriod: res.byPeriod,
-          });
-          if (res.errors > 0) {
-            toast.warning(
-              `Computed ${res.calculated} value(s) across ${res.periods} period(s); ${res.errors} period(s) errored.`,
-            );
-          } else {
-            toast.success(
-              `Computed ${res.calculated} calculated-measure value(s) across ${res.periods} period(s) (${res.skipped} skipped).`,
-            );
-          }
-          return;
-        }
-        if (selectedTargetId == null) {
-          toast.error("Choose a target first.");
-          return;
-        }
-        const res = await recomputeKpiNow(selectedTargetId);
-        setRecompute(res);
-        if (res.failed > 0) {
-          toast.warning(`Recomputed ${res.processed}, ${res.failed} failed.`);
         } else {
-          toast.success(`Recomputed ${res.processed} period(s).`);
+          toast.success(
+            `Computed ${res.calculated} calculated-measure value(s) across ${res.total} period(s) (${res.skipped} skipped).`,
+          );
         }
-      })();
+        return;
+      }
+      if (selectedTargetId == null) {
+        toast.error("Choose a target first.");
+        return;
+      }
+      const res = await recomputeKpiNow(selectedTargetId);
+      setRecompute(res);
+      if (res.failed > 0) {
+        toast.warning(`Recomputed ${res.processed}, ${res.failed} failed.`);
+      } else {
+        toast.success(`Recomputed ${res.processed} period(s).`);
+      }
     });
   };
 
@@ -808,7 +855,11 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                 disabled={isSaving || isComputing || !canSave}
                 title="Save the formula and immediately compute it across all prior and current periods"
               >
-                {isSaving || isComputing ? "Working…" : "Save & Compute"}
+                {computeProgress
+                  ? `Computing ${computeProgress.done}/${computeProgress.total}…`
+                  : isSaving || isComputing
+                    ? "Working…"
+                    : "Save & Compute"}
               </Button>
             )}
             {!(activeMode === "kpi" && isPassThroughKpi) && (
@@ -822,11 +873,13 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                   (activeMode === "kpi" && isDescriptiveProjection)
                 }
               >
-                {isComputing
-                  ? "Computing…"
-                  : activeMode === "kpi"
-                    ? "Compute now"
-                    : "Apply to previous and current periods"}
+                {computeProgress
+                  ? `Computing ${computeProgress.done}/${computeProgress.total}…`
+                  : isComputing
+                    ? "Computing…"
+                    : activeMode === "kpi"
+                      ? "Compute now"
+                      : "Apply to previous and current periods"}
               </Button>
             )}
             <span className="text-muted-foreground ml-auto text-xs">
@@ -866,11 +919,53 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
             </p>
           )}
 
+          {computeProgress && (
+            <div
+              className="bg-muted/30 rounded-lg border p-3"
+              aria-live="polite"
+            >
+              <div className="mb-1.5 flex items-center justify-between text-xs font-medium">
+                <span>
+                  Computing period {Math.min(
+                    computeProgress.done + 1,
+                    computeProgress.total,
+                  )}{" "}
+                  of {computeProgress.total}…
+                </span>
+                <span className="text-muted-foreground tabular-nums">
+                  {computeProgress.total > 0
+                    ? Math.round(
+                        (computeProgress.done / computeProgress.total) * 100,
+                      )
+                    : 0}
+                  %
+                </span>
+              </div>
+              <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
+                <div
+                  className="bg-primary h-full rounded-full transition-all duration-300"
+                  style={{
+                    width: `${
+                      computeProgress.total > 0
+                        ? (computeProgress.done / computeProgress.total) * 100
+                        : 0
+                    }%`,
+                  }}
+                />
+              </div>
+              <p className="text-muted-foreground mt-1.5 text-[11px] leading-snug">
+                Runs in the background across all periods — results fill in below
+                as each batch completes. You can keep this tab open.
+              </p>
+            </div>
+          )}
+
           {recompute && (
             <div className="bg-muted/30 rounded-lg border p-3">
               <p className="mb-2 text-xs font-semibold">
                 Recompute · {recompute.processed} processed ·{" "}
                 {recompute.failed} failed
+                {computeProgress ? " · computing…" : ""}
               </p>
               <div className="max-h-48 overflow-auto">
                 <table className="w-full text-xs">

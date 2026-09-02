@@ -737,10 +737,61 @@ export async function recomputeAllKpis(): Promise<RecomputeResult> {
 }
 
 /**
+ * Active KPIs whose formula references any CALCULATED (is_calculated) measure.
+ * After calculated-measure values change these must be re-published so the KPI
+ * reads fresh upstream values (companion pass-through KPIs from Track-as-KPI +
+ * real KPIs like Cost-per-Customer). Period-independent — resolve once, reuse
+ * across every chunk of a chunked recompute.
+ */
+async function resolveDependentKpiIds(): Promise<number[]> {
+  const calcMeasures = await db
+    .select({ id: measureDefinitions.id })
+    .from(measureDefinitions)
+    .where(eq(measureDefinitions.is_calculated, true));
+  const calcIds = new Set(calcMeasures.map((m) => m.id));
+  if (!calcIds.size) return [];
+  const activeKpis = await db
+    .select({
+      id: kpiDefinitions.id,
+      formula_inputs: kpiDefinitions.formula_inputs,
+    })
+    .from(kpiDefinitions)
+    .where(eq(kpiDefinitions.is_active, true));
+  return activeKpis
+    .filter((k) =>
+      inputMeasureIds(k.formula_inputs).some((id) => calcIds.has(id)),
+    )
+    .map((k) => k.id);
+}
+
+/** Publish the dependent KPIs for a set of periods. Best-effort — the measure
+ *  values are already written; the KPI compute has its own reporting. */
+async function publishDependentKpis(
+  dependentKpiIds: number[],
+  periodIds: number[],
+): Promise<void> {
+  if (!dependentKpiIds.length || !periodIds.length) return;
+  try {
+    await engineRecomputeKpiNow({
+      kpiDefIds: dependentKpiIds,
+      reportPeriodIds: periodIds,
+    });
+  } catch {
+    // best-effort; measure values are already written.
+  }
+}
+
+/**
  * Compute calculated MEASURES (is_calculated=true). Reuses the existing
  * aggregated-worker (fixpoint over all calculated-measure formulas, writing
  * derived values into data_entries), run once per report period at utility
  * scope. The builder's saved formula_inputs cache is what the worker reads.
+ *
+ * NOTE — this is the whole-set SYNCHRONOUS path (all periods in one call). It
+ * exceeds the gateway timeout on the full ~140-period set, so the builder UI no
+ * longer calls it; the UI drives {@link planCalculatedMeasureCompute} +
+ * {@link computeCalculatedMeasureChunk} instead. Kept for scripts/tests and any
+ * non-interactive caller that can tolerate a long single request.
  */
 export async function recomputeCalculatedMeasuresNow(
   reportPeriodIds?: number[],
@@ -756,43 +807,75 @@ export async function recomputeCalculatedMeasuresNow(
   const { calculated, skipped, errors, byPeriod } =
     await computeCalculatedMeasureValues(periodIds, focusMeasureId);
 
-  // Publish downstream KPIs end-to-end: the aggregated worker's own KPI trigger
-  // runs at the caller's org scope only, so recompute every KPI that references
-  // a calculated measure per-utility here (companion pass-through KPIs from
-  // Track-as-KPI + real KPIs like Cost-per-Customer). engineRecomputeKpiNow
-  // iterates report periods, which are utility-specific.
-  try {
-    const calcMeasures = await db
-      .select({ id: measureDefinitions.id })
-      .from(measureDefinitions)
-      .where(eq(measureDefinitions.is_calculated, true));
-    const calcIds = new Set(calcMeasures.map((m) => m.id));
-    if (calcIds.size) {
-      const activeKpis = await db
-        .select({
-          id: kpiDefinitions.id,
-          formula_inputs: kpiDefinitions.formula_inputs,
-        })
-        .from(kpiDefinitions)
-        .where(eq(kpiDefinitions.is_active, true));
-      const dependentKpiIds = activeKpis
-        .filter((k) =>
-          inputMeasureIds(k.formula_inputs).some((id) => calcIds.has(id)),
-        )
-        .map((k) => k.id);
-      if (dependentKpiIds.length) {
-        await engineRecomputeKpiNow({
-          kpiDefIds: dependentKpiIds,
-          reportPeriodIds: periodIds,
-        });
-      }
-    }
-  } catch {
-    // Downstream KPI publish is best-effort; the measure values are already
-    // written. Surface nothing extra — the KPI compute has its own reporting.
-  }
+  await publishDependentKpis(await resolveDependentKpiIds(), periodIds);
 
   revalidatePath("/settings/inputs");
   revalidatePath("/settings/kpi");
   return { periods: periodIds.length, calculated, skipped, errors, byPeriod };
+}
+
+// ---------------------------------------------------------------------------
+// Chunked calculated-measure recompute (async-with-progress)
+//
+// The whole-set path above runs the aggregated worker across ALL report
+// periods in ONE server-action call, which for the full set (~140 periods)
+// blows past the ~1-minute request/gateway timeout — the browser gets no
+// response and the reason table never renders even though the compute finished
+// server-side. Because the aggregated worker is a per-period fixpoint (each
+// period is fully independent), the set can be split into small period-slices
+// that each return well under the timeout. The client enumerates once via
+// planCalculatedMeasureCompute(), then calls computeCalculatedMeasureChunk()
+// per slice — showing "computing period X of N" and streaming each slice's
+// per-period reasons into the table. Chunking is EXACT: same values as one call.
+// ---------------------------------------------------------------------------
+
+export interface CalcComputePlan {
+  /** every report period id, ascending — the client chunks this list */
+  periodIds: number[];
+  /** active KPIs referencing a calculated measure — republished per chunk */
+  dependentKpiIds: number[];
+}
+
+/** Cheap pre-flight: enumerate report periods + resolve dependent KPIs once, so
+ *  the client can drive a chunked recompute with a progress count. */
+export async function planCalculatedMeasureCompute(): Promise<CalcComputePlan> {
+  const [periodIds, dependentKpiIds] = await Promise.all([
+    allReportPeriodIds(),
+    resolveDependentKpiIds(),
+  ]);
+  return { periodIds, dependentKpiIds };
+}
+
+export interface CalcComputeChunkResult {
+  calculated: number;
+  skipped: number;
+  errors: number;
+  /** the focus measure's per-period status for just this chunk's periods */
+  byPeriod: RecomputeResult["byPeriod"];
+}
+
+/**
+ * Compute ONE chunk of report periods: run the aggregated worker for each
+ * period in the slice (whole-set fixpoint per period), then re-publish the
+ * dependent KPIs for those same periods. `dependentKpiIds` comes from
+ * planCalculatedMeasureCompute() so it is resolved once, not per chunk.
+ * `revalidate` (final chunk only) refreshes the settings pages once at the end.
+ */
+export async function computeCalculatedMeasureChunk(input: {
+  periodIds: number[];
+  focusMeasureId?: number;
+  dependentKpiIds: number[];
+  revalidate?: boolean;
+}): Promise<CalcComputeChunkResult> {
+  const { periodIds, focusMeasureId, dependentKpiIds, revalidate } = input;
+  const { calculated, skipped, errors, byPeriod } =
+    await computeCalculatedMeasureValues(periodIds, focusMeasureId);
+
+  await publishDependentKpis(dependentKpiIds, periodIds);
+
+  if (revalidate) {
+    revalidatePath("/settings/inputs");
+    revalidatePath("/settings/kpi");
+  }
+  return { calculated, skipped, errors, byPeriod };
 }
