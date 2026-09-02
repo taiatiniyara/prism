@@ -1,0 +1,15 @@
+#!/bin/sh
+# Nudge (advisory only): warn when dependencies look missing or stale after a
+# pull/merge, so a session doesn't hit a confusing tsc/eslint/build failure with
+# an empty node_modules (which is gitignored and NOT restored by git).
+# LIVE copy in .git/hooks/post-merge. Activate on a fresh clone:
+#   git config core.hooksPath .githooks
+
+count=$(ls -1 node_modules 2>/dev/null | wc -l | tr -d ' ')
+if [ "${count:-0}" -lt 5 ]; then
+  echo ">> [deps] node_modules looks empty/missing — run 'npm ci' in the MAIN tree"
+  echo ">>        (C:/Users/eugen/prism) before tsc/eslint/build/dev; worktrees junction to it."
+elif ! git diff --quiet ORIG_HEAD HEAD -- package-lock.json 2>/dev/null; then
+  echo ">> [deps] package-lock.json changed on this pull — run 'npm ci' to sync dependencies."
+fi
+exit 0

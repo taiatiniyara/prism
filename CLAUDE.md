@@ -45,3 +45,19 @@ On 2026-09-01 PR #213 (a one-line docs change) deleted the **entire repo** — 1
 1. **Never build a commit in a `--no-checkout` or otherwise partial working tree.** Use a **full** checkout so the commit's tree is complete. The slower checkout is worth it.
 2. **Before merging ANY PR — especially "docs-only" — verify the diff scope.** `gh pr diff <n> --stat` (or `git diff --stat origin/main <branch>`); a small change touching hundreds/thousands of files must never merge.
 3. **Enforced by the pre-commit hook** (`.githooks/pre-commit`; live in `.git/hooks`): it blocks any commit that deletes ≥30% of the tree (override for genuine mass removals: `git commit --no-verify`). Activate on a fresh clone with `git config core.hooksPath .githooks`. (Set by Eugene 2026-09-01.)
+
+## Dependencies (node_modules) — recovery & ownership
+
+`node_modules` is **gitignored / untracked** — git never deletes or restores it, and a repo wipe/revert does **not** affect it. It is a rebuildable, per-checkout artifact. Layout here: the **main tree** (`C:/Users/eugen/prism`) holds the real install; `prism-ui` / `prism-bsc` **junction** to it (one install serves all three); `prism-calc` has its own.
+
+**Recovery (the whole fix):**
+```
+cd C:/Users/eugen/prism && npm ci      # ~2 min; restores tsc/eslint/build/dev for main + junctioned worktrees
+```
+`npm ci` is deterministic from `package-lock.json`. Treat empty `node_modules` as a 2-minute fix, not a crisis.
+
+**Who is responsible:**
+- **Self-service first:** any session that finds `node_modules` empty runs `npm ci` in the main tree — it unblocks all junctioned worktrees at once. Do not wait or escalate; it's cheap. The `post-merge` / `post-checkout` nudge hooks warn you when deps look missing/stale.
+- **Accountable owner / backstop: #1 (coordination).** If you're blocked and can't run it (e.g. the main tree is mid-work on another session's branch, or you're unsure), ping #1 and #1 restores it.
+
+**Do NOT** run `npm ci`, `git clean -xfd`, or `rm -rf node_modules` against a **broken or mid-recovery** tree: `npm ci` deletes `node_modules` *before* installing, so a failed install (e.g. missing `package.json`) strands you empty — which is how this got wiped on 2026-09-02. When the tree state is uncertain, use plain `npm install` (no pre-delete). (Set by Eugene 2026-09-02.)
