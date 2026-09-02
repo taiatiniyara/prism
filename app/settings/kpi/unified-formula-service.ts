@@ -250,14 +250,24 @@ export async function getUnifiedFormulaBuilderData(
     };
   });
 
-  // UoM options (the "Unit" managed list) for the inline unit editor.
+  // UoM options for the inline unit editor. The managed list is named "UoM"
+  // (the earlier "Unit"/"Units" guess matched nothing → empty picker); keep the
+  // aliases as a fallback in case the list is renamed.
   const units: MemberOption[] = await db
     .select({ id: managedListItems.id, name: managedListItems.name })
     .from(managedListItems)
     .innerJoin(managedLists, eq(managedListItems.list_id, managedLists.id))
     .where(
       and(
-        inArray(managedLists.name, ["Unit", "Units", "unit", "units"]),
+        inArray(managedLists.name, [
+          "UoM",
+          "UOM",
+          "uom",
+          "Unit",
+          "Units",
+          "unit",
+          "units",
+        ]),
         eq(managedListItems.is_active, true),
       ),
     )
