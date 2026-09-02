@@ -110,7 +110,7 @@ export default function AuthForms(props: {
             className="space-y-4 px-2"
             value="Login"
           >
-            <p className="text-blue-600 font-medium p-2 rounded bg-blue-50">
+            <p className="text-info font-medium p-2 rounded bg-info/10">
               If you have an existing account, please enter your email to
               receive a login link.
             </p>
@@ -131,7 +131,7 @@ export default function AuthForms(props: {
             value="Register"
             className="space-y-4"
           >
-            <p className="text-blue-600 bg-blue-50 p-2 rounded font-medium">
+            <p className="text-info bg-info/10 p-2 rounded font-medium">
               Fill in the form below to register an account. Note that your
               account will be subject to approval by the PRISM team.
             </p>

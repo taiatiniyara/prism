@@ -526,7 +526,7 @@ export default function PendingUserDecisionPanel() {
               </section>
 
               <section className="space-y-6">
-                <div className="rounded-lg border border-slate-300 bg-blue-50 p-4">
+                <div className="rounded-lg border border-slate-300 bg-info/10 p-4">
                   <p className="mb-3 flex items-center gap-2 text-sm font-semibold text-slate-800">
                     <Mail className="h-4 w-4" />
                     Send Clarification Email

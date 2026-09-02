@@ -24,7 +24,7 @@ function Card({ title, children, href }: { title: string; children: React.ReactN
     <div className="border rounded p-4">
       <div className="flex items-center justify-between mb-2">
         <div className="text-xs font-medium text-slate-500 uppercase tracking-wide">{title}</div>
-        {href && <a href={href} className="text-xs text-blue-600 hover:underline">View</a>}
+        {href && <a href={href} className="text-xs text-info hover:underline">View</a>}
       </div>
       {children}
     </div>
@@ -106,14 +106,14 @@ export default function OverviewPage() {
 
         <Card title="Quick Links">
           <div className="space-y-1 text-sm">
-            <div><a href="/settings/config" className="text-blue-600 hover:underline">Config</a></div>
-            <div><a href="/settings/logs/errors" className="text-blue-600 hover:underline">Error Logs</a></div>
-            <div><a href="/settings/logs/audit" className="text-blue-600 hover:underline">Audit Logs</a></div>
-            <div><a href="/settings/ai/usage" className="text-blue-600 hover:underline">AI Usage</a></div>
-            <div><a href="/settings/costs" className="text-blue-600 hover:underline">Costs</a></div>
-            <div><a href="/settings/data-pipeline" className="text-blue-600 hover:underline">Pipeline</a></div>
-            <div><a href="/settings/kpi/health" className="text-blue-600 hover:underline">KPI Health</a></div>
-            <div><a href="/settings/logs/system" className="text-blue-600 hover:underline">System Logs</a></div>
+            <div><a href="/settings/config" className="text-info hover:underline">Config</a></div>
+            <div><a href="/settings/logs/errors" className="text-info hover:underline">Error Logs</a></div>
+            <div><a href="/settings/logs/audit" className="text-info hover:underline">Audit Logs</a></div>
+            <div><a href="/settings/ai/usage" className="text-info hover:underline">AI Usage</a></div>
+            <div><a href="/settings/costs" className="text-info hover:underline">Costs</a></div>
+            <div><a href="/settings/data-pipeline" className="text-info hover:underline">Pipeline</a></div>
+            <div><a href="/settings/kpi/health" className="text-info hover:underline">KPI Health</a></div>
+            <div><a href="/settings/logs/system" className="text-info hover:underline">System Logs</a></div>
           </div>
         </Card>
       </div>
