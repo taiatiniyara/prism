@@ -91,3 +91,14 @@ PRISM **auto-deploys CODE when a non-docs PR merges to `main`**: GitHub Actions 
 - Sessions also expire after 24h regardless of any change.
 
 (Set by Eugene 2026-09-02.)
+
+## Start every change on a FRESH branch off origin/main
+
+Before your **first commit** of any change, cut a **new** branch from **current `origin/main`** — never commit onto whatever branch happens to be checked out. In this shared multi-session tree the checkout is often an old, already-merged, or stale branch; committing there means realising too late and **redoing the commit on a new branch** (wasted work/tokens).
+
+```
+git fetch origin && git switch -c <descriptive-name> origin/main
+```
+(or `git worktree add <path> origin/main` for isolated/parallel work — the pattern the coordination session uses). If unsure what branch you're on, run `scripts/repo-truth.sh` first (it prints your branch + how it compares to origin/main).
+
+Safety net: the `pre-commit` hook prints an **advisory** (never blocks) when your first commit is landing on a branch that has no commits beyond `origin/main` and is behind it — i.e. not cut from current `origin/main`. Heed it and re-branch before continuing. (Set by Eugene 2026-09-02.)
