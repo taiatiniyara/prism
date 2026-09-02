@@ -1,7 +1,9 @@
 import { describe, expect, it } from "vitest";
 
 import {
+  analyzeFormula,
   evaluateArithmetic,
+  evaluateArithmeticWithAliases,
   FormulaError,
   MAX_EXPRESSION_DEPTH,
   MAX_FORMULA_LENGTH,
@@ -115,5 +117,100 @@ describe("evaluateArithmetic — DoS bounds", () => {
     const depth = 10;
     const nested = "(".repeat(depth) + "a + b" + ")".repeat(depth);
     expect(evaluateArithmetic(nested, { a: 2, b: 3 })).toBe(5);
+  });
+});
+
+describe("analyzeFormula — variables", () => {
+  it("returns distinct identifiers in first-seen order", () => {
+    expect(analyzeFormula("b + a + b * (a - c)").variables).toEqual([
+      "b",
+      "a",
+      "c",
+    ]);
+  });
+
+  it("excludes numeric literals", () => {
+    expect(analyzeFormula("a + 2.5 * 3").variables).toEqual(["a"]);
+  });
+
+  it("is empty for a formula with no variables", () => {
+    expect(analyzeFormula("1 + 2").variables).toEqual([]);
+    expect(analyzeFormula("").variables).toEqual([]);
+  });
+
+  it("still surfaces identifiers from a formula the tokenizer rejects", () => {
+    // a broken KPI formula must still report its intended inputs so the
+    // "needs setup or repair" check can flag the unbound variable.
+    expect(analyzeFormula("revenue @ costs").variables).toEqual([
+      "revenue",
+      "costs",
+    ]);
+  });
+});
+
+describe("evaluateArithmeticWithAliases — multi-word variable names", () => {
+  it("evaluates a formula whose variables contain spaces", () => {
+    expect(
+      evaluateArithmeticWithAliases(
+        "Operating Expenses + Administrative Expenses",
+        { "Operating Expenses": 100, "Administrative Expenses": 25 },
+      ),
+    ).toBe(125);
+  });
+
+  it("substitutes the longer name first (prefix collision)", () => {
+    expect(
+      evaluateArithmeticWithAliases("Total Income - Other Income", {
+        "Total Income": 900,
+        "Other Income": 100,
+      }),
+    ).toBe(800);
+  });
+
+  it("mixes slug and multi-word names", () => {
+    expect(
+      evaluateArithmeticWithAliases("rate * Units Sold", {
+        rate: 0.5,
+        "Units Sold": 40,
+      }),
+    ).toBe(20);
+  });
+
+  it("passes straight through when every key is a slug", () => {
+    expect(evaluateArithmeticWithAliases("a + b", { a: 2, b: 3 })).toBe(5);
+  });
+
+  it("still throws on an unknown variable", () => {
+    expect(() =>
+      evaluateArithmeticWithAliases("Known Value + mystery", {
+        "Known Value": 1,
+      }),
+    ).toThrow(FormulaError);
+  });
+
+  it("refuses a punctuation-only variable name", () => {
+    expect(() =>
+      evaluateArithmeticWithAliases("a + b", { a: 1, "+": 2, b: 3 }),
+    ).toThrow(FormulaError);
+  });
+});
+
+describe("analyzeFormula — isPureAddition", () => {
+  const truthTable: Array<[string, boolean]> = [
+    ["a + b + c", true],
+    ["(a + b) + c", true],
+    ["a + 2 + b", true],
+    ["a", true],
+    ["a - b", false],
+    ["-a + b", false],
+    ["a + b * 2", false],
+    ["a / b + c", false],
+    ["", false],
+    ["   ", false],
+    ["1 + 2", true],
+    ["a + @", false],
+  ];
+  it.each(truthTable)("%j → %s", (formula, expected) => {
+    expect(analyzeFormula(formula).isPureAddition).toBe(expected);
   });
 });

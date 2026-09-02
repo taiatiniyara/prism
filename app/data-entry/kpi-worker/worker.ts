@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 
+import { analyzeFormula } from "@/lib/formula/arithmetic";
 import type { CurrentUser } from "@/lib/user.service";
 
 import {
@@ -23,29 +24,6 @@ import {
   releaseScopeLock,
 } from "./lock";
 import type { KpiWorkerRunResult, KpiWorkerTrigger } from "./types";
-
-const isPureAdditionFormula = (formula: string): boolean => {
-  const compact = formula.replace(/\s+/g, "");
-  if (compact.length === 0) {
-    return false;
-  }
-
-  if (compact.includes("-") || compact.includes("*") || compact.includes("/")) {
-    return false;
-  }
-
-  const flattened = compact.replace(/[()]/g, "");
-  const terms = flattened.split("+").filter((term) => term.length > 0);
-
-  if (terms.length === 0) {
-    return false;
-  }
-
-  return terms.every(
-    (term) =>
-      /^[A-Za-z_][A-Za-z0-9_]*$/.test(term) || /^\d+(\.\d+)?$/.test(term),
-  );
-};
 
 const createScopeFollowUpTrigger = (
   trigger: KpiWorkerTrigger,
@@ -164,7 +142,7 @@ export async function runKpiWorker(
         ...resolvedInputs.variables,
       } as Record<string, number>;
 
-      const zeroFillMissing = isPureAdditionFormula(target.formula);
+      const zeroFillMissing = analyzeFormula(target.formula).isPureAddition;
       if (zeroFillMissing && resolvedInputs.missingVariables.length > 0) {
         for (const variableName of resolvedInputs.missingVariables) {
           variablesForEvaluation[variableName] = 0;
