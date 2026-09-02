@@ -34,8 +34,12 @@ interface FormOverridesContextValue {
   getWidth: (formId: string, fieldKey: string) => "full" | "half";
   toggleFieldWidth: (formId: string, fieldKey: string) => void;
   canEdit: boolean;
-  getHidden: (formId: string, fieldKey: string) => boolean;
-  toggleHidden: (formId: string, fieldKey: string) => void;
+  getHidden: (formId: string, fieldKey: string, defaultHidden?: boolean) => boolean;
+  toggleHidden: (
+    formId: string,
+    fieldKey: string,
+    defaultHidden?: boolean,
+  ) => void;
 }
 
 const FormOverridesContext = createContext<FormOverridesContextValue>({
@@ -244,8 +248,8 @@ export default function FormOverridesProvider({
   );
 
   const getHidden = useCallback(
-    (formId: string, fieldKey: string) =>
-      resolveHidden(overrides, formId, fieldKey),
+    (formId: string, fieldKey: string, defaultHidden = false) =>
+      resolveHidden(overrides, formId, fieldKey, defaultHidden),
     [overrides],
   );
 
@@ -280,13 +284,18 @@ export default function FormOverridesProvider({
   );
 
   const toggleHidden = useCallback(
-    (formId: string, fieldKey: string) => {
-      const next = resolveHidden(overridesRef.current, formId, fieldKey)
-        ? undefined
-        : true;
+    (formId: string, fieldKey: string, defaultHidden = false) => {
+      const nextHidden = !resolveHidden(
+        overridesRef.current,
+        formId,
+        fieldKey,
+        defaultHidden,
+      );
+      // Prune back to `undefined` when the new state matches the column default.
+      const patch = nextHidden === defaultHidden ? undefined : nextHidden;
       persist(
         setFieldOverride(overridesRef.current, formId, fieldKey, {
-          hidden: next,
+          hidden: patch,
         }),
       );
     },

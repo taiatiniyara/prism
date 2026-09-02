@@ -153,15 +153,42 @@ export default function DataTable<T extends DataTableRecord>(
     [columns],
   );
 
+  // Declared columns are visible by default; every other field present in the
+  // data is *available* to switch on via the DEV column chooser (hidden by
+  // default). This lets a DEV swap the built-in columns for any record field.
+  const declaredKeys = useMemo(
+    () => new Set(normalizedColumns.map((c) => String(c.name))),
+    [normalizedColumns],
+  );
+  const availableColumns = useMemo(() => {
+    const byKey = new Map<string, (typeof normalizedColumns)[number]>();
+    for (const c of normalizedColumns) byKey.set(String(c.name), c);
+    for (const key of Object.keys(data[0] ?? {})) {
+      if (!byKey.has(key)) {
+        byKey.set(key, { name: key as keyof T, display: formatLabel(key) });
+      }
+    }
+    return Array.from(byKey.values());
+  }, [normalizedColumns, data]);
+
+  const columnDefaultHidden = useCallback(
+    (key: string) => !declaredKeys.has(key),
+    [declaredKeys],
+  );
+
   // DEV column reorder (drag headers). Same store as form fields, namespaced.
   const { ordered: displayColumns, dragProps: colDragProps } =
-    useReorderableList(columnFormId, normalizedColumns, (c) => String(c.name));
+    useReorderableList(columnFormId, availableColumns, (c) => String(c.name));
 
-  // DEV column visibility: hidden columns drop out of the header + body; the
-  // chooser (toolbar) lists all columns so hidden ones can be brought back.
+  // Hidden columns drop out of the header + body; the chooser lists every
+  // available column so any can be switched on/off.
   const visibleColumns = useMemo(
-    () => displayColumns.filter((c) => !getHidden(columnFormId, String(c.name))),
-    [displayColumns, getHidden, columnFormId],
+    () =>
+      displayColumns.filter(
+        (c) =>
+          !getHidden(columnFormId, String(c.name), columnDefaultHidden(String(c.name))),
+      ),
+    [displayColumns, getHidden, columnFormId, columnDefaultHidden],
   );
 
   const quickFilterColumns = useMemo(
@@ -793,12 +820,13 @@ export default function DataTable<T extends DataTableRecord>(
                 <DropdownMenuSeparator />
                 {displayColumns.map((column) => {
                   const key = String(column.name);
-                  const hidden = getHidden(columnFormId, key);
+                  const defHidden = columnDefaultHidden(key);
+                  const hidden = getHidden(columnFormId, key, defHidden);
                   return (
                     <DropdownMenuItem
                       key={key}
                       onSelect={(e) => e.preventDefault()}
-                      onClick={() => toggleHidden(columnFormId, key)}
+                      onClick={() => toggleHidden(columnFormId, key, defHidden)}
                       className="flex items-center gap-2"
                     >
                       {hidden ? (
