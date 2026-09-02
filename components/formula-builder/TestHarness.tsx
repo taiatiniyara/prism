@@ -20,9 +20,13 @@ const formatNumber = (value: number): string =>
 
 /**
  * The value as it renders on dashboards, per the KPI/measure's configured
- * format: currency → "$" + 2dp; a "%" unit → suffixed "%"; any other unit →
- * suffixed. No ×100 conversion — a stored ratio stays a ratio (matches the
- * "KPI's configured format" contract).
+ * format:
+ *   - currency → "$" + 2dp;
+ *   - a "%" unit → PERCENTAGE, i.e. ×100 + "%" (0.12 → "12%") — margins/rates/
+ *     returns are proportions displayed as a percent;
+ *   - any other unit (e.g. "x"/"times" coverage & leverage ratios, "MWh",
+ *     "days") → the literal value suffixed with the unit, NO ×100 — a "times"
+ *     ratio stays a decimal multiple (DSCR 1.3 → "1.3 x", never "130%").
  */
 const formatAdjusted = (
   value: number,
@@ -35,10 +39,14 @@ const formatAdjusted = (
       maximumFractionDigits: 2,
     }).format(value)}`;
   }
-  const num = formatNumber(value);
   const unit = unitLabel?.trim() ?? "";
-  if (!unit) return num;
-  return unit === "%" ? `${num}%` : `${num} ${unit}`;
+  if (unit === "%") {
+    return `${new Intl.NumberFormat("en-US", {
+      maximumFractionDigits: 2,
+    }).format(value * 100)}%`;
+  }
+  const num = formatNumber(value);
+  return unit ? `${num} ${unit}` : num;
 };
 
 export interface TestHarnessProps {
