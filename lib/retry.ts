@@ -6,7 +6,13 @@ export interface RetryPolicyOptions {
 const delay = async (ms: number): Promise<void> =>
   new Promise((resolve) => setTimeout(resolve, ms));
 
-export const isTransientKpiError = (error: unknown): boolean => {
+/**
+ * Heuristic: is this error a transient database / infrastructure failure worth
+ * retrying (connection blips, deadlocks, serialization failures, pool
+ * exhaustion) rather than a real bug? Matches on the error text / Postgres
+ * SQLSTATE fragments.
+ */
+export const isTransientDbError = (error: unknown): boolean => {
   const message = String(error).toLowerCase();
   return (
     message.includes("timeout") ||
@@ -36,7 +42,7 @@ export const executeWithRetry = async <T>(
     try {
       return await task();
     } catch (error) {
-      if (!isTransientKpiError(error) || retries >= maxRetries) {
+      if (!isTransientDbError(error) || retries >= maxRetries) {
         throw error;
       }
 

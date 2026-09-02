@@ -4,11 +4,10 @@ import { db } from "@/db/connection";
 import type { FormulaInput } from "@/db/schema/dataEntry";
 import { kpiDefinitions } from "@/db/schema/kpi";
 import { reportPeriods } from "@/db/schema/reportPeriods";
+import { createFormulaVersionSnapshot } from "@/lib/formula/formula-version";
 
 import { normalizeFormulaInput } from "./normalizeFormulaInput";
 import type { KpiWorkerScope } from "./types";
-
-import { createFormulaVersionSnapshot } from "./snapshot";
 
 export interface ResolvedKpiTarget {
   kpiDefId: number;
