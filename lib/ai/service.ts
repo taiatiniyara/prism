@@ -3,7 +3,7 @@ import { streamText, generateText, stepCountIs } from "ai";
 import type { CurrentUser } from "@/lib/user.service";
 import { createAiTools } from "./tools";
 import { buildSystemPrompt, getPromptVersion } from "./prompt";
-import { getAiPrimarySource } from "./source-setting";
+import { getAiSourceConfig } from "./source-setting";
 import { validateInput, filterOutput } from "./guardrails";
 import { recordRequest, recordError } from "./rate-limit";
 import { AI_MODELS, AI_DEFAULTS, type AiChatMessage } from "./types";
@@ -231,9 +231,16 @@ const prepareRequest = async (
 
   // Resolve the DEV-configured primary source ONCE so the tool descriptions and the
   // system prompt agree on which source is primary.
-  const primary = await getAiPrimarySource();
-  const tools = createAiTools(user, options.abortSignal, options.sessionId, primary);
-  const systemPrompt = systemPromptOverride ?? buildSystemPrompt(primary);
+  const { primary, secondary } = await getAiSourceConfig();
+  const tools = createAiTools(
+    user,
+    options.abortSignal,
+    options.sessionId,
+    primary,
+    secondary,
+  );
+  const systemPrompt =
+    systemPromptOverride ?? buildSystemPrompt(primary, secondary);
   const promptVersion = getPromptVersion();
   const config = getModelConfig(false);
 
