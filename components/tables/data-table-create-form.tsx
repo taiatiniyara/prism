@@ -2,10 +2,12 @@
 
 import { formatLabel } from "@/lib/formatters";
 import {
+  useFieldWidth,
   useFormId,
   useFormOverrides,
   useReorderableList,
 } from "../dev/form-overrides-provider";
+import { cn } from "@/lib/utils";
 import {
   Sheet,
   SheetContent,
@@ -219,6 +221,7 @@ export function DataTableCreateForm<T>(props: DataTableCreateFormProps<T>) {
     props.fields,
     (f) => String(f.key),
   );
+  const { spanClass, widthProps } = useFieldWidth(formId);
   return (
     <Sheet>
       <SheetTrigger className="flex gap-1 items-center bg-slate-200 text-black px-2 py-1 cursor-pointer hover:bg-slate-300 transition-colors rounded text-xs font-bold">
@@ -230,7 +233,7 @@ export function DataTableCreateForm<T>(props: DataTableCreateFormProps<T>) {
         </SheetHeader>
         <ScrollArea className="h-[calc(100vh-100px)]">
           <form
-            className="space-y-4 p-4"
+            className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2"
             action={async (formData) => {
               const data: T = formDataToObject(formData, props.fields);
               const response = await props.formAction(data);
@@ -243,9 +246,11 @@ export function DataTableCreateForm<T>(props: DataTableCreateFormProps<T>) {
           >
             {ordered.map((f) => (
               <div
-                className="space-y-1"
+                className={cn("space-y-1", spanClass(f.key.toString()))}
+                data-field-wrapper=""
                 key={f.key as string}
                 {...dragProps(f.key.toString())}
+                {...widthProps(f.key.toString())}
               >
                 <Label
                   data-form-id={formId}
@@ -261,13 +266,15 @@ export function DataTableCreateForm<T>(props: DataTableCreateFormProps<T>) {
                 {field(f, f.label ?? formatLabel(f.key.toString()))}
               </div>
             ))}
-            <SubmitBtn
-              text={
-                <>
-                  <FaUpload /> Submit
-                </>
-              }
-            />
+            <div className="sm:col-span-2">
+              <SubmitBtn
+                text={
+                  <>
+                    <FaUpload /> Submit
+                  </>
+                }
+              />
+            </div>
           </form>
         </ScrollArea>
       </SheetContent>

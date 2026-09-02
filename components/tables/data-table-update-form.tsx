@@ -31,10 +31,12 @@ import BooleanFormInput from "./boolean-form-input";
 import InputAlternativeNamesEditor from "./input-alternative-names-editor";
 import { Checkbox } from "../ui/checkbox";
 import {
+  useFieldWidth,
   useFormId,
   useFormOverrides,
   useReorderableList,
 } from "../dev/form-overrides-provider";
+import { cn } from "@/lib/utils";
 
 export interface DataTableUpdateFormField<T> {
   key: keyof T;
@@ -188,6 +190,7 @@ export default function DataTableUpdateForm<T>(
     props.fields,
     (f) => String(f.key),
   );
+  const { spanClass, widthProps } = useFieldWidth(formId);
   return (
     <Sheet>
       <SheetTrigger className="flex gap-1 font-bold text-xs items-center cursor-pointer text-slate-500 hover:text-slate-900 transition-colors py-2">
@@ -220,12 +223,14 @@ export default function DataTableUpdateForm<T>(
           }}
           className="flex min-h-0 flex-1 flex-col"
         >
-          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-4">
+          <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-y-auto px-4 pb-4 sm:grid-cols-2">
             {ordered.map((field, index) => (
               <div
-                className="space-y-1"
+                className={cn("space-y-1", spanClass(String(field.key)))}
+                data-field-wrapper=""
                 key={`${String(field.key)}-${index}`}
                 {...dragProps(String(field.key))}
+                {...widthProps(String(field.key))}
               >
                 <Label
                   htmlFor={field.key as string}

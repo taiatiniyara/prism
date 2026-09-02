@@ -18,6 +18,7 @@ import { usePathname } from "next/navigation";
 import {
   orderKeys,
   resolveLabel,
+  resolveWidth,
   setFieldOrder,
   setFieldOverride,
   type FormOverrideMap,
@@ -28,6 +29,9 @@ interface FormOverridesContextValue {
   orderedKeys: (formId: string, keys: string[]) => string[];
   reorder: (formId: string, orderedKeys: string[]) => void;
   reorderActive: boolean;
+  widthActive: boolean;
+  getWidth: (formId: string, fieldKey: string) => "full" | "half";
+  toggleFieldWidth: (formId: string, fieldKey: string) => void;
 }
 
 const FormOverridesContext = createContext<FormOverridesContextValue>({
@@ -35,6 +39,9 @@ const FormOverridesContext = createContext<FormOverridesContextValue>({
   orderedKeys: (_formId, keys) => keys,
   reorder: () => {},
   reorderActive: false,
+  widthActive: false,
+  getWidth: () => "full",
+  toggleFieldWidth: () => {},
 });
 
 // Consumed by DataTable forms + column headers.
@@ -101,6 +108,34 @@ export function useReorderableList<T>(
   return { ordered, dragProps };
 }
 
+// Full/half width helper for form fields. `spanClass(key)` is the grid span for
+// a field; `widthProps(key)` (only in width mode) makes the field toggle its
+// width on click. The form container must be a 2-col grid on sm+.
+export function useFieldWidth(formId: string): {
+  spanClass: (key: string) => string;
+  widthProps: (key: string) => HTMLAttributes<HTMLElement>;
+} {
+  const { widthActive, getWidth, toggleFieldWidth } = useFormOverrides();
+
+  const spanClass = (key: string) =>
+    getWidth(formId, key) === "half" ? "sm:col-span-1" : "sm:col-span-2";
+
+  const widthProps = (key: string): HTMLAttributes<HTMLElement> =>
+    widthActive
+      ? {
+          // Capture the click before it reaches the field's input, and toggle.
+          onClickCapture: (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            toggleFieldWidth(formId, key);
+          },
+          title: "Click to toggle full / half width",
+        }
+      : {};
+
+  return { spanClass, widthProps };
+}
+
 // formId = the settings route path (stable, one DataTable per page in practice).
 export const useFormId = (): string => usePathname() || "/";
 
@@ -113,6 +148,8 @@ body[data-form-edit="on"] [data-form-overrides-ui] [data-form-field-key]{outline
 body[data-form-reorder="on"] [draggable="true"]{cursor:grab !important;outline:1px dashed #6366f1 !important;outline-offset:3px;border-radius:4px;}
 body[data-form-reorder="on"] [draggable="true"]:active{cursor:grabbing !important;}
 body[data-form-reorder="on"] [data-form-overrides-ui] [draggable="true"]{outline:none !important;cursor:pointer !important;}
+body[data-form-width="on"] [data-field-wrapper]{outline:1px dashed #10b981 !important;outline-offset:3px;border-radius:4px;cursor:pointer !important;}
+body[data-form-width="on"] [data-field-wrapper] *{cursor:pointer !important;}
 `;
 
 interface Editing {
@@ -147,6 +184,7 @@ export default function FormOverridesProvider({
   const [canEdit, setCanEdit] = useState(false);
   const [active, setActive] = useState(false); // label-edit mode
   const [reorderActive, setReorderActive] = useState(false); // drag-reorder mode
+  const [widthActive, setWidthActive] = useState(false); // field-width mode
   const overridesRef = useRef<FormOverrideMap>({});
   const editingRef = useRef<Editing | null>(null);
 
@@ -177,6 +215,10 @@ export default function FormOverridesProvider({
     document.body.setAttribute("data-form-reorder", reorderActive ? "on" : "off");
   }, [reorderActive]);
 
+  useEffect(() => {
+    document.body.setAttribute("data-form-width", widthActive ? "on" : "off");
+  }, [widthActive]);
+
   const getLabel = useCallback(
     (formId: string, fieldKey: string, fallback: string) =>
       resolveLabel(overrides, formId, fieldKey, fallback),
@@ -185,6 +227,12 @@ export default function FormOverridesProvider({
 
   const orderedKeys = useCallback(
     (formId: string, keys: string[]) => orderKeys(overrides, formId, keys),
+    [overrides],
+  );
+
+  const getWidth = useCallback(
+    (formId: string, fieldKey: string) =>
+      resolveWidth(overrides, formId, fieldKey),
     [overrides],
   );
 
@@ -200,6 +248,21 @@ export default function FormOverridesProvider({
   const reorder = useCallback(
     (formId: string, keys: string[]) =>
       persist(setFieldOrder(overridesRef.current, formId, keys)),
+    [persist],
+  );
+
+  const toggleFieldWidth = useCallback(
+    (formId: string, fieldKey: string) => {
+      const next =
+        resolveWidth(overridesRef.current, formId, fieldKey) === "half"
+          ? undefined
+          : ("half" as const);
+      persist(
+        setFieldOverride(overridesRef.current, formId, fieldKey, {
+          width: next,
+        }),
+      );
+    },
     [persist],
   );
 
@@ -231,22 +294,31 @@ export default function FormOverridesProvider({
     [persist],
   );
 
-  // The two modes are mutually exclusive so their affordances never overlap.
+  // The three modes are mutually exclusive so their affordances never overlap.
   const toggleActive = useCallback(() => {
     if (editingRef.current) commitEdit(true);
     setReorderActive(false);
+    setWidthActive(false);
     setActive((a) => !a);
   }, [commitEdit]);
 
   const toggleReorder = useCallback(() => {
     if (editingRef.current) commitEdit(true);
     setActive(false);
+    setWidthActive(false);
     setReorderActive((r) => !r);
   }, [commitEdit]);
 
-  // Alt+E (labels) / Alt+R (reorder) — work even while a modal/sheet is open (a
-  // click on a floating button counts as an outside-interaction and would close
-  // a modal; the buttons themselves are also made modal-safe below).
+  const toggleWidth = useCallback(() => {
+    if (editingRef.current) commitEdit(true);
+    setActive(false);
+    setReorderActive(false);
+    setWidthActive((w) => !w);
+  }, [commitEdit]);
+
+  // Alt+E (labels) / Alt+R (reorder) / Alt+W (width) — work even while a modal is
+  // open (a click on a floating button counts as an outside-interaction and would
+  // close a modal; the buttons themselves are also made modal-safe below).
   useEffect(() => {
     if (!canEdit) return;
     const onKey = (e: KeyboardEvent) => {
@@ -257,11 +329,14 @@ export default function FormOverridesProvider({
       } else if (e.key === "r" || e.key === "R") {
         e.preventDefault();
         toggleReorder();
+      } else if (e.key === "w" || e.key === "W") {
+        e.preventDefault();
+        toggleWidth();
       }
     };
     document.addEventListener("keydown", onKey);
     return () => document.removeEventListener("keydown", onKey);
-  }, [canEdit, toggleActive, toggleReorder]);
+  }, [canEdit, toggleActive, toggleReorder, toggleWidth]);
 
   // Click a labelled element (while editing) → edit it in place.
   useEffect(() => {
@@ -309,8 +384,24 @@ export default function FormOverridesProvider({
   }, [active, commitEdit]);
 
   const value = useMemo<FormOverridesContextValue>(
-    () => ({ getLabel, orderedKeys, reorder, reorderActive }),
-    [getLabel, orderedKeys, reorder, reorderActive],
+    () => ({
+      getLabel,
+      orderedKeys,
+      reorder,
+      reorderActive,
+      widthActive,
+      getWidth,
+      toggleFieldWidth,
+    }),
+    [
+      getLabel,
+      orderedKeys,
+      reorder,
+      reorderActive,
+      widthActive,
+      getWidth,
+      toggleFieldWidth,
+    ],
   );
 
   return (
@@ -334,6 +425,16 @@ export default function FormOverridesProvider({
           }}
         >
           <style>{EDIT_CSS}</style>
+          <button
+            type="button"
+            title="Toggle field width — click a field to switch full/half (Alt+W)"
+            onClick={toggleWidth}
+            onPointerDown={(e) => e.stopPropagation()}
+            onMouseDown={(e) => e.preventDefault()}
+            style={toggleStyle(widthActive, "#10b981")}
+          >
+            {widthActive ? "✓ Set width · Alt+W" : "⇱ Field width · Alt+W"}
+          </button>
           <button
             type="button"
             title="Toggle field reordering (Alt+R)"
