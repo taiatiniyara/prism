@@ -885,15 +885,10 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
             )}
             {computeProgress && (
               <div
-                className="ml-2 flex min-w-[12rem] flex-1 items-center gap-2"
+                className="ml-2 flex min-w-[10rem] flex-1 items-center gap-2"
                 aria-live="polite"
               >
-                <span className="text-xs font-medium whitespace-nowrap">
-                  Computing period{" "}
-                  {Math.min(computeProgress.done + 1, computeProgress.total)} of{" "}
-                  {computeProgress.total}…
-                </span>
-                <div className="bg-muted h-1.5 flex-1 overflow-hidden rounded-full">
+                <div className="bg-muted h-2 flex-1 overflow-hidden rounded-full">
                   <div
                     className="bg-primary h-full rounded-full transition-all duration-300"
                     style={{
@@ -918,8 +913,11 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
           </div>
           {computeProgress && (
             <p className="text-muted-foreground text-[11px] leading-snug">
-              Runs in the background across all periods — results fill in below
-              as each batch completes. You can keep this tab open.
+              Computing period{" "}
+              {Math.min(computeProgress.done + 1, computeProgress.total)} of{" "}
+              {computeProgress.total} — runs in the background across all periods;
+              results fill in below as each batch completes. You can keep this tab
+              open.
             </p>
           )}
 
