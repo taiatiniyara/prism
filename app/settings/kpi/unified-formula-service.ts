@@ -197,6 +197,7 @@ export async function getUnifiedFormulaBuilderData(
       isDescriptive: r.is_descriptive ?? false,
       isTrackedAsKpi: false,
       unitLabel: resolveManagedListName(nameById, r.unit_id, null),
+      unitId: r.unit_id ?? null,
       isCurrency: r.is_currency ?? false,
       existingCards,
     };
@@ -243,12 +244,58 @@ export async function getUnifiedFormulaBuilderData(
       isDescriptive: false, // calculated measures are numeric by definition
       isTrackedAsKpi: activeKpiNames.has(r.name.trim().toLowerCase()),
       unitLabel: resolveManagedListName(nameById, r.unit_id, null),
+      unitId: r.unit_id ?? null,
       isCurrency: r.is_currency ?? false,
       existingCards,
     };
   });
 
-  return { mode, kpiTargets, measureTargets, measures, dimMembers };
+  // UoM options (the "Unit" managed list) for the inline unit editor.
+  const units: MemberOption[] = await db
+    .select({ id: managedListItems.id, name: managedListItems.name })
+    .from(managedListItems)
+    .innerJoin(managedLists, eq(managedListItems.list_id, managedLists.id))
+    .where(
+      and(
+        inArray(managedLists.name, ["Unit", "Units", "unit", "units"]),
+        eq(managedListItems.is_active, true),
+      ),
+    )
+    .orderBy(asc(managedListItems.name));
+
+  return { mode, kpiTargets, measureTargets, measures, dimMembers, units };
+}
+
+/**
+ * Inline UoM editor: set a target's unit_id (kpi_definitions for KPIs,
+ * measure_definitions for calculated measures). Display-only metadata — no
+ * recompute needed; the harness/dashboards format off it.
+ */
+export async function updateTargetUom(input: {
+  mode: BuilderMode;
+  ownerId: number;
+  unitId: number;
+}): Promise<{ ok: boolean; error?: string }> {
+  try {
+    if (input.mode === "kpi") {
+      await db
+        .update(kpiDefinitions)
+        .set({ unit_id: input.unitId })
+        .where(eq(kpiDefinitions.id, input.ownerId));
+    } else {
+      await db
+        .update(measureDefinitions)
+        .set({ unit_id: input.unitId })
+        .where(eq(measureDefinitions.id, input.ownerId));
+    }
+    revalidatePath("/settings/kpi");
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Failed to update unit.",
+    };
+  }
 }
 
 function cardsFromLegacyJson(
