@@ -174,6 +174,8 @@ export async function getUnifiedFormulaBuilderData(
       formula: kpiDefinitions.formula,
       formula_inputs: kpiDefinitions.formula_inputs,
       is_descriptive: kpiDefinitions.is_descriptive,
+      is_currency: kpiDefinitions.is_currency,
+      unit_id: kpiDefinitions.unit_id,
     })
     .from(kpiDefinitions)
     .where(eq(kpiDefinitions.is_active, true))
@@ -194,6 +196,8 @@ export async function getUnifiedFormulaBuilderData(
       ),
       isDescriptive: r.is_descriptive ?? false,
       isTrackedAsKpi: false,
+      unitLabel: resolveManagedListName(nameById, r.unit_id, null),
+      isCurrency: r.is_currency ?? false,
       existingCards,
     };
   });
@@ -211,6 +215,8 @@ export async function getUnifiedFormulaBuilderData(
       name: measureDefinitions.name,
       formula: measureDefinitions.formula,
       formula_inputs: measureDefinitions.formula_inputs,
+      is_currency: measureDefinitions.is_currency,
+      unit_id: measureDefinitions.unit_id,
     })
     .from(measureDefinitions)
     .where(
@@ -236,6 +242,8 @@ export async function getUnifiedFormulaBuilderData(
       ),
       isDescriptive: false, // calculated measures are numeric by definition
       isTrackedAsKpi: activeKpiNames.has(r.name.trim().toLowerCase()),
+      unitLabel: resolveManagedListName(nameById, r.unit_id, null),
+      isCurrency: r.is_currency ?? false,
       existingCards,
     };
   });

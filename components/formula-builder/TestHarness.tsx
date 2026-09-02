@@ -18,17 +18,45 @@ const toTokenHash = (value: string): number => {
 const formatNumber = (value: number): string =>
   new Intl.NumberFormat("en-US", { maximumFractionDigits: 4 }).format(value);
 
+/**
+ * The value as it renders on dashboards, per the KPI/measure's configured
+ * format: currency → "$" + 2dp; a "%" unit → suffixed "%"; any other unit →
+ * suffixed. No ×100 conversion — a stored ratio stays a ratio (matches the
+ * "KPI's configured format" contract).
+ */
+const formatAdjusted = (
+  value: number,
+  isCurrency: boolean,
+  unitLabel: string | null | undefined,
+): string => {
+  if (isCurrency) {
+    return `$${new Intl.NumberFormat("en-US", {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value)}`;
+  }
+  const num = formatNumber(value);
+  const unit = unitLabel?.trim() ?? "";
+  if (!unit) return num;
+  return unit === "%" ? `${num}%` : `${num} ${unit}`;
+};
+
 export interface TestHarnessProps {
   formula: string;
   variableNames: string[];
   /** variable name -> tailwind bg/text colour classes (matches its card/token) */
   variableColors?: Record<string, string>;
+  /** selected KPI/measure display format — drives the format-adjusted result */
+  unitLabel?: string | null;
+  isCurrency?: boolean;
 }
 
 export function TestHarness({
   formula,
   variableNames,
   variableColors,
+  unitLabel,
+  isCurrency = false,
 }: TestHarnessProps) {
   const [baseValue, setBaseValue] = useState(10);
   const [seed, setSeed] = useState(1);
@@ -180,12 +208,29 @@ export function TestHarness({
             {formula.trim() || "—"}
           </p>
         </div>
-        <div className="bg-card flex w-48 shrink-0 items-center justify-end rounded-lg border p-2.5">
-          {result.status === "ok" ? (
-            <span className="text-base font-semibold text-emerald-600 tabular-nums dark:text-emerald-400">
-              {formatNumber(Number(result.value))}
-            </span>
-          ) : (
+        {result.status === "ok" ? (
+          <>
+            <div className="bg-card flex w-40 shrink-0 flex-col items-end justify-center rounded-lg border p-2.5">
+              <p className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+                Raw
+              </p>
+              <span className="text-base font-semibold text-emerald-600 tabular-nums dark:text-emerald-400">
+                {formatNumber(Number(result.value))}
+              </span>
+            </div>
+            {(isCurrency || (unitLabel && unitLabel.trim().length > 0)) && (
+              <div className="bg-card flex w-40 shrink-0 flex-col items-end justify-center rounded-lg border p-2.5">
+                <p className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+                  Format adjusted
+                </p>
+                <span className="text-base font-semibold text-emerald-700 tabular-nums dark:text-emerald-300">
+                  {formatAdjusted(Number(result.value), isCurrency, unitLabel)}
+                </span>
+              </div>
+            )}
+          </>
+        ) : (
+          <div className="bg-card flex w-48 shrink-0 items-center justify-end rounded-lg border p-2.5">
             <span
               className={
                 result.status === "error"
@@ -195,8 +240,8 @@ export function TestHarness({
             >
               {result.message}
             </span>
-          )}
-        </div>
+          </div>
+        )}
       </div>
     </div>
   );

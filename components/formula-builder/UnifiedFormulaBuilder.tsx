@@ -664,6 +664,16 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
             formula={formula}
             variableNames={variables}
             variableColors={variableColors}
+            unitLabel={
+              selectedTargetId != null
+                ? targetsById.get(selectedTargetId)?.unitLabel
+                : null
+            }
+            isCurrency={
+              selectedTargetId != null
+                ? (targetsById.get(selectedTargetId)?.isCurrency ?? false)
+                : false
+            }
           />
         </CardContent>
       </Card>
