@@ -1195,7 +1195,7 @@ export default function NewBscBuilder({
             className="flex flex-wrap items-center gap-2 py-0.5 text-xs"
           >
             <span className="inline-block w-3.5 shrink-0" />
-            <span className="inline-flex items-center gap-1 text-blue-600">
+            <span className="inline-flex items-center gap-1 text-info">
               <span>
                 {kpi.kpiName ?? "KPI"}
                 {kpi.unit ? ` (${kpi.unit})` : ""}
