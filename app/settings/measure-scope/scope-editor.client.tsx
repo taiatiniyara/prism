@@ -1,7 +1,7 @@
 "use client";
 
 import { useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
@@ -30,8 +30,14 @@ export default function MeasureDimensionScopeEditor({
   allDimensions,
 }: MeasureDimensionScopeEditorProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // Deep-link target: /settings/measure-scope?measure=<id> (e.g. from the formula
+  // builder's input card). Pre-filter to that measure and highlight its row.
+  const focusId = Number(searchParams.get("measure")) || null;
   const [isPending, startTransition] = useTransition();
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(
+    () => rows.find((r) => r.measureId === focusId)?.measureName ?? "",
+  );
 
   const filteredRows = useMemo(
     () =>
@@ -103,7 +109,13 @@ export default function MeasureDimensionScopeEditor({
             {filteredRows.map((row, i) => (
               <tr
                 key={row.measureId}
-                className={`border-b hover:bg-muted/30 transition-colors ${i % 2 === 0 ? "bg-white" : "bg-muted/10"}`}
+                className={`border-b hover:bg-muted/30 transition-colors ${
+                  row.measureId === focusId
+                    ? "bg-amber-100/70 dark:bg-amber-900/30"
+                    : i % 2 === 0
+                      ? "bg-white"
+                      : "bg-muted/10"
+                }`}
               >
                 <td className="px-3 py-2 sticky left-0 bg-inherit z-10">
                   <div className="font-medium truncate max-w-[240px]">

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/user.service";
 import { getMeasureScopeViewModel } from "./service";
@@ -19,10 +20,12 @@ export default async function MeasureScopePage() {
         </p>
       </div>
 
-      <MeasureDimensionScopeEditor
-        rows={model.rows}
-        allDimensions={model.allDimensions}
-      />
+      <Suspense fallback={null}>
+        <MeasureDimensionScopeEditor
+          rows={model.rows}
+          allDimensions={model.allDimensions}
+        />
+      </Suspense>
     </div>
   );
 }
