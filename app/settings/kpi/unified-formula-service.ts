@@ -687,9 +687,20 @@ async function computeCalculatedMeasureValues(
   let skipped = 0;
   let errors = 0;
   const byPeriod: RecomputeResult["byPeriod"] = [];
+  // Scope the aggregated worker to just the focus measure so Save & Compute
+  // recomputes and re-writes ONLY that measure, not every calculated measure.
+  // (Omitted focus ⇒ whole set — the bulk / no-selection fallback.)
+  const workerOptions =
+    focusMeasureId != null
+      ? { targetInputDefIds: [focusMeasureId] }
+      : undefined;
   for (const reportPeriodId of periodIds) {
     try {
-      const { outcomes } = await runAggregatedWorker(user, { reportPeriodId });
+      const { outcomes } = await runAggregatedWorker(
+        user,
+        { reportPeriodId },
+        workerOptions,
+      );
       for (const o of outcomes) {
         if (o.status === "calculated") calculated += 1;
         else skipped += 1;
@@ -771,19 +782,29 @@ export async function recomputeAllKpis(): Promise<RecomputeResult> {
 }
 
 /**
- * Active KPIs whose formula references any CALCULATED (is_calculated) measure.
- * After calculated-measure values change these must be re-published so the KPI
- * reads fresh upstream values (companion pass-through KPIs from Track-as-KPI +
- * real KPIs like Cost-per-Customer). Period-independent — resolve once, reuse
- * across every chunk of a chunked recompute.
+ * Active KPIs that must be re-published after calculated-measure values change,
+ * so they read fresh upstream values (companion pass-through KPIs from
+ * Track-as-KPI + real KPIs like Cost-per-Customer). Period-independent — resolve
+ * once, reuse across every chunk of a chunked recompute.
+ *
+ * When `focusMeasureId` is given (Save & Compute of one measure), only KPIs that
+ * reference THAT measure are republished — keeping the impact scoped to the
+ * edited measure. Omitted ⇒ every KPI referencing any calculated measure.
  */
-async function resolveDependentKpiIds(): Promise<number[]> {
-  const calcMeasures = await db
-    .select({ id: measureDefinitions.id })
-    .from(measureDefinitions)
-    .where(eq(measureDefinitions.is_calculated, true));
-  const calcIds = new Set(calcMeasures.map((m) => m.id));
-  if (!calcIds.size) return [];
+async function resolveDependentKpiIds(
+  focusMeasureId?: number,
+): Promise<number[]> {
+  let relevantIds: Set<number>;
+  if (focusMeasureId != null) {
+    relevantIds = new Set([focusMeasureId]);
+  } else {
+    const calcMeasures = await db
+      .select({ id: measureDefinitions.id })
+      .from(measureDefinitions)
+      .where(eq(measureDefinitions.is_calculated, true));
+    relevantIds = new Set(calcMeasures.map((m) => m.id));
+  }
+  if (!relevantIds.size) return [];
   const activeKpis = await db
     .select({
       id: kpiDefinitions.id,
@@ -793,7 +814,7 @@ async function resolveDependentKpiIds(): Promise<number[]> {
     .where(eq(kpiDefinitions.is_active, true));
   return activeKpis
     .filter((k) =>
-      inputMeasureIds(k.formula_inputs).some((id) => calcIds.has(id)),
+      inputMeasureIds(k.formula_inputs).some((id) => relevantIds.has(id)),
     )
     .map((k) => k.id);
 }
@@ -816,10 +837,11 @@ async function publishDependentKpis(
 }
 
 /**
- * Compute calculated MEASURES (is_calculated=true). Reuses the existing
- * aggregated-worker (fixpoint over all calculated-measure formulas, writing
- * derived values into data_entries), run once per report period at utility
- * scope. The builder's saved formula_inputs cache is what the worker reads.
+ * Compute calculated MEASURES (is_calculated=true) via the aggregated worker,
+ * once per report period at utility scope, writing derived values into
+ * data_entries. The builder's saved formula_inputs cache is what the worker
+ * reads. When `focusMeasureId` is given the worker + KPI republish are scoped to
+ * that one measure; omitted ⇒ the whole calculated-measure set.
  *
  * NOTE — this is the whole-set SYNCHRONOUS path (all periods in one call). It
  * exceeds the gateway timeout on the full ~140-period set, so the builder UI no
@@ -841,7 +863,10 @@ export async function recomputeCalculatedMeasuresNow(
   const { calculated, skipped, errors, byPeriod } =
     await computeCalculatedMeasureValues(periodIds, focusMeasureId);
 
-  await publishDependentKpis(await resolveDependentKpiIds(), periodIds);
+  await publishDependentKpis(
+    await resolveDependentKpiIds(focusMeasureId),
+    periodIds,
+  );
 
   revalidatePath("/settings/inputs");
   revalidatePath("/settings/kpi");
@@ -871,11 +896,14 @@ export interface CalcComputePlan {
 }
 
 /** Cheap pre-flight: enumerate report periods + resolve dependent KPIs once, so
- *  the client can drive a chunked recompute with a progress count. */
-export async function planCalculatedMeasureCompute(): Promise<CalcComputePlan> {
+ *  the client can drive a chunked recompute with a progress count. Pass the
+ *  focus measure so both the compute and the KPI republish stay scoped to it. */
+export async function planCalculatedMeasureCompute(
+  focusMeasureId?: number,
+): Promise<CalcComputePlan> {
   const [periodIds, dependentKpiIds] = await Promise.all([
     allReportPeriodIds(),
-    resolveDependentKpiIds(),
+    resolveDependentKpiIds(focusMeasureId),
   ]);
   return { periodIds, dependentKpiIds };
 }

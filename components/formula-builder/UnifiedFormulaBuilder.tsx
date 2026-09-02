@@ -392,7 +392,9 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     errors: number;
   }> => {
     const focusId = selectedTargetId ?? undefined;
-    const plan = await planCalculatedMeasureCompute();
+    // Scope the whole run to the selected measure — compute + KPI republish
+    // touch only it, not every calculated measure. (No selection ⇒ whole set.)
+    const plan = await planCalculatedMeasureCompute(focusId);
     const total = plan.periodIds.length;
     setRecompute({ processed: 0, failed: 0, byPeriod: [] });
     if (total === 0) {

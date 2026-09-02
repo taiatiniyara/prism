@@ -167,20 +167,40 @@ const evaluateTargetWithSnapshot = (
   };
 };
 
+export interface AggregatedWorkerOptions {
+  /**
+   * Restrict the run to these calculated-measure targets (by inputDefId) instead
+   * of the whole calculated-measure set. Omitted / empty ⇒ the whole set (the
+   * default the data-entry triggers rely on). Used by the formula builder's
+   * Save & Compute so editing ONE measure recomputes and re-writes only that
+   * measure — not every known calculated measure. Any calculated-measure inputs
+   * a scoped target references are read from their already-stored values in the
+   * source snapshot (they are not themselves recomputed).
+   */
+  targetInputDefIds?: number[];
+}
+
 export const runAggregatedWorker = async (
   user: CurrentUser,
   scope: AggregatedWorkerScope,
+  options?: AggregatedWorkerOptions,
 ): Promise<{ runId: string; outcomes: AggregatedTargetOutcome[] }> => {
   await assertScopeAuthorization(user, scope);
 
   const runId = randomUUID();
   const startedAt = new Date().toISOString();
 
+  const targetFilter =
+    options?.targetInputDefIds && options.targetInputDefIds.length
+      ? new Set(options.targetInputDefIds)
+      : null;
+
   console.info("[Aggregated worker] run started", {
     runId,
     reportPeriodId: scope.reportPeriodId,
     serviceAreaId: scope.serviceAreaId ?? null,
     unitId: scope.unitId ?? null,
+    scopedTargetCount: targetFilter ? targetFilter.size : "all",
   });
 
   storeRunStart({
@@ -191,7 +211,11 @@ export const runAggregatedWorker = async (
     outcomes: [],
   });
 
-  const targets = await selectAggregatedFormulaTargets();
+  const allTargets = await selectAggregatedFormulaTargets();
+  // Scope to the requested measure(s) when asked; otherwise the whole set.
+  const targets = targetFilter
+    ? allTargets.filter((target) => targetFilter.has(target.inputDefId))
+    : allTargets;
   const snapshot = await buildSourceSnapshot(
     scope,
     collectAllVariables(targets),
