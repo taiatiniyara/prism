@@ -558,8 +558,6 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     });
   };
 
-  const activeMeasureCount = data.measures.length;
-
   // Selected target's effective unit (override if the user just changed it).
   const selectedTarget =
     selectedTargetId != null ? targetsById.get(selectedTargetId) : undefined;
@@ -917,9 +915,6 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                 </span>
               </div>
             )}
-            <span className="text-muted-foreground ml-auto text-xs whitespace-nowrap">
-              {activeMeasureCount} measures available
-            </span>
           </div>
           {computeProgress && (
             <p className="text-muted-foreground text-[11px] leading-snug">
