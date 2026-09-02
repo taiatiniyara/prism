@@ -9,7 +9,8 @@ import {
   managedLists,
 } from "@/db/schema/managedLists";
 import { generateRandomNumber } from "@/lib/utils";
-import { eq, like } from "drizzle-orm";
+import { isAllSentinelName } from "@/lib/managed-lists";
+import { asc, eq, like } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 const toOptionalNumber = (value: unknown): number | null => {
@@ -36,7 +37,10 @@ export async function GetAllManagedLists(filter?: {
   name?: string;
   excludeAll?: boolean;
 }): Promise<ManagedList[]> {
-  const items = await db.select().from(managedListItems);
+  const items = await db
+    .select()
+    .from(managedListItems)
+    .orderBy(asc(managedListItems.id));
   const query = db.select().from(managedLists).orderBy(managedLists.name);
 
   if (filter?.name) {
@@ -85,7 +89,7 @@ export async function GetAllManagedListItems(options?: {
   const query = db
     .select()
     .from(managedListItems)
-    .orderBy(managedListItems.name)
+    .orderBy(asc(managedListItems.id))
     .leftJoin(managedLists, eq(managedListItems.list_id, managedLists.id));
 
   if (options?.listName) {
@@ -103,7 +107,7 @@ export async function GetAllManagedListItems(options?: {
   return list
     .filter((item) =>
       options?.excludeAll
-        ? item.managed_list_items.name.toLowerCase().includes("all") === false
+        ? !isAllSentinelName(item.managed_list_items.name)
         : true,
     )
     .map((item) => {
