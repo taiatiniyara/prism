@@ -2,7 +2,11 @@ import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
 
 import { db } from "@/db/connection";
 import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
-import { ALL_MEMBER } from "@/lib/data-entry/dimensions";
+import {
+  allMemberBinding,
+  pickInputValue,
+  type RollupCandidate,
+} from "@/app/data-entry/kpi-worker/dimension-rollup";
 
 export interface AggregatedWorkerScope {
   reportPeriodId: number;
@@ -24,56 +28,44 @@ export interface DimensionedRow {
   utilityFunction: number | null;
 }
 
-const asFiniteNumber = (value: string | null): number | null => {
-  if (value == null) return null;
-  const numeric = Number(value);
-  return Number.isFinite(numeric) ? numeric : null;
-};
-
-/** True when every dimension is the All-member (or a legacy null). */
-const isAllMemberRow = (r: DimensionedRow): boolean =>
-  (r.provider == null || r.provider === ALL_MEMBER.provider_id) &&
-  (r.category == null || r.category === ALL_MEMBER.category_id) &&
-  (r.technology == null || r.technology === ALL_MEMBER.technology_id) &&
-  (r.assetClass == null || r.assetClass === ALL_MEMBER.asset_class_id) &&
-  (r.customerType == null || r.customerType === ALL_MEMBER.customer_type_id) &&
-  (r.paymentMode == null || r.paymentMode === ALL_MEMBER.payment_mode_id) &&
-  (r.consumptionBand == null ||
-    r.consumptionBand === ALL_MEMBER.consumption_band_id) &&
-  (r.division == null || r.division === ALL_MEMBER.division_id) &&
-  (r.gender == null || r.gender === ALL_MEMBER.gender_id) &&
-  (r.utilityFunction == null ||
-    r.utilityFunction === ALL_MEMBER.utility_function_id);
+const toRollupCandidate = (r: DimensionedRow): RollupCandidate => ({
+  value: r.value,
+  // the SQL query already filters is_deleted; the aggregated worker has no
+  // relevance / grain axis, so neutral values here.
+  isDeleted: false,
+  isRelevant: true,
+  energyProviderId: r.provider,
+  energyTypeId: r.category,
+  energySourceId: r.technology,
+  unitTypeId: r.assetClass,
+  customerTypeId: r.customerType,
+  paymentModeId: r.paymentMode,
+  consumptionBandId: r.consumptionBand,
+  divisionId: r.division,
+  genderId: r.gender,
+  utilityFunctionId: r.utilityFunction,
+  grainAreaId: null,
+  grainStationId: null,
+  grainUnitId: null,
+});
 
 /**
- * Resolve one input measure's rows to a single value with the ruled
- * dimension-rollup preference — "All-row else sum of detail" (mirror of
- * kpi-worker/resolveInputs; #8, grounded in PR #104 + §4.6). The aggregated
- * worker treats every input at its All-member aggregate, so:
- *   1. an authoritative All-member (or legacy-null) row exists → USE it;
- *   2. else the input is stored as member slices → SUM them;
- *   3. else missing.
- * One source is ever consulted, never added across → no double-count.
+ * Resolve one input measure's rows to a single value at its All-member
+ * aggregate — "All-row else sum of detail" (§4.6, #8, PR #104). Delegates to
+ * the shared rule engine (`kpi-worker/dimension-rollup`) with an all-All
+ * binding, so the aggregated worker and the KPI worker apply the identical
+ * preference instead of two copies that can drift.
  */
 export const resolveAggregateValue = (
   rows: DimensionedRow[],
 ): string | null => {
-  const authoritative = rows
-    .filter(isAllMemberRow)
-    .map((r) => asFiniteNumber(r.value))
-    .find((v) => v != null);
-  if (authoritative != null) return String(authoritative);
-
-  let sum = 0;
-  let hasValue = false;
-  for (const r of rows) {
-    const numeric = asFiniteNumber(r.value);
-    if (numeric != null) {
-      sum += numeric;
-      hasValue = true;
-    }
-  }
-  return hasValue ? String(sum) : null;
+  const value = pickInputValue({
+    candidateRows: rows.map(toRollupCandidate),
+    binding: allMemberBinding(0),
+    scope: {},
+    grainRollup: false,
+  });
+  return value == null ? null : String(value);
 };
 
 interface VariableMapping {

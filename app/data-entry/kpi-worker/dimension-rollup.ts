@@ -43,6 +43,29 @@ export interface RollupScope {
   paymentModeId?: number | null;
 }
 
+/**
+ * A binding that pins every dimension to its All member — i.e. "resolve this
+ * measure at its aggregate". Used where a caller has no per-dimension scope
+ * (calculated measures always read their inputs whole).
+ */
+export const allMemberBinding = (
+  measureDefId: number,
+  variableName = "_",
+): FormulaInput => ({
+  measure_def_id: measureDefId,
+  variable_name: variableName,
+  provider_id: ALL_MEMBER.provider_id,
+  category_id: ALL_MEMBER.category_id,
+  technology_id: ALL_MEMBER.technology_id,
+  asset_class_id: ALL_MEMBER.asset_class_id,
+  customer_type_id: ALL_MEMBER.customer_type_id,
+  payment_mode_id: ALL_MEMBER.payment_mode_id,
+  consumption_band_id: ALL_MEMBER.consumption_band_id,
+  division_id: ALL_MEMBER.division_id,
+  gender_id: ALL_MEMBER.gender_id,
+  utility_function_id: ALL_MEMBER.utility_function_id,
+});
+
 export const asNumber = (value: string | null): number | null => {
   if (value == null) {
     return null;
