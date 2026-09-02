@@ -61,3 +61,27 @@ cd C:/Users/eugen/prism && npm ci      # ~2 min; restores tsc/eslint/build/dev f
 - **Accountable owner / backstop: #1 (coordination).** If you're blocked and can't run it (e.g. the main tree is mid-work on another session's branch, or you're unsure), ping #1 and #1 restores it.
 
 **Do NOT** run `npm ci`, `git clean -xfd`, or `rm -rf node_modules` against a **broken or mid-recovery** tree: `npm ci` deletes `node_modules` *before* installing, so a failed install (e.g. missing `package.json`) strands you empty — which is how this got wiped on 2026-09-02. When the tree state is uncertain, use plain `npm install` (no pre-delete). (Set by Eugene 2026-09-02.)
+
+## Deploying & handing off to Eugene for testing
+
+PRISM **auto-deploys when a PR merges to `main`**: GitHub Actions `deploy-to-vps.yml` SSHes to the VPS → `git pull` → `npm ci` → `npm run build` → `pm2 restart prism-v2`, applying DB schema via `drizzle-kit push`. It takes ~1–3 min after merge; nothing else "deploys". **Test target = `dev.prismdashboard.org` (p2). `prismdashboard.org` is legacy p1 — untouched.**
+
+**Standard deploy → test handoff — every agent, every time:**
+1. Merge your PR to `main` (that IS the deploy trigger).
+2. **Confirm it's actually live BEFORE telling Eugene anything** — never "do X once it deploys":
+   - Watch the deploy to success:
+     `gh run watch $(gh run list --workflow=deploy-to-vps.yml -L1 --json databaseId --jq '.[0].databaseId') --repo taiatiniyara/prism --exit-status`
+   - Then confirm the app is up: `curl -s https://dev.prismdashboard.org/api/health` → `"status":"ok"` with a low `uptime_seconds` (proves the restart landed).
+   - (Your own deeper check: `GET /api/deployment/info` returns the live `commitSha` — DEV-role gated.)
+3. Send Eugene ONE message in this EXACT format (no variations):
+   > ✅ READY TO TEST — `<change>`
+   > Live on **dev.prismdashboard.org** · commit `<sha>` · deploy ✅ · health ok
+   > **Re-login?** **YES / NO** — `<reason>`
+   > **Test:** 1) … 2) …  · **Expected:** …
+
+**Re-login decision — always state it explicitly:**
+- **YES (log out, log back in)** if the change touched auth: `BETTER_AUTH_SECRET`, the `session`/`user`/`account` tables (schema via `db-push --force` drops sessions), cookie/domain/`BETTER_AUTH_URL`, or 2FA/TOTP.
+- **NO — just refresh** for everything else, incl. role / org / permission / sidebar changes (they take effect within ~5s on the next navigation; `proxy.ts` caches role for 5s).
+- Sessions also expire after 24h regardless of any change.
+
+(Set by Eugene 2026-09-02.)
