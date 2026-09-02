@@ -10,6 +10,7 @@ import Footer from "@/components/layout/footer";
 import BlockedAccessOverlay from "@/components/auth/blocked-access-overlay";
 import { FloatingChatbot } from "@/components/ai/floating-chatbot";
 import DevDesignMode from "@/components/dev/dev-design-mode";
+import FormOverridesProvider from "@/components/dev/form-overrides-provider";
 import RefreshOnNavigate from "@/components/layout/refresh-on-navigate";
 import { db } from "@/db/connection";
 import { organisations } from "@/db/schema/utility";
@@ -49,7 +50,9 @@ export default function RootLayout({
         <Suspense
           fallback={<div className="flex min-h-0 flex-1 overflow-hidden" />}
         >
-          <SessionShell>{children}</SessionShell>
+          <SessionShell>
+            <FormOverridesProvider>{children}</FormOverridesProvider>
+          </SessionShell>
         </Suspense>
 
         <Toaster

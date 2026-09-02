@@ -29,6 +29,11 @@ import { FaEdit, FaSave } from "react-icons/fa";
 import DataTableManagedListInput from "./data-table-managed-list-input";
 import BooleanFormInput from "./boolean-form-input";
 import InputAlternativeNamesEditor from "./input-alternative-names-editor";
+import { Checkbox } from "../ui/checkbox";
+import {
+  useFormId,
+  useFormOverrides,
+} from "../dev/form-overrides-provider";
 
 export interface DataTableUpdateFormField<T> {
   key: keyof T;
@@ -73,6 +78,20 @@ function updateField<T>(
         defaultValue={Boolean(field.value)}
         disabled={field.disabled}
       />
+    );
+  }
+  if (field.type === "checkbox") {
+    // Bind the checked state to the record's current value (was falling through
+    // to a plain <Input> whose defaultValue set the value attr, not `checked`).
+    return (
+      <Label className="flex justify-start border p-3 shadow rounded-lg">
+        <Checkbox
+          disabled={field.disabled}
+          name={field.key as string}
+          defaultChecked={Boolean(field.value)}
+        />
+        Yes
+      </Label>
     );
   }
   if (field.type === "select") {
@@ -159,6 +178,8 @@ function updateField<T>(
 export default function DataTableUpdateForm<T>(
   props: DataTableUpdateFormProps<T>,
 ) {
+  const formId = useFormId();
+  const { getLabel } = useFormOverrides();
   return (
     <Sheet>
       <SheetTrigger className="flex gap-1 font-bold text-xs items-center cursor-pointer text-slate-500 hover:text-slate-900 transition-colors py-2">
@@ -194,8 +215,19 @@ export default function DataTableUpdateForm<T>(
               className="space-y-1"
               key={`${String(field.key)}-${index}`}
             >
-              <Label htmlFor={field.key as string}>
-                {field.label ?? formatLabel(field.key as string)}
+              <Label
+                htmlFor={field.key as string}
+                data-form-id={formId}
+                data-form-field-key={String(field.key)}
+                data-form-default-label={
+                  field.label ?? formatLabel(field.key as string)
+                }
+              >
+                {getLabel(
+                  formId,
+                  String(field.key),
+                  field.label ?? formatLabel(field.key as string),
+                )}
               </Label>
               {updateField(
                 {
