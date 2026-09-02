@@ -1,5 +1,6 @@
 import { randomUUID } from "crypto";
 
+import { resolveComputeOrder } from "@/app/data-entry/enter-data/services/aggregated-worker/compute-order";
 import { classifyDependencies } from "@/app/data-entry/enter-data/services/aggregated-worker/dependency-classifier";
 import { evaluateFormula } from "@/app/data-entry/enter-data/services/aggregated-worker/evaluator";
 import {
@@ -23,8 +24,6 @@ import { writeCalculatedTargetValue } from "@/app/data-entry/enter-data/services
 import { formulaVariableNames } from "@/app/data-entry/enter-data/services/aggregated-worker/formula-variables";
 import { triggerKpiWorker } from "@/app/data-entry/kpi-worker";
 import type { CurrentUser } from "@/lib/user.service";
-
-const MAX_PASS_MULTIPLIER = 2;
 
 const collectAllVariables = (
   targets: Awaited<ReturnType<typeof selectAggregatedFormulaTargets>>,
@@ -201,90 +200,91 @@ export const runAggregatedWorker = async (
   const inputDefVariableAliases = buildInputDefVariableAliases(targets);
   const outcomes: AggregatedTargetOutcome[] = [];
   const kpiTriggerCandidates = new Map<number, string>();
-  const pendingTargets = [...targets];
-  const maxPassCount = Math.max(1, targets.length * MAX_PASS_MULTIPLIER);
-  let passIndex = 0;
+  const targetById = new Map(targets.map((t) => [t.inputDefId, t]));
 
-  while (pendingTargets.length > 0 && passIndex < maxPassCount) {
-    passIndex += 1;
-    let calculatedInPass = false;
-    const pendingBeforePass = pendingTargets.length;
+  // Dependency order: a target that reads another calculated measure is
+  // evaluated after it, so one pass suffices. (Replaces the old fixpoint.)
+  const { order, cyclic } = resolveComputeOrder(
+    targets.map((t) => ({
+      id: t.inputDefId,
+      inputIds: t.formulaInputs.map((fi) => fi.measure_def_id),
+    })),
+  );
 
-    for (let index = 0; index < pendingTargets.length; ) {
-      const target = pendingTargets[index];
-      const evaluation = evaluateTargetWithSnapshot(snapshot, target);
-
-      if (evaluation.status === "skipped") {
-        index += 1;
-        continue;
-      }
-
-      const sourceDataEntryId = await writeCalculatedTargetValue({
-        inputDefId: target.inputDefId,
-        value: evaluation.value,
-        scope,
-      });
-      kpiTriggerCandidates.set(target.inputDefId, sourceDataEntryId);
-
-      outcomes.push(
-        buildCalculatedOutcome(runId, target.inputDefId, evaluation.value),
-      );
-
-      upsertVariableValues(
-        snapshot,
-        inputDefVariableAliases,
-        target.inputDefId,
-        evaluation.value,
-      );
-      pendingTargets.splice(index, 1);
-      calculatedInPass = true;
-    }
-
-    if (!calculatedInPass) {
-      console.info("[Aggregated worker] pass stalled", {
-        runId,
-        passIndex,
-        pendingCount: pendingTargets.length,
-        pendingInputDefIds: pendingTargets.map((target) => target.inputDefId),
-      });
-      break;
-    }
-
-    console.info("[Aggregated worker] pass completed", {
+  for (const inputDefId of cyclic) {
+    // Save-time validation rejects new cycles; a cycle here means pre-existing
+    // bad data. It cannot resolve — record and move on.
+    outcomes.push(buildSkippedOutcome(runId, inputDefId, "unknown-variable"));
+    console.warn("[Aggregated worker] target in a dependency cycle", {
       runId,
-      passIndex,
-      pendingBeforePass,
-      pendingAfterPass: pendingTargets.length,
-      calculatedInPass: pendingBeforePass - pendingTargets.length,
+      inputDefId,
     });
   }
 
-  if (pendingTargets.length > 0 && passIndex >= maxPassCount) {
-    console.warn("[Aggregated worker] max pass count reached", {
-      runId,
-      maxPassCount,
-      pendingCount: pendingTargets.length,
-      pendingInputDefIds: pendingTargets.map((target) => target.inputDefId),
-    });
-  }
+  type SkipReason = "missing-value" | "unknown-variable" | "evaluation-error";
+  type ComputeAttempt =
+    | { status: "calculated" }
+    | { status: "skipped"; reason: SkipReason };
 
-  for (const target of pendingTargets) {
+  const computeTarget = async (
+    target: (typeof targets)[number],
+  ): Promise<ComputeAttempt> => {
     const evaluation = evaluateTargetWithSnapshot(snapshot, target);
-    if (evaluation.status !== "skipped") {
-      continue;
+    if (evaluation.status === "skipped") {
+      return { status: "skipped", reason: evaluation.reason };
     }
-
+    const sourceDataEntryId = await writeCalculatedTargetValue({
+      inputDefId: target.inputDefId,
+      value: evaluation.value,
+      scope,
+    });
+    kpiTriggerCandidates.set(target.inputDefId, sourceDataEntryId);
     outcomes.push(
-      buildSkippedOutcome(runId, target.inputDefId, evaluation.reason),
+      buildCalculatedOutcome(runId, target.inputDefId, evaluation.value),
     );
+    upsertVariableValues(
+      snapshot,
+      inputDefVariableAliases,
+      target.inputDefId,
+      evaluation.value,
+    );
+    return { status: "calculated" };
+  };
 
+  const recordSkip = (
+    target: (typeof targets)[number],
+    reason: SkipReason,
+  ) => {
+    outcomes.push(buildSkippedOutcome(runId, target.inputDefId, reason));
     console.warn("[Aggregated worker] target skipped", {
       runId,
       inputDefId: target.inputDefId,
-      reason: evaluation.reason,
+      reason,
       formula: target.formula,
-      dependencyCount: target.formulaInputs.length,
     });
+  };
+
+  const retryOnMissingValue: (typeof targets)[number][] = [];
+  for (const inputDefId of order) {
+    const target = targetById.get(inputDefId);
+    if (!target) continue;
+    const attempt = await computeTarget(target);
+    if (attempt.status === "calculated") continue;
+    // A missing value can mean the target under-declared a computed dependency
+    // in its formula_inputs, so the topological order didn't put that
+    // dependency first — give it one more try after everything else.
+    if (attempt.reason === "missing-value") {
+      retryOnMissingValue.push(target);
+    } else {
+      recordSkip(target, attempt.reason);
+    }
+  }
+
+  for (const target of retryOnMissingValue) {
+    const attempt = await computeTarget(target);
+    if (attempt.status === "skipped") {
+      recordSkip(target, attempt.reason);
+    }
   }
 
   for (const [
