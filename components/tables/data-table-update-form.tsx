@@ -218,46 +218,50 @@ export default function DataTableUpdateForm<T>(
               toast.error(res.message);
             }
           }}
-          className="px-4 space-y-4"
+          className="flex min-h-0 flex-1 flex-col"
         >
-          {ordered.map((field, index) => (
-            <div
-              className="space-y-1"
-              key={`${String(field.key)}-${index}`}
-              {...dragProps(String(field.key))}
-            >
-              <Label
-                htmlFor={field.key as string}
-                data-form-id={formId}
-                data-form-field-key={String(field.key)}
-                data-form-default-label={
-                  field.label ?? formatLabel(field.key as string)
-                }
+          <div className="min-h-0 flex-1 space-y-4 overflow-y-auto px-4 pb-4">
+            {ordered.map((field, index) => (
+              <div
+                className="space-y-1"
+                key={`${String(field.key)}-${index}`}
+                {...dragProps(String(field.key))}
               >
-                {getLabel(
-                  formId,
-                  String(field.key),
+                <Label
+                  htmlFor={field.key as string}
+                  data-form-id={formId}
+                  data-form-field-key={String(field.key)}
+                  data-form-default-label={
+                    field.label ?? formatLabel(field.key as string)
+                  }
+                >
+                  {getLabel(
+                    formId,
+                    String(field.key),
+                    field.label ?? formatLabel(field.key as string),
+                  )}
+                </Label>
+                {updateField(
+                  {
+                    ...field,
+                    value: (props.record as Record<string, unknown>)[
+                      String(field.key)
+                    ] as T[keyof T],
+                  },
                   field.label ?? formatLabel(field.key as string),
                 )}
-              </Label>
-              {updateField(
-                {
-                  ...field,
-                  value: (props.record as Record<string, unknown>)[
-                    String(field.key)
-                  ] as T[keyof T],
-                },
-                field.label ?? formatLabel(field.key as string),
-              )}
-            </div>
-          ))}
-          <SubmitBtn
-            text={
-              <>
-                <FaSave /> Update
-              </>
-            }
-          />
+              </div>
+            ))}
+          </div>
+          <div className="border-t px-4 py-3">
+            <SubmitBtn
+              text={
+                <>
+                  <FaSave /> Update
+                </>
+              }
+            />
+          </div>
         </form>
       </SheetContent>
     </Sheet>
