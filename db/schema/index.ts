@@ -1,4 +1,5 @@
 export * from "./ai";
+export * from "./appSettings";
 export * from "./auth-schema";
 export * from "./benchmarking-request";
 export * from "./bsc-builder";

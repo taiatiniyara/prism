@@ -209,7 +209,9 @@ interface ModelCallbacks {
   }) => Promise<void>;
 }
 
-const prepareRequest = (options: AiServiceOptions): PreparedRequest => {
+const prepareRequest = async (
+  options: AiServiceOptions,
+): Promise<PreparedRequest> => {
   const { messages, user, maxHistoryTurns, systemPromptOverride } = options;
 
   const effectiveMaxTurns = maxHistoryTurns ?? getRoleBasedMaxTurns(user.role);
@@ -227,7 +229,7 @@ const prepareRequest = (options: AiServiceOptions): PreparedRequest => {
   const sdkMessages = prepareMessages(messages, effectiveMaxTurns);
 
   const tools = createAiTools(user, options.abortSignal, options.sessionId);
-  const systemPrompt = systemPromptOverride ?? getSystemPrompt();
+  const systemPrompt = systemPromptOverride ?? (await getSystemPrompt());
   const promptVersion = getPromptVersion();
   const config = getModelConfig(false);
 
@@ -371,7 +373,7 @@ const generateWithConfig = (
 export const runAiStream = async (
   options: AiServiceOptions,
 ): Promise<AiStreamResult> => {
-  const req = prepareRequest(options);
+  const req = await prepareRequest(options);
   const callbacks = createCallbacks(options.user, options.onFinish);
 
   const primaryConfig = req.config;
@@ -453,7 +455,7 @@ export const runAiStream = async (
 export const runAiGenerate = async (
   options: AiServiceOptions,
 ): Promise<AiGenerateResult> => {
-  const req = prepareRequest(options);
+  const req = await prepareRequest(options);
 
   const primaryConfig = req.config;
   let retries = 0;
