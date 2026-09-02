@@ -64,8 +64,20 @@ export async function missingUtilityLevelShells(): Promise<Finding> {
                     WHERE d.measure_def_id = md.id AND d.is_deleted = false)
     ),
     periods AS (
-      SELECT rp.id, rp.utility_id, rp.report_date
+      -- fy = the CANONICAL fiscal year the period is labelled with (the calendar year its FY
+      -- starts in), via fiscal_year_for_report_period() — the SQL mirror of the TS helper
+      -- fiscalYearForReportPeriod, FYE-aware. NOT EXTRACT(year FROM report_date): for a non-
+      -- December-FYE utility that would put the boundary period in a different FY to the grain
+      -- layer than to the fact/label layer (a second time-truth). Locked to the TS helper by
+      -- test/integration/fiscal-year-parity.
+      SELECT rp.id, rp.utility_id, rp.report_date,
+             fiscal_year_for_report_period(
+               rp.report_date::date,
+               (SELECT name FROM managed_list_items WHERE id = rp.report_type_id),
+               o.fye_month, o.fye_day
+             ) AS fy
       FROM report_periods rp
+      JOIN organisations o ON o.id = rp.utility_id
       WHERE EXISTS (SELECT 1 FROM data_entries d
                     WHERE d.report_period_id = rp.id AND d.is_deleted = false)
     )
@@ -74,11 +86,14 @@ export async function missingUtilityLevelShells(): Promise<Finding> {
     FROM util_level ul
     CROSS JOIN periods p
     WHERE (ul.effective_from IS NULL
-           OR EXTRACT(year FROM p.report_date) >= EXTRACT(year FROM ul.effective_from))
+           OR p.fy >= EXTRACT(year FROM ul.effective_from))
       -- period-correct grain: expect the measure at utility level only for periods whose
       -- effective strata (base, or an effective-dated override) is Utility. Historical
-      -- periods of a re-grained measure keep resolving to their original grain.
-      AND effective_strata_id(ul.id, EXTRACT(year FROM p.report_date)::smallint) =
+      -- periods of a re-grained measure keep resolving to their original grain. Resolved
+      -- against the CANONICAL fy so the boundary matches the benchmarking cycle, not report-
+      -- date-year. (effective_from's RHS stays a coarse calendar year — it's a measure-level
+      -- activation marker, not per-utility; the period-dimension will unify both.)
+      AND effective_strata_id(ul.id, p.fy::smallint) =
           (SELECT id FROM managed_list_items WHERE name = 'Utility'
            AND list_id = (SELECT id FROM managed_lists WHERE name = 'Strata'))
       AND NOT EXISTS (

@@ -10,8 +10,13 @@
 -- else the base measure_definitions.strata_id. With zero history rows everything resolves to base (this
 -- change is additive/greenfield — no existing behaviour moves).
 --
--- fy = EXTRACT(year FROM report_periods.report_date)::smallint — the same year convention the relevance
--- engine already uses (lib/relevance/expected.ts). Consumed there via effective_strata_id().
+-- fy = the CANONICAL fiscal year a period is labelled with (the calendar year its FY starts in),
+-- resolved by fiscal_year_for_report_period() below — the SQL mirror of the TS helper
+-- fiscalYearForReportPeriod. NOT EXTRACT(year FROM report_date): using report-date-year would make a
+-- non-Dec-FYE utility's boundary period read as a different FY to the grain layer than to the fact/
+-- label layer. Feeder Type's FY2026 boundary is the FY2026 BENCHMARKING CYCLE (Eugene, via #8):
+-- "applies to benchmarking reports for 2026 and onwards" — i.e. periods LABELLED FY2026, so every
+-- utility crosses in the same cycle regardless of FY-end. Consumed in lib/relevance/expected.ts.
 --
 -- Paired with Drizzle schema db/schema/measureStrataHistory.ts + the expected.ts rewire (Site 1,
 -- missingUtilityLevelShells: Feeder Type leaves utility-grain for FY>=2026). serviceAreaCoverage is
@@ -47,6 +52,43 @@ LANGUAGE sql STABLE AS $$
       LIMIT 1),
     (SELECT md.strata_id FROM measure_definitions md WHERE md.id = p_measure_def_id)
   );
+$$;
+
+-- Canonical fiscal-year resolver — the SQL mirror of lib/legacy/legacy-dl-resolver.ts
+-- fiscalYearForReportPeriod(). A report period's FY is labelled by the calendar year the
+-- financial year STARTS in (the platform convention retired the old blanket calendar-year /
+-- "-1" logic, commit 6504e7e). The relevance engine must resolve effective-dated grain against
+-- THIS FY, not EXTRACT(year FROM report_date) — otherwise a non-December-FYE utility's boundary
+-- period reads as one FY to the fact/label layer and another to the grain layer (a second source
+-- of time-truth). Kept in lockstep with the TS helper by test/integration/fiscal-year-parity
+-- (asserts TS === SQL across every real report period). The future period-dimension absorbs both.
+--   FY periods, FYE known:   calendar-year FY (Dec 31) -> report_date's year; else start year
+--                            (report_date's year, +1 if report_date is past the FYE anniversary, -1).
+--   FY periods, FYE unknown: report_date is the FY-end date -> start year = (report_date +1d) -1y.
+--   non-FY periods (Monthly): calendar year of report_date.
+CREATE OR REPLACE FUNCTION fiscal_year_for_report_period(
+  p_report_date date,
+  p_report_type text,
+  p_fye_month integer,
+  p_fye_day integer
+) RETURNS integer
+LANGUAGE sql IMMUTABLE AS $$
+  SELECT CASE
+    WHEN p_report_date IS NULL THEN NULL
+    WHEN p_report_type IS DISTINCT FROM 'Financial Year'
+      THEN EXTRACT(year FROM p_report_date)::int
+    WHEN p_fye_month IS NOT NULL AND p_fye_day IS NOT NULL THEN
+      CASE
+        WHEN p_fye_month = 12 AND p_fye_day = 31 THEN EXTRACT(year FROM p_report_date)::int
+        ELSE EXTRACT(year FROM p_report_date)::int
+             + CASE WHEN EXTRACT(month FROM p_report_date)::int > p_fye_month
+                      OR (EXTRACT(month FROM p_report_date)::int = p_fye_month
+                          AND EXTRACT(day FROM p_report_date)::int > p_fye_day)
+                    THEN 1 ELSE 0 END
+             - 1
+      END
+    ELSE EXTRACT(year FROM ((p_report_date + INTERVAL '1 day') - INTERVAL '1 year'))::int
+  END;
 $$;
 
 -- Seed: Feeder Type (54) -> ServiceArea grain from FY2026. Base (measure_definitions.strata_id=4
