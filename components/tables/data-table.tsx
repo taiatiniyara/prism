@@ -91,6 +91,10 @@ interface DataTableProps<T extends DataTableRecord> {
   // Master/detail: highlight + select a row on click (e.g. pick a parent list).
   onRowClick?: (row: T) => void;
   selectedRowId?: string | number | null;
+  // Fill the parent's height and scroll the table body inside (toolbar + header
+  // stay fixed) instead of the default viewport-relative max-height. The parent
+  // must be height-bounded.
+  fillHeight?: boolean;
 }
 
 type SortDirection = "asc" | "desc" | null;
@@ -118,6 +122,7 @@ export default function DataTable<T extends DataTableRecord>(
     reorderRowsProps,
     onRowClick,
     selectedRowId,
+    fillHeight,
   } = props;
   const formId = useFormId();
   // Columns live under a separate namespace so a column key can't collide with
@@ -780,7 +785,7 @@ export default function DataTable<T extends DataTableRecord>(
   }
 
   return (
-    <div className="w-full">
+    <div className={cn("w-full", fillHeight && "flex h-full flex-col")}>
       {/* Header */}
       <div className="flex flex-col gap-3 px-3 pt-5 pb-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
         <div className="flex flex-wrap items-center gap-2 sm:gap-4">
@@ -959,7 +964,14 @@ export default function DataTable<T extends DataTableRecord>(
         )}
       </div>
       {/* Table */}
-      <div className="max-h-[calc(100vh-220px)] overflow-auto sm:max-h-[calc(100vh-200px)]">
+      <div
+        className={cn(
+          "overflow-auto",
+          fillHeight
+            ? "min-h-0 flex-1"
+            : "max-h-[calc(100vh-220px)] sm:max-h-[calc(100vh-200px)]",
+        )}
+      >
         <table className="w-full min-w-max text-xs">
           <thead className="sticky top-0 bg-muted z-50">
             <tr>

@@ -30,9 +30,10 @@ export default function ManagedListsEditor({
   return (
     <div className="flex h-full flex-col gap-3">
       {/* Master — the parent managed lists. Click a row to load its items below. */}
-      <div className="min-h-0 flex-1 overflow-auto rounded-lg border bg-background">
+      <div className="min-h-0 flex-1 overflow-hidden rounded-lg border bg-background">
         <DataTable<ManagedList>
           title="Managed Lists"
+          fillHeight
           columns={["name", "description", "is_active"]}
           data={lists}
           onRowClick={(row) => setSelectedListId(row.id as number)}
@@ -56,8 +57,9 @@ export default function ManagedListsEditor({
       </div>
 
       {/* Detail — items of the selected list. New items inherit the selected list. */}
-      <div className="min-h-0 flex-1 overflow-auto rounded-lg border bg-background">
+      <div className="min-h-0 flex-1 overflow-hidden rounded-lg border bg-background">
         <DataTable<ManagedListItem>
+          fillHeight
           title={
             selectedList
               ? `Items — ${selectedList.name}`
