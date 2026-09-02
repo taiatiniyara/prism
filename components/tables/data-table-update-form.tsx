@@ -186,11 +186,13 @@ export default function DataTableUpdateForm<T>(
         <FaEdit size={16} /> Update
       </SheetTrigger>
       <SheetContent>
-        <SheetHeader>
+        <SheetHeader className="pb-0">
           <SheetTitle className="flex gap-2 items-center">
             <FaEdit size={24} /> Update Record
           </SheetTitle>
-          <SheetDescription>
+          {/* Kept for a11y (radix aria-describedby) but hidden — it was just
+              filler; sr-only removes it from layout so the fields sit higher. */}
+          <SheetDescription className="sr-only">
             Update the record with the following fields
           </SheetDescription>
         </SheetHeader>
