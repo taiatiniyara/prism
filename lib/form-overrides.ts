@@ -10,6 +10,7 @@ export interface FormFieldOverride {
   label?: string;
   order?: number; // slice 2 (drag-to-reorder); carried here so the store is stable
   width?: "half"; // slice 3 — "full" is the default (unset); "half" = compact column
+  hidden?: boolean; // slice 4 — column visibility (tables); default shown
 }
 
 // formId -> fieldKey -> override
@@ -32,6 +33,9 @@ const cleanOrder = (v: unknown): number | undefined => {
 const cleanWidth = (v: unknown): "half" | undefined =>
   v === "half" ? "half" : undefined;
 
+const cleanHidden = (v: unknown): true | undefined =>
+  v === true ? true : undefined;
+
 export const sanitizeFormOverrides = (input: unknown): FormOverrideMap => {
   if (!input || typeof input !== "object") return {};
   const out: FormOverrideMap = {};
@@ -45,9 +49,11 @@ export const sanitizeFormOverrides = (input: unknown): FormOverrideMap => {
       const label = cleanLabel(value.label);
       const order = cleanOrder(value.order);
       const width = cleanWidth(value.width);
+      const hidden = cleanHidden(value.hidden);
       if (label !== undefined) o.label = label;
       if (order !== undefined) o.order = order;
       if (width !== undefined) o.width = width;
+      if (hidden !== undefined) o.hidden = hidden;
       if (Object.keys(o).length > 0) cleanedFields[fieldKey] = o;
     }
     if (Object.keys(cleanedFields).length > 0) out[formId] = cleanedFields;
@@ -71,6 +77,13 @@ export const resolveWidth = (
   fieldKey: string,
 ): "full" | "half" =>
   map[formId]?.[fieldKey]?.width === "half" ? "half" : "full";
+
+// Column/field visibility: default shown.
+export const resolveHidden = (
+  map: FormOverrideMap,
+  formId: string,
+  fieldKey: string,
+): boolean => map[formId]?.[fieldKey]?.hidden === true;
 
 // Sort field/column keys by their DEV override order. Keys without an explicit
 // order keep their original position (stable sort on the original index), so a
