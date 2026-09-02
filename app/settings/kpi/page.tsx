@@ -9,13 +9,11 @@ import {
 import { CustomKpiRequestDialog } from "@/components/data-entry/custom-kpi-request-dialog";
 import { CustomKpiRequestStatusBadge } from "@/components/data-entry/custom-kpi-request-status-badge";
 import { CustomKpiReviewActions } from "@/components/data-entry/custom-kpi-review-actions";
-import KpiFormulaBuilder from "./formulaBuilder";
 import { UnifiedFormulaBuilder } from "@/components/formula-builder/UnifiedFormulaBuilder";
 import { getUnifiedFormulaBuilderData } from "./unified-formula-service";
 import {
   CreateKpiDefinition,
   GetAllKpiDefinitions,
-  GetKpiFormulaBuilderData,
   GetKpiTargetsFilterOptions,
   GetKpiTypeOptions,
   UpdateKpiDefinition,
@@ -49,7 +47,6 @@ export default async function KpiSettingsPage() {
   const showCustomKpiReviewView = isDevRole;
   const showCustomKpiRequestsView = isBloRole;
   const kpiDefinitions = await GetAllKpiDefinitions();
-  const data = await GetKpiFormulaBuilderData();
   const unifiedFormulaData = isDevRole
     ? await getUnifiedFormulaBuilderData("kpi")
     : null;
@@ -398,7 +395,7 @@ export default async function KpiSettingsPage() {
   return (
     <div className="mx-auto w-full max-w-350 space-y-6 pb-8 sm:space-y-8">
       <Tabs
-        defaultValue={isDevRole ? "new-formula-builder" : "definitions"}
+        defaultValue={isDevRole ? "formula-builder" : "definitions"}
         className="space-y-4"
       >
         <TabsList className="h-auto flex-wrap justify-start gap-2 p-1">
@@ -410,11 +407,6 @@ export default async function KpiSettingsPage() {
           <TabsTrigger value="limits">KPI Limits</TabsTrigger>
           {isDevRole ? (
             <TabsTrigger value="formula-builder">Formula Builder</TabsTrigger>
-          ) : null}
-          {isDevRole ? (
-            <TabsTrigger value="new-formula-builder">
-              New Formula Builder
-            </TabsTrigger>
           ) : null}
         </TabsList>
 
@@ -510,7 +502,7 @@ export default async function KpiSettingsPage() {
 
         <TabsContent value="targets">
           <KpiTargetsEditor
-            kpis={data.kpis}
+            kpis={kpiDefinitions}
             utilityId={currentUser.org_id}
             canEditTargets={canEditTargets}
             categories={kpiTargetsFilterOptions.categories}
@@ -518,27 +510,8 @@ export default async function KpiSettingsPage() {
           />
         </TabsContent>
 
-        {isDevRole ? (
-          <TabsContent value="formula-builder">
-            <SectionContainer>
-              <p className="mb-4 text-sm text-muted-foreground">
-                Choose a KPI, select input variables, and build the formula to
-                be used in future KPI calculations.
-              </p>
-              <KpiFormulaBuilder
-                kpis={data.kpis}
-                inputs={data.inputs}
-                energyProviderOptions={data.energyProviderOptions}
-                energyTypeOptions={data.energyTypeOptions}
-                energySourceOptions={data.energySourceOptions}
-                previewContextLabel={data.previewContextLabel}
-              />
-            </SectionContainer>
-          </TabsContent>
-        ) : null}
-
         {isDevRole && unifiedFormulaData ? (
-          <TabsContent value="new-formula-builder">
+          <TabsContent value="formula-builder">
             <SectionContainer>
               <p className="mb-4 text-sm font-bold">
                 Build or re-build Calculated Measures or KPIs formulas

@@ -12,6 +12,7 @@ import {
 } from "@/db/schema/formulaBinding";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
+import { analyzeFormula } from "@/lib/formula/arithmetic";
 import {
   buildManagedListNameMap,
   resolveManagedListName,
@@ -289,7 +290,7 @@ function isTargetConfigured(
   const trimmed = (formula ?? "").trim();
   if (!trimmed) return false;
 
-  const formulaVars = new Set(trimmed.match(/[A-Za-z_][A-Za-z0-9_]*/g) ?? []);
+  const formulaVars = new Set(analyzeFormula(trimmed).variables);
   const cardVars = new Set(cards.map((c) => c.variableName));
   for (const variable of formulaVars) {
     if (!cardVars.has(variable)) return false; // a formula variable with no binding

@@ -1,13 +1,24 @@
 /**
- * Eval-free arithmetic formula evaluator — the single source of truth for
- * evaluating PRISM formula expressions on both the client (Test harness) and
- * the server (kpi-worker). It replaces `new Function(...)` so no code path
- * depends on `'unsafe-eval'` (client CSP) or exposes a server-side eval
- * surface.
+ * Eval-free arithmetic formula evaluator — the one thing that evaluates or
+ * inspects an `arithmetic`-kind PRISM formula. Everything delegates here:
+ *  - `kpi-worker/evaluator.ts` (KPI compute) — via `evaluateArithmetic`
+ *  - `aggregated-worker/evaluator.ts` (calculated-measure compute) — via
+ *    `evaluateArithmeticWithAliases` (multi-word variable names)
+ *  - `components/formula-builder/safe-eval.ts` (the Test harness) — via
+ *    `evaluateArithmetic`
+ *  - `analyzeFormula` — the one "which variables / is it pure addition" query,
+ *    used by both workers and the builder in place of ad-hoc regexes.
  *
- * The formula language the builder produces is pure arithmetic: variables,
- * numeric literals, `+ - * / ( )`, and unary +/-. This is a deliberately
- * tiny recursive-descent evaluator over exactly that grammar.
+ * It replaces `new Function(...)` so no code path depends on `'unsafe-eval'`
+ * (client CSP) or exposes a server-side eval surface.
+ *
+ * The formula language is pure arithmetic: variables, numeric literals,
+ * `+ - * / ( )`, and unary +/-. A deliberately tiny recursive-descent
+ * evaluator over exactly that grammar.
+ *
+ * Scope boundary: this module owns the `arithmetic` formula kind only. The
+ * named built-in kinds (spec §4.6.3, first is `block_tariff`) dispatch
+ * elsewhere and do not pass through here.
  *
  * Design guarantees (security-reviewed with #12):
  *  - FAIL-CLOSED: any character/token/identifier outside the arithmetic
@@ -55,6 +66,68 @@ function tokenize(expr: string): string[] {
     throw new FormulaError(`Unexpected "${tail}" in formula.`, "syntax");
   }
   return tokens;
+}
+
+const IDENTIFIER_RE = /^[A-Za-z_][A-Za-z0-9_]*$/;
+const NUMBER_RE = /^\d+(?:\.\d+)?$/;
+
+export interface FormulaAnalysis {
+  /** Distinct variable identifiers referenced by the formula, first-seen order. */
+  variables: string[];
+  /**
+   * True when the formula is a bare sum of variables / numbers (only `+`,
+   * parens, identifiers and numeric literals — no `- * /`). Callers use this to
+   * decide whether a missing input can be zero-filled (an additive term
+   * contributes 0) rather than failing the whole computation.
+   */
+  isPureAddition: boolean;
+}
+
+/**
+ * Describe a formula's shape without evaluating it: which variables it names and
+ * whether it is pure addition. The single "structure of a formula" query —
+ * every ad-hoc identifier regex and `isPureAdditionFormula` copy should
+ * delegate here.
+ *
+ * Tolerant by design: a formula the tokenizer rejects still yields its
+ * identifier-shaped tokens (so a broken KPI formula still surfaces its intended
+ * variables to the "needs repair" check), and `isPureAddition` is `false` for
+ * anything that does not cleanly tokenize.
+ */
+export function analyzeFormula(formula: string): FormulaAnalysis {
+  const text = typeof formula === "string" ? formula : "";
+
+  let tokens: string[] | null = null;
+  try {
+    tokens = tokenize(text.trim());
+  } catch {
+    tokens = null;
+  }
+
+  const seen = new Set<string>();
+  const variables: string[] = [];
+  const rawIds = tokens ?? (text.match(/[A-Za-z_][A-Za-z0-9_]*/g) ?? []);
+  for (const tok of rawIds) {
+    if (!IDENTIFIER_RE.test(tok) || seen.has(tok)) {
+      continue;
+    }
+    seen.add(tok);
+    variables.push(tok);
+  }
+
+  let isPureAddition = false;
+  if (tokens !== null) {
+    let hasValue = false;
+    isPureAddition = tokens.every((tok) => {
+      if (IDENTIFIER_RE.test(tok) || NUMBER_RE.test(tok)) {
+        hasValue = true;
+        return true;
+      }
+      return tok === "+" || tok === "(" || tok === ")";
+    }) && hasValue;
+  }
+
+  return { variables, isPureAddition };
 }
 
 /**
@@ -168,4 +241,72 @@ export function evaluateArithmetic(
     throw new FormulaError("Formula result is not a finite number.", "value");
   }
   return result;
+}
+
+const escapeRegExp = (value: string): string =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * Evaluate an arithmetic formula whose variable names may contain spaces or
+ * other characters the grammar's identifier rule rejects (e.g. a formula
+ * authored as `"Operating Expenses + Administrative Expenses"`).
+ *
+ * Each key in `variables` is rewritten — longest key first, on word
+ * boundaries, so `"Operating Expenses"` is substituted before `"Operating"`
+ * and `XY` before `X` — to a safe `__vN` token, then the result runs through
+ * the strict `evaluateArithmetic` core. Keys that are already valid slug
+ * identifiers pass straight through. Fail-closed and eval-free, exactly like
+ * the core.
+ */
+export function evaluateArithmeticWithAliases(
+  formula: string,
+  variables: Record<string, number>,
+): number {
+  if (typeof formula !== "string") {
+    throw new FormulaError("Formula must be a string.", "syntax");
+  }
+
+  const aliasKeys = Object.keys(variables).filter(
+    (key) => !IDENTIFIER_RE.test(key),
+  );
+
+  if (aliasKeys.length === 0) {
+    return evaluateArithmetic(formula, variables);
+  }
+
+  // Longest first so a name that is a prefix of another is replaced last.
+  aliasKeys.sort((a, b) => b.length - a.length);
+
+  let rewritten = formula;
+  const safeVariables: Record<string, number> = {};
+
+  // Slug keys carry through unchanged.
+  for (const [key, value] of Object.entries(variables)) {
+    if (IDENTIFIER_RE.test(key)) {
+      safeVariables[key] = value;
+    }
+  }
+
+  aliasKeys.forEach((key, index) => {
+    if (!/[A-Za-z]/.test(key)) {
+      // A "variable" that is punctuation only (e.g. "+") would rewrite the
+      // formula's operators — refuse it rather than silently corrupt.
+      throw new FormulaError(
+        `Invalid formula variable name "${key}".`,
+        "syntax",
+      );
+    }
+    const safeName = `__alias_${index}`;
+    const startsWord = /^\w/.test(key);
+    const endsWord = /\w$/.test(key);
+    // eslint-disable-next-line security/detect-non-literal-regexp -- key is escaped via escapeRegExp
+    const pattern = new RegExp(
+      `${startsWord ? "\\b" : ""}${escapeRegExp(key)}${endsWord ? "\\b" : ""}`,
+      "g",
+    );
+    rewritten = rewritten.replace(pattern, safeName);
+    safeVariables[safeName] = variables[key];
+  });
+
+  return evaluateArithmetic(rewritten, safeVariables);
 }

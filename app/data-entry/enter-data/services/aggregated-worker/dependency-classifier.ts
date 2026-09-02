@@ -1,3 +1,5 @@
+import { analyzeFormula } from "@/lib/formula/arithmetic";
+
 export type AggregatedSkipReason =
   | "missing-value"
   | "unknown-variable"
@@ -9,35 +11,12 @@ export interface DependencyClassification {
   variables: Record<string, number>;
 }
 
-const isPureAdditionFormula = (formula: string): boolean => {
-  const compact = formula.replace(/\s+/g, "");
-  if (compact.length === 0) {
-    return false;
-  }
-
-  if (compact.includes("-") || compact.includes("*") || compact.includes("/")) {
-    return false;
-  }
-
-  const flattened = compact.replace(/[()]/g, "");
-  const terms = flattened.split("+").filter((term) => term.length > 0);
-
-  if (terms.length === 0) {
-    return false;
-  }
-
-  return terms.every(
-    (term) =>
-      /^[A-Za-z_][A-Za-z0-9_]*$/.test(term) || /^\d+(\.\d+)?$/.test(term),
-  );
-};
-
 export const classifyDependencies = (
   formula: string,
   variableNames: string[],
   variableValues: Record<string, string | null | undefined>,
 ): DependencyClassification => {
-  const zeroFillMissing = isPureAdditionFormula(formula);
+  const zeroFillMissing = analyzeFormula(formula).isPureAddition;
   const numericVariables: Record<string, number> = {};
 
   for (const variableName of variableNames) {
