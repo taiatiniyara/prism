@@ -1,0 +1,81 @@
+// DEV form overrides — global, in-app editable overrides for DataTable form
+// fields + column headers (labels now; field order in slice 2). Companion to the
+// CSS styling overrides in lib/ui-style.ts, persisted the same way (a single
+// scoped row in ui_style_override, DEV-gated to edit, applied for everyone).
+//
+// Keyed by (formId, fieldKey): formId is the settings route (usePathname), fieldKey
+// is a DataTable field/column key — both stable, so an override survives restyling.
+
+export interface FormFieldOverride {
+  label?: string;
+  order?: number; // slice 2 (drag-to-reorder); carried here so the store is stable
+}
+
+// formId -> fieldKey -> override
+export type FormOverrideMap = Record<string, Record<string, FormFieldOverride>>;
+
+const KEY_RE = /^[A-Za-z0-9 _./:-]{1,200}$/;
+
+const cleanLabel = (v: unknown): string | undefined => {
+  if (typeof v !== "string") return undefined;
+  const s = v.trim();
+  // allow empty string too? no — an empty override is a delete; caller prunes.
+  return s.length > 0 && s.length <= 200 ? s : undefined;
+};
+
+const cleanOrder = (v: unknown): number | undefined => {
+  const n = typeof v === "number" ? v : Number(v);
+  return Number.isInteger(n) && n >= 0 && n <= 999 ? n : undefined;
+};
+
+export const sanitizeFormOverrides = (input: unknown): FormOverrideMap => {
+  if (!input || typeof input !== "object") return {};
+  const out: FormOverrideMap = {};
+  for (const [formId, fields] of Object.entries(input as Record<string, unknown>)) {
+    if (!KEY_RE.test(formId) || !fields || typeof fields !== "object") continue;
+    const cleanedFields: Record<string, FormFieldOverride> = {};
+    for (const [fieldKey, raw] of Object.entries(fields as Record<string, unknown>)) {
+      if (!KEY_RE.test(fieldKey) || !raw || typeof raw !== "object") continue;
+      const value = raw as Record<string, unknown>;
+      const o: FormFieldOverride = {};
+      const label = cleanLabel(value.label);
+      const order = cleanOrder(value.order);
+      if (label !== undefined) o.label = label;
+      if (order !== undefined) o.order = order;
+      if (Object.keys(o).length > 0) cleanedFields[fieldKey] = o;
+    }
+    if (Object.keys(cleanedFields).length > 0) out[formId] = cleanedFields;
+  }
+  return out;
+};
+
+// Resolve the display label for a field/column: DEV override wins, else the
+// component's own default.
+export const resolveLabel = (
+  map: FormOverrideMap,
+  formId: string,
+  fieldKey: string,
+  fallback: string,
+): string => map[formId]?.[fieldKey]?.label ?? fallback;
+
+// Immutably set/clear one field's override, pruning empties so the store stays lean.
+export const setFieldOverride = (
+  map: FormOverrideMap,
+  formId: string,
+  fieldKey: string,
+  patch: FormFieldOverride,
+): FormOverrideMap => {
+  const next: FormOverrideMap = { ...map, [formId]: { ...map[formId] } };
+  const merged: FormFieldOverride = { ...next[formId][fieldKey], ...patch };
+  // undefined patch values delete that property
+  (Object.keys(patch) as (keyof FormFieldOverride)[]).forEach((k) => {
+    if (patch[k] === undefined) delete merged[k];
+  });
+  if (Object.keys(merged).length === 0) {
+    delete next[formId][fieldKey];
+  } else {
+    next[formId][fieldKey] = merged;
+  }
+  if (Object.keys(next[formId]).length === 0) delete next[formId];
+  return next;
+};

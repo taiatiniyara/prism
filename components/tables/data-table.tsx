@@ -14,6 +14,7 @@ import {
 
 import DataTableUpdateForm from "./data-table-update-form";
 import { formatLabel } from "@/lib/formatters";
+import { useFormId, useFormOverrides } from "../dev/form-overrides-provider";
 import BooleanToggle from "./booleanToggle";
 import { FaSquare } from "react-icons/fa";
 import {
@@ -102,6 +103,8 @@ export default function DataTable<T extends DataTableRecord>(
     updateFormProps,
     reorderRowsProps,
   } = props;
+  const formId = useFormId();
+  const { getLabel } = useFormOverrides();
 
   const [search, setSearch] = useState("");
   const [sortColumn, setSortColumn] = useState<keyof T | null>(null);
@@ -891,7 +894,13 @@ export default function DataTable<T extends DataTableRecord>(
                   )}
                 >
                   <span className="inline-flex items-center">
-                    {column.display}
+                    <span
+                      data-form-id={formId}
+                      data-form-field-key={String(column.name)}
+                      data-form-default-label={column.display}
+                    >
+                      {getLabel(formId, String(column.name), column.display)}
+                    </span>
                     <SortIcon column={column.name} />
                     {columnFilterMenu(column.name, column.display)}
                   </span>

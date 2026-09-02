@@ -1,6 +1,7 @@
 "use client";
 
 import { formatLabel } from "@/lib/formatters";
+import { useFormId, useFormOverrides } from "../dev/form-overrides-provider";
 import {
   Sheet,
   SheetContent,
@@ -205,6 +206,8 @@ function field<T>(field: DataTableCreateFormField<T>, fieldLabel: string) {
 }
 
 export function DataTableCreateForm<T>(props: DataTableCreateFormProps<T>) {
+  const formId = useFormId();
+  const { getLabel } = useFormOverrides();
   return (
     <Sheet>
       <SheetTrigger className="flex gap-1 items-center bg-slate-200 text-black px-2 py-1 cursor-pointer hover:bg-slate-300 transition-colors rounded text-xs font-bold">
@@ -232,7 +235,17 @@ export function DataTableCreateForm<T>(props: DataTableCreateFormProps<T>) {
                 className="space-y-1"
                 key={f.key as string}
               >
-                <Label>{f.label ?? formatLabel(f.key.toString())}</Label>
+                <Label
+                  data-form-id={formId}
+                  data-form-field-key={f.key.toString()}
+                  data-form-default-label={f.label ?? formatLabel(f.key.toString())}
+                >
+                  {getLabel(
+                    formId,
+                    f.key.toString(),
+                    f.label ?? formatLabel(f.key.toString()),
+                  )}
+                </Label>
                 {field(f, f.label ?? formatLabel(f.key.toString()))}
               </div>
             ))}
