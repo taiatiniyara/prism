@@ -33,8 +33,10 @@ const cleanOrder = (v: unknown): number | undefined => {
 const cleanWidth = (v: unknown): "half" | undefined =>
   v === "half" ? "half" : undefined;
 
-const cleanHidden = (v: unknown): true | undefined =>
-  v === true ? true : undefined;
+// Explicit boolean so a column can be forced shown (false) OR hidden (true),
+// overriding its default; `undefined` means "use the column's default".
+const cleanHidden = (v: unknown): boolean | undefined =>
+  typeof v === "boolean" ? v : undefined;
 
 export const sanitizeFormOverrides = (input: unknown): FormOverrideMap => {
   if (!input || typeof input !== "object") return {};
@@ -78,12 +80,15 @@ export const resolveWidth = (
 ): "full" | "half" =>
   map[formId]?.[fieldKey]?.width === "half" ? "half" : "full";
 
-// Column/field visibility: default shown.
+// Column visibility. `defaultHidden` is the column's built-in default (declared
+// columns default shown → false; other data fields default hidden → true); an
+// explicit override wins.
 export const resolveHidden = (
   map: FormOverrideMap,
   formId: string,
   fieldKey: string,
-): boolean => map[formId]?.[fieldKey]?.hidden === true;
+  defaultHidden = false,
+): boolean => map[formId]?.[fieldKey]?.hidden ?? defaultHidden;
 
 // Sort field/column keys by their DEV override order. Keys without an explicit
 // order keep their original position (stable sort on the original index), so a
