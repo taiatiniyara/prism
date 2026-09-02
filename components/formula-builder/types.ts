@@ -145,6 +145,10 @@ export interface TargetOption {
    *  i.e. this calculated measure is currently published as a KPI. Always false
    *  for KPI targets. */
   isTrackedAsKpi: boolean;
+  /** display format (kpi/measure unit + is_currency) — for the harness's
+   *  format-adjusted result preview. */
+  unitLabel?: string | null;
+  isCurrency?: boolean;
   /** rehydrated tag cards from formula_binding (fallback to legacy JSON) */
   existingCards: TagCardState[];
 }
