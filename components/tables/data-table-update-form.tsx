@@ -42,6 +42,7 @@ export interface DataTableUpdateFormField<T> {
   type: FieldType;
   required?: boolean;
   disabled?: boolean;
+  className?: string; // extra classes for the input (e.g. "uppercase")
   selectList?: {
     label: string;
     value: string | number;
@@ -172,6 +173,7 @@ function updateField<T>(
       name={field.key as string}
       defaultValue={stringifyFieldValue(field.value)}
       type={field.type}
+      className={field.className}
     />
   );
 }

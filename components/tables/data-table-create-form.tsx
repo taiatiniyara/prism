@@ -59,6 +59,7 @@ interface DataTableCreateFormField<T> {
   type: FieldType;
   required?: boolean;
   disabled?: boolean;
+  className?: string; // extra classes for the input (e.g. "uppercase")
   selectList?: {
     label: string;
     value: string | number;
@@ -205,6 +206,7 @@ function field<T>(field: DataTableCreateFormField<T>, fieldLabel: string) {
       disabled={field.disabled}
       type={field.type}
       name={field.key as string}
+      className={field.className}
     />
   );
 }
