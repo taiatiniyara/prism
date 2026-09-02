@@ -25,6 +25,48 @@ import {
   setFieldOverride,
   type FormOverrideMap,
 } from "@/lib/form-overrides";
+import {
+  generateUiCss,
+  isSafeSelector,
+  type UiElementStyle,
+  type UiStyleMap,
+} from "@/lib/ui-style";
+import DesignStylePanel from "./design-style-panel";
+
+// Build a reasonably-stable CSS selector for a clicked element (for styling).
+const computeSelector = (start: Element): string => {
+  const safeId = (el: Element) =>
+    el.id && /^[A-Za-z][\w-]*$/.test(el.id) ? `#${el.id}` : null;
+  const startId = safeId(start);
+  if (startId) return startId;
+  const parts: string[] = [];
+  let node: Element | null = start;
+  let depth = 0;
+  while (node && node.nodeType === 1 && depth < 6) {
+    const tag = node.tagName.toLowerCase();
+    if (tag === "body" || tag === "html") break;
+    const id = safeId(node);
+    if (id) {
+      parts.unshift(id);
+      break;
+    }
+    let part = tag;
+    const parent: Element | null = node.parentElement;
+    if (parent) {
+      const current: Element = node;
+      const sameTag = Array.from(parent.children).filter(
+        (c) => c.tagName === current.tagName,
+      );
+      if (sameTag.length > 1) {
+        part += `:nth-of-type(${sameTag.indexOf(current) + 1})`;
+      }
+    }
+    parts.unshift(part);
+    node = node.parentElement;
+    depth += 1;
+  }
+  return parts.join(" > ");
+};
 
 interface FormOverridesContextValue {
   getLabel: (formId: string, fieldKey: string, fallback: string) => string;
@@ -154,9 +196,12 @@ export const useFormId = (): string => usePathname() || "/";
 // Outline labels while editing; the element being edited gets a solid amber ring.
 // Editing happens IN PLACE (contentEditable), so it works inside modals/sheets too.
 const EDIT_CSS = `
-body[data-form-edit="on"] [data-form-field-key]{outline:1px dashed #f59e0b !important;outline-offset:2px;cursor:text !important;}
+body[data-form-edit="on"] *:hover{outline:1px dashed #6366f1 !important;outline-offset:-1px;cursor:crosshair !important;}
+body[data-form-edit="on"] [data-form-field-key]{outline:1px dashed #f59e0b !important;outline-offset:2px;}
+body[data-form-edit="on"] [data-form-field-key]:hover{outline:2px solid #f59e0b !important;cursor:text !important;}
 body[data-form-edit="on"] [data-form-field-key][contenteditable="true"]{outline:2px solid #f59e0b !important;background:#fffbeb !important;border-radius:3px;}
-body[data-form-edit="on"] [data-form-overrides-ui] [data-form-field-key]{outline:none !important;cursor:auto !important;}
+body[data-form-edit="on"] [data-form-overrides-ui] *:hover,body[data-form-edit="on"] [data-form-overrides-ui]:hover{outline:none !important;cursor:auto !important;}
+body[data-form-edit="on"] [data-form-overrides-ui] [data-form-field-key]{outline:none !important;}
 body[data-form-reorder="on"] [draggable="true"]{cursor:grab !important;outline:1px dashed #6366f1 !important;outline-offset:3px;border-radius:4px;}
 body[data-form-reorder="on"] [draggable="true"]:active{cursor:grabbing !important;}
 body[data-form-reorder="on"] [data-form-overrides-ui] [draggable="true"]{outline:none !important;cursor:pointer !important;}
@@ -220,10 +265,34 @@ export default function FormOverridesProvider({
     startLeft: number;
     latest: { top: number; left: number };
   } | null>(null);
+  // Unified Design mode also styles arbitrary elements (folded in from the old
+  // standalone Design tool): selector -> UiElementStyle, persisted via /api/ui-style.
+  const [styles, setStyles] = useState<UiStyleMap>({});
+  const [selectedSelector, setSelectedSelector] = useState<string | null>(null);
+  const stylesRef = useRef<UiStyleMap>({});
+  const styleSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     overridesRef.current = overrides;
   }, [overrides]);
+
+  useEffect(() => {
+    stylesRef.current = styles;
+  }, [styles]);
+
+  // Load the element-style overrides (applied for everyone; DEV edits them).
+  useEffect(() => {
+    let cancelled = false;
+    void fetch("/api/ui-style", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((data: { styles?: UiStyleMap }) => {
+        if (!cancelled) setStyles(data.styles ?? {});
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -288,6 +357,46 @@ export default function FormOverridesProvider({
     (formId: string, keys: string[]) =>
       persist(setFieldOrder(overridesRef.current, formId, keys)),
     [persist],
+  );
+
+  const scheduleStyleSave = useCallback(() => {
+    if (styleSaveTimer.current) clearTimeout(styleSaveTimer.current);
+    styleSaveTimer.current = setTimeout(() => {
+      void fetch("/api/ui-style", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ styles: stylesRef.current }),
+      }).catch(() => {});
+    }, 600);
+  }, []);
+
+  const patchStyle = useCallback(
+    (selector: string, change: Partial<UiElementStyle>) => {
+      setStyles((prev) => {
+        const merged: UiElementStyle = { ...(prev[selector] ?? {}), ...change };
+        (Object.keys(merged) as (keyof UiElementStyle)[]).forEach((k) => {
+          if (merged[k] == null) delete merged[k];
+        });
+        const next = { ...prev };
+        if (Object.keys(merged).length === 0) delete next[selector];
+        else next[selector] = merged;
+        return next;
+      });
+      scheduleStyleSave();
+    },
+    [scheduleStyleSave],
+  );
+
+  const resetSelector = useCallback(
+    (selector: string) => {
+      setStyles((prev) => {
+        const next = { ...prev };
+        delete next[selector];
+        return next;
+      });
+      scheduleStyleSave();
+    },
+    [scheduleStyleSave],
   );
 
   const toggleFieldWidth = useCallback(
@@ -357,6 +466,7 @@ export default function FormOverridesProvider({
     if (editingRef.current) commitEdit(true);
     setReorderActive(false);
     setWidthActive(false);
+    setSelectedSelector(null);
     setActive((a) => !a);
   }, [commitEdit]);
 
@@ -364,6 +474,7 @@ export default function FormOverridesProvider({
     if (editingRef.current) commitEdit(true);
     setActive(false);
     setWidthActive(false);
+    setSelectedSelector(null);
     setReorderActive((r) => !r);
   }, [commitEdit]);
 
@@ -371,6 +482,7 @@ export default function FormOverridesProvider({
     if (editingRef.current) commitEdit(true);
     setActive(false);
     setReorderActive(false);
+    setSelectedSelector(null);
     setWidthActive((w) => !w);
   }, [commitEdit]);
 
@@ -441,19 +553,29 @@ export default function FormOverridesProvider({
     return () => document.removeEventListener("keydown", onKey);
   }, [canEdit, toggleActive, toggleReorder, toggleWidth]);
 
-  // Click a labelled element (while editing) → edit it in place.
+  // Design mode: click a label -> edit its text in place; click any other
+  // element -> select it for styling.
   useEffect(() => {
     if (!active) return;
     const handler = (ev: MouseEvent) => {
       const target = ev.target as HTMLElement | null;
       if (!target) return;
-      if (target.closest("[data-form-overrides-ui]")) return; // our own toggle
+      if (target.closest("[data-form-overrides-ui]")) return; // our own toolbar
       const el = target.closest<HTMLElement>("[data-form-field-key]");
-      if (!el) return;
+      if (!el) {
+        // Not a label → style this element.
+        ev.preventDefault();
+        ev.stopPropagation();
+        if (editingRef.current) commitEdit(true);
+        const selector = computeSelector(target);
+        if (isSafeSelector(selector)) setSelectedSelector(selector);
+        return;
+      }
       if (editingRef.current?.el === el) return; // already editing this one
       ev.preventDefault();
       ev.stopPropagation();
       if (editingRef.current) commitEdit(true); // commit a previous edit
+      setSelectedSelector(null); // switch from styling to label editing
       const formId = el.getAttribute("data-form-id") || "/";
       const fieldKey = el.getAttribute("data-form-field-key") || "";
       const fallback = (el.getAttribute("data-form-default-label") || "").trim();
@@ -515,7 +637,21 @@ export default function FormOverridesProvider({
 
   return (
     <FormOverridesContext.Provider value={value}>
+      {/* Element-style overrides apply for everyone (DEV edits them). */}
+      <style>{generateUiCss(styles)}</style>
       {children}
+      {canEdit && selectedSelector && active && (
+        <DesignStylePanel
+          selector={selectedSelector}
+          style={styles[selectedSelector] ?? {}}
+          onPatch={(change) => patchStyle(selectedSelector, change)}
+          onReset={() => {
+            resetSelector(selectedSelector);
+            setSelectedSelector(null);
+          }}
+          onClose={() => setSelectedSelector(null)}
+        />
+      )}
       {canEdit && (
         // pointer-events:auto keeps the toggles clickable even when a radix modal
         // sets `pointer-events:none` on the background.
@@ -587,13 +723,13 @@ export default function FormOverridesProvider({
           </button>
           <button
             type="button"
-            title="Toggle label editing (Alt+E)"
+            title="Design mode (Alt+E) — click a label to rename it, any other element to style it"
             onClick={toggleActive}
             onPointerDown={(e) => e.stopPropagation()}
             onMouseDown={(e) => e.preventDefault()}
             style={toggleStyle(active, "#f59e0b")}
           >
-            {active ? "✓ Editing labels · Alt+E" : "✎ Edit labels · Alt+E"}
+            {active ? "✓ Design · Alt+E" : "✎ Design · Alt+E"}
           </button>
         </div>
       )}
