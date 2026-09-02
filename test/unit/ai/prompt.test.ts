@@ -69,6 +69,29 @@ describe("data source policy flips with the primary source", () => {
   });
 });
 
+describe("isolation mode (secondary = none)", () => {
+  it("WebApp only → gold layer only, Power BI disabled", () => {
+    const p = buildSystemPrompt("webapp", "none");
+    expect(p).toContain("Use ONLY the **PRISM web app gold layer**");
+    expect(p).toContain("Power BI is DISABLED");
+    expect(p).toContain("there is no fallback source");
+    expect(p).not.toContain("{{DATA_SOURCE_POLICY}}");
+  });
+
+  it("Power BI only → Power BI only, gold layer disabled", () => {
+    const p = buildSystemPrompt("powerbi", "none");
+    expect(p).toContain("Use ONLY **Power BI**");
+    expect(p).toContain("gold-layer tools are DISABLED");
+    expect(p).toContain("there is no fallback source");
+  });
+
+  it("isolation differs from the two-tier policy", () => {
+    expect(buildSystemPrompt("webapp", "none")).not.toEqual(
+      buildSystemPrompt("webapp", "powerbi"),
+    );
+  });
+});
+
 describe("getPromptVersion", () => {
   it("returns a date-based version string", () => {
     const version = getPromptVersion();
