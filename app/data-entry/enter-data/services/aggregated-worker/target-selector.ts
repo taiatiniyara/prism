@@ -2,6 +2,7 @@ import { and, eq, isNotNull, ne, sql } from "drizzle-orm";
 
 import { db } from "@/db/connection";
 import { measureDefinitions } from "@/db/schema/dataEntry";
+import { loadFormulaInputsFromBindings } from "@/app/data-entry/kpi-worker/formula-bindings";
 
 export interface AggregatedFormulaTarget {
   inputDefId: number;
@@ -123,13 +124,27 @@ export const selectAggregatedFormulaTargets = async (): Promise<
     variableName: row.variableName ?? "",
   }));
 
-  return rows.map((row) => ({
-    inputDefId: row.inputDefId,
-    variableName: row.variableName,
-    formula: row.formula ?? "",
-    formulaInputs:
-      row.formulaInputs && row.formulaInputs.length > 0
-        ? row.formulaInputs
-        : inferFormulaInputs(row.formula ?? "", candidates),
-  }));
+  // formula_binding is the source of truth for a calculated measure's inputs
+  // (spec §5.3); fall back to the stored JSON, then to name inference.
+  const bindingInputs = await loadFormulaInputsFromBindings(
+    "measure",
+    rows.map((row) => row.inputDefId),
+  );
+
+  return rows.map((row) => {
+    const bound = bindingInputs.get(row.inputDefId);
+    return {
+      inputDefId: row.inputDefId,
+      variableName: row.variableName,
+      formula: row.formula ?? "",
+      formulaInputs: bound
+        ? bound.map((fi) => ({
+            measure_def_id: fi.measure_def_id,
+            variable_name: fi.variable_name,
+          }))
+        : row.formulaInputs && row.formulaInputs.length > 0
+          ? row.formulaInputs
+          : inferFormulaInputs(row.formula ?? "", candidates),
+    };
+  });
 };

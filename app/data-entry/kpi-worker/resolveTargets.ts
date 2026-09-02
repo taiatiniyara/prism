@@ -6,6 +6,7 @@ import { kpiDefinitions } from "@/db/schema/kpi";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { createFormulaVersionSnapshot } from "@/lib/formula/formula-version";
 
+import { loadFormulaInputsFromBindings } from "./formula-bindings";
 import { normalizeFormulaInput } from "./normalizeFormulaInput";
 import type { KpiWorkerScope } from "./types";
 
@@ -98,6 +99,26 @@ const toResolvedTarget = (
   };
 };
 
+/**
+ * Overlay each KPI's inputs from `formula_binding` (the source of truth) where
+ * it has binding rows; the rest keep their legacy `formula_inputs` JSON until
+ * the manual rebuild reaches them.
+ */
+const withBindingInputs = async <T extends KpiDefinitionLike>(
+  rows: T[],
+): Promise<T[]> => {
+  const bindings = await loadFormulaInputsFromBindings(
+    "kpi",
+    rows.map((r) => r.id),
+  );
+  if (bindings.size === 0) return rows;
+  return rows.map((row) =>
+    bindings.has(row.id)
+      ? { ...row, formula_inputs: bindings.get(row.id)! }
+      : row,
+  );
+};
+
 export const filterAffectedKpiTargets = (
   definitions: KpiDefinitionLike[],
   inputDefId: number,
@@ -153,7 +174,11 @@ export const resolveAffectedKpiTargets = async (
     .from(kpiDefinitions)
     .where(eq(kpiDefinitions.is_active, true));
 
-  return filterAffectedKpiTargets(rows, inputDefId, targetContext);
+  return filterAffectedKpiTargets(
+    await withBindingInputs(rows),
+    inputDefId,
+    targetContext,
+  );
 };
 
 /**
@@ -193,7 +218,7 @@ export const resolveKpiTargetsByIds = async (
       ),
     );
 
-  return rows
+  return (await withBindingInputs(rows))
     .filter((row) => Boolean(row.formula))
     .map((row) => toResolvedTarget(row, targetContext));
 };
