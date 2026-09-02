@@ -41,21 +41,6 @@ export default async function OrganisationsSettingsPage() {
             type: "checkbox",
           },
           {
-            key: "powequality_standard_id",
-            managedListName: "Power Quality Standard",
-            type: "managed-list",
-          },
-          {
-            key: "electricity_regulation_id",
-            managedListName: "Electricity Regulation",
-            type: "managed-list",
-          },
-          {
-            key: "accounting_standard_id",
-            managedListName: "Accounting Standard",
-            type: "managed-list",
-          },
-          {
             key: "entity_type_id",
             managedListName: "Entity Type",
             type: "managed-list",
@@ -105,21 +90,6 @@ export default async function OrganisationsSettingsPage() {
           {
             key: "is_utility",
             type: "checkbox",
-          },
-          {
-            key: "powequality_standard_id",
-            managedListName: "Power Quality Standard",
-            type: "managed-list",
-          },
-          {
-            key: "electricity_regulation_id",
-            managedListName: "Electricity Regulation",
-            type: "managed-list",
-          },
-          {
-            key: "accounting_standard_id",
-            managedListName: "Accounting Standard",
-            type: "managed-list",
           },
           {
             key: "entity_type_id",
