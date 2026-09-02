@@ -68,7 +68,6 @@ export async function CreateManagedListItem(
   const query = db.insert(managedListItems).values({
     ...data,
     parent_id: toOptionalNumber(data.parent_id),
-    asset_class_id: toOptionalNumber(data.asset_class_id),
     is_active: true,
     id: generateRandomNumber(5),
   });
@@ -114,16 +113,10 @@ export async function GetAllManagedListItems(options?: {
       const parent = list.find(
         (l) => l.managed_list_items.id === item.managed_list_items.parent_id,
       )?.managed_list_items;
-      const unitType = list.find(
-        (l) =>
-          l.managed_list_items.id ===
-          item.managed_list_items.asset_class_id,
-      )?.managed_list_items;
       return {
         ...item.managed_list_items,
         list: item.managed_lists?.name,
         parent: parent?.name ?? null,
-        energy_resource_type: unitType?.name ?? null,
       };
     });
 }
@@ -170,12 +163,6 @@ export async function UpdateManagedListItem(
 
   if ("parent_id" in data) {
     updateData.parent_id = toOptionalNumber(data.parent_id);
-  }
-
-  if ("asset_class_id" in data) {
-    updateData.asset_class_id = toOptionalNumber(
-      data.asset_class_id,
-    );
   }
 
   const query = db

@@ -69,7 +69,6 @@ export default function ManagedListsEditor({
             "name",
             "description",
             "parent",
-            { name: "energy_resource_type", display: "Asset Class" },
             "color",
             "is_active",
           ]}
@@ -93,13 +92,6 @@ export default function ManagedListsEditor({
                   value: m.id,
                 })),
               },
-              {
-                key: "asset_class_id",
-                type: "managed-list",
-                managedListName: "Asset Class",
-                label: "Asset Class",
-                required: false,
-              },
               { key: "color", type: "color" },
             ],
           }}
@@ -122,13 +114,6 @@ export default function ManagedListsEditor({
                 key: "list_id",
                 type: "select",
                 selectList: lists.map((m) => ({ label: m.name, value: m.id })),
-              },
-              {
-                key: "asset_class_id",
-                type: "managed-list",
-                managedListName: "Asset Class",
-                label: "Asset Class",
-                required: false,
               },
               { key: "color", type: "color" },
               { key: "is_active", type: "boolean" },
