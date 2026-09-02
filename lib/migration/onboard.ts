@@ -128,8 +128,7 @@ export async function onboardNewOrganisations(
     for (const [f, v] of [
       ["utility_type_id", o.utility_type_id], ["utility_size_id", o.utility_size_id],
       ["operating_basis_id", o.operating_basis_id], ["entity_type_id", o.entity_type_id],
-      ["accounting_standard_id", o.accounting_standard_id], ["electricity_regulation_id", o.electricity_regulation_id],
-      ["powerquality_standard_id", o.powerquality_standard_id], ["ppa_membership_type_id", o.ppa_membership_type_id],
+      ["ppa_membership_type_id", o.ppa_membership_type_id],
       ["services_provided_id", o.services_provided_id],
     ] as const)
       if (v != null && !mliIds.has(v)) res.errors.push(`${tag}: ${f} ${v} is not a managed_list_items id`);
@@ -195,9 +194,6 @@ export async function onboardNewOrganisations(
       utility_size_id: o.utility_size_id,
       operating_basis_id: o.operating_basis_id,
       entity_type_id: o.entity_type_id,
-      accounting_standard_id: o.accounting_standard_id,
-      electricity_regulation_id: o.electricity_regulation_id,
-      powequality_standard_id: o.powerquality_standard_id,
       ppa_membership_type_id: o.ppa_membership_type_id,
       services_provided_id: o.services_provided_id,
       is_active: o.is_active,
