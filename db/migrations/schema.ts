@@ -661,7 +661,6 @@ export const kpiCalculationAttempts = pgTable("kpi_calculation_attempts", {
 	maxRetries: integer("max_retries").default(3).notNull(),
 	failureReason: text("failure_reason"),
 	failureType: varchar("failure_type", { length: 32 }),
-	deferredFollowUp: boolean("deferred_follow_up").default(false).notNull(),
 	startedAt: timestamp("started_at", { mode: 'string' }),
 	completedAt: timestamp("completed_at", { mode: 'string' }),
 	createdAt: timestamp("created_at", { mode: 'string' }).defaultNow().notNull(),
