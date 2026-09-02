@@ -29,7 +29,12 @@ export const buildScopeLockKey = (scope: KpiWorkerScope): string => {
 
 const toLockId = (key: string): string => {
   const hash = crypto.createHash("sha256").update(key).digest("hex");
-  return BigInt("0x" + hash.substring(0, 16)).toString();
+  // Postgres advisory-lock keys are SIGNED bigint (max 9.22e18). The top 64 bits
+  // of the hash are UNSIGNED (up to 1.8e19), so ~half overflow when the high bit
+  // is set ("bigint out of range"). Wrap into signed 64-bit range — deterministic
+  // (same key → same id), just always in range.
+  const unsigned = BigInt("0x" + hash.substring(0, 16));
+  return BigInt.asIntN(64, unsigned).toString();
 };
 
 export const acquireScopeLock = async (
