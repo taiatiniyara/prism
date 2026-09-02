@@ -105,6 +105,17 @@ export async function getUnifiedFormulaBuilderData(
     scopeByMeasure.set(s.measure_id, list);
   }
 
+  // Order each measure's applicable dimensions by the canonical PRISM 2 order
+  // (DIMENSIONS: provider → category → technology → asset_class → customer_type
+  // → payment_mode → consumption_band → division → gender → utility_function),
+  // so the tag cards render in a consistent, expected sequence.
+  const dimOrder = new Map(DIMENSIONS.map((d, i) => [d.field, i]));
+  for (const list of scopeByMeasure.values()) {
+    list.sort(
+      (a, b) => (dimOrder.get(a.field) ?? 99) - (dimOrder.get(b.field) ?? 99),
+    );
+  }
+
   const measures: MeasureCatalogueItem[] = measureRows.map((m) => ({
     id: m.id,
     name: m.name,
