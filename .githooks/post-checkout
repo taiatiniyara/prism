@@ -1,0 +1,18 @@
+#!/bin/sh
+# Nudge (advisory only): after switching branches / adding a worktree, warn if
+# dependencies look missing or the lockfile differs, so tsc/eslint/build/dev
+# don't fail on an empty node_modules (gitignored; not restored by git).
+# Args: $1 prev_HEAD  $2 new_HEAD  $3 flag (1 = branch checkout, 0 = file checkout)
+# LIVE copy in .git/hooks/post-checkout. Activate on a fresh clone:
+#   git config core.hooksPath .githooks
+
+[ "$3" = "1" ] || exit 0   # only on branch/worktree checkouts, not file restores
+
+count=$(ls -1 node_modules 2>/dev/null | wc -l | tr -d ' ')
+if [ "${count:-0}" -lt 5 ]; then
+  echo ">> [deps] node_modules looks empty/missing — run 'npm ci' in the MAIN tree"
+  echo ">>        (C:/Users/eugen/prism) before tsc/eslint/build/dev; worktrees junction to it."
+elif ! git diff --quiet "$1" "$2" -- package-lock.json 2>/dev/null; then
+  echo ">> [deps] package-lock.json differs after this checkout — run 'npm ci' to sync dependencies."
+fi
+exit 0
