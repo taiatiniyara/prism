@@ -102,3 +102,11 @@ git fetch origin && git switch -c <descriptive-name> origin/main
 (or `git worktree add <path> origin/main` for isolated/parallel work — the pattern the coordination session uses). If unsure what branch you're on, run `scripts/repo-truth.sh` first (it prints your branch + how it compares to origin/main).
 
 Safety net: the `pre-commit` hook prints an **advisory** (never blocks) when your first commit is landing on a branch that has no commits beyond `origin/main` and is behind it — i.e. not cut from current `origin/main`. Heed it and re-branch before continuing. (Set by Eugene 2026-09-02.)
+
+## Deploys are serialized — don't merge-storm
+
+**Root cause of the 2026-09-02 pipeline outages: concurrent merges → concurrent deploys.** Every non-docs merge to `main` triggers `deploy-to-vps`, which SSHes into the **shared** `/root/prism` on the VPS and runs `git pull → rm -rf node_modules → npm ci → build → pm2 restart`. Two deploys running at once race on that one directory — one `rm -rf node_modules` lands mid-`npm ci` of the other → corrupted `node_modules` / npm cache (the ENOTEMPTY + ENOENT failures).
+
+**ENFORCED (the means):** the deploy workflow now carries `concurrency: { group: deploy-to-vps, cancel-in-progress: false }`, so **deploys run strictly one at a time** — a merge landing while a deploy is running QUEUES its deploy instead of colliding, and a running deploy is never interrupted mid-install. GitHub serializes this; no coordination lapse can defeat it.
+
+**Still the practice:** **sequence merges to `main`, one at a time — don't fire several concurrently.** When multiple PRs are ready together, land them one-by-one (ideally let each deploy go green before the next). #1 (coordination) sequences merges when several streams are ready at once. The concurrency gate makes concurrent merges *safe*; a one-at-a-time cadence keeps deploys fast and history clean. (Set by Eugene 2026-09-03; root-caused by his engineer.)
