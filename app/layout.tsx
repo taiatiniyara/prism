@@ -68,10 +68,10 @@ export default function RootLayout({
           toastOptions={{
             unstyled: true,
             classNames: {
-              success: "bg-lime-500",
-              error: "bg-red-500",
-              warning: "bg-amber-500",
-              info: "bg-blue-500",
+              success: "bg-success",
+              error: "bg-danger",
+              warning: "bg-warning",
+              info: "bg-info",
               loading:
                 "bg-slate-700 border border-slate-500 text-white [&_svg]:text-white [&_svg]:stroke-white",
             },

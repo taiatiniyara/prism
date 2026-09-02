@@ -266,21 +266,17 @@
 .chat-prose li { margin: 0.125rem 0; }
 .chat-prose li > p { margin: 0; }
 .chat-prose strong { font-weight: 600; }
-.chat-prose a { color: #2563eb; text-decoration: none; }
+.chat-prose a { color: var(--info); text-decoration: none; }
 .chat-prose a:hover { text-decoration: underline; }
 .chat-prose blockquote {
-  border-left: 2px solid #e2e8f0;
+  border-left: 2px solid var(--border);
   padding-left: 0.75rem;
   margin: 0.5rem 0;
-  color: #64748b;
+  color: var(--muted-foreground);
 }
-.chat-prose hr { border: none; border-top: 1px solid #e2e8f0; margin: 0.75rem 0; }
+.chat-prose hr { border: none; border-top: 1px solid var(--border); margin: 0.75rem 0; }
 .chat-prose img { border-radius: 0.5rem; max-width: 100%; }
-.chat-prose cite { font-size: 0.75rem; color: #94a3b8; }
-
-.dark .chat-prose blockquote { border-color: #475569; color: #94a3b8; }
-.dark .chat-prose hr { border-color: #334155; }
-.dark .chat-prose a { color: #60a5fa; }
+.chat-prose cite { font-size: 0.75rem; color: var(--muted-foreground); }
 
 @keyframes cursor-blink {
   0%, 100% { opacity: 1; }

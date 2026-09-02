@@ -662,9 +662,9 @@ export default function DataTable<T extends DataTableRecord>(
         );
       }
       return row[col] ? (
-        <span className="text-lime-500">{"Yes"}</span>
+        <span className="text-success">{"Yes"}</span>
       ) : (
-        <span className="text-slate-600">{"No"}</span>
+        <span className="text-muted-foreground">{"No"}</span>
       );
     }
     if (col === "color") {
