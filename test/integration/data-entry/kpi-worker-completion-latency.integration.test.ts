@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { executeWithRetry } from "@/app/data-entry/kpi-worker/retry";
+import { executeWithRetry } from "@/lib/retry";
 
 describe("kpi worker completion latency", () => {
   it("completes successful calculation path within two minutes target", async () => {

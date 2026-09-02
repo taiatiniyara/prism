@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 
 import { analyzeFormula } from "@/lib/formula/arithmetic";
+import { executeWithRetry, isTransientDbError } from "@/lib/retry";
 import type { CurrentUser } from "@/lib/user.service";
 
 import {
@@ -13,7 +14,6 @@ import {
 } from "./repository";
 import { evaluateKpiFormula } from "./evaluator";
 import { upsertCalculatedKpiValue } from "./persistKpi";
-import { executeWithRetry, isTransientKpiError } from "./retry";
 import { resolveFormulaInputValues } from "./resolveInputs";
 import { resolveAffectedKpiTargets } from "./resolveTargets";
 import { assertKpiWorkerScopeAuthorization } from "./scopeGuard";
@@ -237,7 +237,7 @@ export async function runKpiWorker(
         failedKpiCount += 1;
         await markAttemptFailed(
           currentAttemptId,
-          isTransientKpiError(error) ? "transient-infra" : "unexpected",
+          isTransientDbError(error) ? "transient-infra" : "unexpected",
           String(error),
         );
         continue;
