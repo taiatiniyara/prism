@@ -131,10 +131,16 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
 
   const filteredTargets = useMemo(
     () =>
-      targets.filter((t) =>
-        onlyWithoutFormula ? !t.isProperlyConfigured : true,
+      targets.filter(
+        (t) =>
+          // Always keep the currently-selected target in the list, even after
+          // Save & Compute flips it to properly-configured — otherwise it drops
+          // out of the "needs setup/repair" filter and the dropdown blanks while
+          // the formula + tag-cards stay visible (looks like the selection was lost).
+          t.id === selectedTargetId ||
+          (onlyWithoutFormula ? !t.isProperlyConfigured : true),
       ),
-    [targets, onlyWithoutFormula],
+    [targets, onlyWithoutFormula, selectedTargetId],
   );
 
   const variables = useMemo(() => formulaVariables(formula), [formula]);
