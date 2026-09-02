@@ -392,7 +392,9 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     errors: number;
   }> => {
     const focusId = selectedTargetId ?? undefined;
-    const plan = await planCalculatedMeasureCompute();
+    // Scope the whole run to the selected measure — compute + KPI republish
+    // touch only it, not every calculated measure. (No selection ⇒ whole set.)
+    const plan = await planCalculatedMeasureCompute(focusId);
     const total = plan.periodIds.length;
     setRecompute({ processed: 0, failed: 0, byPeriod: [] });
     if (total === 0) {
@@ -412,6 +414,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
         periodIds: chunk,
         focusMeasureId: focusId,
         dependentKpiIds: plan.dependentKpiIds,
+        targetInputDefIds: plan.targetInputDefIds,
         revalidate: isLast,
       });
       calculated += c.calculated;
@@ -882,10 +885,48 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                       : "Apply to previous and current periods"}
               </Button>
             )}
-            <span className="text-muted-foreground ml-auto text-xs">
+            {computeProgress && (
+              <div
+                className="ml-2 flex min-w-[12rem] flex-1 items-center gap-2"
+                aria-live="polite"
+              >
+                <span className="text-xs font-medium whitespace-nowrap">
+                  Computing period{" "}
+                  {Math.min(computeProgress.done + 1, computeProgress.total)} of{" "}
+                  {computeProgress.total}…
+                </span>
+                <div className="bg-muted h-1.5 flex-1 overflow-hidden rounded-full">
+                  <div
+                    className="bg-primary h-full rounded-full transition-all duration-300"
+                    style={{
+                      width: `${
+                        computeProgress.total > 0
+                          ? (computeProgress.done / computeProgress.total) * 100
+                          : 0
+                      }%`,
+                    }}
+                  />
+                </div>
+                <span className="text-muted-foreground text-xs tabular-nums">
+                  {computeProgress.total > 0
+                    ? Math.round(
+                        (computeProgress.done / computeProgress.total) * 100,
+                      )
+                    : 0}
+                  %
+                </span>
+              </div>
+            )}
+            <span className="text-muted-foreground ml-auto text-xs whitespace-nowrap">
               {activeMeasureCount} measures available
             </span>
           </div>
+          {computeProgress && (
+            <p className="text-muted-foreground text-[11px] leading-snug">
+              Runs in the background across all periods — results fill in below
+              as each batch completes. You can keep this tab open.
+            </p>
+          )}
 
           {activeMode === "kpi" &&
             isDescriptiveProjection &&
@@ -917,47 +958,6 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
               there&rsquo;s nothing to compute here — just{" "}
               <b className="text-foreground">Save</b>.
             </p>
-          )}
-
-          {computeProgress && (
-            <div
-              className="bg-muted/30 rounded-lg border p-3"
-              aria-live="polite"
-            >
-              <div className="mb-1.5 flex items-center justify-between text-xs font-medium">
-                <span>
-                  Computing period {Math.min(
-                    computeProgress.done + 1,
-                    computeProgress.total,
-                  )}{" "}
-                  of {computeProgress.total}…
-                </span>
-                <span className="text-muted-foreground tabular-nums">
-                  {computeProgress.total > 0
-                    ? Math.round(
-                        (computeProgress.done / computeProgress.total) * 100,
-                      )
-                    : 0}
-                  %
-                </span>
-              </div>
-              <div className="bg-muted h-1.5 w-full overflow-hidden rounded-full">
-                <div
-                  className="bg-primary h-full rounded-full transition-all duration-300"
-                  style={{
-                    width: `${
-                      computeProgress.total > 0
-                        ? (computeProgress.done / computeProgress.total) * 100
-                        : 0
-                    }%`,
-                  }}
-                />
-              </div>
-              <p className="text-muted-foreground mt-1.5 text-[11px] leading-snug">
-                Runs in the background across all periods — results fill in below
-                as each batch completes. You can keep this tab open.
-              </p>
-            </div>
           )}
 
           {recompute && (
