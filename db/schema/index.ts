@@ -12,6 +12,7 @@ export * from "./kpi";
 export * from "./managedLists";
 export * from "./measureDimensionScope";
 export * from "./measureDimensionApplicability";
+export * from "./measureStrataHistory";
 export * from "./migration-log";
 export * from "./migrationLoads";
 export * from "./migrationRejections";

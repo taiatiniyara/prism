@@ -38,10 +38,22 @@ export async function missingUtilityLevelShells(): Promise<Finding> {
         -- the role may not exist, purchases where there's no IPP) can be legitimately
         -- absent, so their absence is never a gap. Per Eugene's classification 2026-08-25.
         AND md.is_mandatory
-        -- utility grain (strata "Utility") specifically — service-area (strata 3) and
-        -- unit (strata 1) measures are covered by their own classes below/above
-        AND md.strata_id = (SELECT id FROM managed_list_items WHERE name = 'Utility'
-                            AND list_id = (SELECT id FROM managed_lists WHERE name = 'Strata'))
+        -- utility-grain CANDIDATES — service-area and unit measures are covered by their
+        -- own classes below/above. Grain is effective-dated (measure_strata_history): a
+        -- measure can be utility-grain in some FYs and another grain in others (e.g. Feeder
+        -- Type moved Utility -> ServiceArea @2026). Prefilter to measures that are utility-
+        -- grain in ANY FY (base OR a history row); the PERIOD-CORRECT grain is then enforced
+        -- per-period below via effective_strata_id(), so a re-grained measure drops out of
+        -- utility-level only for the periods it no longer belongs there.
+        AND (
+          md.strata_id = (SELECT id FROM managed_list_items WHERE name = 'Utility'
+                          AND list_id = (SELECT id FROM managed_lists WHERE name = 'Strata'))
+          OR EXISTS (
+            SELECT 1 FROM measure_strata_history h
+            WHERE h.measure_def_id = md.id
+              AND h.strata_id = (SELECT id FROM managed_list_items WHERE name = 'Utility'
+                                 AND list_id = (SELECT id FROM managed_lists WHERE name = 'Strata')))
+        )
         AND NOT EXISTS (
           SELECT 1 FROM measure_dimension_scope s
           WHERE s.measure_id = md.id AND s.expansion_mode <> 'not_applicable')
@@ -63,6 +75,12 @@ export async function missingUtilityLevelShells(): Promise<Finding> {
     CROSS JOIN periods p
     WHERE (ul.effective_from IS NULL
            OR EXTRACT(year FROM p.report_date) >= EXTRACT(year FROM ul.effective_from))
+      -- period-correct grain: expect the measure at utility level only for periods whose
+      -- effective strata (base, or an effective-dated override) is Utility. Historical
+      -- periods of a re-grained measure keep resolving to their original grain.
+      AND effective_strata_id(ul.id, EXTRACT(year FROM p.report_date)::smallint) =
+          (SELECT id FROM managed_list_items WHERE name = 'Utility'
+           AND list_id = (SELECT id FROM managed_lists WHERE name = 'Strata'))
       AND NOT EXISTS (
         SELECT 1 FROM data_entries de
         WHERE de.measure_def_id = ul.id AND de.report_period_id = p.id AND de.is_deleted = false)
@@ -85,6 +103,9 @@ export async function generationCoverageDiff(): Promise<Finding> {
       -- unit-grain measures (strata "Unit"), effective within the migrated window. Precise
       -- via strata_id (not a scope heuristic); the effective filter drops not-yet-effective
       -- ones (2026 solar irradiance / storage) whose absence is correct, not a gap.
+      -- NB: uses BASE strata_id (not effective_strata_id) deliberately — no measure is
+      -- effective-dated INTO or OUT of Unit grain, so base == effective here. If a unit-ward
+      -- re-grain is ever added to measure_strata_history, route this through effective_strata_id.
       SELECT md.id AS measure_id
       FROM measure_definitions md
       WHERE md.strata_id = (SELECT id FROM managed_list_items WHERE name = 'Unit'
