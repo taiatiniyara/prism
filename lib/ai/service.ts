@@ -172,14 +172,26 @@ const getModelConfig = (fallback: boolean) => {
   const baseConfig = {
     model: anthropic(modelName),
     modelName,
-    maxOutputTokens: thinking ? 8000 : 2500,
+    // Output budget is a CEILING, not a target — the model only spends what it needs,
+    // so a higher cap costs nothing extra on short answers. The old 8000 was too tight
+    // for the reasoning model: on data questions the summarized reasoning consumed the
+    // whole budget and the final answer was truncated to empty ("model output limits").
+    // 32000 leaves ample room for reasoning + a full data answer.
+    maxOutputTokens: thinking ? 32000 : 2500,
     ...(thinking ? {} : { temperature: fallback ? 0.3 : 0.4 }),
   };
 
   return {
     ...baseConfig,
     providerOptions: thinking
-      ? { anthropic: { thinking: { type: "adaptive" as const, display: "summarized" as const }, effort: "medium" as const } }
+      ? {
+          anthropic: {
+            // "low" effort keeps the reasoning proportionate so it doesn't crowd out
+            // the answer (it was medium; data queries produced very long chains).
+            thinking: { type: "adaptive" as const, display: "summarized" as const },
+            effort: "low" as const,
+          },
+        }
       : undefined,
   };
 };
