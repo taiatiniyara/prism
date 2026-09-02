@@ -14,7 +14,11 @@ import {
 
 import DataTableUpdateForm from "./data-table-update-form";
 import { formatLabel } from "@/lib/formatters";
-import { useFormId, useFormOverrides } from "../dev/form-overrides-provider";
+import {
+  useFormId,
+  useFormOverrides,
+  useReorderableList,
+} from "../dev/form-overrides-provider";
 import BooleanToggle from "./booleanToggle";
 import { FaSquare } from "react-icons/fa";
 import {
@@ -105,7 +109,10 @@ export default function DataTable<T extends DataTableRecord>(
     reorderRowsProps,
   } = props;
   const formId = useFormId();
-  const { getLabel } = useFormOverrides();
+  // Columns live under a separate namespace so a column key can't collide with
+  // a form-field key of the same name (both keyed by route otherwise).
+  const columnFormId = `${formId}::columns`;
+  const { getLabel, reorderActive } = useFormOverrides();
 
   const [search, setSearch] = useState("");
   const [sortColumn, setSortColumn] = useState<keyof T | null>(null);
@@ -141,6 +148,10 @@ export default function DataTable<T extends DataTableRecord>(
       }),
     [columns],
   );
+
+  // DEV column reorder (drag headers). Same store as form fields, namespaced.
+  const { ordered: displayColumns, dragProps: colDragProps } =
+    useReorderableList(columnFormId, normalizedColumns, (c) => String(c.name));
 
   const quickFilterColumns = useMemo(
     () => quickFilters?.map((filter) => filter.column) ?? [],
@@ -883,10 +894,14 @@ export default function DataTable<T extends DataTableRecord>(
                   Move
                 </th>
               )}
-              {normalizedColumns.map((column) => (
+              {displayColumns.map((column) => (
                 <th
                   key={String(column.name)}
-                  onClick={() => handleSort(column.name)}
+                  onClick={() => {
+                    // While reordering, a header click is a drag target, not a sort.
+                    if (!reorderActive) handleSort(column.name);
+                  }}
+                  {...colDragProps(String(column.name))}
                   className={cn(
                     "whitespace-nowrap px-4 py-2.5 text-left font-semibold uppercase tracking-wider",
                     "text-muted-foreground select-none cursor-pointer",
@@ -1025,7 +1040,7 @@ export default function DataTable<T extends DataTableRecord>(
                         </div>
                       </td>
                     )}
-                    {normalizedColumns.map((column) => (
+                    {displayColumns.map((column) => (
                       <td
                         key={String(column.name)}
                         className="whitespace-nowrap px-4 py-2.5 text-foreground"
