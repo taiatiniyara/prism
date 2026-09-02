@@ -500,14 +500,15 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                   selectedTargetId != null ? String(selectedTargetId) : undefined
                 }
                 onValueChange={handleSelectTarget}
-                options={filteredTargets.map((t) => ({
-                  value: String(t.id),
-                  label: t.isProperlyConfigured
+                options={filteredTargets.map((t) => {
+                  const name = t.isProperlyConfigured
                     ? t.name
                     : t.hasFormula
                       ? `${t.name} — needs repair`
-                      : `${t.name} — no formula`,
-                }))}
+                      : `${t.name} — no formula`;
+                  // Prefix the id (also makes the option searchable by id).
+                  return { value: String(t.id), label: `${t.id} · ${name}` };
+                })}
                 placeholder={
                   activeMode === "kpi" ? "Select a KPI…" : "Select a measure…"
                 }
