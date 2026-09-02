@@ -106,7 +106,15 @@ export function InputTagCard({
           {measure ? (
             <span className="text-muted-foreground text-xs">
               reads{" "}
-              <b className="text-foreground font-semibold">{measure.name}</b>
+              <a
+                href={`/settings/measure-scope?measure=${measure.id}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                title="Edit this measure's dimension scope (opens in a new tab)"
+                className="text-foreground font-semibold underline decoration-dotted underline-offset-2 hover:decoration-solid"
+              >
+                {measure.name}
+              </a>
               {measure.unitLabel ? ` (${measure.unitLabel})` : ""}
             </span>
           ) : (
