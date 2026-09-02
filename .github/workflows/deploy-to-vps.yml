@@ -11,6 +11,16 @@ on:
       - "docs/**"
       - "**.md"
 
+# Serialize deploys: only ONE deploy runs at a time. Concurrent deploys SSH into the
+# SAME /root/prism on the VPS and race on `rm -rf node_modules` / `npm ci`, corrupting
+# node_modules + the npm cache (the ENOTEMPTY + ENOENT pipeline outages of 2026-09-02,
+# root-caused to concurrent merges/deploys). Extra pushes now QUEUE their deploy instead
+# of colliding. cancel-in-progress:false so a running deploy is never interrupted
+# mid-install (which would itself leave corrupted deps).
+concurrency:
+  group: deploy-to-vps
+  cancel-in-progress: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
