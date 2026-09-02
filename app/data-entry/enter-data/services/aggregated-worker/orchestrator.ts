@@ -172,10 +172,11 @@ export interface AggregatedWorkerOptions {
    * Restrict the run to these calculated-measure targets (by inputDefId) instead
    * of the whole calculated-measure set. Omitted / empty ⇒ the whole set (the
    * default the data-entry triggers rely on). Used by the formula builder's
-   * Save & Compute so editing ONE measure recomputes and re-writes only that
-   * measure — not every known calculated measure. Any calculated-measure inputs
-   * a scoped target references are read from their already-stored values in the
-   * source snapshot (they are not themselves recomputed).
+   * Save & Compute to scope the run to the edited measure and its upstream
+   * calculated-dependency closure — not every known calculated measure. Targets
+   * in this set are (re)computed in dependency order; any calculated input a
+   * target references that is NOT itself in the set is read from its
+   * already-stored snapshot value (not recomputed).
    */
   targetInputDefIds?: number[];
 }
