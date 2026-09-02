@@ -5,7 +5,6 @@ import type { CurrentUser } from "@/lib/user.service";
 import { computeKpiTarget } from "./compute-kpi-target";
 import { extractErrorMetadata } from "./error-metadata";
 import {
-  markDeferredFollowUpForScope,
   createKpiCalculationAttempt,
   markAttemptCompleted,
   markAttemptFailed,
@@ -51,10 +50,6 @@ export async function runKpiWorker(
 
   if (!(await acquireScopeLock(trigger.scope))) {
     markDeferredFollowUp(trigger.scope);
-    await markDeferredFollowUpForScope(
-      trigger.scope.reportPeriodId,
-      trigger.scope,
-    );
 
     console.warn("[KPI worker] run deferred due to scope lock", {
       runId,
