@@ -32,16 +32,20 @@ export const useFormOverrides = () => useContext(FormOverridesContext);
 // formId = the settings route path (stable, one DataTable per page in practice).
 export const useFormId = (): string => usePathname() || "/";
 
-// Hover outline only while the label editor is on; ignore the editor's own panel.
+// Outline labels while editing; the element being edited gets a solid amber ring.
+// Editing happens IN PLACE (contentEditable), so it works inside modals/sheets too.
 const EDIT_CSS = `
 body[data-form-edit="on"] [data-form-field-key]{outline:1px dashed #f59e0b !important;outline-offset:2px;cursor:text !important;}
+body[data-form-edit="on"] [data-form-field-key][contenteditable="true"]{outline:2px solid #f59e0b !important;background:#fffbeb !important;border-radius:3px;}
 body[data-form-edit="on"] [data-form-overrides-ui] [data-form-field-key]{outline:none !important;cursor:auto !important;}
 `;
 
-interface Selected {
+interface Editing {
+  el: HTMLElement;
   formId: string;
   fieldKey: string;
   fallback: string;
+  original: string;
 }
 
 export default function FormOverridesProvider({
@@ -52,9 +56,9 @@ export default function FormOverridesProvider({
   const [overrides, setOverrides] = useState<FormOverrideMap>({});
   const [canEdit, setCanEdit] = useState(false);
   const [active, setActive] = useState(false);
-  const [selected, setSelected] = useState<Selected | null>(null);
-  const [draft, setDraft] = useState("");
   const overridesRef = useRef<FormOverrideMap>({});
+  const editingRef = useRef<Editing | null>(null);
+
   useEffect(() => {
     overridesRef.current = overrides;
   }, [overrides]);
@@ -93,70 +97,121 @@ export default function FormOverridesProvider({
     }).catch(() => {});
   }, []);
 
-  // Capture clicks on labelled elements while editing.
+  // Finish the in-place edit: save the new text (or revert on cancel).
+  const commitEdit = useCallback(
+    (save: boolean) => {
+      const ed = editingRef.current;
+      if (!ed) return;
+      editingRef.current = null;
+      ed.el.removeAttribute("contenteditable");
+      ed.el.onkeydown = null;
+      ed.el.onblur = null;
+      if (save) {
+        const text = (ed.el.textContent || "").trim();
+        const patch =
+          text === "" || text === ed.fallback
+            ? { label: undefined }
+            : { label: text };
+        // React re-renders the label from the new override; keep the DOM in sync
+        // meanwhile so there's no flicker.
+        ed.el.textContent = patch.label ?? ed.fallback;
+        persist(
+          setFieldOverride(overridesRef.current, ed.formId, ed.fieldKey, patch),
+        );
+      } else {
+        ed.el.textContent = ed.original;
+      }
+    },
+    [persist],
+  );
+
+  const toggleActive = useCallback(() => {
+    if (editingRef.current) commitEdit(true);
+    setActive((a) => !a);
+  }, [commitEdit]);
+
+  // Alt+E toggles edit mode — works even while a modal/sheet is open (a click on
+  // the floating button would count as an outside-interaction and close a modal).
+  useEffect(() => {
+    if (!canEdit) return;
+    const onKey = (e: KeyboardEvent) => {
+      if (e.altKey && (e.key === "e" || e.key === "E")) {
+        e.preventDefault();
+        toggleActive();
+      }
+    };
+    document.addEventListener("keydown", onKey);
+    return () => document.removeEventListener("keydown", onKey);
+  }, [canEdit, toggleActive]);
+
+  // Click a labelled element (while editing) → edit it in place.
   useEffect(() => {
     if (!active) return;
     const handler = (ev: MouseEvent) => {
       const target = ev.target as HTMLElement | null;
       if (!target) return;
-      if (target.closest("[data-form-overrides-ui]")) return; // our own panel
+      if (target.closest("[data-form-overrides-ui]")) return; // our own toggle
       const el = target.closest<HTMLElement>("[data-form-field-key]");
       if (!el) return;
+      if (editingRef.current?.el === el) return; // already editing this one
       ev.preventDefault();
       ev.stopPropagation();
+      if (editingRef.current) commitEdit(true); // commit a previous edit
       const formId = el.getAttribute("data-form-id") || "/";
       const fieldKey = el.getAttribute("data-form-field-key") || "";
-      const fallback = (el.getAttribute("data-form-default-label") || el.textContent || "").trim();
-      setSelected({ formId, fieldKey, fallback });
-      setDraft(resolveLabel(overridesRef.current, formId, fieldKey, fallback));
+      const fallback = (el.getAttribute("data-form-default-label") || "").trim();
+      editingRef.current = {
+        el,
+        formId,
+        fieldKey,
+        fallback,
+        original: el.textContent || "",
+      };
+      el.setAttribute("contenteditable", "true");
+      el.focus();
+      const range = document.createRange();
+      range.selectNodeContents(el);
+      const sel = window.getSelection();
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+      el.onkeydown = (e: KeyboardEvent) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commitEdit(true);
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          commitEdit(false);
+        }
+      };
+      el.onblur = () => commitEdit(true);
     };
     document.addEventListener("click", handler, true);
     return () => document.removeEventListener("click", handler, true);
-  }, [active]);
+  }, [active, commitEdit]);
 
-  const saveSelected = () => {
-    if (!selected) return;
-    const value = draft.trim();
-    // Empty or equal-to-default clears the override.
-    const patch =
-      value === "" || value === selected.fallback
-        ? { label: undefined }
-        : { label: value };
-    persist(
-      setFieldOverride(overridesRef.current, selected.formId, selected.fieldKey, patch),
-    );
-    setSelected(null);
-  };
-
-  const resetSelected = () => {
-    if (!selected) return;
-    persist(
-      setFieldOverride(overridesRef.current, selected.formId, selected.fieldKey, {
-        label: undefined,
-      }),
-    );
-    setSelected(null);
-  };
-
-  const value = useMemo<FormOverridesContextValue>(() => ({ getLabel }), [getLabel]);
+  const value = useMemo<FormOverridesContextValue>(
+    () => ({ getLabel }),
+    [getLabel],
+  );
 
   return (
     <FormOverridesContext.Provider value={value}>
       {children}
       {canEdit && (
-        <div data-form-overrides-ui>
+        // pointer-events:auto keeps the toggle clickable even when a radix modal
+        // sets `pointer-events:none` on the background.
+        <div data-form-overrides-ui style={{ pointerEvents: "auto" }}>
           <style>{EDIT_CSS}</style>
           <button
             type="button"
-            onClick={() => {
-              setActive((on) => !on);
-              setSelected(null);
-            }}
+            title="Toggle label editing (Alt+E)"
+            onClick={toggleActive}
             style={{
               position: "fixed",
               right: 16,
               bottom: 96,
               zIndex: 2147483000,
+              pointerEvents: "auto",
               padding: "8px 12px",
               borderRadius: 10,
               border: "1px solid #334155",
@@ -168,70 +223,8 @@ export default function FormOverridesProvider({
               cursor: "pointer",
             }}
           >
-            {active ? "✓ Editing labels" : "✎ Edit labels"}
+            {active ? "✓ Editing labels · Alt+E" : "✎ Edit labels · Alt+E"}
           </button>
-
-          {active && selected && (
-            <div
-              style={{
-                position: "fixed",
-                right: 16,
-                bottom: 148,
-                zIndex: 2147483000,
-                width: 300,
-                padding: 14,
-                borderRadius: 12,
-                border: "1px solid #334155",
-                background: "#fff",
-                boxShadow: "0 12px 40px -12px rgba(0,0,0,.4)",
-              }}
-            >
-              <div style={{ fontSize: 11, color: "#64748b", marginBottom: 6 }}>
-                {selected.formId} · <code>{selected.fieldKey}</code>
-              </div>
-              <input
-                autoFocus
-                value={draft}
-                onChange={(e) => setDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") saveSelected();
-                  if (e.key === "Escape") setSelected(null);
-                }}
-                placeholder={selected.fallback}
-                style={{
-                  width: "100%",
-                  height: 36,
-                  padding: "0 10px",
-                  borderRadius: 8,
-                  border: "1px solid #cbd5e1",
-                  fontSize: 14,
-                }}
-              />
-              <div style={{ display: "flex", gap: 8, marginTop: 10, justifyContent: "flex-end" }}>
-                <button
-                  type="button"
-                  onClick={resetSelected}
-                  style={{ fontSize: 12, color: "#64748b", background: "none", border: "none", cursor: "pointer" }}
-                >
-                  Reset to default
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setSelected(null)}
-                  style={{ fontSize: 13, padding: "6px 10px", borderRadius: 8, border: "1px solid #cbd5e1", background: "#fff", cursor: "pointer" }}
-                >
-                  Cancel
-                </button>
-                <button
-                  type="button"
-                  onClick={saveSelected}
-                  style={{ fontSize: 13, padding: "6px 10px", borderRadius: 8, border: "1px solid #4338ca", background: "#4338ca", color: "#fff", cursor: "pointer" }}
-                >
-                  Save
-                </button>
-              </div>
-            </div>
-          )}
         </div>
       )}
     </FormOverridesContext.Provider>
