@@ -1,10 +1,8 @@
 import DataTable from "@/components/tables/data-table";
 import { MeasureDefinition } from "@/db/schema/dataEntry";
-import InputFormulaBuilder from "./formulaBuilder";
 import {
   CreateMeasureDefinition,
   GetAllMeasureDefinitions,
-  GetInputFormulaBuilderData,
   UpdateMeasureDefinition,
 } from "./service";
 import UploadInputsFromExcel from "./uploadFromExcel";
@@ -17,14 +15,12 @@ import { getUnifiedFormulaBuilderData } from "@/app/settings/kpi/unified-formula
 type InputsTab =
   | "definitions"
   | "formula-builder"
-  | "new-formula-builder"
   | "upload"
   | "map-builder";
 
 function resolveDefaultTab(tab: string | undefined): InputsTab {
   if (
     tab === "formula-builder" ||
-    tab === "new-formula-builder" ||
     tab === "upload" ||
     tab === "definitions" ||
     tab === "map-builder"
@@ -40,7 +36,6 @@ export default async function InputsSettingsPage(props: {
   const searchParams = await Promise.resolve(props.searchParams);
   const defaultTab = resolveDefaultTab(searchParams?.tab);
   const measureDefinitions = await GetAllMeasureDefinitions();
-  const formulaBuilderData = await GetInputFormulaBuilderData();
   const unifiedMeasureData = await getUnifiedFormulaBuilderData("measure");
 
   return (
@@ -52,9 +47,6 @@ export default async function InputsSettingsPage(props: {
         <TabsList className="h-auto flex-wrap justify-start gap-2 p-1">
           <TabsTrigger value="definitions">Definitions</TabsTrigger>
           <TabsTrigger value="formula-builder">Formula Builder</TabsTrigger>
-          <TabsTrigger value="new-formula-builder">
-            New Formula Builder
-          </TabsTrigger>
           <TabsTrigger value="upload">Upload</TabsTrigger>
           <TabsTrigger value="map-builder">Map Builder</TabsTrigger>
         </TabsList>
@@ -155,22 +147,6 @@ export default async function InputsSettingsPage(props: {
         </TabsContent>
 
         <TabsContent value="formula-builder">
-          <SectionContainer>
-            <p className="mb-4 text-sm text-muted-foreground">
-              Choose an input definition, then build its formula using other
-              input definitions.
-            </p>
-            <InputFormulaBuilder
-              inputs={formulaBuilderData.inputs}
-              energyProviderOptions={formulaBuilderData.energyProviderOptions}
-              energyTypeOptions={formulaBuilderData.energyTypeOptions}
-              energySourceOptions={formulaBuilderData.energySourceOptions}
-              previewContextLabel={formulaBuilderData.previewContextLabel}
-            />
-          </SectionContainer>
-        </TabsContent>
-
-        <TabsContent value="new-formula-builder">
           <SectionContainer>
             <p className="mb-4 text-sm font-bold">
               Build or re-build Calculated Measures or KPIs formulas
