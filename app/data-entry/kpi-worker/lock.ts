@@ -5,6 +5,9 @@ import crypto from "node:crypto";
 
 const deferredFollowUps = new Set<string>();
 
+/** Scope keys this process currently holds a Postgres advisory lock for. */
+const activeLocks = new Set<string>();
+
 const normalizeScopeValue = (value: number | null | undefined): number | null =>
   value ?? null;
 
@@ -39,10 +42,15 @@ export const acquireScopeLock = async (
     sql`SELECT pg_try_advisory_lock(${sql.raw(lockId)}::bigint) AS acquired`,
   );
 
-  return result.rows[0]?.acquired === true;
+  const acquired = result.rows[0]?.acquired === true;
+  if (acquired) {
+    // Record that we hold it, so releaseScopeLock actually issues the unlock.
+    // (Without this the advisory lock was only ever cleared when the pooled
+    // connection cycled — a leaked lock could wedge a scope for a long time.)
+    activeLocks.add(key);
+  }
+  return acquired;
 };
-
-const activeLocks = new Set<string>();
 
 export const releaseScopeLock = async (
   scope: KpiWorkerScope,
@@ -53,6 +61,11 @@ export const releaseScopeLock = async (
   if (!activeLocks.has(key)) return;
 
   try {
+    // NOTE: session-level advisory locks are per-connection. On a connection
+    // pool the unlock can land on a different backend than the acquire, making
+    // it a no-op. The robust fix is a transaction-scoped lock
+    // (`pg_advisory_xact_lock`), which rides on the orchestrator consolidation
+    // in #237; this at least issues the unlock on the happy path.
     await db.execute(
       sql`SELECT pg_advisory_unlock(${sql.raw(lockId)}::bigint)`,
     );
