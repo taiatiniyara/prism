@@ -20,12 +20,14 @@ describe("evaluator parity — KPI worker vs aggregated worker", () => {
   ];
 
   it.each(agree)("agree on the value of %j", (formula, vars, expected) => {
-    const kpi = evaluateKpiFormula(formula, vars);
-    const agg = evaluateFormula(formula, vars);
-    expect(kpi.status).toBe("ok");
-    expect(agg.status).toBe("calculated");
-    expect(kpi.value).toBe(expected);
-    expect(agg.value).toBe(expected);
+    expect(evaluateKpiFormula(formula, vars)).toMatchObject({
+      status: "ok",
+      value: expected,
+    });
+    expect(evaluateFormula(formula, vars)).toMatchObject({
+      status: "calculated",
+      value: expected,
+    });
   });
 
   const reject: Array<[string, Record<string, number>]> = [
