@@ -4,7 +4,14 @@ import { useMemo, useState, useCallback, memo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Components } from "react-markdown";
-import { ThumbsUp, ThumbsDown, Copy, Check, RefreshCw, ChevronDown } from "lucide-react";
+import {
+  ThumbsUp,
+  ThumbsDown,
+  Copy,
+  Check,
+  RefreshCw,
+  ChevronDown,
+} from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { VisualizationRenderer } from "./visualizations/visualization-renderer";
 import type { AiVisualization } from "@/lib/ai/types";
@@ -22,35 +29,59 @@ interface MessageBubbleProps {
   isStreaming?: boolean;
   reasoningContent?: string;
   toolProgress?: Array<{ name: string; status: "running" | "done" | "error" }>;
-  onFeedback?: (sentiment: "positive" | "negative", correction?: string) => void;
+  onFeedback?: (
+    sentiment: "positive" | "negative",
+    correction?: string,
+  ) => void;
   onCopy?: (content: string) => void;
   onRegenerate?: () => void;
   copied?: boolean;
 }
 
-function CodeBlock({ lang, code, children, ...props }: { lang: string; code: string; children: React.ReactNode } & React.HTMLAttributes<HTMLElement>) {
+function CodeBlock({
+  lang,
+  code,
+  children,
+  ...props
+}: {
+  lang: string;
+  code: string;
+  children: React.ReactNode;
+} & React.HTMLAttributes<HTMLElement>) {
   const [blockCopied, setBlockCopied] = useState(false);
   const handleCopyBlock = useCallback(() => {
-    navigator.clipboard.writeText(code).then(() => {
-      setBlockCopied(true);
-      setTimeout(() => setBlockCopied(false), 2000);
-    }).catch(() => {});
+    navigator.clipboard
+      .writeText(code)
+      .then(() => {
+        setBlockCopied(true);
+        setTimeout(() => setBlockCopied(false), 2000);
+      })
+      .catch(() => {});
   }, [code]);
 
   return (
     <div className="my-3 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
       <div className="flex items-center justify-between border-b border-slate-200 bg-slate-50 px-3 py-1 dark:border-slate-700 dark:bg-slate-900">
-        <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500">{lang}</span>
+        <span className="text-[10px] font-medium uppercase tracking-wider text-slate-400 dark:text-slate-500">
+          {lang}
+        </span>
         <button
           onClick={handleCopyBlock}
           className="rounded p-0.5 text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
           aria-label="Copy code"
         >
-          {blockCopied ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3" />}
+          {blockCopied ? (
+            <Check className="size-3 text-emerald-500" />
+          ) : (
+            <Copy className="size-3" />
+          )}
         </button>
       </div>
       <pre className="overflow-x-auto bg-slate-50 p-4 text-[13px] leading-relaxed dark:bg-slate-900">
-        <code className={props.className} {...props}>
+        <code
+          className={props.className}
+          {...props}
+        >
           {children}
         </code>
       </pre>
@@ -64,10 +95,21 @@ const markdownComponents: Components = {
     if (isBlock && className) {
       const lang = className.replace("language-", "");
       const codeString = String(children).replace(/\n$/, "");
-      return <CodeBlock lang={lang} code={codeString} {...props}>{children}</CodeBlock>;
+      return (
+        <CodeBlock
+          lang={lang}
+          code={codeString}
+          {...props}
+        >
+          {children}
+        </CodeBlock>
+      );
     }
     return (
-      <code className="rounded bg-slate-100 px-1.5 py-0.5 text-[13px] font-medium text-slate-800 dark:bg-slate-800 dark:text-slate-200" {...props}>
+      <code
+        className="rounded bg-slate-100 px-1.5 py-0.5 text-[13px] font-medium text-slate-800 dark:bg-slate-800 dark:text-slate-200"
+        {...props}
+      >
         {children}
       </code>
     );
@@ -101,7 +143,11 @@ interface ReasoningStep {
   content: string;
 }
 
-const REASONING_STEP_PATTERNS: { pattern: RegExp; label: string; icon: string }[] = [
+const REASONING_STEP_PATTERNS: {
+  pattern: RegExp;
+  label: string;
+  icon: string;
+}[] = [
   { pattern: /\b\d+\.\s*\*?\*?Diagnose\b/i, label: "Diagnose", icon: "🔍" },
   { pattern: /\b\d+\.\s*\*?\*?Connect\b/i, label: "Connect", icon: "🔗" },
   { pattern: /\b\d+\.\s*\*?\*?Position\b/i, label: "Position", icon: "📊" },
@@ -127,8 +173,12 @@ function parseReasoningSteps(text: string): ReasoningStep[] {
   const steps: ReasoningStep[] = [];
   for (let i = 0; i < indices.length; i++) {
     const { index, stepIndex } = indices[i];
-    const nextIndex = i + 1 < indices.length ? indices[i + 1].index : text.length;
-    const content = text.slice(index, nextIndex).replace(REASONING_STEP_PATTERNS[stepIndex].pattern, "").trim();
+    const nextIndex =
+      i + 1 < indices.length ? indices[i + 1].index : text.length;
+    const content = text
+      .slice(index, nextIndex)
+      .replace(REASONING_STEP_PATTERNS[stepIndex].pattern, "")
+      .trim();
     if (content) {
       steps.push({
         label: REASONING_STEP_PATTERNS[stepIndex].label,
@@ -141,9 +191,20 @@ function parseReasoningSteps(text: string): ReasoningStep[] {
   return steps;
 }
 
-function MessageBubbleInner({ message, isStreaming, reasoningContent, toolProgress, onFeedback, onCopy, onRegenerate, copied }: MessageBubbleProps) {
+function MessageBubbleInner({
+  message,
+  isStreaming,
+  reasoningContent,
+  toolProgress,
+  onFeedback,
+  onCopy,
+  onRegenerate,
+  copied,
+}: MessageBubbleProps) {
   const isUser = message.role === "user";
-  const [feedbackGiven, setFeedbackGiven] = useState<"positive" | "negative" | null>(null);
+  const [feedbackGiven, setFeedbackGiven] = useState<
+    "positive" | "negative" | null
+  >(null);
   const [showCorrection, setShowCorrection] = useState(false);
   const [correctionText, setCorrectionText] = useState("");
   const [thinkingOpen, setThinkingOpen] = useState(isStreaming ?? false);
@@ -173,7 +234,9 @@ function MessageBubbleInner({ message, isStreaming, reasoningContent, toolProgre
   };
 
   return (
-    <div className={`flex gap-3 ${isUser ? "flex-row-reverse" : ""} animate-in fade-in slide-in-from-bottom-1 duration-200`}>
+    <div
+      className={`flex gap-3 ${isUser ? "flex-row-reverse" : ""} animate-in fade-in slide-in-from-bottom-1 duration-200`}
+    >
       <div
         className={`mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold ${
           isUser
@@ -184,7 +247,9 @@ function MessageBubbleInner({ message, isStreaming, reasoningContent, toolProgre
         {isUser ? "Y" : "AI"}
       </div>
 
-      <div className={`flex max-w-[80%] flex-col ${isUser ? "items-end" : "items-start"}`}>
+      <div
+        className={`flex max-w-[80%] flex-col ${isUser ? "items-end" : "items-start"}`}
+      >
         <div
           className={`text-sm leading-relaxed ${
             isUser
@@ -194,68 +259,85 @@ function MessageBubbleInner({ message, isStreaming, reasoningContent, toolProgre
                 : "px-1 py-0.5 text-slate-700 dark:text-slate-300"
           }`}
         >
-          {!isUser && (reasoningContent || message.reasoningContent) && (() => {
-            const reasoningText = reasoningContent || message.reasoningContent || "";
-            const steps = parseReasoningSteps(reasoningText);
+          {!isUser &&
+            (reasoningContent || message.reasoningContent) &&
+            (() => {
+              const reasoningText =
+                reasoningContent || message.reasoningContent || "";
+              const steps = parseReasoningSteps(reasoningText);
 
-            return (
-            <div className="mb-3 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
-              <button
-                onClick={() => setThinkingOpen(!thinkingOpen)}
-                className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800/50"
-              >
-                <ChevronDown className={`size-3 transition-transform ${thinkingOpen ? "" : "-rotate-90"}`} />
-                {isStreaming ? "Thinking…" : "Thought for a moment"}
-              </button>
-              {thinkingOpen && (
-                <div className="border-t border-slate-100 dark:border-slate-800">
-                  {toolProgress && toolProgress.length > 0 && (
-                    <div className="border-b border-slate-100 px-3 py-1.5 dark:border-slate-800">
-                      {toolProgress.map((tool, i) => (
-                        <div key={i} className="flex items-center gap-2 py-0.5 text-xs">
-                          {tool.status === "running" ? (
-                            <span className="inline-block size-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
-                          ) : tool.status === "error" ? (
-                            <span className="inline-block size-1.5 rounded-full bg-red-400 shrink-0" />
-                          ) : (
-                            <span className="inline-block size-1.5 rounded-full bg-emerald-400 shrink-0" />
-                          )}
-                          <span className="text-slate-500 dark:text-slate-400">{tool.name}</span>
-                          {tool.status === "running" && (
-                            <span className="text-slate-400 dark:text-slate-500 animate-pulse">running...</span>
-                          )}
+              return (
+                <div className="mb-3 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
+                  <button
+                    onClick={() => setThinkingOpen(!thinkingOpen)}
+                    className="flex w-full items-center gap-2 px-3 py-2 text-xs font-medium text-slate-500 transition-colors hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800/50"
+                  >
+                    <ChevronDown
+                      className={`size-3 transition-transform ${thinkingOpen ? "" : "-rotate-90"}`}
+                    />
+                    {isStreaming ? "Thinking…" : "Thinking for a moment"}
+                  </button>
+                  {thinkingOpen && (
+                    <div className="border-t border-slate-100 dark:border-slate-800">
+                      {toolProgress && toolProgress.length > 0 && (
+                        <div className="border-b border-slate-100 px-3 py-1.5 dark:border-slate-800">
+                          {toolProgress.map((tool, i) => (
+                            <div
+                              key={i}
+                              className="flex items-center gap-2 py-0.5 text-xs"
+                            >
+                              {tool.status === "running" ? (
+                                <span className="inline-block size-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
+                              ) : tool.status === "error" ? (
+                                <span className="inline-block size-1.5 rounded-full bg-red-400 shrink-0" />
+                              ) : (
+                                <span className="inline-block size-1.5 rounded-full bg-emerald-400 shrink-0" />
+                              )}
+                              <span className="text-slate-500 dark:text-slate-400">
+                                {tool.name}
+                              </span>
+                              {tool.status === "running" && (
+                                <span className="text-slate-400 dark:text-slate-500 animate-pulse">
+                                  running...
+                                </span>
+                              )}
+                            </div>
+                          ))}
                         </div>
-                      ))}
-                    </div>
-                  )}
-                  {steps.length > 0 ? (
-                    steps.map((step, i) => (
-                      <details key={i} className="group border-b border-slate-100 last:border-b-0 dark:border-slate-800">
-                        <summary className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-xs text-slate-500 transition-colors hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800/50 [&::-webkit-details-marker]:hidden">
-                          <ChevronDown className="size-2.5 transition-transform group-open:rotate-0 -rotate-90 shrink-0" />
-                          <span>{step.icon}</span>
-                          <span className="font-medium">{step.label}</span>
-                        </summary>
-                        <div className="px-3 pb-2 pt-0 pl-9 text-xs leading-relaxed text-slate-400 dark:text-slate-500">
+                      )}
+                      {steps.length > 0 ? (
+                        steps.map((step, i) => (
+                          <details
+                            key={i}
+                            className="group border-b border-slate-100 last:border-b-0 dark:border-slate-800"
+                          >
+                            <summary className="flex cursor-pointer items-center gap-2 px-3 py-1.5 text-xs text-slate-500 transition-colors hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800/50 [&::-webkit-details-marker]:hidden">
+                              <ChevronDown className="size-2.5 transition-transform group-open:rotate-0 -rotate-90 shrink-0" />
+                              <span>{step.icon}</span>
+                              <span className="font-medium">{step.label}</span>
+                            </summary>
+                            <div className="px-3 pb-2 pt-0 pl-9 text-xs leading-relaxed text-slate-400 dark:text-slate-500">
+                              <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                                {step.content}
+                              </ReactMarkdown>
+                            </div>
+                          </details>
+                        ))
+                      ) : (
+                        <div className="px-3 py-2 text-xs leading-relaxed text-slate-400 dark:text-slate-500">
                           <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                            {step.content}
+                            {reasoningText}
                           </ReactMarkdown>
                         </div>
-                      </details>
-                    ))
-                  ) : (
-                    <div className="px-3 py-2 text-xs leading-relaxed text-slate-400 dark:text-slate-500">
-                      <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                        {reasoningText}
-                      </ReactMarkdown>
+                      )}
                     </div>
                   )}
                 </div>
-              )}
-            </div>
-            );
-          })()}
-          <div className={`chat-prose ${isStreaming ? "streaming-cursor" : ""}`}>
+              );
+            })()}
+          <div
+            className={`chat-prose ${isStreaming ? "streaming-cursor" : ""}`}
+          >
             <ReactMarkdown
               remarkPlugins={[remarkGfm]}
               components={markdownComponents}
@@ -265,11 +347,15 @@ function MessageBubbleInner({ message, isStreaming, reasoningContent, toolProgre
           </div>
         </div>
 
-        {visualizations.length > 0 && visualizations.map((viz, index) => (
-          <div key={`viz-${index}`} className="mt-2 w-full overflow-hidden rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
-            <VisualizationRenderer visualization={viz} />
-          </div>
-        ))}
+        {visualizations.length > 0 &&
+          visualizations.map((viz, index) => (
+            <div
+              key={`viz-${index}`}
+              className="mt-2 w-full overflow-hidden rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800"
+            >
+              <VisualizationRenderer visualization={viz} />
+            </div>
+          ))}
 
         {!isUser && message.id && message.id !== "streaming" && (
           <div className="mt-1 flex items-center gap-0.5">
@@ -288,7 +374,11 @@ function MessageBubbleInner({ message, isStreaming, reasoningContent, toolProgre
                 className="rounded-md p-1 text-slate-400 transition-colors hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
                 aria-label="Copy message"
               >
-                {copied ? <Check className="size-3" /> : <Copy className="size-3" />}
+                {copied ? (
+                  <Check className="size-3" />
+                ) : (
+                  <Copy className="size-3" />
+                )}
               </button>
             )}
             {onFeedback && (
@@ -296,7 +386,9 @@ function MessageBubbleInner({ message, isStreaming, reasoningContent, toolProgre
                 <button
                   onClick={() => handleFeedback("positive")}
                   className={`rounded-md p-1 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 ${
-                    feedbackGiven === "positive" ? "text-emerald-500" : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                    feedbackGiven === "positive"
+                      ? "text-emerald-500"
+                      : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                   }`}
                   aria-label="Thumbs up"
                 >
@@ -305,7 +397,9 @@ function MessageBubbleInner({ message, isStreaming, reasoningContent, toolProgre
                 <button
                   onClick={() => handleFeedback("negative")}
                   className={`rounded-md p-1 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 ${
-                    feedbackGiven === "negative" ? "text-red-500" : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                    feedbackGiven === "negative"
+                      ? "text-red-500"
+                      : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                   }`}
                   aria-label="Thumbs down"
                 >
@@ -327,10 +421,16 @@ function MessageBubbleInner({ message, isStreaming, reasoningContent, toolProgre
               aria-label="Correction feedback"
             />
             <div className="flex gap-1.5">
-              <button onClick={submitCorrection} className="rounded-lg bg-slate-900 px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">
+              <button
+                onClick={submitCorrection}
+                className="rounded-lg bg-slate-900 px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200"
+              >
                 Submit
               </button>
-              <button onClick={() => setShowCorrection(false)} className="rounded-lg px-3 py-1.5 text-[11px] font-medium text-slate-500 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800">
+              <button
+                onClick={() => setShowCorrection(false)}
+                className="rounded-lg px-3 py-1.5 text-[11px] font-medium text-slate-500 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
                 Cancel
               </button>
             </div>
@@ -357,7 +457,11 @@ function extractVisualizations(content: string): AiVisualization[] {
         inBlock = true;
         currentBlock = "";
         let j = i + 3;
-        while (j < content.length && content[j] !== "\n" && content[j] !== "\r") {
+        while (
+          j < content.length &&
+          content[j] !== "\n" &&
+          content[j] !== "\r"
+        ) {
           j++;
         }
         i = j;
@@ -399,8 +503,12 @@ function extractVisualizations(content: string): AiVisualization[] {
   }
 
   if (visualizations.length === 0) {
-    const vizTypes = "(bar-chart|line-chart|table|leaderboard|scatter|radar|sankey|heatmap)";
-    const jsonObjectRegex = new RegExp(`\\{[\\s\\S]*?"type"\\s*:\\s*"${vizTypes}"[\\s\\S]*?\\}`, "g");
+    const vizTypes =
+      "(bar-chart|line-chart|table|leaderboard|scatter|radar|sankey|heatmap)";
+    const jsonObjectRegex = new RegExp(
+      `\\{[\\s\\S]*?"type"\\s*:\\s*"${vizTypes}"[\\s\\S]*?\\}`,
+      "g",
+    );
     let match;
     while ((match = jsonObjectRegex.exec(content)) !== null) {
       if (visualizations.length >= MAX_VIZ_COUNT) break;
