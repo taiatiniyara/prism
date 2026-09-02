@@ -29,6 +29,7 @@ jobs:
             git checkout .
             git clean -fd
             git pull
+            rm -rf node_modules   # force-clear any corrupted deps so npm ci can't fail on ENOTEMPTY (e.g. echarts/theme, 2026-09-02)
             npm ci
             npm run build
             pm2 restart prism-v2 --update-env
