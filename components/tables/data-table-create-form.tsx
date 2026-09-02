@@ -1,7 +1,11 @@
 "use client";
 
 import { formatLabel } from "@/lib/formatters";
-import { useFormId, useFormOverrides } from "../dev/form-overrides-provider";
+import {
+  useFormId,
+  useFormOverrides,
+  useReorderableList,
+} from "../dev/form-overrides-provider";
 import {
   Sheet,
   SheetContent,
@@ -208,6 +212,11 @@ function field<T>(field: DataTableCreateFormField<T>, fieldLabel: string) {
 export function DataTableCreateForm<T>(props: DataTableCreateFormProps<T>) {
   const formId = useFormId();
   const { getLabel } = useFormOverrides();
+  const { ordered, dragProps } = useReorderableList(
+    formId,
+    props.fields,
+    (f) => String(f.key),
+  );
   return (
     <Sheet>
       <SheetTrigger className="flex gap-1 items-center bg-slate-200 text-black px-2 py-1 cursor-pointer hover:bg-slate-300 transition-colors rounded text-xs font-bold">
@@ -230,10 +239,11 @@ export function DataTableCreateForm<T>(props: DataTableCreateFormProps<T>) {
               }
             }}
           >
-            {props.fields.map((f) => (
+            {ordered.map((f) => (
               <div
                 className="space-y-1"
                 key={f.key as string}
+                {...dragProps(f.key.toString())}
               >
                 <Label
                   data-form-id={formId}
