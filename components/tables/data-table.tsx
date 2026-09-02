@@ -34,11 +34,14 @@ import {
   ArrowDownIcon,
   ArrowUpIcon,
   CheckIcon,
+  ChevronDown,
+  ChevronsUpDown,
+  ChevronUp,
   Columns3Icon,
   EyeIcon,
   EyeOffIcon,
-  FilterIcon,
   GripVertical,
+  ListFilter,
   Loader2Icon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -621,41 +624,19 @@ export default function DataTable<T extends DataTableRecord>(
 
   function SortIcon({ column }: { column: keyof T }) {
     const isActive = sortColumn === column;
+    // Active sort: a solid, direction-aware chevron (accent, always shown).
+    // Unsorted: a faint up/down chevron that only appears on header hover.
+    if (isActive && sortDirection === "asc") {
+      return <ChevronUp className="ml-1 size-3.5 text-primary" aria-hidden />;
+    }
+    if (isActive && sortDirection === "desc") {
+      return <ChevronDown className="ml-1 size-3.5 text-primary" aria-hidden />;
+    }
     return (
-      <span
-        className={cn(
-          "ml-1.5 inline-flex flex-col gap-px opacity-40 transition-opacity",
-          isActive && "opacity-100",
-        )}
+      <ChevronsUpDown
+        className="ml-1 size-3.5 text-muted-foreground/50 opacity-0 transition-opacity group-hover/th:opacity-100"
         aria-hidden
-      >
-        <svg
-          width="8"
-          height="5"
-          viewBox="0 0 8 5"
-          className={cn(
-            "fill-current transition-colors",
-            isActive && sortDirection === "asc"
-              ? "text-primary"
-              : "text-muted-foreground",
-          )}
-        >
-          <path d="M4 0L8 5H0L4 0Z" />
-        </svg>
-        <svg
-          width="8"
-          height="5"
-          viewBox="0 0 8 5"
-          className={cn(
-            "fill-current transition-colors",
-            isActive && sortDirection === "desc"
-              ? "text-primary"
-              : "text-muted-foreground",
-          )}
-        >
-          <path d="M4 5L0 0H8L4 5Z" />
-        </svg>
-      </span>
+      />
     );
   }
 
@@ -716,11 +697,17 @@ export default function DataTable<T extends DataTableRecord>(
           <Button
             variant="ghost"
             size="icon-xs"
-            className={cn("ml-1", hasFilter && "text-primary")}
+            className={cn(
+              "ml-0.5 rounded-md transition-opacity",
+              // Active filter stays visible (accent); otherwise reveal on hover.
+              hasFilter
+                ? "text-primary opacity-100"
+                : "text-muted-foreground/60 opacity-0 group-hover/th:opacity-100",
+            )}
             aria-label={`Filter ${display}`}
             onClick={(e) => e.stopPropagation()}
           >
-            <FilterIcon className="size-3" />
+            <ListFilter className="size-3.5" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
@@ -985,7 +972,7 @@ export default function DataTable<T extends DataTableRecord>(
                   }}
                   {...colDragProps(String(column.name))}
                   className={cn(
-                    "whitespace-nowrap px-4 py-2.5 text-left font-semibold uppercase tracking-wider",
+                    "group/th whitespace-nowrap px-4 py-2.5 text-left font-semibold uppercase tracking-wider",
                     "text-muted-foreground select-none cursor-pointer",
                     "transition-colors hover:text-foreground hover:bg-muted",
                     sortColumn === column.name && "text-foreground bg-muted",
