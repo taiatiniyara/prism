@@ -5,6 +5,7 @@ import type { AiToolResult } from "../types";
 import { isConfiguredForDax, isConfigured, isPbiHealthy } from "@/lib/powerbi";
 import { validateToolAccess } from "../guardrails";
 import { logger } from "@/lib/logging/logger";
+import { DEFAULT_AI_PRIMARY_SOURCE, type AiPrimarySource } from "../source-setting";
 import {
   getKpiStatus,
   getBenchmarkingData,
@@ -56,8 +57,16 @@ export function createPrismNativeTools(
   user: CurrentUser,
   _abortSignal?: AbortSignal,
   _sessionId?: number,
+  primary: AiPrimarySource = DEFAULT_AI_PRIMARY_SOURCE,
 ) {
   const pbiDown = !isPbiHealthy() || !isConfiguredForDax();
+  // Source-priority hint prepended to the gold-layer performance tools (which read
+  // gold.fact_kpi — real computed KPI values, incl. workforce/employee counts) so the
+  // model's tool choice matches the DEV-configured primary source.
+  const goldTag =
+    primary === "webapp"
+      ? "[PRIMARY performance source — for performance questions (SAIDI, losses, financials, workforce/employee counts, generation, etc.) reach for THIS gold-layer tool FIRST, before Power BI.] "
+      : "[SECONDARY/fallback performance source — Power BI is PRIMARY; use this when Power BI can't answer.] ";
   return {
     get_kpi_status: tool({
       description:
@@ -536,6 +545,7 @@ export function createPrismNativeTools(
 
     get_data_quality_report: tool({
       description:
+        goldTag +
         "Scan KPI values for data quality issues: negative values, values outside expected ranges, and anomalous jumps. Returns flagged values with severity and descriptions.",
       inputSchema: z.object({
         report_period_id: z
@@ -580,6 +590,7 @@ export function createPrismNativeTools(
 
     get_what_changed: tool({
       description:
+        goldTag +
         "Detect what changed between the latest two periods. Automatically identifies the KPIs with the biggest value changes (up or down) and ranks them by magnitude.",
       inputSchema: z.object({
         report_period_id: z
@@ -598,6 +609,7 @@ export function createPrismNativeTools(
 
     get_compliance_status: tool({
       description:
+        goldTag +
         "Check KPI values against regulatory limits. Flags values below minimum thresholds, above maximums, and negative values. Returns critical issues and warnings ranked by severity. Use this when asked about regulatory compliance, whether utilities meet standards, or which KPIs are out of acceptable range.",
       inputSchema: z.object({
         report_period_id: z.number().optional().describe("Report period ID."),
@@ -617,6 +629,7 @@ export function createPrismNativeTools(
 
     get_kpi_targets: tool({
       description:
+        goldTag +
         "Compute peer-benchmark KPI targets. Calculates median, top quartile, and bottom quartile values for each KPI across utilities, then suggests realistic improvement targets. Use this when asked about target-setting, performance goals, or where a utility should aim.",
       inputSchema: z.object({
         report_period_id: z.number().optional().describe("Report period ID."),
@@ -640,6 +653,7 @@ export function createPrismNativeTools(
 
     get_kpi_correlation: tool({
       description:
+        goldTag +
         "Compute correlations between KPIs across utilities. Answers questions like 'do utilities with high system losses also have high SAIDI?' Returns Pearson correlation coefficients.",
       inputSchema: z.object({
         report_period_id: z.number().optional().describe("Report period ID."),
@@ -659,7 +673,8 @@ export function createPrismNativeTools(
 
     compare_kpis_across_utilities: tool({
       description:
-        "Compare actual KPI values across multiple utilities. Returns per-utility values with rankings. Use this to compare specific KPI performance across utilities.",
+        goldTag +
+        "Compare actual KPI values across multiple utilities from the gold layer. Returns per-utility values with rankings — use for 'top N utilities by <metric>', peer comparisons, and any 'which utilities have the most/least <KPI>' question (KPIs include workforce/employee counts like 'Executive Employees Total', financials, reliability, generation, etc.).",
       inputSchema: z.object({
         kpi_names: z
           .array(z.string())

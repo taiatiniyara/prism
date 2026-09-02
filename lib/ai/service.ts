@@ -2,7 +2,8 @@ import { anthropic } from "@ai-sdk/anthropic";
 import { streamText, generateText, stepCountIs } from "ai";
 import type { CurrentUser } from "@/lib/user.service";
 import { createAiTools } from "./tools";
-import { getSystemPrompt, getPromptVersion } from "./prompt";
+import { buildSystemPrompt, getPromptVersion } from "./prompt";
+import { getAiPrimarySource } from "./source-setting";
 import { validateInput, filterOutput } from "./guardrails";
 import { recordRequest, recordError } from "./rate-limit";
 import { AI_MODELS, AI_DEFAULTS, type AiChatMessage } from "./types";
@@ -228,8 +229,11 @@ const prepareRequest = async (
 
   const sdkMessages = prepareMessages(messages, effectiveMaxTurns);
 
-  const tools = createAiTools(user, options.abortSignal, options.sessionId);
-  const systemPrompt = systemPromptOverride ?? (await getSystemPrompt());
+  // Resolve the DEV-configured primary source ONCE so the tool descriptions and the
+  // system prompt agree on which source is primary.
+  const primary = await getAiPrimarySource();
+  const tools = createAiTools(user, options.abortSignal, options.sessionId, primary);
+  const systemPrompt = systemPromptOverride ?? buildSystemPrompt(primary);
   const promptVersion = getPromptVersion();
   const config = getModelConfig(false);
 
