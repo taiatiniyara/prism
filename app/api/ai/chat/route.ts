@@ -323,7 +323,7 @@ export async function POST(request: Request) {
         }`
       : "";
 
-    const systemPrompt = getSystemPrompt() +
+    const systemPrompt = (await getSystemPrompt()) +
       roleContext +
       contextBlock +
       (!utilityCheck.valid
