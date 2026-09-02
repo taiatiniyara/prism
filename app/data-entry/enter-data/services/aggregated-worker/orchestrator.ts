@@ -20,7 +20,7 @@ import {
 import { type AggregatedWorkerScope } from "@/app/data-entry/enter-data/services/aggregated-worker/source-reader";
 import { selectAggregatedFormulaTargets } from "@/app/data-entry/enter-data/services/aggregated-worker/target-selector";
 import { writeCalculatedTargetValue } from "@/app/data-entry/enter-data/services/aggregated-worker/target-writer";
-import { extractFormulaVariables } from "@/app/data-entry/enter-data/services/aggregated-worker/variable-parser";
+import { formulaVariableNames } from "@/app/data-entry/enter-data/services/aggregated-worker/formula-variables";
 import { triggerKpiWorker } from "@/app/data-entry/kpi-worker";
 import type { CurrentUser } from "@/lib/user.service";
 
@@ -32,7 +32,7 @@ const collectAllVariables = (
   const variables = new Set<string>();
 
   targets.forEach((target) => {
-    extractFormulaVariables(target.formula, target.formulaInputs).forEach(
+    formulaVariableNames(target.formula, target.formulaInputs).forEach(
       (name) => {
         variables.add(name);
       },
@@ -136,7 +136,7 @@ const evaluateTargetWithSnapshot = (
       status: "skipped";
       reason: "missing-value" | "unknown-variable" | "evaluation-error";
     } => {
-  const variables = extractFormulaVariables(
+  const variables = formulaVariableNames(
     target.formula,
     target.formulaInputs,
   );

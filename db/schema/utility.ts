@@ -26,6 +26,12 @@ export const organisations = pgTable(
       .notNull()
       .references(() => countries.id),
     is_utility: boolean("is_utility").notNull().default(false),
+    // Whether this utility participates in PPA benchmarking. Orthogonal to
+    // is_utility (an operating utility may still be excluded from benchmarking).
+    // Drives which utilities' report periods the KPI recompute processes/shows —
+    // non-participating utilities are skipped, not surfaced as failed. Default
+    // false; set true per the PPA's participating-utility list. (Eugene, 2026-09-02.)
+    bm_participates: boolean("bm_participates").notNull().default(false),
     powequality_standard_id: integer("powerquality_standard_id").references(
       () => managedListItems.id,
     ),

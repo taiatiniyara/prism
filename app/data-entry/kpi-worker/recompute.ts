@@ -1,8 +1,9 @@
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
 import { db } from "@/db/connection";
 import { kpiDefinitions } from "@/db/schema/kpi";
 import { reportPeriods } from "@/db/schema/reportPeriods";
+import { organisations } from "@/db/schema/utility";
 
 import { evaluateKpiFormula } from "./evaluator";
 import { upsertCalculatedKpiValue } from "./persistKpi";
@@ -74,22 +75,34 @@ export async function recomputeKpiNow(
   }
 
   // 2. Determine the report periods to recompute against.
+  // Only periods for utilities that PARTICIPATE in benchmarking
+  // (organisations.bm_participates = true) are recomputed. A non-participating
+  // utility's KPIs are never benchmarked, so computing — and surfacing a failed
+  // row for — its periods is noise; those periods are skipped entirely.
   // NOTE: no `periodAccessPredicate` is applied here — this internal function
-  // has no CurrentUser to scope by, so it selects all periods (or the explicit
-  // ids given). Callers that need per-user access control must pre-filter the
-  // `reportPeriodIds` they pass in.
+  // has no CurrentUser to scope by, so it selects all participating periods (or
+  // the explicit ids given, still gated on participation). Callers that need
+  // per-user access control must pre-filter the `reportPeriodIds` they pass in.
   const periodQuery = db
     .select({
       id: reportPeriods.id,
       utilityId: reportPeriods.utility_id,
       reportDate: reportPeriods.report_date,
     })
-    .from(reportPeriods);
+    .from(reportPeriods)
+    .innerJoin(
+      organisations,
+      eq(organisations.id, reportPeriods.utility_id),
+    );
+
+  const participates = eq(organisations.bm_participates, true);
 
   const periods =
     args.reportPeriodIds && args.reportPeriodIds.length > 0
-      ? await periodQuery.where(inArray(reportPeriods.id, args.reportPeriodIds))
-      : await periodQuery;
+      ? await periodQuery.where(
+          and(inArray(reportPeriods.id, args.reportPeriodIds), participates),
+        )
+      : await periodQuery.where(participates);
 
   // 4. Resolve targets once per distinct context (utility + year + month) to
   // avoid re-querying kpi_definitions for every period that shares a context.
