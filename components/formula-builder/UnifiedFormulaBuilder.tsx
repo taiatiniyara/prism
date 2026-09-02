@@ -8,6 +8,7 @@ import {
   saveUnifiedFormula,
   recomputeKpiNow,
   recomputeCalculatedMeasuresNow,
+  updateTargetUom,
 } from "@/app/settings/kpi/unified-formula-service";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -71,6 +72,11 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
   const [pickerCardKey, setPickerCardKey] = useState<string | null>(null);
   const [recompute, setRecompute] = useState<RecomputeResult | null>(null);
   const [justSaved, setJustSaved] = useState(false);
+  // Inline UoM edits, keyed by target id, so the harness's format-adjusted
+  // preview reflects a just-changed unit before a reload.
+  const [unitOverrides, setUnitOverrides] = useState<Record<number, number>>(
+    {},
+  );
   const [isSaving, startSave] = useTransition();
   const [isComputing, startCompute] = useTransition();
 
@@ -456,6 +462,35 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
 
   const activeMeasureCount = data.measures.length;
 
+  // Selected target's effective unit (override if the user just changed it).
+  const selectedTarget =
+    selectedTargetId != null ? targetsById.get(selectedTargetId) : undefined;
+  const effectiveUnitId =
+    selectedTargetId != null && selectedTargetId in unitOverrides
+      ? unitOverrides[selectedTargetId]
+      : (selectedTarget?.unitId ?? null);
+  const effectiveUnitLabel =
+    data.units.find((u) => u.id === effectiveUnitId)?.name ?? null;
+
+  const handleChangeUom = (value: string) => {
+    if (selectedTargetId == null) return;
+    const unitId = Number(value);
+    if (!value || !Number.isFinite(unitId)) return;
+    setUnitOverrides((prev) => ({ ...prev, [selectedTargetId]: unitId }));
+    startSave(async () => {
+      const res = await updateTargetUom({
+        mode: activeMode,
+        ownerId: selectedTargetId,
+        unitId,
+      });
+      if (!res.ok) toast.error(res.error ?? "Couldn't update the unit.");
+      else
+        toast.success(
+          `Unit set to ${data.units.find((u) => u.id === unitId)?.name ?? "—"}.`,
+        );
+    });
+  };
+
   return (
     <div className="space-y-4">
       {/* target selector */}
@@ -518,6 +553,26 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                 allowEscapeKeyPropagation={false}
               />
             </div>
+            {selectedTargetId != null && (
+              <div className="w-40">
+                <Label className="text-xs">UoM</Label>
+                <SearchableSelect
+                  value={
+                    effectiveUnitId != null ? String(effectiveUnitId) : undefined
+                  }
+                  onValueChange={handleChangeUom}
+                  options={data.units.map((u) => ({
+                    value: String(u.id),
+                    label: u.name,
+                  }))}
+                  placeholder="Set unit…"
+                  searchPlaceholder="Search units…"
+                  emptyLabel="No units."
+                  triggerClassName="mt-1 w-full"
+                  allowEscapeKeyPropagation={false}
+                />
+              </div>
+            )}
             <Label className="text-muted-foreground flex items-center gap-2 pb-1.5 text-xs">
               <Checkbox
                 checked={onlyWithoutFormula}
@@ -665,16 +720,8 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
             formula={formula}
             variableNames={variables}
             variableColors={variableColors}
-            unitLabel={
-              selectedTargetId != null
-                ? targetsById.get(selectedTargetId)?.unitLabel
-                : null
-            }
-            isCurrency={
-              selectedTargetId != null
-                ? (targetsById.get(selectedTargetId)?.isCurrency ?? false)
-                : false
-            }
+            unitLabel={effectiveUnitLabel}
+            isCurrency={selectedTarget?.isCurrency ?? false}
           />
         </CardContent>
       </Card>
