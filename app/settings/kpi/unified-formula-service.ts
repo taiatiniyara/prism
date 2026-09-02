@@ -18,6 +18,7 @@ import {
   resolveManagedListName,
 } from "@/lib/managed-list-utils";
 import { recomputeKpiNow as engineRecomputeKpiNow } from "@/app/data-entry/kpi-worker/recompute";
+import { wouldCreateCycle } from "@/app/data-entry/enter-data/services/aggregated-worker/compute-order";
 import { runAggregatedWorker } from "@/app/data-entry/enter-data/services/aggregated-worker/orchestrator";
 import { getCurrentUser } from "@/lib/user.service";
 import { reportPeriods } from "@/db/schema/reportPeriods";
@@ -425,6 +426,39 @@ export async function saveUnifiedFormula(
     }
     return fi;
   });
+
+  // Reject a save that would make a calculated measure depend on itself
+  // (directly or through a chain). Only measures form the compute graph; a KPI
+  // is terminal. Checked here so the fixpoint / topological compute never has
+  // to detect a cycle at run time.
+  if (ownerKind === "measure") {
+    const calcMeasures = await db
+      .select({
+        id: measureDefinitions.id,
+        formula_inputs: measureDefinitions.formula_inputs,
+      })
+      .from(measureDefinitions)
+      .where(eq(measureDefinitions.is_calculated, true));
+
+    const otherNodes = calcMeasures.map((m) => ({
+      id: m.id,
+      inputIds: inputMeasureIds(m.formula_inputs),
+    }));
+
+    if (
+      wouldCreateCycle(
+        payload.ownerId,
+        formulaInputs.map((fi) => fi.measure_def_id),
+        otherNodes,
+      )
+    ) {
+      return {
+        ok: false,
+        error:
+          "This formula would create a dependency cycle between calculated measures.",
+      };
+    }
+  }
 
   try {
     await db.transaction(async (tx) => {
