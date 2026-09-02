@@ -64,7 +64,9 @@ cd C:/Users/eugen/prism && npm ci      # ~2 min; restores tsc/eslint/build/dev f
 
 ## Deploying & handing off to Eugene for testing
 
-PRISM **auto-deploys when a PR merges to `main`**: GitHub Actions `deploy-to-vps.yml` SSHes to the VPS → `git pull` → `npm ci` → `npm run build` → `pm2 restart prism-v2`, applying DB schema via `drizzle-kit push`. It takes ~1–3 min after merge; nothing else "deploys". **Test target = `dev.prismdashboard.org` (p2). `prismdashboard.org` is legacy p1 — untouched.**
+PRISM **auto-deploys CODE when a non-docs PR merges to `main`**: GitHub Actions `deploy-to-vps.yml` SSHes to the VPS → `git pull` → `npm ci` → `npm run build` → `pm2 restart prism-v2` (~1–3 min). **It does NOT touch the database**, and **docs-only pushes (`docs/**`, `**.md`) skip the deploy entirely** (`paths-ignore`). **Test target = `dev.prismdashboard.org` (p2). `prismdashboard.org` is legacy p1 — untouched.**
+
+**DB changes are a SEPARATE, MANUAL step (never automatic).** The auto-deploy will NOT apply schema — `db-push` lives only in the manual `npm run deploy` script (`scripts/deploy.sh`), not in the workflow. So per **Git before DB**: merge the code PR (code deploys), then apply the DB change to p2 yourself — `npm run db-push` (`drizzle-kit push --force`) for **drizzle-schema** changes, or run your **raw SQL** for data/views/backfills. Both halves are manual. Apply the DB step **promptly after merge**: merged code that references a not-yet-applied column is broken until you push it (the code-ahead-of-DB trap). (`npm run deploy` is a manual all-in-one that does `db-push` THEN commits+pushes to `main`; the canonical flow is still PR→merge for code, then `db-push` for schema.)
 
 **Standard deploy → test handoff — every agent, every time:**
 1. Merge your PR to `main` (that IS the deploy trigger).
