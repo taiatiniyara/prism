@@ -17,6 +17,7 @@ import { usePathname } from "next/navigation";
 
 import {
   orderKeys,
+  resolveHidden,
   resolveLabel,
   resolveWidth,
   setFieldOrder,
@@ -32,6 +33,9 @@ interface FormOverridesContextValue {
   widthActive: boolean;
   getWidth: (formId: string, fieldKey: string) => "full" | "half";
   toggleFieldWidth: (formId: string, fieldKey: string) => void;
+  canEdit: boolean;
+  getHidden: (formId: string, fieldKey: string) => boolean;
+  toggleHidden: (formId: string, fieldKey: string) => void;
 }
 
 const FormOverridesContext = createContext<FormOverridesContextValue>({
@@ -42,6 +46,9 @@ const FormOverridesContext = createContext<FormOverridesContextValue>({
   widthActive: false,
   getWidth: () => "full",
   toggleFieldWidth: () => {},
+  canEdit: false,
+  getHidden: () => false,
+  toggleHidden: () => {},
 });
 
 // Consumed by DataTable forms + column headers.
@@ -236,6 +243,12 @@ export default function FormOverridesProvider({
     [overrides],
   );
 
+  const getHidden = useCallback(
+    (formId: string, fieldKey: string) =>
+      resolveHidden(overrides, formId, fieldKey),
+    [overrides],
+  );
+
   const persist = useCallback((next: FormOverrideMap) => {
     setOverrides(next);
     void fetch("/api/form-overrides", {
@@ -260,6 +273,20 @@ export default function FormOverridesProvider({
       persist(
         setFieldOverride(overridesRef.current, formId, fieldKey, {
           width: next,
+        }),
+      );
+    },
+    [persist],
+  );
+
+  const toggleHidden = useCallback(
+    (formId: string, fieldKey: string) => {
+      const next = resolveHidden(overridesRef.current, formId, fieldKey)
+        ? undefined
+        : true;
+      persist(
+        setFieldOverride(overridesRef.current, formId, fieldKey, {
+          hidden: next,
         }),
       );
     },
@@ -392,6 +419,9 @@ export default function FormOverridesProvider({
       widthActive,
       getWidth,
       toggleFieldWidth,
+      canEdit,
+      getHidden,
+      toggleHidden,
     }),
     [
       getLabel,
@@ -401,6 +431,9 @@ export default function FormOverridesProvider({
       widthActive,
       getWidth,
       toggleFieldWidth,
+      canEdit,
+      getHidden,
+      toggleHidden,
     ],
   );
 

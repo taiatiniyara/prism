@@ -34,6 +34,9 @@ import {
   ArrowDownIcon,
   ArrowUpIcon,
   CheckIcon,
+  Columns3Icon,
+  EyeIcon,
+  EyeOffIcon,
   FilterIcon,
   GripVertical,
   Loader2Icon,
@@ -112,7 +115,8 @@ export default function DataTable<T extends DataTableRecord>(
   // Columns live under a separate namespace so a column key can't collide with
   // a form-field key of the same name (both keyed by route otherwise).
   const columnFormId = `${formId}::columns`;
-  const { getLabel, reorderActive } = useFormOverrides();
+  const { getLabel, reorderActive, canEdit, getHidden, toggleHidden } =
+    useFormOverrides();
 
   const [search, setSearch] = useState("");
   const [sortColumn, setSortColumn] = useState<keyof T | null>(null);
@@ -152,6 +156,13 @@ export default function DataTable<T extends DataTableRecord>(
   // DEV column reorder (drag headers). Same store as form fields, namespaced.
   const { ordered: displayColumns, dragProps: colDragProps } =
     useReorderableList(columnFormId, normalizedColumns, (c) => String(c.name));
+
+  // DEV column visibility: hidden columns drop out of the header + body; the
+  // chooser (toolbar) lists all columns so hidden ones can be brought back.
+  const visibleColumns = useMemo(
+    () => displayColumns.filter((c) => !getHidden(columnFormId, String(c.name))),
+    [displayColumns, getHidden, columnFormId],
+  );
 
   const quickFilterColumns = useMemo(
     () => quickFilters?.map((filter) => filter.column) ?? [],
@@ -761,6 +772,49 @@ export default function DataTable<T extends DataTableRecord>(
             {title}
           </Heading>
           {createFormProps && <DataTableCreateForm {...createFormProps} />}
+          {canEdit && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  title="Show/hide columns (DEV) — drag headers to reorder"
+                >
+                  <Columns3Icon className="mr-1.5 size-3" />
+                  Columns
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="start"
+                className="max-h-80 overflow-y-auto"
+              >
+                <DropdownMenuLabel>Show columns (DEV, global)</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {displayColumns.map((column) => {
+                  const key = String(column.name);
+                  const hidden = getHidden(columnFormId, key);
+                  return (
+                    <DropdownMenuItem
+                      key={key}
+                      onSelect={(e) => e.preventDefault()}
+                      onClick={() => toggleHidden(columnFormId, key)}
+                      className="flex items-center gap-2"
+                    >
+                      {hidden ? (
+                        <EyeOffIcon className="size-3.5 text-muted-foreground" />
+                      ) : (
+                        <EyeIcon className="size-3.5" />
+                      )}
+                      <span className={cn(hidden && "text-muted-foreground")}>
+                        {getLabel(formId, key, column.display)}
+                      </span>
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
           {reorderRowsProps && isOrderDirty && (
             <Button
               size="sm"
@@ -894,7 +948,7 @@ export default function DataTable<T extends DataTableRecord>(
                   Move
                 </th>
               )}
-              {displayColumns.map((column) => (
+              {visibleColumns.map((column) => (
                 <th
                   key={String(column.name)}
                   onClick={() => {
@@ -934,7 +988,7 @@ export default function DataTable<T extends DataTableRecord>(
               <tr>
                 <td
                   colSpan={
-                    normalizedColumns.length +
+                    visibleColumns.length +
                     (updateFormProps ? 1 : 0) +
                     (reorderRowsProps ? 1 : 0)
                   }
@@ -1040,7 +1094,7 @@ export default function DataTable<T extends DataTableRecord>(
                         </div>
                       </td>
                     )}
-                    {displayColumns.map((column) => (
+                    {visibleColumns.map((column) => (
                       <td
                         key={String(column.name)}
                         className="whitespace-nowrap px-4 py-2.5 text-foreground"
