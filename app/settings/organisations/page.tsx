@@ -41,6 +41,11 @@ export default async function OrganisationsSettingsPage() {
             type: "checkbox",
           },
           {
+            key: "bm_participates",
+            label: "Participates in Benchmarking",
+            type: "boolean",
+          },
+          {
             key: "entity_type_id",
             managedListName: "Entity Type",
             type: "managed-list",
@@ -90,6 +95,11 @@ export default async function OrganisationsSettingsPage() {
           {
             key: "is_utility",
             type: "checkbox",
+          },
+          {
+            key: "bm_participates",
+            label: "Participates in Benchmarking",
+            type: "boolean",
           },
           {
             key: "entity_type_id",
