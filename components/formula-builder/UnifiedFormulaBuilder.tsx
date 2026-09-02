@@ -1,6 +1,14 @@
 "use client";
 
-import { type ReactNode, useMemo, useState, useTransition } from "react";
+import {
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { isCategoricalDataType } from "@/lib/formula/descriptive-projection";
@@ -79,6 +87,29 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
   );
   const [isSaving, startSave] = useTransition();
   const [isComputing, startCompute] = useTransition();
+
+  // Re-fetch the loader data (measures + their dimension scope, targets, units)
+  // when this tab regains focus — so changes made in the separate Measure Scope
+  // / settings tabs show up without a manual reload. router.refresh() re-runs the
+  // server component but preserves this component's local edit state. Debounced
+  // so a quick tab flick doesn't refetch repeatedly.
+  const router = useRouter();
+  const lastRefresh = useRef(0);
+  useEffect(() => {
+    const maybeRefresh = () => {
+      if (document.visibilityState !== "visible") return;
+      const now = Date.now();
+      if (now - lastRefresh.current < 1500) return;
+      lastRefresh.current = now;
+      router.refresh();
+    };
+    document.addEventListener("visibilitychange", maybeRefresh);
+    window.addEventListener("focus", maybeRefresh);
+    return () => {
+      document.removeEventListener("visibilitychange", maybeRefresh);
+      window.removeEventListener("focus", maybeRefresh);
+    };
+  }, [router]);
 
   // Recompute-results table sort. Period ascending is the default; clicking a
   // header sorts by that column (toggling asc/desc on repeat clicks).
