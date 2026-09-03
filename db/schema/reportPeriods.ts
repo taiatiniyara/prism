@@ -32,6 +32,12 @@ export const reportPeriods = pgTable(
     // Lean data-entry workflow (BLO-activated per period): the BLO enters and vouches
     // in one action → entry lands at Reviewed(4). Per lean-data-entry-workflow-spec.
     lean_mode: boolean("lean_mode").notNull().default(false),
+    // Per-period benchmarking opt-in: the utility explicitly participated in
+    // benchmarking for THIS report period (per docs/per-period-participation-spec.md).
+    // Distinct from the org-level eligibility (now just organisations.is_utility) —
+    // participation is purely this per-period flag. Canonical "period is benchmarked"
+    // predicate: organisations.is_utility = true AND report_periods.bm_opted_in = true.
+    bm_opted_in: boolean("bm_opted_in").notNull().default(false),
     updated_at: timestamp("updated_at").notNull().defaultNow(),
   },
   (t) => ({
