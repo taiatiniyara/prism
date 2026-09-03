@@ -106,6 +106,7 @@ Model-A left ~147 periods `Approved`; only 68 genuinely participated. An **`Appr
 
 **Back up every deleted row to a `backup.*` table first** (#2's Option-B pattern; cheap + recoverable):
 
+- **Audit trail on every excluded row (Eugene, 2026-09-03):** each backed-up / excluded row records, beside the data, the **utility acronym** and the **reason for exclusion/opt-out** (e.g. `non-participating-org`, `pre-participation-shell`, `withdrawn-after-opt-in FY2025`). So the `backup.*` schema carries `utility_acronym` + `exclusion_reason` (+ excluded-at timestamp); nothing is dropped without a legible why-and-who. Applies to both the cleanup below and the §7 withdraw-after-data case.
 - Delete `data_entries` under non-participating orgs (`NOT (is_utility AND organisations.bm_participates)`) — the **17** stray rows (verified §1: all system-generated/calculated, zero real values → clean to delete). Any stray that *did* carry a real value would get soft-delete/preserve + Eugene disposition per the CUC-fuel precedent — none do here.
 - Delete system-generated / calculated `data_entries` on periods where `bm_opted_in = false` (the ~9 shells with stray `hours_in_period`, plus any computed values on shells).
 - **Pre-participation period rows: KEEP, flagged `false`** (they carry the period timeline/status/FYE placement and are FK-referenced by the FYE/time-series work; deleting risks gaps/orphans). Delete only stray **data**, never period rows.
@@ -133,7 +134,7 @@ Additive flag column (§3) is safe to apply promptly after merge; the `DELETE`s 
 - **Delete safety** — back up to `backup.*` first; additive column promptly after merge, DML git-first + after backfill agreed. *(#2)*
 - **Table rename** — land the flag on the final `submissions` name; #2 sequences with #8's rename.
 
-**Open — need Eugene's call:**
-- **Backfill start years** (§5.1) — confirm NUC FY2020 / NPC FY2025 / all others FY2022, and that the explicit start years are authoritative over the data-presence heuristic. (Stated "from memory.")
-- **Re-open / withdraw policy** (#10's recommendation) — **before** any real data submitted: un-tick removes / never-generates shells. **After** real data exists: opt-out sets `bm_opted_in=false` but **KEEPS the entered data** (backed up), and the canonical predicate simply excludes it from compute — never a silent delete. Mirrors the §5 "keep the rows, exclude via flag" pattern. This is a PPA participation-policy call.
-- **Eugene's direct greenlight** — #2 will not start schema/DDL + the destructive migration off a relay; needs Eugene's explicit go on their pieces (§3, §5).
+**Resolved (Eugene, 2026-09-03):**
+- **Backfill start years** (§5.1) — **CONFIRMED** authoritative: NUC FY2020 / NPC FY2025 / all others FY2022 (data-presence is the cross-check; #2 flags any mismatch).
+- **Re-open / withdraw policy** — **AGREED** as #10 proposed: before data → un-tick removes/never-generates shells; after data → `bm_opted_in=false` keeps the entered data (backed up) and the predicate excludes it — never a silent delete. **Refinement:** every excluded row records the utility acronym + exclusion/opt-out reason beside the data (§5.3 audit trail).
+- **Eugene's direct greenlight** — **GIVEN.** #2 to proceed with schema (§3) + backfill/status-reconcile/cleanup (§5). #3's helper + compute gating (§4) follow once #2's flag column lands (avoid code-ahead-of-DB). #2 sequences the column-add with #8's `report_periods`→`submissions` rename so the flag lands on the final name.
