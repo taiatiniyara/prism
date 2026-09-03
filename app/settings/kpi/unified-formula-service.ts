@@ -23,6 +23,7 @@ import { runAggregatedWorker } from "@/app/data-entry/enter-data/services/aggreg
 import { selectAggregatedFormulaTargets } from "@/app/data-entry/enter-data/services/aggregated-worker/target-selector";
 import { getCurrentUser } from "@/lib/user.service";
 import { reportPeriods } from "@/db/schema/reportPeriods";
+import { organisations } from "@/db/schema/utility";
 import {
   ALL_MEMBER_BY_FIELD,
   BuilderData,
@@ -658,9 +659,17 @@ function inputMeasureIds(
 
 async function allReportPeriodIds(explicit?: number[]): Promise<number[]> {
   if (explicit && explicit.length) return explicit;
+  // Only periods for utilities that PARTICIPATE in benchmarking
+  // (organisations.bm_participates = true) — mirrors the KPI worker
+  // (kpi-worker/recompute.ts). A non-participating utility is never benchmarked,
+  // so computing — and surfacing failed rows for — its periods is noise. This is
+  // why the calculator processed all 140 periods instead of the 128 participating
+  // ones: the enumeration had no participation filter (the worker already did).
   const rows = await db
     .select({ id: reportPeriods.id })
     .from(reportPeriods)
+    .innerJoin(organisations, eq(organisations.id, reportPeriods.utility_id))
+    .where(eq(organisations.bm_participates, true))
     .orderBy(asc(reportPeriods.id));
   return rows.map((r) => r.id);
 }
