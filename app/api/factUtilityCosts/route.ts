@@ -1,10 +1,14 @@
 import { db } from "@/db/connection";
 import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
-import { reportPeriods, publishedPeriodCondition } from "@/db/schema/reportPeriods";
+import {
+  reportPeriods,
+  publishedPeriodCondition,
+} from "@/db/schema/reportPeriods";
 import { managedLists, managedListItems } from "@/db/schema/managedLists";
 import { eq, and, inArray } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
 import { resolveEntryValue } from "@/lib/legacy/entry-value";
+import { countries, organisations } from "@/db/schema";
 
 const SUBGROUP_LIST_NAME = "Measures Subgroup";
 const SUBGROUP_NAME = "Cost Breakdown";
@@ -49,6 +53,10 @@ export async function GET(req: Request) {
       ),
     );
   const measureIds = defs.map((d) => d.id);
+  const utilities = await db
+    .select()
+    .from(organisations)
+    .leftJoin(countries, eq(organisations.country_id, countries.id));
   if (measureIds.length === 0) return Response.json([]);
 
   const entries = await db
@@ -77,6 +85,13 @@ export async function GET(req: Request) {
   for (const entry of entries) {
     const rp = rps.find((r) => r.id === entry.report_period_id);
     if (!rp) continue;
+    const utility = utilities.find((u) => u.organisations.id === rp.utility_id);
+    if (!utility) continue;
+    const country = utility.countries ?? null;
+    if (country !== null) continue;
+    const currency = itemsById.get(country!.currency_id) ?? null;
+    const reportType = itemsById.get(rp.report_type_id) ?? null;
+    if (reportType !== "Annual" && reportType !== "Quarterly") continue;
     const def = defs.find((d) => d.id === entry.measure_def_id);
     if (!def) continue;
     const utilityFunction = itemsById.get(entry.utility_function_id) ?? null;
@@ -91,12 +106,14 @@ export async function GET(req: Request) {
       UtilityFunction: utilityFunction,
       ReportPeriodId: rp.id,
       ReportPeriod: rp.report_date,
+      ReportType: reportType,
       UtilityId: rp.utility_id,
       Value: resolveEntryValue(
         entry,
         dataTypeNameById.get(def.id) ?? null,
         itemsById,
       ),
+      Currency: currency,
     });
   }
 
