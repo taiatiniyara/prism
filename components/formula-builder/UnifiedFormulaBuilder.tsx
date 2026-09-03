@@ -395,47 +395,55 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     errors: number;
   }> => {
     const focusId = selectedTargetId ?? undefined;
-    // Scope the whole run to the selected measure — compute + KPI republish
-    // touch only it, not every calculated measure. (No selection ⇒ whole set.)
-    const plan = await planCalculatedMeasureCompute(focusId);
-    const total = plan.periodIds.length;
+    // Show the bar for the WHOLE run, including the save + planning window before
+    // the period count is known: start INDETERMINATE (total 0 → animated bar),
+    // then flip to the determinate count once the plan resolves. Without this the
+    // buttons read "Working…" with no bar during save/plan (the reported gap).
+    // Cleared in `finally` so it never sticks on error or early-exit.
+    setComputeProgress((p) => p ?? { done: 0, total: 0 });
     setRecompute({ processed: 0, failed: 0, byPeriod: [] });
-    if (total === 0) {
+    try {
+      // Scope the whole run to the selected measure — compute + KPI republish
+      // touch only it, not every calculated measure. (No selection ⇒ whole set.)
+      const plan = await planCalculatedMeasureCompute(focusId);
+      const total = plan.periodIds.length;
+      if (total === 0) {
+        return { total: 0, calculated: 0, skipped: 0, errors: 0 };
+      }
+      setComputeProgress({ done: 0, total });
+      const accum: RecomputeResult["byPeriod"] = [];
+      let calculated = 0;
+      let skipped = 0;
+      let errors = 0;
+      let done = 0;
+      for (let i = 0; i < plan.periodIds.length; i += CHUNK_SIZE) {
+        const chunk = plan.periodIds.slice(i, i + CHUNK_SIZE);
+        const isLast = i + CHUNK_SIZE >= plan.periodIds.length;
+        const c = await computeCalculatedMeasureChunk({
+          periodIds: chunk,
+          focusMeasureId: focusId,
+          dependentKpiIds: plan.dependentKpiIds,
+          targetInputDefIds: plan.targetInputDefIds,
+          revalidate: isLast,
+        });
+        calculated += c.calculated;
+        skipped += c.skipped;
+        errors += c.errors;
+        if (c.byPeriod.length) accum.push(...c.byPeriod);
+        done += chunk.length;
+        setComputeProgress({ done, total });
+        // Stream partial results into the reason table as each slice lands.
+        const snapshot = [...accum];
+        setRecompute({
+          processed: snapshot.filter((p) => p.status === "ok").length,
+          failed: snapshot.filter((p) => p.status !== "ok").length,
+          byPeriod: snapshot,
+        });
+      }
+      return { total, calculated, skipped, errors };
+    } finally {
       setComputeProgress(null);
-      return { total: 0, calculated: 0, skipped: 0, errors: 0 };
     }
-    setComputeProgress({ done: 0, total });
-    const accum: RecomputeResult["byPeriod"] = [];
-    let calculated = 0;
-    let skipped = 0;
-    let errors = 0;
-    let done = 0;
-    for (let i = 0; i < plan.periodIds.length; i += CHUNK_SIZE) {
-      const chunk = plan.periodIds.slice(i, i + CHUNK_SIZE);
-      const isLast = i + CHUNK_SIZE >= plan.periodIds.length;
-      const c = await computeCalculatedMeasureChunk({
-        periodIds: chunk,
-        focusMeasureId: focusId,
-        dependentKpiIds: plan.dependentKpiIds,
-        targetInputDefIds: plan.targetInputDefIds,
-        revalidate: isLast,
-      });
-      calculated += c.calculated;
-      skipped += c.skipped;
-      errors += c.errors;
-      if (c.byPeriod.length) accum.push(...c.byPeriod);
-      done += chunk.length;
-      setComputeProgress({ done, total });
-      // Stream partial results into the reason table as each slice lands.
-      const snapshot = [...accum];
-      setRecompute({
-        processed: snapshot.filter((p) => p.status === "ok").length,
-        failed: snapshot.filter((p) => p.status !== "ok").length,
-        byPeriod: snapshot,
-      });
-    }
-    setComputeProgress(null);
-    return { total, calculated, skipped, errors };
   };
 
   const handleSave = () => {
@@ -492,8 +500,15 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
       trackAsKpi: activeMode === "measure" ? trackAsKpi : undefined,
     };
     startSave(async () => {
+      // Measure Save & Compute shows the progress bar for the whole run — set it
+      // indeterminate up front so it's visible during the save + planning window,
+      // not just once the first chunk lands (the reported "Working…, no bar" gap).
+      if (activeMode === "measure") {
+        setComputeProgress({ done: 0, total: 0 });
+      }
       const res = await saveUnifiedFormula(payload);
       if (!res.ok) {
+        setComputeProgress(null);
         toast.error(res.error ?? "Save failed.");
         return;
       }
@@ -856,7 +871,9 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                 title="Save the formula and immediately compute it across all prior and current periods"
               >
                 {computeProgress
-                  ? `Computing ${computeProgress.done}/${computeProgress.total}…`
+                  ? computeProgress.total > 0
+                    ? `Computing ${computeProgress.done}/${computeProgress.total}…`
+                    : "Working…"
                   : isSaving || isComputing
                     ? "Working…"
                     : "Save & Compute"}
@@ -874,7 +891,9 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                 }
               >
                 {computeProgress
-                  ? `Computing ${computeProgress.done}/${computeProgress.total}…`
+                  ? computeProgress.total > 0
+                    ? `Computing ${computeProgress.done}/${computeProgress.total}…`
+                    : "Working…"
                   : isComputing
                     ? "Computing…"
                     : activeMode === "kpi"
@@ -888,35 +907,43 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                 aria-live="polite"
               >
                 <div className="bg-muted h-2 flex-1 overflow-hidden rounded-full">
-                  <div
-                    className="bg-primary h-full rounded-full transition-all duration-300"
-                    style={{
-                      width: `${
-                        computeProgress.total > 0
-                          ? (computeProgress.done / computeProgress.total) * 100
-                          : 0
-                      }%`,
-                    }}
-                  />
+                  {computeProgress.total > 0 ? (
+                    <div
+                      className="bg-primary h-full rounded-full transition-all duration-300"
+                      style={{
+                        width: `${
+                          (computeProgress.done / computeProgress.total) * 100
+                        }%`,
+                      }}
+                    />
+                  ) : (
+                    // Indeterminate (save + planning, before the count is known).
+                    <div className="bg-primary/60 h-full w-full animate-pulse rounded-full" />
+                  )}
                 </div>
                 <span className="text-muted-foreground text-xs tabular-nums">
                   {computeProgress.total > 0
-                    ? Math.round(
+                    ? `${Math.round(
                         (computeProgress.done / computeProgress.total) * 100,
-                      )
-                    : 0}
-                  %
+                      )}%`
+                    : "…"}
                 </span>
               </div>
             )}
           </div>
           {computeProgress && (
             <p className="text-muted-foreground text-[11px] leading-snug">
-              Computing period{" "}
-              {Math.min(computeProgress.done + 1, computeProgress.total)} of{" "}
-              {computeProgress.total} — runs in the background across all periods;
-              results fill in below as each batch completes. You can keep this tab
-              open.
+              {computeProgress.total > 0 ? (
+                <>
+                  Computing period{" "}
+                  {Math.min(computeProgress.done + 1, computeProgress.total)} of{" "}
+                  {computeProgress.total} — runs in the background across all
+                  periods; results fill in below as each batch completes. You can
+                  keep this tab open.
+                </>
+              ) : (
+                <>Saving &amp; preparing the periods to compute…</>
+              )}
             </p>
           )}
 
