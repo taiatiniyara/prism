@@ -722,10 +722,6 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                     />
                   </span>
                 </button>
-                <span className="text-muted-foreground max-w-52 text-right text-[10.5px] leading-snug">
-                  Also publish this measure as a KPI (a companion KPI that
-                  references it — computed once, on Save).
-                </span>
               </div>
             )}
           </div>
