@@ -420,8 +420,9 @@ export async function POST(request: Request) {
                 controller.enqueue(encoder.encode(`0:${JSON.stringify(text)}\n`));
               }
             }
-          } catch {
-            controller.enqueue(encoder.encode(`3:${JSON.stringify({ error: "text_stream_error" })}\n`));
+          } catch (err) {
+            logger.error("[ai-chat] Text stream error", { error: err instanceof Error ? err.message : String(err) });
+            controller.enqueue(encoder.encode(`3:${JSON.stringify({ error: err instanceof Error ? err.message : "text_stream_error" })}\n`));
           }
           textDone = true;
           if (toolDone) {
@@ -451,9 +452,9 @@ export async function POST(request: Request) {
                   })}\n`));
                 } else if (event.type === "tool-result" && event.toolName) {
                   const endTime = Date.now();
-                  const resultSummary = typeof event.result === "string"
-                    ? event.result.slice(0, 200)
-                    : JSON.stringify(event.result).slice(0, 200);
+                  const resultSummary = typeof event.output === "string"
+                    ? event.output.slice(0, 200)
+                    : JSON.stringify(event.output).slice(0, 200);
                   controller.enqueue(encoder.encode(`2:${JSON.stringify({
                     type: "tool-end",
                     toolName: event.toolName,
@@ -473,8 +474,9 @@ export async function POST(request: Request) {
                 }
               }
             }
-          } catch {
-            controller.enqueue(encoder.encode(`3:${JSON.stringify({ error: "tool_stream_error" })}\n`));
+          } catch (err) {
+            logger.error("[ai-chat] Tool stream error", { error: err instanceof Error ? err.message : String(err) });
+            controller.enqueue(encoder.encode(`3:${JSON.stringify({ error: err instanceof Error ? err.message : "tool_stream_error" })}\n`));
           }
           toolDone = true;
           if (textDone) {

@@ -282,6 +282,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
       }
 
       let displayedLen = 0;
+      let streamError: string | null = null;
 
       const revealNext = () => {
         const target = pendingContentRef.current;
@@ -354,7 +355,14 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
               // ignore malformed tool events
             }
           } else if (line.startsWith("3:")) {
-            // stream error event - silently acknowledge
+            try {
+              const errEvent = JSON.parse(line.slice(2));
+              if (errEvent && typeof errEvent.error === "string" && errEvent.error) {
+                streamError = errEvent.error;
+              }
+            } catch {
+              // ignore malformed error events
+            }
           } else if (line.length > 0 && !line.startsWith("0:") && !line.startsWith("2:") && !line.startsWith("3:")) {
             const content = line + "\n";
             pendingContentRef.current += content;
@@ -373,6 +381,10 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
       const fullReasoning = reasoningContentRef.current;
       setStreamingContent(fullContent);
       setStreamingReasoning("");
+
+      if (!fullContent && streamError) {
+        throw new Error(streamError);
+      }
 
       const assistantMessage: ChatMessage = {
         id: nextMessageId("assistant"),
