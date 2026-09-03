@@ -29,6 +29,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { FormulaEditor, formulaVariables } from "./FormulaEditor";
 import { InputTagCard } from "./InputTagCard";
 import { MeasurePickerModal } from "./MeasurePickerModal";
+import { InputCoverageModal } from "./InputCoverageModal";
 import { TestHarness } from "./TestHarness";
 import {
   colorForVariableIndex,
@@ -80,6 +81,8 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
   const [trackAsKpi, setTrackAsKpi] = useState(false);
   const [pickerCardKey, setPickerCardKey] = useState<string | null>(null);
   const [recompute, setRecompute] = useState<RecomputeResult | null>(null);
+  // Report period whose per-unit input coverage the diagnostic modal shows.
+  const [coveragePeriod, setCoveragePeriod] = useState<number | null>(null);
   // Chunked calculated-measure compute progress ("period X of N"). null = idle.
   const [computeProgress, setComputeProgress] = useState<{
     done: number;
@@ -1012,7 +1015,26 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                           {r.value ?? "—"}
                         </td>
                         <td className="text-muted-foreground py-1">
-                          {r.reason ?? ""}
+                          <div className="flex items-center justify-between gap-2">
+                            <span>{r.reason ?? ""}</span>
+                            {selectedTargetId != null && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setCoveragePeriod(r.reportPeriodId)
+                                }
+                                className={cn(
+                                  "shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium underline-offset-2 hover:underline",
+                                  r.status === "ok"
+                                    ? "text-muted-foreground"
+                                    : "text-primary",
+                                )}
+                                title="Which generators (units) are missing which inputs, for this period"
+                              >
+                                {r.status === "ok" ? "coverage" : "which units?"}
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -1034,6 +1056,17 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
         variableName={
           cards.find((c) => c.key === pickerCardKey)?.variableName ?? null
         }
+      />
+
+      <InputCoverageModal
+        open={coveragePeriod != null}
+        onOpenChange={(o) => {
+          if (!o) setCoveragePeriod(null);
+        }}
+        ownerKind={activeMode}
+        ownerId={selectedTargetId}
+        reportPeriodId={coveragePeriod}
+        ownerName={selectedTarget?.name}
       />
     </div>
   );
