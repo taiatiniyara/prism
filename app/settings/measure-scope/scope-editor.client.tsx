@@ -1,12 +1,13 @@
 "use client";
 
 import { useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
 import { Loader2, Search } from "lucide-react";
 import { MeasureScopeRow, saveMeasureDimensionScope } from "./service";
+import { DIMENSIONS } from "@/components/formula-builder/types";
 import { useState, useMemo } from "react";
 
 interface MeasureDimensionScopeEditorProps {
@@ -14,24 +15,27 @@ interface MeasureDimensionScopeEditorProps {
   allDimensions: readonly string[];
 }
 
-const DIMENSION_LABELS: Record<string, string> = {
-  provider: "Provider",
-  category: "Type",
-  technology: "Source",
-  customer_type: "Customer",
-  payment_mode: "Payment",
-  consumption_band: "Band",
-  division: "Division",
-  gender: "Gender",
-};
+// Standardised PRISM 2 dimension names, driven by the single source of truth
+// (DIMENSIONS.scopeKey === measure_dimension_scope.dimension). Keeps the editor
+// headers (Category / Technology / Asset Class / Consumption Band / …) in step
+// with the formula builder instead of showing the raw codes (type/source/…).
+const DIMENSION_LABELS: Record<string, string> = Object.fromEntries(
+  DIMENSIONS.map((d) => [d.scopeKey, d.label]),
+);
 
 export default function MeasureDimensionScopeEditor({
   rows,
   allDimensions,
 }: MeasureDimensionScopeEditorProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  // Deep-link target: /settings/measure-scope?measure=<id> (e.g. from the formula
+  // builder's input card). Pre-filter to that measure and highlight its row.
+  const focusId = Number(searchParams.get("measure")) || null;
   const [isPending, startTransition] = useTransition();
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(
+    () => rows.find((r) => r.measureId === focusId)?.measureName ?? "",
+  );
 
   const filteredRows = useMemo(
     () =>
@@ -103,7 +107,13 @@ export default function MeasureDimensionScopeEditor({
             {filteredRows.map((row, i) => (
               <tr
                 key={row.measureId}
-                className={`border-b hover:bg-muted/30 transition-colors ${i % 2 === 0 ? "bg-white" : "bg-muted/10"}`}
+                className={`border-b hover:bg-muted/30 transition-colors ${
+                  row.measureId === focusId
+                    ? "bg-amber-100/70 dark:bg-amber-900/30"
+                    : i % 2 === 0
+                      ? "bg-white"
+                      : "bg-muted/10"
+                }`}
               >
                 <td className="px-3 py-2 sticky left-0 bg-inherit z-10">
                   <div className="font-medium truncate max-w-[240px]">

@@ -22,9 +22,10 @@ describe("evaluator parity — KPI worker vs aggregated worker", () => {
   it.each(agree)("agree on the value of %j", (formula, vars, expected) => {
     const kpi = evaluateKpiFormula(formula, vars);
     const agg = evaluateFormula(formula, vars);
-    expect(kpi.status).toBe("ok");
     expect(agg.status).toBe("calculated");
-    expect(kpi.value).toBe(expected);
+    // toMatchObject narrows the KPI result's discriminated union (status 'ok'
+    // carries `value`) without an unchecked property access.
+    expect(kpi).toMatchObject({ status: "ok", value: expected });
     expect(agg.value).toBe(expected);
   });
 

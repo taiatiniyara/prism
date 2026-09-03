@@ -7,6 +7,13 @@ import { generateRandomNumber } from "@/lib/utils";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
+// Acronyms are always stored uppercase (trimmed), regardless of how they were
+// typed — the single source of truth so every surface presents them uppercase.
+const upperAcronym = <T extends { acronym?: string | null }>(data: T): T =>
+  typeof data.acronym === "string"
+    ? { ...data, acronym: data.acronym.trim().toUpperCase() }
+    : data;
+
 export async function AllOrganisations(filters?: {
   utilitiesOnly?: boolean;
   activeOnly?: boolean;
@@ -42,7 +49,7 @@ export async function CreateOrganisation(data: Organisation) {
   const [org] = await db
     .insert(organisations)
     .values({
-      ...data,
+      ...upperAcronym(data),
       id: generateRandomNumber(5),
       is_active: true,
       updated_date: null,
@@ -66,7 +73,7 @@ export async function GetOrganisationById(id: number) {
 export async function UpdateOrganisation(data: Partial<Organisation>) {
   const [upd] = await db
     .update(organisations)
-    .set(data)
+    .set(upperAcronym(data))
     .where(eq(organisations.id, data.id!))
     .returning();
 

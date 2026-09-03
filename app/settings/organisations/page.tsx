@@ -29,6 +29,12 @@ export default async function OrganisationsSettingsPage() {
             type: "text",
           },
           {
+            key: "acronym",
+            type: "text",
+            required: false,
+            className: "uppercase",
+          },
+          {
             key: "country_id",
             type: "select",
             selectList: countries.map((country) => ({
@@ -39,6 +45,11 @@ export default async function OrganisationsSettingsPage() {
           {
             key: "is_utility",
             type: "checkbox",
+          },
+          {
+            key: "bm_participates",
+            label: "Participates in Benchmarking",
+            type: "boolean",
           },
           {
             key: "entity_type_id",
@@ -80,6 +91,12 @@ export default async function OrganisationsSettingsPage() {
             type: "text",
           },
           {
+            key: "acronym",
+            type: "text",
+            required: false,
+            className: "uppercase",
+          },
+          {
             key: "country_id",
             type: "select",
             selectList: countries.map((country) => ({
@@ -90,6 +107,11 @@ export default async function OrganisationsSettingsPage() {
           {
             key: "is_utility",
             type: "checkbox",
+          },
+          {
+            key: "bm_participates",
+            label: "Participates in Benchmarking",
+            type: "boolean",
           },
           {
             key: "entity_type_id",

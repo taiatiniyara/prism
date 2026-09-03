@@ -20,6 +20,8 @@ export interface MeasurePickerModalProps {
   onOpenChange: (open: boolean) => void;
   measures: MeasureCatalogueItem[];
   onPick: (measure: MeasureCatalogueItem) => void;
+  /** the formula variable this measure is being picked for — shown at the top */
+  variableName?: string | null;
 }
 
 interface GroupNode {
@@ -49,6 +51,7 @@ export function MeasurePickerModal({
   onOpenChange,
   measures,
   onPick,
+  variableName,
 }: MeasurePickerModalProps) {
   const [search, setSearch] = useState("");
   const [activeGroup, setActiveGroup] = useState<string | null>(null);
@@ -100,6 +103,16 @@ export function MeasurePickerModal({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-3xl sm:max-w-3xl">
         <DialogHeader>
+          {variableName && (
+            <div className="mb-1 flex flex-wrap items-baseline gap-x-2 gap-y-0.5">
+              <span className="text-muted-foreground text-xs font-medium tracking-wide uppercase">
+                Variable
+              </span>
+              <span className="text-foreground font-mono text-lg font-bold break-all">
+                {variableName}
+              </span>
+            </div>
+          )}
           <DialogTitle>Pick a measure</DialogTitle>
           <DialogDescription>
             Browse by group / subgroup, or search — the list narrows as you

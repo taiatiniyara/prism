@@ -3,6 +3,7 @@ import { kpiDefinitions } from "@/db/schema/kpi";
 import { eq, and, like, or, inArray } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
 import { evaluateKpiFormula } from "@/app/data-entry/kpi-worker/evaluator";
+import { loadFormulaInputsFromBindings } from "@/app/data-entry/kpi-worker/formula-bindings";
 import { resolveFormulaInputValues } from "@/app/data-entry/kpi-worker/resolveInputs";
 import type { FormulaInput } from "@/db/schema/dataEntry";
 import type { KpiWorkerScope } from "@/app/data-entry/kpi-worker/types";
@@ -136,10 +137,19 @@ export const calculateKpis = async (
     };
   }
 
+  // formula_binding is the source of truth for a formula's inputs; fall back to
+  // the legacy formula_inputs JSON for KPIs still awaiting the manual rebuild.
+  const bindingInputs = await loadFormulaInputsFromBindings(
+    "kpi",
+    defs.map((d) => d.id),
+  );
+
   const calculated: CalculatedKpi[] = [];
 
   for (const def of defs) {
-    const formulaInputs = (def.formulaInputs ?? []) as FormulaInput[];
+    const formulaInputs =
+      bindingInputs.get(def.id) ??
+      ((def.formulaInputs ?? []) as FormulaInput[]);
     let variables: Record<string, number> = {};
     let missingVariables: string[] = [];
     let scenario: CalculatedKpi["scenario"] = undefined;
@@ -161,22 +171,32 @@ export const calculateKpis = async (
         missingVariables = resolved.missingVariables;
 
         const evaluation = evaluateKpiFormula(def.formula, variables);
-        result = {
-          value: evaluation.value ?? null,
-          status: evaluation.status,
-          failure_reason: evaluation.failureReason,
-        };
+        result =
+          evaluation.status === "error"
+            ? {
+                value: null,
+                status: "error" as const,
+                failure_reason: evaluation.failureReason,
+              }
+            : { value: evaluation.value, status: "ok" as const };
 
         // Scenario / what-if analysis
         if (options.hypothetical_values && Object.keys(options.hypothetical_values).length > 0) {
           const scenarioVars = { ...variables, ...options.hypothetical_values };
           const scenarioEval = evaluateKpiFormula(def.formula, scenarioVars);
-          scenario = {
-            value: scenarioEval.value ?? null,
-            status: scenarioEval.status,
-            failure_reason: scenarioEval.failureReason,
-            hypothetical_values: options.hypothetical_values,
-          };
+          scenario =
+            scenarioEval.status === "error"
+              ? {
+                  value: null,
+                  status: "error" as const,
+                  failure_reason: scenarioEval.failureReason,
+                  hypothetical_values: options.hypothetical_values,
+                }
+              : {
+                  value: scenarioEval.value,
+                  status: "ok" as const,
+                  hypothetical_values: options.hypothetical_values,
+                };
         }
 
         // Sensitivity analysis
@@ -190,7 +210,7 @@ export const calculateKpis = async (
             return {
               pct_change: pct,
               new_value: Math.round(newVal * 100) / 100,
-              kpi_result: evaled.value ?? null,
+              kpi_result: evaled.status === "error" ? null : evaled.value,
             };
           });
           sensitivity = {

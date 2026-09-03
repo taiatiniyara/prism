@@ -14,6 +14,11 @@ import {
 
 import DataTableUpdateForm from "./data-table-update-form";
 import { formatLabel } from "@/lib/formatters";
+import {
+  useFormId,
+  useFormOverrides,
+  useReorderableList,
+} from "../dev/form-overrides-provider";
 import BooleanToggle from "./booleanToggle";
 import { FaSquare } from "react-icons/fa";
 import {
@@ -29,8 +34,14 @@ import {
   ArrowDownIcon,
   ArrowUpIcon,
   CheckIcon,
-  FilterIcon,
+  ChevronDown,
+  ChevronsUpDown,
+  ChevronUp,
+  Columns3Icon,
+  EyeIcon,
+  EyeOffIcon,
   GripVertical,
+  ListFilter,
   Loader2Icon,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -60,6 +71,7 @@ interface DataTableProps<T extends DataTableRecord> {
       type: FieldType;
       required?: boolean;
       disabled?: boolean;
+      className?: string;
       selectList?: {
         label: string;
         value: string | number;
@@ -76,6 +88,13 @@ interface DataTableProps<T extends DataTableRecord> {
       }[],
     ) => Promise<{ success: boolean; message: string }>;
   };
+  // Master/detail: highlight + select a row on click (e.g. pick a parent list).
+  onRowClick?: (row: T) => void;
+  selectedRowId?: string | number | null;
+  // Fill the parent's height and scroll the table body inside (toolbar + header
+  // stay fixed) instead of the default viewport-relative max-height. The parent
+  // must be height-bounded.
+  fillHeight?: boolean;
 }
 
 type SortDirection = "asc" | "desc" | null;
@@ -101,7 +120,16 @@ export default function DataTable<T extends DataTableRecord>(
     createFormProps,
     updateFormProps,
     reorderRowsProps,
+    onRowClick,
+    selectedRowId,
+    fillHeight,
   } = props;
+  const formId = useFormId();
+  // Columns live under a separate namespace so a column key can't collide with
+  // a form-field key of the same name (both keyed by route otherwise).
+  const columnFormId = `${formId}::columns`;
+  const { getLabel, reorderActive, canEdit, getHidden, toggleHidden } =
+    useFormOverrides();
 
   const [search, setSearch] = useState("");
   const [sortColumn, setSortColumn] = useState<keyof T | null>(null);
@@ -136,6 +164,44 @@ export default function DataTable<T extends DataTableRecord>(
         };
       }),
     [columns],
+  );
+
+  // Declared columns are visible by default; every other field present in the
+  // data is *available* to switch on via the DEV column chooser (hidden by
+  // default). This lets a DEV swap the built-in columns for any record field.
+  const declaredKeys = useMemo(
+    () => new Set(normalizedColumns.map((c) => String(c.name))),
+    [normalizedColumns],
+  );
+  const availableColumns = useMemo(() => {
+    const byKey = new Map<string, (typeof normalizedColumns)[number]>();
+    for (const c of normalizedColumns) byKey.set(String(c.name), c);
+    for (const key of Object.keys(data[0] ?? {})) {
+      if (!byKey.has(key)) {
+        byKey.set(key, { name: key as keyof T, display: formatLabel(key) });
+      }
+    }
+    return Array.from(byKey.values());
+  }, [normalizedColumns, data]);
+
+  const columnDefaultHidden = useCallback(
+    (key: string) => !declaredKeys.has(key),
+    [declaredKeys],
+  );
+
+  // DEV column reorder (drag headers). Same store as form fields, namespaced.
+  const { ordered: displayColumns, dragProps: colDragProps } =
+    useReorderableList(columnFormId, availableColumns, (c) => String(c.name));
+
+  // Hidden columns drop out of the header + body; the chooser lists every
+  // available column so any can be switched on/off.
+  const visibleColumns = useMemo(
+    () =>
+      displayColumns.filter(
+        (c) =>
+          !getHidden(columnFormId, String(c.name), columnDefaultHidden(String(c.name))),
+      ),
+    [displayColumns, getHidden, columnFormId, columnDefaultHidden],
   );
 
   const quickFilterColumns = useMemo(
@@ -568,41 +634,19 @@ export default function DataTable<T extends DataTableRecord>(
 
   function SortIcon({ column }: { column: keyof T }) {
     const isActive = sortColumn === column;
+    // Active sort: a solid, direction-aware chevron (accent, always shown).
+    // Unsorted: a faint up/down chevron that only appears on header hover.
+    if (isActive && sortDirection === "asc") {
+      return <ChevronUp className="ml-1 size-3.5 text-primary" aria-hidden />;
+    }
+    if (isActive && sortDirection === "desc") {
+      return <ChevronDown className="ml-1 size-3.5 text-primary" aria-hidden />;
+    }
     return (
-      <span
-        className={cn(
-          "ml-1.5 inline-flex flex-col gap-px opacity-40 transition-opacity",
-          isActive && "opacity-100",
-        )}
+      <ChevronsUpDown
+        className="ml-1 size-3.5 text-muted-foreground/50 opacity-0 transition-opacity group-hover/th:opacity-100"
         aria-hidden
-      >
-        <svg
-          width="8"
-          height="5"
-          viewBox="0 0 8 5"
-          className={cn(
-            "fill-current transition-colors",
-            isActive && sortDirection === "asc"
-              ? "text-primary"
-              : "text-muted-foreground",
-          )}
-        >
-          <path d="M4 0L8 5H0L4 0Z" />
-        </svg>
-        <svg
-          width="8"
-          height="5"
-          viewBox="0 0 8 5"
-          className={cn(
-            "fill-current transition-colors",
-            isActive && sortDirection === "desc"
-              ? "text-primary"
-              : "text-muted-foreground",
-          )}
-        >
-          <path d="M4 5L0 0H8L4 5Z" />
-        </svg>
-      </span>
+      />
     );
   }
 
@@ -618,9 +662,9 @@ export default function DataTable<T extends DataTableRecord>(
         );
       }
       return row[col] ? (
-        <span className="text-lime-500">{"Yes"}</span>
+        <span className="text-success">{"Yes"}</span>
       ) : (
-        <span className="text-slate-600">{"No"}</span>
+        <span className="text-muted-foreground">{"No"}</span>
       );
     }
     if (col === "color") {
@@ -663,11 +707,17 @@ export default function DataTable<T extends DataTableRecord>(
           <Button
             variant="ghost"
             size="icon-xs"
-            className={cn("ml-1", hasFilter && "text-primary")}
+            className={cn(
+              "ml-0.5 rounded-md transition-opacity",
+              // Active filter stays visible (accent); otherwise reveal on hover.
+              hasFilter
+                ? "text-primary opacity-100"
+                : "text-muted-foreground/60 opacity-0 group-hover/th:opacity-100",
+            )}
             aria-label={`Filter ${display}`}
             onClick={(e) => e.stopPropagation()}
           >
-            <FilterIcon className="size-3" />
+            <ListFilter className="size-3.5" />
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent
@@ -735,7 +785,7 @@ export default function DataTable<T extends DataTableRecord>(
   }
 
   return (
-    <div className="w-full">
+    <div className={cn("w-full", fillHeight && "flex h-full flex-col")}>
       {/* Header */}
       <div className="flex flex-col gap-3 px-3 pt-5 pb-4 sm:flex-row sm:items-center sm:justify-between sm:px-5">
         <div className="flex flex-wrap items-center gap-2 sm:gap-4">
@@ -746,6 +796,50 @@ export default function DataTable<T extends DataTableRecord>(
             {title}
           </Heading>
           {createFormProps && <DataTableCreateForm {...createFormProps} />}
+          {canEdit && (
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="h-7 text-xs"
+                  title="Show/hide columns (DEV) — drag headers to reorder"
+                >
+                  <Columns3Icon className="mr-1.5 size-3" />
+                  Columns
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent
+                align="start"
+                className="max-h-80 overflow-y-auto"
+              >
+                <DropdownMenuLabel>Show columns (DEV, global)</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {displayColumns.map((column) => {
+                  const key = String(column.name);
+                  const defHidden = columnDefaultHidden(key);
+                  const hidden = getHidden(columnFormId, key, defHidden);
+                  return (
+                    <DropdownMenuItem
+                      key={key}
+                      onSelect={(e) => e.preventDefault()}
+                      onClick={() => toggleHidden(columnFormId, key, defHidden)}
+                      className="flex items-center gap-2"
+                    >
+                      {hidden ? (
+                        <EyeOffIcon className="size-3.5 text-muted-foreground" />
+                      ) : (
+                        <EyeIcon className="size-3.5" />
+                      )}
+                      <span className={cn(hidden && "text-muted-foreground")}>
+                        {getLabel(formId, key, column.display)}
+                      </span>
+                    </DropdownMenuItem>
+                  );
+                })}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          )}
           {reorderRowsProps && isOrderDirty && (
             <Button
               size="sm"
@@ -808,8 +902,8 @@ export default function DataTable<T extends DataTableRecord>(
         </div>
       </div>
 
-      <div className="p-2">
-        {quickFilters && quickFilters.length > 0 && (
+      {quickFilters && quickFilters.length > 0 && (
+        <div className="px-2 pb-2">
           <div className="flex w-full flex-wrap items-center gap-2 sm:w-auto">
             {quickFilters.map((filter) => {
               const key = String(filter.column);
@@ -867,10 +961,17 @@ export default function DataTable<T extends DataTableRecord>(
               );
             })}
           </div>
-        )}
-      </div>
+        </div>
+      )}
       {/* Table */}
-      <div className="max-h-[calc(100vh-220px)] overflow-auto sm:max-h-[calc(100vh-200px)]">
+      <div
+        className={cn(
+          "overflow-auto",
+          fillHeight
+            ? "min-h-0 flex-1"
+            : "max-h-[calc(100vh-220px)] sm:max-h-[calc(100vh-200px)]",
+        )}
+      >
         <table className="w-full min-w-max text-xs">
           <thead className="sticky top-0 bg-muted z-50">
             <tr>
@@ -879,19 +980,29 @@ export default function DataTable<T extends DataTableRecord>(
                   Move
                 </th>
               )}
-              {normalizedColumns.map((column) => (
+              {visibleColumns.map((column) => (
                 <th
                   key={String(column.name)}
-                  onClick={() => handleSort(column.name)}
+                  onClick={() => {
+                    // While reordering, a header click is a drag target, not a sort.
+                    if (!reorderActive) handleSort(column.name);
+                  }}
+                  {...colDragProps(String(column.name))}
                   className={cn(
-                    "whitespace-nowrap px-4 py-2.5 text-left font-semibold uppercase tracking-wider",
+                    "group/th whitespace-nowrap px-4 py-2.5 text-left font-semibold uppercase tracking-wider",
                     "text-muted-foreground select-none cursor-pointer",
                     "transition-colors hover:text-foreground hover:bg-muted",
                     sortColumn === column.name && "text-foreground bg-muted",
                   )}
                 >
                   <span className="inline-flex items-center">
-                    {column.display}
+                    <span
+                      data-form-id={formId}
+                      data-form-field-key={String(column.name)}
+                      data-form-default-label={column.display}
+                    >
+                      {getLabel(formId, String(column.name), column.display)}
+                    </span>
                     <SortIcon column={column.name} />
                     {columnFilterMenu(column.name, column.display)}
                   </span>
@@ -909,7 +1020,7 @@ export default function DataTable<T extends DataTableRecord>(
               <tr>
                 <td
                   colSpan={
-                    normalizedColumns.length +
+                    visibleColumns.length +
                     (updateFormProps ? 1 : 0) +
                     (reorderRowsProps ? 1 : 0)
                   }
@@ -967,11 +1078,18 @@ export default function DataTable<T extends DataTableRecord>(
                       setDraggedRowId(null);
                       setDragOverRowId(null);
                     }}
+                    onClick={
+                      onRowClick ? () => onRowClick(record) : undefined
+                    }
                     className={cn(
                       "group transition-colors hover:bg-muted/40",
                       draggedRowId === record.id && "opacity-60",
                       dragOverRowId === record.id && "bg-muted/70",
                       canReorderRows && "cursor-move",
+                      onRowClick && "cursor-pointer",
+                      selectedRowId != null &&
+                        selectedRowId === record.id &&
+                        "bg-primary/10 hover:bg-primary/15",
                     )}
                   >
                     {reorderRowsProps && (
@@ -1015,7 +1133,7 @@ export default function DataTable<T extends DataTableRecord>(
                         </div>
                       </td>
                     )}
-                    {normalizedColumns.map((column) => (
+                    {visibleColumns.map((column) => (
                       <td
                         key={String(column.name)}
                         className="whitespace-nowrap px-4 py-2.5 text-foreground"

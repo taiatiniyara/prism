@@ -28,9 +28,6 @@ export interface NewOrgRow {
   utility_size_id: number | null;
   operating_basis_id: number | null;
   entity_type_id: number | null;
-  accounting_standard_id: number | null;
-  electricity_regulation_id: number | null;
-  powerquality_standard_id: number | null;
   ppa_membership_type_id: number | null;
   services_provided_id: number | null;
   is_active: boolean;
@@ -151,9 +148,6 @@ const ORG_ALIASES: Record<string, string[]> = {
   utility_size_id: ["utility_size_id"],
   operating_basis_id: ["operating_basis_id"],
   entity_type_id: ["entity_type_id"],
-  accounting_standard_id: ["accounting_standard_id"],
-  electricity_regulation_id: ["electricity_regulation_id"],
-  powerquality_standard_id: ["powerquality_standard_id", "powequality_standard_id"],
   ppa_membership_type_id: ["ppa_membership_type_id"],
   services_provided_id: ["services_provided_id"],
   is_active: ["is_active", "active"],
@@ -232,9 +226,6 @@ export async function parseNewOrganisationsWorkbook(
         utility_size_id: toInt(g(r, "utility_size_id")),
         operating_basis_id: toInt(g(r, "operating_basis_id")),
         entity_type_id: toInt(g(r, "entity_type_id")),
-        accounting_standard_id: toInt(g(r, "accounting_standard_id")),
-        electricity_regulation_id: toInt(g(r, "electricity_regulation_id")),
-        powerquality_standard_id: toInt(g(r, "powerquality_standard_id")),
         ppa_membership_type_id: toInt(g(r, "ppa_membership_type_id")),
         services_provided_id: toInt(g(r, "services_provided_id")),
         is_active: toBool(g(r, "is_active"), true),

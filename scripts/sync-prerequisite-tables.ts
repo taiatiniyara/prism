@@ -67,9 +67,8 @@ async function main() {
         is_utility: o.is_utility ?? true, is_active: o.is_active ?? true,
         is_mth_reports_relevant_month: o.is_mth_reports_relevant ?? false,
         updated_date: o.updated_date,
-        powequality_standard_id: mliIds.has(o.powerquality_standard_id) ? o.powerquality_standard_id : null,
-        electricity_regulation_id: mliIds.has(o.electricity_regulation_id) ? o.electricity_regulation_id : null,
-        accounting_standard_id: mliIds.has(o.accounting_standard_id) ? o.accounting_standard_id : null,
+        // accounting/electricity/powerquality standard ids retired 2026-09-02 (Stage 2) —
+        // reported context answers now live in data_entries (measures 51/53/52), not org columns.
         entity_type_id: mliIds.has(o.entity_type_id) ? o.entity_type_id : null,
         utility_type_id: mliIds.has(o.utility_type_id) ? o.utility_type_id : 440,
         operating_basis_id: mliIds.has(o.operating_basis_id) ? o.operating_basis_id : null,

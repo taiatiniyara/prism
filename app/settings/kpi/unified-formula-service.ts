@@ -18,9 +18,11 @@ import {
   resolveManagedListName,
 } from "@/lib/managed-list-utils";
 import { recomputeKpiNow as engineRecomputeKpiNow } from "@/app/data-entry/kpi-worker/recompute";
+import { wouldCreateCycle } from "@/app/data-entry/enter-data/services/aggregated-worker/compute-order";
 import { runAggregatedWorker } from "@/app/data-entry/enter-data/services/aggregated-worker/orchestrator";
+import { selectAggregatedFormulaTargets } from "@/app/data-entry/enter-data/services/aggregated-worker/target-selector";
 import { getCurrentUser } from "@/lib/user.service";
-import { reportPeriods } from "@/db/schema/reportPeriods";
+import { listBenchmarkingPeriodIds } from "@/lib/benchmarking/participation";
 import {
   ALL_MEMBER_BY_FIELD,
   BuilderData,
@@ -105,6 +107,17 @@ export async function getUnifiedFormulaBuilderData(
     scopeByMeasure.set(s.measure_id, list);
   }
 
+  // Order each measure's applicable dimensions by the canonical PRISM 2 order
+  // (DIMENSIONS: provider → category → technology → asset_class → customer_type
+  // → payment_mode → consumption_band → division → gender → utility_function),
+  // so the tag cards render in a consistent, expected sequence.
+  const dimOrder = new Map(DIMENSIONS.map((d, i) => [d.field, i]));
+  for (const list of scopeByMeasure.values()) {
+    list.sort(
+      (a, b) => (dimOrder.get(a.field) ?? 99) - (dimOrder.get(b.field) ?? 99),
+    );
+  }
+
   const measures: MeasureCatalogueItem[] = measureRows.map((m) => ({
     id: m.id,
     name: m.name,
@@ -174,6 +187,8 @@ export async function getUnifiedFormulaBuilderData(
       formula: kpiDefinitions.formula,
       formula_inputs: kpiDefinitions.formula_inputs,
       is_descriptive: kpiDefinitions.is_descriptive,
+      is_currency: kpiDefinitions.is_currency,
+      unit_id: kpiDefinitions.unit_id,
     })
     .from(kpiDefinitions)
     .where(eq(kpiDefinitions.is_active, true))
@@ -194,6 +209,9 @@ export async function getUnifiedFormulaBuilderData(
       ),
       isDescriptive: r.is_descriptive ?? false,
       isTrackedAsKpi: false,
+      unitLabel: resolveManagedListName(nameById, r.unit_id, null),
+      unitId: r.unit_id ?? null,
+      isCurrency: r.is_currency ?? false,
       existingCards,
     };
   });
@@ -211,6 +229,8 @@ export async function getUnifiedFormulaBuilderData(
       name: measureDefinitions.name,
       formula: measureDefinitions.formula,
       formula_inputs: measureDefinitions.formula_inputs,
+      is_currency: measureDefinitions.is_currency,
+      unit_id: measureDefinitions.unit_id,
     })
     .from(measureDefinitions)
     .where(
@@ -236,11 +256,69 @@ export async function getUnifiedFormulaBuilderData(
       ),
       isDescriptive: false, // calculated measures are numeric by definition
       isTrackedAsKpi: activeKpiNames.has(r.name.trim().toLowerCase()),
+      unitLabel: resolveManagedListName(nameById, r.unit_id, null),
+      unitId: r.unit_id ?? null,
+      isCurrency: r.is_currency ?? false,
       existingCards,
     };
   });
 
-  return { mode, kpiTargets, measureTargets, measures, dimMembers };
+  // UoM options for the inline unit editor. The managed list is named "UoM"
+  // (the earlier "Unit"/"Units" guess matched nothing → empty picker); keep the
+  // aliases as a fallback in case the list is renamed.
+  const units: MemberOption[] = await db
+    .select({ id: managedListItems.id, name: managedListItems.name })
+    .from(managedListItems)
+    .innerJoin(managedLists, eq(managedListItems.list_id, managedLists.id))
+    .where(
+      and(
+        inArray(managedLists.name, [
+          "UoM",
+          "UOM",
+          "uom",
+          "Unit",
+          "Units",
+          "unit",
+          "units",
+        ]),
+        eq(managedListItems.is_active, true),
+      ),
+    )
+    .orderBy(asc(managedListItems.name));
+
+  return { mode, kpiTargets, measureTargets, measures, dimMembers, units };
+}
+
+/**
+ * Inline UoM editor: set a target's unit_id (kpi_definitions for KPIs,
+ * measure_definitions for calculated measures). Display-only metadata — no
+ * recompute needed; the harness/dashboards format off it.
+ */
+export async function updateTargetUom(input: {
+  mode: BuilderMode;
+  ownerId: number;
+  unitId: number;
+}): Promise<{ ok: boolean; error?: string }> {
+  try {
+    if (input.mode === "kpi") {
+      await db
+        .update(kpiDefinitions)
+        .set({ unit_id: input.unitId })
+        .where(eq(kpiDefinitions.id, input.ownerId));
+    } else {
+      await db
+        .update(measureDefinitions)
+        .set({ unit_id: input.unitId })
+        .where(eq(measureDefinitions.id, input.ownerId));
+    }
+    revalidatePath("/settings/kpi");
+    return { ok: true };
+  } catch (error) {
+    return {
+      ok: false,
+      error: error instanceof Error ? error.message : "Failed to update unit.",
+    };
+  }
 }
 
 function cardsFromLegacyJson(
@@ -349,6 +427,39 @@ export async function saveUnifiedFormula(
     }
     return fi;
   });
+
+  // Reject a save that would make a calculated measure depend on itself
+  // (directly or through a chain). Only measures form the compute graph; a KPI
+  // is terminal. Checked here so the fixpoint / topological compute never has
+  // to detect a cycle at run time.
+  if (ownerKind === "measure") {
+    const calcMeasures = await db
+      .select({
+        id: measureDefinitions.id,
+        formula_inputs: measureDefinitions.formula_inputs,
+      })
+      .from(measureDefinitions)
+      .where(eq(measureDefinitions.is_calculated, true));
+
+    const otherNodes = calcMeasures.map((m) => ({
+      id: m.id,
+      inputIds: inputMeasureIds(m.formula_inputs),
+    }));
+
+    if (
+      wouldCreateCycle(
+        payload.ownerId,
+        formulaInputs.map((fi) => fi.measure_def_id),
+        otherNodes,
+      )
+    ) {
+      return {
+        ok: false,
+        error:
+          "This formula would create a dependency cycle between calculated measures.",
+      };
+    }
+  }
 
   try {
     await db.transaction(async (tx) => {
@@ -547,34 +658,96 @@ function inputMeasureIds(
 
 async function allReportPeriodIds(explicit?: number[]): Promise<number[]> {
   if (explicit && explicit.length) return explicit;
-  const rows = await db
-    .select({ id: reportPeriods.id })
-    .from(reportPeriods)
-    .orderBy(asc(reportPeriods.id));
-  return rows.map((r) => r.id);
+  // Only periods opted into benchmarking — the canonical predicate
+  // (organisations.is_utility = true AND report_periods.bm_opted_in = true),
+  // via the ONE shared helper so the KPI worker, this enumeration, and any
+  // future gate stay in lockstep. Non-opted-in periods are never benchmarked,
+  // so computing — and surfacing failed rows for — them is noise.
+  return listBenchmarkingPeriodIds();
 }
 
 /** Compute just the calculated-measure VALUES (aggregated worker per period);
  *  no downstream KPI publish — callers add that when they want end-to-end. */
+const AGG_SKIP_REASON_TEXT: Record<string, string> = {
+  "missing-value": "Missing input value",
+  "unknown-variable": "Unknown variable in formula",
+  "evaluation-error": "Formula evaluation error",
+};
+
 async function computeCalculatedMeasureValues(
   periodIds: number[],
-): Promise<{ calculated: number; skipped: number; errors: number }> {
+  focusMeasureId?: number,
+  scopeTargetIds?: number[],
+): Promise<{
+  calculated: number;
+  skipped: number;
+  errors: number;
+  // Per-period status FOR the focus measure (drives the builder's reason table).
+  byPeriod: RecomputeResult["byPeriod"];
+}> {
   const user = await getCurrentUser();
   let calculated = 0;
   let skipped = 0;
   let errors = 0;
+  const byPeriod: RecomputeResult["byPeriod"] = [];
+  // Scope the aggregated worker to the edited measure + its calculated-dependency
+  // closure (resolved by the caller) so Save & Compute recomputes only that
+  // measure and its upstream calc ancestors — not every calculated measure.
+  // Empty ⇒ whole set (the bulk / no-selection fallback).
+  const workerOptions =
+    scopeTargetIds && scopeTargetIds.length
+      ? { targetInputDefIds: scopeTargetIds }
+      : undefined;
   for (const reportPeriodId of periodIds) {
     try {
-      const { outcomes } = await runAggregatedWorker(user, { reportPeriodId });
+      const { outcomes } = await runAggregatedWorker(
+        user,
+        { reportPeriodId },
+        workerOptions,
+      );
       for (const o of outcomes) {
         if (o.status === "calculated") calculated += 1;
         else skipped += 1;
       }
-    } catch {
+      if (focusMeasureId != null) {
+        const o = outcomes.find((x) => x.inputDefId === focusMeasureId);
+        if (!o) {
+          byPeriod.push({
+            reportPeriodId,
+            kpiDefId: focusMeasureId,
+            status: "failed",
+            reason: "Not computed this period (no data / dependency missing).",
+          });
+        } else if (o.status === "calculated") {
+          byPeriod.push({
+            reportPeriodId,
+            kpiDefId: focusMeasureId,
+            status: "ok",
+            value: o.calculatedValue,
+          });
+        } else {
+          byPeriod.push({
+            reportPeriodId,
+            kpiDefId: focusMeasureId,
+            status: "failed",
+            reason:
+              AGG_SKIP_REASON_TEXT[o.reason ?? ""] ?? o.reason ?? "Skipped.",
+          });
+        }
+      }
+    } catch (error) {
       errors += 1;
+      if (focusMeasureId != null) {
+        byPeriod.push({
+          reportPeriodId,
+          kpiDefId: focusMeasureId,
+          status: "failed",
+          reason: `Worker error: ${error instanceof Error ? error.message : String(error)}`,
+        });
+      }
     }
   }
-  return { calculated, skipped, errors };
+  return { calculated, skipped, errors, byPeriod };
 }
 
 export async function recomputeKpiNow(
@@ -612,61 +785,281 @@ export async function recomputeAllKpis(): Promise<RecomputeResult> {
   return engineRecomputeKpiNow({ all: true });
 }
 
+export interface KpiComputePlan {
+  periodIds: number[];
+  /**
+   * true when the KPI references at least one calculated measure, so each chunk
+   * must refresh those upstream measure VALUES for its periods before computing
+   * the KPI (the per-batch equivalent of recomputeKpiNow's one-shot refresh).
+   */
+  refreshMeasures: boolean;
+}
+
 /**
- * Compute calculated MEASURES (is_calculated=true). Reuses the existing
- * aggregated-worker (fixpoint over all calculated-measure formulas, writing
- * derived values into data_entries), run once per report period at utility
- * scope. The builder's saved formula_inputs cache is what the worker reads.
+ * Plan a chunked KPI recompute so the client can drive a progress bar (mirrors
+ * planCalculatedMeasureCompute for the KPI path). Returns the participating
+ * periods to compute across — `allReportPeriodIds()` is already gated on the
+ * canonical predicate (is_utility AND bm_opted_in), the same set the whole
+ * recompute would use —
+ * plus whether the KPI depends on calculated measures.
+ */
+export async function planKpiCompute(kpiDefId: number): Promise<KpiComputePlan> {
+  const [kpi] = await db
+    .select({ formula_inputs: kpiDefinitions.formula_inputs })
+    .from(kpiDefinitions)
+    .where(eq(kpiDefinitions.id, kpiDefId))
+    .limit(1);
+  const inputIds = inputMeasureIds(kpi?.formula_inputs);
+  let refreshMeasures = false;
+  if (inputIds.length) {
+    const computedInputs = await db
+      .select({ id: measureDefinitions.id })
+      .from(measureDefinitions)
+      .where(
+        and(
+          inArray(measureDefinitions.id, inputIds),
+          eq(measureDefinitions.is_calculated, true),
+        ),
+      );
+    refreshMeasures = computedInputs.length > 0;
+  }
+  const periodIds = await allReportPeriodIds();
+  return { periodIds, refreshMeasures };
+}
+
+/**
+ * Compute ONE chunk of report periods for a KPI. When the KPI depends on
+ * calculated measures, refresh those measure VALUES for just this chunk's
+ * periods first — the per-batch equivalent of recomputeKpiNow's upstream
+ * refresh, so the whole operation chunks instead of one heavy all-periods
+ * request. Returns the per-period status for streaming into the reason table.
+ */
+export async function computeKpiChunk(input: {
+  kpiDefId: number;
+  reportPeriodIds: number[];
+  refreshMeasures: boolean;
+}): Promise<RecomputeResult> {
+  if (input.refreshMeasures) {
+    await computeCalculatedMeasureValues(input.reportPeriodIds);
+  }
+  return engineRecomputeKpiNow({
+    kpiDefIds: [input.kpiDefId],
+    reportPeriodIds: input.reportPeriodIds,
+  });
+}
+
+/**
+ * The edited measure + every calculated measure it transitively depends on (its
+ * calculated-dependency closure). Walks the SAME dependency graph the aggregated
+ * worker runs (`selectAggregatedFormulaTargets`, bindings-first) so the scope
+ * matches what the worker will compute. Raw-measure inputs are excluded — they
+ * are read from stored values, not recomputed. So Save & Compute of e.g. Profit
+ * (← Total Costs) recomputes Profit AND Total Costs, but nothing unrelated.
+ */
+async function resolveCalcClosure(focusMeasureId: number): Promise<number[]> {
+  const targets = await selectAggregatedFormulaTargets();
+  const inputsById = new Map<number, number[]>();
+  const targetIds = new Set<number>();
+  for (const t of targets) {
+    targetIds.add(t.inputDefId);
+    inputsById.set(
+      t.inputDefId,
+      t.formulaInputs.map((fi) => fi.measure_def_id),
+    );
+  }
+  const closure = new Set<number>([focusMeasureId]);
+  const frontier = [focusMeasureId];
+  while (frontier.length) {
+    const id = frontier.pop() as number;
+    for (const depId of inputsById.get(id) ?? []) {
+      // Only follow dependencies that are themselves calculated targets; raw
+      // inputs are read from stored values, not recomputed.
+      if (targetIds.has(depId) && !closure.has(depId)) {
+        closure.add(depId);
+        frontier.push(depId);
+      }
+    }
+  }
+  return [...closure];
+}
+
+/**
+ * Active KPIs that must be re-published after calculated-measure values change,
+ * so they read fresh upstream values (companion pass-through KPIs from
+ * Track-as-KPI + real KPIs like Cost-per-Customer). Period-independent — resolve
+ * once, reuse across every chunk of a chunked recompute.
+ *
+ * When `relevantMeasureIds` is given (Save & Compute — the edited measure's
+ * calc-dependency closure), only KPIs referencing one of THOSE measures are
+ * republished, keeping the impact scoped. Omitted ⇒ every KPI referencing any
+ * calculated measure.
+ */
+async function resolveDependentKpiIds(
+  relevantMeasureIds?: number[],
+): Promise<number[]> {
+  let relevantIds: Set<number>;
+  if (relevantMeasureIds && relevantMeasureIds.length) {
+    relevantIds = new Set(relevantMeasureIds);
+  } else {
+    const calcMeasures = await db
+      .select({ id: measureDefinitions.id })
+      .from(measureDefinitions)
+      .where(eq(measureDefinitions.is_calculated, true));
+    relevantIds = new Set(calcMeasures.map((m) => m.id));
+  }
+  if (!relevantIds.size) return [];
+  const activeKpis = await db
+    .select({
+      id: kpiDefinitions.id,
+      formula_inputs: kpiDefinitions.formula_inputs,
+    })
+    .from(kpiDefinitions)
+    .where(eq(kpiDefinitions.is_active, true));
+  return activeKpis
+    .filter((k) =>
+      inputMeasureIds(k.formula_inputs).some((id) => relevantIds.has(id)),
+    )
+    .map((k) => k.id);
+}
+
+/** Publish the dependent KPIs for a set of periods. Best-effort — the measure
+ *  values are already written; the KPI compute has its own reporting. */
+async function publishDependentKpis(
+  dependentKpiIds: number[],
+  periodIds: number[],
+): Promise<void> {
+  if (!dependentKpiIds.length || !periodIds.length) return;
+  try {
+    await engineRecomputeKpiNow({
+      kpiDefIds: dependentKpiIds,
+      reportPeriodIds: periodIds,
+    });
+  } catch {
+    // best-effort; measure values are already written.
+  }
+}
+
+/**
+ * Compute calculated MEASURES (is_calculated=true) via the aggregated worker,
+ * once per report period at utility scope, writing derived values into
+ * data_entries. The builder's saved formula_inputs cache is what the worker
+ * reads. When `focusMeasureId` is given the worker + KPI republish are scoped to
+ * that measure and its calculated-dependency closure; omitted ⇒ the whole set.
+ *
+ * NOTE — this is the whole-set SYNCHRONOUS path (all periods in one call). It
+ * exceeds the gateway timeout on the full ~140-period set, so the builder UI no
+ * longer calls it; the UI drives {@link planCalculatedMeasureCompute} +
+ * {@link computeCalculatedMeasureChunk} instead. Kept for scripts/tests and any
+ * non-interactive caller that can tolerate a long single request.
  */
 export async function recomputeCalculatedMeasuresNow(
   reportPeriodIds?: number[],
+  focusMeasureId?: number,
 ): Promise<{
   periods: number;
   calculated: number;
   skipped: number;
   errors: number;
+  byPeriod: RecomputeResult["byPeriod"];
 }> {
   const periodIds = await allReportPeriodIds(reportPeriodIds);
-  const { calculated, skipped, errors } =
-    await computeCalculatedMeasureValues(periodIds);
+  // Scope to the edited measure + its calc-dependency closure when focused.
+  const scopeIds =
+    focusMeasureId != null
+      ? await resolveCalcClosure(focusMeasureId)
+      : undefined;
+  const { calculated, skipped, errors, byPeriod } =
+    await computeCalculatedMeasureValues(periodIds, focusMeasureId, scopeIds);
 
-  // Publish downstream KPIs end-to-end: the aggregated worker's own KPI trigger
-  // runs at the caller's org scope only, so recompute every KPI that references
-  // a calculated measure per-utility here (companion pass-through KPIs from
-  // Track-as-KPI + real KPIs like Cost-per-Customer). engineRecomputeKpiNow
-  // iterates report periods, which are utility-specific.
-  try {
-    const calcMeasures = await db
-      .select({ id: measureDefinitions.id })
-      .from(measureDefinitions)
-      .where(eq(measureDefinitions.is_calculated, true));
-    const calcIds = new Set(calcMeasures.map((m) => m.id));
-    if (calcIds.size) {
-      const activeKpis = await db
-        .select({
-          id: kpiDefinitions.id,
-          formula_inputs: kpiDefinitions.formula_inputs,
-        })
-        .from(kpiDefinitions)
-        .where(eq(kpiDefinitions.is_active, true));
-      const dependentKpiIds = activeKpis
-        .filter((k) =>
-          inputMeasureIds(k.formula_inputs).some((id) => calcIds.has(id)),
-        )
-        .map((k) => k.id);
-      if (dependentKpiIds.length) {
-        await engineRecomputeKpiNow({
-          kpiDefIds: dependentKpiIds,
-          reportPeriodIds: periodIds,
-        });
-      }
-    }
-  } catch {
-    // Downstream KPI publish is best-effort; the measure values are already
-    // written. Surface nothing extra — the KPI compute has its own reporting.
-  }
+  await publishDependentKpis(
+    await resolveDependentKpiIds(scopeIds),
+    periodIds,
+  );
 
   revalidatePath("/settings/inputs");
   revalidatePath("/settings/kpi");
-  return { periods: periodIds.length, calculated, skipped, errors };
+  return { periods: periodIds.length, calculated, skipped, errors, byPeriod };
+}
+
+// ---------------------------------------------------------------------------
+// Chunked calculated-measure recompute (async-with-progress)
+//
+// The whole-set path above runs the aggregated worker across ALL report
+// periods in ONE server-action call, which for the full set (~140 periods)
+// blows past the ~1-minute request/gateway timeout — the browser gets no
+// response and the reason table never renders even though the compute finished
+// server-side. Because the aggregated worker is a per-period fixpoint (each
+// period is fully independent), the set can be split into small period-slices
+// that each return well under the timeout. The client enumerates once via
+// planCalculatedMeasureCompute(), then calls computeCalculatedMeasureChunk()
+// per slice — showing "computing period X of N" and streaming each slice's
+// per-period reasons into the table. Chunking is EXACT: same values as one call.
+// ---------------------------------------------------------------------------
+
+export interface CalcComputePlan {
+  /** every report period id, ascending — the client chunks this list */
+  periodIds: number[];
+  /** active KPIs referencing a scoped measure — republished per chunk */
+  dependentKpiIds: number[];
+  /** the aggregated-worker scope (edited measure + its calc-dependency closure);
+   *  undefined ⇒ whole set (no focus measure) */
+  targetInputDefIds?: number[];
+}
+
+/** Cheap pre-flight: enumerate report periods + (when a focus measure is given)
+ *  resolve its calc-dependency closure once, then the KPIs that reference it, so
+ *  the client can drive a chunked recompute with a progress count. Both the
+ *  compute and the KPI republish stay scoped to the closure. */
+export async function planCalculatedMeasureCompute(
+  focusMeasureId?: number,
+): Promise<CalcComputePlan> {
+  const [periodIds, targetInputDefIds] = await Promise.all([
+    allReportPeriodIds(),
+    focusMeasureId != null
+      ? resolveCalcClosure(focusMeasureId)
+      : Promise.resolve(undefined),
+  ]);
+  const dependentKpiIds = await resolveDependentKpiIds(targetInputDefIds);
+  return { periodIds, dependentKpiIds, targetInputDefIds };
+}
+
+export interface CalcComputeChunkResult {
+  calculated: number;
+  skipped: number;
+  errors: number;
+  /** the focus measure's per-period status for just this chunk's periods */
+  byPeriod: RecomputeResult["byPeriod"];
+}
+
+/**
+ * Compute ONE chunk of report periods: run the aggregated worker for each
+ * period in the slice — scoped to `targetInputDefIds` (the edited measure + its
+ * calc-dependency closure) when given — then re-publish the dependent KPIs for
+ * those same periods. `dependentKpiIds` + `targetInputDefIds` come from
+ * planCalculatedMeasureCompute() so they are resolved once, not per chunk.
+ * `revalidate` (final chunk only) refreshes the settings pages once at the end.
+ */
+export async function computeCalculatedMeasureChunk(input: {
+  periodIds: number[];
+  focusMeasureId?: number;
+  dependentKpiIds: number[];
+  targetInputDefIds?: number[];
+  revalidate?: boolean;
+}): Promise<CalcComputeChunkResult> {
+  const { periodIds, focusMeasureId, dependentKpiIds, targetInputDefIds, revalidate } =
+    input;
+  const { calculated, skipped, errors, byPeriod } =
+    await computeCalculatedMeasureValues(
+      periodIds,
+      focusMeasureId,
+      targetInputDefIds,
+    );
+
+  await publishDependentKpis(dependentKpiIds, periodIds);
+
+  if (revalidate) {
+    revalidatePath("/settings/inputs");
+    revalidatePath("/settings/kpi");
+  }
+  return { calculated, skipped, errors, byPeriod };
 }

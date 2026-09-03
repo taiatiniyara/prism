@@ -30,6 +30,13 @@ import DataTableManagedListInput from "./data-table-managed-list-input";
 import BooleanFormInput from "./boolean-form-input";
 import InputAlternativeNamesEditor from "./input-alternative-names-editor";
 import { Checkbox } from "../ui/checkbox";
+import {
+  useFieldWidth,
+  useFormId,
+  useFormOverrides,
+  useReorderableList,
+} from "../dev/form-overrides-provider";
+import { cn } from "@/lib/utils";
 
 export interface DataTableUpdateFormField<T> {
   key: keyof T;
@@ -37,6 +44,7 @@ export interface DataTableUpdateFormField<T> {
   type: FieldType;
   required?: boolean;
   disabled?: boolean;
+  className?: string; // extra classes for the input (e.g. "uppercase")
   selectList?: {
     label: string;
     value: string | number;
@@ -167,6 +175,7 @@ function updateField<T>(
       name={field.key as string}
       defaultValue={stringifyFieldValue(field.value)}
       type={field.type}
+      className={field.className}
     />
   );
 }
@@ -174,17 +183,27 @@ function updateField<T>(
 export default function DataTableUpdateForm<T>(
   props: DataTableUpdateFormProps<T>,
 ) {
+  const formId = useFormId();
+  const { getLabel } = useFormOverrides();
+  const { ordered, dragProps } = useReorderableList(
+    formId,
+    props.fields,
+    (f) => String(f.key),
+  );
+  const { spanClass, widthProps } = useFieldWidth(formId);
   return (
     <Sheet>
       <SheetTrigger className="flex gap-1 font-bold text-xs items-center cursor-pointer text-slate-500 hover:text-slate-900 transition-colors py-2">
         <FaEdit size={16} /> Update
       </SheetTrigger>
       <SheetContent>
-        <SheetHeader>
+        <SheetHeader className="pb-0">
           <SheetTitle className="flex gap-2 items-center">
             <FaEdit size={24} /> Update Record
           </SheetTitle>
-          <SheetDescription>
+          {/* Kept for a11y (radix aria-describedby) but hidden — it was just
+              filler; sr-only removes it from layout so the fields sit higher. */}
+          <SheetDescription className="sr-only">
             Update the record with the following fields
           </SheetDescription>
         </SheetHeader>
@@ -202,34 +221,52 @@ export default function DataTableUpdateForm<T>(
               toast.error(res.message);
             }
           }}
-          className="px-4 space-y-4"
+          className="flex min-h-0 flex-1 flex-col"
         >
-          {props.fields.map((field, index) => (
-            <div
-              className="space-y-1"
-              key={`${String(field.key)}-${index}`}
-            >
-              <Label htmlFor={field.key as string}>
-                {field.label ?? formatLabel(field.key as string)}
-              </Label>
-              {updateField(
-                {
-                  ...field,
-                  value: (props.record as Record<string, unknown>)[
-                    String(field.key)
-                  ] as T[keyof T],
-                },
-                field.label ?? formatLabel(field.key as string),
-              )}
-            </div>
-          ))}
-          <SubmitBtn
-            text={
-              <>
-                <FaSave /> Update
-              </>
-            }
-          />
+          <div className="grid min-h-0 flex-1 grid-cols-1 gap-4 overflow-y-auto px-4 pb-4 sm:grid-cols-2">
+            {ordered.map((field, index) => (
+              <div
+                className={cn("space-y-1", spanClass(String(field.key)))}
+                data-field-wrapper=""
+                key={`${String(field.key)}-${index}`}
+                {...dragProps(String(field.key))}
+                {...widthProps(String(field.key))}
+              >
+                <Label
+                  htmlFor={field.key as string}
+                  data-form-id={formId}
+                  data-form-field-key={String(field.key)}
+                  data-form-default-label={
+                    field.label ?? formatLabel(field.key as string)
+                  }
+                >
+                  {getLabel(
+                    formId,
+                    String(field.key),
+                    field.label ?? formatLabel(field.key as string),
+                  )}
+                </Label>
+                {updateField(
+                  {
+                    ...field,
+                    value: (props.record as Record<string, unknown>)[
+                      String(field.key)
+                    ] as T[keyof T],
+                  },
+                  field.label ?? formatLabel(field.key as string),
+                )}
+              </div>
+            ))}
+          </div>
+          <div className="border-t px-4 py-3">
+            <SubmitBtn
+              text={
+                <>
+                  <FaSave /> Update
+                </>
+              }
+            />
+          </div>
         </form>
       </SheetContent>
     </Sheet>

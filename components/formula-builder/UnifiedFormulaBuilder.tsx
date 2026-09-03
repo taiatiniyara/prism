@@ -1,13 +1,24 @@
 "use client";
 
-import { type ReactNode, useMemo, useState, useTransition } from "react";
+import {
+  type ReactNode,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
+import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { isCategoricalDataType } from "@/lib/formula/descriptive-projection";
 import {
   saveUnifiedFormula,
-  recomputeKpiNow,
-  recomputeCalculatedMeasuresNow,
+  planCalculatedMeasureCompute,
+  computeCalculatedMeasureChunk,
+  planKpiCompute,
+  computeKpiChunk,
+  updateTargetUom,
 } from "@/app/settings/kpi/unified-formula-service";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -19,6 +30,7 @@ import { SearchableSelect } from "@/components/ui/searchable-select";
 import { FormulaEditor, formulaVariables } from "./FormulaEditor";
 import { InputTagCard } from "./InputTagCard";
 import { MeasurePickerModal } from "./MeasurePickerModal";
+import { InputCoverageModal } from "./InputCoverageModal";
 import { TestHarness } from "./TestHarness";
 import {
   colorForVariableIndex,
@@ -70,9 +82,44 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
   const [trackAsKpi, setTrackAsKpi] = useState(false);
   const [pickerCardKey, setPickerCardKey] = useState<string | null>(null);
   const [recompute, setRecompute] = useState<RecomputeResult | null>(null);
+  // Report period whose per-unit input coverage the diagnostic modal shows.
+  const [coveragePeriod, setCoveragePeriod] = useState<number | null>(null);
+  // Chunked calculated-measure compute progress ("period X of N"). null = idle.
+  const [computeProgress, setComputeProgress] = useState<{
+    done: number;
+    total: number;
+  } | null>(null);
   const [justSaved, setJustSaved] = useState(false);
+  // Inline UoM edits, keyed by target id, so the harness's format-adjusted
+  // preview reflects a just-changed unit before a reload.
+  const [unitOverrides, setUnitOverrides] = useState<Record<number, number>>(
+    {},
+  );
   const [isSaving, startSave] = useTransition();
   const [isComputing, startCompute] = useTransition();
+
+  // Re-fetch the loader data (measures + their dimension scope, targets, units)
+  // when this tab regains focus — so changes made in the separate Measure Scope
+  // / settings tabs show up without a manual reload. router.refresh() re-runs the
+  // server component but preserves this component's local edit state. Debounced
+  // so a quick tab flick doesn't refetch repeatedly.
+  const router = useRouter();
+  const lastRefresh = useRef(0);
+  useEffect(() => {
+    const maybeRefresh = () => {
+      if (document.visibilityState !== "visible") return;
+      const now = Date.now();
+      if (now - lastRefresh.current < 1500) return;
+      lastRefresh.current = now;
+      router.refresh();
+    };
+    document.addEventListener("visibilitychange", maybeRefresh);
+    window.addEventListener("focus", maybeRefresh);
+    return () => {
+      document.removeEventListener("visibilitychange", maybeRefresh);
+      window.removeEventListener("focus", maybeRefresh);
+    };
+  }, [router]);
 
   // Recompute-results table sort. Period ascending is the default; clicking a
   // header sorts by that column (toggling asc/desc on repeat clicks).
@@ -131,10 +178,16 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
 
   const filteredTargets = useMemo(
     () =>
-      targets.filter((t) =>
-        onlyWithoutFormula ? !t.isProperlyConfigured : true,
+      targets.filter(
+        (t) =>
+          // Always keep the currently-selected target in the list, even after
+          // Save & Compute flips it to properly-configured — otherwise it drops
+          // out of the "needs setup/repair" filter and the dropdown blanks while
+          // the formula + tag-cards stay visible (looks like the selection was lost).
+          t.id === selectedTargetId ||
+          (onlyWithoutFormula ? !t.isProperlyConfigured : true),
       ),
-    [targets, onlyWithoutFormula],
+    [targets, onlyWithoutFormula, selectedTargetId],
   );
 
   const variables = useMemo(() => formulaVariables(formula), [formula]);
@@ -225,6 +278,9 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     setCards(target?.existingCards.map((c) => ({ ...c })) ?? []);
     setTrackAsKpi(target?.isTrackedAsKpi ?? false);
     setRecompute(null);
+    // The progress bar persists after a backfill (Eugene) — clear it only when
+    // the target changes, so the last run's bar + reason table clear together.
+    setComputeProgress(null);
     setJustSaved(false);
   };
 
@@ -235,6 +291,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     setFormula("");
     setCards([]);
     setRecompute(null);
+    setComputeProgress(null);
     setJustSaved(false);
     setOnlyWithoutFormula(false);
     setTrackAsKpi(false);
@@ -328,6 +385,125 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     });
 
   // --- actions ------------------------------------------------------------
+
+  // Chunked calculated-measure recompute. The aggregated worker is a per-period
+  // fixpoint, so computing all ~140 periods in one server-action call blows past
+  // the gateway timeout (the old bug: the browser saw nothing while the compute
+  // finished server-side). Instead: enumerate periods once, then compute a small
+  // slice per request — updating "period X of N" and streaming each slice's
+  // per-period reasons into the table below. Returns the final totals for the toast.
+  const CHUNK_SIZE = 8;
+  const runChunkedMeasureCompute = async (): Promise<{
+    total: number;
+    calculated: number;
+    skipped: number;
+    errors: number;
+  }> => {
+    const focusId = selectedTargetId ?? undefined;
+    // Show the bar for the WHOLE run, including the save + planning window before
+    // the period count is known: start INDETERMINATE (total 0 → animated bar),
+    // then flip to the determinate count once the plan resolves. Without this the
+    // buttons read "Working…" with no bar during save/plan (the reported gap).
+    // Cleared in `finally` so it never sticks on error or early-exit.
+    setComputeProgress((p) => p ?? { done: 0, total: 0 });
+    setRecompute({ processed: 0, failed: 0, byPeriod: [] });
+    try {
+      // Scope the whole run to the selected measure — compute + KPI republish
+      // touch only it, not every calculated measure. (No selection ⇒ whole set.)
+      const plan = await planCalculatedMeasureCompute(focusId);
+      const total = plan.periodIds.length;
+      if (total === 0) {
+        return { total: 0, calculated: 0, skipped: 0, errors: 0 };
+      }
+      setComputeProgress({ done: 0, total });
+      const accum: RecomputeResult["byPeriod"] = [];
+      let calculated = 0;
+      let skipped = 0;
+      let errors = 0;
+      let done = 0;
+      for (let i = 0; i < plan.periodIds.length; i += CHUNK_SIZE) {
+        const chunk = plan.periodIds.slice(i, i + CHUNK_SIZE);
+        const isLast = i + CHUNK_SIZE >= plan.periodIds.length;
+        const c = await computeCalculatedMeasureChunk({
+          periodIds: chunk,
+          focusMeasureId: focusId,
+          dependentKpiIds: plan.dependentKpiIds,
+          targetInputDefIds: plan.targetInputDefIds,
+          revalidate: isLast,
+        });
+        calculated += c.calculated;
+        skipped += c.skipped;
+        errors += c.errors;
+        if (c.byPeriod.length) accum.push(...c.byPeriod);
+        done += chunk.length;
+        setComputeProgress({ done, total });
+        // Stream partial results into the reason table as each slice lands.
+        const snapshot = [...accum];
+        setRecompute({
+          processed: snapshot.filter((p) => p.status === "ok").length,
+          failed: snapshot.filter((p) => p.status !== "ok").length,
+          byPeriod: snapshot,
+        });
+      }
+      return { total, calculated, skipped, errors };
+    } finally {
+      // Keep the bar visible until the target changes (Eugene): a determinate
+      // bar (100% on success, or partial on error) STAYS as the record of the
+      // last backfill; only the indeterminate "preparing" state (total 0 —
+      // planning failed or no periods) is cleared. Cleared for real in
+      // handleSelectTarget / handleModeSwitch.
+      setComputeProgress((p) => (p && p.total > 0 ? p : null));
+    }
+  };
+
+  // KPI equivalent of runChunkedMeasureCompute: the KPI backfill must ALSO show
+  // the progress bar (Eugene: the bar is a required part of showing backfill
+  // compute for both calculated inputs AND KPIs). recomputeKpiNow does a heavy
+  // one-shot refresh of upstream measures across ALL periods then computes; here
+  // we chunk it — planKpiCompute gives the participating periods (+ whether to
+  // refresh measures), and computeKpiChunk does the refresh + KPI compute per
+  // batch, streaming per-period status into the reason table. No worker change.
+  const runChunkedKpiCompute = async (
+    kpiDefId: number,
+  ): Promise<RecomputeResult> => {
+    setComputeProgress((p) => p ?? { done: 0, total: 0 });
+    setRecompute({ processed: 0, failed: 0, byPeriod: [] });
+    try {
+      const plan = await planKpiCompute(kpiDefId);
+      const total = plan.periodIds.length;
+      if (total === 0) {
+        return { processed: 0, failed: 0, byPeriod: [] };
+      }
+      setComputeProgress({ done: 0, total });
+      const accum: RecomputeResult["byPeriod"] = [];
+      let processed = 0;
+      let failed = 0;
+      let done = 0;
+      for (let i = 0; i < plan.periodIds.length; i += CHUNK_SIZE) {
+        const chunk = plan.periodIds.slice(i, i + CHUNK_SIZE);
+        const c = await computeKpiChunk({
+          kpiDefId,
+          reportPeriodIds: chunk,
+          refreshMeasures: plan.refreshMeasures,
+        });
+        processed += c.processed;
+        failed += c.failed;
+        if (c.byPeriod.length) accum.push(...c.byPeriod);
+        done += chunk.length;
+        setComputeProgress({ done, total });
+        const snapshot = [...accum];
+        setRecompute({
+          processed: snapshot.filter((p) => p.status === "ok").length,
+          failed: snapshot.filter((p) => p.status !== "ok").length,
+          byPeriod: snapshot,
+        });
+      }
+      return { processed, failed, byPeriod: accum };
+    } finally {
+      setComputeProgress((p) => (p && p.total > 0 ? p : null));
+    }
+  };
+
   const handleSave = () => {
     if (selectedTargetId == null) {
       toast.error("Choose a target first.");
@@ -381,74 +557,118 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
       cards,
       trackAsKpi: activeMode === "measure" ? trackAsKpi : undefined,
     };
-    startSave(() => {
-      void (async () => {
-        const res = await saveUnifiedFormula(payload);
-        if (!res.ok) {
-          toast.error(res.error ?? "Save failed.");
-          return;
-        }
-        setJustSaved(true);
-        if (activeMode === "measure") {
-          const c = await recomputeCalculatedMeasuresNow();
-          if (c.errors > 0) {
-            toast.warning(
-              `Saved ✓ · computed ${c.calculated} value(s) across ${c.periods} period(s); ${c.errors} errored.`,
-            );
-          } else {
-            toast.success(
-              `Saved ✓ · computed ${c.calculated} value(s) across ${c.periods} period(s) (${c.skipped} skipped).`,
-            );
-          }
+    startSave(async () => {
+      // Show the bar for the whole run — BOTH calculated-measure and KPI backfill
+      // (Eugene: the progress bar is a required part of showing backfill compute
+      // regardless of target type). Set it indeterminate up front so it's visible
+      // during the save + planning window, not just once the first chunk lands.
+      setComputeProgress({ done: 0, total: 0 });
+      const res = await saveUnifiedFormula(payload);
+      if (!res.ok) {
+        setComputeProgress(null);
+        toast.error(res.error ?? "Save failed.");
+        return;
+      }
+      setJustSaved(true);
+      if (activeMode === "measure") {
+        // Chunked async-with-progress: never a single >1-min request.
+        const c = await runChunkedMeasureCompute();
+        if (c.total === 0) {
+          toast.warning("Saved ✓ · no report periods to compute.");
+        } else if (c.errors > 0) {
+          toast.warning(
+            `Saved ✓ · computed ${c.calculated} value(s) across ${c.total} period(s); ${c.errors} period(s) errored.`,
+          );
         } else {
-          const c = await recomputeKpiNow(targetId);
-          setRecompute(c);
-          if (c.failed > 0) {
-            toast.warning(
-              `Saved ✓ · recomputed ${c.processed}, ${c.failed} failed.`,
-            );
-          } else {
-            toast.success(`Saved ✓ · recomputed ${c.processed} period(s).`);
-          }
+          toast.success(
+            `Saved ✓ · computed ${c.calculated} value(s) across ${c.total} period(s) (${c.skipped} skipped).`,
+          );
         }
-      })();
+      } else {
+        // KPI backfill — same chunked bar (streams per-period status into the
+        // reason table); runChunkedKpiCompute sets `recompute` as it goes.
+        const c = await runChunkedKpiCompute(targetId);
+        const attempted = c.processed + c.failed;
+        if (attempted === 0) {
+          toast.warning("Saved ✓ · no report periods to compute.");
+        } else if (c.failed > 0) {
+          toast.warning(
+            `Saved ✓ · recomputed ${c.processed}, ${c.failed} failed.`,
+          );
+        } else {
+          toast.success(`Saved ✓ · recomputed ${c.processed} period(s).`);
+        }
+      }
     });
   };
 
   const handleCompute = () => {
-    startCompute(() => {
-      void (async () => {
-        if (activeMode === "measure") {
-          // Batch: compute ALL calculated measures across all periods
-          // (the aggregated worker is fixpoint over the whole set).
-          const res = await recomputeCalculatedMeasuresNow();
-          if (res.errors > 0) {
-            toast.warning(
-              `Computed ${res.calculated} value(s) across ${res.periods} period(s); ${res.errors} period(s) errored.`,
-            );
-          } else {
-            toast.success(
-              `Computed ${res.calculated} calculated-measure value(s) across ${res.periods} period(s) (${res.skipped} skipped).`,
-            );
-          }
-          return;
-        }
-        if (selectedTargetId == null) {
-          toast.error("Choose a target first.");
-          return;
-        }
-        const res = await recomputeKpiNow(selectedTargetId);
-        setRecompute(res);
-        if (res.failed > 0) {
-          toast.warning(`Recomputed ${res.processed}, ${res.failed} failed.`);
+    startCompute(async () => {
+      if (activeMode === "measure") {
+        // Batch: compute ALL calculated measures across all periods (the
+        // aggregated worker is a fixpoint over the whole set), chunked per
+        // period so no single request exceeds the gateway timeout; the reason
+        // table below streams the SELECTED measure's per-period status.
+        const res = await runChunkedMeasureCompute();
+        if (res.total === 0) {
+          toast.warning("No report periods to compute.");
+        } else if (res.errors > 0) {
+          toast.warning(
+            `Computed ${res.calculated} value(s) across ${res.total} period(s); ${res.errors} period(s) errored.`,
+          );
         } else {
-          toast.success(`Recomputed ${res.processed} period(s).`);
+          toast.success(
+            `Computed ${res.calculated} calculated-measure value(s) across ${res.total} period(s) (${res.skipped} skipped).`,
+          );
         }
-      })();
+        return;
+      }
+      if (selectedTargetId == null) {
+        toast.error("Choose a target first.");
+        return;
+      }
+      // KPI backfill — chunked with the same progress bar; streams per-period
+      // status into the reason table as each batch lands.
+      const res = await runChunkedKpiCompute(selectedTargetId);
+      const attempted = res.processed + res.failed;
+      if (attempted === 0) {
+        toast.warning("No report periods to compute.");
+      } else if (res.failed > 0) {
+        toast.warning(`Recomputed ${res.processed}, ${res.failed} failed.`);
+      } else {
+        toast.success(`Recomputed ${res.processed} period(s).`);
+      }
     });
   };
 
-  const activeMeasureCount = data.measures.length;
+  // Selected target's effective unit (override if the user just changed it).
+  const selectedTarget =
+    selectedTargetId != null ? targetsById.get(selectedTargetId) : undefined;
+  const effectiveUnitId =
+    selectedTargetId != null && selectedTargetId in unitOverrides
+      ? unitOverrides[selectedTargetId]
+      : (selectedTarget?.unitId ?? null);
+  const effectiveUnitLabel =
+    data.units.find((u) => u.id === effectiveUnitId)?.name ?? null;
+
+  const handleChangeUom = (value: string) => {
+    if (selectedTargetId == null) return;
+    const unitId = Number(value);
+    if (!value || !Number.isFinite(unitId)) return;
+    setUnitOverrides((prev) => ({ ...prev, [selectedTargetId]: unitId }));
+    startSave(async () => {
+      const res = await updateTargetUom({
+        mode: activeMode,
+        ownerId: selectedTargetId,
+        unitId,
+      });
+      if (!res.ok) toast.error(res.error ?? "Couldn't update the unit.");
+      else
+        toast.success(
+          `Unit set to ${data.units.find((u) => u.id === unitId)?.name ?? "—"}.`,
+        );
+    });
+  };
 
   return (
     <div className="space-y-4">
@@ -494,14 +714,15 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                   selectedTargetId != null ? String(selectedTargetId) : undefined
                 }
                 onValueChange={handleSelectTarget}
-                options={filteredTargets.map((t) => ({
-                  value: String(t.id),
-                  label: t.isProperlyConfigured
+                options={filteredTargets.map((t) => {
+                  const name = t.isProperlyConfigured
                     ? t.name
                     : t.hasFormula
                       ? `${t.name} — needs repair`
-                      : `${t.name} — no formula`,
-                }))}
+                      : `${t.name} — no formula`;
+                  // Prefix the id (also makes the option searchable by id).
+                  return { value: String(t.id), label: `${t.id} · ${name}` };
+                })}
                 placeholder={
                   activeMode === "kpi" ? "Select a KPI…" : "Select a measure…"
                 }
@@ -511,6 +732,26 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                 allowEscapeKeyPropagation={false}
               />
             </div>
+            {selectedTargetId != null && (
+              <div className="w-40">
+                <Label className="text-xs">UoM</Label>
+                <SearchableSelect
+                  value={
+                    effectiveUnitId != null ? String(effectiveUnitId) : undefined
+                  }
+                  onValueChange={handleChangeUom}
+                  options={data.units.map((u) => ({
+                    value: String(u.id),
+                    label: u.name,
+                  }))}
+                  placeholder="Set unit…"
+                  searchPlaceholder="Search units…"
+                  emptyLabel="No units."
+                  triggerClassName="mt-1 w-full"
+                  allowEscapeKeyPropagation={false}
+                />
+              </div>
+            )}
             <Label className="text-muted-foreground flex items-center gap-2 pb-1.5 text-xs">
               <Checkbox
                 checked={onlyWithoutFormula}
@@ -561,10 +802,6 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                     />
                   </span>
                 </button>
-                <span className="text-muted-foreground max-w-52 text-right text-[10.5px] leading-snug">
-                  Also publish this measure as a KPI (a companion KPI that
-                  references it — computed once, on Save).
-                </span>
               </div>
             )}
           </div>
@@ -658,6 +895,8 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
             formula={formula}
             variableNames={variables}
             variableColors={variableColors}
+            unitLabel={effectiveUnitLabel}
+            isCurrency={selectedTarget?.isCurrency ?? false}
           />
         </CardContent>
       </Card>
@@ -696,7 +935,11 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                 disabled={isSaving || isComputing || !canSave}
                 title="Save the formula and immediately compute it across all prior and current periods"
               >
-                {isSaving || isComputing ? "Working…" : "Save & Compute"}
+                {isSaving || isComputing
+                  ? computeProgress && computeProgress.total > 0
+                    ? `Computing ${computeProgress.done}/${computeProgress.total}…`
+                    : "Working…"
+                  : "Save & Compute"}
               </Button>
             )}
             {!(activeMode === "kpi" && isPassThroughKpi) && (
@@ -711,16 +954,66 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                 }
               >
                 {isComputing
-                  ? "Computing…"
+                  ? computeProgress && computeProgress.total > 0
+                    ? `Computing ${computeProgress.done}/${computeProgress.total}…`
+                    : "Computing…"
                   : activeMode === "kpi"
                     ? "Compute now"
                     : "Apply to previous and current periods"}
               </Button>
             )}
-            <span className="text-muted-foreground ml-auto text-xs">
-              {activeMeasureCount} measures available
-            </span>
+            {computeProgress && (
+              <div
+                className="ml-2 flex min-w-[10rem] flex-1 items-center gap-2"
+                aria-live="polite"
+              >
+                <div className="bg-muted h-2 flex-1 overflow-hidden rounded-full">
+                  {computeProgress.total > 0 ? (
+                    <div
+                      className="bg-primary h-full rounded-full transition-all duration-300"
+                      style={{
+                        width: `${
+                          (computeProgress.done / computeProgress.total) * 100
+                        }%`,
+                      }}
+                    />
+                  ) : (
+                    // Indeterminate (save + planning, before the count is known).
+                    <div className="bg-primary/60 h-full w-full animate-pulse rounded-full" />
+                  )}
+                </div>
+                <span className="text-muted-foreground text-xs tabular-nums">
+                  {computeProgress.total > 0
+                    ? `${Math.round(
+                        (computeProgress.done / computeProgress.total) * 100,
+                      )}%`
+                    : "…"}
+                </span>
+              </div>
+            )}
           </div>
+          {computeProgress && (
+            <p className="text-muted-foreground text-[11px] leading-snug">
+              {computeProgress.total > 0 ? (
+                computeProgress.done >= computeProgress.total ? (
+                  <>
+                    Computed all {computeProgress.total} period(s) — results
+                    below. Stays until you switch to another KPI or measure.
+                  </>
+                ) : (
+                  <>
+                    Computing period{" "}
+                    {Math.min(computeProgress.done + 1, computeProgress.total)} of{" "}
+                    {computeProgress.total} — runs in the background across all
+                    periods; results fill in below as each batch completes. You
+                    can keep this tab open.
+                  </>
+                )
+              ) : (
+                <>Saving &amp; preparing the periods to compute…</>
+              )}
+            </p>
+          )}
 
           {activeMode === "kpi" &&
             isDescriptiveProjection &&
@@ -759,6 +1052,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
               <p className="mb-2 text-xs font-semibold">
                 Recompute · {recompute.processed} processed ·{" "}
                 {recompute.failed} failed
+                {isSaving || isComputing ? " · computing…" : ""}
               </p>
               <div className="max-h-48 overflow-auto">
                 <table className="w-full text-xs">
@@ -812,7 +1106,26 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                           {r.value ?? "—"}
                         </td>
                         <td className="text-muted-foreground py-1">
-                          {r.reason ?? ""}
+                          <div className="flex items-center justify-between gap-2">
+                            <span>{r.reason ?? ""}</span>
+                            {selectedTargetId != null && (
+                              <button
+                                type="button"
+                                onClick={() =>
+                                  setCoveragePeriod(r.reportPeriodId)
+                                }
+                                className={cn(
+                                  "shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium underline-offset-2 hover:underline",
+                                  r.status === "ok"
+                                    ? "text-muted-foreground"
+                                    : "text-primary",
+                                )}
+                                title="Which generators (units) are missing which inputs, for this period"
+                              >
+                                {r.status === "ok" ? "coverage" : "which units?"}
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -831,6 +1144,20 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
         }}
         measures={data.measures}
         onPick={handlePickMeasure}
+        variableName={
+          cards.find((c) => c.key === pickerCardKey)?.variableName ?? null
+        }
+      />
+
+      <InputCoverageModal
+        open={coveragePeriod != null}
+        onOpenChange={(o) => {
+          if (!o) setCoveragePeriod(null);
+        }}
+        ownerKind={activeMode}
+        ownerId={selectedTargetId}
+        reportPeriodId={coveragePeriod}
+        ownerName={selectedTarget?.name}
       />
     </div>
   );

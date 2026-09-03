@@ -5,11 +5,11 @@ import Sidebar from "@/components/layout/sidebar";
 import { getSession } from "@/lib/session.service";
 import { Toaster } from "sonner";
 import { Suspense } from "react";
-import { IBM_Plex_Sans } from "next/font/google";
+import { IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import Footer from "@/components/layout/footer";
 import BlockedAccessOverlay from "@/components/auth/blocked-access-overlay";
 import { FloatingChatbot } from "@/components/ai/floating-chatbot";
-import DevDesignMode from "@/components/dev/dev-design-mode";
+import FormOverridesProvider from "@/components/dev/form-overrides-provider";
 import RefreshOnNavigate from "@/components/layout/refresh-on-navigate";
 import { db } from "@/db/connection";
 import { organisations } from "@/db/schema/utility";
@@ -22,6 +22,14 @@ const plexSans = IBM_Plex_Sans({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-sans",
+});
+
+// IBM Plex Mono — wired to the --font-mono token (previously pointed at an
+// unloaded var). Used for ids, codes, formulas and other data cells.
+const plexMono = IBM_Plex_Mono({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-geist-mono",
 });
 
 export const dynamic = "force-dynamic";
@@ -38,7 +46,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className={plexSans.variable}>
+    <html lang="en" className={`${plexSans.variable} ${plexMono.variable}`}>
       <body
         className={`${plexSans.className} font-sans flex h-screen flex-col overflow-hidden text-slate-900`}
       >
@@ -49,7 +57,9 @@ export default function RootLayout({
         <Suspense
           fallback={<div className="flex min-h-0 flex-1 overflow-hidden" />}
         >
-          <SessionShell>{children}</SessionShell>
+          <SessionShell>
+            <FormOverridesProvider>{children}</FormOverridesProvider>
+          </SessionShell>
         </Suspense>
 
         <Toaster
@@ -58,10 +68,10 @@ export default function RootLayout({
           toastOptions={{
             unstyled: true,
             classNames: {
-              success: "bg-lime-500",
-              error: "bg-red-500",
-              warning: "bg-amber-500",
-              info: "bg-blue-500",
+              success: "bg-success",
+              error: "bg-danger",
+              warning: "bg-warning",
+              info: "bg-info",
               loading:
                 "bg-slate-700 border border-slate-500 text-white [&_svg]:text-white [&_svg]:stroke-white",
             },
@@ -73,7 +83,6 @@ export default function RootLayout({
         <Footer />
 
         <RefreshOnNavigate />
-        <DevDesignMode />
       </body>
     </html>
   );

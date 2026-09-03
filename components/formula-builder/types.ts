@@ -145,6 +145,11 @@ export interface TargetOption {
    *  i.e. this calculated measure is currently published as a KPI. Always false
    *  for KPI targets. */
   isTrackedAsKpi: boolean;
+  /** display format (kpi/measure unit + is_currency) — for the harness's
+   *  format-adjusted result preview. */
+  unitLabel?: string | null;
+  unitId?: number | null;
+  isCurrency?: boolean;
   /** rehydrated tag cards from formula_binding (fallback to legacy JSON) */
   existingCards: TagCardState[];
 }
@@ -159,6 +164,8 @@ export interface BuilderData {
   measures: MeasureCatalogueItem[];
   /** member option lists keyed by physical dimension field */
   dimMembers: Record<DimensionField, MemberOption[]>;
+  /** UoM options (the "Unit" managed list) for the inline unit editor */
+  units: MemberOption[];
 }
 
 export interface SavePayload {

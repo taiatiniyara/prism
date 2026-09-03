@@ -1,18 +1,30 @@
 import { describe, expect, it } from "vitest";
 
 import { evaluateKpiFormula } from "@/app/data-entry/kpi-worker/evaluator";
+import type { KpiFormulaEvaluationResult } from "@/app/data-entry/kpi-worker/evaluator";
+
+// Narrow the discriminated union ({status:'ok',value} | {status:'error',...})
+// before reading a branch-specific field — a wrong status fails the test.
+const okValue = (r: KpiFormulaEvaluationResult): string => {
+  if (r.status !== "ok") throw new Error(`expected ok, got "${r.status}"`);
+  return r.value;
+};
+const errType = (r: KpiFormulaEvaluationResult): string => {
+  if (r.status !== "error") throw new Error(`expected error, got "${r.status}"`);
+  return r.failureType;
+};
 
 describe("evaluateKpiFormula — success", () => {
   it("evaluates a sum and returns the value as a string", () => {
     const result = evaluateKpiFormula("a + b + c", { a: 1, b: 2, c: 3 });
     expect(result.status).toBe("ok");
-    expect(result.value).toBe("6");
+    expect(okValue(result)).toBe("6");
   });
 
   it("coerces string inputs to numbers", () => {
     const result = evaluateKpiFormula("a * b", { a: "2", b: "3" });
     expect(result.status).toBe("ok");
-    expect(result.value).toBe("6");
+    expect(okValue(result)).toBe("6");
   });
 
   it("computes the real Total Costs formula", () => {
@@ -30,7 +42,7 @@ describe("evaluateKpiFormula — success", () => {
     const formula = Object.keys(vars).join(" + ");
     const result = evaluateKpiFormula(formula, vars);
     expect(result.status).toBe("ok");
-    expect(result.value).toBe("360");
+    expect(okValue(result)).toBe("360");
   });
 
   it("computes the real Profit formula (with subtraction)", () => {
@@ -40,7 +52,7 @@ describe("evaluateKpiFormula — success", () => {
       other: 5,
     });
     expect(result.status).toBe("ok");
-    expect(result.value).toBe("65");
+    expect(okValue(result)).toBe("65");
   });
 });
 
@@ -48,25 +60,25 @@ describe("evaluateKpiFormula — failure mapping", () => {
   it("empty formula → formula-invalid", () => {
     const result = evaluateKpiFormula("   ", { a: 1 });
     expect(result.status).toBe("error");
-    expect(result.failureType).toBe("formula-invalid");
+    expect(errType(result)).toBe("formula-invalid");
   });
 
   it("missing/non-numeric input value → evaluation-error", () => {
     const result = evaluateKpiFormula("a + b", { a: 1, b: null });
     expect(result.status).toBe("error");
-    expect(result.failureType).toBe("evaluation-error");
+    expect(errType(result)).toBe("evaluation-error");
   });
 
   it("non-arithmetic token → formula-invalid (fail-closed, no eval)", () => {
     const result = evaluateKpiFormula("a && b", { a: 1, b: 2 });
     expect(result.status).toBe("error");
-    expect(result.failureType).toBe("formula-invalid");
+    expect(errType(result)).toBe("formula-invalid");
   });
 
   it("division by zero → evaluation-error (non-finite result)", () => {
     const result = evaluateKpiFormula("a / b", { a: 1, b: 0 });
     expect(result.status).toBe("error");
-    expect(result.failureType).toBe("evaluation-error");
+    expect(errType(result)).toBe("evaluation-error");
   });
 
   it("attempted property access is rejected, not evaluated", () => {

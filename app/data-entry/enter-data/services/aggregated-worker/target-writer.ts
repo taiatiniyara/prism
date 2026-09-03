@@ -81,6 +81,11 @@ export const writeCalculatedTargetValue = async ({
       // `value` kept transitionally so un-migrated readers don't regress.
       value_numeric: value,
       value,
+      // A computed value means the data IS available — clear any prior
+      // no_data_reason, else a row previously flagged 'not_available' would hold
+      // BOTH a value and a reason and violate chk_value_xor_nodata (the write
+      // then throws and the whole period's compute errors).
+      no_data_reason: null,
       status_id: DataEntryStatusId.Entered,
       is_deleted: false,
       updated_at: now.toISOString(),

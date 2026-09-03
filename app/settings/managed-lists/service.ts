@@ -9,7 +9,8 @@ import {
   managedLists,
 } from "@/db/schema/managedLists";
 import { generateRandomNumber } from "@/lib/utils";
-import { eq, like } from "drizzle-orm";
+import { isAllSentinelName } from "@/lib/managed-lists";
+import { asc, eq, like } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
 const toOptionalNumber = (value: unknown): number | null => {
@@ -36,7 +37,10 @@ export async function GetAllManagedLists(filter?: {
   name?: string;
   excludeAll?: boolean;
 }): Promise<ManagedList[]> {
-  const items = await db.select().from(managedListItems);
+  const items = await db
+    .select()
+    .from(managedListItems)
+    .orderBy(asc(managedListItems.id));
   const query = db.select().from(managedLists).orderBy(managedLists.name);
 
   if (filter?.name) {
@@ -64,7 +68,6 @@ export async function CreateManagedListItem(
   const query = db.insert(managedListItems).values({
     ...data,
     parent_id: toOptionalNumber(data.parent_id),
-    asset_class_id: toOptionalNumber(data.asset_class_id),
     is_active: true,
     id: generateRandomNumber(5),
   });
@@ -85,7 +88,7 @@ export async function GetAllManagedListItems(options?: {
   const query = db
     .select()
     .from(managedListItems)
-    .orderBy(managedListItems.name)
+    .orderBy(asc(managedListItems.id))
     .leftJoin(managedLists, eq(managedListItems.list_id, managedLists.id));
 
   if (options?.listName) {
@@ -103,23 +106,17 @@ export async function GetAllManagedListItems(options?: {
   return list
     .filter((item) =>
       options?.excludeAll
-        ? item.managed_list_items.name.toLowerCase().includes("all") === false
+        ? !isAllSentinelName(item.managed_list_items.name)
         : true,
     )
     .map((item) => {
       const parent = list.find(
         (l) => l.managed_list_items.id === item.managed_list_items.parent_id,
       )?.managed_list_items;
-      const unitType = list.find(
-        (l) =>
-          l.managed_list_items.id ===
-          item.managed_list_items.asset_class_id,
-      )?.managed_list_items;
       return {
         ...item.managed_list_items,
         list: item.managed_lists?.name,
         parent: parent?.name ?? null,
-        energy_resource_type: unitType?.name ?? null,
       };
     });
 }
@@ -166,12 +163,6 @@ export async function UpdateManagedListItem(
 
   if ("parent_id" in data) {
     updateData.parent_id = toOptionalNumber(data.parent_id);
-  }
-
-  if ("asset_class_id" in data) {
-    updateData.asset_class_id = toOptionalNumber(
-      data.asset_class_id,
-    );
   }
 
   const query = db

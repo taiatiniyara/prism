@@ -32,15 +32,11 @@ export const organisations = pgTable(
     // non-participating utilities are skipped, not surfaced as failed. Default
     // false; set true per the PPA's participating-utility list. (Eugene, 2026-09-02.)
     bm_participates: boolean("bm_participates").notNull().default(false),
-    powequality_standard_id: integer("powerquality_standard_id").references(
-      () => managedListItems.id,
-    ),
-    electricity_regulation_id: integer("electricity_regulation_id").references(
-      () => managedListItems.id,
-    ),
-    accounting_standard_id: integer("accounting_standard_id").references(
-      () => managedListItems.id,
-    ),
+    // NOTE: accounting_standard_id / electricity_regulation_id / powerquality_standard_id
+    // were retired 2026-09-02 (Stage 2, utility-context consolidation). These are
+    // utility-REPORTED context answers (measures 51/53/52, subgroup 222) that live in
+    // data_entries via the ratified workflow — not org columns. entity_type_id STAYS
+    // (it's the registration/tenancy axis, not a per-FY reported answer).
     entity_type_id: integer("entity_type_id").references(
       () => managedListItems.id,
     ),
