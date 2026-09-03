@@ -1,10 +1,21 @@
 # Per-Period Benchmarking Participation (p2)
 
-**Status:** Draft for review — circulated to #2 (schema), #8 (data entry / worker), #10 (onboarding/access), #3 (calculator).
-**Author:** #3 (calculator), from Eugene's 2026-09-03 direction.
+**Status:** v3 — cross-stream review converged (#2 schema, #8 worker/shells, #10 access/onboarding all folded in). Remaining gates are **Eugene's policy calls + his direct greenlight for #2 to build** (see §8).
+**Author:** #3 (calculator), from Eugene's 2026-09-03 direction; reviewed by #2, #8, #10.
 **One-line:** Benchmarking data and calculations exist for a `(utility, period)` **only when the utility has explicitly opted into benchmarking for that period** — replacing p1's "every utility gets shells" model that littered `data_entries` with unsubmitted stubs.
 
 ---
+
+## 0. The four-layer stack (framing — #8)
+
+Participation sits **above** relevance; naming the stack keeps the gates from blurring:
+
+1. **Participation** — does this `(utility, period)` exist for benchmarking at all? *(this spec)*
+2. **Relevance** — which dimension slices apply (measure scope / expansion mode).
+3. **Obligation** — which of those must be answered (required vs optional).
+4. **Assertion** — the answer itself (`data_entries` value, or `no_data_reason`).
+
+Each layer's absence is **skip, never fail**: a non-participated period isn't an error any more than an out-of-scope slice is.
 
 ## 1. Problem (p1 behaviour)
 
@@ -12,7 +23,7 @@ In Prism 1, report-period **shells were auto-generated for every utility just by
 
 **Observed in p2 today (audit 2026-09-03):**
 - Of **128** report-periods belonging to participating utilities (`is_utility=true AND organisations.bm_participates=true`): **68 have real submitted data** (genuinely participated) and **60 are pre-participation shells** (report-period exists, zero real data).
-- **17** stray `data_entries` rows sit under **non-participating** utilities (`bm_participates=false`) across 12 periods.
+- **17** stray `data_entries` rows sit under **non-participating** utilities (`bm_participates=false`) across 12 periods. **Verified 2026-09-03: all 17 are `Total Costs` (calculated, value 0) or `Hours in Period` (system-generated, 8784) — none carry a real entered value.** (#8's data-preservation check → clean; safe to delete, still backed up first.)
 - ~**9** pre-participation shells already carry a stray system-generated `Hours in Period` row.
 - These are exactly what makes e.g. Generator Availability/Outage/Capacity KPIs (#97–100) report `Missing formula inputs: hours_in_period` — for periods no one participated in.
 
@@ -21,60 +32,108 @@ In Prism 1, report-period **shells were auto-generated for every utility just by
 Participation is **explicit and per-period**, not inferred from "is a utility." A utility joins Prism, and **from the period they opt in onward** they participate; earlier periods are simply not part of benchmarking.
 
 **Submission workflow (the new gate):**
-1. A submission becomes due for a utility → **email reminder** sent.
-2. Utility logs in and **explicitly ticks the benchmarking opt-in** for that period (sets `report_periods.bm_opted_in = true`).
-3. They **review/update** their reference data for the period: **service areas, generators, IPPs, tariffs**.
-4. **Only then** are the **relevant shells generated** for that period.
+1. A submission becomes due for a utility → **email reminder** sent (to the org's `is_primary_contact`). *(#10)*
+2. Utility logs in and **explicitly ticks the benchmarking opt-in** for that period (sets `bm_opted_in = true`). *(#10)*
+3. They **review/update** their reference data for the period: **service areas, generators, IPPs, tariffs**. *(#8)*
+4. **Only then** are the **relevant shells generated** for that period. *(#8)*
 5. No opt-in → no shells → no data → no compute for that `(utility, period)`.
 
-## 3. Data model
+**Clean handoff at the tick:** #10 owns steps 1–2 (reminder → tick → set flag); #8 owns steps 3–4 (review reference data → generate shells).
+
+## 3. Data model — two flags on two layers
 
 Add an **explicit per-period participation flag** on the period row:
 
-- **`report_periods.bm_opted_in boolean NOT NULL DEFAULT false`** — name per #2's review: **deliberately distinct from the org-level `organisations.bm_participates`** to avoid a same-name-different-meaning footgun (the canonical predicate joins both).
-- Semantics: *this utility opted into benchmarking for this specific report period.* Set `true` at step 2 of the workflow; shells (step 4) and all compute key off it.
+- **`report_periods.bm_opted_in boolean NOT NULL DEFAULT false`** — deliberately distinct from the org-level `organisations.bm_participates` to avoid a same-name-different-meaning footgun.
+- Semantics: *this utility opted into benchmarking for this specific report period.* Set `true` at step 2; shells (step 4) and all compute key off it.
+- **Table-rename heads-up (#10/#8):** `report_periods` is being renamed to **`submissions`** by #8's time-series work. **Land the flag on the final table name** so the schema doesn't churn — #2 to sequence the column add with the rename.
 
-**Relationship to the existing `organisations.bm_participates` (org-level, per #10's tiered-access model):**
-- `organisations.is_utility` + `organisations.bm_participates` = *this org is a benchmarking-eligible utility at all.*
-- `report_periods.bm_opted_in` = *this eligible utility actually participated in this period.*
-- **Canonical "is this period benchmarked" predicate:** `org.is_utility = true AND org.bm_participates = true AND report_period.bm_opted_in = true`.
-- **Open design point (for #10/#2):** is the org-level flag still needed as an eligibility gate, or does the per-period flag subsume it? (Recommend keeping the org flag as eligibility; the per-period flag as the actual opt-in.)
+**Access layer vs data layer — the two flags do NOT collapse (resolved with #10):**
 
-## 4. Compute & generation gating (owned by #3 + #8)
+| | Governs | Predicate |
+|---|---|---|
+| **Org-level** `is_utility AND organisations.bm_participates` | **ACCESS** — WebApp visibility (full app) + PBI plan reference gate | 2-way, org only |
+| **Per-period** `+ report_period.bm_opted_in` | **DATA / compute** — shells, KPI + measure compute, hours generation | 3-way, the canonical predicate |
 
-Everything that reads/derives benchmarking values gates on the canonical predicate above — so a non-opted-in period is **skipped, never "failed"**:
+- The org flags stay as **eligibility**: "this org is a benchmarking-eligible utility, gets the full app, and is *shown* the per-period opt-in." They are **not subsumed** by the per-period flag.
+- **Why access can't gate on `bm_opted_in`:** a utility needs full-app access to log in and *perform* the per-period opt-in — gating access on the opt-in would be chicken-and-egg (#10).
+- Only org-level-eligible utilities are ever shown the opt-in; `bm_opted_in` then records the actual per-period decision.
+- **Canonical "is this period benchmarked" predicate (the data/compute gate):**
+  `org.is_utility = true AND org.bm_participates = true AND report_period.bm_opted_in = true`.
 
-- **KPI recompute** (`recomputeKpiNow`) — today gated on `organisations.bm_participates` only; tighten to include `is_utility` **and** `report_periods.bm_opted_in`. *(#3)*
-- **Calculated-measure compute** (aggregated worker `runAggregatedWorker` / `computeCalculatedMeasureValues`) — currently ungated; add the predicate so it never computes a non-participated period. *(#8's worker; #3 orchestrates via `recomputeCalculatedMeasuresNow`)*
-- **`hours_in_period` generation** (`lib/period-hours.ts`, and the interactive data-entry path) — generate only for participated periods; the blanket `scripts/backfill-hours-in-period.ts` must be participation-scoped. *(#8 / #3)*
+## 4. Compute & generation gating — ONE predicate helper (owned by #3 + #8)
 
-## 5. One-time migration for existing data (owned by #2 / #8)
+Everything that reads/derives benchmarking values gates on the canonical predicate — a non-opted-in period is **skipped, never "failed."**
 
-Retrofit the flag to the truth already in `data_entries`, then clean up:
+**Single choke point (#8, agreed):** the predicate is about to appear in ≥4 places (KPI gate, aggregated worker gate, hours generation, shell generation). Write it **ONCE** — do not hand-roll four copies:
 
-1. **Backfill the flag:** for each existing `report_periods` row, set `bm_opted_in = true` where the period has ≥1 real submitted value (a `data_entries` row on a measure that is **not** `is_system_generated` and **not** `is_calculated`); else `false`. (Retro-captures each utility's start-of-participation.) *(`is_system_generated` and `is_calculated` confirmed as the live `measure_definitions` columns in the 2026-09-03 audit.)*
-2. **Cleanup unnecessary entries** (only after 1 is agreed) — **back up every deleted row to a `backup.*` table first** (#2's Option-B pattern; cheap + recoverable):
-   - Delete `data_entries` under non-participating orgs (`NOT (is_utility AND organisations.bm_participates)`) — the **17** stray rows.
-   - Delete system-generated / calculated `data_entries` sitting on periods where `report_periods.bm_opted_in = false` (the ~9 shells with stray `hours_in_period`, plus any computed values on shells).
-   - **Pre-participation `report_periods` rows: KEEP, flagged `false`** (agreed with #2 — they carry the period timeline/status/FYE placement and are FK-referenced by the recent FYE/time-series work; deleting risks gaps/orphans. Delete only the stray *data*, never the period rows).
-3. **Git-before-DB (+ backup):** the additive flag column (§3) is safe to apply promptly after merge; the `DELETE`s are DML — git-first, backed up, and applied only after the backfill is agreed.
+- **`isBenchmarkingParticipant(utilityId, reportPeriodId): boolean`** in `lib` (+ its **SQL twin**, parity-welded the way `fiscal_year` is, if a set-based query needs it). Every gate calls it.
+- **Extra reason it must be a choke point:** the predicate contains `is_utility`, which **#10's two-axis model retires** (→ `relationship = 'utility'`). When that lands, the swap happens in **one line** instead of a hunt across gates.
+- **#3 owns the shared helper** (owns the KPI gate + it's a generic lib util); #8, #10, hours + shell generation all call it.
 
-## 6. Ownership & sequencing (proposed — to be agreed)
+Call sites:
+- **KPI recompute** (`recomputeKpiNow`) — today gated on `organisations.bm_participates` only (`app/data-entry/kpi-worker/recompute.ts`); tighten to the full predicate via the helper. *(#3)*
+- **Calculated-measure compute** (aggregated worker `runAggregatedWorker` / `computeCalculatedMeasureValues`) — currently ungated; add the helper so it never computes a non-participated period. *(#8's worker; #3 orchestrates via `recomputeCalculatedMeasuresNow`)*
+- **`hours_in_period` generation** (`lib/period-hours.ts` + the interactive data-entry path) — generate only for participated periods; the blanket `scripts/backfill-hours-in-period.ts` must call the helper. *(#8 / #3)*
+- **Shell generation** (step 4) — keyed on the flag. *(#8)*
 
-1. **#2** — add `report_periods.bm_opted_in` (schema), then run the §5 backfill + cleanup SQL. *(blocks everything)*
-2. **#10** — the opt-in UX: email reminder, the opt-in tick at submission, and setting `report_periods.bm_opted_in = true` on opt-in. Fits the tiered-access/onboarding model.
-3. **#8** — the "review SA/generators/IPPs/tariffs → generate shells" step keyed off the per-period flag; and the aggregated-worker gate.
-4. **#3** — gate KPI + `hours_in_period` compute on the canonical predicate (depends on #2's flag + backfill landing first).
+## 5. One-time migration for existing data (owned by #2, with #8)
+
+Retrofit the flag to the historical truth, then clean up.
+
+### 5.1 Backfill the flag
+
+**Authoritative signal — Eugene's per-utility start years (2026-09-03, "from memory" → #2 verifies against data):** of the 20 `bm_participates=true` utilities:
+
+| Utility | Opted in from | Set `bm_opted_in=true` for |
+|---|---|---|
+| **NUC** | **FY2020** (submitted FY2020 data) | periods FY2020 onward |
+| **NPC** | **FY2025** | periods FY2025 onward |
+| **all other 18** | **FY2022** | periods FY2022 onward |
+
+Everything before a utility's start year → `bm_opted_in = false`.
+
+**Cross-check (not the primary signal):** the data-presence heuristic — a period has ≥1 real submitted value (a `data_entries` row on a measure that is **not** `is_system_generated` and **not** `is_calculated`) — should broadly agree with the start-year mapping. #2 reconciles the two before writing; where they disagree, the explicit start year wins but the discrepancy is surfaced to Eugene. (`is_system_generated` / `is_calculated` confirmed live `measure_definitions` columns, 2026-09-03 audit.) Going forward the flag is set explicitly by the opt-in UX, so this retro-backfill is one-time.
+
+### 5.2 Period-status reconciliation (#8 — one stated rule, #2 implements)
+
+Model-A left ~147 periods `Approved`; only 68 genuinely participated. An **`Approved` period that was never opted in is semantically wrong** (Approved = the CEO's act on submitted content). The backfill states the rule:
+
+- **Genuinely participated** (opted in per §5.1) → `bm_opted_in = true`, **status stands**.
+- **Pre-participation / non-participating** → `bm_opted_in = false` **AND** status reset to **Pending** (or the period soft-retired). **Never `Approved`-but-not-participating.**
+
+### 5.3 Cleanup unnecessary entries (only after 5.1/5.2 agreed)
+
+**Back up every deleted row to a `backup.*` table first** (#2's Option-B pattern; cheap + recoverable):
+
+- Delete `data_entries` under non-participating orgs (`NOT (is_utility AND organisations.bm_participates)`) — the **17** stray rows (verified §1: all system-generated/calculated, zero real values → clean to delete). Any stray that *did* carry a real value would get soft-delete/preserve + Eugene disposition per the CUC-fuel precedent — none do here.
+- Delete system-generated / calculated `data_entries` on periods where `bm_opted_in = false` (the ~9 shells with stray `hours_in_period`, plus any computed values on shells).
+- **Pre-participation period rows: KEEP, flagged `false`** (they carry the period timeline/status/FYE placement and are FK-referenced by the FYE/time-series work; deleting risks gaps/orphans). Delete only stray **data**, never period rows.
+
+### 5.4 Git-before-DB (+ backup)
+
+Additive flag column (§3) is safe to apply promptly after merge; the `DELETE`s + status resets are DML — git-first, backed up, applied only after 5.1/5.2 are agreed and Eugene greenlights.
+
+## 6. Ownership & sequencing
+
+1. **#2** — add `report_periods`/`submissions`.`bm_opted_in` (schema, on the final table name), then run the §5 backfill + status reconciliation + cleanup SQL. *(blocks everything)*
+2. **#3** — write `isBenchmarkingParticipant()` (lib + SQL twin, §4); gate KPI + `hours_in_period` compute on it. *(depends on #2's flag landing)*
+3. **#8** — review-reference-data → generate-shells (step 4) keyed on the flag; aggregated-worker gate via the helper; period-status rule input. *(depends on #2)*
+4. **#10** — opt-in UX: reminder email → opt-in tick → set `bm_opted_in=true`; keeps org-level flags as the access/eligibility gate; folds the flag into the consolidated tiered-access pass. *(depends on #2)*
 
 ## 7. Decisions & open questions
 
-**Resolved (#2 review, 2026-09-03):**
-- **Flag name** — `report_periods.bm_opted_in` (distinct from the org-level `bm_participates`; #2's pick).
-- **Pre-participation `report_periods`** — KEEP, flagged `false`; delete only stray data (never period rows).
-- **Delete safety** — back up removed rows to `backup.*` first; additive column promptly after merge, `DELETE`s git-first + after backfill agreed.
+**Resolved:**
+- **Flag name** — `bm_opted_in` on the period/`submissions` row (distinct from org `bm_participates`). *(#2, #10)*
+- **Org-flag relationship** — **KEEP as eligibility, not subsumed.** Org flags govern access; the per-period flag governs data/compute. Two layers, shared terms. *(#10)*
+- **Single predicate helper** — `isBenchmarkingParticipant()`, one choke point, lib + SQL twin. *(#8, #3)*
+- **17 stray rows** — verified all system-generated/calculated, zero real values → clean to delete (backed up first). *(#3 verify, #8 concern)*
+- **Period-status rule** — non-participating periods never stay `Approved`; reset to Pending / soft-retire. *(#8)*
+- **Pre-participation period rows** — KEEP, flagged `false`; delete only stray data. *(#2)*
+- **Delete safety** — back up to `backup.*` first; additive column promptly after merge, DML git-first + after backfill agreed. *(#2)*
+- **Table rename** — land the flag on the final `submissions` name; #2 sequences with #8's rename.
 
-**Still open:**
-- **Org-flag relationship** (§3) — keep as eligibility, or subsume? — #10.
-- **Backfill signal** — "has real submitted data" is the pragmatic retro-signal; confirm it matches how #10 wants the historic start-of-participation defined (vs a manual per-utility start period).
-- **Re-open / withdraw** — can a utility opt out after opting in (and what happens to already-entered data)? — #10/#8.
-- **Eugene's direct go** — #2 will not start schema/DDL + the destructive migration off a relay; needs Eugene's explicit greenlight on their pieces (§3, §5) + final confirmation of the flag name.
+**Open — need Eugene's call:**
+- **Backfill start years** (§5.1) — confirm NUC FY2020 / NPC FY2025 / all others FY2022, and that the explicit start years are authoritative over the data-presence heuristic. (Stated "from memory.")
+- **Re-open / withdraw policy** (#10's recommendation) — **before** any real data submitted: un-tick removes / never-generates shells. **After** real data exists: opt-out sets `bm_opted_in=false` but **KEEPS the entered data** (backed up), and the canonical predicate simply excludes it from compute — never a silent delete. Mirrors the §5 "keep the rows, exclude via flag" pattern. This is a PPA participation-policy call.
+- **Eugene's direct greenlight** — #2 will not start schema/DDL + the destructive migration off a relay; needs Eugene's explicit go on their pieces (§3, §5).
