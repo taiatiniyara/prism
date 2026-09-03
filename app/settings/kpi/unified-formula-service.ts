@@ -793,6 +793,68 @@ export async function recomputeAllKpis(): Promise<RecomputeResult> {
   return engineRecomputeKpiNow({ all: true });
 }
 
+export interface KpiComputePlan {
+  periodIds: number[];
+  /**
+   * true when the KPI references at least one calculated measure, so each chunk
+   * must refresh those upstream measure VALUES for its periods before computing
+   * the KPI (the per-batch equivalent of recomputeKpiNow's one-shot refresh).
+   */
+  refreshMeasures: boolean;
+}
+
+/**
+ * Plan a chunked KPI recompute so the client can drive a progress bar (mirrors
+ * planCalculatedMeasureCompute for the KPI path). Returns the participating
+ * periods to compute across — `allReportPeriodIds()` is already gated on
+ * `organisations.bm_participates`, the same set the whole recompute would use —
+ * plus whether the KPI depends on calculated measures.
+ */
+export async function planKpiCompute(kpiDefId: number): Promise<KpiComputePlan> {
+  const [kpi] = await db
+    .select({ formula_inputs: kpiDefinitions.formula_inputs })
+    .from(kpiDefinitions)
+    .where(eq(kpiDefinitions.id, kpiDefId))
+    .limit(1);
+  const inputIds = inputMeasureIds(kpi?.formula_inputs);
+  let refreshMeasures = false;
+  if (inputIds.length) {
+    const computedInputs = await db
+      .select({ id: measureDefinitions.id })
+      .from(measureDefinitions)
+      .where(
+        and(
+          inArray(measureDefinitions.id, inputIds),
+          eq(measureDefinitions.is_calculated, true),
+        ),
+      );
+    refreshMeasures = computedInputs.length > 0;
+  }
+  const periodIds = await allReportPeriodIds();
+  return { periodIds, refreshMeasures };
+}
+
+/**
+ * Compute ONE chunk of report periods for a KPI. When the KPI depends on
+ * calculated measures, refresh those measure VALUES for just this chunk's
+ * periods first — the per-batch equivalent of recomputeKpiNow's upstream
+ * refresh, so the whole operation chunks instead of one heavy all-periods
+ * request. Returns the per-period status for streaming into the reason table.
+ */
+export async function computeKpiChunk(input: {
+  kpiDefId: number;
+  reportPeriodIds: number[];
+  refreshMeasures: boolean;
+}): Promise<RecomputeResult> {
+  if (input.refreshMeasures) {
+    await computeCalculatedMeasureValues(input.reportPeriodIds);
+  }
+  return engineRecomputeKpiNow({
+    kpiDefIds: [input.kpiDefId],
+    reportPeriodIds: input.reportPeriodIds,
+  });
+}
+
 /**
  * The edited measure + every calculated measure it transitively depends on (its
  * calculated-dependency closure). Walks the SAME dependency graph the aggregated
