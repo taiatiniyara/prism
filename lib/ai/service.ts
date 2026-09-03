@@ -43,7 +43,14 @@ interface AiGenerateResult {
     input: number;
     output: number;
   };
+  steps: Array<{
+    toolCalls: Array<{ toolName: string }>;
+    toolResults: Array<{ toolName: string; ok: boolean }>;
+  }>;
 }
+
+const EMPTY_ANSWER_NUDGE =
+  "IMPORTANT: You have already gathered the data needed to answer. You MUST now write your complete final answer to the user in full, directly addressing their question. Do not make any further tool calls, and do not end your turn with an empty response. Write the answer now.";
 
 type SdkMessage = { role: "user" | "assistant" | "system"; content: string };
 
@@ -378,6 +385,47 @@ const generateWithConfig = (
   });
 };
 
+// Runs generateText with transient-error retries, and additionally retries once with a
+// synthesis nudge when the model finished after tool use but produced an empty final step
+// (a v7/Anthropic intermittent failure that otherwise yields blank answers to the user).
+const generateWithRetry = async (
+  req: PreparedRequest,
+  config: ReturnType<typeof getModelConfig>,
+  abortSignal?: AbortSignal,
+): Promise<Awaited<ReturnType<typeof generateWithConfig>>> => {
+  const first = await withRetry(
+    () => generateWithConfig(req, config, abortSignal),
+    `generate:${config.modelName}`,
+  );
+  let result = first.result;
+
+  const usedTools = result.steps.some((s) => (s.toolCalls ?? []).length > 0);
+  if (usedTools && !(result.text ?? "").trim()) {
+    logger.warn(`[ai-service] Empty final answer after tool use (${config.modelName}); retrying with synthesis nudge`);
+    const nudgedReq: PreparedRequest = {
+      ...req,
+      systemPrompt: `${req.systemPrompt}\n\n${EMPTY_ANSWER_NUDGE}`,
+    };
+    const retried = await withRetry(
+      () => generateWithConfig(nudgedReq, config, abortSignal),
+      `generate-empty-retry:${config.modelName}`,
+    );
+    result = retried.result;
+  }
+
+  return result;
+};
+
+type GenerateStepLike = {
+  toolCalls: Array<{ toolName: string }>;
+  toolResults: Array<{ toolName: string }>;
+};
+
+const stepToProgress = (step: GenerateStepLike): AiGenerateResult["steps"][number] => ({
+  toolCalls: (step.toolCalls ?? []).map((tc) => ({ toolName: tc.toolName })),
+  toolResults: (step.toolResults ?? []).map((tr) => ({ toolName: tr.toolName, ok: true })),
+});
+
 export const runAiStream = async (
   options: AiServiceOptions,
 ): Promise<AiStreamResult> => {
@@ -466,15 +514,10 @@ export const runAiGenerate = async (
   const req = await prepareRequest(options);
 
   const primaryConfig = req.config;
-  let retries = 0;
 
   try {
     checkCircuit(primaryConfig.modelName);
-    const { result, retries: r } = await withRetry(
-      () => generateWithConfig(req, primaryConfig, options.abortSignal),
-      `generate:${primaryConfig.modelName}`,
-    );
-    retries = r;
+    const result = await generateWithRetry(req, primaryConfig, options.abortSignal);
     recordCircuitSuccess(primaryConfig.modelName);
 
     const { filtered } = filterOutput(result.text);
@@ -497,22 +540,19 @@ export const runAiGenerate = async (
       wasFallback: false,
       promptVersion: req.promptVersion,
       tokenUsage,
+      steps: result.steps.map(stepToProgress),
     };
   } catch (primaryError) {
     recordCircuitFailure(primaryConfig.modelName);
     logger.warn("[ai-service] Primary generate model failed, trying fallback", {
       primaryModel: primaryConfig.modelName,
-      retries,
       error: primaryError instanceof Error ? primaryError.message : String(primaryError),
     });
 
     try {
       const fallbackConfig = getModelConfig(true);
       checkCircuit(fallbackConfig.modelName);
-      const { result } = await withRetry(
-        () => generateWithConfig(req, fallbackConfig),
-        `generate:${fallbackConfig.modelName}`,
-      );
+      const result = await generateWithRetry(req, fallbackConfig);
       recordCircuitSuccess(fallbackConfig.modelName);
 
       const { filtered } = filterOutput(result.text);
@@ -535,12 +575,12 @@ export const runAiGenerate = async (
         wasFallback: true,
         promptVersion: req.promptVersion,
         tokenUsage,
+        steps: result.steps.map(stepToProgress),
       };
     } catch (fallbackError) {
       recordCircuitFailure(getModelConfig(true).modelName);
       await recordError(options.user.id);
       logger.error("[ai-service] Both primary and fallback generate models failed", {
-        retries,
         fallbackError: fallbackError instanceof Error ? fallbackError.message : String(fallbackError),
       });
       throw fallbackError;
