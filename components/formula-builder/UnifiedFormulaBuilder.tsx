@@ -14,9 +14,10 @@ import { cn } from "@/lib/utils";
 import { isCategoricalDataType } from "@/lib/formula/descriptive-projection";
 import {
   saveUnifiedFormula,
-  recomputeKpiNow,
   planCalculatedMeasureCompute,
   computeCalculatedMeasureChunk,
+  planKpiCompute,
+  computeKpiChunk,
   updateTargetUom,
 } from "@/app/settings/kpi/unified-formula-service";
 import { Button } from "@/components/ui/button";
@@ -277,6 +278,9 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     setCards(target?.existingCards.map((c) => ({ ...c })) ?? []);
     setTrackAsKpi(target?.isTrackedAsKpi ?? false);
     setRecompute(null);
+    // The progress bar persists after a backfill (Eugene) — clear it only when
+    // the target changes, so the last run's bar + reason table clear together.
+    setComputeProgress(null);
     setJustSaved(false);
   };
 
@@ -287,6 +291,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     setFormula("");
     setCards([]);
     setRecompute(null);
+    setComputeProgress(null);
     setJustSaved(false);
     setOnlyWithoutFormula(false);
     setTrackAsKpi(false);
@@ -442,7 +447,60 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
       }
       return { total, calculated, skipped, errors };
     } finally {
-      setComputeProgress(null);
+      // Keep the bar visible until the target changes (Eugene): a determinate
+      // bar (100% on success, or partial on error) STAYS as the record of the
+      // last backfill; only the indeterminate "preparing" state (total 0 —
+      // planning failed or no periods) is cleared. Cleared for real in
+      // handleSelectTarget / handleModeSwitch.
+      setComputeProgress((p) => (p && p.total > 0 ? p : null));
+    }
+  };
+
+  // KPI equivalent of runChunkedMeasureCompute: the KPI backfill must ALSO show
+  // the progress bar (Eugene: the bar is a required part of showing backfill
+  // compute for both calculated inputs AND KPIs). recomputeKpiNow does a heavy
+  // one-shot refresh of upstream measures across ALL periods then computes; here
+  // we chunk it — planKpiCompute gives the participating periods (+ whether to
+  // refresh measures), and computeKpiChunk does the refresh + KPI compute per
+  // batch, streaming per-period status into the reason table. No worker change.
+  const runChunkedKpiCompute = async (
+    kpiDefId: number,
+  ): Promise<RecomputeResult> => {
+    setComputeProgress((p) => p ?? { done: 0, total: 0 });
+    setRecompute({ processed: 0, failed: 0, byPeriod: [] });
+    try {
+      const plan = await planKpiCompute(kpiDefId);
+      const total = plan.periodIds.length;
+      if (total === 0) {
+        return { processed: 0, failed: 0, byPeriod: [] };
+      }
+      setComputeProgress({ done: 0, total });
+      const accum: RecomputeResult["byPeriod"] = [];
+      let processed = 0;
+      let failed = 0;
+      let done = 0;
+      for (let i = 0; i < plan.periodIds.length; i += CHUNK_SIZE) {
+        const chunk = plan.periodIds.slice(i, i + CHUNK_SIZE);
+        const c = await computeKpiChunk({
+          kpiDefId,
+          reportPeriodIds: chunk,
+          refreshMeasures: plan.refreshMeasures,
+        });
+        processed += c.processed;
+        failed += c.failed;
+        if (c.byPeriod.length) accum.push(...c.byPeriod);
+        done += chunk.length;
+        setComputeProgress({ done, total });
+        const snapshot = [...accum];
+        setRecompute({
+          processed: snapshot.filter((p) => p.status === "ok").length,
+          failed: snapshot.filter((p) => p.status !== "ok").length,
+          byPeriod: snapshot,
+        });
+      }
+      return { processed, failed, byPeriod: accum };
+    } finally {
+      setComputeProgress((p) => (p && p.total > 0 ? p : null));
     }
   };
 
@@ -500,12 +558,11 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
       trackAsKpi: activeMode === "measure" ? trackAsKpi : undefined,
     };
     startSave(async () => {
-      // Measure Save & Compute shows the progress bar for the whole run — set it
-      // indeterminate up front so it's visible during the save + planning window,
-      // not just once the first chunk lands (the reported "Working…, no bar" gap).
-      if (activeMode === "measure") {
-        setComputeProgress({ done: 0, total: 0 });
-      }
+      // Show the bar for the whole run — BOTH calculated-measure and KPI backfill
+      // (Eugene: the progress bar is a required part of showing backfill compute
+      // regardless of target type). Set it indeterminate up front so it's visible
+      // during the save + planning window, not just once the first chunk lands.
+      setComputeProgress({ done: 0, total: 0 });
       const res = await saveUnifiedFormula(payload);
       if (!res.ok) {
         setComputeProgress(null);
@@ -528,9 +585,13 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
           );
         }
       } else {
-        const c = await recomputeKpiNow(targetId);
-        setRecompute(c);
-        if (c.failed > 0) {
+        // KPI backfill — same chunked bar (streams per-period status into the
+        // reason table); runChunkedKpiCompute sets `recompute` as it goes.
+        const c = await runChunkedKpiCompute(targetId);
+        const attempted = c.processed + c.failed;
+        if (attempted === 0) {
+          toast.warning("Saved ✓ · no report periods to compute.");
+        } else if (c.failed > 0) {
           toast.warning(
             `Saved ✓ · recomputed ${c.processed}, ${c.failed} failed.`,
           );
@@ -566,9 +627,13 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
         toast.error("Choose a target first.");
         return;
       }
-      const res = await recomputeKpiNow(selectedTargetId);
-      setRecompute(res);
-      if (res.failed > 0) {
+      // KPI backfill — chunked with the same progress bar; streams per-period
+      // status into the reason table as each batch lands.
+      const res = await runChunkedKpiCompute(selectedTargetId);
+      const attempted = res.processed + res.failed;
+      if (attempted === 0) {
+        toast.warning("No report periods to compute.");
+      } else if (res.failed > 0) {
         toast.warning(`Recomputed ${res.processed}, ${res.failed} failed.`);
       } else {
         toast.success(`Recomputed ${res.processed} period(s).`);
@@ -870,13 +935,11 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                 disabled={isSaving || isComputing || !canSave}
                 title="Save the formula and immediately compute it across all prior and current periods"
               >
-                {computeProgress
-                  ? computeProgress.total > 0
+                {isSaving || isComputing
+                  ? computeProgress && computeProgress.total > 0
                     ? `Computing ${computeProgress.done}/${computeProgress.total}…`
                     : "Working…"
-                  : isSaving || isComputing
-                    ? "Working…"
-                    : "Save & Compute"}
+                  : "Save & Compute"}
               </Button>
             )}
             {!(activeMode === "kpi" && isPassThroughKpi) && (
@@ -890,15 +953,13 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                   (activeMode === "kpi" && isDescriptiveProjection)
                 }
               >
-                {computeProgress
-                  ? computeProgress.total > 0
+                {isComputing
+                  ? computeProgress && computeProgress.total > 0
                     ? `Computing ${computeProgress.done}/${computeProgress.total}…`
-                    : "Working…"
-                  : isComputing
-                    ? "Computing…"
-                    : activeMode === "kpi"
-                      ? "Compute now"
-                      : "Apply to previous and current periods"}
+                    : "Computing…"
+                  : activeMode === "kpi"
+                    ? "Compute now"
+                    : "Apply to previous and current periods"}
               </Button>
             )}
             {computeProgress && (
@@ -934,13 +995,20 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
           {computeProgress && (
             <p className="text-muted-foreground text-[11px] leading-snug">
               {computeProgress.total > 0 ? (
-                <>
-                  Computing period{" "}
-                  {Math.min(computeProgress.done + 1, computeProgress.total)} of{" "}
-                  {computeProgress.total} — runs in the background across all
-                  periods; results fill in below as each batch completes. You can
-                  keep this tab open.
-                </>
+                computeProgress.done >= computeProgress.total ? (
+                  <>
+                    Computed all {computeProgress.total} period(s) — results
+                    below. Stays until you switch to another KPI or measure.
+                  </>
+                ) : (
+                  <>
+                    Computing period{" "}
+                    {Math.min(computeProgress.done + 1, computeProgress.total)} of{" "}
+                    {computeProgress.total} — runs in the background across all
+                    periods; results fill in below as each batch completes. You
+                    can keep this tab open.
+                  </>
+                )
               ) : (
                 <>Saving &amp; preparing the periods to compute…</>
               )}
@@ -984,7 +1052,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
               <p className="mb-2 text-xs font-semibold">
                 Recompute · {recompute.processed} processed ·{" "}
                 {recompute.failed} failed
-                {computeProgress ? " · computing…" : ""}
+                {isSaving || isComputing ? " · computing…" : ""}
               </p>
               <div className="max-h-48 overflow-auto">
                 <table className="w-full text-xs">
