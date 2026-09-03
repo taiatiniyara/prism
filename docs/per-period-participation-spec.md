@@ -21,8 +21,8 @@ Each layer's absence is **skip, never fail**: a non-participated period isn't an
 
 In Prism 1, report-period **shells were auto-generated for every utility just by virtue of being a utility**, on the assumption they'd populate them. Utilities that never submitted left the shells empty — so `data_entries` carries **unnecessary rows for periods nobody participated in**, and every benchmarking calculation that touches those periods reports spurious "missing input" failures.
 
-**Observed in p2 today (audit 2026-09-03):**
-- Of **128** report-periods belonging to participating utilities (`is_utility=true AND organisations.bm_participates=true`): **68 have real submitted data** (genuinely participated) and **60 are pre-participation shells** (report-period exists, zero real data).
+**Observed in p2 today (audit 2026-09-03, reconciled with #2 — see §5.1 for the authoritative breakdown):**
+- **128** report-periods belong to participating utilities (`is_utility=true AND organisations.bm_participates=true`), split by report type: **79 "Financial Year" (annual benchmarking)** + **49 "Monthly" (all empty)**. Within the 79 FY periods: **68 hold real numeric data**, 10 are boolean-only shells, 1 is empty (NPC's opted-in FY2025). *(The initial "68/60" and #2's "78/50" both conflated the two report types; §5.1 has the corrected scoping.)*
 - **17** stray `data_entries` rows sit under **non-participating** utilities (`bm_participates=false`) across 12 periods. **Verified 2026-09-03: all 17 are `Total Costs` (calculated, value 0) or `Hours in Period` (system-generated, 8784) — none carry a real entered value.** (#8's data-preservation check → clean; safe to delete, still backed up first.)
 - ~**9** pre-participation shells already carry a stray system-generated `Hours in Period` row.
 - These are exactly what makes e.g. Generator Availability/Outage/Capacity KPIs (#97–100) report `Missing formula inputs: hours_in_period` — for periods no one participated in.
@@ -93,7 +93,18 @@ Retrofit the flag to the historical truth, then clean up.
 
 Everything before a utility's start year → `bm_opted_in = false`.
 
-**Cross-check (not the primary signal):** the data-presence heuristic — a period has ≥1 real submitted value (a `data_entries` row on a measure that is **not** `is_system_generated` and **not** `is_calculated`) — should broadly agree with the start-year mapping. #2 reconciles the two before writing; where they disagree, the explicit start year wins but the discrepancy is surfaced to Eugene. (`is_system_generated` / `is_calculated` confirmed live `measure_definitions` columns, 2026-09-03 audit.) Going forward the flag is set explicitly by the opt-in UX, so this retro-backfill is one-time.
+**SCOPE — benchmarking = report_type "Financial Year" only (reconciled with #2, 2026-09-03).** `report_periods.report_type_id` has two values (`managed_list_items`): **490 = "Financial Year"** (the annual benchmarking submission) and **491 = "Monthly"**. Benchmarking participation applies **only to Financial-Year periods**. So the backfill predicate is:
+
+```
+bm_opted_in := (report_type_id = 490)                          -- Financial Year only; every Monthly (491) => false
+             AND (EXTRACT(year FROM report_date) >= start_yr)    -- NUC 2020, NPC 2025, else 2022
+```
+
+**Resulting set on current p2:** of 128 participating-org periods, **79 are Financial-Year (490)** and **49 are Monthly (491, all empty — NUC's 45 phantom shells live here)**. The predicate flags **78 FY periods true, 1 FY false (NPC FY2024, period id 224), all 49 Monthly false.**
+
+**Cross-check (not the primary signal) — and why start-year beats it:** the data-presence heuristic (a period has ≥1 real submitted value on a measure that is **not** `is_system_generated` and **not** `is_calculated`) gives 78 (row-exists) or 68 (row has a non-null `value_numeric`) across both types — but it **misclassifies NPC in both directions**: NPC FY2024 (id 224) carries 14 `value_boolean` reference rows → data-presence wrongly calls it participated; NPC FY2025 (id 254, Eugene's real opt-in) is **empty** → data-presence wrongly calls it a shell. The start-year rule gets both right. So the explicit start years are authoritative; data-presence is only a post-backfill sanity check. After backfill, the sole opted-in-but-empty FY period is NPC id 254 (expected: opted in, awaiting submission), and the sole non-opted FY period carrying data is NPC id 224 (its 14 booleans → the one FY stray-data cleanup candidate). (`is_system_generated` / `is_calculated` confirmed live `measure_definitions` columns, 2026-09-03 audit.) Going forward the flag is set explicitly by the opt-in UX, so this retro-backfill is one-time.
+
+**Oddity flagged for Eugene:** NPC's opted period (FY2025) is empty while its prior FY2024 carries the 14 booleans — possibly a default carryover. Eugene's mapping (opt-in = FY2025) stands; noted so #2 isn't surprised.
 
 ### 5.2 Period-status reconciliation (#8 — one stated rule, #2 implements)
 
