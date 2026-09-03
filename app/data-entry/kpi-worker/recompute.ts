@@ -4,6 +4,7 @@ import { db } from "@/db/connection";
 import { kpiDefinitions } from "@/db/schema/kpi";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { organisations } from "@/db/schema/utility";
+import { benchmarkingParticipantCondition } from "@/lib/benchmarking/participation";
 
 import { computeKpiTarget } from "./compute-kpi-target";
 import { resolveKpiTargetsByIds } from "./resolveTargets";
@@ -77,13 +78,15 @@ export async function recomputeKpiNow(
   }
 
   // 2. Determine the report periods to recompute against.
-  // Only periods for utilities that PARTICIPATE in benchmarking
-  // (organisations.bm_participates = true) are recomputed. A non-participating
-  // utility's KPIs are never benchmarked, so computing — and surfacing a failed
-  // row for — its periods is noise; those periods are skipped entirely.
+  // Only periods OPTED INTO benchmarking are recomputed — the canonical
+  // predicate (organisations.is_utility = true AND report_periods.bm_opted_in =
+  // true) via the ONE shared helper `benchmarkingParticipantCondition()`, so
+  // this worker, the calculator's period enumeration, and any future gate stay
+  // in lockstep. A non-opted-in period is never benchmarked, so computing — and
+  // surfacing a failed row for — it is noise; those periods are skipped.
   // NOTE: no `periodAccessPredicate` is applied here — this internal function
-  // has no CurrentUser to scope by, so it selects all participating periods (or
-  // the explicit ids given, still gated on participation). Callers that need
+  // has no CurrentUser to scope by, so it selects all opted-in periods (or the
+  // explicit ids given, still gated on participation). Callers that need
   // per-user access control must pre-filter the `reportPeriodIds` they pass in.
   const periodQuery = db
     .select({
@@ -97,7 +100,7 @@ export async function recomputeKpiNow(
       eq(organisations.id, reportPeriods.utility_id),
     );
 
-  const participates = eq(organisations.bm_participates, true);
+  const participates = benchmarkingParticipantCondition();
 
   const periods =
     args.reportPeriodIds && args.reportPeriodIds.length > 0

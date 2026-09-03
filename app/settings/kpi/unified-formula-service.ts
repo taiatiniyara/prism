@@ -22,8 +22,7 @@ import { wouldCreateCycle } from "@/app/data-entry/enter-data/services/aggregate
 import { runAggregatedWorker } from "@/app/data-entry/enter-data/services/aggregated-worker/orchestrator";
 import { selectAggregatedFormulaTargets } from "@/app/data-entry/enter-data/services/aggregated-worker/target-selector";
 import { getCurrentUser } from "@/lib/user.service";
-import { reportPeriods } from "@/db/schema/reportPeriods";
-import { organisations } from "@/db/schema/utility";
+import { listBenchmarkingPeriodIds } from "@/lib/benchmarking/participation";
 import {
   ALL_MEMBER_BY_FIELD,
   BuilderData,
@@ -659,19 +658,12 @@ function inputMeasureIds(
 
 async function allReportPeriodIds(explicit?: number[]): Promise<number[]> {
   if (explicit && explicit.length) return explicit;
-  // Only periods for utilities that PARTICIPATE in benchmarking
-  // (organisations.bm_participates = true) — mirrors the KPI worker
-  // (kpi-worker/recompute.ts). A non-participating utility is never benchmarked,
-  // so computing — and surfacing failed rows for — its periods is noise. This is
-  // why the calculator processed all 140 periods instead of the 128 participating
-  // ones: the enumeration had no participation filter (the worker already did).
-  const rows = await db
-    .select({ id: reportPeriods.id })
-    .from(reportPeriods)
-    .innerJoin(organisations, eq(organisations.id, reportPeriods.utility_id))
-    .where(eq(organisations.bm_participates, true))
-    .orderBy(asc(reportPeriods.id));
-  return rows.map((r) => r.id);
+  // Only periods opted into benchmarking — the canonical predicate
+  // (organisations.is_utility = true AND report_periods.bm_opted_in = true),
+  // via the ONE shared helper so the KPI worker, this enumeration, and any
+  // future gate stay in lockstep. Non-opted-in periods are never benchmarked,
+  // so computing — and surfacing failed rows for — them is noise.
+  return listBenchmarkingPeriodIds();
 }
 
 /** Compute just the calculated-measure VALUES (aggregated worker per period);
@@ -806,8 +798,9 @@ export interface KpiComputePlan {
 /**
  * Plan a chunked KPI recompute so the client can drive a progress bar (mirrors
  * planCalculatedMeasureCompute for the KPI path). Returns the participating
- * periods to compute across — `allReportPeriodIds()` is already gated on
- * `organisations.bm_participates`, the same set the whole recompute would use —
+ * periods to compute across — `allReportPeriodIds()` is already gated on the
+ * canonical predicate (is_utility AND bm_opted_in), the same set the whole
+ * recompute would use —
  * plus whether the KPI depends on calculated measures.
  */
 export async function planKpiCompute(kpiDefId: number): Promise<KpiComputePlan> {
