@@ -17,7 +17,8 @@
  * signal a hand-SQL change that never made it into the model).
  *
  * EXIT CODES: 0 = in sync · 1 = drift detected · 2 = check error (e.g. no DATABASE_URL).
- * Run: npx tsx scripts/schema-drift-check.ts   (needs DATABASE_URL in env)
+ * FLAGS: --github emits ::error:: / ::warning:: annotation lines for inline PR display.
+ * Run: npx tsx scripts/schema-drift-check.ts [--github]   (needs DATABASE_URL in env)
  */
 import { Pool } from "pg";
 import { is, getTableColumns } from "drizzle-orm";
@@ -55,8 +56,17 @@ type LiveCol = {
 };
 
 async function main() {
+  // --github emits GitHub Actions annotation lines (::error:: / ::warning::) so drift
+  // shows inline on the PR diff. Backward-compatible: default output is unchanged.
+  const github = process.argv.includes("--github");
+  const annotate = (level: "error" | "warning", msg: string) => {
+    if (github) console.log(`::${level}::${msg.replace(/\n/g, " ")}`);
+  };
+
   const connectionString = process.env.DATABASE_URL;
   if (!connectionString) {
+    // exit 2 = check couldn't run (no creds / DB unreachable) → CI should WARN, not block.
+    annotate("warning", "schema drift-check skipped: DATABASE_URL not set (check could not run)");
     console.error("drift-check: DATABASE_URL not set.");
     process.exit(2);
   }
@@ -140,7 +150,10 @@ async function main() {
 
   if (warnings.length > 0) {
     console.warn(`\n⚠ ${warnings.length} DB-only column(s) not in the model:`);
-    for (const w of warnings) console.warn("  - " + w);
+    for (const w of warnings) {
+      console.warn("  - " + w);
+      annotate("warning", w);
+    }
   }
 
   if (errors.length === 0) {
@@ -151,7 +164,10 @@ async function main() {
   }
 
   console.error(`\n❌ Schema drift detected — ${errors.length} issue(s):`);
-  for (const e of errors) console.error("  - " + e);
+  for (const e of errors) {
+    console.error("  - " + e);
+    annotate("error", e);
+  }
   console.error(
     "\nReconcile with a REVIEWED migration (drizzle-kit generate), never `db-push --force` without a backup.",
   );
