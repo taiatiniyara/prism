@@ -71,3 +71,28 @@ export async function isBenchmarkingParticipant(
     .limit(1);
   return rows.length > 0;
 }
+
+/**
+ * Org-level "is a benchmarking participant" — the DERIVED replacement for the
+ * stored `organisations.bm_participates` flag (Eugene 2026-09-04, per-period-
+ * participation-spec; #10 tiered-access model). A utility IS a participant iff it
+ * has opted into at least one report period:
+ *   is_utility = true  AND  EXISTS(report_period with bm_opted_in = true).
+ *
+ * Derived, so it can never drift from the per-period truth. #10 gates the "full
+ * participant app" (Tier 2) on this; the "eligible / can opt in" tier (Tier 1)
+ * gates on `is_utility` alone. Consumers should read THIS (or the DB view
+ * `v_organisation_participation`) instead of `organisations.bm_participates`,
+ * which is retired once #10's access code reads the derived value and is live.
+ */
+export async function isOrgBenchmarkingParticipant(
+  utilityId: number,
+): Promise<boolean> {
+  const rows = await db
+    .select({ id: reportPeriods.id })
+    .from(reportPeriods)
+    .innerJoin(organisations, eq(organisations.id, reportPeriods.utility_id))
+    .where(and(eq(organisations.id, utilityId), benchmarkingParticipantCondition()))
+    .limit(1);
+  return rows.length > 0;
+}
