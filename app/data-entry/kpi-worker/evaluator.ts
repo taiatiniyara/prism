@@ -1,13 +1,15 @@
 import type { KpiCalculationFailureType } from "./types";
+import { evaluateArithmetic, FormulaError } from "@/lib/formula/arithmetic";
 
 export type FormulaVariableValue = string | number | null | undefined;
 
-export interface KpiFormulaEvaluationResult {
-  status: "ok" | "error";
-  value?: string;
-  failureType?: KpiCalculationFailureType;
-  failureReason?: string;
-}
+export type KpiFormulaEvaluationResult =
+  | { status: "ok"; value: string }
+  | {
+      status: "error";
+      failureType: KpiCalculationFailureType;
+      failureReason: string;
+    };
 
 const toFiniteNumber = (value: FormulaVariableValue): number | null => {
   if (value == null) {
@@ -18,15 +20,21 @@ const toFiniteNumber = (value: FormulaVariableValue): number | null => {
   return Number.isFinite(numeric) ? numeric : null;
 };
 
+/**
+ * Evaluate a KPI/measure formula.
+ *
+ * The formula language is pure arithmetic (`+ - * / ( )`, unary +/-, numbers,
+ * variables). Evaluation goes through the shared eval-free parser
+ * (`lib/formula/arithmetic.ts`) — NO `new Function`/eval — so this is safe to
+ * run server-side and identical to the client Test harness. The parser is
+ * fail-closed: any non-arithmetic token throws, which maps to a
+ * `formula-invalid` failure rather than silently evaluating.
+ */
 export const evaluateKpiFormula = (
   formula: string,
   variables: Record<string, FormulaVariableValue>,
 ): KpiFormulaEvaluationResult => {
-  const normalizedFormula = formula
-    .replace(/\bAND\b/gi, "&&")
-    .replace(/\bOR\b/gi, "||");
-
-  if (normalizedFormula.trim().length === 0) {
+  if (formula.trim().length === 0) {
     return {
       status: "error",
       failureType: "formula-invalid",
@@ -34,46 +42,38 @@ export const evaluateKpiFormula = (
     };
   }
 
-  const names = Object.keys(variables);
-  const values = names.map((name) => toFiniteNumber(variables[name]));
-
-  if (values.some((value) => value == null)) {
-    return {
-      status: "error",
-      failureType: "evaluation-error",
-      failureReason: "Formula input value is missing or non-numeric.",
-    };
-  }
-
-  try {
-    const allowedChars = /^[A-Za-z_][A-Za-z0-9_]*$/;
-    for (const name of names) {
-      if (!allowedChars.test(name)) {
-        return {
-          status: "error",
-          failureType: "formula-invalid",
-          failureReason: `Variable name "${name}" contains invalid characters.`,
-        };
-      }
-    }
-
-    const evaluator = new Function(...names, `return (${normalizedFormula});`);
-    const computed = evaluator(...(values as number[]));
-    const numeric = Number(computed);
-
-    if (!Number.isFinite(numeric)) {
+  // Coerce inputs; a missing/non-numeric bound value is an evaluation error
+  // (preserved from the previous behaviour, distinct from a bad formula).
+  const numericVariables: Record<string, number> = {};
+  for (const [name, raw] of Object.entries(variables)) {
+    const numeric = toFiniteNumber(raw);
+    if (numeric == null) {
       return {
         status: "error",
         failureType: "evaluation-error",
-        failureReason: "Formula result is not a finite number.",
+        failureReason: "Formula input value is missing or non-numeric.",
       };
     }
+    numericVariables[name] = numeric;
+  }
 
+  try {
+    const numeric = evaluateArithmetic(formula, numericVariables);
     return {
       status: "ok",
       value: String(numeric),
     };
-  } catch {
+  } catch (error) {
+    if (error instanceof FormulaError) {
+      // A "value" error (unknown/missing variable, non-finite result) is an
+      // evaluation error; syntax/range problems are an invalid formula.
+      return {
+        status: "error",
+        failureType:
+          error.kind === "value" ? "evaluation-error" : "formula-invalid",
+        failureReason: error.message,
+      };
+    }
     return {
       status: "error",
       failureType: "formula-invalid",

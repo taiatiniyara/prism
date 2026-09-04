@@ -15,6 +15,7 @@ import {
   check,
   timestamp,
   numeric,
+  date,
 } from "drizzle-orm/pg-core";
 import { sql } from "drizzle-orm";
 import { managedListItems, managedLists } from "./managedLists";
@@ -27,6 +28,7 @@ import {
 } from "./utility";
 import { user } from "./auth-schema";
 import { relations } from "drizzle-orm";
+import { DataEntryStatusId, APPROVED_STATUS } from "./dataEntryStatus";
 import { countries, Region, subRegions } from "./country";
 
 export interface FormulaInput {
@@ -81,7 +83,6 @@ export const measureDefinitions = pgTable("measure_definitions", {
   valid_range_min: numeric("valid_range_min"),
   valid_range_max: numeric("valid_range_max"),
   is_currency: boolean("is_currency").default(false).notNull(),
-  is_aggregated: boolean("is_aggregated").default(false).notNull(),
   strata_id: integer("strata_id").references(() => managedListItems.id),
   is_active: boolean("is_active").default(true).notNull(),
   is_mandatory: boolean("is_mandatory").default(false).notNull(),
@@ -89,10 +90,20 @@ export const measureDefinitions = pgTable("measure_definitions", {
   // measures the 2 utilities that report differently need split). Catalogue policy —
   // BMO/migration sets which measures; default false.
   is_apportionable: boolean("is_apportionable").default(false).notNull(),
+  // TRUE for the "Country Context" measures (subgroup 221) whose data is fed from
+  // the country_context table via the read bridge, not entered per-utility. An
+  // absolute gate: these never get data-entry relevance/shells. Distinct from
+  // is_system_generated (computed, e.g. Hours in Period). Flagged 2026-08-24.
+  is_context_fed: boolean("is_context_fed").default(false).notNull(),
   is_system_generated: boolean("is_system_generated").default(false).notNull(),
   is_calculated: boolean("is_calculated").default(false).notNull(),
-  is_kpi: boolean("is_kpi").default(false).notNull(),
-  is_kpi_input: boolean("is_kpi_input").default(false).notNull(),
+  // Measure-level "birth date": the measure exists (and can be shelled) only from this
+  // fiscal year onward. Compared by fiscal year: a period is in scope when
+  // fy(period) >= fy(effective_from). NULL = always valid. This is the coarse,
+  // measure-level gate; measure_dimension_applicability.effective_from/to carries the
+  // finer per-(dimension,member) validity. Populated from the BMO effective-dating
+  // catalogue (2026-08-25). See measure-effective-dating-spec / ADR 0004.
+  effective_from: date("effective_from"),
   updated_at: timestamp("updated_at").notNull().defaultNow(),
   alternative_names:
     json("alternative_names").$type<MeasureDefinitionAlternativeNames>(),
@@ -160,17 +171,32 @@ export const inputDefinitionRelations = relations(
   }),
 );
 
-export enum DataEntryStatusId {
-  Requested = 1,
-  Pending = 2,
-  Entered = 3,
-  Reviewed = 4,
-  Approved = 5,
-  /** @deprecated Endorsed has been retired — migrated to Approved (5) */
-  Endorsed = 6,
-  /** @deprecated retired — answer-availability moved to `data_entries.no_data_reason` */
-  Not_Available = 7,
-}
+// DataEntryStatusId + APPROVED_STATUS moved to ./dataEntryStatus — a LEAF module with no
+// table-schema imports — to break the dataEntry <-> reportPeriods circular-init (TDZ) crash
+// (reportPeriods needs APPROVED_STATUS as a module-init value for its publish gate). Re-exported
+// here so existing `import { DataEntryStatusId | APPROVED_STATUS } from "@/db/schema/dataEntry"`
+// call sites are unaffected.
+export { DataEntryStatusId, APPROVED_STATUS };
+export const isPublishableStatus = (statusId?: number | null): boolean =>
+  (statusId ?? 0) >= APPROVED_STATUS;
+
+/**
+ * Enriched, SINGLE SOURCE of workflow-status metadata for the active states (1–5). `status_id` is
+ * a CODE ENUM (a state-machine contract) — its values gate control flow, so it is intentionally
+ * NOT a BMO-editable managed list. These business `label`/`description`s carry the BLO/CEO
+ * language that previously lived — duplicated and id-mismatched — in the "Data Workflow Status"
+ * managed list (list 21), which is being retired. Use this for ALL user- and AI-facing status text.
+ */
+export const DATA_ENTRY_STATUS_META: Record<
+  number,
+  { code: string; label: string; description: string; color: string; publishable: boolean }
+> = {
+  // Requested (1) retired — Pending (2) is the single starting state (see enum). Not listed here.
+  [DataEntryStatusId.Pending]: { code: "Pending", label: "Pending", description: "The shell's starting state — awaiting the utility's data (action needed / outstanding).", color: "#facc15", publishable: false },
+  [DataEntryStatusId.Entered]: { code: "Entered", label: "Entered", description: "A value (or a confirmed no-data answer) has been entered, awaiting review.", color: "#a3e635", publishable: false },
+  [DataEntryStatusId.Reviewed]: { code: "Reviewed", label: "BLO Reviewed", description: "Reviewed by the BLO.", color: "#34d399", publishable: false },
+  [DataEntryStatusId.Approved]: { code: "Approved", label: "CEO Approved", description: "Approved by the utility CEO — the terminal, publishable state that feeds Power BI / benchmarking.", color: "#38bdf8", publishable: true },
+};
 
 /** Answer-availability reasons on `data_entries.no_data_reason` (derived on kpi_actual). */
 export const NO_DATA_REASONS = ["not_available", "asserted_not_applicable"] as const;
@@ -194,11 +220,19 @@ export const dataEntryStatusColors = {
   Not_Available: "#94a3b8",
 };
 
-export const DataEntryStatusList = Object.keys(DataEntryStatus).map((key) => ({
-  id: DataEntryStatus[key as keyof typeof DataEntryStatus],
-  name: key,
-  color: dataEntryStatusColors[key as keyof typeof dataEntryStatusColors],
-}));
+export const DataEntryStatusList = Object.keys(DataEntryStatus).map((key) => {
+  const id = DataEntryStatus[key as keyof typeof DataEntryStatus];
+  const meta = DATA_ENTRY_STATUS_META[id];
+  return {
+    id,
+    name: key,
+    // Business/AI-facing label + description (fall back to the code key for deprecated states).
+    label: meta?.label ?? key,
+    description: meta?.description ?? null,
+    color: meta?.color ?? dataEntryStatusColors[key as keyof typeof dataEntryStatusColors],
+    publishable: meta?.publishable ?? false,
+  };
+});
 
 export type DataEntryComment = {
   comment: string;
@@ -282,6 +316,13 @@ export const dataEntries = pgTable(
     value_option_id: integer("value_option_id").references(
       () => managedListItems.id,
     ),
+    // Unit scale the reporter used when stating the figure ("Ones", "Tens",
+    // "Thousands", …). Backfilled from prism-training's data_entry_main
+    // (2026-08-25) where the extract migration dropped it; PRISM 2 stores the
+    // as-entered number, so true LCU = value × multiplier. Defaults to Ones.
+    multiplier: varchar("multiplier", { length: 16 })
+      .notNull()
+      .default("Ones"),
     updatedAt: timestamp("updated_at").notNull().defaultNow(),
     updatedById: text("updated_by_id").references(() => user.id),
   },

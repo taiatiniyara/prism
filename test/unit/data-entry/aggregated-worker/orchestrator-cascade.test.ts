@@ -245,6 +245,77 @@ describe("aggregated worker orchestrator cascade", () => {
     );
   });
 
+  it("computes in dependency order even when the dependent is listed first", async () => {
+    mocks.selectAggregatedFormulaTargets.mockResolvedValue([
+      buildAggregatedTarget({
+        inputDefId: 902, // listed first, but depends on 901
+        variableName: "D",
+        formula: "C * 2",
+        formulaInputs: [{ measure_def_id: 901, variable_name: "C" }],
+      }),
+      buildAggregatedTarget({
+        inputDefId: 901,
+        variableName: "C",
+        formula: "A + B",
+        formulaInputs: [
+          { measure_def_id: 11, variable_name: "A" },
+          { measure_def_id: 12, variable_name: "B" },
+        ],
+      }),
+    ]);
+
+    const { runAggregatedWorker } = await import(
+      "@/app/data-entry/enter-data/services/aggregated-worker/orchestrator"
+    );
+    const result = await runAggregatedWorker({ id: "user-1" } as never, {
+      reportPeriodId: 12,
+    });
+
+    expect(result.outcomes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ inputDefId: 901, calculatedValue: "7" }),
+        expect.objectContaining({ inputDefId: 902, calculatedValue: "14" }),
+      ]),
+    );
+    expect(mocks.writeCalculatedTargetValue).toHaveBeenNthCalledWith(1, {
+      inputDefId: 901,
+      value: "7",
+      scope: { reportPeriodId: 12 },
+    });
+  });
+
+  it("skips both targets of a dependency cycle without looping", async () => {
+    mocks.selectAggregatedFormulaTargets.mockResolvedValue([
+      buildAggregatedTarget({
+        inputDefId: 801,
+        variableName: "X",
+        formula: "Y + 1",
+        formulaInputs: [{ measure_def_id: 802, variable_name: "Y" }],
+      }),
+      buildAggregatedTarget({
+        inputDefId: 802,
+        variableName: "Y",
+        formula: "X + 1",
+        formulaInputs: [{ measure_def_id: 801, variable_name: "X" }],
+      }),
+    ]);
+
+    const { runAggregatedWorker } = await import(
+      "@/app/data-entry/enter-data/services/aggregated-worker/orchestrator"
+    );
+    const result = await runAggregatedWorker({ id: "user-1" } as never, {
+      reportPeriodId: 12,
+    });
+
+    expect(result.outcomes).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ inputDefId: 801, status: "skipped" }),
+        expect.objectContaining({ inputDefId: 802, status: "skipped" }),
+      ]),
+    );
+    expect(mocks.writeCalculatedTargetValue).not.toHaveBeenCalled();
+  });
+
   it("cascades to top-level outputs when formula variable names contain spaces", async () => {
     mocks.buildSourceSnapshot.mockResolvedValue({
       capturedAt: "2026-01-01T00:00:00.000Z",

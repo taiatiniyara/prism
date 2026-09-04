@@ -25,7 +25,11 @@ export default function AiUsagePage() {
     }
   }, [tab, days]);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    void (async () => {
+      await fetchData();
+    })();
+  }, [fetchData]);
 
   const formatCost = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
@@ -52,7 +56,7 @@ export default function AiUsagePage() {
           <button
             key={t.key}
             onClick={() => setTab(t.key)}
-            className={`px-4 py-1.5 text-sm ${tab === t.key ? "border-b-2 border-blue-600 text-blue-600 font-medium" : "text-slate-500"}`}
+            className={`px-4 py-1.5 text-sm ${tab === t.key ? "border-b-2 border-info text-info font-medium" : "text-slate-500"}`}
           >
             {t.label}
           </button>

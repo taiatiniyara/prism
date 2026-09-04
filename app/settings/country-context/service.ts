@@ -2,7 +2,7 @@
 
 import { DataTableFormResponse } from "@/components/tables/data-table-create-form";
 import { db } from "@/db/connection";
-import { managedListItems } from "@/db/schema/managedLists";
+import { measureDefinitions } from "@/db/schema/dataEntry";
 import {
   countries,
   countryContext,
@@ -19,8 +19,8 @@ export async function GetCountryContext() {
       id: countryContext.id,
       country_id: countryContext.country_id,
       country_name: countries.name,
-      dl_def_id: countryContext.dl_def_id,
-      dl_def_name: managedListItems.name,
+      measure_def_id: countryContext.measure_def_id,
+      measure_def_name: measureDefinitions.name,
       source_date: countryContext.source_date,
       source_doc: countryContext.source_doc,
       source_url: countryContext.source_url,
@@ -30,7 +30,10 @@ export async function GetCountryContext() {
     })
     .from(countryContext)
     .leftJoin(countries, eq(countryContext.country_id, countries.id))
-    .leftJoin(managedListItems, eq(countryContext.dl_def_id, managedListItems.id))
+    .leftJoin(
+      measureDefinitions,
+      eq(countryContext.measure_def_id, measureDefinitions.id),
+    )
     .orderBy(desc(countryContext.updated_date));
 
   const list = await query;

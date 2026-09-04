@@ -16,6 +16,7 @@ import {
 } from "../data-service";
 
 import { withSizeLimit } from "./utils";
+import { DEFAULT_AI_PRIMARY_SOURCE, type AiPrimarySource } from "../source-setting";
 
 function pbiUnavailableResponse() {
   return {
@@ -23,8 +24,19 @@ function pbiUnavailableResponse() {
   };
 }
 
-export function createPowerBiTools(user: CurrentUser, _abortSignal?: AbortSignal, sessionId?: number) {
+export function createPowerBiTools(
+  user: CurrentUser,
+  _abortSignal?: AbortSignal,
+  sessionId?: number,
+  primary: AiPrimarySource = DEFAULT_AI_PRIMARY_SOURCE,
+) {
   const pbiDown = !isPbiHealthy() || !isConfiguredForDax();
+  // Source-priority hint prepended to the performance-answering tools so the model's
+  // tool choice matches the DEV-configured primary source (not just the system prompt).
+  const pbiTag =
+    primary === "powerbi"
+      ? "[PRIMARY performance source — for performance questions (SAIDI, losses, financials, workforce/employee counts, generation, etc.) reach for Power BI FIRST.] "
+      : "[SECONDARY performance source — the PRISM gold-layer tools (compare_kpis_across_utilities, get_kpi_targets, get_compliance_status, …) are PRIMARY; use Power BI only if they can't answer.] ";
   return {
     pbi_schema: tool({
       description:
@@ -49,6 +61,7 @@ export function createPowerBiTools(user: CurrentUser, _abortSignal?: AbortSignal
 
     pbi_query: tool({
       description:
+        pbiTag +
         "Run a pre-built, tested Power BI query. Much faster than writing custom DAX. Use pbi_query_catalog for full list. Use pbi_match to find the right query from natural language. Key queries: saidi_by_utility, saifi_by_utility, reliability_summary, rated_capacity, rated_capacity_by_utility, generation_output, generation_by_source, peak_demand, system_losses, distribution_overview, financial_summary, cost_recovery, customer_overview, metering_summary, workforce_summary, safety_summary, utility_profile, peer_comparison, composite_score, whatif_sensitivity, saidi_trend, generation_trend, losses_trend, recovery_trend, electrification_trend.",
       inputSchema: z.object({
         query: z.string().describe("Query template name. Use pbi_query_catalog for full list or pbi_match for NL matching."),
@@ -61,7 +74,9 @@ export function createPowerBiTools(user: CurrentUser, _abortSignal?: AbortSignal
     }),
 
     pbi_match: tool({
-      description: "Match a natural language question to the best Power BI query template. Use this when you're not sure which query to use.",
+      description:
+        pbiTag +
+        "Match a natural language question to the best Power BI query template. Use this when you're not sure which query to use.",
       inputSchema: z.object({
         question: z.string().describe("The user's question in their own words."),
       }),

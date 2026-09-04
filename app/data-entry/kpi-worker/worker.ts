@@ -2,18 +2,15 @@ import { randomUUID } from "node:crypto";
 
 import type { CurrentUser } from "@/lib/user.service";
 
+import { computeKpiTarget } from "./compute-kpi-target";
+import { extractErrorMetadata } from "./error-metadata";
 import {
-  markDeferredFollowUpForScope,
   createKpiCalculationAttempt,
   markAttemptCompleted,
   markAttemptFailed,
   markAttemptProcessing,
   markAttemptRetryPending,
 } from "./repository";
-import { evaluateKpiFormula } from "./evaluator";
-import { upsertCalculatedKpiValue } from "./persistKpi";
-import { executeWithRetry, isTransientKpiError } from "./retry";
-import { resolveFormulaInputValues } from "./resolveInputs";
 import { resolveAffectedKpiTargets } from "./resolveTargets";
 import { assertKpiWorkerScopeAuthorization } from "./scopeGuard";
 import {
@@ -24,29 +21,6 @@ import {
 } from "./lock";
 import type { KpiWorkerRunResult, KpiWorkerTrigger } from "./types";
 
-const isPureAdditionFormula = (formula: string): boolean => {
-  const compact = formula.replace(/\s+/g, "");
-  if (compact.length === 0) {
-    return false;
-  }
-
-  if (compact.includes("-") || compact.includes("*") || compact.includes("/")) {
-    return false;
-  }
-
-  const flattened = compact.replace(/[()]/g, "");
-  const terms = flattened.split("+").filter((term) => term.length > 0);
-
-  if (terms.length === 0) {
-    return false;
-  }
-
-  return terms.every(
-    (term) =>
-      /^[A-Za-z_][A-Za-z0-9_]*$/.test(term) || /^\d+(\.\d+)?$/.test(term),
-  );
-};
-
 const createScopeFollowUpTrigger = (
   trigger: KpiWorkerTrigger,
 ): KpiWorkerTrigger => ({
@@ -54,40 +28,6 @@ const createScopeFollowUpTrigger = (
   triggerId: randomUUID(),
   triggeredAt: new Date().toISOString(),
 });
-
-const extractErrorMetadata = (error: unknown) => {
-  const baseError =
-    typeof error === "object" && error !== null
-      ? (error as Record<string, unknown>)
-      : null;
-  const cause =
-    baseError && typeof baseError.cause === "object" && baseError.cause !== null
-      ? (baseError.cause as Record<string, unknown>)
-      : null;
-
-  const pick = (key: string): string | null => {
-    const fromBase = baseError?.[key];
-    if (typeof fromBase === "string" && fromBase.length > 0) {
-      return fromBase;
-    }
-
-    const fromCause = cause?.[key];
-    if (typeof fromCause === "string" && fromCause.length > 0) {
-      return fromCause;
-    }
-
-    return null;
-  };
-
-  return {
-    code: pick("code"),
-    detail: pick("detail"),
-    constraint: pick("constraint"),
-    table: pick("table"),
-    column: pick("column"),
-    schema: pick("schema"),
-  };
-};
 
 export async function runKpiWorker(
   trigger: KpiWorkerTrigger,
@@ -110,10 +50,6 @@ export async function runKpiWorker(
 
   if (!(await acquireScopeLock(trigger.scope))) {
     markDeferredFollowUp(trigger.scope);
-    await markDeferredFollowUpForScope(
-      trigger.scope.reportPeriodId,
-      trigger.scope,
-    );
 
     console.warn("[KPI worker] run deferred due to scope lock", {
       runId,
@@ -151,126 +87,50 @@ export async function runKpiWorker(
       });
 
       attemptId = attempt.id;
-      const currentAttemptId = attempt.id;
-      await markAttemptProcessing(currentAttemptId);
+      await markAttemptProcessing(attempt.id);
 
-      const resolvedInputs = await resolveFormulaInputValues({
-        formulaInputs: target.formulaInputs,
-        kpiAggLevelId: target.strataId,
+      const outcome = await computeKpiTarget({
+        target,
         scope: trigger.scope,
+        onRetry: (retryCount, error) =>
+          markAttemptRetryPending(attempt.id, retryCount, String(error)),
       });
 
-      const variablesForEvaluation = {
-        ...resolvedInputs.variables,
-      } as Record<string, number>;
+      if (outcome.status === "failed") {
+        failedKpiCount += 1;
+        await markAttemptFailed(
+          attempt.id,
+          outcome.failureType,
+          outcome.reason,
+        );
+        console.warn("[KPI worker] KPI calculation failed", {
+          runId,
+          attemptId: attempt.id,
+          kpiDefId: target.kpiDefId,
+          reason: outcome.failureType,
+          details: outcome.reason,
+        });
+        continue;
+      }
 
-      const zeroFillMissing = isPureAdditionFormula(target.formula);
-      if (zeroFillMissing && resolvedInputs.missingVariables.length > 0) {
-        for (const variableName of resolvedInputs.missingVariables) {
-          variablesForEvaluation[variableName] = 0;
-        }
+      await markAttemptCompleted(attempt.id);
+      processedKpiCount += 1;
 
+      if (outcome.zeroFilled.length > 0) {
         console.info(
           "[KPI worker] zero-filled missing inputs for additive formula",
           {
             runId,
-            attemptId: currentAttemptId,
+            attemptId: attempt.id,
             kpiDefId: target.kpiDefId,
-            missingVariables: resolvedInputs.missingVariables,
+            missingVariables: outcome.zeroFilled,
           },
         );
       }
-
-      if (!zeroFillMissing && resolvedInputs.missingVariables.length > 0) {
-        failedKpiCount += 1;
-        await markAttemptFailed(
-          currentAttemptId,
-          "missing-input",
-          `Missing formula inputs: ${resolvedInputs.missingVariables.join(", ")}`,
-        );
-
-        console.warn("[KPI worker] KPI calculation failed", {
-          runId,
-          attemptId: currentAttemptId,
-          kpiDefId: target.kpiDefId,
-          reason: "missing-input",
-          details: resolvedInputs.missingVariables,
-        });
-        continue;
-      }
-
-      const evaluation = evaluateKpiFormula(
-        target.formula,
-        variablesForEvaluation,
-      );
-      if (evaluation.status === "error") {
-        failedKpiCount += 1;
-        await markAttemptFailed(
-          currentAttemptId,
-          evaluation.failureType ?? "evaluation-error",
-          evaluation.failureReason ?? "Formula evaluation failed.",
-        );
-
-        console.warn("[KPI worker] KPI calculation failed", {
-          runId,
-          attemptId: currentAttemptId,
-          kpiDefId: target.kpiDefId,
-          reason: evaluation.failureType ?? "evaluation-error",
-          details: evaluation.failureReason ?? "Formula evaluation failed.",
-        });
-        continue;
-      }
-
-      try {
-        await executeWithRetry(
-          async () => {
-            await upsertCalculatedKpiValue({
-              reportPeriodId: trigger.scope.reportPeriodId,
-              kpiDefId: target.kpiDefId,
-              actualValue: evaluation.value!,
-              formulaVersion: target.formulaVersion,
-              targetValue: target.targetValue,
-            });
-          },
-          {
-            maxRetries: 3,
-            baseDelayMs: 200,
-          },
-          async (retryCount, error) => {
-            await markAttemptRetryPending(
-              currentAttemptId,
-              retryCount,
-              String(error),
-            );
-          },
-        );
-      } catch (error) {
-        console.error("[KPI worker] KPI table write failed", {
-          sourceDataEntryId: trigger.sourceDataEntryId,
-          inputDefId: trigger.inputDefId,
-          reportPeriodId: trigger.scope.reportPeriodId,
-          kpiDefId: target.kpiDefId,
-          formulaVersion: target.formulaVersion,
-          actualValue: evaluation.value ?? null,
-          error: String(error),
-          ...extractErrorMetadata(error),
-        });
-
-        failedKpiCount += 1;
-        await markAttemptFailed(
-          currentAttemptId,
-          isTransientKpiError(error) ? "transient-infra" : "unexpected",
-          String(error),
-        );
-        continue;
-      }
-
-      await markAttemptCompleted(currentAttemptId);
-      processedKpiCount += 1;
 
       console.info("[KPI worker] KPI calculation completed", {
         runId,
-        attemptId: currentAttemptId,
+        attemptId: attempt.id,
         kpiDefId: target.kpiDefId,
         formulaVersion: target.formulaVersion,
       });

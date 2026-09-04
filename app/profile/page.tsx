@@ -114,7 +114,7 @@ export default async function ProfilePage({ searchParams }: PageProps) {
         <div className="mt-4 text-sm text-slate-500">
           <Link
             href="/settings/overview"
-            className="text-blue-600 hover:underline"
+            className="text-info hover:underline"
           >
             Go to settings
           </Link>

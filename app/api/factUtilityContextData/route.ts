@@ -1,13 +1,18 @@
 import { db } from "@/db/connection";
 import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
-import { reportPeriods } from "@/db/schema/reportPeriods";
+import { reportPeriods, publishedPeriodCondition } from "@/db/schema/reportPeriods";
 import { managedListItems } from "@/db/schema/managedLists";
-import { eq, and, isNotNull } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
 import {
   formatReportPeriodIso,
 } from "@/lib/legacy/legacy-dl-resolver";
 import { resolveEntryValue } from "@/lib/legacy/entry-value";
+
+// Power BI column labels (measure name -> legacy semantic-model name).
+const UTILITY_CONTEXT_COLUMN_LABELS: Record<string, string> = {
+  "Utility Ownership Type": "Ownership Type",
+};
 
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
@@ -21,7 +26,7 @@ export async function GET(req: Request) {
   const rps = await db
     .select()
     .from(reportPeriods)
-    .where(isNotNull(reportPeriods.status_id));
+    .where(publishedPeriodCondition);
   const allItems = await db
     .select()
     .from(managedListItems)
@@ -56,8 +61,11 @@ export async function GET(req: Request) {
         .reduce(
           (acc, e) => {
             const dl = inputDefs.find((d) => d.id === e.measure_def_id);
+            const label = dl
+              ? (UTILITY_CONTEXT_COLUMN_LABELS[dl.name] ?? dl.name)
+              : "";
             return {
-              [dl?.name ?? ""]: resolveEntryValue(
+              [label]: resolveEntryValue(
                 e,
                 dataTypeNameById.get(e.measure_def_id) ?? null,
                 itemsById,
@@ -71,6 +79,7 @@ export async function GET(req: Request) {
       return {
         ReportType: reportType,
         ReportPeriod: formatReportPeriodIso(urp.report_date, reportType),
+        ReportPeriodId: urp.id,
         UtilityId: urp.utility_id,
         ...ucData,
       };

@@ -1,18 +1,22 @@
 import DataTable from "@/components/tables/data-table";
 import { MeasureDefinition } from "@/db/schema/dataEntry";
-import InputFormulaBuilder from "./formulaBuilder";
 import {
   CreateMeasureDefinition,
   GetAllMeasureDefinitions,
-  GetInputFormulaBuilderData,
   UpdateMeasureDefinition,
 } from "./service";
 import UploadInputsFromExcel from "./uploadFromExcel";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import SectionContainer from "@/components/layout/section-container";
 import InputDlMapBuilder from "./mapBuilder";
+import { UnifiedFormulaBuilder } from "@/components/formula-builder/UnifiedFormulaBuilder";
+import { getUnifiedFormulaBuilderData } from "@/app/settings/kpi/unified-formula-service";
 
-type InputsTab = "definitions" | "formula-builder" | "upload" | "map-builder";
+type InputsTab =
+  | "definitions"
+  | "formula-builder"
+  | "upload"
+  | "map-builder";
 
 function resolveDefaultTab(tab: string | undefined): InputsTab {
   if (
@@ -32,7 +36,7 @@ export default async function InputsSettingsPage(props: {
   const searchParams = await Promise.resolve(props.searchParams);
   const defaultTab = resolveDefaultTab(searchParams?.tab);
   const measureDefinitions = await GetAllMeasureDefinitions();
-  const formulaBuilderData = await GetInputFormulaBuilderData();
+  const unifiedMeasureData = await getUnifiedFormulaBuilderData("measure");
 
   return (
     <div className="mx-auto w-full max-w-350 space-y-6 pb-8 sm:space-y-8">
@@ -144,16 +148,12 @@ export default async function InputsSettingsPage(props: {
 
         <TabsContent value="formula-builder">
           <SectionContainer>
-            <p className="mb-4 text-sm text-muted-foreground">
-              Choose an input definition, then build its formula using other
-              input definitions.
+            <p className="mb-4 text-sm font-bold">
+              Build or re-build Calculated Measures or KPIs formulas
             </p>
-            <InputFormulaBuilder
-              inputs={formulaBuilderData.inputs}
-              energyProviderOptions={formulaBuilderData.energyProviderOptions}
-              energyTypeOptions={formulaBuilderData.energyTypeOptions}
-              energySourceOptions={formulaBuilderData.energySourceOptions}
-              previewContextLabel={formulaBuilderData.previewContextLabel}
+            <UnifiedFormulaBuilder
+              data={unifiedMeasureData}
+              mode="measure"
             />
           </SectionContainer>
         </TabsContent>

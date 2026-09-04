@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
-import readXlsxFile from "read-excel-file/browser";
+import { readSheet } from "read-excel-file/browser";
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -114,29 +114,6 @@ export default function KpiTargetsEditor(props: {
     [props.kpis, selectedCategoryId, selectedSubcategoryId],
   );
 
-  useEffect(() => {
-    if (
-      selectedSubcategoryId != null &&
-      !filteredSubcategories.some((sub) => sub.id === selectedSubcategoryId)
-    ) {
-      setSelectedSubcategoryId(null);
-    }
-  }, [selectedSubcategoryId, filteredSubcategories]);
-
-  useEffect(() => {
-    const selectedStillVisible = filteredKpis.some(
-      (kpi) => String(kpi.id) === selectedKpiId,
-    );
-
-    if (selectedStillVisible) {
-      return;
-    }
-
-    const fallback = filteredKpis[0];
-    setSelectedKpiId(fallback ? String(fallback.id) : "");
-    setRows(parseTargetRows(fallback, props.utilityId));
-  }, [filteredKpis, props.utilityId, selectedKpiId]);
-
   const selectedKpi = useMemo(
     () => props.kpis.find((kpi) => String(kpi.id) === selectedKpiId),
     [props.kpis, selectedKpiId],
@@ -145,6 +122,33 @@ export default function KpiTargetsEditor(props: {
   const [rows, setRows] = useState<TargetRow[]>(
     parseTargetRows(selectedKpi, props.utilityId),
   );
+
+  useEffect(() => {
+    void (async () => {
+      if (
+        selectedSubcategoryId != null &&
+        !filteredSubcategories.some((sub) => sub.id === selectedSubcategoryId)
+      ) {
+        setSelectedSubcategoryId(null);
+      }
+    })();
+  }, [selectedSubcategoryId, filteredSubcategories]);
+
+  useEffect(() => {
+    void (async () => {
+      const selectedStillVisible = filteredKpis.some(
+        (kpi) => String(kpi.id) === selectedKpiId,
+      );
+
+      if (selectedStillVisible) {
+        return;
+      }
+
+      const fallback = filteredKpis[0];
+      setSelectedKpiId(fallback ? String(fallback.id) : "");
+      setRows(parseTargetRows(fallback, props.utilityId));
+    })();
+  }, [filteredKpis, props.utilityId, selectedKpiId]);
 
   const onCategoryChange = (value: string) => {
     const nextCategoryId = value === "all" ? null : Number(value);
@@ -313,7 +317,7 @@ export default function KpiTargetsEditor(props: {
     }
 
     try {
-      const rowsFromFile = await readXlsxFile(file, { sheet: "KPI Targets" });
+      const rowsFromFile = await readSheet(file, "KPI Targets");
       const headers = (rowsFromFile[0] ?? []).map((value) =>
         String(value ?? "")
           .trim()

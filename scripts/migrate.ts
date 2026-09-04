@@ -12,6 +12,10 @@
  *
  * Flags: --dry-run  parse/validate only, no writes · --label=TEXT  load label
  *        --limit=N   parse at most N extract rows (smoke test)
+ *        --new-orgs=FILE  STEP 0: onboard NEW organisations/service_areas/report_periods from an
+ *                    Excel workbook BEFORE the load (FK parents for the facts). Omit when the run has
+ *                    no new utilities. Idempotent (existing ids skipped). See
+ *                    docs/migration-new-organisation-format.md.
  *        --no-flush  append to existing data_entries (default is flush-and-reload: truncate first,
  *                    so you can iterate the migration cleanly — each run is a fresh replace)
  * Exit code is non-zero if there are parse errors or scorecard anomalies (pipeline-friendly).
@@ -21,6 +25,10 @@ import {
   parseExtractWorkbook,
   type ParseError,
 } from "../lib/migration/parse";
+import {
+  parseNewOrganisationsWorkbook,
+  type NewOrgFile,
+} from "../lib/migration/onboard-parse";
 import type { ExtractRow } from "../lib/migration/types";
 
 function arg(name: string): string | undefined {
@@ -33,6 +41,7 @@ const positionals = process.argv.slice(2).filter((a) => !a.startsWith("--"));
 const DRY_RUN = FLAGS.has("--dry-run");
 const LIMIT = arg("limit") ? Number(arg("limit")) : undefined;
 const LABEL = arg("label");
+const NEW_ORGS = arg("new-orgs"); // optional Excel workbook of NEW orgs/service_areas/report_periods
 const [extractPath, controlPath] = positionals;
 
 function printParseErrors(label: string, errors: ParseError[]): void {
@@ -58,7 +67,7 @@ function perPeriodBreakdown(rows: ExtractRow[]): void {
 
 async function main() {
   if (!extractPath) {
-    console.error("usage: migrate.ts <extract.xlsx> [control-totals.xlsx] [--dry-run] [--label=..] [--limit=N]");
+    console.error("usage: migrate.ts <extract.xlsx> [control-totals.xlsx] [--dry-run] [--label=..] [--limit=N] [--new-orgs=new-organisations.xlsx]");
     process.exit(2);
   }
 
@@ -79,10 +88,31 @@ async function main() {
     console.log("\n(no control-totals file given — scorecard reconciliation will be skipped)");
   }
 
-  const parseErrorCount = extract.errors.length + control.errors.length;
+  // STEP 0 (optional) — NEW organisations / service_areas / report_periods. Parsed here so its
+  // structural errors join the dry-run gate; the actual idempotent insert (with semantic/DB
+  // validation) runs below, BEFORE the data_entries flush, so a bad file never truncates anything.
+  let newOrg: { data: NewOrgFile; errors: ParseError[] } | null = null;
+  if (NEW_ORGS) {
+    console.log(`\nParsing new-organisations file: ${NEW_ORGS}`);
+    newOrg = await parseNewOrganisationsWorkbook(NEW_ORGS);
+    console.log(
+      `  → ${newOrg.data.organisations.length} org(s), ${newOrg.data.serviceAreas.length} service area(s), ` +
+        `${newOrg.data.reportPeriods.length} report period(s); ${newOrg.errors.length} parse error(s)`,
+    );
+    printParseErrors("new-organisations", newOrg.errors);
+  } else {
+    console.log("\n(no --new-orgs file — no new organisations to onboard; will go straight to data-entries)");
+  }
+
+  const parseErrorCount =
+    extract.errors.length + control.errors.length + (newOrg?.errors.length ?? 0);
 
   if (DRY_RUN) {
     console.log(`\nDRY-RUN — no data written. ${parseErrorCount} parse error(s).`);
+    if (newOrg)
+      console.log(
+        "  (new-organisations: structural parse only in dry-run — semantic/DB validation runs at load.)",
+      );
     console.log("Re-run without --dry-run (and with DATABASE_URL) to load.");
     process.exit(parseErrorCount > 0 ? 1 : 0);
   }
@@ -93,11 +123,29 @@ async function main() {
   }
 
   // DB-touching work — imported lazily so --dry-run needs no DATABASE_URL.
-  const { startLoad, finishLoad, reconcilePeriod, getAnomalies, getScorecardSummary } =
+  const { startLoad, finishLoad, reconcilePeriod, getAnomalies, getScorecardSummary, reconcileApprovalModelA } =
     await import("../lib/migration/loads");
   const { loadExtract } = await import("../lib/migration/load");
   const { db } = await import("../db/connection");
   const { sql } = await import("drizzle-orm");
+
+  // STEP 0 — onboard NEW organisations / service_areas / report_periods (FK parents for the load).
+  // Runs BEFORE the flush: if the file fails validation we abort here, so data_entries is never
+  // truncated with missing parents. Idempotent — existing ids are skipped, so re-runs are safe.
+  if (newOrg) {
+    const { onboardNewOrganisations } = await import("../lib/migration/onboard");
+    const ob = await onboardNewOrganisations(newOrg.data);
+    if (ob.errors.length) {
+      console.error(`\n⚑ New-organisation onboarding ABORTED — ${ob.errors.length} validation error(s) (nothing written):`);
+      for (const e of ob.errors.slice(0, 50)) console.error(`    ${e}`);
+      process.exit(1);
+    }
+    console.log(
+      `\nStep 0 — new organisations onboarded: ${ob.orgsCreated} org(s) created (${ob.orgsSkipped} already existed), ` +
+        `${ob.saCreated} service area(s) (${ob.saSkipped} existed), ${ob.periodsCreated} report period(s) (${ob.periodsSkipped} existed), ` +
+        `${ob.saLinksAdded} SA↔period link(s) added.`,
+    );
+  }
 
   // FLUSH-AND-RELOAD (default): empty data_entries so every iteration is a clean replace and rows
   // can't collide on the unique address. Pass --no-flush to append to existing rows.
@@ -117,6 +165,15 @@ async function main() {
       `${result.shellsFailed} shell failures | ${result.valuesFilled} values filled, ` +
       `${result.noDataAnswers} no-data answers | ` +
       `${result.valuesFailed} value/no-data failures | ${result.skipped} skipped`,
+  );
+
+  // MODEL A (Eugene + #8, 2026-08-30): preserve p1 CEO-approval end-to-end. Shells of an Approved
+  // period inherit Approved(5); truly-empty shells → not_available (loader-derived). Runs before the
+  // scorecard so fill/calc lines reflect the reconciled statuses.
+  const approvalA = await reconcileApprovalModelA();
+  console.log(
+    `\nModel-A approval reconciliation: ${approvalA.lifted} shells lifted to Approved ` +
+      `(${approvalA.empties} empty → not_available) under CEO-approved periods.`,
   );
 
   if (control.rows.length > 0) {

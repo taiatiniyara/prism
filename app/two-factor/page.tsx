@@ -6,8 +6,7 @@ import TwoFactorChallenge from "./challenge-client";
 // Login-time TOTP challenge for admins (BMO/DEV). Reached after a magic-link
 // login when the session has not yet passed the challenge (enforced by proxy.ts).
 export default async function TwoFactorPage() {
-  // skipMfaCheck: this page IS the MFA challenge — the admin hasn't passed it yet.
-  const user = await getCurrentUser({ skipMfaCheck: true }).catch(() => null);
+  const user = await getCurrentUser().catch(() => null);
   if (!user) redirect("/auth");
 
   const isAdmin = user.role === "DEV" || user.role === "BMO";

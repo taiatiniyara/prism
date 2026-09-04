@@ -1,0 +1,73 @@
+#!/bin/sh
+# PRISM pre-commit hook (canonical, tracked copy).
+#
+# The LIVE copy lives in .git/hooks/pre-commit (shared by all worktrees of a
+# repo). To activate this tracked version on a fresh clone / another machine:
+#   git config core.hooksPath .githooks
+# (or copy this file to .git/hooks/pre-commit and chmod +x it).
+#
+# Two guards:
+#   1. Block direct commits to main/master — land via branch -> PR.
+#   2. Block a commit that deletes a large fraction of the tree — catches the
+#      --no-checkout / partial-stage worktree accident that wiped main (PR #213).
+
+branch="$(git symbolic-ref --short HEAD 2>/dev/null)"
+
+if [ "$branch" = "main" ] || [ "$branch" = "master" ]; then
+  echo "-------------------------------------------------------------------"
+  echo "  BLOCKED: direct commit to '$branch' is not allowed (PRISM policy)."
+  echo ""
+  echo "  Use a branch -> PR instead:"
+  echo "      git switch -c my-change      # start a branch"
+  echo "      git commit ...               # commit there"
+  echo "      git push -u origin HEAD      # then open a PR"
+  echo ""
+  echo "  Genuine emergency override (use sparingly):"
+  echo "      git commit --no-verify"
+  echo "-------------------------------------------------------------------"
+  exit 1
+fi
+
+# Guard: block a commit that deletes a large FRACTION of the tree. This catches
+# the class of accident that wiped main on 2026-09-01 (PR #213): a commit built
+# in a --no-checkout / partial-stage worktree records a tree of only the staged
+# file(s), so every other file registers as deleted and a merge wipes the repo.
+deleted="$(git diff --cached --diff-filter=D --name-only 2>/dev/null | grep -c . || true)"
+total="$(git ls-tree -r --name-only HEAD 2>/dev/null | grep -c . || true)"
+if [ "${total:-0}" -gt 20 ] && [ "${deleted:-0}" -gt 0 ]; then
+  pct=$(( deleted * 100 / total ))
+  if [ "$pct" -ge 30 ]; then
+    echo "-------------------------------------------------------------------"
+    echo "  BLOCKED: this commit deletes $deleted of $total tracked files (${pct}%)."
+    echo ""
+    echo "  A mass deletion like this is almost always a BROKEN checkout —"
+    echo "  e.g. a commit built in a --no-checkout / partial-stage worktree,"
+    echo "  which records a tree of only the staged file(s). Merging it wipes"
+    echo "  the repo (this is exactly what PR #213 did to main)."
+    echo ""
+    echo "  Check first:  git diff --cached --stat | tail -1"
+    echo "  Build docs/small changes in a FULL working tree, not --no-checkout."
+    echo "  If this deletion really is intentional:  git commit --no-verify"
+    echo "-------------------------------------------------------------------"
+    exit 1
+  fi
+fi
+
+# Advisory (never blocks): flag committing on what looks like an OLD/stale branch
+# before it wastes a redo. Fires only on a branch whose tip has NO commits beyond
+# origin/main AND is behind it — i.e. your first commit is landing on a branch that
+# was NOT cut from current origin/main (often a reused/already-merged branch).
+if git merge-base --is-ancestor HEAD origin/main 2>/dev/null; then
+  behind="$(git rev-list --count HEAD..origin/main 2>/dev/null || echo 0)"
+  if [ "${behind:-0}" -gt 0 ]; then
+    echo "-------------------------------------------------------------------"
+    echo "  [branch] '$branch' has NO commits beyond origin/main and is $behind behind it."
+    echo "  If this is a NEW change you may be on an old/merged branch. Start fresh:"
+    echo "      git fetch origin && git switch -c my-change origin/main"
+    echo "  Advisory only (not blocked) — catches committing on a stale branch"
+    echo "  before you have to redo it on a fresh one."
+    echo "-------------------------------------------------------------------"
+  fi
+fi
+
+exit 0

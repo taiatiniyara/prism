@@ -1,14 +1,14 @@
-import { eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 
 import { db } from "@/db/connection";
 import type { FormulaInput } from "@/db/schema/dataEntry";
 import { kpiDefinitions } from "@/db/schema/kpi";
 import { reportPeriods } from "@/db/schema/reportPeriods";
+import { createFormulaVersionSnapshot } from "@/lib/formula/formula-version";
 
+import { loadFormulaInputsFromBindings } from "./formula-bindings";
 import { normalizeFormulaInput } from "./normalizeFormulaInput";
 import type { KpiWorkerScope } from "./types";
-
-import { createFormulaVersionSnapshot } from "./snapshot";
 
 export interface ResolvedKpiTarget {
   kpiDefId: number;
@@ -38,7 +38,7 @@ interface KpiDefinitionLike {
 interface TargetResolutionContext {
   utilityId: number | null;
   year: number;
-  month: number;
+  month: number | null;
 }
 
 const resolveTargetValueForContext = (
@@ -71,6 +71,54 @@ const resolveTargetValueForContext = (
   return yearlyTarget?.target_value ?? null;
 };
 
+/**
+ * Build a `ResolvedKpiTarget` from a single active KPI definition row. Assumes
+ * the definition carries a non-null formula (callers filter for this first).
+ * Shared by `filterAffectedKpiTargets` (input-triggered) and
+ * `resolveKpiTargetsByIds` (KPI-triggered) so both derive identical targets.
+ */
+const toResolvedTarget = (
+  definition: KpiDefinitionLike,
+  ctx: TargetResolutionContext,
+): ResolvedKpiTarget => {
+  const formulaInputs = (definition.formula_inputs ?? [])
+    .map(normalizeFormulaInput)
+    .filter((input): input is FormulaInput => input != null);
+
+  return {
+    kpiDefId: definition.id,
+    strataId: definition.strata_id,
+    formula: definition.formula!,
+    formulaInputs,
+    formulaVersion: createFormulaVersionSnapshot({
+      kpiDefId: definition.id,
+      formula: definition.formula!,
+      formulaInputs,
+    }),
+    targetValue: resolveTargetValueForContext(definition.targets, ctx),
+  };
+};
+
+/**
+ * Overlay each KPI's inputs from `formula_binding` (the source of truth) where
+ * it has binding rows; the rest keep their legacy `formula_inputs` JSON until
+ * the manual rebuild reaches them.
+ */
+const withBindingInputs = async <T extends KpiDefinitionLike>(
+  rows: T[],
+): Promise<T[]> => {
+  const bindings = await loadFormulaInputsFromBindings(
+    "kpi",
+    rows.map((r) => r.id),
+  );
+  if (bindings.size === 0) return rows;
+  return rows.map((row) =>
+    bindings.has(row.id)
+      ? { ...row, formula_inputs: bindings.get(row.id)! }
+      : row,
+  );
+};
+
 export const filterAffectedKpiTargets = (
   definitions: KpiDefinitionLike[],
   inputDefId: number,
@@ -91,27 +139,7 @@ export const filterAffectedKpiTargets = (
 
       return formulaInputs.some((input) => input.measure_def_id === inputDefId);
     })
-    .map((definition) => {
-      const formulaInputs = (definition.formula_inputs ?? [])
-        .map(normalizeFormulaInput)
-        .filter((input): input is FormulaInput => input != null);
-
-      return {
-        kpiDefId: definition.id,
-        strataId: definition.strata_id,
-        formula: definition.formula!,
-        formulaInputs,
-        formulaVersion: createFormulaVersionSnapshot({
-          kpiDefId: definition.id,
-          formula: definition.formula!,
-          formulaInputs,
-        }),
-        targetValue: resolveTargetValueForContext(
-          definition.targets,
-          targetContext,
-        ),
-      };
-    });
+    .map((definition) => toResolvedTarget(definition, targetContext));
 };
 
 export const resolveAffectedKpiTargets = async (
@@ -146,5 +174,51 @@ export const resolveAffectedKpiTargets = async (
     .from(kpiDefinitions)
     .where(eq(kpiDefinitions.is_active, true));
 
-  return filterAffectedKpiTargets(rows, inputDefId, targetContext);
+  return filterAffectedKpiTargets(
+    await withBindingInputs(rows),
+    inputDefId,
+    targetContext,
+  );
+};
+
+/**
+ * Resolve KPI targets for a set of KPI definition ids directly (as opposed to
+ * `resolveAffectedKpiTargets`, which discovers KPIs from a changed input). Used
+ * by the manual "Compute now" recompute path. Only active definitions that
+ * carry a non-empty formula produce a target; others are skipped.
+ */
+export const resolveKpiTargetsByIds = async (
+  kpiDefIds: number[],
+  ctx: { utilityId: number; year: number; month?: number | null },
+): Promise<ResolvedKpiTarget[]> => {
+  if (kpiDefIds.length === 0) {
+    return [];
+  }
+
+  const targetContext: TargetResolutionContext = {
+    utilityId: ctx.utilityId,
+    year: ctx.year,
+    month: ctx.month ?? null,
+  };
+
+  const rows = await db
+    .select({
+      id: kpiDefinitions.id,
+      strata_id: kpiDefinitions.strata_id,
+      is_active: kpiDefinitions.is_active,
+      formula: kpiDefinitions.formula,
+      formula_inputs: kpiDefinitions.formula_inputs,
+      targets: kpiDefinitions.targets,
+    })
+    .from(kpiDefinitions)
+    .where(
+      and(
+        eq(kpiDefinitions.is_active, true),
+        inArray(kpiDefinitions.id, kpiDefIds),
+      ),
+    );
+
+  return (await withBindingInputs(rows))
+    .filter((row) => Boolean(row.formula))
+    .map((row) => toResolvedTarget(row, targetContext));
 };

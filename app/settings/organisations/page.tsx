@@ -29,6 +29,12 @@ export default async function OrganisationsSettingsPage() {
             type: "text",
           },
           {
+            key: "acronym",
+            type: "text",
+            required: false,
+            className: "uppercase",
+          },
+          {
             key: "country_id",
             type: "select",
             selectList: countries.map((country) => ({
@@ -41,19 +47,9 @@ export default async function OrganisationsSettingsPage() {
             type: "checkbox",
           },
           {
-            key: "powequality_standard_id",
-            managedListName: "Power Quality Standard",
-            type: "managed-list",
-          },
-          {
-            key: "electricity_regulation_id",
-            managedListName: "Electricity Regulation",
-            type: "managed-list",
-          },
-          {
-            key: "accounting_standard_id",
-            managedListName: "Accounting Standard",
-            type: "managed-list",
+            key: "bm_participates",
+            label: "Participates in Benchmarking",
+            type: "boolean",
           },
           {
             key: "entity_type_id",
@@ -95,6 +91,12 @@ export default async function OrganisationsSettingsPage() {
             type: "text",
           },
           {
+            key: "acronym",
+            type: "text",
+            required: false,
+            className: "uppercase",
+          },
+          {
             key: "country_id",
             type: "select",
             selectList: countries.map((country) => ({
@@ -107,19 +109,9 @@ export default async function OrganisationsSettingsPage() {
             type: "checkbox",
           },
           {
-            key: "powequality_standard_id",
-            managedListName: "Power Quality Standard",
-            type: "managed-list",
-          },
-          {
-            key: "electricity_regulation_id",
-            managedListName: "Electricity Regulation",
-            type: "managed-list",
-          },
-          {
-            key: "accounting_standard_id",
-            managedListName: "Accounting Standard",
-            type: "managed-list",
+            key: "bm_participates",
+            label: "Participates in Benchmarking",
+            type: "boolean",
           },
           {
             key: "entity_type_id",

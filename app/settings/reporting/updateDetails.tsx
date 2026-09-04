@@ -55,55 +55,33 @@ function getMaxDayForMonth(month: MonthOption): number {
   }
 }
 
-function getInitialFinancialYearEnd(value: string | null) {
-  if (!value) {
-    return { day: "", month: undefined as string | undefined };
-  }
-
-  const match = value.trim().match(/^(\d{1,2})\s+([A-Za-z]+)$/);
-  if (!match) {
-    return { day: "", month: undefined as string | undefined };
-  }
-
-  const day = Number(match[1]);
-  if (!Number.isInteger(day) || day < 1 || day > 31) {
-    return { day: "", month: undefined as string | undefined };
-  }
-
-  const normalizedMonth = match[2].slice(0, 3);
+function getInitialFinancialYearEnd(
+  fyeMonth: number | null,
+  fyeDay: number | null,
+) {
   const month =
-    MONTH_OPTIONS.find(
-      (m) => m.toLowerCase() === normalizedMonth.toLowerCase(),
-    ) ?? undefined;
-
-  if (!month) {
-    return {
-      day: "",
-      month: undefined as string | undefined,
-    };
+    fyeMonth != null && fyeMonth >= 1 && fyeMonth <= 12
+      ? MONTH_OPTIONS[fyeMonth - 1]
+      : undefined;
+  if (!month || fyeDay == null) {
+    return { day: "", month: undefined as MonthOption | undefined };
   }
-
   const maxDayForMonth = getMaxDayForMonth(month);
-  if (day > maxDayForMonth) {
-    return {
-      day: "",
-      month,
-    };
+  if (!Number.isInteger(fyeDay) || fyeDay < 1 || fyeDay > maxDayForMonth) {
+    return { day: "", month };
   }
-
-  return {
-    day: String(day),
-    month,
-  };
+  return { day: String(fyeDay), month };
 }
 
 export default function UpdateReportingDetailsForm(props: {
-  financial_year_end: string | null;
+  fye_month: number | null;
+  fye_day: number | null;
   is_mth_report_relevant: boolean;
   orgId: number;
 }) {
   const initialFinancialYearEnd = getInitialFinancialYearEnd(
-    props.financial_year_end,
+    props.fye_month,
+    props.fye_day,
   );
   const [financialYearEndMonth, setFinancialYearEndMonth] = useState<
     MonthOption | undefined
@@ -140,10 +118,9 @@ export default function UpdateReportingDetailsForm(props: {
       return;
     }
 
-    const financial_year_end = `${submittedFinancialYearEndDay} ${financialYearEndMonth}`;
-
     const res = await UpdateOrganisation({
-      financial_year_end,
+      fye_month: MONTH_OPTIONS.indexOf(financialYearEndMonth) + 1,
+      fye_day: submittedFinancialYearEndDay,
       id: props.orgId,
     });
 

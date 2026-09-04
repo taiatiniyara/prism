@@ -2,12 +2,79 @@ import { and, eq, inArray, isNull, or, sql } from "drizzle-orm";
 
 import { db } from "@/db/connection";
 import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
+import { ALL_MEMBER } from "@/lib/data-entry/dimensions";
 
 export interface AggregatedWorkerScope {
   reportPeriodId: number;
   serviceAreaId?: number | null;
   unitId?: number | null;
 }
+
+export interface DimensionedRow {
+  value: string | null;
+  provider: number | null;
+  category: number | null;
+  technology: number | null;
+  assetClass: number | null;
+  customerType: number | null;
+  paymentMode: number | null;
+  consumptionBand: number | null;
+  division: number | null;
+  gender: number | null;
+  utilityFunction: number | null;
+}
+
+const asFiniteNumber = (value: string | null): number | null => {
+  if (value == null) return null;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+};
+
+/** True when every dimension is the All-member (or a legacy null). */
+const isAllMemberRow = (r: DimensionedRow): boolean =>
+  (r.provider == null || r.provider === ALL_MEMBER.provider_id) &&
+  (r.category == null || r.category === ALL_MEMBER.category_id) &&
+  (r.technology == null || r.technology === ALL_MEMBER.technology_id) &&
+  (r.assetClass == null || r.assetClass === ALL_MEMBER.asset_class_id) &&
+  (r.customerType == null || r.customerType === ALL_MEMBER.customer_type_id) &&
+  (r.paymentMode == null || r.paymentMode === ALL_MEMBER.payment_mode_id) &&
+  (r.consumptionBand == null ||
+    r.consumptionBand === ALL_MEMBER.consumption_band_id) &&
+  (r.division == null || r.division === ALL_MEMBER.division_id) &&
+  (r.gender == null || r.gender === ALL_MEMBER.gender_id) &&
+  (r.utilityFunction == null ||
+    r.utilityFunction === ALL_MEMBER.utility_function_id);
+
+/**
+ * Resolve one input measure's rows to a single value with the ruled
+ * dimension-rollup preference — "All-row else sum of detail" (mirror of
+ * kpi-worker/resolveInputs; #8, grounded in PR #104 + §4.6). The aggregated
+ * worker treats every input at its All-member aggregate, so:
+ *   1. an authoritative All-member (or legacy-null) row exists → USE it;
+ *   2. else the input is stored as member slices → SUM them;
+ *   3. else missing.
+ * One source is ever consulted, never added across → no double-count.
+ */
+export const resolveAggregateValue = (
+  rows: DimensionedRow[],
+): string | null => {
+  const authoritative = rows
+    .filter(isAllMemberRow)
+    .map((r) => asFiniteNumber(r.value))
+    .find((v) => v != null);
+  if (authoritative != null) return String(authoritative);
+
+  let sum = 0;
+  let hasValue = false;
+  for (const r of rows) {
+    const numeric = asFiniteNumber(r.value);
+    if (numeric != null) {
+      sum += numeric;
+      hasValue = true;
+    }
+  }
+  return hasValue ? String(sum) : null;
+};
 
 interface VariableMapping {
   variableToInputDefId: Map<string, number>;
@@ -105,14 +172,34 @@ export const readSourceSnapshot = async (
       value: sql<
         string | null
       >`coalesce(${dataEntries.value_numeric}::text, ${dataEntries.value})`,
+      provider: dataEntries.provider_id,
+      category: dataEntries.category_id,
+      technology: dataEntries.technology_id,
+      assetClass: dataEntries.asset_class_id,
+      customerType: dataEntries.customer_type_id,
+      paymentMode: dataEntries.payment_mode_id,
+      consumptionBand: dataEntries.consumption_band_id,
+      division: dataEntries.division_id,
+      gender: dataEntries.gender_id,
+      utilityFunction: dataEntries.utility_function_id,
     })
     .from(dataEntries)
     .where(and(...conditions));
 
+  // Group each input measure's rows, then resolve to one value via the
+  // "All-row else sum of detail" rule so a slice-only input sums to its total
+  // instead of collapsing to one arbitrary slice (last-wins).
+  const rowsByInputDef = new Map<number, DimensionedRow[]>();
+  for (const row of rows) {
+    const bucket = rowsByInputDef.get(row.inputDefId) ?? [];
+    bucket.push(row);
+    rowsByInputDef.set(row.inputDefId, bucket);
+  }
+
   const byInputDefId: Record<number, string | null> = {};
-  rows.forEach((row) => {
-    byInputDefId[row.inputDefId] = row.value;
-  });
+  for (const [inputDefId, groupRows] of rowsByInputDef) {
+    byInputDefId[inputDefId] = resolveAggregateValue(groupRows);
+  }
 
   const byVariable: Record<string, string | null> = {};
   for (const variableName of variableNames) {

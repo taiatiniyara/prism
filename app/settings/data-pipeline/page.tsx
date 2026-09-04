@@ -22,7 +22,11 @@ export default function DataPipelinePage() {
     }
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    void (async () => {
+      await fetchData();
+    })();
+  }, [fetchData]);
 
   if (loading) return <div className="p-6 text-slate-500">Loading pipeline stats...</div>;
   if (error) return <div className="p-6 text-red-600">Error: {error}</div>;
@@ -53,7 +57,7 @@ export default function DataPipelinePage() {
               <div key={s} className="flex items-center gap-2">
                 <span className="text-xs w-24 text-right">{s}</span>
                 <div className="flex-1 bg-slate-100 rounded h-5">
-                  <div className="bg-blue-500 h-5 rounded" style={{ width: `${pct}%` }} />
+                  <div className="bg-info h-5 rounded" style={{ width: `${pct}%` }} />
                 </div>
                 <span className="text-xs w-12">{count}</span>
               </div>

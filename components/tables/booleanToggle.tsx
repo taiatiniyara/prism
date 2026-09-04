@@ -13,7 +13,8 @@ export default function BooleanToggle<T extends BooleanToggleRecord>(props: {
 }) {
   return (
     <Checkbox
-      className="cursor-pointer"
+      // 75% = 25% smaller than the default size-4; scales box + check together.
+      className="cursor-pointer scale-75"
       defaultChecked={props.data[props.column] as boolean}
       onCheckedChange={async (checked) => {
         const data: Partial<T> = {

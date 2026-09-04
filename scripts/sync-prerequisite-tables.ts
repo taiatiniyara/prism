@@ -5,6 +5,23 @@ import { sql } from "drizzle-orm";
 
 const MIGRATION_KEY = process.env.PRISM_TRAINING_MIGRATION_KEY?.trim() ?? "";
 
+const FYE_MONTH_NUM: Record<string, number> = {
+  jan: 1, feb: 2, mar: 3, apr: 4, may: 5, jun: 6,
+  jul: 7, aug: 8, sep: 9, oct: 10, nov: 11, dec: 12,
+};
+
+/** Legacy migration API still serves financial_year_end as a "30 Sep 2024" string. */
+function parseLegacyFye(
+  s: string | null | undefined,
+): { month: number; day: number } | null {
+  if (!s) return null;
+  const m = /^\s*(\d{1,2})\s+([A-Za-z]{3})/.exec(s.trim());
+  if (!m) return null;
+  const day = Number(m[1]);
+  const month = FYE_MONTH_NUM[m[2].toLowerCase()];
+  return month && day ? { month, day } : null;
+}
+
 function log(msg: string) { console.log(msg); }
 
 async function fetchSource(path: string) {
@@ -50,16 +67,16 @@ async function main() {
         is_utility: o.is_utility ?? true, is_active: o.is_active ?? true,
         is_mth_reports_relevant_month: o.is_mth_reports_relevant ?? false,
         updated_date: o.updated_date,
-        powequality_standard_id: mliIds.has(o.powerquality_standard_id) ? o.powerquality_standard_id : null,
-        electricity_regulation_id: mliIds.has(o.electricity_regulation_id) ? o.electricity_regulation_id : null,
-        accounting_standard_id: mliIds.has(o.accounting_standard_id) ? o.accounting_standard_id : null,
+        // accounting/electricity/powerquality standard ids retired 2026-09-02 (Stage 2) —
+        // reported context answers now live in data_entries (measures 51/53/52), not org columns.
         entity_type_id: mliIds.has(o.entity_type_id) ? o.entity_type_id : null,
         utility_type_id: mliIds.has(o.utility_type_id) ? o.utility_type_id : 440,
         operating_basis_id: mliIds.has(o.operating_basis_id) ? o.operating_basis_id : null,
         ppa_membership_type_id: mliIds.has(o.ppa_membership_type_id) ? o.ppa_membership_type_id : null,
         utility_size_id: mliIds.has(o.utility_size_id) ? o.utility_size_id : null,
         services_provided_id: mliIds.has(o.services_provided_id) ? o.services_provided_id : null,
-        financial_year_end: o.financial_year_end,
+        fye_month: parseLegacyFye((o as { financial_year_end?: string | null }).financial_year_end)?.month ?? null,
+        fye_day: parseLegacyFye((o as { financial_year_end?: string | null }).financial_year_end)?.day ?? null,
       });
       orgIns++;
     } catch { /* dup */ }

@@ -1,9 +1,9 @@
 import { db } from "@/db/connection";
 import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
 import { serviceAreas } from "@/db/schema/utility";
-import { reportPeriods } from "@/db/schema/reportPeriods";
+import { reportPeriods, publishedPeriodCondition } from "@/db/schema/reportPeriods";
 import { managedLists, managedListItems } from "@/db/schema/managedLists";
-import { eq, and, isNotNull, inArray } from "drizzle-orm";
+import { eq, and, inArray } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
 import { formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
 import {
@@ -18,6 +18,16 @@ const DISTRIBUTION_MEASURE_NAMES = [
   "FTE Employees",
 ] as const;
 
+// Power BI column labels (measure name -> semantic-model column name).
+const DISTRIBUTION_COLUMN_LABELS: Record<string, string> = {
+  "Distribution Transformer Rated Capacity":
+    "Distribution Network Transformer Capacity",
+  "Network Length": "Distribution Network Length",
+  "Network Unplanned Downtime Events":
+    "Distribution Network Unplanned Downtime Events",
+  "FTE Employees": "FTE Employees in Distribution",
+};
+
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
   if (authorize.success === false)
@@ -28,11 +38,8 @@ export async function GET(req: Request) {
     .from(measureDefinitions)
     .where(inArray(measureDefinitions.name, [...DISTRIBUTION_MEASURE_NAMES]));
 
-  const fteId = measureDefs.find((m) => m.name === "FTE Employees")?.id;
   const allDlIds = measureDefs.map((m) => m.id);
-  if (allDlIds.length === 0) return Response.json([]);
-
-  // "FTE Employees" is scoped by utility function; resolve the Distribution member.
+  if (allDlIds.length === 0) return Response.json([]);  // Distribution measures are scoped by the Distribution utility function.
   const distributionListId = (
     await db
       .select({ id: managedLists.id })
@@ -67,7 +74,7 @@ export async function GET(req: Request) {
   const rps = await db
     .select()
     .from(reportPeriods)
-    .where(isNotNull(reportPeriods.status_id));
+    .where(publishedPeriodCondition);
   const allSa = await db
     .select()
     .from(serviceAreas)
@@ -113,37 +120,27 @@ export async function GET(req: Request) {
         return {
           ReportType: reportType,
           ReportPeriod: formatReportPeriodIso(urp.report_date, reportType),
+          ReportPeriodId: urp.id,
           UtilityId: urp.utility_id,
           Data: allSa
             .filter((sa) => sa.utility_id === urp.utility_id)
-            .map((sa) => ({
-              ServiceAreaId: sa.id,
-              "Distribution Transformer Rated Capacity": findEntryValue(
-                measureDefs.find(
-                  (m) => m.name === "Distribution Transformer Rated Capacity",
-                )!.id,
-                urp.id,
-                sa.id,
+            .map((sa) =>
+              measureDefs.reduce(
+                (acc, dl) => {
+                  const label = DISTRIBUTION_COLUMN_LABELS[dl.name] ?? dl.name;
+                  return {
+                    ...acc,
+                    [label]: findEntryValue(
+                      dl.id,
+                      urp.id,
+                      sa.id,
+                      distributionFunctionId,
+                    ),
+                  };
+                },
+                { ServiceAreaId: sa.id } as Record<string, unknown>,
               ),
-              "Network Length": findEntryValue(
-                measureDefs.find((m) => m.name === "Network Length")!.id,
-                urp.id,
-                sa.id,
-              ),
-              "Network Unplanned Downtime Events": findEntryValue(
-                measureDefs.find(
-                  (m) => m.name === "Network Unplanned Downtime Events",
-                )!.id,
-                urp.id,
-                sa.id,
-              ),
-              "FTE Employees in Distribution": findEntryValue(
-                fteId!,
-                urp.id,
-                sa.id,
-                distributionFunctionId,
-              ),
-            })),
+            ),
         };
       }),
   );

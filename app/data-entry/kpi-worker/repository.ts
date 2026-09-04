@@ -1,4 +1,4 @@
-import { and, eq, sql } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 
 import { db } from "@/db/connection";
 import { kpiCalculationAttempts } from "@/db/schema/kpi";
@@ -42,7 +42,6 @@ const setAttemptStatus = async (
     failureReason?: string | null;
     failureType?: KpiCalculationFailureType | null;
     retryCount?: number;
-    deferredFollowUp?: boolean;
     formulaVersion?: string;
     completedAt?: Date | null;
   },
@@ -54,7 +53,6 @@ const setAttemptStatus = async (
       failure_reason: updates?.failureReason,
       failure_type: updates?.failureType,
       retry_count: updates?.retryCount,
-      deferred_follow_up: updates?.deferredFollowUp,
       formula_version: updates?.formulaVersion,
       completed_at: updates?.completedAt,
       updated_at: new Date(),
@@ -131,24 +129,4 @@ export const markAttemptRetryPending = async (
     failureType: "transient-infra",
     completedAt: null,
   });
-};
-
-export const markDeferredFollowUpForScope = async (
-  reportPeriodId: number,
-  scope: KpiWorkerScope,
-): Promise<void> => {
-  const scopeJson = JSON.stringify(scope);
-
-  await db
-    .update(kpiCalculationAttempts)
-    .set({
-      deferred_follow_up: true,
-      updated_at: new Date(),
-    })
-    .where(
-      and(
-        eq(kpiCalculationAttempts.report_period_id, reportPeriodId),
-        sql`${kpiCalculationAttempts.scope}::text = ${scopeJson}`,
-      ),
-    );
 };

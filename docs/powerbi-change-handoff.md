@@ -2,6 +2,18 @@
 
 For the **Power BI developer**. Lists the changes the Power BI side needs so it stays in sync with PRISM's terminology.
 
+## 2026-08-26 — new fields your queries must pick up (refresh alone won't show them)
+
+The API now serves these fields, but if your queries expand an explicit field
+list they will not appear on refresh until added to the query:
+
+| table | JSON key | notes |
+|---|---|---|
+| `Fact Safety` | **`Total Hours Worked`** | served on every `/api/factSafety` row (number). 43 of 77 periods carry values — the rest are genuinely unreported periods, so partial nulls are expected. |
+| `Fact UtilityCosts`, `Fact FinancialAccounts`, `Fact TariffStructure` | **`Multiplier`** | served on every row: `"Ones" \| "Thousands" \| "Mixed"` (scale the reporter used; true LCU = value × multiplier). An alias key **`Multipler`** is also emitted in case the model column uses that spelling — bind one or the other, not both. |
+
+---
+
 ## Context (how PRISM talks to Power BI)
 
 - The PRISM app sends **DAX** to a Power BI **semantic model** via the REST `executeQueries` API. The query catalog + DAX + schema map live in `lib/ai/data-service/pbi-queries.ts`, `pbi-schema-registry.ts`, `pbi-insights.ts`, and the AI tool catalog in `lib/ai/tools/power-bi.ts`.

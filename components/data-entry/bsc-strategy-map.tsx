@@ -406,7 +406,9 @@ export default function BscStrategyMap({
   }, []);
 
   useEffect(() => {
-    void load();
+    void (async () => {
+      await load();
+    })();
   }, [load]);
 
   const layout = useMemo(

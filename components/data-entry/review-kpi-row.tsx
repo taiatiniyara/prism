@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 
 import {
   ReviewKpiFilterContext,
@@ -61,6 +61,7 @@ const formatResultValue = (
 
 export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
   const [localRow, setLocalRow] = useState(row);
+  const [prevRow, setPrevRow] = useState(row);
   const [draftValues, setDraftValues] = useState<Record<string, string>>(
     toDraftMap(row.inputs),
   );
@@ -68,10 +69,11 @@ export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isSaving, startSaveTransition] = useTransition();
 
-  useEffect(() => {
+  if (prevRow !== row) {
+    setPrevRow(row);
     setLocalRow(row);
     setDraftValues(toDraftMap(row.inputs));
-  }, [row]);
+  }
 
   const { isConnected, error: syncError } = useReviewKpiSync({
     context,

@@ -22,6 +22,7 @@
 | D-3 | `git checkout .` on the server **discards** any uncommitted state silently | Masks drift; no record of what was overwritten; can hide a compromise or a hotfix. | CIS 8 (audit) |
 | D-4 | `deploy.sh` does `git add . && git commit && git push` | Couples deploy with VCS; bare `git commit` (no `-m`) is interactive and will hang a non-interactive shell; auto-committing server state is backwards (server should be a consumer of `main`, not a producer). | change mgmt |
 | D-5 | One `SSH_PRIVATE_KEY` with **root** login | Broad blast radius; the CI secret is effectively root on the box. | CIS 4/5 |
+| D-6 | **Launch-cutover check: keep the hardened CSP on the p2 prod host.** *(Corrected 2026-09-01 — this was NOT a live gap.)* p2's real deployment (`dev.prismdashboard.org`) already serves the hardened Next CSP (verified). An earlier version measured `prismdashboard.org` and mislabeled its weak CSP as a p2-prod gap — but `prismdashboard.org` is the **legacy p1** system (migration source), not a p2 prod host (Eugene ruling, CLAUDE.md). So there is **no live p2-prod CSP gap**; when prod URLs repoint to the p2 instance at launch, ensure the serving proxy carries the hardened CSP (not a legacy weak one). | ASVS 14.4.5; OWASP A05 |
 
 ## Proposed changes
 
@@ -116,6 +117,23 @@ Notes:
 
 Drop the `git add . && git commit && git push` tail entirely. Developers push to `main` from their workstation; the server only ever *consumes* `main`. If a one-shot manual deploy script is still wanted, it should mirror the workflow above (backup → migrate → build → reload → health check) and never write to git.
 
+### 5. At p2 launch, keep the hardened CSP on the prod host (cutover checklist)
+
+**Status — corrected 2026-09-01: there is NO live p2-prod CSP gap.** p2's real deployment, `dev.prismdashboard.org`, serves the hardened Next CSP (verified: `script-src 'self' 'unsafe-inline' https://app.powerbi.com`, no `unsafe-eval`). An earlier version of this section measured **`prismdashboard.org`** and flagged its weak CSP (`unsafe-eval` + bare `https:` wildcards, `X-Frame-Options: SAMEORIGIN`) as a p2-prod gap — that was a **misattribution**: `prismdashboard.org` is the **legacy p1** system (the migration's data source), *not* a p2 prod host (Eugene ruling, CLAUDE.md). p1 answering like a live app is expected — it's the running legacy system.
+
+**The residual valid point — a cutover check.** p2 is a single instance whose production URLs are repointed at launch. Whatever proxy fronts the p2 app in production must then serve the **hardened** CSP, not a hand-rolled weak one:
+
+- **Preferred — let Next own the security headers.** Ensure the production Nginx does **not** `add_header Content-Security-Policy …` (or `X-Frame-Options`) and does **not** `proxy_hide_header` them, so Next's hardened CSP + HSTS + `X-Frame-Options: DENY` + `nosniff` (from `next.config.ts`) pass through untouched.
+- **If Nginx must own them,** mirror `next.config.ts` **verbatim** — drop `'unsafe-eval'`, drop the bare `https:` wildcards, set `X-Frame-Options: DENY` — and add `proxy_hide_header Content-Security-Policy;` so there is never a weak+strict duplicate.
+
+**Verify at/after cutover:**
+```bash
+curl -sD - -o /dev/null https://<p2-prod-host>/ | grep -i content-security-policy
+# expect: NO 'unsafe-eval' and NO bare `https:` in script-src
+```
+
+**Owner:** infra/VPS (Nginx), **at launch.** Not a live gap — a cutover checklist item.
+
 ## Suggested order
 
 1. Reconcile `ecosystem.config.js` name/port with reality (cheap, unblocks the health check).
@@ -123,5 +141,6 @@ Drop the `git add . && git commit && git push` tail entirely. Developers push to
 3. Stand up the `prism` service user; move the app to `/srv/prism/app`; repoint pm2 + the CI secret.
 4. Swap in the hardened workflow.
 5. Delete `db-push` from every deploy path.
+6. **At launch, keep the hardened CSP on the p2 prod host** (D-6) — a cutover check, *not* a live gap (the earlier "prod CSP weak" reading was `prismdashboard.org` = legacy p1, misattributed): ensure the p2 prod proxy serves Next's hardened CSP.
 
-Items 2 + 5 are the highest priority — they close D-2, the one that can destroy production data during the schema churn.
+Items 2 + 5 are the highest priority — they close D-2, the one that can destroy production data during the schema churn. Item 6 is a **launch-cutover** check (not a live gap): when the p2 prod host goes live, confirm it serves the hardened CSP.

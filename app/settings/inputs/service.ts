@@ -3,53 +3,23 @@
 import { DataTableFormResponse } from "@/components/tables/data-table-create-form";
 import { db } from "@/db/connection";
 import {
-  FormulaInput,
   MeasureDefinition,
   MeasureDefinitionAlternativeNames,
   inputDlDefMappings,
   measureDefinitions,
 } from "@/db/schema/dataEntry";
-import { managedListItems, managedLists } from "@/db/schema/managedLists";
+import { managedListItems } from "@/db/schema/managedLists";
 import {
   createVariableName,
   deriveMeasureVariableName,
 } from "@/lib/formatters";
-import { and, asc, eq, ilike, inArray, or } from "drizzle-orm";
+import { asc, eq, ilike, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { GetAllManagedListItems } from "../managed-lists/service";
 import {
   buildManagedListNameMap,
   resolveManagedListName,
 } from "@/lib/managed-list-utils";
-
-export interface InputFormulaOption {
-  id: number;
-  name: string;
-  variable_name: string | null;
-  unit: string | null;
-  formula: string | null;
-  formula_inputs: FormulaInput[] | null;
-  is_active: boolean;
-}
-
-export interface ManagedDimensionOption {
-  id: number;
-  name: string;
-}
-
-export interface InputFormulaBuilderData {
-  inputs: InputFormulaOption[];
-  energyProviderOptions: ManagedDimensionOption[];
-  energyTypeOptions: ManagedDimensionOption[];
-  energySourceOptions: ManagedDimensionOption[];
-  previewContextLabel: string | null;
-}
-
-export interface SaveInputFormulaPayload {
-  inputId: number;
-  formula: string;
-  formulaInputs: FormulaInput[];
-}
 
 interface CreateMeasureDefinitionPayload {
   name: string;
@@ -375,11 +345,8 @@ export interface ExcelMeasureDefinition {
   input_id: number;
   input_subcategory_id: number;
   is_active: boolean;
-  is_aggregated: boolean;
   is_calculated: boolean;
   is_currency: boolean;
-  is_kpi: boolean;
-  is_kpi_input: boolean;
   is_mandatory: boolean;
   is_system_generated: boolean;
   name: string;
@@ -417,14 +384,13 @@ export async function UpdateMeasureDefinitionFromExcel(
     measures_subgroup_id: item.input_subcategory_id,
     strata_id: item.strata_id,
     is_active: item.is_active,
-    is_aggregated: item.is_aggregated,
     is_calculated: item.is_calculated,
     is_currency: item.is_currency,
-    is_kpi: item.is_kpi,
-    is_kpi_input: item.is_kpi_input,
     is_mandatory: item.is_mandatory,
     is_system_generated: item.is_system_generated,
     is_apportionable: false,
+    is_context_fed: false,
+    effective_from: null,
     unit_id: item.unit_id,
     valid_polarity_id: item.valid_polarity_id,
     valid_range_max:
@@ -447,139 +413,6 @@ export async function UpdateMeasureDefinitionFromExcel(
   }
 
   revalidatePath("/settings/inputs");
-}
-
-export async function GetInputFormulaBuilderData(): Promise<InputFormulaBuilderData> {
-  const managedListsItems = await db.select().from(managedListItems);
-  const managedListNamesById = buildManagedListNameMap(managedListsItems);
-
-  const inputs = await db
-    .select({
-      id: measureDefinitions.id,
-      name: measureDefinitions.name,
-      variable_name: measureDefinitions.variable_name,
-      unitId: measureDefinitions.unit_id,
-      formula: measureDefinitions.formula,
-      formula_inputs: measureDefinitions.formula_inputs,
-      is_active: measureDefinitions.is_active,
-    })
-    .from(measureDefinitions)
-    .orderBy(asc(measureDefinitions.name));
-
-  const energyProviderRows = await db
-    .select({
-      id: managedListItems.id,
-      name: managedListItems.name,
-    })
-    .from(managedListItems)
-    .leftJoin(managedLists, eq(managedListItems.list_id, managedLists.id))
-    .where(
-      and(
-        eq(managedListItems.is_active, true),
-        or(
-          ilike(managedLists.name, "%energy provider%"),
-          ilike(managedLists.name, "%energy providers%"),
-        ),
-      ),
-    )
-    .orderBy(asc(managedListItems.name));
-
-  const energySourceRows = await db
-    .select({
-      id: managedListItems.id,
-      name: managedListItems.name,
-    })
-    .from(managedListItems)
-    .leftJoin(managedLists, eq(managedListItems.list_id, managedLists.id))
-    .where(
-      and(
-        eq(managedListItems.is_active, true),
-        or(
-          ilike(managedLists.name, "%energy source%"),
-          ilike(managedLists.name, "%energy sources%"),
-        ),
-      ),
-    )
-    .orderBy(asc(managedListItems.name));
-
-  const energyTypeRows = await db
-    .select({
-      id: managedListItems.id,
-      name: managedListItems.name,
-    })
-    .from(managedListItems)
-    .leftJoin(managedLists, eq(managedListItems.list_id, managedLists.id))
-    .where(
-      and(
-        eq(managedListItems.is_active, true),
-        or(
-          ilike(managedLists.name, "%energy type%"),
-          ilike(managedLists.name, "%energy types%"),
-        ),
-      ),
-    )
-    .orderBy(asc(managedListItems.name));
-
-  return {
-    inputs: inputs.map((item) => ({
-      id: item.id,
-      name: item.name,
-      variable_name: item.variable_name,
-      unit: resolveManagedListName(managedListNamesById, item.unitId, null),
-      formula: item.formula,
-      formula_inputs: item.formula_inputs,
-      is_active: item.is_active,
-    })),
-    energyProviderOptions: energyProviderRows,
-    energyTypeOptions: energyTypeRows,
-    energySourceOptions: energySourceRows,
-    previewContextLabel: "Preview uses sample values.",
-  };
-}
-
-export async function SaveInputFormula(payload: SaveInputFormulaPayload) {
-  const formula = payload.formula.trim();
-
-  if (!payload.inputId || Number.isNaN(payload.inputId)) {
-    return {
-      success: false,
-      message: "Please choose an input definition first.",
-    };
-  }
-  if (!formula) {
-    return { success: false, message: "Formula is required." };
-  }
-
-  const containsSelfReference = payload.formulaInputs.some(
-    (item) => item.measure_def_id === payload.inputId,
-  );
-  if (containsSelfReference) {
-    return {
-      success: false,
-      message: "An input formula cannot reference itself.",
-    };
-  }
-
-  try {
-    await db
-      .update(measureDefinitions)
-      .set({
-        formula,
-        formula_inputs: payload.formulaInputs,
-        is_calculated: true,
-      })
-      .where(eq(measureDefinitions.id, payload.inputId));
-  } catch (error) {
-    console.error("Failed to save input formula:", error);
-    return {
-      success: false,
-      message:
-        "Unable to save formula. It may exceed current database limits. Please shorten it and try again.",
-    };
-  }
-
-  revalidatePath("/settings/inputs");
-  return { success: true, message: "Input formula saved successfully." };
 }
 
 export async function getInputsBySubcategory(

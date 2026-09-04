@@ -1,9 +1,9 @@
 import { db } from "@/db/connection";
 import { countries } from "@/db/schema/country";
 import { organisations } from "@/db/schema/utility";
-import { reportPeriods } from "@/db/schema/reportPeriods";
+import { reportPeriods, publishedPeriodCondition } from "@/db/schema/reportPeriods";
 import { managedListItems } from "@/db/schema/managedLists";
-import { eq, and, isNotNull } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
 import { formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
 import { getResolvedContextRows } from "@/lib/legacy/context-data";
@@ -17,7 +17,7 @@ export async function GET(req: Request) {
   const rps = await db
     .select()
     .from(reportPeriods)
-    .where(isNotNull(reportPeriods.status_id));
+    .where(publishedPeriodCondition);
   const allUtils = await db
     .select()
     .from(organisations)
@@ -45,13 +45,14 @@ export async function GET(req: Request) {
       const country = u ? cMap.get(u.country_id) : undefined;
       const cc = ctxRows.find(
         (r) =>
-          r.country_id === (country?.id ?? -1) &&
+          r.report_period_id === urp.id && r.country_id === (country?.id ?? -1) &&
           r.measureName === "GDP Per Capita",
       );
       const reportType = findItem(urp.report_type_id)?.name;
       return {
         "Report Type": reportType,
-        "Report Period": formatReportPeriodIso(urp.report_date, reportType),
+        "Report Period": formatReportPeriodIso(urp.report_date, reportType, u?.fye_month, u?.fye_day),
+        ReportPeriodId: urp.id,
         Country: country?.name,
         "GDP Per Capita": cc?.value ?? null,
         Source: "unknown",

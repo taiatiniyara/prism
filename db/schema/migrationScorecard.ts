@@ -74,14 +74,14 @@ export const migrationScorecard = pgTable(
     failed: numeric("failed").notNull().default("0"), // recorded in migration_rejections
     // Generated: exact (numeric) balance. On anomaly lines, variance≠0 = investigate.
     variance: numeric("variance").generatedAlwaysAs(
-      sql`source - migrated - failed`,
+      sql`((source - migrated) - failed)`,
     ),
     // True on lines where variance≠0 is a real anomaly (not the informational fill/excluded).
     balance_expected: boolean("balance_expected").generatedAlwaysAs(
-      sql`recon_line in ('shell', 'value', 'value_sum', 'leak')`,
+      sql`((recon_line)::text = ANY ((ARRAY['shell'::character varying, 'value'::character varying, 'value_sum'::character varying, 'leak'::character varying])::text[]))`,
     ),
     is_balanced: boolean("is_balanced").generatedAlwaysAs(
-      sql`source = migrated + failed`,
+      sql`(source = (migrated + failed))`,
     ),
     note: text("note"),
     created_at: timestamp("created_at").notNull().defaultNow(),

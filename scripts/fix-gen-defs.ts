@@ -3,6 +3,10 @@ import { measureDefinitions, inputDlDefMappings } from "@/db/schema/dataEntry";
 import { sql, eq, and, inArray } from "drizzle-orm";
 
 async function main() {
+  // OBSOLETE: measure_definitions.is_aggregated was retired 2026-08-31 (dup of is_calculated).
+  // This script's whole purpose was setting that now-dropped column — abort so a stray run fails safely.
+  console.error("fix-gen-defs.ts is obsolete: measure_definitions.is_aggregated was retired. Aborting.");
+  process.exit(1);
   // Get IDs of defs with mappings created by our bulk script (mappings created recently)
   // Actually, just get defs that were NOT originally in prism (identified by subcat 273 "generation" and sort_order=0 since bulk-created ones have defaults)
 

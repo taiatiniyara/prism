@@ -2,7 +2,6 @@
 
 import { DataTableFormResponse } from "@/components/tables/data-table-create-form";
 import { db } from "@/db/connection";
-import { FormulaInput, measureDefinitions } from "@/db/schema/dataEntry";
 import {
   KpiDefinition,
   kpiDefinitions,
@@ -22,45 +21,9 @@ import {
   resolveManagedListName,
 } from "@/lib/managed-list-utils";
 
-export interface KpiFormulaInputOption {
-  id: number;
-  name: string;
-  variable_name: string | null;
-  unit: string | null;
-  actualSamples: KpiFormulaInputActualSample[];
-}
-
-export interface KpiFormulaInputActualSample {
-  inputDefId: number;
-  energyProviderId: number | null;
-  energyTypeId: number | null;
-  energySourceId: number | null;
-  value: number;
-}
-
-export interface KpiFormulaBuilderData {
-  kpis: KpiDefinition[];
-  inputs: KpiFormulaInputOption[];
-  energyProviderOptions: ManagedDimensionOption[];
-  energyTypeOptions: ManagedDimensionOption[];
-  energySourceOptions: ManagedDimensionOption[];
-  previewContextLabel: string | null;
-}
-
-export interface ManagedDimensionOption {
-  id: number;
-  name: string;
-}
-
 export interface KpiTypeOption {
   label: string;
   value: "benchmarking" | "custom";
-}
-
-export interface SaveKpiFormulaPayload {
-  kpiId: number;
-  formula: string;
-  formulaInputs: FormulaInput[];
 }
 
 type KpiDefinitionWritePayload = Partial<KpiDefinition> & {
@@ -696,153 +659,6 @@ export async function UpdateKpiDefinition(
       message: `Unable to update KPI definition. ${[baseMessage, ...contextParts].join(" | ")}`,
     };
   }
-}
-
-export async function GetKpiFormulaBuilderData(): Promise<KpiFormulaBuilderData> {
-  const currentUser = await getCurrentUser();
-  const visibilityFilter = getKpiVisibilityFilter(currentUser);
-  const managedListsItems = await db.select().from(managedListItems);
-  const managedListNamesById = buildManagedListNameMap(managedListsItems);
-  const kpiRows = visibilityFilter
-    ? await db
-        .select()
-        .from(kpiDefinitions)
-        .where(visibilityFilter)
-        .orderBy(asc(kpiDefinitions.name))
-    : await db.select().from(kpiDefinitions).orderBy(asc(kpiDefinitions.name));
-
-  const kpis = kpiRows.map((i) => {
-    const kpi: KpiDefinition = {
-      ...i,
-      strata: resolveManagedListName(
-        managedListNamesById,
-        i.strata_id,
-        null,
-      ),
-      category: resolveManagedListName(
-        managedListNamesById,
-        i.category_id,
-        null,
-      ),
-      subcategory: resolveManagedListName(
-        managedListNamesById,
-        i.subcategory_id,
-        null,
-      ),
-      unit: resolveManagedListName(managedListNamesById, i.unit_id, null),
-    };
-    return kpi;
-  });
-
-  const inputs = await db
-    .select({
-      id: measureDefinitions.id,
-      name: measureDefinitions.name,
-      variable_name: measureDefinitions.variable_name,
-      unitId: measureDefinitions.unit_id,
-    })
-    .from(measureDefinitions)
-    .where(
-      and(
-        eq(measureDefinitions.is_active, true),
-        eq(measureDefinitions.is_kpi_input, true),
-      ),
-    )
-    .orderBy(asc(measureDefinitions.name));
-
-  const previewContextLabel = "Preview uses sample values.";
-
-  const formulaInputs: KpiFormulaInputOption[] = inputs.map((item) => ({
-    id: item.id,
-    name: item.name,
-    variable_name: item.variable_name,
-    unit: resolveManagedListName(managedListNamesById, item.unitId, null),
-    actualSamples: [],
-  }));
-
-  const energyProviderRows = await db
-    .select({
-      id: managedListItems.id,
-      name: managedListItems.name,
-    })
-    .from(managedListItems)
-    .leftJoin(managedLists, eq(managedListItems.list_id, managedLists.id))
-    .where(
-      and(
-        eq(managedListItems.is_active, true),
-        or(
-          ilike(managedLists.name, "%energy provider%"),
-          ilike(managedLists.name, "%energy providers%"),
-        ),
-      ),
-    )
-    .orderBy(asc(managedListItems.name));
-
-  const energySourceRows = await db
-    .select({
-      id: managedListItems.id,
-      name: managedListItems.name,
-    })
-    .from(managedListItems)
-    .leftJoin(managedLists, eq(managedListItems.list_id, managedLists.id))
-    .where(
-      and(
-        eq(managedListItems.is_active, true),
-        or(
-          ilike(managedLists.name, "%energy source%"),
-          ilike(managedLists.name, "%energy sources%"),
-        ),
-      ),
-    )
-    .orderBy(asc(managedListItems.name));
-
-  const energyTypeRows = await db
-    .select({
-      id: managedListItems.id,
-      name: managedListItems.name,
-    })
-    .from(managedListItems)
-    .leftJoin(managedLists, eq(managedListItems.list_id, managedLists.id))
-    .where(
-      and(
-        eq(managedListItems.is_active, true),
-        or(
-          ilike(managedLists.name, "%energy type%"),
-          ilike(managedLists.name, "%energy types%"),
-        ),
-      ),
-    )
-    .orderBy(asc(managedListItems.name));
-
-  return {
-    kpis,
-    inputs: formulaInputs,
-    energyProviderOptions: energyProviderRows,
-    energyTypeOptions: energyTypeRows,
-    energySourceOptions: energySourceRows,
-    previewContextLabel,
-  };
-}
-
-export async function SaveKpiFormula(payload: SaveKpiFormulaPayload) {
-  const formula = payload.formula.trim();
-  if (!payload.kpiId || Number.isNaN(payload.kpiId)) {
-    return { success: false, message: "Please choose a KPI first." };
-  }
-  if (!formula) {
-    return { success: false, message: "Formula is required." };
-  }
-
-  await db
-    .update(kpiDefinitions)
-    .set({
-      formula,
-      formula_inputs: payload.formulaInputs,
-    })
-    .where(eq(kpiDefinitions.id, payload.kpiId));
-
-  revalidatePath("/settings/kpi");
-  return { success: true, message: "KPI formula saved successfully." };
 }
 
 export async function SaveKpiLimits(

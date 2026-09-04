@@ -26,6 +26,18 @@
   --color-input: var(--input);
   --color-border: var(--border);
   --color-destructive: var(--destructive);
+  /* Semantic brand + status tokens (design-system refresh 2026-09-03) — one
+     token per meaning, replacing the ~13 ad-hoc raw Tailwind accent hues. */
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-warning: var(--warning);
+  --color-warning-foreground: var(--warning-foreground);
+  --color-danger: var(--danger);
+  --color-danger-foreground: var(--danger-foreground);
+  --color-info: var(--info);
+  --color-info-foreground: var(--info-foreground);
   --color-accent-foreground: var(--accent-foreground);
   --color-accent: var(--accent);
   --color-muted-foreground: var(--muted-foreground);
@@ -50,7 +62,9 @@
 }
 
 :root {
-  --background: oklch(1 0 0);
+  /* Chosen neutral: a barely-there cool off-white ground; cards stay pure white
+     (--card below) so surfaces lift off it without heavy shadow. */
+  --background: oklch(0.993 0.002 264.5);
   --foreground: oklch(0.13 0.028 261.692);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.13 0.028 261.692);
@@ -65,14 +79,26 @@
   --accent: oklch(0.967 0.003 264.542);
   --accent-foreground: oklch(0.21 0.034 264.665);
   --destructive: oklch(0.577 0.245 27.325);
+  /* Brand + status — the single source of truth for each meaning. */
+  --brand: oklch(0.769 0.163 70.4); /* amber */
+  --brand-foreground: oklch(0.21 0.034 264.665);
+  --success: oklch(0.598 0.145 148); /* green */
+  --success-foreground: oklch(0.985 0.002 247.839);
+  --warning: oklch(0.705 0.162 57); /* amber-deep */
+  --warning-foreground: oklch(0.21 0.034 264.665);
+  --danger: oklch(0.577 0.245 27.325); /* red (= destructive) */
+  --danger-foreground: oklch(0.985 0.002 247.839);
+  --info: oklch(0.588 0.142 242); /* sky */
+  --info-foreground: oklch(0.985 0.002 247.839);
   --border: oklch(0.928 0.006 264.531);
   --input: oklch(0.928 0.006 264.531);
   --ring: oklch(0.707 0.022 261.325);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+  /* Branded categorical chart sequence, anchored on the amber brand. */
+  --chart-1: oklch(0.769 0.163 70.4); /* amber */
+  --chart-2: oklch(0.7 0.115 195); /* teal */
+  --chart-3: oklch(0.55 0.15 268); /* indigo */
+  --chart-4: oklch(0.62 0.18 12); /* rose */
+  --chart-5: oklch(0.72 0.16 135); /* lime */
   --radius: 0.625rem;
   --sidebar: oklch(0.985 0.002 247.839);
   --sidebar-foreground: oklch(0.13 0.028 261.692);
@@ -100,14 +126,24 @@
   --accent: oklch(0.278 0.033 256.848);
   --accent-foreground: oklch(0.985 0.002 247.839);
   --destructive: oklch(0.704 0.191 22.216);
+  --brand: oklch(0.83 0.16 78); /* amber-400, brighter on dark */
+  --brand-foreground: oklch(0.21 0.034 264.665);
+  --success: oklch(0.75 0.19 132);
+  --success-foreground: oklch(0.21 0.034 264.665);
+  --warning: oklch(0.83 0.16 78);
+  --warning-foreground: oklch(0.21 0.034 264.665);
+  --danger: oklch(0.704 0.191 22.216);
+  --danger-foreground: oklch(0.985 0.002 247.839);
+  --info: oklch(0.75 0.12 235);
+  --info-foreground: oklch(0.21 0.034 264.665);
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.551 0.027 264.364);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
+  --chart-1: oklch(0.83 0.16 78); /* amber */
+  --chart-2: oklch(0.78 0.12 195); /* teal */
+  --chart-3: oklch(0.68 0.15 268); /* indigo */
+  --chart-4: oklch(0.72 0.17 8); /* rose */
+  --chart-5: oklch(0.8 0.17 135); /* lime */
   --sidebar: oklch(0.21 0.034 264.665);
   --sidebar-foreground: oklch(0.985 0.002 247.839);
   --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -124,6 +160,10 @@
   }
   body {
     @apply bg-background text-foreground;
+  }
+  /* Data product: figures line up in every table by default. */
+  table {
+    font-variant-numeric: tabular-nums;
   }
 }
 
@@ -226,21 +266,17 @@
 .chat-prose li { margin: 0.125rem 0; }
 .chat-prose li > p { margin: 0; }
 .chat-prose strong { font-weight: 600; }
-.chat-prose a { color: #2563eb; text-decoration: none; }
+.chat-prose a { color: var(--info); text-decoration: none; }
 .chat-prose a:hover { text-decoration: underline; }
 .chat-prose blockquote {
-  border-left: 2px solid #e2e8f0;
+  border-left: 2px solid var(--border);
   padding-left: 0.75rem;
   margin: 0.5rem 0;
-  color: #64748b;
+  color: var(--muted-foreground);
 }
-.chat-prose hr { border: none; border-top: 1px solid #e2e8f0; margin: 0.75rem 0; }
+.chat-prose hr { border: none; border-top: 1px solid var(--border); margin: 0.75rem 0; }
 .chat-prose img { border-radius: 0.5rem; max-width: 100%; }
-.chat-prose cite { font-size: 0.75rem; color: #94a3b8; }
-
-.dark .chat-prose blockquote { border-color: #475569; color: #94a3b8; }
-.dark .chat-prose hr { border-color: #334155; }
-.dark .chat-prose a { color: #60a5fa; }
+.chat-prose cite { font-size: 0.75rem; color: var(--muted-foreground); }
 
 @keyframes cursor-blink {
   0%, 100% { opacity: 1; }

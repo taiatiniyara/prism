@@ -1,3 +1,7 @@
+/* ⚠️ STALE (2026-08-17) — SELECT uses m.category_id / m.subcategory_id (renamed to
+ * measures_group_id / measures_subgroup_id) and the old energy DIMS names for the scope/
+ * applicability dumps; will error / write the wrong shape against the current schema.
+ * See docs/measures-enrichment/README.md before reuse. */
 /**
  * Regenerate ALL migration artifacts straight from the DB (source of truth):
  *   docs/measures-enrichment/  measures-enriched-final.json · measure-dimension-scope-final.json ·

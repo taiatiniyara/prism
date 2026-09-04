@@ -51,6 +51,23 @@ The 2026-07-23 rows above deliberately left the DB columns unchanged (display-re
 | list label (55) | "Asset" | **Asset Class** | ✅ 2026-07-28 | sharpened from the 2026-07-23 "Asset" relabel — it names the asset **class** (Generation/Storage), distinct from a unit instance |
 | member (1) | "Equipment" | **Unit** | ✅ 2026-07-28 | the level-1 grain member = a unit |
 
+### Country-context metric key repoint (2026-08-23, #4)
+The `country_context` table keyed its metric on `dl_def_id → managed_list_items`, but the
+country-context metrics are `measure_definitions` in subgroup **221 "Country Context"** (ids
+1..16). 11 of the 14 fact-route metrics don't exist in `managed_list_items` at all, so the
+legacy key could not represent them. Table was empty → clean repoint.
+
+| kind | current | new | status | why |
+|---|---|---|---|---|
+| column | `country_context.dl_def_id` | `measure_def_id` | ✅ 2026-08-23 | rename + FK repoint `managed_list_items → measure_definitions` (subgroup 221); matches `data_entries.measure_def_id` |
+| constraint | FK `country_context.dl_def_id → managed_list_items` | FK `measure_def_id → measure_definitions(id)` | ✅ 2026-08-23 | metrics live as measure_definitions, not DL items |
+| (read model) | facts read country context from `data_entries` (subgroup 221) | `getResolvedContextRows` **bridge** reads `country_context` + carry-forward per report-period | ✅ 2026-08-23 | Option 2 — national annual store, expanded to utility×period at read time |
+
+### Spelling corrections
+| kind | current | new | status | why |
+|---|---|---|---|---|
+| member (1030) | "Ancilliary Services" | **Ancillary Services** | ✅ 2026-08-25 | misspelled user-facing vocab (utility_function member); referenced by id everywhere, 0 code/DAX string refs → one-row fix |
+
 ## Notes
 - **The 2026-07-23 relabels were display-only at first, then physicalised.** They initially changed display names only (columns left as `energy_type_id` etc. to keep it cheap). That was **superseded by the physicalisation block above (PR #68, 2026-07-27)** — the columns were then physically renamed (`energy_type_id → category_id`, …) so DB and terminology now match. Do **not** rely on the old `energy_*` column names. See `schema-redesign-medallion.md` §1.2a.
 - **The `submissions` / `submission_id` rename is design-approved but NOT built** — it lands with the period-rework implementation because it touches `data_entries` and the migration extract contract; coordinate #2 ↔ #8. See `kpi-time-series-spec.md` (Naming note).

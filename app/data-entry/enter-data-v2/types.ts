@@ -96,8 +96,10 @@ export interface MeasureEntryRowView {
   statusName: string | null;
   isDataNotAvailable: boolean;
   isMandatory: boolean;
+  isCurrency: boolean;
   validRangeMin: number | null;
   validRangeMax: number | null;
+  validPolarityId: number | null;
   validPolarityName: string | null;
   comments: string | null;
   updatedByName: string | null;

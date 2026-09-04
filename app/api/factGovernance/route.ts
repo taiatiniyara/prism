@@ -1,8 +1,8 @@
 import { db } from "@/db/connection";
 import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
-import { reportPeriods } from "@/db/schema/reportPeriods";
+import { reportPeriods, publishedPeriodCondition } from "@/db/schema/reportPeriods";
 import { managedListItems } from "@/db/schema/managedLists";
-import { eq, and, isNotNull } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
 import {
   formatReportPeriodIso,
@@ -21,7 +21,7 @@ export async function GET(req: Request) {
   const rps = await db
     .select()
     .from(reportPeriods)
-    .where(isNotNull(reportPeriods.status_id));
+    .where(publishedPeriodCondition);
   const allItems = await db
     .select()
     .from(managedListItems)
@@ -67,6 +67,7 @@ export async function GET(req: Request) {
       return {
         ReportType: reportType,
         ReportPeriod: formatReportPeriodIso(urp.report_date, reportType),
+        ReportPeriodId: urp.id,
         UtilityId: urp.utility_id,
         ...dlValues,
       };

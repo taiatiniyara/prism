@@ -3,6 +3,23 @@ name: "Deploy to VPS"
 on:
   push:
     branches: ["main"]
+    paths-ignore:
+      # Coordination docs / markdown never affect the running app — skip the VPS
+      # deploy for docs-only pushes (e.g. #15's PENDING.md / USER-IMPACT.md updates).
+      # A mixed code+docs push still deploys; the VPS picks up any skipped docs on
+      # the next code deploy's `git pull`.
+      - "docs/**"
+      - "**.md"
+
+# Serialize deploys: only ONE deploy runs at a time. Concurrent deploys SSH into the
+# SAME /root/prism on the VPS and race on `rm -rf node_modules` / `npm ci`, corrupting
+# node_modules + the npm cache (the ENOTEMPTY + ENOENT pipeline outages of 2026-09-02,
+# root-caused to concurrent merges/deploys). Extra pushes now QUEUE their deploy instead
+# of colliding. cancel-in-progress:false so a running deploy is never interrupted
+# mid-install (which would itself leave corrupted deps).
+concurrency:
+  group: deploy-to-vps
+  cancel-in-progress: false
 
 jobs:
   deploy:
@@ -15,10 +32,17 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
+            set -e
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
             cd /root/prism
             git checkout .
+            git clean -fd
             git pull
+            rm -rf node_modules   # force-clear any corrupted deps so npm ci can't fail on ENOTEMPTY (e.g. echarts/theme, 2026-09-02)
+            # Happy path uses the npm cache (fast). If npm ci fails (e.g. ENOENT chmod
+            # from a CORRUPT npm cache — sharp/semver, 2026-09-02), clear the cache and
+            # node_modules and retry a clean install. set -e still aborts if the retry fails.
+            npm ci || { echo "npm ci failed — clearing npm cache + node_modules, retrying clean"; npm cache clean --force; rm -rf node_modules; npm ci; }
             npm run build
             pm2 restart prism-v2 --update-env

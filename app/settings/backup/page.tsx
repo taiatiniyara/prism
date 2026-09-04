@@ -30,7 +30,11 @@ export default function BackupPage() {
     }
   }, []);
 
-  useEffect(() => { fetchData(); }, [fetchData]);
+  useEffect(() => {
+    void (async () => {
+      await fetchData();
+    })();
+  }, [fetchData]);
 
   if (loading) return <div className="p-6 text-slate-500">Loading backup status...</div>;
   if (error) return <div className="p-6 text-red-600">Error: {error}</div>;

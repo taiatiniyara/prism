@@ -32,6 +32,13 @@ interface ChatPanelProps {
 const MAX_CHARS = 4000;
 const RAF_MAX_BUFFER_CHARS = 12000;
 
+let messageSeq = 0;
+
+const nextMessageId = (prefix: string): string => {
+  messageSeq += 1;
+  return `${prefix}-${messageSeq}`;
+};
+
 export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelProps) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
@@ -53,7 +60,9 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
   const pendingContentRef = useRef("");
   const reasoningContentRef = useRef("");
 
-  messagesRef.current = messages;
+  useEffect(() => {
+    messagesRef.current = messages;
+  }, [messages]);
 
   const sessionList = useMemo(() => sessions, [sessions]);
 
@@ -70,7 +79,9 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
   }, []);
 
   useEffect(() => {
-    refreshSessions();
+    void (async () => {
+      await refreshSessions();
+    })();
   }, [refreshSessions]);
 
   const initialSessionLoaded = useRef(false);
@@ -204,7 +215,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
     if (isStreamingRef.current) return;
 
     const userMessage: ChatMessage = {
-      id: `user-${Date.now()}`,
+      id: nextMessageId("user"),
       role: "user",
       content: message,
     };
@@ -271,6 +282,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
       }
 
       let displayedLen = 0;
+      let streamError: string | null = null;
 
       const revealNext = () => {
         const target = pendingContentRef.current;
@@ -343,7 +355,14 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
               // ignore malformed tool events
             }
           } else if (line.startsWith("3:")) {
-            // stream error event - silently acknowledge
+            try {
+              const errEvent = JSON.parse(line.slice(2));
+              if (errEvent && typeof errEvent.error === "string" && errEvent.error) {
+                streamError = errEvent.error;
+              }
+            } catch {
+              // ignore malformed error events
+            }
           } else if (line.length > 0 && !line.startsWith("0:") && !line.startsWith("2:") && !line.startsWith("3:")) {
             const content = line + "\n";
             pendingContentRef.current += content;
@@ -363,8 +382,12 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
       setStreamingContent(fullContent);
       setStreamingReasoning("");
 
+      if (!fullContent && streamError) {
+        throw new Error(streamError);
+      }
+
       const assistantMessage: ChatMessage = {
-        id: `assistant-${Date.now()}`,
+        id: nextMessageId("assistant"),
         role: "assistant",
         content: fullContent,
         reasoningContent: fullReasoning || undefined,
@@ -387,7 +410,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
       if (error instanceof Error && error.name === "AbortError") {
         if (pendingContentRef.current) {
           const partialAssistant: ChatMessage = {
-            id: `assistant-${Date.now()}`,
+            id: nextMessageId("assistant"),
             role: "assistant",
             content: pendingContentRef.current + "\n\n*[Generation stopped]*",
           };
@@ -397,7 +420,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
       }
       const msg = error instanceof Error ? error.message : "Sorry, I encountered an error. Please try again.";
       const errorMessage: ChatMessage = {
-        id: `error-${Date.now()}`,
+        id: nextMessageId("error"),
         role: "assistant",
         content: msg,
         isError: true,

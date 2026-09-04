@@ -8,6 +8,7 @@ import {
   DataEntryStatusId,
 } from "@/db/schema/dataEntry";
 import { managedListItems, managedLists } from "@/db/schema/managedLists";
+import { reportPeriods } from "@/db/schema/reportPeriods";
 import { getCurrentUser } from "@/lib/user.service";
 
 interface WriteTargetValueInput {
@@ -62,15 +63,29 @@ export const writeCalculatedTargetValue = async ({
 
     const dims = await getAllMemberIdsMap();
 
+    // The report period is utility-specific, so the computed row belongs to the
+    // period's utility — keep it in the same partition as its input rows.
+    const [period] = await tx
+      .select({ utilityId: reportPeriods.utility_id })
+      .from(reportPeriods)
+      .where(eq(reportPeriods.id, scope.reportPeriodId))
+      .limit(1);
+
     const writeValues = {
       report_period_id: scope.reportPeriodId,
       measure_def_id: inputDefId,
+      utility_id: period?.utilityId ?? null,
       service_area_id: scope.serviceAreaId ?? null,
       unit_id: scope.unitId ?? null,
       // Calculated targets are numeric → write the typed column (§4.8); legacy
       // `value` kept transitionally so un-migrated readers don't regress.
       value_numeric: value,
       value,
+      // A computed value means the data IS available — clear any prior
+      // no_data_reason, else a row previously flagged 'not_available' would hold
+      // BOTH a value and a reason and violate chk_value_xor_nodata (the write
+      // then throws and the whole period's compute errors).
+      no_data_reason: null,
       status_id: DataEntryStatusId.Entered,
       is_deleted: false,
       updated_at: now.toISOString(),

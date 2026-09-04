@@ -1,10 +1,12 @@
 import {
   boolean,
+  check,
   index,
   integer,
   jsonb,
   pgTable,
   serial,
+  smallint,
   text,
   timestamp,
   varchar,
@@ -24,15 +26,17 @@ export const organisations = pgTable(
       .notNull()
       .references(() => countries.id),
     is_utility: boolean("is_utility").notNull().default(false),
-    powequality_standard_id: integer("powerquality_standard_id").references(
-      () => managedListItems.id,
-    ),
-    electricity_regulation_id: integer("electricity_regulation_id").references(
-      () => managedListItems.id,
-    ),
-    accounting_standard_id: integer("accounting_standard_id").references(
-      () => managedListItems.id,
-    ),
+    // Whether this utility participates in PPA benchmarking. Orthogonal to
+    // is_utility (an operating utility may still be excluded from benchmarking).
+    // Drives which utilities' report periods the KPI recompute processes/shows —
+    // non-participating utilities are skipped, not surfaced as failed. Default
+    // false; set true per the PPA's participating-utility list. (Eugene, 2026-09-02.)
+    bm_participates: boolean("bm_participates").notNull().default(false),
+    // NOTE: accounting_standard_id / electricity_regulation_id / powerquality_standard_id
+    // were retired 2026-09-02 (Stage 2, utility-context consolidation). These are
+    // utility-REPORTED context answers (measures 51/53/52, subgroup 222) that live in
+    // data_entries via the ratified workflow — not org columns. entity_type_id STAYS
+    // (it's the registration/tenancy axis, not a per-FY reported answer).
     entity_type_id: integer("entity_type_id").references(
       () => managedListItems.id,
     ),
@@ -54,7 +58,11 @@ export const organisations = pgTable(
     services_provided_id: integer("services_provided_id").references(
       () => managedListItems.id,
     ),
-    financial_year_end: varchar("financial_year_end", { length: 255 }),
+    // Canonical per-utility financial-year-end declaration, set at onboarding. NULL → the
+    // fiscal-year helper falls back to report_date. (Replaced the retired financial_year_end
+    // text field — #2 FYE cleanup, Eugene-approved 2026-08-30.)
+    fye_month: smallint("fye_month"),
+    fye_day: smallint("fye_day"),
     is_mth_reports_relevant_month: boolean("is_mth_report_relevant")
       .notNull()
       .default(false),
@@ -63,6 +71,14 @@ export const organisations = pgTable(
   },
   (table) => [
     index("organisation_idx").on(table.country_id, table.id, table.name),
+    check(
+      "chk_org_fye_month",
+      sql`${table.fye_month} IS NULL OR ${table.fye_month} BETWEEN 1 AND 12`,
+    ),
+    check(
+      "chk_org_fye_day",
+      sql`${table.fye_day} IS NULL OR ${table.fye_day} BETWEEN 1 AND 31`,
+    ),
   ],
 );
 export type Organisation = typeof organisations.$inferSelect & {

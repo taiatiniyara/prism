@@ -1,14 +1,14 @@
 import { db } from "@/db/connection";
 import { aiChatSession, aiChatTurn, aiToolCall } from "@/db/schema/ai";
 import { getPromptVersion } from "@/lib/ai";
-import { validateInput, filterOutput } from "@/lib/ai/guardrails";
+import { validateInput } from "@/lib/ai/guardrails";
 import { recordError, recordToolCall, checkRateLimit, checkCostBudget, recordLatency } from "@/lib/ai/rate-limit";
 import type { AiChatMessage } from "@/lib/ai/types";
 import { getCurrentUser } from "@/lib/user.service";
 import { eq, sql, and } from "drizzle-orm";
 import { getSystemPrompt } from "@/lib/ai/prompt";
 import { checkUserUtility } from "@/lib/ai/data-service/utils";
-import { runAiStream, runAiGenerate, getCircuitState } from "@/lib/ai/service";
+import { runAiGenerate, getCircuitState } from "@/lib/ai/service";
 import { isValidOrigin } from "@/lib/ai/origin";
 import { logger } from "@/lib/logging/logger";
 
@@ -323,7 +323,7 @@ export async function POST(request: Request) {
         }`
       : "";
 
-    const systemPrompt = getSystemPrompt() +
+    const systemPrompt = (await getSystemPrompt()) +
       roleContext +
       contextBlock +
       (!utilityCheck.valid
@@ -333,157 +333,113 @@ export async function POST(request: Request) {
         ? `\n\nNOTE: This conversation has ${conversationTurns} turns. Before answering, briefly summarise the key context from earlier turns in 1-2 sentences, then answer the latest question concisely.`
         : "");
 
-    const { stream, fullStream, model, wasFallback, promptVersion } = await runAiStream({
+    const { reply, model, wasFallback, promptVersion, tokenUsage, steps } = await runAiGenerate({
       messages: cleanMessages,
       user,
       systemPromptOverride: systemPrompt,
-      onFinish: async ({ text, usage, toolCalls: toolCallsFromStream, model: usedModel, wasFallback: fallbackFlag }) => {
-        const turnLatencyMs = Date.now() - startedAt;
-        recordLatency("chat", turnLatencyMs);
+    });
 
-        try {
-          const { filtered } = filterOutput(text);
-          const finalText = filtered.trim() || "I received your question but was unable to generate a response. This may be due to model output limits. Could you try rephrasing or asking a more specific question?";
+    const turnLatencyMs = Date.now() - startedAt;
+    recordLatency("chat", turnLatencyMs);
 
-          const [existingTurn] = await db
-            .select({ assistant_response: aiChatTurn.assistant_response })
-            .from(aiChatTurn)
-            .where(eq(aiChatTurn.id, turnId))
-            .limit(1);
+    try {
+      const finalText = reply.trim() || "I received your question but was unable to generate a response. This may be due to model output limits. Could you try rephrasing or asking a more specific question?";
 
-          if (existingTurn?.assistant_response) {
-            return;
-          }
+      const [existingTurn] = await db
+        .select({ assistant_response: aiChatTurn.assistant_response })
+        .from(aiChatTurn)
+        .where(eq(aiChatTurn.id, turnId))
+        .limit(1);
 
-          await db
-            .update(aiChatTurn)
-            .set({
-              assistant_response: finalText,
-              model_used: usedModel,
-              model_was_fallback: fallbackFlag,
-              token_count_input: usage.inputTokens,
-              token_count_output: usage.outputTokens,
-              latency_ms: turnLatencyMs,
-            })
-            .where(eq(aiChatTurn.id, turnId));
+      if (!existingTurn?.assistant_response) {
+        await db
+          .update(aiChatTurn)
+          .set({
+            assistant_response: finalText,
+            model_used: model,
+            model_was_fallback: wasFallback,
+            token_count_input: tokenUsage.input,
+            token_count_output: tokenUsage.output,
+            latency_ms: turnLatencyMs,
+          })
+          .where(eq(aiChatTurn.id, turnId));
 
-          if (toolCallsFromStream && toolCallsFromStream.length > 0) {
-            for (const toolCall of toolCallsFromStream) {
+        const seenTools = new Set<string>();
+        for (const step of steps) {
+          for (const tc of step.toolCalls) {
+            if (seenTools.has(tc.toolName)) continue;
+            seenTools.add(tc.toolName);
+            try {
               await db.insert(aiToolCall).values({
                 turn_id: turnId,
-                tool_name: toolCall.toolName,
-                tool_args: toolCall.input as Record<string, unknown>,
+                tool_name: tc.toolName,
+                tool_args: (tc as unknown as { input?: Record<string, unknown> }).input ?? {},
                 status: "success",
               });
-              try {
-                await recordToolCall(user.id);
-              } catch {
-                // Non-critical
-              }
+            } catch {
+              // Non-critical
+            }
+            try {
+              await recordToolCall(user.id);
+            } catch {
+              // Non-critical
             }
           }
-
-          // Best-effort summarization
-          if (shouldSummarize) {
-            summarizeConversation(sessionId, user.id).catch(() => {});
-          }
-        } catch (err) {
-          logger.error("[ai-chat] Failed to persist turn response", { error: err instanceof Error ? err.message : String(err), turnId, sessionId });
         }
-      },
-    });
+      }
+
+      // Best-effort summarization
+      if (shouldSummarize) {
+        summarizeConversation(sessionId, user.id).catch(() => {});
+      }
+    } catch (err) {
+      logger.error("[ai-chat] Failed to persist turn response", { error: err instanceof Error ? err.message : String(err), turnId, sessionId });
+    }
 
     const encoder = new TextEncoder();
 
-    let fullStreamReader: ReadableStreamDefaultReader<unknown> | null = null;
-    try {
-      fullStreamReader = fullStream.getReader();
-    } catch {
-      // fullStream not available, fall back to text-only
-    }
-
     const combined = new ReadableStream({
       async start(controller) {
-        const textReader = stream.getReader();
-
-        let textDone = false;
-        let toolDone = !fullStreamReader;
-
-        const readText = async () => {
+        const streamError = (message: string) => {
           try {
-            while (true) {
-              const { done, value } = await textReader.read();
-              if (done) break;
-
-              const text = typeof value === "string" ? value : new TextDecoder().decode(value);
-              if (text.length > 0) {
-                controller.enqueue(encoder.encode(`0:${JSON.stringify(text)}\n`));
-              }
-            }
+            controller.enqueue(encoder.encode(`3:${JSON.stringify({ error: message })}\n`));
           } catch {
-            controller.enqueue(encoder.encode(`3:${JSON.stringify({ error: "text_stream_error" })}\n`));
-          }
-          textDone = true;
-          if (toolDone) {
-            try { controller.close(); } catch { /* already closed */ }
+            // ignore
           }
         };
 
-        const readTools = async () => {
-          if (!fullStreamReader) return;
-          try {
-            while (true) {
-              const { done, value } = await fullStreamReader.read();
-              if (done) break;
-
-              if (value && typeof value === "object") {
-                const event = value as Record<string, unknown>;
-                if (event.type === "tool-call" && event.toolName) {
-                  const startTime = Date.now();
-                  controller.enqueue(encoder.encode(`2:${JSON.stringify({
-                    type: "tool-start",
-                    toolName: event.toolName,
-                    timestamp: startTime,
-                  })}\n`));
-                  controller.enqueue(encoder.encode(`1:${JSON.stringify({
-                    type: "reasoning-delta",
-                    text: `\n🔍 ${event.toolName}...`,
-                  })}\n`));
-                } else if (event.type === "tool-result" && event.toolName) {
-                  const endTime = Date.now();
-                  const resultSummary = typeof event.result === "string"
-                    ? event.result.slice(0, 200)
-                    : JSON.stringify(event.result).slice(0, 200);
-                  controller.enqueue(encoder.encode(`2:${JSON.stringify({
-                    type: "tool-end",
-                    toolName: event.toolName,
-                    timestamp: endTime,
-                    resultSummary,
-                  })}\n`));
-                  controller.enqueue(encoder.encode(`1:${JSON.stringify({
-                    type: "reasoning-delta",
-                    text: `\n✅ ${event.toolName} done\n`,
-                  })}\n`));
-                } else if (event.type === "reasoning-start") {
-                  controller.enqueue(encoder.encode(`1:${JSON.stringify({ type: "reasoning-start", id: event.id })}\n`));
-                } else if (event.type === "reasoning-delta" && typeof event.text === "string") {
-                  controller.enqueue(encoder.encode(`1:${JSON.stringify({ type: "reasoning-delta", text: event.text })}\n`));
-                } else if (event.type === "reasoning-end") {
-                  controller.enqueue(encoder.encode(`1:${JSON.stringify({ type: "reasoning-end", id: event.id })}\n`));
-                }
-              }
+        // Emit tool-progress + reasoning events derived from the completed generateText steps.
+        try {
+          for (const step of steps) {
+            const doneNames = new Set(step.toolResults.map((r) => r.toolName));
+            for (const tc of step.toolCalls) {
+              const startTime = Date.now();
+              controller.enqueue(encoder.encode(`2:${JSON.stringify({ type: "tool-start", toolName: tc.toolName, timestamp: startTime })}\n`));
+              controller.enqueue(encoder.encode(`1:${JSON.stringify({ type: "reasoning-delta", text: `\n🔍 ${tc.toolName}...` })}\n`));
+              // Always emit a tool-end so the UI never leaves a tool stuck at "running"
+              // (some calls time out or error before producing a tool-result).
+              controller.enqueue(encoder.encode(`2:${JSON.stringify({ type: "tool-end", toolName: tc.toolName, timestamp: Date.now(), resultSummary: "" })}\n`));
+              controller.enqueue(encoder.encode(`1:${JSON.stringify({ type: "reasoning-delta", text: doneNames.has(tc.toolName) ? `\n✅ ${tc.toolName} done\n` : `\n⚠️ ${tc.toolName} returned no data\n` })}\n`));
             }
-          } catch {
-            controller.enqueue(encoder.encode(`3:${JSON.stringify({ error: "tool_stream_error" })}\n`));
           }
-          toolDone = true;
-          if (textDone) {
-            try { controller.close(); } catch { /* already closed */ }
-          }
-        };
+        } catch (err) {
+          streamError(err instanceof Error ? err.message : "tool_stream_error");
+        }
 
-        readText();
-        readTools();
+        // Stream the final answer.
+        try {
+          if (reply.length > 0) {
+            controller.enqueue(encoder.encode(`0:${JSON.stringify(reply)}\n`));
+          }
+        } catch {
+          // already closed
+        }
+
+        try {
+          controller.close();
+        } catch {
+          // already closed
+        }
       },
     });
 

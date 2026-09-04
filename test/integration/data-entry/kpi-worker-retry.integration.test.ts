@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { executeWithRetry } from "@/app/data-entry/kpi-worker/retry";
+import { executeWithRetry } from "@/lib/retry";
 
 describe("kpi worker transient retry policy", () => {
   it("retries transient failures up to three times and then succeeds", async () => {

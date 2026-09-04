@@ -305,7 +305,7 @@ const getMeasureDefinitionsForContext = async (
   const conditions = [
     and(
       eq(measureDefinitions.is_active, true),
-      eq(measureDefinitions.is_aggregated, false),
+      eq(measureDefinitions.is_calculated, false),
       eq(measureDefinitions.is_system_generated, false),
     ),
   ];
@@ -949,7 +949,7 @@ const getOverallProgressForContext = async (
     .where(
       and(
         eq(measureDefinitions.is_active, true),
-        eq(measureDefinitions.is_aggregated, false),
+        eq(measureDefinitions.is_calculated, false),
         eq(measureDefinitions.is_system_generated, false),
         sql`lower(${managedListItems.name}) <> 'country context'`,
       ),
@@ -1241,7 +1241,7 @@ export const getInputSubcategoryOptions = async (
     eq(dataEntries.is_deleted, false),
     eq(reportPeriods.utility_id, user.org_id),
     eq(measureDefinitions.is_active, true),
-    eq(measureDefinitions.is_aggregated, false),
+    eq(measureDefinitions.is_calculated, false),
     eq(measureDefinitions.is_system_generated, false),
   ];
 
@@ -1258,7 +1258,7 @@ export const getInputSubcategoryOptions = async (
     .where(
       and(
         eq(measureDefinitions.is_active, true),
-        eq(measureDefinitions.is_aggregated, false),
+        eq(measureDefinitions.is_calculated, false),
         eq(measureDefinitions.is_system_generated, false),
         inArray(
           measureDefinitions.measures_subgroup_id,

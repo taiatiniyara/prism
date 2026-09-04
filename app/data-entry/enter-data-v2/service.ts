@@ -18,6 +18,11 @@ import { organisations } from "@/db/schema/utility";
 import { resolveValueColumn } from "@/lib/data-entry/value-router";
 import { upsertHoursInPeriod } from "@/lib/period-hours";
 import {
+  getDataTypeValidationMessage,
+  getRangeOrPolarityValidationMessage,
+  isValueValidForDataType,
+} from "@/app/data-entry/enter-data/services/dataEntryValidation.service";
+import {
   MeasureEntryFilterContext,
   MeasureEntryPageViewModel,
   MeasureEntryRowView,
@@ -233,8 +238,10 @@ export async function getMeasureEntryFilterViewModel(): Promise<MeasureEntryPage
       unitId: dataEntries.unit_id,
       statusId: dataEntries.status_id,
       isMandatory: measureDefinitions.is_mandatory,
+      isCurrency: measureDefinitions.is_currency,
       validRangeMin: measureDefinitions.valid_range_min,
       validRangeMax: measureDefinitions.valid_range_max,
+      validPolarityId: measureDefinitions.valid_polarity_id,
       comments: dataEntries.comments,
       updatedAt: dataEntries.updatedAt,
     })
@@ -350,8 +357,10 @@ export async function getMeasureEntryFilterViewModel(): Promise<MeasureEntryPage
       statusName: null,
       isDataNotAvailable: r.statusId === DataEntryStatusId.Not_Available,
       isMandatory: r.isMandatory,
+      isCurrency: r.isCurrency ?? false,
       validRangeMin: r.validRangeMin != null ? Number(r.validRangeMin) : null,
       validRangeMax: r.validRangeMax != null ? Number(r.validRangeMax) : null,
+      validPolarityId: r.validPolarityId ?? null,
       validPolarityName: null,
       comments: r.comments ? JSON.stringify(r.comments) : null,
       updatedByName: null,
@@ -455,6 +464,52 @@ export async function updateMeasureEntryValueAction(
 ) {
   "use server";
   const user = await getCurrentUser();
+
+  // Authoritative server-side validation (the client can be bypassed).
+  const rawValue =
+    payload.valueNumeric !== undefined
+      ? String(payload.valueNumeric)
+      : payload.valueString !== undefined
+        ? (payload.valueString ?? "")
+        : null;
+  if (rawValue != null && rawValue.trim().length > 0) {
+    const [md] = await db
+      .select({
+        measureName: measureDefinitions.name,
+        isMandatory: measureDefinitions.is_mandatory,
+        isCurrency: measureDefinitions.is_currency,
+        validRangeMin: measureDefinitions.valid_range_min,
+        validRangeMax: measureDefinitions.valid_range_max,
+        validPolarityId: measureDefinitions.valid_polarity_id,
+        dataTypeName: sql<string | null>`ml.name`,
+      })
+      .from(measureDefinitions)
+      .leftJoin(
+        sql`managed_list_items ml`,
+        sql`${measureDefinitions.data_type_id} = ml.id`,
+      )
+      .where(eq(measureDefinitions.id, payload.measureId))
+      .limit(1);
+    if (md) {
+      const metadata = {
+        inputName: md.measureName,
+        isMandatory: md.isMandatory,
+        dataTypeName: md.dataTypeName ?? null,
+        isCurrency: md.isCurrency ?? false,
+        validRangeMin:
+          md.validRangeMin == null ? null : Number(md.validRangeMin),
+        validRangeMax:
+          md.validRangeMax == null ? null : Number(md.validRangeMax),
+        validPolarityId: md.validPolarityId ?? null,
+        validPolarityName: null,
+      };
+      if (!isValueValidForDataType(metadata.dataTypeName, rawValue)) {
+        throw new Error(getDataTypeValidationMessage(metadata));
+      }
+      const rangeError = getRangeOrPolarityValidationMessage(metadata, rawValue);
+      if (rangeError) throw new Error(rangeError);
+    }
+  }
 
   const existing = payload.dataEntryId
     ? await db

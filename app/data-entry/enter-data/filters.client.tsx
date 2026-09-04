@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 
 import {
@@ -71,10 +71,12 @@ export default function DataEntryFiltersClient({
   }, [context, urlContext]);
 
   const [localContext, setLocalContext] = useState(mergedContext);
+  const [prevMergedContext, setPrevMergedContext] = useState(mergedContext);
 
-  useEffect(() => {
+  if (prevMergedContext !== mergedContext) {
+    setPrevMergedContext(mergedContext);
     setLocalContext(mergedContext);
-  }, [mergedContext]);
+  }
 
   const handleChange = (
     key: DataEntryFilterCookieKey,

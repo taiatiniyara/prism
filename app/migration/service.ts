@@ -903,8 +903,12 @@ export async function retrieveCountryContextData(options?: {
           const n = Number(rawValue);
           valueField.value_numeric = Number.isFinite(n) ? n : null;
         } else if (valueColumn === "value_boolean") {
+          const normalized = String(rawValue).trim().toLowerCase();
           valueField.value_boolean =
-            rawValue === "true" || rawValue === "1" || rawValue === "yes";
+            normalized === "true" ||
+            normalized === "1" ||
+            normalized === "yes" ||
+            normalized === "y";
         } else if (valueColumn === "value_option_id") {
           valueField.value_option_id =
             itemIdByName.get(String(rawValue).trim().toLowerCase()) ?? null;
@@ -1178,21 +1182,8 @@ export async function retrieveUtilityData() {
     .filter((org) => countryIds.has(org.country_id))
     .map((org) => ({
       ...org,
-      powequality_standard_id: managedListItemIds.has(
-        org.powequality_standard_id ?? -1,
-      )
-        ? org.powequality_standard_id
-        : null,
-      electricity_regulation_id: managedListItemIds.has(
-        org.electricity_regulation_id ?? -1,
-      )
-        ? org.electricity_regulation_id
-        : null,
-      accounting_standard_id: managedListItemIds.has(
-        org.accounting_standard_id ?? -1,
-      )
-        ? org.accounting_standard_id
-        : null,
+      // accounting/electricity/powerquality standard ids retired 2026-09-02 (Stage 2) —
+      // these context answers live in data_entries (measures 51/53/52), not org columns.
       entity_type_id: managedListItemIds.has(org.entity_type_id ?? -1)
         ? org.entity_type_id
         : null,
