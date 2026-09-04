@@ -30,7 +30,7 @@ jobs:
           DATABASE_URL: ${{ secrets.DATABASE_URL_READONLY }}
         run: |
           set +e
-          npm run drift-check
+          npm run drift-check -- --github   # emits ::error:: per drift + ::warning:: for skip/DB-only cols, inline on the PR
           code=$?
           if [ "$code" -eq 1 ]; then
             echo "::error::Schema drift between the Drizzle model and live p2 — reconcile before merging (owner: #2 migration). Run 'npm run drift-check' locally for the diff."
