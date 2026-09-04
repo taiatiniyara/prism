@@ -1,8 +1,15 @@
 name: "Schema drift check"
 
 # Guards against the model<->DB drift that let a `db-push --force` recreate a
-# drifted table and wipe data_entries (2026-09-04). Runs on every PR: introspects
-# LIVE p2's information_schema (READ-ONLY) and diffs it against the Drizzle model.
+# drifted table and wipe data_entries (2026-09-04). Introspects LIVE p2's
+# information_schema (READ-ONLY) and diffs it against the Drizzle model.
+#
+# Runs in TWO places (docs/schema-drift-and-agent-safety.md §2):
+#   - on every PR to main  -> drift blocks the merge (exit 1 fails the check)
+#   - daily on a schedule  -> catches drift from raw SQL applied OUT-OF-BAND
+#     (no PR touches it, so the PR run never sees it). A red scheduled run is
+#     the signal to reconcile before it accumulates. #2 (migration) is owner.
+#   - workflow_dispatch    -> run it by hand anytime.
 #
 # Needs a READ-ONLY DB connection string in the repo secret DATABASE_URL_READONLY
 # (least privilege — the check only SELECTs from information_schema). Until that
@@ -10,11 +17,15 @@ name: "Schema drift check"
 #
 # Exit codes (from scripts/schema-drift-check.ts):
 #   0 = in sync            -> pass
-#   1 = real drift         -> FAIL the PR (reconcile first; owner: #2 migration)
+#   1 = real drift         -> FAIL (reconcile first; owner: #2 migration)
 #   2 = couldn't run       -> WARN only, never block (no creds / p2 unreachable)
 on:
   pull_request:
     branches: ["main"]
+  schedule:
+    # 06:15 UTC daily — off-peak, and before the NZ working day starts.
+    - cron: "15 6 * * *"
+  workflow_dispatch:
 
 jobs:
   drift-check:
@@ -33,10 +44,10 @@ jobs:
           npm run drift-check -- --github   # emits ::error:: per drift + ::warning:: for skip/DB-only cols, inline on the PR
           code=$?
           if [ "$code" -eq 1 ]; then
-            echo "::error::Schema drift between the Drizzle model and live p2 — reconcile before merging (owner: #2 migration). Run 'npm run drift-check' locally for the diff."
+            echo "::error::Schema drift between the Drizzle model and live p2 — reconcile (owner: #2 migration). Run 'npm run drift-check' locally for the diff."
             exit 1
           elif [ "$code" -eq 2 ]; then
-            echo "::warning::drift-check could not run (no DB creds or p2 unreachable) — NOT blocking this PR."
+            echo "::warning::drift-check could not run (no DB creds or p2 unreachable) — NOT blocking."
             exit 0
           else
             echo "Schema in sync with live p2."
