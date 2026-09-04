@@ -267,6 +267,42 @@ Clarification messages link to the `access_request`; on approval it provisions `
 
 ---
 
+## 5.5 User journeys (end-to-end)
+
+How §0–§5 play out per user type. The two genuinely new flows are the **utility per-period opt-in** and the **structured registration**.
+
+### 5.5.1 Registration (all new users)
+1. Wizard: About you → **organisation** (live dedup §5.2 — pick an existing org, or propose a new one with a UN-M49 country pick, §5.4) → **structured purpose quiz** (§5.4) → suggested plan → submit → creates an **`access_request`**.
+2. Routing (§5.1/§5.3): joining an existing org → **org-admin** approves (BMO cc'd); net-new org / individual → **BMO** vets.
+3. On approval → provisions `user` + `seat` → magic-link login. Org-admins then **self-serve** adding colleagues within their own org.
+- Replaces the retired free-text `external_registrations` intake.
+
+### 5.5.2 Utility — the biggest change (2-tier + per-period opt-in)
+Eligibility = `is_utility`; participation = per-period (`report_periods.bm_opted_in`); `bm_participates` is **derived** (exists-an-opted-in-period), never stored (§2 / Eugene option B).
+1. **Log in → Tier 1** (gated on `is_utility`): Dashboards + Profile + **the opt-in prompt**. *No auto-shells, no data-entry app yet.*
+2. Each period a submission falls due → **reminder email to the org's `is_primary_contact`** (§8).
+3. They **explicitly opt in for that period** (`bm_opted_in = true`).
+4. **Review reference data** (service areas, generators, IPPs, tariffs — #8's step) → shells generate.
+5. **Tier 2 unlocks** (now a participant): full **Data Entry + BSC** → enter the period's data.
+- The **opt-in tick is the Tier-1 → Tier-2 transition**. A utility that never opts in simply stays at Tier 1 — there is **no "permanently view-only utility"** (that state isn't stored).
+
+### 5.5.3 Consumer / subscriber (non-member, paying) — teaser → convert
+1. Register → land on the free **Public** plan: **Teaser Samples + PDF reports** only.
+2. Subscribe to Basic / Premium / Per-Project → **PPA Finance** charges the card in the bank virtual terminal (§6; PRISM never sees the PAN) → subscription active → the paid Power BI reference unlocks.
+
+### 5.5.4 Member (Affiliate / Allied) — free via membership
+- Register → **BMO sets `ppa_membership_type`** (§2 / the org form) → free **Premium-level** access (the Premium PBI reference), **no payment**. Members don't buy a plan.
+
+### 5.5.5 What every login resolves
+The app resolves the org's columns → (a) the **WebApp tier/menu** and (b) which of the **4 Power BI plan references** (Public / Utility / Premium / Basic) goes into the embed token (§3.2; PBI enforces the actual dashboards + export rights):
+- `is_utility` → utility Tier 1 / Tier 2.
+- `ppa_membership_type` → member (Premium ref) vs consumer (Public / paid).
+- derived `bm_participates` → participant *status* (Tier-2 unlock + benchmarking data), not an access gate.
+
+> **Cross-refs / still folding in (same consolidated pass):** the per-period `bm_opted_in` flag + backfill (#3's `per-period-participation-spec.md`), the 4 PBI references / entitlement-templates + the `download_inputs` right, and the WebApp-visibility matrix detail (§8 open calls). This section is the end-to-end synthesis those hang off.
+
+---
+
 ## 6. Payment (manual now, gateway later)
 
 ### 6.1 Mode switch (DEV)
