@@ -15,7 +15,7 @@
     "test:integration": "vitest run test/integration",
     "test:watch": "vitest",
     "db-push": "drizzle-kit push --config ./db/config.ts --force",
-    "db-push-safe": "npm run db-push",
+    "db-push-safe": "npx tsx scripts/db-push-safe.ts",
     "drift-check": "npx tsx scripts/schema-drift-check.ts",
     "db-seed": "npx tsx scripts/seed.ts",
     "db-seed-bsc": "npx tsx scripts/seed-bsc-template.ts",

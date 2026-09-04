@@ -110,3 +110,11 @@ Safety net: the `pre-commit` hook prints an **advisory** (never blocks) when you
 **ENFORCED (the means):** the deploy workflow now carries `concurrency: { group: deploy-to-vps, cancel-in-progress: false }`, so **deploys run strictly one at a time** — a merge landing while a deploy is running QUEUES its deploy instead of colliding, and a running deploy is never interrupted mid-install. GitHub serializes this; no coordination lapse can defeat it.
 
 **Still the practice:** **sequence merges to `main`, one at a time — don't fire several concurrently.** When multiple PRs are ready together, land them one-by-one (ideally let each deploy go green before the next). #1 (coordination) sequences merges when several streams are ready at once. The concurrency gate makes concurrent merges *safe*; a one-at-a-time cadence keeps deploys fast and history clean. (Set by Eugene 2026-09-03; root-caused by his engineer.)
+
+## Never `db-push --force` on p2 without a fresh backup
+
+On 2026-09-04 `data_entries` was wiped to 0 rows: model↔DB schema drift accumulated across the two hand-synced tracks (Drizzle `db/schema/` + raw `scripts/sql/`), and resolving it with `drizzle-kit push --force` **recreated the drifted table and dropped every row**. Rules:
+
+1. **Never run `drizzle-kit push --force` (or the raw `npm run db-push`) against p2 without a FRESH backup** of the entered-data tables first. Use **`npm run db-push-safe`** — it now snapshots `data_entries` + `data_entry_logs` into `backup.<table>_prepush_<ts>` **before** pushing, so a destructive push is always recoverable. (Reference/config tables aren't backed up there — they're reseedable via `npm run db-seed`.)
+2. **Drizzle is the source of truth.** Prefer generated migrations (`drizzle-kit generate`) over divergent hand-SQL — the two hand-synced tracks are what drifted in the first place.
+3. **Drift is caught automatically:** `drift-check` runs on every PR (fails the PR on real drift) plus a scheduled live-p2 watch (#2, accountable for reconciliation). Reconcile flagged drift **before** any push. (Set by Eugene 2026-09-04.)
