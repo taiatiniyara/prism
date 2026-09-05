@@ -349,7 +349,7 @@ export default function PendingUserDecisionPanel() {
                         <button
                           type="button"
                           onClick={() => void decide(item.id, "activate")}
-                          className="rounded-md bg-lime-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-lime-700"
+                          className="rounded-md bg-success px-3 py-1.5 text-xs font-semibold text-white hover:bg-lime-700"
                         >
                           Activate
                         </button>

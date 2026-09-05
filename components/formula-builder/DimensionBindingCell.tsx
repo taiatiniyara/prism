@@ -17,9 +17,9 @@ export const TAG_STATE_CLASSES: Record<
   { chip: string; dot: string; text: string }
 > = {
   pin: {
-    chip: "border-emerald-300/70 bg-emerald-50 dark:border-emerald-800/60 dark:bg-emerald-950/40",
-    dot: "bg-emerald-600 dark:bg-emerald-400",
-    text: "text-emerald-700 dark:text-emerald-300",
+    chip: "border-success/40/70 bg-success/10 dark:border-emerald-800/60 dark:bg-emerald-950/40",
+    dot: "bg-success dark:bg-success",
+    text: "text-success dark:text-success",
   },
   all: {
     chip: "border-amber-300/70 bg-amber-50 dark:border-amber-700/60 dark:bg-amber-950/40",

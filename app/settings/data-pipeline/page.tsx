@@ -43,7 +43,7 @@ export default function DataPipelinePage() {
 
       <div className="flex gap-4 text-sm">
         <div className="px-3 py-1.5 rounded bg-slate-100">Total: {String(data.totalEntries)}</div>
-        <div className="px-3 py-1.5 rounded bg-green-100 text-green-800">{String(data.completedPct)}% complete</div>
+        <div className="px-3 py-1.5 rounded bg-success/10 text-success">{String(data.completedPct)}% complete</div>
         <div className="px-3 py-1.5 rounded bg-yellow-100 text-yellow-800">{String(data.stuckCount)} stuck (&gt;{String(data.stuckThresholdDays)}d)</div>
       </div>
 

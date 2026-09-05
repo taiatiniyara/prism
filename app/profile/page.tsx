@@ -80,7 +80,7 @@ export default async function ProfilePage({ searchParams }: PageProps) {
           <p className="font-medium flex items-center gap-2">
             {currentUser.email}
             {currentUser.emailVerified ? (
-              <span className="bg-green-100 text-green-700 text-xs font-medium px-2 py-0.5 rounded">
+              <span className="bg-success/10 text-success text-xs font-medium px-2 py-0.5 rounded">
                 Verified
               </span>
             ) : (

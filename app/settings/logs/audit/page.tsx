@@ -67,7 +67,7 @@ export default function AuditLogsPage() {
     let color = "bg-slate-100 text-slate-700";
     if (action.startsWith("auth.")) color = "bg-purple-100 text-purple-800";
     else if (action.startsWith("user.")) color = "bg-blue-100 text-blue-800";
-    else if (action.startsWith("data_entry.")) color = "bg-green-100 text-green-800";
+    else if (action.startsWith("data_entry.")) color = "bg-success/10 text-success";
     else if (action.startsWith("settings.")) color = "bg-orange-100 text-orange-800";
     else if (action.startsWith("migration.")) color = "bg-cyan-100 text-cyan-800";
     return `inline-block px-2 py-0.5 rounded text-xs font-medium ${color}`;

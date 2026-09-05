@@ -472,7 +472,7 @@ export default function InputCell({ row }: InputCellProps) {
         ) : null}
       </div>
       {lastSavedValue && !saveError && !isSaving ? (
-        <p className="text-[10px] text-lime-600">
+        <p className="text-[10px] text-success">
           Saved: {lastSavedValue}
           <button
             type="button"

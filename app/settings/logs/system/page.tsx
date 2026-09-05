@@ -74,7 +74,7 @@ export default function SystemLogsPage() {
       {loading && entries.length === 0 ? (
         <div className="text-slate-500">Loading...</div>
       ) : (
-        <div className="bg-slate-900 text-green-400 font-mono text-xs rounded p-3 max-h-[70vh] overflow-auto">
+        <div className="bg-slate-900 text-success font-mono text-xs rounded p-3 max-h-[70vh] overflow-auto">
           {entries.map((e, i) => (
             <div key={i} className="whitespace-pre-wrap break-all leading-relaxed">
               <span className="text-slate-500">[{e.timestamp.slice(11, 19)}]</span>{" "}

@@ -148,7 +148,7 @@ export default function GeneratorGroups({
                       ? "bg-slate-100 text-slate-600"
                       : isPendingBadge
                         ? "bg-amber-100 text-amber-800"
-                        : "bg-lime-100 text-lime-700"
+                        : "bg-success/10 text-success"
                   }`}
                 >
                   {badgeLabel}

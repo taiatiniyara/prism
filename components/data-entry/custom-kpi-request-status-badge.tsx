@@ -8,7 +8,7 @@ export type CustomKpiRequestStatus =
 
 const classes: Record<CustomKpiRequestStatus, string> = {
   PENDING_REVIEW: "bg-amber-100 text-amber-800",
-  APPROVED: "bg-lime-100 text-lime-800",
+  APPROVED: "bg-success/10 text-success",
   REJECTED: "bg-danger/10 text-danger",
   REPLACED: "bg-sky-100 text-sky-800",
 };

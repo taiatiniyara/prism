@@ -30,7 +30,7 @@ export function ResendVerificationButton() {
       {message && (
         <p
           className={`text-sm ${
-            message.ok ? "text-green-700" : "text-danger"
+            message.ok ? "text-success" : "text-danger"
           }`}
         >
           {message.text}

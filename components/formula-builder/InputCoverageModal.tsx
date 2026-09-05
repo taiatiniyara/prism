@@ -161,7 +161,7 @@ function CoverageCard({ input }: { input: InputCoverage }) {
       )}
 
       {perUnit && missingUnits.length === 0 && (
-        <p className="mt-2 text-xs font-medium text-emerald-600 dark:text-emerald-400">
+        <p className="mt-2 text-xs font-medium text-success dark:text-success">
           ✓ All {totalUnits} generators have this input entered.
         </p>
       )}

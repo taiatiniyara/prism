@@ -356,7 +356,7 @@ function InputCell({
   const borderClass = validationError
     ? "border-danger"
     : row.displayValue
-      ? "border-lime-300"
+      ? "border-success/40"
       : "border-danger/40";
 
   switch (row.valueColumn) {
@@ -397,7 +397,7 @@ function InputCell({
               onSave(row, e.target.value);
             }}
             disabled={isSaving}
-            className={`h-8 w-20 text-xs border rounded-md px-1 ${row.displayValue ? "border-lime-300" : "border-danger/40"} border-l-4 rounded-l-none`}
+            className={`h-8 w-20 text-xs border rounded-md px-1 ${row.displayValue ? "border-success/40" : "border-danger/40"} border-l-4 rounded-l-none`}
             aria-label={`Boolean value for ${row.measureName}`}
           >
             <option value="">—</option>

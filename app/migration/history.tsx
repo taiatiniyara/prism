@@ -55,7 +55,7 @@ export default async function MigrationHistory() {
                   <span
                     className={
                       row.success
-                        ? "text-green-600 font-medium"
+                        ? "text-success font-medium"
                         : "text-danger font-medium"
                     }
                   >

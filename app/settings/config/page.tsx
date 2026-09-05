@@ -53,7 +53,7 @@ export default function ConfigPage() {
       <h2 className="text-lg font-bold">Environment Configuration</h2>
 
       <div className="flex gap-4 text-sm">
-        <div className="px-3 py-1.5 rounded bg-green-100 text-green-800 font-medium">
+        <div className="px-3 py-1.5 rounded bg-success/10 text-success font-medium">
           {setCount} set
         </div>
         <div className="px-3 py-1.5 rounded bg-yellow-100 text-yellow-800 font-medium">
@@ -72,7 +72,7 @@ export default function ConfigPage() {
             key={flag.name}
             className={`px-3 py-1 rounded-full text-xs font-medium ${
               flag.enabled
-                ? "bg-green-100 text-green-800"
+                ? "bg-success/10 text-success"
                 : "bg-slate-100 text-slate-500"
             }`}
           >
@@ -119,7 +119,7 @@ export default function ConfigPage() {
                   <span
                     className={`inline-block px-2 py-0.5 rounded text-xs font-medium ${
                       v.status === "set"
-                        ? "bg-green-100 text-green-800"
+                        ? "bg-success/10 text-success"
                         : "bg-yellow-100 text-yellow-800"
                     }`}
                   >

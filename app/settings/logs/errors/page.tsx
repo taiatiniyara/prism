@@ -182,7 +182,7 @@ export default function ErrorLogsPage() {
                           <button
                             onClick={() => markResolved([e.id])}
                             disabled={resolving.has(e.id)}
-                            className="px-2 py-0.5 text-xs border rounded hover:bg-green-50 disabled:opacity-40"
+                            className="px-2 py-0.5 text-xs border rounded hover:bg-success/10 disabled:opacity-40"
                           >
                             Resolve
                           </button>

@@ -56,12 +56,12 @@ export default function OverviewPage() {
           {health.loading ? <SkeletonCard /> : health.data ? (
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full ${health.data.status === "ok" ? "bg-green-500" : health.data.status === "down" ? "bg-danger" : "bg-yellow-500"}`} />
+                <span className={`w-2 h-2 rounded-full ${health.data.status === "ok" ? "bg-success" : health.data.status === "down" ? "bg-danger" : "bg-yellow-500"}`} />
                 <span className="text-sm font-medium capitalize">{health.data.status}</span>
               </div>
               {Object.entries(health.data?.checks ?? {}).slice(0, 5).map(([k, v]) => (
                 <div key={k} className="flex items-center gap-2 text-xs ml-4">
-                  <span className={`w-1.5 h-1.5 rounded-full ${(v as { ok: boolean }).ok ? "bg-green-400" : "bg-red-400"}`} />
+                  <span className={`w-1.5 h-1.5 rounded-full ${(v as { ok: boolean }).ok ? "bg-success" : "bg-red-400"}`} />
                   <span className="text-slate-600">{k}</span>
                 </div>
               ))}
@@ -92,7 +92,7 @@ export default function OverviewPage() {
         <Card title="Backup" href="/settings/backup">
           {backup.loading ? <SkeletonCard /> : backup.data ? (
             <div className="space-y-1">
-              <div className={`text-sm font-medium ${backup.data.backupOk ? "text-green-700" : "text-danger"}`}>
+              <div className={`text-sm font-medium ${backup.data.backupOk ? "text-success" : "text-danger"}`}>
                 {backup.data.backupOk ? "Healthy" : "Warning"}
               </div>
               {backup.data.lastBackup && (

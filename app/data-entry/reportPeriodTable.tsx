@@ -119,7 +119,7 @@ export default function ReportPeriodTable(props: {
                     <div className="space-y-1">
                       <div className="h-1.5 w-full overflow-hidden rounded-full bg-slate-200">
                         <div
-                          className="h-full rounded-full bg-lime-500 transition-all"
+                          className="h-full rounded-full bg-success transition-all"
                           style={{ width: `${Math.min(progressPct, 100)}%` }}
                         />
                       </div>
