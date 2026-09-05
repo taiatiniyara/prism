@@ -653,7 +653,7 @@ export default function NewBscBuilder({
 
   if (error) {
     return (
-      <div className="rounded-md border bg-rose-50 p-3 text-xs text-rose-800">
+      <div className="rounded-md border bg-danger/10 p-3 text-xs text-danger">
         {error}
       </div>
     );
@@ -1123,7 +1123,7 @@ export default function NewBscBuilder({
   const targetStatusFor = (
     kpiDefinitionId: number | null,
   ): { label: string; cls: string; el: string } => {
-    const notSet = `${PILL_BASE} border-red-200 bg-red-50 text-red-700`;
+    const notSet = `${PILL_BASE} border-danger/40 bg-danger/10 text-danger`;
     const partial = `${PILL_BASE} border-amber-200 bg-amber-50 text-amber-700`;
     const full = `${PILL_BASE} border-emerald-200 bg-emerald-50 text-emerald-700`;
 

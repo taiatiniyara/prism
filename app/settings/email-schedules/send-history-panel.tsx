@@ -89,7 +89,7 @@ export default function SendHistoryPanel({
                         <span>
                           {log.recipient_count} sent
                           {log.error_count > 0 && (
-                            <span className="text-red-500 ml-1">
+                            <span className="text-danger ml-1">
                               ({log.error_count} errors)
                             </span>
                           )}

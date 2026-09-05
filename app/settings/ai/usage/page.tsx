@@ -63,7 +63,7 @@ export default function AiUsagePage() {
         ))}
       </div>
 
-      {loading ? <div className="text-slate-500">Loading...</div> : error ? <div className="p-6 text-red-600">Error: {error}</div> : !data ? null : (
+      {loading ? <div className="text-slate-500">Loading...</div> : error ? <div className="p-6 text-danger">Error: {error}</div> : !data ? null : (
         <>
           {tab === "overview" && (
             <div className="space-y-4">

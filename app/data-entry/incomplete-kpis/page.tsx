@@ -43,10 +43,10 @@ function IncompleteKpiCard({ kpi }: { kpi: IncompleteKpiRow }) {
           .map((input) => (
             <div
               key={input.dataEntryId}
-              className="flex items-center justify-between text-xs bg-red-50 border border-red-100 rounded px-2 py-1"
+              className="flex items-center justify-between text-xs bg-danger/10 border border-danger/40 rounded px-2 py-1"
             >
               <span>{input.inputName}</span>
-              <span className="text-red-500 font-medium">Missing</span>
+              <span className="text-danger font-medium">Missing</span>
             </div>
           ))}
       </div>

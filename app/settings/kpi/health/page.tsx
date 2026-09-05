@@ -70,7 +70,7 @@ export default function KpiHealthPage() {
   const statusBadge = (s: string) => {
     const colors: Record<string, string> = {
       completed: "bg-green-100 text-green-800",
-      failed: "bg-red-100 text-red-800",
+      failed: "bg-danger/10 text-danger",
       in_progress: "bg-blue-100 text-blue-800",
       pending: "bg-yellow-100 text-yellow-800",
     };
@@ -78,7 +78,7 @@ export default function KpiHealthPage() {
   };
 
   if (loading) return <div className="p-6 text-slate-500">Loading KPI calc status...</div>;
-  if (error) return <div className="p-6 text-red-600">Error: {error}</div>;
+  if (error) return <div className="p-6 text-danger">Error: {error}</div>;
 
   return (
     <div className="p-4 space-y-4">
@@ -103,7 +103,7 @@ export default function KpiHealthPage() {
         <button
           onClick={retryFailed}
           disabled={retrying || !data?.attempts.some((a) => a.status === "failed")}
-          className="px-3 py-1 text-xs bg-red-100 text-red-800 rounded hover:bg-red-200 disabled:opacity-40"
+          className="px-3 py-1 text-xs bg-danger/10 text-danger rounded hover:bg-danger/20 disabled:opacity-40"
         >
           Retry All Failed
         </button>
@@ -129,7 +129,7 @@ export default function KpiHealthPage() {
                 <td className="p-2">{a.reportPeriodId}</td>
                 <td className="p-2"><span className={statusBadge(a.status)}>{a.status}</span></td>
                 <td className="p-2">{a.retryCount}</td>
-                <td className="p-2 text-red-600 max-w-xs truncate">{a.failureReason || "-"}</td>
+                <td className="p-2 text-danger max-w-xs truncate">{a.failureReason || "-"}</td>
                 <td className="p-2 text-slate-500">{new Date(a.createdAt).toLocaleString()}</td>
                 <td className="p-2">
                   {a.status === "failed" && (

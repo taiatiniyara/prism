@@ -161,7 +161,7 @@ export function AggregatedProcessingStatus({
         {isLoading ? (
           <p className="text-muted-foreground">Loading latest status...</p>
         ) : null}
-        {error ? <p className="text-red-600">{error}</p> : null}
+        {error ? <p className="text-danger">{error}</p> : null}
 
         {mode === "aggregated" && !latestRun && !error && !isLoading ? (
           <p className="text-muted-foreground">
@@ -175,14 +175,14 @@ export function AggregatedProcessingStatus({
               Latest run:{" "}
               <strong
                 className={
-                  latestRun.status === "failed" ? "text-red-600" : ""
+                  latestRun.status === "failed" ? "text-danger" : ""
                 }
               >
                 {latestRun.status}
               </strong>
             </p>
             {latestRun.error ? (
-              <p className="text-red-600 text-xs">{latestRun.error}</p>
+              <p className="text-danger text-xs">{latestRun.error}</p>
             ) : null}
             <div className="flex items-center gap-2">
               <AggregatedOutcomeBadge status="calculated" />
@@ -213,7 +213,7 @@ export function AggregatedProcessingStatus({
               Retries: {latestKpiAttempt.retryCount}
             </p>
             {latestKpiAttempt.failureReason ? (
-              <p className="text-red-600">{latestKpiAttempt.failureReason}</p>
+              <p className="text-danger">{latestKpiAttempt.failureReason}</p>
             ) : null}
             <p className="text-muted-foreground text-xs">
               {latestKpiAttempt.completedAt

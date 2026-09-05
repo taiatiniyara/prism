@@ -77,7 +77,7 @@ export default function ErrorLogsPage() {
 
   const severityBadge = (s: string) => {
     const colors: Record<string, string> = {
-      critical: "bg-red-100 text-red-800",
+      critical: "bg-danger/10 text-danger",
       error: "bg-orange-100 text-orange-800",
       warning: "bg-yellow-100 text-yellow-800",
     };

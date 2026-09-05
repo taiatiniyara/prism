@@ -309,7 +309,7 @@ export default function PendingUserDecisionPanel() {
         )}
 
         {!loading && error && (
-          <p className="rounded-md bg-red-50 p-3 text-sm text-red-700">
+          <p className="rounded-md bg-danger/10 p-3 text-sm text-danger">
             {error}
           </p>
         )}
@@ -356,7 +356,7 @@ export default function PendingUserDecisionPanel() {
                         <button
                           type="button"
                           onClick={() => setRejectDialogUserId(item.id)}
-                          className="rounded-md bg-rose-600 px-3 py-1.5 text-xs font-semibold text-white hover:bg-rose-700"
+                          className="rounded-md bg-danger px-3 py-1.5 text-xs font-semibold text-white hover:bg-danger/90"
                         >
                           Reject
                         </button>
@@ -431,7 +431,7 @@ export default function PendingUserDecisionPanel() {
                 <button
                   type="button"
                   onClick={() => void confirmReject(rejectUser.id)}
-                  className="rounded-md bg-rose-600 px-4 py-2 text-sm font-semibold text-white hover:bg-rose-700 transition-colors"
+                  className="rounded-md bg-danger px-4 py-2 text-sm font-semibold text-white hover:bg-danger/90 transition-colors"
                 >
                   Confirm Reject
                 </button>

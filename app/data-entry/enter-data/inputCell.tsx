@@ -410,7 +410,7 @@ export default function InputCell({ row }: InputCellProps) {
 
       {saveError ? (
         <div className="flex items-center gap-1">
-          <p className="text-[11px] text-red-600 flex-1">{saveError}</p>
+          <p className="text-[11px] text-danger flex-1">{saveError}</p>
           <Button
             type="button"
             size="sm"

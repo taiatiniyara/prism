@@ -42,7 +42,7 @@ export default async function InputDlMapBuilder() {
         <h3 className="text-base font-semibold">
           Input to Data Label Map Builder
         </h3>
-        <p className="mt-2 text-sm text-red-600">{errorMessage}</p>
+        <p className="mt-2 text-sm text-danger">{errorMessage}</p>
         <p className="mt-2 text-xs text-muted-foreground">
           Ensure prism environment has PRISM_TRAINING_API_BASE_URL and (if set
           in training) PRISM_TRAINING_MIGRATION_KEY.
@@ -99,7 +99,7 @@ export default async function InputDlMapBuilder() {
           Source endpoint: {result.source.endpoint}
         </p>
         {resolvedResult.source.error ? (
-          <p className="mt-1 text-xs text-red-600">
+          <p className="mt-1 text-xs text-danger">
             Error fetching training labels: {resolvedResult.source.error}
           </p>
         ) : null}
@@ -117,7 +117,7 @@ export default async function InputDlMapBuilder() {
       </div>
 
       {localInputs.length === 0 ? (
-        <p className="mt-2 text-xs text-red-600">
+        <p className="mt-2 text-xs text-danger">
           No rows found in prism.measure_definitions .
         </p>
       ) : null}

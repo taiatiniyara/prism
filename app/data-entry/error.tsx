@@ -17,9 +17,9 @@ export default function DataEntryError({
   }, [error]);
 
   return (
-    <Card className="border-red-200">
+    <Card className="border-danger/40">
       <CardHeader>
-        <CardTitle className="text-red-700">
+        <CardTitle className="text-danger">
           Something went wrong loading the data entry page
         </CardTitle>
       </CardHeader>

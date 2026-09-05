@@ -30,7 +30,7 @@ export function FieldGroup({
       </label>
       {children}
       {error && (
-        <p id={errorId} className="text-xs text-red-500" role="alert">
+        <p id={errorId} className="text-xs text-danger" role="alert">
           {error}
         </p>
       )}

@@ -42,7 +42,7 @@ export default function SystemLogsPage() {
   }, [entries, autoScroll]);
 
   const levelColor = (level: string) => {
-    if (level === "error") return "text-red-600";
+    if (level === "error") return "text-danger";
     if (level === "warn") return "text-yellow-600";
     if (level === "info") return "text-info";
     return "text-slate-500";
