@@ -10,6 +10,7 @@ import Footer from "@/components/layout/footer";
 import BlockedAccessOverlay from "@/components/auth/blocked-access-overlay";
 import { FloatingChatbot } from "@/components/ai/floating-chatbot";
 import FormOverridesProvider from "@/components/dev/form-overrides-provider";
+import DesignTokenStyle from "@/components/dev/design-token-style";
 import RefreshOnNavigate from "@/components/layout/refresh-on-navigate";
 import { db } from "@/db/connection";
 import { organisations } from "@/db/schema/utility";
@@ -50,6 +51,9 @@ export default function RootLayout({
       <body
         className={`${plexSans.className} font-sans flex h-screen flex-col overflow-hidden text-slate-900`}
       >
+        <Suspense fallback={null}>
+          <DesignTokenStyle />
+        </Suspense>
         <Suspense fallback={<div className="p-6 bg-slate-900"></div>}>
           <AppNavigation />
         </Suspense>

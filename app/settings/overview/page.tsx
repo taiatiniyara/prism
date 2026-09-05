@@ -107,6 +107,7 @@ export default function OverviewPage() {
         <Card title="Quick Links">
           <div className="space-y-1 text-sm">
             <div><a href="/settings/config" className="text-info hover:underline">Config</a></div>
+            <div><a href="/settings/design" className="text-info hover:underline">Design (branding)</a></div>
             <div><a href="/settings/logs/errors" className="text-info hover:underline">Error Logs</a></div>
             <div><a href="/settings/logs/audit" className="text-info hover:underline">Audit Logs</a></div>
             <div><a href="/settings/ai/usage" className="text-info hover:underline">AI Usage</a></div>
