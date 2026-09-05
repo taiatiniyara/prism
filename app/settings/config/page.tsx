@@ -38,7 +38,7 @@ export default function ConfigPage() {
   }, []);
 
   if (loading) return <div className="p-6 text-slate-500">Loading configuration...</div>;
-  if (error) return <div className="p-6 text-red-600">Error: {error}</div>;
+  if (error) return <div className="p-6 text-danger">Error: {error}</div>;
   if (!data) return null;
 
   const filtered = filter
@@ -60,7 +60,7 @@ export default function ConfigPage() {
           {unsetCount} unset
         </div>
         {data.missingFromExample.length > 0 && (
-          <div className="px-3 py-1.5 rounded bg-red-100 text-red-800 font-medium">
+          <div className="px-3 py-1.5 rounded bg-danger/10 text-danger font-medium">
             {data.missingFromExample.length} missing from .env.example
           </div>
         )}
@@ -82,11 +82,11 @@ export default function ConfigPage() {
       </div>
 
       {data.missingFromExample.length > 0 && (
-        <div className="rounded border border-red-200 bg-red-50 p-3">
-          <p className="text-sm font-medium text-red-800 mb-1">
+        <div className="rounded border border-danger/40 bg-danger/10 p-3">
+          <p className="text-sm font-medium text-danger mb-1">
             Missing from .env.example
           </p>
-          <p className="text-xs text-red-600 font-mono">
+          <p className="text-xs text-danger font-mono">
             {data.missingFromExample.join(", ")}
           </p>
         </div>

@@ -29,7 +29,7 @@ export default function CostsPage() {
   const formatCost = (cents: number) => `$${(cents / 100).toFixed(2)}`;
 
   if (loading) return <div className="p-6 text-slate-500">Loading cost data...</div>;
-  if (!data) return <div className="p-6 text-red-600">Failed to load cost data.</div>;
+  if (!data) return <div className="p-6 text-danger">Failed to load cost data.</div>;
 
   const budget = data.budget as Record<string, unknown>;
   const anomalies = (data.anomalies as Array<Record<string, unknown>>) || [];
@@ -56,10 +56,10 @@ export default function CostsPage() {
           <div className="text-xs text-slate-500">Daily Budget</div>
           <div className="text-xl font-bold">{formatCost(Number(budget.dailyLimitCents))}</div>
         </div>
-        <div className={`border rounded p-3 ${budget.todayOverBudget ? "border-red-300 bg-red-50" : ""}`}>
+        <div className={`border rounded p-3 ${budget.todayOverBudget ? "border-danger/40 bg-danger/10" : ""}`}>
           <div className="text-xs text-slate-500">Today</div>
           <div className="text-xl font-bold">{formatCost(Number(budget.todaySpendCents))}</div>
-          {Boolean(budget.todayOverBudget) && <div className="text-xs text-red-600 font-medium">OVER BUDGET</div>}
+          {Boolean(budget.todayOverBudget) && <div className="text-xs text-danger font-medium">OVER BUDGET</div>}
         </div>
         <div className="border rounded p-3">
           <div className="text-xs text-slate-500">Anomalies</div>
@@ -69,10 +69,10 @@ export default function CostsPage() {
       </div>
 
       {anomalies.length > 0 && (
-        <div className="border border-red-200 rounded p-3 bg-red-50">
-          <div className="text-sm font-medium text-red-800 mb-2">Spend Anomalies</div>
+        <div className="border border-danger/40 rounded p-3 bg-danger/10">
+          <div className="text-sm font-medium text-danger mb-2">Spend Anomalies</div>
           {anomalies.map((a) => (
-            <div key={String(a.date)} className="text-xs text-red-600 flex gap-4">
+            <div key={String(a.date)} className="text-xs text-danger flex gap-4">
               <span>{new Date(String(a.date)).toLocaleDateString()}</span>
               <span className="font-medium">{formatCost(Number(a.costCents))}</span>
               <span>vs avg {formatCost(Number(a.avg7dCents))} ({String(a.ratio)}x)</span>

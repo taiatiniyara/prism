@@ -395,7 +395,7 @@ export default function DataEntryBreakdownPanel({
             <Skeleton className="h-64 w-full" />
           </div>
         ) : fetchError ? (
-          <p className="rounded border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
+          <p className="rounded border border-danger/40 bg-danger/10 px-3 py-2 text-sm text-danger">
             Unable to load breakdown: {fetchError}
           </p>
         ) : !rows ? null : rows.length === 0 ? (
@@ -428,7 +428,7 @@ export default function DataEntryBreakdownPanel({
                 <span
                   className={
                     totalExpected - totalV2 !== 0
-                      ? "font-semibold text-red-600"
+                      ? "font-semibold text-danger"
                       : "font-semibold"
                   }
                 >
@@ -669,7 +669,7 @@ export default function DataEntryBreakdownPanel({
                         {row.expectedCount.toLocaleString()}
                       </td>
                       <td
-                        className={`px-3 py-2 text-right font-mono ${row.expectedCount !== row.v2Count ? "text-red-600" : ""}`}
+                        className={`px-3 py-2 text-right font-mono ${row.expectedCount !== row.v2Count ? "text-danger" : ""}`}
                       >
                         {(
                           row.expectedCount - row.v2Count

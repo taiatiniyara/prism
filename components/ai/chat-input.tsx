@@ -94,7 +94,7 @@ export function ChatInput({
           )}
         </div>
         {maxLength && (
-          <div className={`mt-1.5 px-1 text-right text-[11px] ${isOverLimit ? "font-medium text-red-500" : "text-slate-400"}`}>
+          <div className={`mt-1.5 px-1 text-right text-[11px] ${isOverLimit ? "font-medium text-danger" : "text-slate-400"}`}>
             {charCount}/{maxLength}
           </div>
         )}

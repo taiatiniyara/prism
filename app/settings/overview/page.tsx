@@ -56,7 +56,7 @@ export default function OverviewPage() {
           {health.loading ? <SkeletonCard /> : health.data ? (
             <div className="space-y-1">
               <div className="flex items-center gap-2">
-                <span className={`w-2 h-2 rounded-full ${health.data.status === "ok" ? "bg-green-500" : health.data.status === "down" ? "bg-red-500" : "bg-yellow-500"}`} />
+                <span className={`w-2 h-2 rounded-full ${health.data.status === "ok" ? "bg-green-500" : health.data.status === "down" ? "bg-danger" : "bg-yellow-500"}`} />
                 <span className="text-sm font-medium capitalize">{health.data.status}</span>
               </div>
               {Object.entries(health.data?.checks ?? {}).slice(0, 5).map(([k, v]) => (
@@ -66,7 +66,7 @@ export default function OverviewPage() {
                 </div>
               ))}
             </div>
-          ) : <span className="text-xs text-red-500">Failed</span>}
+          ) : <span className="text-xs text-danger">Failed</span>}
         </Card>
 
         <Card title="Security" href="/settings/security">
@@ -74,10 +74,10 @@ export default function OverviewPage() {
             <div className="space-y-1">
               <div className="text-2xl font-bold">{security.data.activeSessionCount} <span className="text-sm font-normal text-slate-500">active</span></div>
               {security.data.failedLoginSpike.isSpike && (
-                <div className="text-xs text-red-600 font-medium">Login spike detected</div>
+                <div className="text-xs text-danger font-medium">Login spike detected</div>
               )}
             </div>
-          ) : <span className="text-xs text-red-500">Failed</span>}
+          ) : <span className="text-xs text-danger">Failed</span>}
         </Card>
 
         <Card title="Deployment" href="/settings/deployment">
@@ -86,13 +86,13 @@ export default function OverviewPage() {
               <div>Commit: <span className="font-mono font-medium">{deployment.data.commitSha}</span></div>
               <div>Uptime: <span className="font-medium">{formatUptime(deployment.data.uptimeSeconds)}</span></div>
             </div>
-          ) : <span className="text-xs text-red-500">Failed</span>}
+          ) : <span className="text-xs text-danger">Failed</span>}
         </Card>
 
         <Card title="Backup" href="/settings/backup">
           {backup.loading ? <SkeletonCard /> : backup.data ? (
             <div className="space-y-1">
-              <div className={`text-sm font-medium ${backup.data.backupOk ? "text-green-700" : "text-red-600"}`}>
+              <div className={`text-sm font-medium ${backup.data.backupOk ? "text-green-700" : "text-danger"}`}>
                 {backup.data.backupOk ? "Healthy" : "Warning"}
               </div>
               {backup.data.lastBackup && (
@@ -101,7 +101,7 @@ export default function OverviewPage() {
                 </div>
               )}
             </div>
-          ) : <span className="text-xs text-red-500">Failed</span>}
+          ) : <span className="text-xs text-danger">Failed</span>}
         </Card>
 
         <Card title="Quick Links">

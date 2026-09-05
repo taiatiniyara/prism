@@ -14,7 +14,7 @@ export default async function BalancedScorecardPage() {
   if (error) {
     return (
       <div className="space-y-3 p-2 sm:p-3">
-        <div className="rounded-md border border-rose-200 bg-rose-50 p-3 text-sm text-rose-800">
+        <div className="rounded-md border border-danger/40 bg-danger/10 p-3 text-sm text-danger">
           Unable to load scorecard data. Please try again later.
         </div>
       </div>

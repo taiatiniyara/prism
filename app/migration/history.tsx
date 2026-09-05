@@ -56,7 +56,7 @@ export default async function MigrationHistory() {
                     className={
                       row.success
                         ? "text-green-600 font-medium"
-                        : "text-red-600 font-medium"
+                        : "text-danger font-medium"
                     }
                   >
                     {row.success ? "OK" : "FAIL"}
@@ -70,7 +70,7 @@ export default async function MigrationHistory() {
                 <td className="px-3 py-2 text-muted-foreground">
                   {row.records_affected ?? "-"}
                 </td>
-                <td className="px-3 py-2 text-red-500 max-w-xs truncate">
+                <td className="px-3 py-2 text-danger max-w-xs truncate">
                   {row.error_message ?? ""}
                 </td>
               </tr>

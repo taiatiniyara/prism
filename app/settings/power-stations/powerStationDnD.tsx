@@ -162,7 +162,7 @@ export default function PowerStationDnD({
         <div
           className={`border-2 rounded-lg transition-all min-h-[200px] ${
             dragOverStationId === "unassigned"
-              ? "border-red-300 bg-red-50"
+              ? "border-danger/40 bg-danger/10"
               : "border-slate-200 bg-white"
           }`}
           onDragOver={(e) => {
@@ -254,7 +254,7 @@ function UnitChip({
             e.stopPropagation();
             onRemove();
           }}
-          className="text-slate-400 hover:text-red-500 transition-colors shrink-0 p-0.5 rounded hover:bg-red-50"
+          className="text-slate-400 hover:text-danger transition-colors shrink-0 p-0.5 rounded hover:bg-danger/10"
           title="Remove from power station"
         >
           <svg

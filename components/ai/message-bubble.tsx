@@ -190,7 +190,7 @@ function MessageBubbleInner({ message, isStreaming, reasoningContent, toolProgre
             isUser
               ? "rounded-2xl rounded-br-md bg-slate-100 px-4 py-2.5 text-slate-800 dark:bg-slate-800 dark:text-slate-100"
               : message.isError
-                ? "rounded-2xl rounded-bl-md bg-red-50 px-4 py-2.5 text-red-700 dark:bg-red-950 dark:text-red-300"
+                ? "rounded-2xl rounded-bl-md bg-danger/10 px-4 py-2.5 text-danger dark:bg-red-950 dark:text-red-300"
                 : "px-1 py-0.5 text-slate-700 dark:text-slate-300"
           }`}
         >
@@ -305,7 +305,7 @@ function MessageBubbleInner({ message, isStreaming, reasoningContent, toolProgre
                 <button
                   onClick={() => handleFeedback("negative")}
                   className={`rounded-md p-1 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 ${
-                    feedbackGiven === "negative" ? "text-red-500" : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                    feedbackGiven === "negative" ? "text-danger" : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                   }`}
                   aria-label="Thumbs down"
                 >

@@ -90,7 +90,7 @@ export default function TwoFactorSetupClient({
                 below to generate your secret key, then add it to the app.
               </p>
               {error && (
-                <p className="text-sm text-red-600 bg-red-50 rounded p-2">
+                <p className="text-sm text-danger bg-danger/10 rounded p-2">
                   {error}
                 </p>
               )}
@@ -157,7 +157,7 @@ export default function TwoFactorSetupClient({
               </div>
 
               {error && (
-                <p className="text-sm text-red-600 bg-red-50 rounded p-2">
+                <p className="text-sm text-danger bg-danger/10 rounded p-2">
                   {error}
                 </p>
               )}

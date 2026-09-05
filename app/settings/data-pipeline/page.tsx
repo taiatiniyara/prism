@@ -29,7 +29,7 @@ export default function DataPipelinePage() {
   }, [fetchData]);
 
   if (loading) return <div className="p-6 text-slate-500">Loading pipeline stats...</div>;
-  if (error) return <div className="p-6 text-red-600">Error: {error}</div>;
+  if (error) return <div className="p-6 text-danger">Error: {error}</div>;
   if (!data) return null;
 
   const sc = data.statusCounts as Record<string, number>;

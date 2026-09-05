@@ -35,19 +35,19 @@ export default function SecurityPage() {
   }, [fetchData]);
 
   if (loading) return <div className="p-6 text-slate-500">Loading security overview...</div>;
-  if (error) return <div className="p-6 text-red-600">Error: {error}</div>;
-  if (!data) return <div className="p-6 text-red-600">Failed to load</div>;
+  if (error) return <div className="p-6 text-danger">Error: {error}</div>;
+  if (!data) return <div className="p-6 text-danger">Failed to load</div>;
 
   return (
     <div className="p-4 space-y-6">
       <h2 className="text-lg font-bold">Security &amp; Auth</h2>
 
       <div className="grid grid-cols-4 gap-3">
-        <div className={`border rounded p-3 ${data.failedLoginSpike.isSpike ? "border-red-300 bg-red-50" : ""}`}>
+        <div className={`border rounded p-3 ${data.failedLoginSpike.isSpike ? "border-danger/40 bg-danger/10" : ""}`}>
           <div className="text-xs text-slate-500">Failed logins (1h)</div>
           <div className="text-2xl font-bold">{data.failedLoginSpike.currentHour}</div>
           <div className="text-xs text-slate-400">Avg: {data.failedLoginSpike.avgHourly}/h</div>
-          {data.failedLoginSpike.isSpike && <div className="text-xs text-red-600 font-medium mt-1">SPIKE DETECTED</div>}
+          {data.failedLoginSpike.isSpike && <div className="text-xs text-danger font-medium mt-1">SPIKE DETECTED</div>}
         </div>
         <div className="border rounded p-3">
           <div className="text-xs text-slate-500">Active Sessions</div>

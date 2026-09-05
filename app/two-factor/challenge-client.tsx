@@ -68,7 +68,7 @@ export default function TwoFactorChallenge({
               required
             />
             {error && (
-              <p className="text-sm text-red-600 bg-red-50 rounded p-2">
+              <p className="text-sm text-danger bg-danger/10 rounded p-2">
                 {error}
               </p>
             )}

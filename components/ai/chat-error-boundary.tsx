@@ -31,7 +31,7 @@ export class ChatErrorBoundary extends Component<Props, State> {
     if (this.state.hasError) {
       return this.props.fallback || (
         <div className="flex flex-col items-center justify-center p-8 text-center">
-          <p className="text-sm font-medium text-red-600 dark:text-red-400">Something went wrong</p>
+          <p className="text-sm font-medium text-danger dark:text-red-400">Something went wrong</p>
           <p className="text-muted-foreground mt-1 text-xs">
             The chat encountered an error. Please try refreshing the page.
           </p>

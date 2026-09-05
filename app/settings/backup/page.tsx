@@ -37,10 +37,10 @@ export default function BackupPage() {
   }, [fetchData]);
 
   if (loading) return <div className="p-6 text-slate-500">Loading backup status...</div>;
-  if (error) return <div className="p-6 text-red-600">Error: {error}</div>;
+  if (error) return <div className="p-6 text-danger">Error: {error}</div>;
   if (!data) return null;
 
-  const ageColor = !data.lastBackup ? "bg-red-100 text-red-800" :
+  const ageColor = !data.lastBackup ? "bg-danger/10 text-danger" :
     data.lastBackup.ageHours > Number(data.backupAgeWarnHours) ? "bg-yellow-100 text-yellow-800" : "bg-green-100 text-green-800";
 
   const formatSize = (bytes: number | null) => {

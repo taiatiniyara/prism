@@ -354,10 +354,10 @@ function InputCell({
   };
 
   const borderClass = validationError
-    ? "border-red-500"
+    ? "border-danger"
     : row.displayValue
       ? "border-lime-300"
-      : "border-red-100";
+      : "border-danger/40";
 
   switch (row.valueColumn) {
     case "value_numeric":
@@ -381,7 +381,7 @@ function InputCell({
             ) : null}
           </div>
           {validationError ? (
-            <p className="max-w-40 text-[11px] leading-tight text-red-600">
+            <p className="max-w-40 text-[11px] leading-tight text-danger">
               {validationError}
             </p>
           ) : null}
@@ -397,7 +397,7 @@ function InputCell({
               onSave(row, e.target.value);
             }}
             disabled={isSaving}
-            className={`h-8 w-20 text-xs border rounded-md px-1 ${row.displayValue ? "border-lime-300" : "border-red-100"} border-l-4 rounded-l-none`}
+            className={`h-8 w-20 text-xs border rounded-md px-1 ${row.displayValue ? "border-lime-300" : "border-danger/40"} border-l-4 rounded-l-none`}
             aria-label={`Boolean value for ${row.measureName}`}
           >
             <option value="">—</option>
@@ -431,7 +431,7 @@ function InputCell({
             ) : null}
           </div>
           {validationError ? (
-            <p className="max-w-40 text-[11px] leading-tight text-red-600">
+            <p className="max-w-40 text-[11px] leading-tight text-danger">
               {validationError}
             </p>
           ) : null}

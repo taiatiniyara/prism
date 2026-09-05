@@ -533,7 +533,7 @@ export default function BscStrategyMap({
   }
   if (error) {
     return (
-      <div className="rounded-md border bg-rose-50 p-3 text-xs text-rose-800">
+      <div className="rounded-md border bg-danger/10 p-3 text-xs text-danger">
         {error}
       </div>
     );

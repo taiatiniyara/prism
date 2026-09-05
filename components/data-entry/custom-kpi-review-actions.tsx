@@ -617,9 +617,9 @@ export function CustomKpiReviewActions({
         aria-live="assertive"
       >
         {validationError ? (
-          <p className="text-xs text-red-700">{validationError}</p>
+          <p className="text-xs text-danger">{validationError}</p>
         ) : null}
-        {error ? <p className="text-xs text-red-700">{error}</p> : null}
+        {error ? <p className="text-xs text-danger">{error}</p> : null}
       </div>
     </BorderedBox>
   );
