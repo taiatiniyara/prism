@@ -36,7 +36,7 @@ export default function DeploymentPage() {
   const circuitBadge = (state: { open: boolean; remaining: number }) =>
     state.open
       ? `bg-danger/10 text-danger`
-      : `bg-green-100 text-green-800`;
+      : `bg-success/10 text-success`;
 
   return (
     <div className="p-4 space-y-6">

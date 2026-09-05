@@ -134,7 +134,7 @@ export default function CustomKpiRelevanceTable(props: {
           <section
             key={item.kpiDefId}
             className={`rounded-lg border bg-card p-3 shadow-sm ${
-              item.isRelevant ? "border-lime-300" : "border-border"
+              item.isRelevant ? "border-success/40" : "border-border"
             }`}
             aria-label={`Custom KPI relevance for ${item.kpiName}`}
           >

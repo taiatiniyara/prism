@@ -46,7 +46,7 @@ function CodeBlock({ lang, code, children, ...props }: { lang: string; code: str
           className="rounded p-0.5 text-slate-400 transition-colors hover:bg-slate-200 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
           aria-label="Copy code"
         >
-          {blockCopied ? <Check className="size-3 text-emerald-500" /> : <Copy className="size-3" />}
+          {blockCopied ? <Check className="size-3 text-success" /> : <Copy className="size-3" />}
         </button>
       </div>
       <pre className="overflow-x-auto bg-slate-50 p-4 text-[13px] leading-relaxed dark:bg-slate-900">
@@ -218,7 +218,7 @@ function MessageBubbleInner({ message, isStreaming, reasoningContent, toolProgre
                           ) : tool.status === "error" ? (
                             <span className="inline-block size-1.5 rounded-full bg-red-400 shrink-0" />
                           ) : (
-                            <span className="inline-block size-1.5 rounded-full bg-emerald-400 shrink-0" />
+                            <span className="inline-block size-1.5 rounded-full bg-success shrink-0" />
                           )}
                           <span className="text-slate-500 dark:text-slate-400">{tool.name}</span>
                           {tool.status === "running" && (
@@ -296,7 +296,7 @@ function MessageBubbleInner({ message, isStreaming, reasoningContent, toolProgre
                 <button
                   onClick={() => handleFeedback("positive")}
                   className={`rounded-md p-1 transition-colors hover:bg-slate-100 dark:hover:bg-slate-800 ${
-                    feedbackGiven === "positive" ? "text-emerald-500" : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+                    feedbackGiven === "positive" ? "text-success" : "text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
                   }`}
                   aria-label="Thumbs up"
                 >

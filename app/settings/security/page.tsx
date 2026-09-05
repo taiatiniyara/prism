@@ -60,7 +60,7 @@ export default function SecurityPage() {
         <div className="border rounded p-3">
           <div className="text-xs text-slate-500">Users</div>
           <div className="flex gap-2 text-sm mt-1">
-            <span className="text-green-700">{data.registrationFunnel.active} active</span>
+            <span className="text-success">{data.registrationFunnel.active} active</span>
             <span className="text-yellow-700">{data.registrationFunnel.pending} pending</span>
           </div>
         </div>

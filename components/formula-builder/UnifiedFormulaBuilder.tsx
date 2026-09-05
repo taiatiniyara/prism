@@ -763,7 +763,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
             </Label>
           </div>
           {justSaved && (
-            <p className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+            <p className="text-xs font-medium text-success dark:text-success">
               Saved ✓ — still shown below. Keep editing, or pick another{" "}
               {activeMode === "kpi" ? "KPI" : "measure"} from the dropdown above.
             </p>
@@ -845,7 +845,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
               </span>
               <span className="text-muted-foreground flex items-center gap-3">
                 <span className="flex items-center gap-1.5">
-                  <span className="size-1.5 rounded-full bg-emerald-500" />
+                  <span className="size-1.5 rounded-full bg-success" />
                   Pinned
                 </span>
                 <span className="flex items-center gap-1.5">
@@ -1210,7 +1210,7 @@ function Flag({ ok, children }: { ok: boolean; children: ReactNode }) {
     <span
       className={cn(
         "flex items-center gap-1.5",
-        ok ? "text-emerald-600 dark:text-emerald-400" : "text-muted-foreground",
+        ok ? "text-success dark:text-success" : "text-muted-foreground",
       )}
     >
       <span aria-hidden>{ok ? "✓" : "○"}</span>

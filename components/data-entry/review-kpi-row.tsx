@@ -268,7 +268,7 @@ export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
           tone="lime"
           title="KPI Result"
         >
-          <div className="rounded-md border border-lime-200/60 bg-background p-2 text-xs sm:text-sm dark:border-lime-900/50">
+          <div className="rounded-md border border-success/40/60 bg-background p-2 text-xs sm:text-sm dark:border-lime-900/50">
             <div className="mb-1 text-sm font-semibold sm:text-base">
               {formattedResultValue}
               {localRow.unitName && localRow.result.value != null ? (
@@ -286,7 +286,7 @@ export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
             >
               Connection:{" "}
               <span
-                className={`${isConnected ? "text-lime-500" : "text-yellow-500"} font-bold`}
+                className={`${isConnected ? "text-success" : "text-yellow-500"} font-bold`}
               >
                 {isConnected ? "Live" : "Reconnecting"}
               </span>

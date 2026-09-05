@@ -218,7 +218,7 @@ export function FormulaEditor({
                       (variableColors?.[token] ??
                         "bg-accent text-accent-foreground/90 dark:bg-accent"),
                     isNum &&
-                      "bg-lime-100 text-lime-800 dark:bg-lime-950/40 dark:text-lime-300",
+                      "bg-success/10 text-success dark:bg-lime-950/40 dark:text-success",
                     isOp && "bg-transparent font-sans text-muted-foreground",
                   )}
                 >

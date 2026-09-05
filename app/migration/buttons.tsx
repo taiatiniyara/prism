@@ -217,7 +217,7 @@ export default function MigrationButtons() {
         <div className="space-y-1">
           <div className="text-sm font-medium mb-2">{passed} passed{failed > 0 ? `, ${failed} failed` : ""}</div>
           {results.map((r, i) => (
-            <div key={i} className={`text-xs px-2 py-1 rounded ${r.ok ? "bg-lime-100 text-lime-800" : "bg-danger/10 text-danger"}`}>
+            <div key={i} className={`text-xs px-2 py-1 rounded ${r.ok ? "bg-success/10 text-success" : "bg-danger/10 text-danger"}`}>
         {r.ok ? "\u2713" : "\u2717"} {r.label} ({r.ms}ms)
         {r.details && <span className="ml-1 opacity-75"> {"—"} {r.details}</span>}
         {r.error && <span className="ml-2 opacity-75">{r.error}</span>}

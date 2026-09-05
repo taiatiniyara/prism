@@ -36,7 +36,7 @@ export default function ProgressBreakdown({
           </div>
           <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
             <div
-              className="h-full rounded-full bg-lime-400 transition-all"
+              className="h-full rounded-full bg-success transition-all"
               style={{ width: `${progressPercentage}%` }}
             />
           </div>

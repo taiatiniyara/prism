@@ -222,7 +222,7 @@ export function TestHarness({
               <p className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
                 Raw
               </p>
-              <span className="text-base font-semibold text-emerald-600 tabular-nums dark:text-emerald-400">
+              <span className="text-base font-semibold text-success tabular-nums dark:text-success">
                 {formatNumber(Number(result.value))}
               </span>
             </div>
@@ -231,7 +231,7 @@ export function TestHarness({
                 <p className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
                   Format adjusted
                 </p>
-                <span className="text-base font-semibold text-emerald-700 tabular-nums dark:text-emerald-300">
+                <span className="text-base font-semibold text-success tabular-nums dark:text-success">
                   {formatAdjusted(Number(result.value), isCurrency, unitLabel)}
                 </span>
               </div>

@@ -82,14 +82,14 @@ export default function DevOrganisationRelevancePivotTable(props: {
                       key={`${row.id}-${organisation.id}`}
                       className={
                         isNonZero
-                          ? "border bg-emerald-50 px-3 py-2 text-center text-xs"
+                          ? "border bg-success/10 px-3 py-2 text-center text-xs"
                           : "border px-3 py-2 text-center text-xs"
                       }
                     >
                       <span
                         className={
                           isNonZero
-                            ? "font-semibold text-emerald-700"
+                            ? "font-semibold text-success"
                             : "font-semibold text-muted-foreground"
                         }
                       >
@@ -114,14 +114,14 @@ export default function DevOrganisationRelevancePivotTable(props: {
                   key={`total-${organisation.id}`}
                   className={
                     isNonZero
-                      ? "border bg-emerald-100 px-3 py-2 text-center text-xs"
+                      ? "border bg-success/10 px-3 py-2 text-center text-xs"
                       : "border px-3 py-2 text-center text-xs"
                   }
                 >
                   <span
                     className={
                       isNonZero
-                        ? "font-semibold text-emerald-800"
+                        ? "font-semibold text-success"
                         : "font-semibold text-muted-foreground"
                     }
                   >

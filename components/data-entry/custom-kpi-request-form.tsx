@@ -985,7 +985,7 @@ export function CustomKpiRequestForm(props: {
           <span className="rounded border border-sky-200 bg-sky-50 px-2 py-0.5 text-sky-700">
             Blue: insert token action
           </span>
-          <span className="rounded border border-lime-200 bg-lime-50 px-2 py-0.5 text-lime-700">
+          <span className="rounded border border-success/40 bg-success/10 px-2 py-0.5 text-success">
             Lime: used in formula
           </span>
           <span className="rounded border border-amber-200 bg-amber-50 px-2 py-0.5 text-amber-700">
@@ -1021,7 +1021,7 @@ export function CustomKpiRequestForm(props: {
                     <tr
                       key={option.id}
                       className={
-                        isUsedInFormula ? "bg-lime-50/30" : "bg-background"
+                        isUsedInFormula ? "bg-success/10/30" : "bg-background"
                       }
                     >
                       <td className="px-3 py-2 text-xs text-foreground">
@@ -1039,7 +1039,7 @@ export function CustomKpiRequestForm(props: {
                         <span
                           className={`rounded border px-2 py-0.5 text-xs ${
                             isUsedInFormula
-                              ? "border-lime-200 bg-lime-50 text-lime-700"
+                              ? "border-success/40 bg-success/10 text-success"
                               : "border-amber-200 bg-amber-50 text-amber-700"
                           }`}
                         >
@@ -1074,7 +1074,7 @@ export function CustomKpiRequestForm(props: {
                           placeholder="Enter sample value"
                           className={`h-8 text-xs ${
                             hasSampleValue
-                              ? "border-lime-300 bg-lime-50/60"
+                              ? "border-success/40 bg-success/10/60"
                               : "border-amber-300 bg-amber-50/50"
                           }`}
                         />
