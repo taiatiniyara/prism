@@ -78,6 +78,17 @@ const migrationApiKey =
     process.env.MIGRATION_API_KEY)?.trim() ??
   "";
 
+const parseTargetIds = (): Set<number> | null => {
+  const arg = process.argv.find((a) => a.startsWith("--ids="));
+  if (!arg) return null;
+  const raw = arg.slice("--ids=".length);
+  const ids = raw
+    .split(",")
+    .map((s) => Number(s.trim()))
+    .filter((n) => Number.isFinite(n) && n > 0);
+  return ids.length > 0 ? new Set(ids) : null;
+};
+
 const fetchUsersFromTraining = async (): Promise<MigrationUserDto[]> => {
   const headers: Record<string, string> = {
     "Content-Type": "application/json",
@@ -119,8 +130,24 @@ const fetchUsersFromTraining = async (): Promise<MigrationUserDto[]> => {
 async function main() {
   console.log("=== Sync users from prism-training into prism user table ===\n");
 
-  const list = await fetchUsersFromTraining();
+  const targetIds = parseTargetIds();
+  let list = await fetchUsersFromTraining();
+
+  if (targetIds) {
+    const matched = list.filter((u) => targetIds.has(Number(u.id)));
+    if (matched.length === 0) {
+      console.error(
+        `No prism-training users found matching ids: ${[...targetIds].join(", ")}`,
+      );
+      process.exit(1);
+    }
+    list = matched;
+  }
+
   console.log(`Fetched ${list.length} users from prism-training.\n`);
+  if (targetIds) {
+    console.log(`Filtered to target ids: ${[...targetIds].join(", ")}\n`);
+  }
 
   const [existingUsers, existingRoles, existingOrganisations] =
     await Promise.all([
