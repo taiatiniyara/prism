@@ -31,12 +31,29 @@ export interface ParseResult<T> {
   errors: ParseError[];
 }
 
-const VALUE_TYPES: ReadonlySet<string> = new Set([
-  "numeric",
-  "boolean",
-  "text",
-  "option",
-]);
+// Canonical value types are numeric | boolean | text | option. The customer's extract
+// uses its own synonyms (e.g. "number" for numeric), so normalise common aliases here —
+// this is the one spot to extend when a new sample uses a different spelling.
+const VALUE_TYPE_ALIASES: Record<string, ValueType> = {
+  numeric: "numeric",
+  number: "numeric",
+  num: "numeric",
+  int: "numeric",
+  integer: "numeric",
+  decimal: "numeric",
+  float: "numeric",
+  double: "numeric",
+  boolean: "boolean",
+  bool: "boolean",
+  text: "text",
+  string: "text",
+  varchar: "text",
+  char: "text",
+  option: "option",
+  select: "option",
+  list: "option",
+  enum: "option",
+};
 
 const NO_DATA_REASON_SET: ReadonlySet<string> = new Set(NO_DATA_REASONS);
 
@@ -265,11 +282,12 @@ export async function parseExtractWorkbook(
     let value: number | boolean | string | null = null;
     if (rawValue != null && rawValue !== "") {
       const t = rawType == null ? "" : String(rawType).trim().toLowerCase();
-      if (!VALUE_TYPES.has(t)) {
+      const normalized = VALUE_TYPE_ALIASES[t];
+      if (!normalized) {
         errors.push({ sheet, row: rowNumber, field: "value_type", reason: `value present but value_type is "${rawType ?? ""}" (want numeric|boolean|text|option)`, raw: rawType });
         bad = true;
       } else {
-        valueType = t as ValueType;
+        valueType = normalized;
         value = rawValue;
       }
     }
