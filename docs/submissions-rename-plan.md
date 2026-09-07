@@ -28,8 +28,16 @@ Rename the table and its references **only**. Do **not** couple in the `report_t
 - **Optional hardening (#8):** add `CHECK (bm_opted_in = true OR status_id = Pending)` — mechanizes "never Approved-but-not-opted-in" (participation-spec §5.2).
 - **No USER-IMPACT row** unless UI labels change (name-only rename doesn't).
 
+## Timing — standalone now vs bundle with the period-dimension split
+
+#4's lean: the clean end-state is **`submissions` (the cycle) + a canonical period _dimension_ (the time grain)** — this one table currently conflates both, and the multi-level-hierarchy board already anticipates "report_periods→submissions + period_id FK". Since both are heavy destructive restructures touching the same table, #4 favours **bundling the rename with the period-dimension work as one coherent change** rather than a standalone rename — *unless Eugene wants the naming clarity sooner*, in which case do the name-only rename now (atomic single PR + verify-live) and the period split later. Either order is sound; **now-vs-bundle is Eugene's call.** (This is the one open timing question; the name and scope are settled.)
+
+## Data-integrity check (2026-09-08, #2 — done)
+
+#4 asked whether the purged periods (140→79) left **orphaned `data_entries`**. Verified on live p2: **0 orphans**, and structurally impossible — `data_entries.report_period_id` has FK `data_entries_report_period_id_report_periods_id_fk` with **`ON DELETE RESTRICT`**, so a period with data can't be deleted. Coverage: 77/79 periods hold data; the 2 empty periods are NPC FY2024 (224) + FY2025 (254) — validly opted-in, not orphans. #4's AI/verifier surfaces (which JOIN report_periods) are safe; no `bm_participates` filter needed there — the rationalisation mooted it.
+
 ## Sign-offs
 
-- #8 (owns lifecycle CHECK + publish gate): endorsed name-only, with atomicity caution + the CHECK hardening. ✅
-- #4 (schema owner): weigh-in pending (idle at capture time).
+- #8 (owns lifecycle CHECK + publish gate): endorsed name-only, with atomicity caution + the `CHECK (bm_opted_in=true OR status_id=Pending)` hardening. ✅
+- #4 (schema owner): backs the `submissions` name + Q1 keep-flag + Q3 placement; timing lean = **bundle with the period-dimension split** (Eugene's call). Flagged the orphan check — now verified clean. ✅
 - #2 (this stream): owns the DDL execution when scheduled.
