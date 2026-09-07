@@ -1,11 +1,11 @@
 # Graph Report - prism  (2026-09-08)
 
 ## Corpus Check
-- 1083 files · ~770,184 words
+- 1083 files · ~770,131 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 5719 nodes · 13828 edges · 415 communities (282 shown, 133 thin omitted)
+- 5719 nodes · 13831 edges · 418 communities (284 shown, 134 thin omitted)
 - Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 252 edges (avg confidence: 0.79)
 - Token cost: 0 input · 0 output
 
@@ -15,7 +15,7 @@
 - Run `graphify update .` after code changes (no API cost).
 
 ## Community Hubs (Navigation)
-- energy-resources/service.ts
+- calculator.ts
 - authorizeApiKey
 - cn
 - AI streaming chat endpoint (POST)
@@ -24,7 +24,7 @@
 - user.service.ts
 - relevance/service.ts
 - powerbi/index.ts
-- custom-kpi-request-form.tsx
+- dialog.tsx
 - buttons.tsx
 - strategy-map.repository.ts
 - custom-kpi/service.ts
@@ -32,12 +32,12 @@
 - data-table-create-form.tsx
 - relations.ts
 - utilityRelevance.tsx
-- custom-kpi-review-actions.tsx
+- custom-kpi-request-form.tsx
 - review-kpi/types.ts
 - inputs/service.ts
-- relevanceFilters.tsx
+- tariffGroups.tsx
 - builderClient.tsx
-- service-areas/service.ts
+- service-areas/page.tsx
 - compilerOptions
 - data-entry/types.ts
 - us1.contextPersistence.service.ts
@@ -53,7 +53,7 @@
 - balanced-scorecard/types.ts
 - session.service.ts
 - PRISM 2 — Calculator Engine & Formula Builder Spec
-- source-reader.ts
+- message-bubble.tsx
 - generate-api-docs.ts
 - schema.ts
 - components.json
@@ -78,13 +78,13 @@
 - scripts
 - strategy-map.validators.ts
 - requests/route.ts
-- seed-dev-demo.ts
+- schema/kpi.ts
 - source-setting.ts
 - loads.ts
-- [userId]/status/route.ts
+- clarifications/route.ts
 - new-bsc/authz.ts
 - target-selector.ts
-- saveDataEntryValueInternal
+- listReviewKpiRows
 - PRISM
 - PRISM 2 — KPI targets & actuals: time-series model (spec)
 - ai/types.ts
@@ -102,14 +102,14 @@
 - parse.ts
 - onboard-parse.ts
 - data_entries — Database Builder's Configuration Guide
-- managedLists.ts
+- measureDefinitions
 - migrate.ts
 - arithmetic.ts
 - migration/service.ts
 - dashboard/page.tsx
-- factFinancialAccounts/route.ts
+- pbi-queries.ts
 - powerbi-client
-- clarifications/route.ts
+- us3.conditionalViews.service.ts
 - PRISM 2 — Pending Work Tracker
 - Per-Period Benchmarking Participation (p2)
 - PRISM 2 — Database Build Specification (for the database builder)
@@ -126,11 +126,11 @@
 - PRISM 2 — Data-Entry UX Requirements (error-prevention patterns)
 - logger.ts
 - package.json
-- migrate-data-entries.ts
+- diagnose-input-def-gap.ts
 - role-guard.ts
 - enter-data/service.ts
 - orchestrator.ts
-- orgs.service.ts
+- diagnose-data-entry-gap.ts
 - dump-tables-to-xlsx.ts
 - sub-regions/service.ts
 - formula-bindings.ts
@@ -139,12 +139,12 @@
 - measure-scope/service.ts
 - Apportioned-costs contextual label — electricity-only financials for multi-service utilities
 - Proposed changes
-- compliance.ts
+- visualization-renderer.tsx
 - `kpi_actual` DDL design (DRAFT)
 - Measure catalogue — change log
 - Multi-level data hierarchy — agreed grain convention + requirements (RULED)
 - worker.ts
-- errors/contract.test.ts
+- errors/route.ts
 - PBIX API Feed Fixes — Resolution Report (2026-08-25)
 - map.ts
 - gen-measure-applicability.ts
@@ -158,7 +158,7 @@
 - Lean data-entry workflow (BLO-activated) — reduce entry burden where no DAO engages
 - gen-extract-template.ts
 - update-p2-ids.ts
-- enter-data/filters.client.tsx
+- constants.ts
 - Multi-sector terminology — proposed resolutions to ADR 0003's open questions
 - events/route.ts
 - Data-quality findings from the dictionary drafting pass (2026-07-07)
@@ -222,7 +222,7 @@
 - Issue 9 — KPI Calculation Monitor
 - gen-measure-dimension-scope.ts
 - rename-formula-input-energy-keys.ts
-- tariffRelevanceTable.tsx
+- checkbox.tsx
 - errors/page.tsx
 - 5. Input context & traceability — "a tag card for every input"
 - ISSUES.md — Dev Observability Backlog
@@ -246,7 +246,7 @@
 - logs/page.tsx
 - New-organisation onboarding — migration step 0
 - retrieveDataEntries
-- lock.ts
+- chat-error-boundary.tsx
 - kpi-worker/evaluator.ts
 - Data Entry Logs Page
 - PRISM README
@@ -255,7 +255,7 @@
 - PRISM — project instructions
 - CSP + security headers configuration
 - Export data as CSV or Excel
-- countries/service.ts
+- orgs.service.ts
 - managed-lists/service.ts
 - Schema Drift & Agent-Safety Guardrails
 - new-bsc-builder.tsx
@@ -279,7 +279,7 @@
 - Download Button Component
 - Enter Data Error Boundary
 - Incomplete KPIs Page
-- report-periods/service.ts
+- managedLists.ts
 - Pending Users States Integration Test
 - Filter Context Cookies Unit Test
 - PRIVILEGED_ROLES (DEV, BMO)
@@ -310,7 +310,7 @@
 - inspect-saifi-dims.ts
 - enter-data-v2/service.ts
 - migrate-customers-served.ts
-- prism-native.ts
+- data-service/utils.ts
 - Custom KPI Create Request Contract Test
 - Registration Clarifications Contract Test
 - PRISM Application Logo
@@ -319,15 +319,15 @@
 - Window Application Icon SVG
 - verify-allgen-grandtotal.ts
 - visualization-extraction.test.ts
-- dataEntryValidation.service.ts
+- Power Stations Service
 - @base-ui/react
-- lib/formatters.ts
+- formatReportPeriodDisplay
 - measures-enrichment — artifacts + regeneration
-- topNav.tsx
+- measure-scope/page.tsx
 - SESSION.md
 - echarts
 - echarts-for-react
-- Environment Variables
+- compute-order.ts
 - eslint.config.mjs
 - global.d.ts
 - jsdom
@@ -335,7 +335,7 @@
 - fix-governance-booleans-from-training.ts
 - node-cron
 - drizzle-orm
-- bsc-template/page.tsx
+- utility.ts
 - nodemailer
 - generationRelevance.shared.ts
 - clsx
@@ -357,7 +357,7 @@
 - tailwind-merge
 - @xyflow/react
 - yaml
-- dimension-defaults.ts
+- TestHarness.tsx
 - formula_binding migration (#238)
 - seed-country-context.ts
 - info/route.ts
@@ -374,7 +374,7 @@
 - Registration Clarifications Contract Test
 - Custom KPI Create Request Contract Test
 - Data Entry Validation Unit Test
-- generationRelevanceTable.tsx
+- balanced-scorecard/authz.ts
 - pg
 - ADR 0001: Replace BSC Strategy Builder with Template-Driven BSC Builder
 - tw-animate-css
@@ -384,8 +384,11 @@
 - next-env.d.ts
 - rebuild-country-context-from-p1.ts
 - sync-prerequisite-tables.ts
-- rebuild-dl-def-mappings.ts
-- dataEntryStatus/route.ts
+- balanced-scorecard/page.tsx
+- country-context-carry-forward.test.ts
+- bar-chart-view.tsx
+- leaderboard-view.tsx
+- table-view.tsx
 - db-push-safe.ts
 - class-variance-authority
 - post-checkout
@@ -429,123 +432,123 @@
 - **Strategy Map Rendering Pipeline** — bscbuilderspec_strategy_map, bscbuilderspec_bsc_objective_link, bscbuilderspec_is_map_node, bscbuilderspec_preview_filter, bscbuilderspec_per_utility_overlay [EXTRACTED 1.00]
 - **AI Safety Guardrail System** — prismaireport_anti_hallucination_rules, prismaireport_pii_filtering, agentsmd_in_memory_rate_limiter, agentsmd_better_auth [INFERRED 0.80]
 
-## Communities (415 total, 133 thin omitted)
+## Communities (418 total, 134 thin omitted)
 
-### Community 0 - "energy-resources/service.ts"
-Cohesion: 0.19
-Nodes (22): ENERGY_SOURCE_MANAGED_LIST_ALIASES, UnitsSettingsPage(), CreateUnit(), CreateUnitFromPeriodRow(), GetAllReportPeriods(), GetAllUnits(), resolveNumber(), toPeriodRows() (+14 more)
+### Community 0 - "calculator.ts"
+Cohesion: 0.18
+Nodes (11): kpiDefinitions, CalculatedKpi, calculateKpis(), CalculatorData, formatPeriodDisplay(), CustomKpiRequest, CustomKpiStatusData, explainFormula() (+3 more)
 
 ### Community 1 - "authorizeApiKey"
-Cohesion: 0.05
-Nodes (66): Migration Users POST Handler, Power BI RLS GET Handler, Users API GET Handler, GET(), getManagedListByName(), GET(), getManagedListByName(), GET() (+58 more)
+Cohesion: 0.06
+Nodes (59): Migration Users POST Handler, Power BI RLS GET Handler, Users API GET Handler, COUNTRY_DISPLAY_NAMES, GET(), GET(), getManagedListByName(), GET() (+51 more)
 
 ### Community 2 - "cn"
-Cohesion: 0.06
-Nodes (41): downloadBlob(), DownloadButton(), DownloadRow, SetTransmissionRelevancePayload, TransmissionItem, ChatSession, ChatSidebarProps, formatAdjusted() (+33 more)
+Cohesion: 0.08
+Nodes (38): downloadBlob(), DownloadButton(), DownloadRow, CHILD_LEVEL, FlatNode, LEVEL_LABEL, AlertDialog(), AlertDialogAction() (+30 more)
 
 ### Community 3 - "AI streaming chat endpoint (POST)"
 Cohesion: 0.09
 Nodes (26): AI Review Queue (DB Schema), Admin role set (BMO, DEV), AI streaming chat endpoint (POST), Derive session title from first message, Strip non-role/content fields from messages, Auto-summarize conversation after 8 turns, Validate and sanitize context_summary JSON, Submit thumbs-up/down feedback with review queue (+18 more)
 
 ### Community 4 - "powerbi.ts"
-Cohesion: 0.04
-Nodes (94): createToolMetadata(), ALLOWED_TOP_LEVEL, DANGEROUS_DAX_PATTERNS, DaxValidationResult, DDL_PATTERNS, sanitizeDax(), assembleFullReport(), autoFillDonorApplication() (+86 more)
+Cohesion: 0.05
+Nodes (85): createToolMetadata(), sanitizeDax(), assembleFullReport(), autoFillDonorApplication(), CapacityRecommendation, CompletenessScore, computeKpiCorrelations(), ExecutiveBriefing (+77 more)
 
 ### Community 5 - "connection.ts"
 Cohesion: 0.03
-Nodes (65): GET(), GET(), FUEL_OIL_LABEL_BY_TECHNOLOGY, GENERATOR_COLUMN_LABELS, GET(), GET(), GET(), GET() (+57 more)
+Nodes (60): GET(), GET(), FUEL_OIL_LABEL_BY_TECHNOLOGY, GENERATOR_COLUMN_LABELS, GET(), GET(), GET(), GET() (+52 more)
 
 ### Community 6 - "user.service.ts"
-Cohesion: 0.04
-Nodes (86): READ_ROLES, WRITE_ROLES, buildKpiWhereConditions(), getKpiVisibilityFilterForUser(), listReviewKpiRows(), GetReportPeriods(), GetReportPeriodsOptions, ReportPeriodDTO (+78 more)
+Cohesion: 0.05
+Nodes (89): GetReportPeriods(), GetReportPeriodsOptions, ReportPeriodDTO, UserStatus, compareKpisAcrossUtilities(), CorrelationData, CorrelationPair, CountryRegionItem (+81 more)
 
 ### Community 7 - "relevance/service.ts"
 Cohesion: 0.05
-Nodes (64): toPositiveInteger(), DevAssetClassRelevanceBuilder(), ENERGY_RESOURCE_TYPE_MANAGED_LIST_ALIASES, ENERGY_SOURCE_MANAGED_LIST_ALIASES, ENERGY_TYPE_MANAGED_LIST_ALIASES, AddDevInputRelevance(), CreateDevAssetClassRelevance(), CustomKpiRelevanceInput (+56 more)
+Nodes (65): resolveEnergyMetadata(), toPositiveInteger(), DevAssetClassRelevanceBuilder(), ENERGY_RESOURCE_TYPE_MANAGED_LIST_ALIASES, ENERGY_SOURCE_MANAGED_LIST_ALIASES, ENERGY_TYPE_MANAGED_LIST_ALIASES, AddDevInputRelevance(), CreateDevAssetClassRelevance() (+57 more)
 
 ### Community 8 - "powerbi/index.ts"
 Cohesion: 0.13
 Nodes (45): GET(), benchmarkingRequests, DiscoveryData, ReportData, SchemaData, logger, AzureTokenResponse, clearTokenCache() (+37 more)
 
-### Community 9 - "custom-kpi-request-form.tsx"
-Cohesion: 0.05
-Nodes (49): getPeriodInputCoverage(), InputCoverage, inputsFromJson(), PeriodInputCoverage, AggregatedOutcomeBadge(), AggregatedOutcomeBadgeProps, BscKpiPickerModal(), distinct() (+41 more)
+### Community 9 - "dialog.tsx"
+Cohesion: 0.06
+Nodes (42): getPeriodInputCoverage(), InputCoverage, inputsFromJson(), PeriodInputCoverage, AggregatedOutcomeBadge(), AggregatedOutcomeBadgeProps, BscKpiPickerModal(), distinct() (+34 more)
 
 ### Community 10 - "buttons.tsx"
 Cohesion: 0.11
 Nodes (42): HEAVY_TIMEOUT_MS, HistoryEntry, MigrationButtons(), Step, StepResult, steps, withTimeout(), assertDevMigrationAccess() (+34 more)
 
 ### Community 11 - "strategy-map.repository.ts"
-Cohesion: 0.08
-Nodes (47): DELETE(), PUT(), assertNewBscBuildAccess(), asJson(), createObjectiveLink(), deleteObjectiveLink(), fetchStrategyMap(), setNodeMapDisplay() (+39 more)
+Cohesion: 0.07
+Nodes (50): assertNewBscBuildAccess(), ensureMandatoryMaterialized(), getUtilityScorecard(), asJson(), createObjectiveLink(), deleteObjectiveLink(), fetchStrategyMap(), setNodeMapDisplay() (+42 more)
 
 ### Community 12 - "custom-kpi/service.ts"
-Cohesion: 0.07
-Nodes (43): assertCustomKpiRequestCreateAccess(), assertCustomKpiUnitIdIsValid(), assertSelectedMeasureDefinitionIdsAreValid(), assertValidCustomKpiStatusTransition(), buildCustomKpiDefinitionFingerprint(), calculateNextCustomKpiEmailAttemptAt(), canTransitionCustomKpiStatus(), createCustomKpiRequest() (+35 more)
+Cohesion: 0.08
+Nodes (41): assertCustomKpiRequestCreateAccess(), assertCustomKpiUnitIdIsValid(), assertSelectedMeasureDefinitionIdsAreValid(), assertValidCustomKpiStatusTransition(), buildCustomKpiDefinitionFingerprint(), calculateNextCustomKpiEmailAttemptAt(), canTransitionCustomKpiStatus(), createCustomKpiRequest() (+33 more)
 
 ### Community 13 - "requireUser"
 Cohesion: 0.13
-Nodes (32): GET(), GET(), errorResponse(), requireUser(), GET(), GET(), PUT(), PUT() (+24 more)
+Nodes (32): GET(), GET(), errorResponse(), requireUser(), GET(), GET(), PUT(), DELETE() (+24 more)
 
 ### Community 14 - "data-table-create-form.tsx"
 Cohesion: 0.08
-Nodes (58): DIMENSION_LABELS, MeasureDimensionScopeEditorProps, MeasureScopeRow, getInitialFinancialYearEnd(), getMaxDayForMonth(), MONTH_OPTIONS, MonthOption, UpdateReportingDetailsForm() (+50 more)
+Nodes (60): LimitRow, MONTHS, MONTHS, TargetRow, getInitialFinancialYearEnd(), getMaxDayForMonth(), MONTH_OPTIONS, MonthOption (+52 more)
 
 ### Community 15 - "relations.ts"
 Cohesion: 0.03
 Nodes (71): accountRelations, aiChatSessionRelations, aiChatTurnRelations, aiCostBudgetRelations, aiFeedbackRelations, aiReviewQueueRelations, aiToolCallRelations, aiUsageMetricsRelations (+63 more)
 
 ### Community 16 - "utilityRelevance.tsx"
-Cohesion: 0.14
-Nodes (22): DevInputRelevanceTable(), DevOrganisationRelevancePivotTable(), OrganisationOption, PivotRow, DevRelevanceSection(), RelevanceSearchParams, RelevanceSettingsPage(), GetCustomKpiRelevance() (+14 more)
+Cohesion: 0.11
+Nodes (28): InputsSettingsPage(), InputsTab, resolveDefaultTab(), CreateMeasureDefinition(), parseAlternativeNames(), UpdateMeasureDefinition(), DevInputRelevanceTable(), DevOrganisationRelevancePivotTable() (+20 more)
 
-### Community 17 - "custom-kpi-review-actions.tsx"
-Cohesion: 0.18
-Nodes (10): CategoryOption, CustomKpiReviewActions(), CustomKpiReviewActionsProps, DecisionType, SubcategoryOption, BorderedBox(), BorderedBoxProps, variantClasses (+2 more)
+### Community 17 - "custom-kpi-request-form.tsx"
+Cohesion: 0.12
+Nodes (17): FormState, FORMULA_OPERATORS, INITIAL_STATE, InputOption, ProposedInputDraft, ProposedUnitDraft, UnitOption, CategoryOption (+9 more)
 
 ### Community 18 - "review-kpi/types.ts"
 Cohesion: 0.08
-Nodes (39): SyncStore, ReviewKpiConflictResponse, ReviewKpiFilterContext, ReviewKpiFilterOption, ReviewKpiInputValue, ReviewKpiPageViewModel, ReviewKpiResult, ReviewKpiResultStatus (+31 more)
+Nodes (40): SyncStore, AddReviewKpiCommentPayload, ReviewKpiConflictResponse, ReviewKpiFilterContext, ReviewKpiFilterOption, ReviewKpiInputValue, ReviewKpiPageViewModel, ReviewKpiResult (+32 more)
 
 ### Community 19 - "inputs/service.ts"
-Cohesion: 0.10
-Nodes (36): MapBuilderClient(), MapBuilderClientProps, getLocalInputs(), InputDlMapBuilder(), InputsSettingsPage(), InputsTab, resolveDefaultTab(), AutoAcceptHighInputDlMappings() (+28 more)
+Cohesion: 0.11
+Nodes (29): MapBuilderClient(), MapBuilderClientProps, getLocalInputs(), InputDlMapBuilder(), AutoAcceptHighInputDlMappings(), BuildInputDlMappingCandidates(), confidenceFromScore(), CreateMeasureDefinitionPayload (+21 more)
 
-### Community 20 - "relevanceFilters.tsx"
-Cohesion: 0.29
-Nodes (7): FilterOption, RelevanceFilters(), SetTariffRelevancePayload, TariffRelevanceCell, TariffRelevanceLabel, TariffRelevanceRow, toQueryValue()
+### Community 20 - "tariffGroups.tsx"
+Cohesion: 0.17
+Nodes (17): readSessionCustomerType(), readSessionNumber(), selectStoredCustomerTypes(), selectStoredPaymentModeId(), TariffGroups(), writeSessionCustomerType(), writeSessionNumber(), DataEntryComparisonPanel() (+9 more)
 
 ### Community 21 - "builderClient.tsx"
 Cohesion: 0.13
 Nodes (30): defaultDevValidationBuilderConfig, defaultValidationRuleToggles, normalizeCodes(), normalizeRuleToggles(), sanitizeDevValidationBuilderConfig(), VALIDATION_CODES, VALIDATION_RULE_NAMES, clearDevValidationBuilderConfigInDb() (+22 more)
 
-### Community 22 - "service-areas/service.ts"
-Cohesion: 0.12
-Nodes (25): ServiceAreasSettingsPage(), AddServiceArea(), AllServiceAreas(), UpdateServiceArea(), NewServiceArea, ServiceArea, getActiveSector(), ADR-0003 (+17 more)
+### Community 22 - "service-areas/page.tsx"
+Cohesion: 0.13
+Nodes (22): ServiceAreasSettingsPage(), AddServiceArea(), UpdateServiceArea(), ServiceArea, getActiveSector(), ADR-0003, ConceptKey, CONCEPTS (+14 more)
 
 ### Community 23 - "compilerOptions"
 Cohesion: 0.06
 Nodes (31): dom, dom.iterable, esnext, **/*.mts, .next/dev/types/**/*.ts, next-env.d.ts, .next/types/**/*.ts, node_modules (+23 more)
 
 ### Community 24 - "data-entry/types.ts"
-Cohesion: 0.09
-Nodes (23): GeneratorGroupsProps, InputCellProps, InputRowsProps, ProgressBreakdownProps, DataEntryValueCandidate, buildGenerationGroups(), GeneratorCandidate, GeneratorEntryCandidate (+15 more)
+Cohesion: 0.07
+Nodes (36): DataEntryFiltersClient(), DataEntryFiltersClientProps, keyMap, parseNullableInt(), GeneratorGroupsProps, InputCellProps, InputRowsProps, ProgressBreakdownProps (+28 more)
 
 ### Community 25 - "us1.contextPersistence.service.ts"
-Cohesion: 0.25
-Nodes (10): ensureValidOrDefault(), getDefaultOptionValue(), hasOption(), sanitizeDependentFilterContext(), sanitizePrimaryFilterContext(), buildFilterContextFixture(), buildFilterOptionsFixture(), FilterContextFixture (+2 more)
+Cohesion: 0.20
+Nodes (12): bootstrapDataEntryFilterContext(), ensureValidOrDefault(), getDefaultOptionValue(), getOperationalCategoryId(), hasOption(), sanitizeDependentFilterContext(), sanitizePrimaryFilterContext(), buildFilterContextFixture() (+4 more)
 
 ### Community 26 - "templatePanel.tsx"
 Cohesion: 0.13
 Nodes (27): DataEntryTemplateUploadRowPayload, shouldRunValidationBuilderRule(), applyBoldHeaderRow(), applyHeaderFilter(), applyLeftAlignment(), buildValueValidationFormula(), createTemplateRowLookupKey(), DownloadTemplateScope (+19 more)
 
 ### Community 27 - "auth-schema.ts"
-Cohesion: 0.16
-Nodes (12): RolesSettingsPage(), CreateRole(), UpdateRole(), accountRelations, NewRole, NewUser, RegistrationClarificationDirection, Role (+4 more)
+Cohesion: 0.15
+Nodes (14): AuthPage(), RolesSettingsPage(), AllRoles(), CreateRole(), UpdateRole(), accountRelations, NewRole, NewUser (+6 more)
 
 ### Community 28 - "new-bsc/_lib/validators.ts"
-Cohesion: 0.18
-Nodes (24): asDateOrNull(), asLevel(), asOrd(), asPositiveIntOrNull(), asTrimmed(), asUuidOrNull(), isPlainObject(), LEVELS (+16 more)
+Cohesion: 0.16
+Nodes (26): asDateOrNull(), asLevel(), asOrd(), asPositiveIntOrNull(), asTrimmed(), asUuidOrNull(), isPlainObject(), LEVELS (+18 more)
 
 ### Community 29 - "access-plans-client.tsx"
 Cohesion: 0.12
@@ -565,27 +568,27 @@ Nodes (36): AI Concurrent Request Slot Management, AI Primary/Fallback Model Arc
 
 ### Community 33 - "getCurrentUser"
 Cohesion: 0.09
-Nodes (31): GET(), GET(), GET(), GET(), STUCK_DAYS, GET(), POST(), GET() (+23 more)
+Nodes (47): GET(), GET(), GET(), GET(), STUCK_DAYS, GET(), POST(), ENERGY_SOURCE_MANAGED_LIST_ALIASES (+39 more)
 
 ### Community 34 - "generators-sync.ts"
 Cohesion: 0.11
 Nodes (22): POST(), configuredTrainingBaseUrls, fetchGeneratorsFromTraining(), GENERATOR_FETCH_TIMEOUT_MS, GeneratorSyncResult, InsertUnit, isPgInt32(), JSON_HEADERS (+14 more)
 
 ### Community 35 - "balanced-scorecard/types.ts"
-Cohesion: 0.06
-Nodes (39): CustomKpiReferenceOptions, ExcludedScoreRow, ExclusionReasonCode, ScorecardCustomKpiRequest, ScorecardDraftInitiativeInput, ScorecardDraftKpiInput, ScorecardDraftObjectiveInput, ScorecardDraftSavePayload (+31 more)
+Cohesion: 0.07
+Nodes (31): CustomKpiReferenceOptions, ExcludedScoreRow, ExclusionReasonCode, ScorecardCustomKpiRequest, ScorecardDraftInitiativeInput, ScorecardDraftKpiInput, ScorecardDraftObjectiveInput, ScorecardDraftSavePayload (+23 more)
 
 ### Community 36 - "session.service.ts"
-Cohesion: 0.18
-Nodes (13): POST(), features, Page(), GetOrganisationById(), DEV_BMO_ROLES, SettingsHomePage(), ReportingSettingsPage(), getSession() (+5 more)
+Cohesion: 0.22
+Nodes (11): POST(), GetOrganisationById(), DEV_BMO_ROLES, SettingsHomePage(), ReportingSettingsPage(), getSession(), getUser(), DEV_UTILITY_CONTEXT_COOKIE (+3 more)
 
 ### Community 37 - "PRISM 2 — Calculator Engine & Formula Builder Spec"
 Cohesion: 0.10
 Nodes (21): 0. Design principles, 10. Schema changes summary, 11. Open decisions register, 12. Locked context this depends on, 1. The problem, 2. Current-state reality (what's actually in p2 today), 3. One node type: computed measures (KPI is a label), 4.4 Engine topology & compute home (DECIDED 2026-07-24) (+13 more)
 
-### Community 38 - "source-reader.ts"
-Cohesion: 0.15
-Nodes (16): assertScopeAuthorization(), buildSourceSnapshot(), WorkerSnapshot, AggregatedWorkerScope, asFiniteNumber(), DimensionedRow, isAllMemberRow(), readSourceSnapshot() (+8 more)
+### Community 38 - "message-bubble.tsx"
+Cohesion: 0.22
+Nodes (9): ChatMessage, extractVisualizations(), markdownComponents, MessageBubbleInner(), MessageBubbleProps, parseReasoningSteps(), REASONING_STEP_PATTERNS, ReasoningStep (+1 more)
 
 ### Community 39 - "generate-api-docs.ts"
 Cohesion: 0.17
@@ -612,20 +615,20 @@ Cohesion: 0.10
 Nodes (21): 10. Tiered access / tenancy + registration — 🟢 active (design), 11. UI / frontend — 🟢 active, 12. Security hardening — 🟢 active (quiet; 2 items await Eugene), 13. Multi-sector (water/sanitation) — 🟢 Phase 5a shipped; 5b/5c deferred, 14. Data updates / reference-data — 🟢, 15. Pending-work tracker — 🟢, 1. Project management / coordination — 🟢, 2. Medallion migration — 🟢 active (data_entries VALIDATED; awaiting tariff + 340/342 extracts) (+13 more)
 
 ### Community 45 - "status.service.ts"
-Cohesion: 0.16
-Nodes (13): GET(), parseOptionalNumber(), parseRequiredNumber(), AttemptTransitionInput, getNextAttemptStatus(), KpiStatusFilter, listKpiWorkerStatuses(), mapFailureMessage() (+5 more)
+Cohesion: 0.15
+Nodes (14): GET(), parseOptionalNumber(), parseRequiredNumber(), getLatestKpiFailureForContext(), AttemptTransitionInput, getNextAttemptStatus(), KpiStatusFilter, listKpiWorkerStatuses() (+6 more)
 
 ### Community 46 - "health/route.ts"
 Cohesion: 0.23
 Nodes (12): checkDb(), CheckResult, checkSmtp(), checkWorldBank(), DbCheck, GET(), HealthResponse, ModelCheck (+4 more)
 
 ### Community 47 - "resolveTargets.ts"
-Cohesion: 0.18
-Nodes (16): normalizeFormulaInput(), toNullableNumber(), filterAffectedKpiTargets(), KpiDefinitionLike, resolveAffectedKpiTargets(), ResolvedKpiTarget, resolveKpiTargetsByIds(), resolveTargetValueForContext() (+8 more)
+Cohesion: 0.09
+Nodes (33): ComputeKpiOutcome, computeKpiTarget(), extractErrorMetadata(), normalizeFormulaInput(), toNullableNumber(), PersistKpiResultParams, upsertCalculatedKpiValue(), NOTE: no `periodAccessPredicate` is applied here — this internal function (+25 more)
 
 ### Community 48 - "users/service.ts"
-Cohesion: 0.12
-Nodes (22): buildClarificationReference(), DecisionResult, getInboundReferenceSecret(), logRegistrationClarificationInboundReply(), parseReferenceFromSubject(), PendingUserListItem, RegistrationClarificationMessage, resolveUserIdFromReference() (+14 more)
+Cohesion: 0.09
+Nodes (31): GET(), UsersSettingsPage(), utilityRoles, AllUsers(), buildClarificationReference(), CreateUser(), DecisionResult, getInboundReferenceSecret() (+23 more)
 
 ### Community 49 - "load.ts"
 Cohesion: 0.23
@@ -648,16 +651,16 @@ Cohesion: 0.17
 Nodes (25): dimensionRollupConsistency(), generationCoverageDiff(), measureClassification(), missingUtilityLevelShells(), Row, run(), runGenerativeChecks(), serviceAreaCoverage() (+17 more)
 
 ### Community 54 - "decision/route.ts"
-Cohesion: 0.14
-Nodes (14): optionalString(), parsePositiveIntOrNull(), parseRequestIdParam(), parseReviewDecisionPayload(), ReviewDecisionInput, ReviewDecisionType, POST(), POST() (+6 more)
+Cohesion: 0.15
+Nodes (12): optionalString(), parsePositiveIntOrNull(), parseRequestIdParam(), parseReviewDecisionPayload(), ReviewDecisionInput, ReviewDecisionType, POST(), POST() (+4 more)
 
 ### Community 55 - "migration/page.tsx"
-Cohesion: 0.13
-Nodes (18): DataEntryBreakdownPanel(), DataEntryComparisonPanel(), getMigrationHistory(), MigrationHistory(), MigrationPage(), buildReportPeriodLabel(), fetchReportPeriodOptionsWithUtility(), fetchReportTypeOptions() (+10 more)
+Cohesion: 0.14
+Nodes (17): DataEntryBreakdownPanel(), getMigrationHistory(), MigrationHistory(), MigrationPage(), buildReportPeriodLabel(), fetchReportPeriodOptionsWithUtility(), fetchReportTypeOptions(), fetchV1Breakdown() (+9 more)
 
 ### Community 56 - "kpi/page.tsx"
 Cohesion: 0.06
-Nodes (58): listCustomKpiApprovalTaxonomyOptions(), listCustomKpiReviewQueue(), createEmptyRow(), KpiLimitsEditor(), parseLimitRows(), KpiSettingsPage(), canSetKpiLimits(), canSetKpiTargets() (+50 more)
+Nodes (54): listCustomKpiApprovalTaxonomyOptions(), listCustomKpiReviewQueue(), createEmptyRow(), KpiLimitsEditor(), parseLimitRows(), KpiSettingsPage(), canSetKpiLimits(), canSetKpiTargets() (+46 more)
 
 ### Community 57 - "WORKSTREAMS.md"
 Cohesion: 0.16
@@ -676,16 +679,16 @@ Cohesion: 0.10
 Nodes (20): scripts, build, db-push, db-push-safe, db-seed, db-seed-bsc, deploy, dev (+12 more)
 
 ### Community 61 - "strategy-map.validators.ts"
-Cohesion: 0.22
-Nodes (14): asIntOrNull(), asNoteOrNull(), asRelation(), asUuid(), isPlainObject(), parseCreateObjectiveLinkPayload(), parseSetNodeMapDisplayPayload(), parseUpdateObjectiveLinkPayload() (+6 more)
+Cohesion: 0.24
+Nodes (13): asIntOrNull(), asNoteOrNull(), asRelation(), asUuid(), isPlainObject(), parseCreateObjectiveLinkPayload(), parseSetNodeMapDisplayPayload(), parseUpdateObjectiveLinkPayload() (+5 more)
 
 ### Community 62 - "requests/route.ts"
 Cohesion: 0.18
 Nodes (14): CreateCustomKpiRequestInput, optionalString(), parseBoolean(), parseCreateCustomKpiRequestPayload(), parseProposedInputs(), parseProposedUnits(), parseSelectedMeasureDefinitionIds(), requirePositiveInteger() (+6 more)
 
-### Community 63 - "seed-dev-demo.ts"
-Cohesion: 0.13
-Nodes (13): MigrateUser, GET(), authorizeSensitiveApiKey(), constantTimeEqual(), PageProps, Countries (DB Schema), roles, Organisations (DB Schema) (+5 more)
+### Community 63 - "schema/kpi.ts"
+Cohesion: 0.09
+Nodes (23): Countries (DB Schema), DefinitionStatus, BscNodeLevel, BscNodeRef, BscRelationship, Kpi, KpiActual, KpiCalculationAttempt (+15 more)
 
 ### Community 64 - "source-setting.ts"
 Cohesion: 0.12
@@ -695,41 +698,41 @@ Nodes (25): AiSettingsForm(), AiSettingsPage(), updateAiSourceConfig(), SectionC
 Cohesion: 0.12
 Nodes (11): MigrationLoad, migrationLoads, MigrationLoadStatus, NewMigrationLoad, MigrationScorecard, NewMigrationScorecard, SCORECARD_LINES, SCORECARD_VALUE_TYPES (+3 more)
 
-### Community 66 - "[userId]/status/route.ts"
-Cohesion: 0.15
-Nodes (10): ClarificationRequestAction, parseStatusDecisionRequest(), POST(), RouteParams, applyPendingUserDecision(), StatusDecision, mocks, mocks (+2 more)
+### Community 66 - "clarifications/route.ts"
+Cohesion: 0.10
+Nodes (20): ClarificationRequestAction, parseClarificationRequest(), parseStatusDecisionRequest(), GET(), POST(), RouteParams, POST(), RouteParams (+12 more)
 
 ### Community 67 - "new-bsc/authz.ts"
-Cohesion: 0.16
-Nodes (15): parseSaveThemePayload(), PUT(), assertNewBscMasterLinkAccess(), assertNewBscThemeAdminAccess(), BUILD_ROLES, canEditBscMasterLinks(), canEditBscTheme(), MASTER_LINK_ROLES (+7 more)
+Cohesion: 0.17
+Nodes (12): assertNewBscMasterLinkAccess(), assertNewBscTemplateAdminAccess(), BUILD_ROLES, canEditBscMasterLinks(), MASTER_LINK_ROLES, READ_ROLES, TEMPLATE_ADMIN_ROLES, THEME_ADMIN_ROLES (+4 more)
 
 ### Community 68 - "target-selector.ts"
 Cohesion: 0.19
 Nodes (10): AggregatedFormulaTarget, escapeRegExp(), FormulaInputCandidate, inferFormulaInputs(), isEligibleAggregatedTarget(), isIdentifier(), selectAggregatedFormulaTargets(), loadFormulaInputsFromBindings() (+2 more)
 
-### Community 69 - "saveDataEntryValueInternal"
-Cohesion: 0.13
-Nodes (21): GeneratorGroups(), InputRows(), buildExistingDataEntryConditions(), getAllMemberId(), getAllMemberIdsMap(), getDataEntryValidationMetadata(), getDevValidationBuilderConfig(), normalizeDataEntryValue() (+13 more)
+### Community 69 - "listReviewKpiRows"
+Cohesion: 0.11
+Nodes (27): buildKpiWhereConditions(), getKpiVisibilityFilterForUser(), getReviewKpiFilterOptions(), listReviewKpiRows(), Create Tool Metadata (Common), Get Severity Score (Common), Has Global Utility Access, getSeverityScore() (+19 more)
 
 ### Community 70 - "PRISM"
-Cohesion: 0.11
-Nodes (17): API Notes, code:bash (npm install), code:bash (cp .env.example .env), code:powershell (Copy-Item .env.example .env), code:bash (npm run db-push-safe), code:bash (npm run dev), code:bash (npm run test), Deployment (+9 more)
+Cohesion: 0.08
+Nodes (25): Annual Benchmarking Report, PPA Benchmarking Platform, PPA Secretariat, API Notes, Chatbot Integration, code:bash (npm install), code:bash (cp .env.example .env), code:powershell (Copy-Item .env.example .env) (+17 more)
 
 ### Community 71 - "PRISM 2 — KPI targets & actuals: time-series model (spec)"
 Cohesion: 0.12
 Nodes (16): 10. Out of scope / open, 1. Problem, 2. Decision, 3. The `period` dimension, 4. Targets — `kpi_target`, 5. Actuals — `kpi_actual`, 6.1 When monthly switches on (`is_mth_reports_relevant = TRUE`), 6. Financial year is (currently) the only live granularity (+8 more)
 
 ### Community 72 - "ai/types.ts"
-Cohesion: 0.04
-Nodes (53): ChatMessage, extractVisualizations(), markdownComponents, MessageBubbleInner(), MessageBubbleProps, parseReasoningSteps(), REASONING_STEP_PATTERNS, ReasoningStep (+45 more)
+Cohesion: 0.08
+Nodes (27): ADMIN_ONLY_TOOLS, ADMIN_ROLES, GuardrailRule, INPUT_GUARDRAIL_RULES, PII_PATTERNS, AI_DEFAULTS, AI_MODELS, AI_PROMPT_VERSION (+19 more)
 
 ### Community 73 - "merge-dictionary-drafts.ts"
 Cohesion: 0.12
 Nodes (13): Draft, esc(), finalInputs, finalKpis, inputDrafts, _inputSrcMap, kpiDrafts, _kpiSrcMap (+5 more)
 
 ### Community 74 - "user-status.ts"
-Cohesion: 0.18
-Nodes (11): BlockedMessage, getBlockedMessage(), BlockedAccessOverlay(), BlockedAccessOverlayProps, asBlockedStatus(), assertValidTransition(), BLOCKED_STATUSES, BlockedAccessState (+3 more)
+Cohesion: 0.17
+Nodes (12): BlockedMessage, getBlockedMessage(), BlockedAccessOverlay(), BlockedAccessOverlayProps, asBlockedStatus(), assertValidTransition(), BLOCKED_STATUSES, BlockedAccessState (+4 more)
 
 ### Community 75 - "Detailed change log"
 Cohesion: 0.12
@@ -737,11 +740,11 @@ Nodes (17): D1 — Postgres RLS · design locked to Eugene's ruling 2026-07-27 (
 
 ### Community 76 - "lib/auth.ts"
 Cohesion: 0.08
-Nodes (37): { GET, POST }, POST(), resendVerificationEmail(), ResendVerificationButton(), BMO Email Button, BmoEmailButton(), sendBmoEmail(), SendBmoEmailInput (+29 more)
+Nodes (38): { GET, POST }, POST(), resendVerificationEmail(), ResendVerificationButton(), notifyDevUsersOfCustomKpiSubmission(), BMO Email Button, BmoEmailButton(), sendBmoEmail() (+30 more)
 
 ### Community 77 - "bsc-builder.ts"
-Cohesion: 0.04
-Nodes (55): FONT_WEIGHTS, generateThemeCss(), safeColor(), safeInt(), safeWeight(), sanitizeThemeStyles(), STYLEABLE_ELEMENTS, STYLEABLE_IDS (+47 more)
+Cohesion: 0.05
+Nodes (44): BSC Template Nodes (DB Schema), BscActivityKind, BscInitiative, bscInitiatives, BscKpiLink, bscKpiLinks, BscKpiTargetPlan, BscObjectiveLink (+36 more)
 
 ### Community 78 - "form-overrides-provider.tsx"
 Cohesion: 0.06
@@ -752,12 +755,12 @@ Cohesion: 0.19
 Nodes (11): GET(), ConfigFlag, ConfigResponse, ConfigVar, getConfig(), isSecretKey(), KNOWN_VARS, parseExampleFile() (+3 more)
 
 ### Community 80 - "dimension-rollup.ts"
-Cohesion: 0.07
-Nodes (33): carryForwardContextValues(), CountryContextReader, CountryContextRow, DbCountryContextReader, asNumber(), candidateMatchesBinding(), detail(), GrainSelection (+25 more)
+Cohesion: 0.08
+Nodes (31): carryForwardContextValues(), CountryContextReader, DbCountryContextReader, asNumber(), candidateMatchesBinding(), detail(), GrainSelection, matchDimension() (+23 more)
 
 ### Community 81 - "unified-formula-service.ts"
 Cohesion: 0.07
-Nodes (58): AGG_SKIP_REASON_TEXT, allReportPeriodIds(), CalcComputeChunkResult, CalcComputePlan, computeCalculatedMeasureChunk(), computeCalculatedMeasureValues(), computeKpiChunk(), inputMeasureIds() (+50 more)
+Nodes (60): AGG_SKIP_REASON_TEXT, allReportPeriodIds(), CalcComputeChunkResult, CalcComputePlan, cardsFromLegacyJson(), computeCalculatedMeasureChunk(), computeCalculatedMeasureValues(), computeKpiChunk() (+52 more)
 
 ### Community 82 - "security/overview/route.ts"
 Cohesion: 0.17
@@ -779,9 +782,9 @@ Nodes (15): cellValue(), findSheet(), headerIndex(), NewOrgRow, NewReportPeriodR
 Cohesion: 0.14
 Nodes (13): 0. Read this first: the two phases, 1. Dependencies — what must exist before Phase B runs, 2.1 `measure_dimension_scope` rules (table is empty → safe), 2. PHASE A — apply today, 3. PHASE B — migration day, on the freshly-flushed table, 4. Relationships map (all already configured — reference only), 5. What NOT to do, B1. Defaults — "if a dimension isn't specified, it means All" (+5 more)
 
-### Community 87 - "managedLists.ts"
-Cohesion: 0.07
-Nodes (76): COUNTRY_DISPLAY_NAMES, GET(), GET(), GET(), COUNTRY_CONTEXT_COLUMN_LABELS, GET(), GET(), DISTRIBUTION_COLUMN_LABELS (+68 more)
+### Community 87 - "measureDefinitions"
+Cohesion: 0.08
+Nodes (59): GET(), DISTRIBUTION_COLUMN_LABELS, DISTRIBUTION_MEASURE_NAMES, GET(), GET(), FINANCIAL_COLUMN_LABELS, GET(), GENERATION_MEASURE_NAMES (+51 more)
 
 ### Community 88 - "migrate.ts"
 Cohesion: 0.20
@@ -789,7 +792,7 @@ Nodes (10): NewOrgFile, ParseError, DRY_RUN, FLAGS, LABEL, main(), NEW_ORGS, per
 
 ### Community 89 - "arithmetic.ts"
 Cohesion: 0.12
-Nodes (19): AggregatedSkipReason, classifyDependencies(), DependencyClassification, evaluateFormula(), EvaluationResult, formulaVariableNames(), RESERVED_TOKENS, SafeEvalResult (+11 more)
+Nodes (18): AggregatedSkipReason, classifyDependencies(), DependencyClassification, evaluateFormula(), EvaluationResult, RESERVED_TOKENS, SafeEvalResult, safeEvaluateFormula() (+10 more)
 
 ### Community 90 - "migration/service.ts"
 Cohesion: 0.04
@@ -799,13 +802,13 @@ Nodes (55): configuredTrainingBaseUrls, DataEntryBreakdownFilterOptions, DataEnt
 Cohesion: 0.24
 Nodes (6): DashboardPage(), getCredentials(), EmbedErrorBoundary, PowerBiDashboard(), PowerBIEmbed, TOKEN_TYPE_EMBED
 
-### Community 92 - "factFinancialAccounts/route.ts"
-Cohesion: 0.22
-Nodes (14): FINANCIAL_COLUMN_LABELS, GET(), GET(), Fact Route Architectural Pattern (multi-table join with report periods + DL resolution), getAllExchangeRates (Exchange Rate Utility), Exchange Rates Library, convertToUsd(), fetchRates() (+6 more)
+### Community 92 - "pbi-queries.ts"
+Cohesion: 0.15
+Nodes (10): ALLOWED_TOP_LEVEL, DANGEROUS_DAX_PATTERNS, DaxValidationResult, DDL_PATTERNS, ChartType, PBI_QUERIES, PbiQueryTemplate, resolveQueryFromNL() (+2 more)
 
-### Community 94 - "clarifications/route.ts"
-Cohesion: 0.16
-Nodes (14): parseClarificationRequest(), GET(), GET(), POST(), RouteParams, assertAdminRole(), listPendingUsers(), listRegistrationClarificationMessages() (+6 more)
+### Community 94 - "us3.conditionalViews.service.ts"
+Cohesion: 0.22
+Nodes (11): isTariffSubcategorySelected(), toPageModel(), DataEntryValueCandidate, buildGenerationGroups(), GeneratorCandidate, GeneratorEntryCandidate, isGenerationContext(), isOperationalContext() (+3 more)
 
 ### Community 95 - "PRISM 2 — Pending Work Tracker"
 Cohesion: 0.14
@@ -824,8 +827,8 @@ Cohesion: 0.17
 Nodes (12): 10. Relationships, 11. Open items, 1. Motivation, 2. Where the effective date lives — `measure_dimension_applicability`, 3. Columns + semantics, 4. Comparison is by FISCAL YEAR, not raw calendar date (Eugene's ruling), 5. How shell creation uses it, 6. New expectations are mandatory from their effective period (+4 more)
 
 ### Community 99 - "chat-panel.tsx"
-Cohesion: 0.09
-Nodes (16): ChatErrorBoundary, Props, State, ChatInput(), ChatInputProps, Character-by-Character Reveal (requestAnimationFrame), ChatMessage, ChatPanel() (+8 more)
+Cohesion: 0.15
+Nodes (12): ChatInput(), ChatInputProps, Character-by-Character Reveal (requestAnimationFrame), ChatMessage, ChatPanel(), ChatPanelProps, ChatSession, nextMessageId() (+4 more)
 
 ### Community 100 - "CONTEXT.md — PRISM Domain Glossary"
 Cohesion: 0.18
@@ -853,7 +856,7 @@ Nodes (7): getConfiguredWebhookSecret(), getString(), InboundWebhookBody, normal
 
 ### Community 106 - "dataEntry.ts"
 Cohesion: 0.04
-Nodes (61): CoverageUnit, Data Entries DB Table, Data Entry Logs DB Table, BenchmarkingRequest, NewBenchmarkingRequest, DATA_ENTRY_STATUS_META, dataEntries, DataEntry (+53 more)
+Nodes (45): DATA_ENTRY_STATUS_META, DataEntry, dataEntryLogs, dataEntryStatusColors, inputDefinitionRelations, inputDefinitions, InputDlDefMapping, inputDlDefMappings (+37 more)
 
 ### Community 107 - "FormulaEditor.tsx"
 Cohesion: 0.32
@@ -871,25 +874,25 @@ Nodes (21): GET(), CACHE, getWorldBankCountryContext(), INDICATOR_DEFS, resolveU
 Cohesion: 0.18
 Nodes (10): name, overrides, body-parser, brace-expansion, esbuild, hono, postcss, sharp (+2 more)
 
-### Community 111 - "migrate-data-entries.ts"
-Cohesion: 0.06
-Nodes (29): inputDefinitions, inputDlDefMappings, DRY_RUN, main(), normalizeMultiplier(), PINNED_PAIRS, RawRow, baseUrl (+21 more)
+### Community 111 - "diagnose-input-def-gap.ts"
+Cohesion: 0.29
+Nodes (6): baseUrl, fetchSource(), main(), _MIGRATION_API_KEY, MIGRATION_KEY, MIGRATION_URL
 
 ### Community 112 - "role-guard.ts"
-Cohesion: 0.14
-Nodes (17): Home Page, TwoFactorPage(), TwoFactorSetupPage(), Better Auth, canAccessRoute(), getDefaultPageForRole(), getSidebarForRole(), isRoleAllowedForRoute() (+9 more)
+Cohesion: 0.13
+Nodes (19): features, Home Page, Page(), TwoFactorPage(), TwoFactorSetupPage(), Better Auth, canAccessRoute(), getDefaultPageForRole() (+11 more)
 
 ### Community 113 - "enter-data/service.ts"
 Cohesion: 0.07
-Nodes (65): bootstrapDataEntryFilterContext(), DATA_ENTRY_STATUS_OPTIONS, DataEntryScopedPayload, DataEntryTemplateUploadResult, EnergyMetadata, filterGenerationGroupsByDataEntryStatus(), filterRowsByDataEntryStatus(), filterTariffGroupsByDataEntryStatus() (+57 more)
+Nodes (63): buildExistingDataEntryConditions(), DATA_ENTRY_STATUS_OPTIONS, DataEntryScopedPayload, DataEntryTemplateUploadResult, EnergyMetadata, filterGenerationGroupsByDataEntryStatus(), filterRowsByDataEntryStatus(), filterTariffGroupsByDataEntryStatus() (+55 more)
 
 ### Community 114 - "orchestrator.ts"
-Cohesion: 0.08
-Nodes (36): Aggregated Dependency Classifier, Aggregated Outcome Builder, Aggregated Scope Authorization, Aggregated Snapshot Builder, Aggregated Target Selector, GET(), parseOptionalNumber(), GET() (+28 more)
+Cohesion: 0.07
+Nodes (46): Aggregated Dependency Classifier, Aggregated Outcome Builder, Aggregated Scope Authorization, Aggregated Snapshot Builder, Aggregated Target Selector, GET(), parseOptionalNumber(), GET() (+38 more)
 
-### Community 115 - "orgs.service.ts"
-Cohesion: 0.24
-Nodes (14): AuthPage(), AllOrganisations(), CreateOrganisation(), UpdateOrganisation(), upperAcronym(), OrganisationsSettingsPage(), AllRoles(), UsersSettingsPage() (+6 more)
+### Community 115 - "diagnose-data-entry-gap.ts"
+Cohesion: 0.33
+Nodes (5): baseUrl, fetchSource(), main(), MIGRATION_KEY, MIGRATION_URL
 
 ### Community 116 - "dump-tables-to-xlsx.ts"
 Cohesion: 0.27
@@ -919,9 +922,9 @@ Nodes (8): 1. The problem, 2. Decision — don't store the prefix; apply it cont
 Cohesion: 0.18
 Nodes (10): 1. Run as an unprivileged user (fixes D-1, D-5), 2. Migration-based DB deploys (fixes D-2), 3. Hardened deploy workflow (fixes D-3, D-4), 4. Retire `scripts/deploy.sh`'s VCS coupling (D-4), 5. At p2 launch, keep the hardened CSP on the prod host (cutover checklist), Current setup (as of 2026-07-26), Findings, PRISM — Deploy Pipeline Hardening (proposal) (+2 more)
 
-### Community 124 - "compliance.ts"
-Cohesion: 0.19
-Nodes (13): CACHE_INVALIDATION, CACHE_PREFIXES, CacheEntry, CacheKey, clearRequestCache(), invalidateCache(), invalidateCacheByPrefix(), pruneExpired() (+5 more)
+### Community 124 - "visualization-renderer.tsx"
+Cohesion: 0.29
+Nodes (7): EChartsViewProps, LineChartView(), LineChartViewProps, EChartsView, VisualizationRendererProps, AiLineChartVisualization, AiVisualization
 
 ### Community 125 - "`kpi_actual` DDL design (DRAFT)"
 Cohesion: 0.22
@@ -936,8 +939,12 @@ Cohesion: 0.25
 Nodes (8): 1.1 The rulebook (plain-language, Eugene-agreed 2026-07-27/28), 1. The ruled convention in one paragraph, 2. Requirements on the grain columns, 3. Backfill: promoting entries off the virtual entities, 4. RLS (#12) — native but with one sharp edge, 5. Interaction with the submissions rename, 6. Out of scope for #2 (stays with other streams), Multi-level data hierarchy — agreed grain convention + requirements (RULED)
 
 ### Community 128 - "worker.ts"
-Cohesion: 0.08
-Nodes (42): ComputeKpiOutcome, computeKpiTarget(), ComputeKpiTargetArgs, extractErrorMetadata(), PersistKpiResultParams, upsertCalculatedKpiValue(), NOTE: no `periodAccessPredicate` is applied here — this internal function, recomputeKpiNow() (+34 more)
+Cohesion: 0.09
+Nodes (37): assertScopeAuthorization(), ComputeKpiTargetArgs, acquireScopeLock(), activeLocks, buildScopeLockKey(), consumeDeferredFollowUp(), deferredFollowUps, markDeferredFollowUp() (+29 more)
+
+### Community 129 - "errors/route.ts"
+Cohesion: 0.29
+Nodes (4): GET(), PATCH(), mocks, THENABLE_METHODS
 
 ### Community 130 - "PBIX API Feed Fixes — Resolution Report (2026-08-25)"
 Cohesion: 0.14
@@ -968,8 +975,8 @@ Cohesion: 0.22
 Nodes (9): addSheet(), Col, main(), ORG_COLS, ORG_EXAMPLE, RP_COLS, RP_EXAMPLES, SA_COLS (+1 more)
 
 ### Community 137 - "review-kpi/actions.ts"
-Cohesion: 0.22
-Nodes (13): updateReviewKpiFilterContextAction(), getReviewKpiFilterContextFromCookies(), parseNullableInt(), REVIEW_KPI_FILTER_COOKIE_KEYS, ReviewKpiFilterContextInput, ReviewKpiFilterCookieKey, sanitizeReviewKpiFilterCookieContext(), saveReviewKpiFilterContextToCookies() (+5 more)
+Cohesion: 0.18
+Nodes (16): updateReviewKpiFilterContextAction(), getReviewKpiFilterContextFromCookies(), parseNullableInt(), REVIEW_KPI_FILTER_COOKIE_KEYS, ReviewKpiFilterContextInput, ReviewKpiFilterCookieKey, sanitizeReviewKpiFilterCookieContext(), saveReviewKpiFilterContextToCookies() (+8 more)
 
 ### Community 138 - "Power BI integration — change handoff"
 Cohesion: 0.22
@@ -991,17 +998,17 @@ Nodes (5): COLS, EX_EMPTY, EX_FILLED, EX_SLICED, headers
 Cohesion: 0.61
 Nodes (7): getRegionForSubregion(), log(), main(), updateCountries(), updateRegions(), updateServiceAreas(), updateSubRegions()
 
-### Community 143 - "enter-data/filters.client.tsx"
-Cohesion: 0.10
-Nodes (28): DATA_ENTRY_FILTER_COOKIE_KEYS, DataEntryFilterContext, DataEntryFilterCookieKey, DEFAULT_DATA_ENTRY_FILTER_CONTEXT, DataEntryFiltersClient(), DataEntryFiltersClientProps, keyMap, parseNullableInt() (+20 more)
+### Community 143 - "constants.ts"
+Cohesion: 0.12
+Nodes (22): DATA_ENTRY_FILTER_COOKIE_KEYS, DataEntryFilterContext, DataEntryFilterCookieKey, DEFAULT_DATA_ENTRY_FILTER_CONTEXT, EnterDataTemplatePanelProps, DataEntryFilterContextInput, getFilterContextFromCookies(), saveFilterContextToCookies() (+14 more)
 
 ### Community 144 - "Multi-sector terminology — proposed resolutions to ADR 0003's open questions"
 Cohesion: 0.22
 Nodes (9): Grounding (what these answers are built on), Multi-sector terminology — proposed resolutions to ADR 0003's open questions, Q1 — Exact per-sector labels, Q2 — Is `service_area` shared geography across sectors, or sector-specific rows?, Q3 — Where does the terminology map live?, Q4 — How does `sector` interact with #10's `entity_type` / `relationship` axes?, Q5 — Timing: when is the label layer worth shipping, independent of water/sanitation modelling?, Ratification checklist (+1 more)
 
 ### Community 145 - "events/route.ts"
-Cohesion: 0.12
-Nodes (23): GET(), matchesScope(), POST(), PATCH(), parseAddCommentPayload(), parseNumber(), parseOptionalSinceEventId(), parseRequiredUuid() (+15 more)
+Cohesion: 0.10
+Nodes (28): GET(), matchesScope(), POST(), PATCH(), parseAddCommentPayload(), parseNumber(), parseOptionalSinceEventId(), parseRequiredUuid() (+20 more)
 
 ### Community 146 - "Data-quality findings from the dictionary drafting pass (2026-07-07)"
 Cohesion: 0.29
@@ -1020,8 +1027,8 @@ Cohesion: 0.33
 Nodes (6): APPLY, COUNTRY_FKS, loadIsoToM49(), main(), SUBREGION_FKS, SUBREGION_REPOINT
 
 ### Community 150 - "layout.tsx"
-Cohesion: 0.18
-Nodes (12): AppNavigation(), dynamic, metadata, plexMono, plexSans, RootLayout(), SessionShell(), Footer() (+4 more)
+Cohesion: 0.11
+Nodes (19): AppNavigation(), dynamic, metadata, plexMono, plexSans, RootLayout(), SessionShell(), FloatingChatbot() (+11 more)
 
 ### Community 152 - "load-measures-and-scope.ts"
 Cohesion: 0.43
@@ -1040,8 +1047,8 @@ Cohesion: 0.40
 Nodes (3): FetchState, OverviewPage(), useFetch()
 
 ### Community 156 - "state-message.tsx"
-Cohesion: 0.13
-Nodes (14): IncompleteKpisPage(), GetIncompleteKpis(), IncompleteKpiRow, ReviewFeedbackPage(), GetReviewFeedback(), ReviewFeedbackRow, ReviewKpiPage(), getReviewKpiPageViewModel() (+6 more)
+Cohesion: 0.10
+Nodes (21): Submissions GET Handler, DownloadsPage(), GetDownloadData(), IncompleteKpisPage(), GetIncompleteKpis(), IncompleteKpiRow, ReviewFeedbackPage(), GetReviewFeedback() (+13 more)
 
 ### Community 157 - "copilot-instructions.md"
 Cohesion: 0.33
@@ -1056,8 +1063,8 @@ Cohesion: 0.47
 Nodes (5): applyMigration(), DraftRow, FORCE, loadTable(), main()
 
 ### Community 160 - "review-kpi/service.ts"
-Cohesion: 0.08
-Nodes (39): POST(), addReviewKpiCommentAction(), updateReviewKpiInputAction(), addReviewKpiInputComment(), ApplyCustomKpiDecisionInput, applyCustomKpiReviewDecision(), assertCustomKpiReviewerAccess(), assertReviewKpiWriteAccess() (+31 more)
+Cohesion: 0.10
+Nodes (33): POST(), ApplyCustomKpiDecisionInput, applyCustomKpiReviewDecision(), assertCustomKpiReviewerAccess(), assertReviewKpiWriteAccess(), buildVariableNameFromInputName(), canPromoteCustomKpiVisibility(), collectCommenterIds() (+25 more)
 
 ### Community 161 - "split-downtime-measures.ts"
 Cohesion: 0.47
@@ -1068,8 +1075,8 @@ Cohesion: 0.47
 Nodes (5): DROP_FKS, getRegion(), log(), main(), RECREATE_FKS
 
 ### Community 163 - "new-bsc/service.ts"
-Cohesion: 0.11
-Nodes (40): createTemplateNode(), deleteTemplateNode(), ensureMandatoryMaterialized(), getThemeStyles(), getUtilityScorecard(), listBuilderInputOptions(), listBuilderKpiOptions(), listKpiTargets() (+32 more)
+Cohesion: 0.08
+Nodes (51): assertNewBscThemeAdminAccess(), canEditBscTheme(), createTemplateNode(), deleteTemplateNode(), setTemplateNodeLinks(), updateTemplateNode(), deleteTemplateNode(), getThemeStyles() (+43 more)
 
 ### Community 164 - "prompt.ts"
 Cohesion: 0.33
@@ -1100,8 +1107,8 @@ Cohesion: 0.40
 Nodes (3): ConfigFlag, ConfigResponse, ConfigVar
 
 ### Community 172 - "excel-upload-form.tsx"
-Cohesion: 0.16
-Nodes (13): Submissions GET Handler, DownloadsPage(), GetDownloadData(), Heading, HeadingProps, headingVariants, ExcelUploadForm(), ExcelUploadFormProps (+5 more)
+Cohesion: 0.32
+Nodes (6): ExcelUploadForm(), ExcelUploadFormProps, rowsToObjects(), UploadActionResponse, SettingsSection(), SettingsSectionProps
 
 ### Community 173 - "alerts/route.ts"
 Cohesion: 0.43
@@ -1235,9 +1242,9 @@ Nodes (4): DIMS, main(), rows, scope()
 Cohesion: 0.40
 Nodes (3): APPLY, KEY_MAP, pool
 
-### Community 209 - "tariffRelevanceTable.tsx"
-Cohesion: 0.29
-Nodes (7): CustomerTypeOption, RelevanceCell, RelevanceLabel, RelevanceRow, SetRelevancePayload, summarizeCell(), TariffRelevanceTable()
+### Community 209 - "checkbox.tsx"
+Cohesion: 0.07
+Nodes (28): DIMENSION_LABELS, MeasureDimensionScopeEditorProps, MeasureScopeRow, CustomKpiInput, CustomKpiRelevanceItem, CustomKpiRelevanceTable(), SetCustomKpiRelevancePayload, DevInputRelevanceItem (+20 more)
 
 ### Community 211 - "5. Input context & traceability — "a tag card for every input""
 Cohesion: 0.25
@@ -1279,33 +1286,33 @@ Nodes (7): Caveats, How it runs, New-organisation onboarding — migration step 
 Cohesion: 0.14
 Nodes (28): DataEntryMigrationPanel(), backfillCountryContextDataEntriesFromPreviousPeriods, backfillCountryContextDataEntriesFromPreviousPeriods(), backfillUtilityContextDataEntriesFromPreviousPeriods, backfillUtilityContextDataEntriesFromPreviousPeriods(), buildDataEntryComparisonKey(), buildDataEntryKeyForTargetPeriod(), compareDataEntries() (+20 more)
 
-### Community 233 - "lock.ts"
-Cohesion: 0.28
-Nodes (11): acquireScopeLock(), activeLocks, buildScopeLockKey(), consumeDeferredFollowUp(), deferredFollowUps, markDeferredFollowUp(), normalizeScopeValue(), NOTE: session-level advisory locks are per-connection. On a connection (+3 more)
+### Community 233 - "chat-error-boundary.tsx"
+Cohesion: 0.25
+Nodes (3): ChatErrorBoundary, Props, State
 
 ### Community 234 - "kpi-worker/evaluator.ts"
 Cohesion: 0.07
-Nodes (31): evaluateKpiFormula(), FormulaVariableValue, KpiFormulaEvaluationResult, toFiniteNumber(), CustomKpiRequestForm(), Fix, FIXES, main() (+23 more)
+Nodes (33): evaluateKpiFormula(), FormulaVariableValue, KpiFormulaEvaluationResult, toFiniteNumber(), resolveFormulaInputValues(), KpiCalculationFailureType, CustomKpiRequestForm(), Fix (+25 more)
 
 ### Community 239 - "PRISM — project instructions"
 Cohesion: 0.18
 Nodes (10): Dependencies (node_modules) — recovery & ownership, Deploying & handing off to Eugene for testing, Deploys are serialized — don't merge-storm, Git before DB — NO EXCEPTIONS, Multi-session coordination (READ FIRST), Never `db-push --force` on p2 without a fresh backup, Never let a PR wipe the repo, PRISM — project instructions (+2 more)
 
-### Community 242 - "countries/service.ts"
-Cohesion: 0.21
-Nodes (13): CountriesPage(), AllCountries(), AllSubRegions(), CreateCountry(), CountryContextPage(), CreateCountryContextData(), GetCountryContext(), Generic DataTable Component (+5 more)
+### Community 242 - "orgs.service.ts"
+Cohesion: 0.16
+Nodes (19): CountriesPage(), AllCountries(), AllSubRegions(), CreateCountry(), CountryContextPage(), CreateCountryContextData(), GetCountryContext(), AllOrganisations() (+11 more)
 
 ### Community 243 - "managed-lists/service.ts"
-Cohesion: 0.13
-Nodes (28): ManagedListsEditor(), ManagedListSettingsPage(), CreateManagedList(), CreateManagedListItem(), GetAllManagedListItems(), GetAllManagedLists(), GetManagedListItemByName(), toOptionalNumber() (+20 more)
+Cohesion: 0.15
+Nodes (26): ManagedListsEditor(), ManagedListSettingsPage(), CreateManagedList(), CreateManagedListItem(), GetAllManagedListItems(), GetAllManagedLists(), GetManagedListItemByName(), toOptionalNumber() (+18 more)
 
 ### Community 244 - "Schema Drift & Agent-Safety Guardrails"
 Cohesion: 0.25
 Nodes (7): 1. What happened (the "why"), 2. The reusable tool — a read-only drift check, 3. The golden rule (this one alone prevents the incident), 4. The `CLAUDE.md` guardrails your agents should adopt, 5. Artifacts to copy, 6. How to adopt (for your agents), Schema Drift & Agent-Safety Guardrails
 
 ### Community 245 - "new-bsc-builder.tsx"
-Cohesion: 0.07
-Nodes (50): asJson(), createTemplateNode(), deleteTemplateNode(), fetchInputOptions(), fetchKpiOptions(), fetchReportTypes(), fetchScorecard(), fetchTargetPlans() (+42 more)
+Cohesion: 0.08
+Nodes (41): asJson(), fetchInputOptions(), fetchKpiOptions(), fetchReportTypes(), fetchScorecard(), fetchTargetPlans(), fetchTemplate(), fetchTheme() (+33 more)
 
 ### Community 246 - "backup/status/route.ts"
 Cohesion: 0.40
@@ -1319,9 +1326,9 @@ Nodes (6): Country-context metric key repoint (2026-08-23, #4), Notes, Physicali
 Cohesion: 0.67
 Nodes (3): Role Guard, Database Seed Script, Role-Based Access Control
 
-### Community 266 - "report-periods/service.ts"
-Cohesion: 0.38
-Nodes (7): getReportTypeOptions(), ReportPeriodsPage(), AllReportPeriods(), CreateReportPeriod(), UpdateReportPeriod(), NewReportPeriod, ReportPeriod
+### Community 266 - "managedLists.ts"
+Cohesion: 0.08
+Nodes (30): getReportTypeOptions(), ReportPeriodsPage(), AllReportPeriods(), CreateReportPeriod(), UpdateReportPeriod(), Data Entries DB Table, Data Entry Logs DB Table, roles (+22 more)
 
 ### Community 276 - "auth/service.ts"
 Cohesion: 0.60
@@ -1329,55 +1336,55 @@ Nodes (5): AuthForms(), rolesFilter(), getForwardedAuthHeaders(), registerUser()
 
 ### Community 286 - "button.tsx"
 Cohesion: 0.07
-Nodes (47): formatScore(), PerspectiveScore, STATUS_ID_TO_LABEL, getDraftKey(), InputCell(), readDraft(), removeDraft(), writeDraft() (+39 more)
+Nodes (39): formatScore(), PerspectiveScore, GeneratorGroups(), STATUS_ID_TO_LABEL, getDraftKey(), InputCell(), readDraft(), removeDraft() (+31 more)
 
 ### Community 291 - "rejections.ts"
 Cohesion: 0.33
 Nodes (6): FAILURE_CATEGORIES, FailureCategory, MigrationRejection, migrationRejections, NewMigrationRejection, RejectionInput
 
 ### Community 296 - "enter-data-v2/service.ts"
-Cohesion: 0.09
-Nodes (42): EnterDataPage(), DIMENSION_CONFIG, DimensionPanel(), DimensionPanelProps, MeasureEntryFiltersClient(), MeasureEntryFiltersClientProps, parseNullableInt(), DIMENSION_COLUMNS (+34 more)
+Cohesion: 0.06
+Nodes (58): EnterDataPage(), DataEntryValidationMetadata, getDataTypeValidationMessage(), getRangeOrPolarityValidationMessage(), isValueValidForDataType(), normalizeNumericCandidate(), normalizeTypeName(), parseNumericCandidate() (+50 more)
 
-### Community 298 - "prism-native.ts"
-Cohesion: 0.05
-Nodes (66): getReviewKpiFilterOptions(), Input Definitions (DB Schema), KPI Definitions (DB Schema), compareKpisAcrossUtilities(), CorrelationData, CorrelationPair, CountryRegionItem, ExportReportData (+58 more)
+### Community 298 - "data-service/utils.ts"
+Cohesion: 0.08
+Nodes (36): Input Definitions (DB Schema), KPI Definitions (DB Schema), CACHE_INVALIDATION, CACHE_PREFIXES, CacheEntry, CacheKey, clearRequestCache(), invalidateCache() (+28 more)
 
-### Community 307 - "dataEntryValidation.service.ts"
-Cohesion: 0.35
-Nodes (10): DataEntryValidationMetadata, getDataTypeValidationMessage(), getRangeOrPolarityValidationMessage(), isValueValidForDataType(), normalizeNumericCandidate(), normalizeTypeName(), parseNumericCandidate(), resolvePolarityRule() (+2 more)
+### Community 307 - "Power Stations Service"
+Cohesion: 0.29
+Nodes (7): Power Stations Settings Page, Power Station Drag and Drop, Power Stations Service, Report Periods Settings Page, Report Periods Service, Sub-Regions Settings Page, Sub-Regions Service
 
-### Community 321 - "lib/formatters.ts"
-Cohesion: 0.22
-Nodes (9): createVariableName(), deriveMeasureVariableName(), UNIT_SUFFIX_OVERRIDES, DEF, DOWNTIME_IDS, EQUIP_IDS, main(), main() (+1 more)
+### Community 321 - "formatReportPeriodDisplay"
+Cohesion: 0.21
+Nodes (10): createVariableName(), deriveMeasureVariableName(), formatReportPeriodDisplay(), UNIT_SUFFIX_OVERRIDES, DEF, DOWNTIME_IDS, EQUIP_IDS, main() (+2 more)
 
 ### Community 322 - "measures-enrichment — artifacts + regeneration"
 Cohesion: 0.40
 Nodes (4): Current state (regenerated 2026-08-17 from the live DB), How it was regenerated, measures-enrichment — artifacts + regeneration, ⚠️ Stale scripts (DO NOT RUN as-is — schema drift)
 
-### Community 323 - "topNav.tsx"
-Cohesion: 0.28
-Nodes (6): DevUtilityContextSwitcher(), UtilityOption, NavList(), NavItem, navList, UserDropdown()
+### Community 323 - "measure-scope/page.tsx"
+Cohesion: 0.50
+Nodes (4): MeasureScopePage(), MeasureDimensionScopeEditor(), getMeasureScopeViewModel(), saveMeasureDimensionScope()
 
-### Community 327 - "Environment Variables"
-Cohesion: 0.25
-Nodes (8): Annual Benchmarking Report, PPA Benchmarking Platform, PPA Secretariat, Chatbot Integration, Core, Environment Variables, Power BI Integration, SMTP (magic-link email delivery)
+### Community 327 - "compute-order.ts"
+Cohesion: 0.53
+Nodes (4): ComputeNode, ComputeOrder, resolveComputeOrder(), wouldCreateCycle()
 
 ### Community 332 - "fix-governance-booleans-from-training.ts"
 Cohesion: 0.32
 Nodes (7): coerceBoolean(), DIMS, DRY_RUN, fetchGovernanceRows(), main(), SourceRow, TRAINING_DL_TO_MEASURE
 
-### Community 336 - "bsc-template/page.tsx"
-Cohesion: 0.40
-Nodes (5): getTemplate(), BscTemplatePage(), BSC Template Client API, BSC Template Editor, BSC Template Service
+### Community 336 - "utility.ts"
+Cohesion: 0.08
+Nodes (43): GET(), GET(), COUNTRY_CONTEXT_COLUMN_LABELS, GET(), GET(), GET(), GET(), GET() (+35 more)
 
 ### Community 338 - "generationRelevance.shared.ts"
 Cohesion: 0.40
 Nodes (4): buildGenerationTypeSourcePairs(), GenerationTypeSourcePair, NamedDimension, TypeSourceMapping
 
-### Community 358 - "dimension-defaults.ts"
-Cohesion: 0.40
-Nodes (3): DimensionDefaults, DumpRow, main()
+### Community 358 - "TestHarness.tsx"
+Cohesion: 0.60
+Nodes (5): formatAdjusted(), formatNumber(), TestHarness(), TestHarnessProps, toTokenHash()
 
 ### Community 359 - "formula_binding migration (#238)"
 Cohesion: 0.33
@@ -1390,10 +1397,6 @@ Nodes (5): cellDate(), cellNum(), cellStr(), main(), ParsedRow
 ### Community 361 - "info/route.ts"
 Cohesion: 0.60
 Nodes (4): GET(), getCommitSha(), checkCircuit(), getCircuitState()
-
-### Community 392 - "generationRelevanceTable.tsx"
-Cohesion: 0.40
-Nodes (4): GenerationRelevanceTable(), RelevanceCell, RelevanceRow, SetRelevancePayload
 
 ### Community 394 - "ADR 0001: Replace BSC Strategy Builder with Template-Driven BSC Builder"
 Cohesion: 0.60
@@ -1419,9 +1422,17 @@ Nodes (3): DRY_RUN, P1Row, pool
 Cohesion: 0.60
 Nodes (5): fetchSource(), FYE_MONTH_NUM, log(), main(), parseLegacyFye()
 
-### Community 402 - "rebuild-dl-def-mappings.ts"
-Cohesion: 0.50
-Nodes (3): COUNTRY_CONTEXT_MAP, main(), norm()
+### Community 404 - "bar-chart-view.tsx"
+Cohesion: 0.67
+Nodes (3): BarChartView(), BarChartViewProps, AiBarChartVisualization
+
+### Community 405 - "leaderboard-view.tsx"
+Cohesion: 0.67
+Nodes (3): LeaderboardView(), LeaderboardViewProps, AiLeaderboardVisualization
+
+### Community 406 - "table-view.tsx"
+Cohesion: 0.67
+Nodes (3): TableView(), TableViewProps, AiTableVisualization
 
 ## Ambiguous Edges - Review These
 - `factFinancialAccounts/route.ts` → `getAzureAccessToken/route.ts`  [AMBIGUOUS]
@@ -1436,7 +1447,7 @@ Nodes (3): COUNTRY_CONTEXT_MAP, main(), norm()
 ## Knowledge Gaps
 - **1844 isolated node(s):** `$schema`, `.opencode/plugins/graphify.js`, `maxDuration`, `ADMIN_ROLES`, `{ GET, POST }` (+1839 more)
   These have ≤1 connection - possible missing edges or undocumented components.
-- **133 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+- **134 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
@@ -1449,9 +1460,9 @@ _Questions this graph is uniquely positioned to answer:_
   _Edge tagged AMBIGUOUS (relation: calls) - confidence is low._
 - **What is the exact relationship between `KpiTargetsEditor()` and `Power Stations Service`?**
   _Edge tagged AMBIGUOUS (relation: calls) - confidence is low._
-- **Why does `db` connect `connection.ts` to `energy-resources/service.ts`, `authorizeApiKey`, `user.service.ts`, `relevance/service.ts`, `powerbi/index.ts`, `strategy-map.repository.ts`, `custom-kpi/service.ts`, `inputs/service.ts`, `builderClient.tsx`, `service-areas/service.ts`, `auth-schema.ts`, `getCurrentUser`, `generators-sync.ts`, `session.service.ts`, `source-reader.ts`, `status.service.ts`, `health/route.ts`, `resolveTargets.ts`, `users/service.ts`, `load.ts`, `verify.ts`, `migration/page.tsx`, `kpi/page.tsx`, `seed-dev-demo.ts`, `source-setting.ts`, `loads.ts`, `target-selector.ts`, `lib/auth.ts`, `bsc-builder.ts`, `form-overrides-provider.tsx`, `dimension-rollup.ts`, `unified-formula-service.ts`, `security/overview/route.ts`, `chat/route.ts`, `managedLists.ts`, `migration/service.ts`, `factFinancialAccounts/route.ts`, `bulk-create-input-defs.ts`, `dataEntry.ts`, `logger.ts`, `migrate-data-entries.ts`, `role-guard.ts`, `enter-data/service.ts`, `orgs.service.ts`, `sub-regions/service.ts`, `formula-bindings.ts`, `measure-scope/service.ts`, `compliance.ts`, `worker.ts`, `map.ts`, `gen-measure-applicability.ts`, `update-p2-ids.ts`, `layout.tsx`, `load-measures-and-scope.ts`, `sidebar/service.ts`, `generate-sample-medallion-entries.ts`, `load-dictionary-drafts.ts`, `review-kpi/service.ts`, `split-downtime-measures.ts`, `update-ids-to-p2.ts`, `new-bsc/service.ts`, `email-schedules/service.ts`, `seed-power-stations.ts`, `ai.ts`, `seed.ts`, `alerts/route.ts`, `period-hours.ts`, `ensure-country.ts`, `sync-users-from-training.ts`, `lock.ts`, `countries/service.ts`, `managed-lists/service.ts`, `backup/status/route.ts`, `report-periods/service.ts`, `auth/service.ts`, `button.tsx`, `rejections.ts`, `enter-data-v2/service.ts`, `prism-native.ts`, `lib/formatters.ts`, `fix-governance-booleans-from-training.ts`, `dimension-defaults.ts`, `seed-country-context.ts`, `migration-status.ts`, `sync-prerequisite-tables.ts`?**
+- **Why does `db` connect `connection.ts` to `calculator.ts`, `authorizeApiKey`, `user.service.ts`, `relevance/service.ts`, `powerbi/index.ts`, `strategy-map.repository.ts`, `custom-kpi/service.ts`, `inputs/service.ts`, `builderClient.tsx`, `auth-schema.ts`, `getCurrentUser`, `generators-sync.ts`, `session.service.ts`, `status.service.ts`, `health/route.ts`, `resolveTargets.ts`, `users/service.ts`, `load.ts`, `verify.ts`, `migration/page.tsx`, `kpi/page.tsx`, `schema/kpi.ts`, `source-setting.ts`, `loads.ts`, `target-selector.ts`, `listReviewKpiRows`, `lib/auth.ts`, `bsc-builder.ts`, `form-overrides-provider.tsx`, `dimension-rollup.ts`, `unified-formula-service.ts`, `security/overview/route.ts`, `chat/route.ts`, `measureDefinitions`, `migration/service.ts`, `bulk-create-input-defs.ts`, `dataEntry.ts`, `logger.ts`, `diagnose-input-def-gap.ts`, `role-guard.ts`, `enter-data/service.ts`, `orchestrator.ts`, `diagnose-data-entry-gap.ts`, `sub-regions/service.ts`, `formula-bindings.ts`, `measure-scope/service.ts`, `worker.ts`, `errors/route.ts`, `map.ts`, `gen-measure-applicability.ts`, `update-p2-ids.ts`, `layout.tsx`, `load-measures-and-scope.ts`, `sidebar/service.ts`, `generate-sample-medallion-entries.ts`, `load-dictionary-drafts.ts`, `review-kpi/service.ts`, `split-downtime-measures.ts`, `update-ids-to-p2.ts`, `new-bsc/service.ts`, `email-schedules/service.ts`, `seed-power-stations.ts`, `ai.ts`, `seed.ts`, `alerts/route.ts`, `period-hours.ts`, `ensure-country.ts`, `sync-users-from-training.ts`, `orgs.service.ts`, `managed-lists/service.ts`, `backup/status/route.ts`, `managedLists.ts`, `auth/service.ts`, `button.tsx`, `rejections.ts`, `enter-data-v2/service.ts`, `data-service/utils.ts`, `formatReportPeriodDisplay`, `fix-governance-booleans-from-training.ts`, `utility.ts`, `seed-country-context.ts`, `migration-status.ts`, `sync-prerequisite-tables.ts`?**
   _High betweenness centrality (0.124) - this node is a cross-community bridge._
 - **Why does `ADR 0001: Replace BSC Strategy Builder with Template-Driven BSC Builder` connect `ADR 0001: Replace BSC Strategy Builder with Template-Driven BSC Builder` to `role-guard.ts`, `WORKSTREAMS.md`?**
   _High betweenness centrality (0.099) - this node is a cross-community bridge._
-- **Why does `getCurrentUser()` connect `getCurrentUser` to `energy-resources/service.ts`, `connection.ts`, `user.service.ts`, `relevance/service.ts`, `review-kpi/actions.ts`, `buttons.tsx`, `requireUser`, `enter-data/filters.client.tsx`, `utilityRelevance.tsx`, `events/route.ts`, `builderClient.tsx`, `service-areas/service.ts`, `auth-schema.ts`, `state-message.tsx`, `access-plans-client.tsx`, `review-kpi/service.ts`, `session.service.ts`, `email-schedules/service.ts`, `enter-data-v2/service.ts`, `ai.ts`, `excel-upload-form.tsx`, `alerts/route.ts`, `status.service.ts`, `health/route.ts`, `users/service.ts`, `decision/route.ts`, `migration/page.tsx`, `kpi/page.tsx`, `requests/route.ts`, `source-setting.ts`, `[userId]/status/route.ts`, `saveDataEntryValueInternal`, `lib/auth.ts`, `form-overrides-provider.tsx`, `config.service.ts`, `bsc-template/page.tsx`, `unified-formula-service.ts`, `security/overview/route.ts`, `chat/route.ts`, `managedLists.ts`, `migration/service.ts`, `dashboard/page.tsx`, `clarifications/route.ts`, `info/route.ts`, `dataEntry.ts`, `logger.ts`, `role-guard.ts`, `enter-data/service.ts`, `orchestrator.ts`, `countries/service.ts`, `orgs.service.ts`, `backup/status/route.ts`, `measure-scope/service.ts`?**
-  _High betweenness centrality (0.057) - this node is a cross-community bridge._
+- **Why does `getCurrentUser()` connect `getCurrentUser` to `errors/route.ts`, `connection.ts`, `user.service.ts`, `relevance/service.ts`, `review-kpi/actions.ts`, `managedLists.ts`, `buttons.tsx`, `requireUser`, `utilityRelevance.tsx`, `events/route.ts`, `balanced-scorecard/page.tsx`, `builderClient.tsx`, `service-areas/page.tsx`, `data-entry/types.ts`, `auth-schema.ts`, `state-message.tsx`, `access-plans-client.tsx`, `review-kpi/service.ts`, `new-bsc/service.ts`, `session.service.ts`, `email-schedules/service.ts`, `enter-data-v2/service.ts`, `ai.ts`, `alerts/route.ts`, `status.service.ts`, `health/route.ts`, `users/service.ts`, `decision/route.ts`, `migration/page.tsx`, `kpi/page.tsx`, `requests/route.ts`, `source-setting.ts`, `clarifications/route.ts`, `measure-scope/page.tsx`, `listReviewKpiRows`, `lib/auth.ts`, `form-overrides-provider.tsx`, `config.service.ts`, `utility.ts`, `unified-formula-service.ts`, `security/overview/route.ts`, `chat/route.ts`, `migration/service.ts`, `dashboard/page.tsx`, `info/route.ts`, `logger.ts`, `role-guard.ts`, `enter-data/service.ts`, `orchestrator.ts`, `orgs.service.ts`, `backup/status/route.ts`, `measure-scope/service.ts`?**
+  _High betweenness centrality (0.055) - this node is a cross-community bridge._
