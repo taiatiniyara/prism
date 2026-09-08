@@ -264,23 +264,28 @@ dataset_access_grant
   sponsor_type          'utility' | 'development_partner'
   sponsor_org_id        → organisations (nullable) -- the dev partner, when sponsor_type='development_partner'
   tor_reference         text                      -- TOR / agreement consent artifact (ref or document link)
-  grantee_org_id        → organisations (nullable) -- consultant org / peer utility (null = private individual)
-  content_scope         'kpi' | 'kpi_input'       -- KPIs only, or KPIs + inputs (§3.6 content_class)
-  status_scope          'approved_only' | 'include_working'   -- [Eugene — open Q; default approved_only]
+  grantee_org_id        → organisations (nullable) -- consultant org / peer utility this person belongs to
+                                                    -- (membership TAG only; access is per NAMED user, below)
+  status_scope          'approved_only' | 'include_working'   -- DECIDED: default 'approved_only'
   start_date, end_date  date
   status                'active' | 'expired' | 'terminated'
   granted_by_user_id    → user  (the CEO), granted_at
   terminated_by_user_id → user (nullable), terminated_at       -- early CEO termination
   created_at, updated_at
 
-dataset_access_grant_grantee            -- the consultant(s) who receive access
-  grant_id → dataset_access_grant · user_id → user            -- private consultant = org-of-one; named
-  (PK grant_id+user_id)                                        -- seats of a consultant org; or the peer CEO
+dataset_access_grant_grantee            -- the NAMED consultant(s) who receive access (DECIDED: named individuals,
+  grant_id → dataset_access_grant       --   not whole-org inheritance — auditable). A private consultant is an
+  user_id  → user                       --   org-of-one; consultant-org staff are added by name; a peer utility's
+  (PK grant_id+user_id)                 --   CEO is one named user. grant.grantee_org_id is just their org tag.
 
-dataset_access_grant_item               -- WHICH datasets + view/download rights (requirement (a))
-  grant_id → dataset_access_grant · dataset_ref text           -- dataset key from the §3.2 catalogue
-  can_view boolean · can_download boolean
-  (PK grant_id+dataset_ref)
+dataset_access_grant_scope              -- WHICH taxonomy nodes + view/download rights (requirement (a))
+  grant_id      → dataset_access_grant  -- CEO selects specific Categories/Groups and/or Subcategories/Subgroups
+  content_type  'kpi' | 'kpi_input'     --   for KPIs and/or inputs (two rows = both)
+  node_level    'group' | 'subgroup'    -- Category/Group (measures_group_id / kpi.category_id) or
+                                        --   Subcategory/Subgroup (measures_subgroup_id / kpi.subcategory_id)
+  node_id       → managed_list_items    -- the selected group or subgroup (both are managed-list-backed)
+  can_view      boolean · can_download boolean
+  (PK grant_id+content_type+node_level+node_id)     -- a 'group' row implies all its subgroups
 
 dataset_access_extension_request        -- the extension workflow
   id · grant_id → dataset_access_grant
@@ -293,7 +298,7 @@ dataset_access_extension_request        -- the extension workflow
   decision_note text (nullable)
 ```
 
-**Access enforcement (extends §3.6).** While `status='active'` and today ∈ `[start_date, end_date]`, each grantee — when **acting as** the granting utility (§3.3 act-as) — resolves to `SCOPE_OWN_UTILITY` **of `granting_org_id`** (not their own org), further filtered to the grant's `dataset_access_grant_item` set, at its `content_scope`, per-item view/download rights, and `status_scope` (approved-only vs include-working, §3.6 status axis). Mechanically this is a **time-boxed, dataset-scoped entry in the `pbiRls` user→org map** — the same per-token mechanism with the granting org substituted and a dataset filter applied. Grants are **independent**: a grantee may hold several (same or different utilities), each resolving separately.
+**Access enforcement (extends §3.6).** While `status='active'` and today ∈ `[start_date, end_date]`, each grantee — when **acting as** the granting utility (§3.3 act-as) — resolves to `SCOPE_OWN_UTILITY` **of `granting_org_id`** (not their own org), further filtered to the grant's `dataset_access_grant_scope` — the selected **Groups/Subgroups** (per `content_type` KPI and/or input), with per-node view/download rights, and `status_scope` (default approved-only; §3.6 status axis). Mechanically this is a **time-boxed, taxonomy-scoped entry in the `pbiRls` user→org map** — the same per-token mechanism with the granting org substituted and a group/subgroup filter applied. Grants are **independent**: a grantee may hold several (same or different utilities), each resolving separately. *(The Group→Subgroup taxonomy is managed-list-backed and shared with the calculator/medallion taxonomy work — if it is restructured, the grant-scope node keys follow it.)*
 
 **Expiry & isolation (extends §7 nightly cron).** The nightly PM2 cron flips a grant to `status='expired'` when `end_date` passes and **removes that grant's access in full** (drops its `pbiRls`/act-as mapping). **Per-project isolation:** expiring or terminating one grant touches **only** that grant — any other active grants the same grantee holds to the same utility (other projects) are untouched.
 
@@ -511,7 +516,7 @@ Governs **which WebApp menu items appear** for a signed-in user. This is the *me
 ## 9. Pending follow-ups & open questions
 
 - **[RESOLVED 2026-09-09, Eugene] WebApp visibility matrix (§8.1)** — the sidebar/menu-visibility rules are now specified. Dashboards require login; consumer Dashboards = benchmarking family only (Utility dashboard never for non-utility); AI + Docs privilege-gated (no-subscription → none, subscriber → KPI-only, utility → own KPI+inputs); PPA_FIN = finance scope only; Data Entry = DAO*/BLO only (CEO edits inputs via review, EXE/MGR none); free `member` plan = same access as paid subscriptions (AI/Docs KPI-only). Fully resolved — no residual.
-- **[OPEN 2026-09-09, Eugene] Delegated dataset access (§3.7) — 3 design calls.** (i) **status_scope default** — does a grant expose the granting utility's **working (all-status)** data or **approved-only**? Sensitive where the grantee is a **peer utility's CEO** (competitor's unapproved inputs). Recommend grant-configurable, **default `approved_only`**, CEO opts into `include_working`. (ii) **dataset granularity** — per-**dashboard** scope enough, or per-**KPI** selection needed? (model supports either via `dataset_ref`). (iii) **consultant-org grantee shape** — grant to **named users** (recommended, auditable) vs the **whole org** (all seats inherit). Otherwise the mechanism (CEO-granted, time-boxed, extension workflow, per-project isolation, notifications) is fully specified in §3.7.
+- **[RESOLVED 2026-09-09, Eugene] Delegated dataset access (§3.7) — 3 design calls.** (i) **status_scope** → **default `approved_only`** (CEO may opt a grant into `include_working`). (ii) **dataset granularity** → CEO selects specific **Categories/Groups and Subcategories/Subgroups**, for both **inputs and KPIs** — modelled as `dataset_access_grant_scope` (content_type × node_level group/subgroup × managed-list node, per-node view/download; a group implies its subgroups). (iii) **consultant-org grantee** → **named individuals** (auditable), org is a tag only. §3.7 fully specified.
 - **[OPEN 2026-09-09, Eugene → #4 + #3] Own-utility live dashboard vs approved-only benchmarking (§3.6 status axis).** Requirement: a utility's own Utility dashboard must reflect its input edits regardless of workflow status; benchmarking shows only CEO-approved (`status_id = 5`). **Not met today** — all `app/api/fact*` PBI feeds are gated to Approved via `publishedPeriodCondition`. Needs a status-aware feed split (own-utility feed keeps statuses 2–5, org-scoped + adequate refresh + the period `status_id`/`is_approved` flag for the watermark — **#4**) and pre-approval KPI compute on working data (**#3**). **Presentation decided (Eugene): option (a)** — live KPIs shown with a "working/unapproved" watermark, not suppressed. Raised to #4; #3 to confirm the calculator computes unapproved data.
 - **[OPEN 2026-09, Eugene] Download-gating hardness (§3.6)** — Power BI hard-enforces *view*/*content* (RLS) but only *softly* toggles downloads (client-side, bypassable via screenshot). Is a tier's "no download" (e.g. Basic) acceptable as a soft/convenience gate, or must it be **hard** — which means RLS-hiding the data, removing *view* too?
 - **[RESOLVED 2026-09-09, Eugene via #4] External-visibility flag — RETIRED.** The Q6b external-visibility consent flag is dropped; the grain question (per-utility vs per-period) is moot. CEO period-approval already serves as disclosure consent, and the tiered model sells the approved benchmarking surface to external subscribers — so a separate consent flag is redundant with approval. No flag column (#2 DDL not needed), no BMO consent-governance, no gold grain-split. See §3.6 retired-flag note.
