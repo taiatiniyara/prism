@@ -389,6 +389,7 @@ export async function UpdateMeasureDefinitionFromExcel(
     is_mandatory: item.is_mandatory,
     is_system_generated: item.is_system_generated,
     is_apportionable: false,
+    is_additive: true,
     is_context_fed: false,
     effective_from: null,
     unit_id: item.unit_id,
