@@ -31,6 +31,10 @@ import { FormulaEditor, formulaVariables } from "./FormulaEditor";
 import { InputTagCard } from "./InputTagCard";
 import { MeasurePickerModal } from "./MeasurePickerModal";
 import { InputCoverageModal } from "./InputCoverageModal";
+import {
+  getPeriodsCoverageSummary,
+  type PeriodCoverageSummary,
+} from "@/app/settings/kpi/input-coverage-service";
 import { TestHarness } from "./TestHarness";
 import {
   colorForVariableIndex,
@@ -84,6 +88,11 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
   const [recompute, setRecompute] = useState<RecomputeResult | null>(null);
   // Report period whose per-unit input coverage the diagnostic modal shows.
   const [coveragePeriod, setCoveragePeriod] = useState<number | null>(null);
+  // Per-period "N units blank" totals for the inline badge in the reason table
+  // (batched; fetched once a recompute settles), keyed by report period id.
+  const [coverageSummary, setCoverageSummary] = useState<
+    Map<number, PeriodCoverageSummary>
+  >(new Map());
   // Chunked calculated-measure compute progress ("period X of N"). null = idle.
   const [computeProgress, setComputeProgress] = useState<{
     done: number;
@@ -163,6 +172,35 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
       return cmp * mul;
     });
   }, [recompute, resultSort]);
+
+  // Once a recompute settles (not mid-flight), fetch per-period unit-coverage
+  // totals so the reason table can badge "N units blank" inline without opening
+  // the modal. Batched — one query for all periods, so it stays cheap.
+  useEffect(() => {
+    if (selectedTargetId == null || !recompute || isSaving || isComputing) {
+      return;
+    }
+    const periodIds = recompute.byPeriod.map((p) => p.reportPeriodId);
+    if (periodIds.length === 0) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const rows = await getPeriodsCoverageSummary({
+          ownerKind: activeMode,
+          ownerId: selectedTargetId,
+          reportPeriodIds: periodIds,
+        });
+        if (!cancelled) {
+          setCoverageSummary(new Map(rows.map((r) => [r.reportPeriodId, r])));
+        }
+      } catch {
+        // diagnostic only — a coverage-summary failure must not disrupt the table
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [recompute, selectedTargetId, activeMode, isSaving, isComputing]);
 
   const measuresById = useMemo(() => {
     const m = new Map<number, MeasureCatalogueItem>();
@@ -278,6 +316,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     setCards(target?.existingCards.map((c) => ({ ...c })) ?? []);
     setTrackAsKpi(target?.isTrackedAsKpi ?? false);
     setRecompute(null);
+    setCoverageSummary(new Map());
     // The progress bar persists after a backfill (Eugene) — clear it only when
     // the target changes, so the last run's bar + reason table clear together.
     setComputeProgress(null);
@@ -291,6 +330,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     setFormula("");
     setCards([]);
     setRecompute(null);
+    setCoverageSummary(new Map());
     setComputeProgress(null);
     setJustSaved(false);
     setOnlyWithoutFormula(false);
@@ -1107,7 +1147,20 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                         </td>
                         <td className="text-muted-foreground py-1">
                           <div className="flex items-center justify-between gap-2">
-                            <span>{r.reason ?? ""}</span>
+                            <span className="flex min-w-0 items-center gap-1.5">
+                              <span className="truncate">{r.reason ?? ""}</span>
+                              {(() => {
+                                const s = coverageSummary.get(r.reportPeriodId);
+                                return s && s.missingUnits > 0 ? (
+                                  <span
+                                    className="bg-destructive/10 text-destructive shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium"
+                                    title={`${s.missingUnits} of ${s.totalUnits} generator(s) missing an input this period`}
+                                  >
+                                    {s.missingUnits} blank
+                                  </span>
+                                ) : null;
+                              })()}
+                            </span>
                             {selectedTargetId != null && (
                               <button
                                 type="button"

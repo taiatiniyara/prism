@@ -222,6 +222,19 @@ const candidateMatchesBinding = (
     ALL_MEMBER.utility_function_id,
   );
 
+/**
+ * True when a row falls within a binding's dimension scope — the DETAIL
+ * semantics the resolver's rule 2 uses (an All-binding admits any member on that
+ * dimension; a pinned binding admits only that member). Exposed so the input-
+ * coverage diagnostic filters rows to exactly the slice a variable resolves
+ * over, instead of lumping every slice of a measure together.
+ */
+export const candidateInBindingScope = (
+  c: RollupCandidate,
+  binding: FormulaInput,
+  scope: RollupScope = {},
+): boolean => candidateMatchesBinding(c, binding, scope, detail);
+
 export interface PickInputArgs {
   candidateRows: RollupCandidate[];
   binding: FormulaInput;
