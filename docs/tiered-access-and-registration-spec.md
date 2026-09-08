@@ -157,13 +157,15 @@ created_by, created_at
 ```
 - Exactly **one current version** per plan (`valid_to IS NULL`). A DEV/BMO price/seat/term edit = **close** the current version (set `valid_to`) + **insert** a new one — versions are **immutable**, so the change history is the version list. A `subscription` locks its `plan_version_id` (§3.1), so old subs keep the price/seat/term they were sold.
 
-**`plan_entitlement`** — dashboard × the **three rights** (§0 matrix), keyed to the **plan identity** (not the version) because **entitlement changes forward-apply to every user on the plan** (Eugene 2026-07-28):
+**`plan_entitlement`** — (dashboard × **`content_class`**) × the **three rights**, keyed to the **plan identity** (not the version) because **entitlement changes forward-apply to every user on the plan** (Eugene 2026-07-28):
 ```
 id, plan_id → plan,
 dashboard: 'annual_reports_pdf'|'teaser_samples'|'utility_specific_kpi'
          | 'benchmarking_kpi'|'country_kpi'|'subregional_kpi'|'regional_kpi',
+content_class: 'kpi' | 'kpi_input',   -- KPI results vs the underlying KPI inputs (Eugene 2026-09)
 can_view (bool), can_download_charts (bool), can_download_tables (bool)
 ```
+- **`content_class` (added 2026-09) gives KPI-vs-input granularity** — a dashboard carries up to two rows: one for KPI results, one for KPI inputs, each independently gating view / chart-download / table-download. This **replaces the earlier separate `download_inputs` bool** (subsumed: "download inputs" = `can_download_*` on a `content_class='kpi_input'` row) and makes the input axis symmetric across view + download. It maps 1:1 to the §3.6 RLS content roles (`KPI_ONLY` / `KPI_AND_INPUTS`) — and per §3.6, view + content_class are the **hard** (RLS-enforced) boundaries; the download flags are soft (client-side) toggles.
 - **View is prerequisite** for either download (enforce: a download right implies `can_view`). Editing a plan's entitlements takes effect immediately for **all** its subscribers — no per-subscription locking. History is an **audit trail** (`plan_entitlement_event`: from/to, actor, timestamp), not version-locking — so "see historical changes" is satisfied without freezing anyone.
 - **Why the split:** commercial terms (what you *paid*) lock to the sold `plan_version`; feature entitlements (what the plan *grants*) forward-apply from the live `plan_entitlement`. A repricing never changes access; a dashboard added to Premium reaches every Premium subscriber at once.
 - Everything is a plan — the 3 paid tiers **plus** `public` (free default / BMO-revert target, §5), `member` (free; the three PPA member classes — Allied / Affiliate-Dev-Partner / Affiliate-Other, labelled on the org via `ppa_membership_type_id`, §4 — share this one plan), and `utility` (provider set). One uniform mechanism.
@@ -208,6 +210,33 @@ New registration + tiered-access state lives mostly in **new** tables (`access_r
 **`roles`** — add the `PPA_FIN` row (§8); no structural change.
 
 **Untouched (reused as-is):** `session`, `account`, `verification`, `user_status_event`, `user_registration_clarification_message`.
+
+---
+
+### 3.6 Power BI access-control mechanism (co-authored #10 + #4, 2026-09)
+
+How the entitlement model (§3.2) is **enforced in Power BI**. Verified against the live PBI layer. **Model:** the WebApp is the source of truth; Power BI enforces per embed-token / per DAX-query. The app resolves each org → a reference + RLS role set → translates it into the token at issuance, so a WebApp privilege change takes effect on the user's **next load** — no PBI redeploy.
+
+**Resolution (app, §1/§2):** org columns + subscription → reference (Public/Utility/Premium/Basic) → RLS role set + client-side export settings. Basic ≡ Premium at RLS (they differ only in export toggles).
+
+**RLS role model** (the `.pbix` dataset roles — the single contract both surfaces send):
+- **Content:** `KPI_ONLY` (`content_class='kpi'`) · `KPI_AND_INPUTS` (`kpi` + `kpi_input`).
+- **Row-scope:** `SCOPE_PUBLIC` (teaser/aggregate only) · `SCOPE_OWN_UTILITY` (own rows via `USERNAME()` + the `pbiRls` user→org table) · `SCOPE_BENCHMARKING` (cross-utility, external-visibility flag applied).
+- **Reference → roles:** Public = `[SCOPE_PUBLIC, KPI_ONLY]` · Utility = `[SCOPE_OWN_UTILITY, SCOPE_BENCHMARKING, KPI_AND_INPUTS]` · Premium/Member/Per-Project & Basic = `[SCOPE_BENCHMARKING, KPI_ONLY]`.
+
+**Two enforcement surfaces — both must scope, or it leaks:**
+1. **Embed (dashboard):** per-user embed token — `lib/powerbi/operations.ts GenerateToken` sends `identities:[{ username: email, roles:[…resolved], datasets:[…] }]`. Mechanism already built; the extension is sending the *resolved* roles, not the user's workflow-role.
+2. **AI / DAX (PRISM AI answers):** DAX runs under `impersonatedUserName = the requesting user's email` (same RLS), replacing the single env identity — else a Basic user's AI could surface Premium/input content the dashboard gates. DAX cache must be **entitlement-keyed**. (#4's data-service domain.)
+
+**Hard vs soft (reality-check):**
+- **Hard (RLS):** *view* + *which content* (`kpi` vs `kpi_input`) + row-scope — a user provably cannot see excluded data.
+- **Soft (client-side embed settings):** download-charts / download-tables toggles are client-side and **bypassable** (a viewer can screenshot). So a tier's "no download" is a convenience gate, **not** an IP-hard boundary; hard extraction-prevention = RLS-hide the data (which also removes view). **[Eugene — open: soft acceptable for Basic?]**
+
+**Gold/dataset prerequisites** (#4 owns the shaping):
+- **`content_class` dimension** on the gold fact (`kpi_actual`→'kpi', `data_entries`→'kpi_input') — what the content roles filter. Materialising it is #4's, near-term.
+- **External-visibility consent flag** (Q6b: per-utility, **exclusion-not-anonymisation**, default OFF) → **gold grain-split**: `SCOPE_BENCHMARKING` gates the fine-grain per-utility **detail** by the flag; the coarse-grain **aggregate** rows (region/country rollups) are unfiltered → *"hidden from detail, still counted in aggregate."* **Flag: #10 homes it / #2 lands the column / BMO sets it (consent) / #4's gold reads it.** **[Eugene — open: grain per-utility vs per-utility-per-period?]** **Dependency:** aggregate-preservation needs `kpi_actual` to hold coarse-grain rollup rows (#3's two-axis calculator rollup) — so this split sequences *after* that lands.
+
+**Report structure:** start **1 report + RLS** (reuses the built per-user-identity mechanism); split to multiple reports only for genuine *layout* divergence RLS can't express.
 
 ---
 
@@ -376,6 +405,8 @@ failure_reason
 
 ## 9. Pending follow-ups & open questions
 
+- **[OPEN 2026-09, Eugene] Download-gating hardness (§3.6)** — Power BI hard-enforces *view*/*content* (RLS) but only *softly* toggles downloads (client-side, bypassable via screenshot). Is a tier's "no download" (e.g. Basic) acceptable as a soft/convenience gate, or must it be **hard** — which means RLS-hiding the data, removing *view* too?
+- **[OPEN 2026-09, Eugene] External-visibility flag grain (§3.6/§2.1)** — per-utility (org-level) vs per-utility-per-period consent for external benchmarking visibility. #10 homes the column, #2 lands the DDL, BMO sets it (consent); awaiting the grain choice. Policy already decided (Q6b: exclusion-not-anonymisation, default OFF).
 - **[UPDATED 2026-08-03] Plans finalised** — folded `FINALISED Tiered Access Plans 260803.xlsx` into §0/§3.2/§4: member tier = one `member` plan (10 seats/365d) covering the 3 PPA member classes (label via `ppa_membership_type_id`); **`public_kpi` dashboard → `teaser_samples`** (Public gets view + downloads on it); paid tiers unchanged.
 - **[RESOLVED 2026-08-03] Default plan contents** — the **`public`** plan = Teaser Samples (view + downloads) + Annual Reports PDF (§0/§4).
 - **[RESOLVED 2026-08-03] Member entitlements** — the **`member`** plan = PDF + full benchmarking family (view + both downloads), 10 seats/365d, sector-scoped (§0/§4).
