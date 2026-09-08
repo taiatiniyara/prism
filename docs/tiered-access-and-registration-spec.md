@@ -221,7 +221,7 @@ How the entitlement model (§3.2) is **enforced in Power BI**. Verified against 
 
 **RLS role model** (the `.pbix` dataset roles — the single contract both surfaces send):
 - **Content:** `KPI_ONLY` (`content_class='kpi'`) · `KPI_AND_INPUTS` (`kpi` + `kpi_input`).
-- **Row-scope:** `SCOPE_PUBLIC` (teaser/aggregate only) · `SCOPE_OWN_UTILITY` (own rows via `USERNAME()` + the `pbiRls` user→org table) · `SCOPE_BENCHMARKING` (cross-utility, external-visibility flag applied).
+- **Row-scope:** `SCOPE_PUBLIC` (teaser/aggregate only) · `SCOPE_OWN_UTILITY` (own rows via `USERNAME()` + the `pbiRls` user→org table) · `SCOPE_BENCHMARKING` (the cross-utility benchmarking family for **CEO-approved periods** — no per-utility flag filter; the approval publish-gate governs what reaches this surface, see the retired-flag note below).
 - **Reference → roles:** Public = `[SCOPE_PUBLIC, KPI_ONLY]` · Utility = `[SCOPE_OWN_UTILITY, SCOPE_BENCHMARKING, KPI_AND_INPUTS]` · Premium/Member/Per-Project & Basic = `[SCOPE_BENCHMARKING, KPI_ONLY]`.
 
 **Two enforcement surfaces — both must scope, or it leaks:**
@@ -234,7 +234,7 @@ How the entitlement model (§3.2) is **enforced in Power BI**. Verified against 
 
 **Gold/dataset prerequisites** (#4 owns the shaping):
 - **`content_class` dimension** on the gold fact (`kpi_actual`→'kpi', `data_entries`→'kpi_input') — what the content roles filter. Materialising it is #4's, near-term.
-- **External-visibility consent flag** (Q6b: per-utility, **exclusion-not-anonymisation**, default OFF) → **gold grain-split**: `SCOPE_BENCHMARKING` gates the fine-grain per-utility **detail** by the flag; the coarse-grain **aggregate** rows (region/country rollups) are unfiltered → *"hidden from detail, still counted in aggregate."* **Flag: #10 homes it / #2 lands the column / BMO sets it (consent) / #4's gold reads it.** **[Eugene — open: grain per-utility vs per-utility-per-period?]** **Dependency:** aggregate-preservation needs `kpi_actual` to hold coarse-grain rollup rows (#3's two-axis calculator rollup) — so this split sequences *after* that lands.
+- **~~External-visibility consent flag~~ — RETIRED 2026-09-09 (Eugene ruling, via #4).** The earlier Q6b flag (per-utility "exclusion-not-anonymisation", default OFF) and its gold grain-split are **dropped**. Rationale: **CEO period-approval already IS the disclosure consent** — approving a period publishes that utility's data as benchmarking KPIs on the benchmarking surfaces (#4's publish-gate: only Approved periods reach benchmarking), and our tiered model deliberately *sells* that approved surface to external subscribers (the non-member funnel). The flag's only distinct capability was "count me in aggregates but hide my individual line" (aggregate-only participation) — which PRISM does **not** want; participation is all-or-nothing at approval (don't want it seen → don't approve). So `SCOPE_BENCHMARKING` carries **only its row-scope**, no flag filter; no grain-split; **#2's flag-column DDL and the BMO consent-governance for it are not needed.**
 
 **Report structure:** start **1 report + RLS** (reuses the built per-user-identity mechanism); split to multiple reports only for genuine *layout* divergence RLS can't express.
 
@@ -406,7 +406,7 @@ failure_reason
 ## 9. Pending follow-ups & open questions
 
 - **[OPEN 2026-09, Eugene] Download-gating hardness (§3.6)** — Power BI hard-enforces *view*/*content* (RLS) but only *softly* toggles downloads (client-side, bypassable via screenshot). Is a tier's "no download" (e.g. Basic) acceptable as a soft/convenience gate, or must it be **hard** — which means RLS-hiding the data, removing *view* too?
-- **[OPEN 2026-09, Eugene] External-visibility flag grain (§3.6/§2.1)** — per-utility (org-level) vs per-utility-per-period consent for external benchmarking visibility. #10 homes the column, #2 lands the DDL, BMO sets it (consent); awaiting the grain choice. Policy already decided (Q6b: exclusion-not-anonymisation, default OFF).
+- **[RESOLVED 2026-09-09, Eugene via #4] External-visibility flag — RETIRED.** The Q6b external-visibility consent flag is dropped; the grain question (per-utility vs per-period) is moot. CEO period-approval already serves as disclosure consent, and the tiered model sells the approved benchmarking surface to external subscribers — so a separate consent flag is redundant with approval. No flag column (#2 DDL not needed), no BMO consent-governance, no gold grain-split. See §3.6 retired-flag note.
 - **[UPDATED 2026-08-03] Plans finalised** — folded `FINALISED Tiered Access Plans 260803.xlsx` into §0/§3.2/§4: member tier = one `member` plan (10 seats/365d) covering the 3 PPA member classes (label via `ppa_membership_type_id`); **`public_kpi` dashboard → `teaser_samples`** (Public gets view + downloads on it); paid tiers unchanged.
 - **[RESOLVED 2026-08-03] Default plan contents** — the **`public`** plan = Teaser Samples (view + downloads) + Annual Reports PDF (§0/§4).
 - **[RESOLVED 2026-08-03] Member entitlements** — the **`member`** plan = PDF + full benchmarking family (view + both downloads), 10 seats/365d, sector-scoped (§0/§4).
