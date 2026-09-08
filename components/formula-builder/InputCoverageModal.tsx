@@ -99,8 +99,8 @@ export function InputCoverageModal({
           )}
           {!loading &&
             !error &&
-            data?.inputs.map((input) => (
-              <CoverageCard key={input.measureDefId} input={input} />
+            data?.inputs.map((input, idx) => (
+              <CoverageCard key={`${input.measureDefId}-${idx}`} input={input} />
             ))}
         </div>
       </DialogContent>
@@ -112,6 +112,7 @@ function CoverageCard({ input }: { input: InputCoverage }) {
   const {
     measureName,
     variableNames,
+    sliced,
     perUnit,
     totalUnits,
     enteredUnits,
@@ -126,7 +127,14 @@ function CoverageCard({ input }: { input: InputCoverage }) {
     <div className="rounded-lg border p-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="min-w-0">
-          <p className="truncate text-sm font-semibold">{measureName}</p>
+          <p className="truncate text-sm font-semibold">
+            {measureName}
+            {sliced && (
+              <span className="text-muted-foreground ml-1.5 text-[11px] font-normal">
+                · sliced
+              </span>
+            )}
+          </p>
           {variableNames.length > 0 && (
             <p className="text-muted-foreground font-mono text-[11px]">
               {variableNames.join(", ")}
