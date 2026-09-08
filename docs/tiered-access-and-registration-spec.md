@@ -246,6 +246,71 @@ How the entitlement model (§3.2) is **enforced in Power BI**. Verified against 
 
 **Report structure:** start **1 report + RLS** (reuses the built per-user-identity mechanism); split to multiple reports only for genuine *layout* divergence RLS can't express.
 
+### 3.7 Delegated dataset access — utility-CEO-granted, time-boxed (added 2026-09-09, Eugene)
+
+**Purpose.** A utility's CEO can grant an outside party **temporary** access to that utility's **own** datasets (KPIs and/or KPI-inputs) — for work **sponsored by the utility itself or a development partner**, evidenced by a TOR/agreement. Two grantee kinds: **consultants** (a private individual or a consultant organisation) and **another utility's CEO** (peer access). Within a grant the grantee **inherits the granting utility's privileges** on the granted datasets (sees/downloads them as the utility would), **scoped and time-boxed** by the CEO. **Orthogonal to the plan/subscription tiers (§0/§3.2)** — this is not *bought*, it is *granted by the data owner*.
+
+**Governance — private to the utility, no BMO:**
+- **Only the granting utility's CEO** creates, scopes, extends, or terminates a grant.
+- **CEO + BLO** of that utility may **view** the grantee list and their access.
+- **No BMO / PPA oversight** — grants are private to the utility; the delegated-access tables are **not** surfaced in any BMO/PPA/DEV admin console (a deliberate exception to BMO-sees-all; DEV keeps platform-debug visibility only).
+
+**Data model:**
+```
+dataset_access_grant
+  id
+  granting_org_id       → organisations          -- the utility whose data is shared
+  project_name          text                      -- the engagement; expiry is PER-project (a grantee may hold several)
+  sponsor_type          'utility' | 'development_partner'
+  sponsor_org_id        → organisations (nullable) -- the dev partner, when sponsor_type='development_partner'
+  tor_reference         text                      -- TOR / agreement consent artifact (ref or document link)
+  grantee_org_id        → organisations (nullable) -- consultant org / peer utility (null = private individual)
+  content_scope         'kpi' | 'kpi_input'       -- KPIs only, or KPIs + inputs (§3.6 content_class)
+  status_scope          'approved_only' | 'include_working'   -- [Eugene — open Q; default approved_only]
+  start_date, end_date  date
+  status                'active' | 'expired' | 'terminated'
+  granted_by_user_id    → user  (the CEO), granted_at
+  terminated_by_user_id → user (nullable), terminated_at       -- early CEO termination
+  created_at, updated_at
+
+dataset_access_grant_grantee            -- the consultant(s) who receive access
+  grant_id → dataset_access_grant · user_id → user            -- private consultant = org-of-one; named
+  (PK grant_id+user_id)                                        -- seats of a consultant org; or the peer CEO
+
+dataset_access_grant_item               -- WHICH datasets + view/download rights (requirement (a))
+  grant_id → dataset_access_grant · dataset_ref text           -- dataset key from the §3.2 catalogue
+  can_view boolean · can_download boolean
+  (PK grant_id+dataset_ref)
+
+dataset_access_extension_request        -- the extension workflow
+  id · grant_id → dataset_access_grant
+  requested_by_user_id → user           -- a grantee consultant OR the utility CEO
+  requested_at · current_end_date date  -- end_date snapshot at request time (to restate on denial)
+  proposed_end_date date (nullable)
+  status 'pending' | 'approved' | 'denied'
+  decided_by_user_id → user (the CEO), decided_at
+  new_end_date date (nullable)          -- set on approval; CHECK new_end_date > current_date
+  decision_note text (nullable)
+```
+
+**Access enforcement (extends §3.6).** While `status='active'` and today ∈ `[start_date, end_date]`, each grantee — when **acting as** the granting utility (§3.3 act-as) — resolves to `SCOPE_OWN_UTILITY` **of `granting_org_id`** (not their own org), further filtered to the grant's `dataset_access_grant_item` set, at its `content_scope`, per-item view/download rights, and `status_scope` (approved-only vs include-working, §3.6 status axis). Mechanically this is a **time-boxed, dataset-scoped entry in the `pbiRls` user→org map** — the same per-token mechanism with the granting org substituted and a dataset filter applied. Grants are **independent**: a grantee may hold several (same or different utilities), each resolving separately.
+
+**Expiry & isolation (extends §7 nightly cron).** The nightly PM2 cron flips a grant to `status='expired'` when `end_date` passes and **removes that grant's access in full** (drops its `pbiRls`/act-as mapping). **Per-project isolation:** expiring or terminating one grant touches **only** that grant — any other active grants the same grantee holds to the same utility (other projects) are untouched.
+
+**Notifications** (reuse `notifications` [alerting.ts] + `email_schedules` + `lib/email/email.service.ts sendEmail`):
+1. **Expiry reminder — `x` days before `end_date`**, to the **CEO and all grantee(s)**. `x` is **BLO-configurable per utility** (new setting). The email carries a **deep link** that opens an **extension-request** form in PRISM.
+2. **Extension request** (submitted by a grantee **or** the CEO) → lands in the **CEO's pending-action list** (the existing period review/approval queue, extended).
+3. **Extension decision** → notify grantee(s): *Approved* + new expiry, or *Denied* + expiry restated.
+4. **Post-expiry reactivation** → notify grantee(s).
+
+**Extension decision UI (CEO).** Each pending request shows **[Approved]** / **[Denied]**:
+- **Approved** → CEO must pick a **new end date > today** (enforced `new_end_date > current_date`); grant `end_date` updated and `status` returns to `active` if lapsed; grantee(s) notified with the new expiry.
+- **Denied** → grantee(s) emailed, current expiry **restated**; grant unchanged.
+
+**Post-expiry reactivation.** A CEO may extend a grant **after it has lapsed** by setting a new `end_date` (grant returns to `active`) — no request needed. This **always** fires a grantee notification.
+
+**RBAC / menu (§8/§8.1).** New CEO surface **"Delegated Access"** (create/scope/extend/terminate grants + the pending extension-request queue); **BLO** gets it **read-only** (view grantees; set the reminder-lead-days). A grantee's **active grant adds the granting utility to their act-as switcher (§3.3)**, exposing that utility's granted datasets on the Utility dashboard (scoped, §3.6) for the term only — the grant is an **overlay** on the grantee's normal identity, not a new base user class.
+
 ---
 
 ## 4. Plans coverage — all resolved by the FINALISED 2026-08-03 matrix (§0)
@@ -396,6 +461,7 @@ failure_reason
 
 - **`access_settings`** (BMO-configurable): `reminder_lead_hours` (default 48) — applies to **both** seat-expiry and subscription-renewal reminders.
 - **Nightly job** (PM2 — `ecosystem.config.js` already present, add a cron): (a) flip seats past `valid_until` → `expired`, subscriptions past `term_end` → `lapsed`; (b) send reminders to **org admin *and* consultant** for seats/subscriptions inside `reminder_lead_hours`, with extend/renew deep-links. Extend = admin sets a new `valid_until ≤ term_end`.
+- **Delegated-access grants (§3.7)** ride the same nightly job: flip `dataset_access_grant` past `end_date` → `expired` (dropping that grant's access only, per-project-isolated), and send the **`x`-days-before** expiry reminder (per-utility, **BLO-configurable**, separate from the BMO `reminder_lead_hours`) to the **CEO + grantee(s)** with the extension-request deep-link.
 - **Org admin capability** (generalizes today's BLO screen, which can only create+list): invite/assign a seat, set/extend/revoke `valid_until`, resend magic-link, see seat usage vs cap. First approved user of a net-new subscriber org **becomes admin**; multiple admins allowed.
 - Audit: reuse the `user_status_event` pattern as `seat_event`.
 
@@ -408,6 +474,7 @@ failure_reason
 - **BLO** stays the utility's admin (`is_admin` on utility seats) and Utility-Liaison; glossary updated (`CONTEXT.md`).
 - **Primary contact** = a **`seat.is_primary_contact`** flag (per-org, on the seat — like `is_admin`), **not** a role synonym: it defaults to the BLO seat but a utility can nominate specific people, and a utility may have more than one. It's the recipient set for measure/expectation notifications (new effective-dated measures, "mandatory in the next benchmarking report") — from [measure-effective-dating-spec.md](measure-effective-dating-spec.md) §8. The email **trigger** lives in the alerting/email-schedule model (consumes this flag); #10 owns the **designation**, the effective-dating stream owns the trigger.
 - Existing route-prefix / `sidebar_access` gating extends to the new surfaces (Payments, Subscriptions, Seats).
+- **Delegated Access surface (§3.7)** — **CEO**: create/scope/extend/terminate grants + decide pending extension requests; **BLO**: read-only view of grantees + set the reminder-lead-days. **No BMO/PPA** access (private to the utility). Not a new global role — CEO/BLO capabilities on their own utility's grants.
 
 ### 8.1 WebApp visibility matrix (sidebar/menu — decided 2026-09-09, Eugene)
 
@@ -444,6 +511,7 @@ Governs **which WebApp menu items appear** for a signed-in user. This is the *me
 ## 9. Pending follow-ups & open questions
 
 - **[RESOLVED 2026-09-09, Eugene] WebApp visibility matrix (§8.1)** — the sidebar/menu-visibility rules are now specified. Dashboards require login; consumer Dashboards = benchmarking family only (Utility dashboard never for non-utility); AI + Docs privilege-gated (no-subscription → none, subscriber → KPI-only, utility → own KPI+inputs); PPA_FIN = finance scope only; Data Entry = DAO*/BLO only (CEO edits inputs via review, EXE/MGR none); free `member` plan = same access as paid subscriptions (AI/Docs KPI-only). Fully resolved — no residual.
+- **[OPEN 2026-09-09, Eugene] Delegated dataset access (§3.7) — 3 design calls.** (i) **status_scope default** — does a grant expose the granting utility's **working (all-status)** data or **approved-only**? Sensitive where the grantee is a **peer utility's CEO** (competitor's unapproved inputs). Recommend grant-configurable, **default `approved_only`**, CEO opts into `include_working`. (ii) **dataset granularity** — per-**dashboard** scope enough, or per-**KPI** selection needed? (model supports either via `dataset_ref`). (iii) **consultant-org grantee shape** — grant to **named users** (recommended, auditable) vs the **whole org** (all seats inherit). Otherwise the mechanism (CEO-granted, time-boxed, extension workflow, per-project isolation, notifications) is fully specified in §3.7.
 - **[OPEN 2026-09-09, Eugene → #4 + #3] Own-utility live dashboard vs approved-only benchmarking (§3.6 status axis).** Requirement: a utility's own Utility dashboard must reflect its input edits regardless of workflow status; benchmarking shows only CEO-approved (`status_id = 5`). **Not met today** — all `app/api/fact*` PBI feeds are gated to Approved via `publishedPeriodCondition`. Needs a status-aware feed split (own-utility feed keeps statuses 2–5, org-scoped + adequate refresh + the period `status_id`/`is_approved` flag for the watermark — **#4**) and pre-approval KPI compute on working data (**#3**). **Presentation decided (Eugene): option (a)** — live KPIs shown with a "working/unapproved" watermark, not suppressed. Raised to #4; #3 to confirm the calculator computes unapproved data.
 - **[OPEN 2026-09, Eugene] Download-gating hardness (§3.6)** — Power BI hard-enforces *view*/*content* (RLS) but only *softly* toggles downloads (client-side, bypassable via screenshot). Is a tier's "no download" (e.g. Basic) acceptable as a soft/convenience gate, or must it be **hard** — which means RLS-hiding the data, removing *view* too?
 - **[RESOLVED 2026-09-09, Eugene via #4] External-visibility flag — RETIRED.** The Q6b external-visibility consent flag is dropped; the grain question (per-utility vs per-period) is moot. CEO period-approval already serves as disclosure consent, and the tiered model sells the approved benchmarking surface to external subscribers — so a separate consent flag is redundant with approval. No flag column (#2 DDL not needed), no BMO consent-governance, no gold grain-split. See §3.6 retired-flag note.
