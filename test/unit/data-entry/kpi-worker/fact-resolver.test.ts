@@ -47,7 +47,11 @@ const meta = (
   new Map(
     entries.map(([id, m]) => [
       id,
-      { strataId: m.strataId ?? null, isContextFed: m.isContextFed ?? false },
+      {
+        strataId: m.strataId ?? null,
+        isContextFed: m.isContextFed ?? false,
+        isAdditive: m.isAdditive ?? true,
+      },
     ]),
   );
 
@@ -171,5 +175,50 @@ describe("fact resolver", () => {
       scope: scope(),
     });
     expect(out.variables.a).toBe(10);
+  });
+
+  it("non-additive: sub-utility rows with no utility aggregate → missing (never Σ grain)", async () => {
+    const { resolve } = resolver(
+      new InMemoryFactSource(meta([[10, { isAdditive: false }]]), [
+        dimRow(10, { value: "30", grainAreaId: 1 }),
+        dimRow(10, { value: "20", grainAreaId: 2 }),
+      ]),
+    );
+    const out = await resolve({
+      formulaInputs: [binding(10, "a")],
+      kpiAggLevelId: null,
+      scope: scope(), // utility target → grain rollup would be required
+    });
+    expect(out).toEqual({ variables: {}, missingVariables: ["a"] });
+  });
+
+  it("non-additive: uses the utility-level aggregate when one exists (no Σ)", async () => {
+    const { resolve } = resolver(
+      new InMemoryFactSource(meta([[10, { isAdditive: false }]]), [
+        dimRow(10, { value: "100" }), // utility aggregate
+        dimRow(10, { value: "30", grainAreaId: 1 }),
+      ]),
+    );
+    const out = await resolve({
+      formulaInputs: [binding(10, "a")],
+      kpiAggLevelId: null,
+      scope: scope(),
+    });
+    expect(out.variables.a).toBe(100);
+  });
+
+  it("non-additive: never sums across a coarser KPI strata → missing", async () => {
+    const { resolve } = resolver(
+      new InMemoryFactSource(meta([[10, { strataId: 1, isAdditive: false }]]), [
+        dimRow(10, { value: "4" }),
+        dimRow(10, { value: "6" }),
+      ]),
+    );
+    const out = await resolve({
+      formulaInputs: [binding(10, "a")],
+      kpiAggLevelId: 3, // coarser than input strata → strata rollup
+      scope: scope(),
+    });
+    expect(out).toEqual({ variables: {}, missingVariables: ["a"] });
   });
 });

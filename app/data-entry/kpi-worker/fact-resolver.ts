@@ -112,9 +112,11 @@ export const createFactResolver = (deps: FactResolverDeps = {}) => {
       }
 
       const sourceRows = byMeasure.get(formulaInput.measure_def_id) ?? [];
+      const measureMeta = meta.get(formulaInput.measure_def_id);
+      const isAdditive = measureMeta?.isAdditive ?? true;
       const strataRollup = strataShouldRollup(
         request.kpiAggLevelId,
-        meta.get(formulaInput.measure_def_id)?.strataId ?? null,
+        measureMeta?.strataId ?? null,
       );
 
       const grain = selectGrainCandidates(sourceRows, rollUpGrain);
@@ -124,6 +126,18 @@ export const createFactResolver = (deps: FactResolverDeps = {}) => {
         );
       }
 
+      const grainRollup = strataRollup || grain.summed;
+
+      // Non-additive measure (#4): it may not be SUMMED across grain or strata.
+      // If a rollup would be required — finer-grain rows with no target-level
+      // aggregate, or a coarser KPI strata — there is no authoritative aggregate
+      // at the target, so the input is missing rather than a wrong sum. (The
+      // dimension-slice Σ is disabled inside pickInputValue via `isAdditive`.)
+      if (!isAdditive && grainRollup) {
+        missingVariables.push(formulaInput.variable_name);
+        continue;
+      }
+
       const value = pickInputValue({
         candidateRows: grain.candidates,
         binding: formulaInput,
@@ -131,7 +145,8 @@ export const createFactResolver = (deps: FactResolverDeps = {}) => {
           customerTypeId: request.scope.customerTypeId ?? null,
           paymentModeId: request.scope.paymentModeId ?? null,
         },
-        grainRollup: strataRollup || grain.summed,
+        grainRollup,
+        isAdditive,
       });
 
       if (value == null) {
