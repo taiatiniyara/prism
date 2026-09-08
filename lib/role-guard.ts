@@ -62,21 +62,36 @@ export const PUBLIC_PREFIXES = [
 
 export function getDefaultPageForRole(role: string | null | undefined): string {
   if (!role) return "/auth";
-  return ROLE_DEFAULT_PAGES[role] ?? "/dashboard";
+  // A role that exists in the `roles` table but has no entry here (e.g. AFM,
+  // CON, DEVPBI, ALM, DON, DASH_*, System) has no configured route access at
+  // all: `canAccessRoute` denies every path for it. Falling back to
+  // "/dashboard" here used to send those users into an infinite redirect
+  // loop in proxy.ts (denied -> redirect to "/dashboard" -> denied again).
+  // "/auth" is outside proxy.ts's matcher, so it terminates the loop instead
+  // of looping through it. This does NOT grant the role real access — it
+  // still needs a proper entry in ROLE_ROUTE_PREFIXES / ROLE_DEFAULT_PAGES
+  // once its intended pages are decided.
+  return ROLE_DEFAULT_PAGES[role] ?? "/auth";
 }
 
 export function canAccessRoute(role: string | null, pathname: string): boolean {
-  if (!role) return false;
-
-  const allowed = ROLE_ROUTE_PREFIXES[role];
-  if (!allowed) return false;
-
+  // Public prefixes are accessible regardless of role — checked first so an
+  // unrecognised/unmapped role (or no role at all) can still reach them.
+  // Previously this was checked AFTER the role lookup, so any role missing
+  // from ROLE_ROUTE_PREFIXES was denied even on public paths; the only thing
+  // stopping that from causing a redirect loop was proxy.ts's matcher
+  // happening not to cover "/auth". Don't rely on that coincidence.
   if (
     PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix)) ||
     pathname === "/"
   ) {
     return true;
   }
+
+  if (!role) return false;
+
+  const allowed = ROLE_ROUTE_PREFIXES[role];
+  if (!allowed) return false;
 
   return allowed.some((prefix) => pathname.startsWith(prefix));
 }
