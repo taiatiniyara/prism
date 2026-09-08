@@ -105,22 +105,28 @@ export function fiscalYearForReportPeriod(
   return s.getFullYear();
 }
 
+/**
+ * ISO rendering of a report period's date for the fact API layer.
+ *
+ * Emits the STORED report_date unchanged (no fiscal-year relabelling) — the
+ * pivot fact endpoints feed Power BI and must match report_periods.report_date
+ * exactly. The fiscal-year START label is a relevance/labeling concern; it lives
+ * in fiscalYearForReportPeriod (used by the relevance engine and its SQL parity
+ * guard), NOT here — rewiring it via setFullYear produced off-by-one years
+ * (e.g. a 2022-01-31 FY-end period surfaced as 2021-01-31).
+ *
+ * The trailing params are kept for signature compatibility with the many fact
+ * routes that pass reportType/fye; they no longer influence the output.
+ */
 export function formatReportPeriodIso(
   reportDate: Date | string | null,
-  reportType: string | null | undefined,
-  fyeMonth?: number | null,
-  fyeDay?: number | null,
+  _reportType?: string | null | undefined,
+  _fyeMonth?: number | null,
+  _fyeDay?: number | null,
 ): string | null {
   if (!reportDate) return null;
   const d = typeof reportDate === "string" ? new Date(reportDate) : reportDate;
   if (isNaN(d.getTime())) return null;
-
-  if (reportType === "Financial Year") {
-    const fy = fiscalYearForReportPeriod(d, reportType, fyeMonth, fyeDay);
-    if (fy != null) d.setFullYear(fy);
-    return d.toISOString();
-  }
-
   return d.toISOString();
 }
 
