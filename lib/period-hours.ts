@@ -8,6 +8,11 @@ import { managedListItems, managedLists } from "@/db/schema/managedLists";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { and, eq } from "drizzle-orm";
 
+import {
+  isBenchmarkingPeriod,
+  listBenchmarkingPeriodIds,
+} from "@/lib/benchmarking/participation";
+
 const HOURS_IN_PERIOD_MEASURE_NAME = "Hours in Period";
 
 // Resolve the measure by NAME, not a hardcoded id. The medallion catalogue
@@ -127,6 +132,16 @@ async function getAllMemberId(listName: string): Promise<number> {
 }
 
 export async function upsertHoursInPeriod(reportPeriodId: number): Promise<void> {
+  // Hours-in-Period is benchmarking data — generate it ONLY for periods opted
+  // into benchmarking (canonical predicate: is_utility AND bm_opted_in). This is
+  // the single choke point for BOTH the interactive data-entry paths and the
+  // bulk backfill, so a non-opted-in period (e.g. a kept-but-opted-out period)
+  // never gets a system-generated Hours row that would then drive spurious KPI
+  // failures. (per-period-participation-spec §4; #3/#8.)
+  if (!(await isBenchmarkingPeriod(reportPeriodId))) {
+    return;
+  }
+
   const { reportDate, reportTypeName } =
     await getReportPeriodDetails(reportPeriodId);
   const hours = calculateHoursInPeriod(reportDate, reportTypeName);
@@ -221,29 +236,32 @@ async function getDefaultDimensionMap() {
 
 /**
  * Reload/backfill entry point: (re)generate the system-computed "Hours in Period"
- * for EVERY report period. Idempotent (upsert). The interactive data-entry paths
- * call `upsertHoursInPeriod` per period, but a bulk reload does not touch each
- * period through the UI — so the reload (or a one-off post-reload run) must call
- * this, otherwise historical periods have no Hours-in-Period row and every KPI
- * that divides by it breaks. Returns the number of periods processed.
+ * for every BENCHMARKING period. Idempotent (upsert). The interactive data-entry
+ * paths call `upsertHoursInPeriod` per period, but a bulk reload does not touch
+ * each period through the UI — so the reload (or a one-off post-reload run) must
+ * call this, otherwise participating periods have no Hours-in-Period row and every
+ * KPI that divides by it breaks.
+ *
+ * Scoped to opted-in periods (canonical predicate) — the blanket "every report
+ * period" run is exactly what littered `data_entries` with Hours rows on periods
+ * nobody participated in (Eugene stopped that run 2026-09-03). `upsertHoursInPeriod`
+ * re-checks per period, so this is belt-and-suspenders. Returns periods processed.
  */
 export async function backfillHoursInPeriodForAllPeriods(): Promise<{
   processed: number;
   failed: number;
 }> {
-  const periods = await db
-    .select({ id: reportPeriods.id })
-    .from(reportPeriods);
+  const periodIds = await listBenchmarkingPeriodIds();
   let processed = 0;
   let failed = 0;
-  for (const p of periods) {
+  for (const id of periodIds) {
     try {
-      await upsertHoursInPeriod(p.id);
+      await upsertHoursInPeriod(id);
       processed += 1;
     } catch (err) {
       failed += 1;
       console.error(
-        `[hours-in-period] backfill failed for report period ${p.id}:`,
+        `[hours-in-period] backfill failed for report period ${id}:`,
         err instanceof Error ? err.message : err,
       );
     }

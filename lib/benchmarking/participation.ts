@@ -50,6 +50,28 @@ export async function listBenchmarkingPeriodIds(): Promise<number[]> {
 }
 
 /**
+ * Period-only gate — is THIS report period benchmarked? For callers that hold a
+ * `reportPeriodId` but not the utility id (e.g. hours-in-period generation).
+ * Joins to the owning organisation and applies the canonical predicate.
+ */
+export async function isBenchmarkingPeriod(
+  reportPeriodId: number,
+): Promise<boolean> {
+  const rows = await db
+    .select({ id: reportPeriods.id })
+    .from(reportPeriods)
+    .innerJoin(organisations, eq(organisations.id, reportPeriods.utility_id))
+    .where(
+      and(
+        eq(reportPeriods.id, reportPeriodId),
+        benchmarkingParticipantCondition(),
+      ),
+    )
+    .limit(1);
+  return rows.length > 0;
+}
+
+/**
  * Single `(utility, period)` gate — for per-row checks (e.g. a data-entry or
  * hours-generation path deciding whether one period is benchmarked).
  */
