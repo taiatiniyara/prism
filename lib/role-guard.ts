@@ -36,10 +36,22 @@ export const ROLE_ROUTE_PREFIXES: Record<string, string[]> = {
   EXE: ["/dashboard", "/profile", "/docs", "/prism-ai"],
   EXT: ["/dashboard", "/profile", "/docs", "/prism-ai"],
   MGR: ["/dashboard", "/profile", "/docs", "/prism-ai"],
-  // Interim: AFM had no entry at all (see getDefaultPageForRole), which used
-  // to redirect-loop. Given the same minimal view-only baseline as EXE/EXT
-  // until product decides AFM's real page set.
+  // Interim: these roles had no entry at all (see getDefaultPageForRole),
+  // which used to redirect-loop. Given the same minimal view-only baseline
+  // as EXE/EXT until product decides each role's real page set. NOTE:
+  // "System" is presumed to be a non-interactive/service role — granting it
+  // UI page access is likely a no-op in practice, but flagging since it was
+  // included here mechanically along with the rest, not by design intent.
   AFM: ["/dashboard", "/profile", "/docs", "/prism-ai"],
+  CON: ["/dashboard", "/profile", "/docs", "/prism-ai"],
+  DEVPBI: ["/dashboard", "/profile", "/docs", "/prism-ai"],
+  ALM: ["/dashboard", "/profile", "/docs", "/prism-ai"],
+  DON: ["/dashboard", "/profile", "/docs", "/prism-ai"],
+  DASH_UTL: ["/dashboard", "/profile", "/docs", "/prism-ai"],
+  DASH_COU: ["/dashboard", "/profile", "/docs", "/prism-ai"],
+  DASH_REG: ["/dashboard", "/profile", "/docs", "/prism-ai"],
+  DASH_PAC: ["/dashboard", "/profile", "/docs", "/prism-ai"],
+  System: ["/dashboard", "/profile", "/docs", "/prism-ai"],
 };
 
 export const ROLE_DEFAULT_PAGES: Record<string, string> = {
@@ -54,6 +66,15 @@ export const ROLE_DEFAULT_PAGES: Record<string, string> = {
   EXT: "/dashboard",
   MGR: "/data-entry",
   AFM: "/dashboard",
+  CON: "/dashboard",
+  DEVPBI: "/dashboard",
+  ALM: "/dashboard",
+  DON: "/dashboard",
+  DASH_UTL: "/dashboard",
+  DASH_COU: "/dashboard",
+  DASH_REG: "/dashboard",
+  DASH_PAC: "/dashboard",
+  System: "/dashboard",
 };
 
 export const PUBLIC_PREFIXES = [
@@ -67,15 +88,14 @@ export const PUBLIC_PREFIXES = [
 
 export function getDefaultPageForRole(role: string | null | undefined): string {
   if (!role) return "/auth";
-  // A role that exists in the `roles` table but has no entry here (e.g. CON,
-  // DEVPBI, ALM, DON, DASH_*, System) has no configured route access at
-  // all: `canAccessRoute` denies every path for it. Falling back to
-  // "/dashboard" here used to send those users into an infinite redirect
-  // loop in proxy.ts (denied -> redirect to "/dashboard" -> denied again).
-  // "/auth" is outside proxy.ts's matcher, so it terminates the loop instead
-  // of looping through it. This does NOT grant the role real access — it
-  // still needs a proper entry in ROLE_ROUTE_PREFIXES / ROLE_DEFAULT_PAGES
-  // once its intended pages are decided.
+  // Every role currently in the `roles` table has an entry above, but a
+  // role could still show up here unmapped (a new role added to the DB
+  // before being wired in here, a typo, etc). If it did, falling back to
+  // "/dashboard" would send it into an infinite redirect loop in proxy.ts
+  // (denied -> redirect to "/dashboard" -> denied again, since
+  // canAccessRoute denies every path for an unmapped role). "/auth" is
+  // outside proxy.ts's matcher, so it terminates the loop instead of
+  // looping through it. This does NOT grant the role real access.
   return ROLE_DEFAULT_PAGES[role] ?? "/auth";
 }
 

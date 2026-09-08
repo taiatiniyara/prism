@@ -7,11 +7,26 @@ import {
   ROLE_ROUTE_PREFIXES,
 } from "@/lib/role-guard";
 
-// A role known to exist in the `roles` table but that still has no entry in
-// ROLE_ROUTE_PREFIXES / ROLE_DEFAULT_PAGES, used to exercise the "unmapped
-// role" fallback behaviour. Kept distinct from AFM, which is now mapped
-// (interim /dashboard-only access) below.
-const UNMAPPED_ROLE = "CON";
+// A role that does NOT exist in the `roles` table (or this map) at all,
+// used purely to exercise the "unmapped role" fallback behaviour — e.g. a
+// new role added to the DB before being wired in here. Every real role
+// currently has an interim entry (see below), so this must stay synthetic.
+const UNMAPPED_ROLE = "SOME_FUTURE_ROLE_NOT_YET_WIRED_UP";
+
+// Roles that had no entry at all until the AFM ticket surfaced the gap, and
+// were granted the same minimal interim view-only baseline as EXE/EXT.
+const INTERIM_DASHBOARD_ONLY_ROLES = [
+  "AFM",
+  "CON",
+  "DEVPBI",
+  "ALM",
+  "DON",
+  "DASH_UTL",
+  "DASH_COU",
+  "DASH_REG",
+  "DASH_PAC",
+  "System",
+];
 
 describe("role-guard", () => {
   it("returns the configured default page for a known role", () => {
@@ -19,16 +34,20 @@ describe("role-guard", () => {
     expect(getDefaultPageForRole("MGR")).toBe("/data-entry");
   });
 
-  it("grants AFM interim dashboard access", () => {
-    // AFM previously had no entry at all, which caused an infinite redirect
-    // loop in proxy.ts once an AFM session existed. Granted the same
-    // minimal view-only baseline as EXE/EXT as an interim fix.
-    expect(getDefaultPageForRole("AFM")).toBe("/dashboard");
-    expect(canAccessRoute("AFM", "/dashboard")).toBe(true);
-    expect(canAccessRoute("AFM", "/profile")).toBe(true);
-    expect(canAccessRoute("AFM", "/settings")).toBe(false);
-    expect(canAccessRoute("AFM", "/data-entry")).toBe(false);
-  });
+  it.each(INTERIM_DASHBOARD_ONLY_ROLES)(
+    "grants %s the interim dashboard-only baseline",
+    (role) => {
+      // These previously had no entry at all, which caused an infinite
+      // redirect loop in proxy.ts once a session for that role existed.
+      // Granted the same minimal view-only baseline as EXE/EXT as an
+      // interim fix, pending a real product decision per role.
+      expect(getDefaultPageForRole(role)).toBe("/dashboard");
+      expect(canAccessRoute(role, "/dashboard")).toBe(true);
+      expect(canAccessRoute(role, "/profile")).toBe(true);
+      expect(canAccessRoute(role, "/settings")).toBe(false);
+      expect(canAccessRoute(role, "/data-entry")).toBe(false);
+    },
+  );
 
   it("returns /auth for a role with no route access configured", () => {
     // Regression test for the redirect-loop bug: falling back to
