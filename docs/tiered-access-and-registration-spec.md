@@ -328,7 +328,7 @@ The app resolves the org's columns → (a) the **WebApp tier/menu** and (b) whic
 - `ppa_membership_type` → member (Premium ref) vs consumer (Public / paid).
 - derived `bm_participates` → participant *status* (Tier-2 unlock + benchmarking data), not an access gate.
 
-> **Cross-refs / still folding in (same consolidated pass):** the per-period `bm_opted_in` flag + backfill (#3's `per-period-participation-spec.md`), the 4 PBI references / entitlement-templates + the `download_inputs` right, and the WebApp-visibility matrix detail (§8 open calls). This section is the end-to-end synthesis those hang off.
+> **Cross-refs / still folding in (same consolidated pass):** the per-period `bm_opted_in` flag + backfill (#3's `per-period-participation-spec.md`), the 4 PBI references / entitlement-templates + the `download_inputs` right, and the WebApp-visibility matrix (now specified in §8.1). This section is the end-to-end synthesis those hang off.
 
 ---
 
@@ -401,10 +401,39 @@ failure_reason
 - **Primary contact** = a **`seat.is_primary_contact`** flag (per-org, on the seat — like `is_admin`), **not** a role synonym: it defaults to the BLO seat but a utility can nominate specific people, and a utility may have more than one. It's the recipient set for measure/expectation notifications (new effective-dated measures, "mandatory in the next benchmarking report") — from [measure-effective-dating-spec.md](measure-effective-dating-spec.md) §8. The email **trigger** lives in the alerting/email-schedule model (consumes this flag); #10 owns the **designation**, the effective-dating stream owns the trigger.
 - Existing route-prefix / `sidebar_access` gating extends to the new surfaces (Payments, Subscriptions, Seats).
 
+### 8.1 WebApp visibility matrix (sidebar/menu — decided 2026-09-09, Eugene)
+
+Governs **which WebApp menu items appear** for a signed-in user. This is the *menu-visibility* layer; it **composes with** two layers already specified: the plan-entitlement matrix (§0/§3.2 — *which dashboards + view/download rights within them*) and the Power BI RLS/content roles (§3.6 — *which rows/content class inside a dashboard*). A menu item shows only when this layer allows it **and** the user's plan grants ≥ view.
+
+**Qualified baseline (Eugene 2026-09-09):**
+- **Dashboards require login** — no anonymous/not-logged-in dashboard access at all.
+- The consumer-facing **Dashboards** menu exposes **only the benchmarking family**: Benchmarking · Country · Sub-regional · Regional. *Which* of these a user sees, and at what depth, still follows their plan (public/default → **Teaser Samples**; paid/member → full).
+- The **Utility** dashboard (which contains **KPI-inputs** data) is **never** shown to non-utility users — it is own-utility only (`SCOPE_OWN_UTILITY`, §3.6).
+- **PRISM AI** and **PRISM Docs** are **privilege-gated** (not on by default): **no subscription → no AI, no Docs.** A paid **subscriber** gets AI + Docs scoped to **benchmarking KPIs only** (`content_class='kpi'`, no KPI-inputs). **Utility** staff get AI + Docs over their **own** KPIs **and** inputs (`kpi + kpi_input`, own scope).
+
+| User class / role | Dashboards (benchmarking family) | Utility dashboard | Data Entry | PRISM AI | Docs | Payments | Settings / Subs / Seats | Profile |
+|---|---|---|---|---|---|---|---|---|
+| **Not logged in** | — (login only) | — | — | — | — | — | — | — |
+| **Registered, no subscription** (public/default plan) | Teaser Samples only | — | — | **—** | **—** | — | — | ✓ |
+| **Subscriber** (Per-Project / Basic / Premium) | ✓ full (view/download per plan) | — | — | ✓ **KPI-only** | ✓ **KPI-only** | self-serve request | own subscription/seats (if seat-admin) | ✓ |
+| **Member** (free PPA member plan) | ✓ full (view + downloads) | — | — | ✓ KPI-only¹ | ✓ KPI-only¹ | — | own seats (if seat-admin) | ✓ |
+| **Utility — DAO\*/BLO** (participating) | ✓ full | ✓ own | ✓ | ✓ own KPI+inputs | ✓ own KPI+inputs | — | own-org user mgmt (BLO `is_admin`) | ✓ |
+| **Utility — CEO** (participating) | ✓ full | ✓ own | **— (no menu)**; may edit inputs via review/approval when required | ✓ own KPI+inputs | ✓ own KPI+inputs | — | — | ✓ |
+| **Utility — EXE / MGR** (participating) | ✓ full | ✓ own | — | ✓ own KPI+inputs | ✓ own KPI+inputs | — | — | ✓ |
+| **Utility — non-participating** (`bm_participates=false`) | ✓ benchmarking family (per plan) | — | — | per plan | per plan | — | — | ✓ |
+| **PPA_FIN** (Finance) | — | — | — | — | — | ✓ (queue) | — | ✓ |
+| **BMO** (PPA admin) | ✓ all | ✓ (oversight) | ✓ (oversight) | ✓ | ✓ | ✓ (queue) | ✓ full (plans, subs, seats, users) | ✓ |
+| **DEV / Developer (Innov8)** | ✓ all | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ + DEV tools | ✓ |
+
+**Rulings captured:** (1) AI/Docs privilege-gated, KPI-only for consumers / KPI+inputs-own for utilities; (2) **PPA_FIN = finance scope only** (Payments queue + Profile); (3) **Data Entry = DAOs + BLOs only** — CEO may edit inputs when required (through the review/approval path, **not** a Data Entry menu), EXE/MGR get neither.
+
+**Two small build/confirm notes:** ¹ *Member AI/Docs* — treated as KPI-only (members hold the benchmarking entitlement); confirm members get AI/Docs at all vs. paid-only. And the mechanism by which a **CEO edits an input without a Data-Entry menu** (inline on the period-review/approval screen vs. a scoped temporary elevation) is a build-time detail, not a model change.
+
 ---
 
 ## 9. Pending follow-ups & open questions
 
+- **[RESOLVED 2026-09-09, Eugene] WebApp visibility matrix (§8.1)** — the sidebar/menu-visibility rules are now specified. Dashboards require login; consumer Dashboards = benchmarking family only (Utility dashboard never for non-utility); AI + Docs privilege-gated (no-subscription → none, subscriber → KPI-only, utility → own KPI+inputs); PPA_FIN = finance scope only; Data Entry = DAO*/BLO only (CEO edits inputs via review, EXE/MGR none). One residual confirm: whether the free `member` plan includes AI/Docs (assumed KPI-only) — §8.1 note ¹.
 - **[OPEN 2026-09, Eugene] Download-gating hardness (§3.6)** — Power BI hard-enforces *view*/*content* (RLS) but only *softly* toggles downloads (client-side, bypassable via screenshot). Is a tier's "no download" (e.g. Basic) acceptable as a soft/convenience gate, or must it be **hard** — which means RLS-hiding the data, removing *view* too?
 - **[RESOLVED 2026-09-09, Eugene via #4] External-visibility flag — RETIRED.** The Q6b external-visibility consent flag is dropped; the grain question (per-utility vs per-period) is moot. CEO period-approval already serves as disclosure consent, and the tiered model sells the approved benchmarking surface to external subscribers — so a separate consent flag is redundant with approval. No flag column (#2 DDL not needed), no BMO consent-governance, no gold grain-split. See §3.6 retired-flag note.
 - **[UPDATED 2026-08-03] Plans finalised** — folded `FINALISED Tiered Access Plans 260803.xlsx` into §0/§3.2/§4: member tier = one `member` plan (10 seats/365d) covering the 3 PPA member classes (label via `ppa_membership_type_id`); **`public_kpi` dashboard → `teaser_samples`** (Public gets view + downloads on it); paid tiers unchanged.
