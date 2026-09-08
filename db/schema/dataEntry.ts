@@ -97,6 +97,15 @@ export const measureDefinitions = pgTable("measure_definitions", {
   is_context_fed: boolean("is_context_fed").default(false).notNull(),
   is_system_generated: boolean("is_system_generated").default(false).notNull(),
   is_calculated: boolean("is_calculated").default(false).notNull(),
+  // Whether the calculator may SUM this measure's numeric value when rolling up across
+  // grain (service_area → utility) or dimension (slices → All), i.e. "All-row else
+  // sum-of-detail". TRUE (default) = additive: counts, energy (MWh), hours, length (km),
+  // headcount (FTE) — summing is correct. FALSE = non-additive: rates, %, ratios,
+  // averages, tariff-structure values — summing is meaningless; the resolver must take a
+  // stored All-row (or a defined re-aggregation), never Σ of details. Default true is
+  // safe: all 17 measures rolled up today are additive (#3, 2026-09-08). #4 owns the
+  // column; #3's resolver gate (#194/#195) reads it. (2026-09-08)
+  is_additive: boolean("is_additive").notNull().default(true),
   // Measure-level "birth date": the measure exists (and can be shelled) only from this
   // fiscal year onward. Compared by fiscal year: a period is in scope when
   // fy(period) >= fy(effective_from). NULL = always valid. This is the coarse,
