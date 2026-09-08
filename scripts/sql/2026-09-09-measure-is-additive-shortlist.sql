@@ -1,0 +1,28 @@
+-- measure_definitions.is_additive — Eugene's ruling on the 3 held-out averages
+-- ---------------------------------------------------------------------------
+-- Follow-up to 2026-09-09-measure-is-additive.sql (which marked the 17
+-- unambiguous non-additive measures and left these 3 averages at the default
+-- TRUE pending Eugene's judgment). Ruling 2026-09-09:
+--
+--   360 Solar Hours of Irradiance (H_irradiance) [Hours]  → NON-ADDITIVE (false)
+--        A per-location intensity (peak-sun-hours); two service areas' solar
+--        hours do not sum to the utility's. Roll up by (weighted) average, not sum.
+--
+--   400 Electricity Demand Average Load [MWh]  → ADDITIVE (stays true)
+--   411 Distribution Transformer Average Load [MVA]  → ADDITIVE (stays true)
+--        Eugene: "both additive, but only when the averaging interval is
+--        identical and you are summing coincident average loads." PRISM's
+--        roll-ups satisfy both by construction — every roll-up sums same-period
+--        partitions of one system (grain service_area→utility, or slice→All,
+--        always within one report period), so the interval is always identical
+--        and the components are coincident. Hence summable HERE.
+--        CAVEAT for the resolver (#3): this additivity is CONDITIONAL. Never sum
+--        400/411 across DIFFERENT averaging intervals or NON-coincident sources.
+--        411 specifically is apparent power (MVA) — arithmetic Σ|S_i| is an upper
+--        bound (exact only when power factors align), a slight over-estimate; if
+--        precision matters, sum the real/reactive components, not the MVA.
+--
+-- Git-first: rides commit on s4-is-additive-360 → origin/main before apply.
+-- Additive/DML data change → apply promptly after merge. #4, 2026-09-09.
+
+UPDATE measure_definitions SET is_additive = false WHERE id = 360;
