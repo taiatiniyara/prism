@@ -36,6 +36,10 @@ export const ROLE_ROUTE_PREFIXES: Record<string, string[]> = {
   EXE: ["/dashboard", "/profile", "/docs", "/prism-ai"],
   EXT: ["/dashboard", "/profile", "/docs", "/prism-ai"],
   MGR: ["/dashboard", "/profile", "/docs", "/prism-ai"],
+  // Interim: AFM had no entry at all (see getDefaultPageForRole), which used
+  // to redirect-loop. Given the same minimal view-only baseline as EXE/EXT
+  // until product decides AFM's real page set.
+  AFM: ["/dashboard", "/profile", "/docs", "/prism-ai"],
 };
 
 export const ROLE_DEFAULT_PAGES: Record<string, string> = {
@@ -49,6 +53,7 @@ export const ROLE_DEFAULT_PAGES: Record<string, string> = {
   EXE: "/dashboard",
   EXT: "/dashboard",
   MGR: "/data-entry",
+  AFM: "/dashboard",
 };
 
 export const PUBLIC_PREFIXES = [
@@ -62,8 +67,8 @@ export const PUBLIC_PREFIXES = [
 
 export function getDefaultPageForRole(role: string | null | undefined): string {
   if (!role) return "/auth";
-  // A role that exists in the `roles` table but has no entry here (e.g. AFM,
-  // CON, DEVPBI, ALM, DON, DASH_*, System) has no configured route access at
+  // A role that exists in the `roles` table but has no entry here (e.g. CON,
+  // DEVPBI, ALM, DON, DASH_*, System) has no configured route access at
   // all: `canAccessRoute` denies every path for it. Falling back to
   // "/dashboard" here used to send those users into an infinite redirect
   // loop in proxy.ts (denied -> redirect to "/dashboard" -> denied again).
