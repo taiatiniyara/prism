@@ -228,6 +228,15 @@ export interface PickInputArgs {
   scope: RollupScope;
   /** true when grain OR strata rollup applies — the aggregate path sums. */
   grainRollup: boolean;
+  /**
+   * `measure_definitions.is_additive` (#4). When FALSE the measure may NOT be
+   * summed, so the dimension-slice roll-up (rule 2) is disabled — a non-additive
+   * input resolves only from an authoritative aggregate row (rule 1) or is
+   * missing (rule 3), never from Σ of its slices. (Grain/strata summation is
+   * gated upstream in the resolver.) Defaults to true — the additive path is
+   * byte-for-byte unchanged.
+   */
+  isAdditive?: boolean;
 }
 
 /**
@@ -239,6 +248,7 @@ export const pickInputValue = ({
   binding,
   scope,
   grainRollup,
+  isAdditive = true,
 }: PickInputArgs): number | null => {
   // Rule 1 — authoritative All-member aggregate.
   const strictCandidates = candidateRows.filter((c) =>
@@ -259,7 +269,9 @@ export const pickInputValue = ({
   }
 
   // Rule 2 — no aggregate row: dimension rollup = sum the detail slices.
-  if (value == null) {
+  // Only for ADDITIVE measures — a non-additive measure must never be summed
+  // across its slices, so with no authoritative aggregate it stays missing.
+  if (value == null && isAdditive) {
     const detailCandidates = candidateRows.filter((c) =>
       candidateMatchesBinding(c, binding, scope, detail),
     );

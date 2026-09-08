@@ -224,4 +224,36 @@ describe("pickInputValue — rule 1 / 2 / 3", () => {
       }),
     ).toBeNull();
   });
+
+  it("non-additive: no aggregate → does NOT sum slices → null (rule 2 disabled)", () => {
+    const rows = [
+      candidate({ value: "90", energyProviderId: 3 }),
+      candidate({ value: "410", energyProviderId: 4 }),
+    ];
+    expect(
+      pickInputValue({
+        candidateRows: rows,
+        binding: allMemberBinding(),
+        scope,
+        grainRollup: false,
+        isAdditive: false,
+      }),
+    ).toBeNull();
+  });
+
+  it("non-additive: still uses an authoritative aggregate row (rule 1)", () => {
+    const rows = [
+      candidate({ value: "500" }), // All-member aggregate
+      candidate({ value: "90", energyProviderId: 3 }),
+    ];
+    expect(
+      pickInputValue({
+        candidateRows: rows,
+        binding: allMemberBinding(),
+        scope,
+        grainRollup: false,
+        isAdditive: false,
+      }),
+    ).toBe(500);
+  });
 });

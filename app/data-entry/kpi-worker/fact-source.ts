@@ -14,6 +14,14 @@ export interface DimensionedRow extends RollupCandidate {
 export interface MeasureMeta {
   strataId: number | null;
   isContextFed: boolean;
+  /**
+   * Roll-up summation flag (`measure_definitions.is_additive`, #4). TRUE ⇒ the
+   * resolver may SUM this measure across grain (unit→utility) and dimension
+   * (slices→All). FALSE ⇒ it must use a stored authoritative aggregate row and
+   * never Σ — a non-additive measure with only finer-grain / slice rows and no
+   * aggregate is treated as missing rather than silently summed.
+   */
+  isAdditive: boolean;
 }
 
 export interface DimensionedRowsQuery {
@@ -53,13 +61,18 @@ export class DbFactSource implements FactSource {
         id: measureDefinitions.id,
         strataId: measureDefinitions.strata_id,
         isContextFed: measureDefinitions.is_context_fed,
+        isAdditive: measureDefinitions.is_additive,
       })
       .from(measureDefinitions)
       .where(inArray(measureDefinitions.id, measureIds));
     return new Map(
       rows.map((row) => [
         row.id,
-        { strataId: row.strataId, isContextFed: Boolean(row.isContextFed) },
+        {
+          strataId: row.strataId,
+          isContextFed: Boolean(row.isContextFed),
+          isAdditive: Boolean(row.isAdditive),
+        },
       ]),
     );
   }
