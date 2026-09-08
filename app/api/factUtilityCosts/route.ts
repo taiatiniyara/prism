@@ -13,6 +13,15 @@ import { countries, organisations } from "@/db/schema";
 const SUBGROUP_LIST_NAME = "Measures Subgroup";
 const SUBGROUP_NAME = "Cost Breakdown";
 
+export interface UtilityCostRow {
+  ReportPeriodId: number;
+  ReportPeriod: Date;
+  ReportType: string | null;
+  UtilityId: number;
+  Currency: string | null;
+  [measure: string]: unknown;
+}
+
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
   if (authorize.success === false)
@@ -81,7 +90,7 @@ export async function GET(req: Request) {
     defs.map((d) => [d.id, itemsById.get(d.data_type_id) ?? null]),
   );
 
-  const rows = [];
+  const periodRows = new Map<number, UtilityCostRow>();
   for (const entry of entries) {
     const rp = rps.find((r) => r.id === entry.report_period_id);
     if (!rp) continue;
@@ -101,23 +110,25 @@ export async function GET(req: Request) {
       utilityFunction && utilityFunction !== "All"
         ? `${utilityFunction} ${def.name}`
         : def.name;
-    rows.push({
-      MeasureId: def.id,
-      Measure: label,
-      VariableName: def.variable_name,
-      UtilityFunction: utilityFunction,
-      ReportPeriodId: rp.id,
-      ReportPeriod: rp.report_date,
-      ReportType: reportType,
-      UtilityId: rp.utility_id,
-      Value: resolveEntryValue(
-        entry,
-        dataTypeNameById.get(def.id) ?? null,
-        itemsById,
-      ),
-      Currency: currency,
-    });
+    const value = resolveEntryValue(
+      entry,
+      dataTypeNameById.get(def.id) ?? null,
+      itemsById,
+    );
+
+    let row = periodRows.get(rp.id);
+    if (!row) {
+      row = {
+        ReportPeriodId: rp.id,
+        ReportPeriod: rp.report_date,
+        ReportType: reportType,
+        UtilityId: rp.utility_id,
+        Currency: currency,
+      };
+      periodRows.set(rp.id, row);
+    }
+    row[label] = value;
   }
 
-  return Response.json(rows);
+  return Response.json(Array.from(periodRows.values()));
 }
