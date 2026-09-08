@@ -88,10 +88,12 @@ export async function GET(req: Request) {
     const utility = utilities.find((u) => u.organisations.id === rp.utility_id);
     if (!utility) continue;
     const country = utility.countries ?? null;
-    if (country !== null) continue;
+    if (country === null) continue;
     const currency = itemsById.get(country!.currency_id) ?? null;
     const reportType = itemsById.get(rp.report_type_id) ?? null;
-    if (reportType !== "Annual" && reportType !== "Quarterly") continue;
+    // "Report Type" list today carries only "Financial Year" (490) and
+    // "Monthly" (491) — legacy "Annual"/"Quarterly" are no longer assigned.
+    if (reportType === "Monthly") continue;
     const def = defs.find((d) => d.id === entry.measure_def_id);
     if (!def) continue;
     const utilityFunction = itemsById.get(entry.utility_function_id) ?? null;
