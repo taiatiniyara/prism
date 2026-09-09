@@ -33,6 +33,32 @@
 -- NEW surfaces bind to (own-utility live, content_class gating, delegated
 -- grants). Leave the existing wide benchmarking facts in place so today's
 -- dashboards need no re-point. See the shared summary for the trade-off.
+--
+-- PREREQUISITE — the KPI half reads an EMPTY table today (confirmed by #3,
+-- 2026-09-09). `kpi_actual` has NO writer in code: the kpi-worker persists only
+-- to the `kpi` table (utility grain, no dims, varchar value). `kpi_actual` was
+-- always the *intended* computed-KPI store (its DDL header says "calculator =
+-- sole writer") but the write path was never built. So the KPI half of
+-- gold_fact_value returns nothing until one of:
+--   (a) the calculator's kpi_actual write path is built (the ratified full-grain
+--       intent — real work, not yet scheduled); OR
+--   (b) an interim `kpi -> kpi_actual`-shape bridge view (utility grain,
+--       all-dims-All). IMPORTANT: (b) is NOT lossy for GOVERNANCE — owning_org
+--       and status resolve via report_periods (join on report_period_id),
+--       content_class is constant 'kpi', and measure_category/subgroup resolve
+--       via kpi_definitions (join on kpi_def_id). The only thing (b) loses is
+--       fine-grain dimensional SLICING (service_area/unit, dim breakdowns). So
+--       (b) can fully power the delegated category/subgroup grants and the
+--       org-grained own-utility watermarked KPI view AT LAUNCH; (a) is only
+--       needed to slice KPIs below utility grain on the dashboard.
+--   Lean: (b) as the unblock (stamp grain_level='utility' + All-member ids so it
+--   is a clean subset of the eventual (a) writes), (a) as the durable path.
+--   Pending Eugene's prioritisation — ping #3 to scope. The INPUT half
+--   (data_entries) is populated today and needs neither.
+-- Recompute cadence: NOT a gap — the kpi-worker already recomputes over working
+-- (unapproved) data_entries on edit (gate is participation only, no status<5
+-- filter), so the live-watermark requirement's compute is already met; only the
+-- destination table differs. (#3, 2026-09-09.)
 -- ============================================================================
 
 
