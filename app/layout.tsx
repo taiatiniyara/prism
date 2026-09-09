@@ -11,6 +11,8 @@ import BlockedAccessOverlay from "@/components/auth/blocked-access-overlay";
 import { FloatingChatbot } from "@/components/ai/floating-chatbot";
 import FormOverridesProvider from "@/components/dev/form-overrides-provider";
 import DesignTokenStyle from "@/components/dev/design-token-style";
+import { SectorProvider } from "@/lib/terminology/sector-context";
+import { getActiveSector } from "@/lib/terminology/active-sector";
 import RefreshOnNavigate from "@/components/layout/refresh-on-navigate";
 import { db } from "@/db/connection";
 import { organisations } from "@/db/schema/utility";
@@ -137,6 +139,9 @@ async function AppNavigation() {
 
 async function SessionShell({ children }: { children: React.ReactNode }) {
   const session = await getSession();
+  // Phase 5b: seed the client-side sector context once per request so every
+  // `useTerm()` under the shell renders labels for the active sector.
+  const activeSector = await getActiveSector();
 
   const showSidebar =
     Boolean(session?.user && session?.role) && !session?.blockedState?.blocked;
@@ -150,7 +155,7 @@ async function SessionShell({ children }: { children: React.ReactNode }) {
     Boolean(session?.user) && !session?.blockedState?.blocked;
 
   return (
-    <>
+    <SectorProvider sector={activeSector}>
       <div className="flex min-h-0 flex-1 overflow-hidden">
         {showSidebar ? <Sidebar list={session?.sidebarList ?? []} /> : null}
         <main className="flex-1 min-w-0 overflow-y-auto p-2">
@@ -166,6 +171,6 @@ async function SessionShell({ children }: { children: React.ReactNode }) {
       </div>
 
       {showFloatingChatbot ? <FloatingChatbot /> : null}
-    </>
+    </SectorProvider>
   );
 }

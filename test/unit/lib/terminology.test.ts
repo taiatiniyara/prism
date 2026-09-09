@@ -4,6 +4,10 @@ import { resolveTerm } from "@/lib/terminology/resolver";
 import { NEUTRAL_DEFAULTS } from "@/lib/terminology/concepts";
 import { DEFAULT_SECTOR } from "@/lib/terminology/sectors";
 import { getActiveSector } from "@/lib/terminology/active-sector";
+import {
+  parseSector,
+  pickActiveSector,
+} from "@/lib/terminology/active-sector.core";
 
 describe("terminology resolver (ADR 0003 label layer)", () => {
   it("resolves the active-sector default (electricity) to 'Grid'", () => {
@@ -36,14 +40,64 @@ describe("terminology resolver (ADR 0003 label layer)", () => {
     );
   });
 
-  it("active-sector seam is behaviour-neutral in Phase 5a (resolves to electricity)", async () => {
-    // Pre-staged seam: getActiveSector() must equal DEFAULT_SECTOR today, so
-    // threading call sites through it does not change any rendered label until
-    // Phase 5b swaps the seam body. This test guards that neutrality.
+  it("active-sector seam falls back to electricity outside a request / with no memberships", async () => {
+    // Phase 5b: outside a Next request scope (no session, no cookies) the seam
+    // must still resolve to DEFAULT_SECTOR rather than throw — this guards the
+    // never-take-a-page-down contract and today's behaviour-neutrality.
     expect(await getActiveSector()).toBe(DEFAULT_SECTOR);
     expect(resolveTerm("service_area", { sector: await getActiveSector() })).toBe(
       resolveTerm("service_area"),
     );
+  });
+
+  describe("pickActiveSector precedence (Phase 5b)", () => {
+    it("no memberships → DEFAULT_SECTOR, even if a cookie asks for water", () => {
+      expect(pickActiveSector({ memberships: [], requested: "water" })).toBe(
+        DEFAULT_SECTOR,
+      );
+    });
+
+    it("cookie wins only when the org is a member of that sector", () => {
+      expect(
+        pickActiveSector({
+          memberships: ["electricity", "water"],
+          requested: "water",
+        }),
+      ).toBe("water");
+      expect(
+        pickActiveSector({
+          memberships: ["electricity"],
+          requested: "water",
+        }),
+      ).toBe("electricity");
+    });
+
+    it("single membership wins over the default", () => {
+      expect(pickActiveSector({ memberships: ["water"], requested: null })).toBe(
+        "water",
+      );
+    });
+
+    it("multi-membership without a cookie prefers the default, else the first", () => {
+      expect(
+        pickActiveSector({
+          memberships: ["water", "electricity"],
+          requested: null,
+        }),
+      ).toBe("electricity");
+      expect(
+        pickActiveSector({
+          memberships: ["water", "sanitation"],
+          requested: null,
+        }),
+      ).toBe("water");
+    });
+
+    it("parseSector rejects anything outside the Sector union", () => {
+      expect(parseSector("water")).toBe("water");
+      expect(parseSector("gas")).toBeNull();
+      expect(parseSector(undefined)).toBeNull();
+    });
   });
 
   it("never renders blank/snake_case — neutral defaults always exist for every concept", () => {
