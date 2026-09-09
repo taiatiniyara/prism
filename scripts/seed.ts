@@ -3,6 +3,7 @@ import { roles } from "@/db/schema/auth-schema";
 import { managedLists } from "@/db/schema/managedLists";
 import { subRegions } from "@/db/schema/country";
 import { sectors } from "@/db/schema/sector";
+import { sectorTerminology } from "@/db/schema/sectorTerminology";
 import { sidebarAccess } from "@/db/schema/rls";
 import crypto from "node:crypto";
 
@@ -151,12 +152,31 @@ async function seedSectors() {
   console.log("Seeded sectors (electricity/water/sanitation).");
 }
 
+// ADR 0003 sector terminology labels (the `sector_terminology` source of truth
+// behind the terminology resolver). Idempotent bootstrap — a `db-push --force`
+// can recreate the table and drop these rows, so re-seed after a push; the
+// bundled terminology.generated.ts is regenerated from these via
+// scripts/build-terminology-config.ts. concept_key 'service_area' is the Phase-5b
+// concept (Grid / Supply Zone / Catchment).
+async function seedSectorTerminology() {
+  await db
+    .insert(sectorTerminology)
+    .values([
+      { sector_id: 1, concept_key: "service_area", label: "Grid", label_plural: "Grids" },
+      { sector_id: 2, concept_key: "service_area", label: "Supply Zone", label_plural: "Supply Zones" },
+      { sector_id: 3, concept_key: "service_area", label: "Catchment", label_plural: "Catchments" },
+    ])
+    .onConflictDoNothing();
+  console.log("Seeded sector_terminology (service_area labels).");
+}
+
 async function main() {
   console.log("Seeding PRISM database...\n");
   await seedRoles();
   await seedManagedLists();
   await seedSubRegions();
   await seedSectors();
+  await seedSectorTerminology();
   await seedSidebar();
   console.log("\nSeed complete.");
 }
