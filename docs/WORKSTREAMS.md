@@ -107,11 +107,11 @@ This file is read and written by multiple concurrent Claude Code sessions (the "
 ### 5. BSC Builder — 🟢 active
 - **Owner:** PRISM 2 BSC
 - **Owns:** BSC spec ([bsc-builder-spec.md](bsc-builder-spec.md) + ADRs [0001](adr/0001-bsc-builder.md)/[0002](adr/0002-bsc-strategy-map.md), folded in from former #9) + the Tier-1 strategy map (former #6). **Scope:** template + per-utility overlay; "+ Add KPI" KPI/Input picker + per-metric targets; strategy map.
-- **Depends on:** targets sub-work needs #2's relational `kpi_target`/`kpi_actual` · **Blocks:** —
+- **Depends on:** targets sub-work needs #2's canonical **period dim** + relational `kpi_target`/`kpi_actual` (hard gate) · **Blocks:** — · **Owns Target semantics/UX** per ratified contract [kpi-target-actual-contract.md](kpi-target-actual-contract.md) (PR #400, #3-authored).
 - **Works from worktree** `C:/Users/eugen/prism-bsc` (NOT the shared main tree); cut new branches fresh off `origin/main`.
 - **State (2026-09-01):** shipped & merged — legacy BSC tabs + dead scorecard backend removed (PR #20); settings-card fix + step-7 tests (PR #19); strategy map build (PR #15/#19); "+ Add KPI" Input/KPI picker modal + `bsc_kpi_link.input_definition_id` (PR #35, mig `0031`); KPI-trajectory feature removed end-to-end incl. `kpi_target_trajectory` drop (PR #35, mig `0032`); context-fed measures excluded from the BLO Input picker (PR #118, `8b41e13`). Migrations 0029–0032 applied.
-- **Open:** (1) **Targets for Input-tracked items** — blocked on #2's relational `kpi_target`/`kpi_actual` (don't exist yet); will extend `kpi_target` with `input_definition_id` keyed per Eugene's HYBRID `grain_level` ruling (`7c01627`), NOT a JSON column. (2) "Create New" metric submit — scaffolded, unwired.
-- **Last update 2026-09-01.**
+- **Open:** (1) **BSC targets → relational `kpi_target`** (I own semantics/UX; contract PR #400). Hard-gated on #2's canonical period dim; `kpi_target` addressed by `kpi_def_id`+7-grain+10-dims (supersedes my earlier `input_definition_id`-key plan). **BSC must stop blind-writing `kpi_definitions.targets`** — the BSC target path routes through ONE guarded set-target service (override-alert on existing target + set-time grain/eval-coverage guard), same as the direct KPI-target UI. Utility-or-finer, no roll-up, no carry-forward; authority (PPA/Country) targets are distinct fields. **Open semantics Q for #3:** how Input-tracked BSC metrics (a `measure_definition`, not a `kpi_def`) address into a `kpi_def_id`-keyed `kpi_target`. (2) "Create New" metric submit — scaffolded, unwired.
+- **Last update 2026-09-09.**
 
 ### 6. BSC strategy map — ➡️ MERGED INTO #5 (2026-07-26)
 - Consolidated into **#5 BSC Builder** (same owning session); the separate "PRISM 2 BSC strategy map levels" session was archived. ✅ build was merged (PR #15/#19). Number retired to avoid renumbering others.
