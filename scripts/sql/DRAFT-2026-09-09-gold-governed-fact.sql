@@ -59,6 +59,30 @@
 -- (unapproved) data_entries on edit (gate is participation only, no status<5
 -- filter), so the live-watermark requirement's compute is already met; only the
 -- destination table differs. (#3, 2026-09-09.)
+--
+-- BRIDGE (b) BUILD NOTES — apply these when writing the kpi->kpi_actual bridge
+-- (verified against schema by #3, 2026-09-09):
+--   * All four governance keys resolve from `kpi`'s two FKs, no grain/dim address:
+--       owning_org  = report_periods.utility_id (NOT NULL) via kpi.report_period_id
+--       status      = report_periods.status_id            via kpi.report_period_id
+--       content     = 'kpi' constant
+--       category/subgroup = kpi_definitions.category_id/subcategory_id via kpi.kpi_def_id
+--   * STATUS PREDICATE: use the canonical publishedPeriodCondition
+--     (db/schema/reportPeriods.ts:61) = `status_id = 5` — EQUALITY, not >=5.
+--     (#8 ruling 2026-08-30: =5, because the post-repoint enum can admit a stray
+--     Not_Available(7).) So is_approved := (status_id = 5); the LIVE own-utility
+--     working slice is `status_id <> 5` (NOT `< 5`), matching the rest of the
+--     fact layer's status semantics exactly.
+--   * FIDELITY: `kpi.actual_value` is varchar NOT NULL and the table has NO
+--     no_data_reason concept. Bridge rows therefore ALWAYS emit a value
+--     (cast varchar->numeric) and NEVER a no_data_reason. Flag downstream: do not
+--     assume no_data_reason is ever populated on KPI rows until (a)'s real writes
+--     land (only (a) can emit 'not_available' / 'asserted_not_applicable' cells).
+--   * CAST GUARD: if actual_value->numeric fails (legacy non-numeric text), DROP
+--     the row (do not NULL the value) — preserves the value-XOR-no_data_reason
+--     invariant the real (a) writes uphold.
+--   * STAMP: grain_level='utility' + All-member dim ids (deterministic, since
+--     report_period_id already implies the utility) -> a clean subset of (a).
 -- ============================================================================
 
 
