@@ -1,6 +1,7 @@
 import { db } from "@/db/connection";
 import { auditLogs, type NewAuditLog } from "@/db/schema/audit-log";
 import { headers } from "next/headers";
+import { logger } from "@/lib/logging/logger";
 
 export type AuditAction =
   | "user.activate"
@@ -19,7 +20,12 @@ export type AuditAction =
   | "migration.import"
   | "migration.export"
   | "auth.login"
-  | "auth.login_failed";
+  | "auth.login_failed"
+  | "auth.signup"
+  | "auth.magic_link_sent"
+  | "auth.logout"
+  | "auth.2fa_verify"
+  | "auth.2fa_failed";
 
 export interface AuditEntryInput {
   action: AuditAction;
@@ -58,4 +64,19 @@ export async function writeAuditLog(input: AuditEntryInput): Promise<void> {
   };
 
   await db.insert(auditLogs).values(entry);
+}
+
+// Audit writes are best-effort: a DB failure must never break the underlying
+// auth/data action that triggered the entry.
+export async function tryWriteAuditLog(
+  input: AuditEntryInput,
+): Promise<void> {
+  try {
+    await writeAuditLog(input);
+  } catch (error) {
+    logger.error("[audit] failed to write audit log", {
+      action: input.action,
+      error: error instanceof Error ? error.message : String(error),
+    });
+  }
 }

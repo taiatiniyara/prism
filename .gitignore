@@ -45,9 +45,14 @@ dist/
 .vscode/
 .idea/
 
+# agent tooling (local, not part of the app)
+.claude/
+.serena/
+
 # vercel
 .vercel
 
 # typescript
 *.tsbuildinfo
-next-env.d.ts.claude/launch.json
+next-env.d.ts
+.claude/launch.json

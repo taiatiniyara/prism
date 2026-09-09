@@ -3,7 +3,9 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mocks = vi.hoisted(() => ({
   execute: vi.fn(),
   testPowerBiConnection: vi.fn(),
+  isPbiHealthy: vi.fn(),
   getCircuitState: vi.fn(),
+  getCurrentUser: vi.fn(),
   createTransport: vi.fn(),
   fetch: vi.fn(),
 }));
@@ -14,6 +16,11 @@ vi.mock("@/db/connection", () => ({
 
 vi.mock("@/lib/powerbi", () => ({
   testPowerBiConnection: mocks.testPowerBiConnection,
+  isPbiHealthy: mocks.isPbiHealthy,
+}));
+
+vi.mock("@/lib/user.service", () => ({
+  getCurrentUser: mocks.getCurrentUser,
 }));
 
 vi.mock("@/lib/ai/service", () => ({
@@ -30,6 +37,8 @@ describe("GET /api/health contract", () => {
     vi.clearAllMocks();
     globalThis.fetch = mocks.fetch;
     mocks.getCircuitState.mockReturnValue({ open: false, remaining: 0 });
+    mocks.isPbiHealthy.mockReturnValue(true);
+    mocks.getCurrentUser.mockResolvedValue({ role: "DEV" });
     mocks.testPowerBiConnection.mockResolvedValue({
       ok: true,
       datasets_accessible: true,
@@ -81,6 +90,19 @@ describe("GET /api/health contract", () => {
     expect(body.status).toBe("degraded");
     expect(body.checks.db.ok).toBe(true);
     expect(body.checks.powerbi.ok).toBe(false);
+  });
+
+  it("reports Power BI circuit open without probing connection", async () => {
+    mocks.isPbiHealthy.mockReturnValue(false);
+
+    const { GET } = await import("@/app/api/health/route");
+
+    const response = await GET(new Request("http://localhost/api/health"));
+    expect(response.status).toBe(200);
+    const body = await response.json();
+    expect(body.checks.powerbi.ok).toBe(false);
+    expect(body.checks.powerbi.circuit_open).toBe(true);
+    expect(mocks.testPowerBiConnection).not.toHaveBeenCalled();
   });
 
   it("returns down when DB fails", async () => {

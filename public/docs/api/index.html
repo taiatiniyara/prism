@@ -53,12 +53,12 @@
 <body>
 <div class="container">
 <h1>prism API Reference</h1>
-<p class="subtitle">Auto-generated from 137 route files &middot; 156 endpoints &middot; 32 tag groups</p>
+<p class="subtitle">Auto-generated from 138 route files &middot; 158 endpoints &middot; 33 tag groups</p>
 <div class="stats">
 <span class="stat"><strong>DELETE</strong> 3</span>
-<span class="stat"><strong>GET</strong> 119</span>
+<span class="stat"><strong>GET</strong> 120</span>
 <span class="stat"><strong>PATCH</strong> 3</span>
-<span class="stat"><strong>POST</strong> 21</span>
+<span class="stat"><strong>POST</strong> 22</span>
 <span class="stat"><strong>PUT</strong> 10</span>
 </div>
 <div class="filter"><input type="text" id="filter" placeholder="Filter endpoints..." oninput="filterEndpoints(this.value)"></div>
@@ -308,6 +308,54 @@
         <span class="status-code status-4xx">401 Unauthorized</span>
 <span class="status-code status-4xx">403 Forbidden</span>
 <span class="status-code status-5xx">500 Error</span>
+      </div>
+    </div>
+  </div>
+</div>
+</div>
+
+<div class="tag-group" data-tag="Auth">
+<h2 class="tag-title">Auth</h2>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#22c55e">GET</span>
+    <span class="ep-path">/api/auth/{all+}</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">Get {all+}</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> Session (Better Auth)</span>
+    </div>
+    <div class="ep-params"><strong>Parameters:</strong><ul><li><code>{all}</code> (path, required)</li><li><code>token</code> (query, required)</li><li><code>error</code> (query, required)</li></ul></div>
+    
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-2xx">200 OK</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="endpoint">
+  <div class="ep-header" onclick="this.classList.toggle('open')">
+    <span class="method" style="background:#3b82f6">POST</span>
+    <span class="ep-path">/api/auth/{all+}</span>
+    <span class="ep-arrow">&#9654;</span>
+  </div>
+  <div class="ep-body">
+    <p style="margin:0 0 8px">Create {all+}</p>
+    <div class="ep-meta">
+      <span><strong>Auth:</strong> Session (Better Auth)</span>
+    </div>
+    <div class="ep-params"><strong>Parameters:</strong><ul><li><code>{all}</code> (path, required)</li></ul></div>
+    
+    <div style="margin-top:8px">
+      <strong>Responses:</strong>
+      <div class="status-list" style="margin-top:4px">
+        <span class="status-code status-2xx">200 OK</span>
       </div>
     </div>
   </div>

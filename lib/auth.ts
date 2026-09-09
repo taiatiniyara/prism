@@ -99,6 +99,10 @@ export const auth = betterAuth({
   },
   plugins: [
     magicLink({
+      // Keep the token lifespan in sync with the copy in buildMagicLinkEmail.
+      // Default is 300s (5 min); PRISM ships at 15 min so users have room to
+      // switch inboxes and open the link without it timing out.
+      expiresIn: 60 * 15, // 15 minutes
       sendMagicLink: async ({ email, url }) => {
         const payload = buildMagicLinkEmail({ url });
 

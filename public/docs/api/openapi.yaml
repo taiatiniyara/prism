@@ -29,6 +29,7 @@ components:
       description: Migration endpoint access key
   tags:
     - name: AI / Chatbot
+    - name: Auth
     - name: Context
     - name: Countries
     - name: CountryContext
@@ -345,6 +346,49 @@ paths:
           description: Forbidden
         '500':
           description: Internal Server Error
+  /api/auth/{all+}:
+    get:
+      tags:
+        - Auth
+      summary: "Get {all+}"
+      parameters:
+        - name: all
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: token
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: error
+          in: query
+          required: true
+          schema:
+            type: string
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '200':
+          description: Success
+    post:
+      tags:
+        - Auth
+      summary: "Create {all+}"
+      parameters:
+        - name: all
+          in: path
+          required: true
+          schema:
+            type: string
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '200':
+          description: Success
   /api/backup/status:
     get:
       tags:

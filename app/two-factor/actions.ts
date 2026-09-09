@@ -5,6 +5,7 @@ import { db } from "@/db/connection";
 import { session as sessionTable } from "@/db/schema/auth-schema";
 import { headers } from "next/headers";
 import { eq } from "drizzle-orm";
+import { tryWriteAuditLog } from "@/lib/logging/audit.service";
 
 type Result = { ok: boolean; error?: string };
 
@@ -41,6 +42,14 @@ export async function verifyAndMarkTwoFactor(
       await auth.api.verifyTOTP({ body: { code: trimmed }, headers: hdrs });
     }
   } catch {
+    await tryWriteAuditLog({
+      action: "auth.2fa_failed",
+      actorUserId: current.user.id,
+      actorEmail: current.user.email,
+      targetType: "user",
+      targetId: current.user.id,
+      details: { method: useBackupCode ? "backup_code" : "totp" },
+    });
     return {
       ok: false,
       error: "That code was not valid. Please try again.",
@@ -51,6 +60,15 @@ export async function verifyAndMarkTwoFactor(
     .update(sessionTable)
     .set({ twoFactorVerifiedAt: new Date() })
     .where(eq(sessionTable.id, current.session.id));
+
+  await tryWriteAuditLog({
+    action: "auth.2fa_verify",
+    actorUserId: current.user.id,
+    actorEmail: current.user.email,
+    targetType: "user",
+    targetId: current.user.id,
+    details: { method: useBackupCode ? "backup_code" : "totp" },
+  });
 
   return { ok: true };
 }
