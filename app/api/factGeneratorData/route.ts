@@ -21,6 +21,10 @@ const GENERATOR_MEASURE_NAMES = [
   "Lubrication Oil",
   "Equipment Planned Downtime Hours",
   "Equipment Unplanned Downtime Hours",
+  "Solar Hours of Irradiance (H_irradiance)",
+  "Solar Average measured irradiance (G_measured)",
+  "Solar Standard Test Condition irradiance (G_STC)",
+  "Solar Electricity Generated Theoretical",
 ] as const;
 
 // Power BI column labels (measure name -> semantic-model column name).
@@ -32,10 +36,20 @@ const GENERATOR_COLUMN_LABELS: Record<string, string> = {
   "Lubrication Oil": "Oil for Lubrication",
 };
 
+// Solar measures are emitted per-provider so the column name matches the
+// legacy feed (e.g. "Utility G_STC", "IPP Solar Energy output max Theoretical").
+const SOLAR_COLUMN_SUFFIX: Record<string, string> = {
+  "Solar Hours of Irradiance (H_irradiance)": "H_irradiance",
+  "Solar Average measured irradiance (G_measured)": "G_measured",
+  "Solar Standard Test Condition irradiance (G_STC)": "G_STC",
+  "Solar Electricity Generated Theoretical": "Solar Energy output max Theoretical",
+};
+
 // "Fuel Oil" is split by technology in the semantic model.
 const FUEL_OIL_LABEL_BY_TECHNOLOGY: Record<string, string> = {
   Diesel: "Fuel Oil for Diesel Generators",
   "Heavy Fuel": "Fuel Oil for Heavy Fuel Generators",
+  Solar: "Fuel Oil for Heavy Fuel Generators",
 };
 
 export async function GET(req: Request) {
@@ -147,11 +161,18 @@ export async function GET(req: Request) {
                   const def = measureDefs.find((m) => m.id === e.measure_def_id);
                   if (!def) return acc;
                   const techName = findItem(g.technology_id)?.name ?? "";
+                  const providerName = findItem(g.provider_id)?.name ?? "";
+                  const solarSuffix = SOLAR_COLUMN_SUFFIX[def.name];
                   const label =
                     def.name === "Fuel Oil"
                       ? (FUEL_OIL_LABEL_BY_TECHNOLOGY[techName] ?? def.name)
-                      : (GENERATOR_COLUMN_LABELS[def.name] ?? def.name);
-                  return { [label]: valueFor(e), ...acc };
+                      : solarSuffix
+                        ? `${providerName} ${solarSuffix}`.trim()
+                        : (GENERATOR_COLUMN_LABELS[def.name] ?? def.name);
+                  const value = valueFor(e);
+                  if (label === "Oil for Lubrication")
+                    return { [label]: value, "Lubrication Oil": value, ...acc };
+                  return { [label]: value, ...acc };
                 },
                 {} as Record<string, unknown>,
               ),

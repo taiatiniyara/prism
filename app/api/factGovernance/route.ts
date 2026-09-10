@@ -45,6 +45,12 @@ export async function GET(req: Request) {
     return id ? allItems.find((m) => m.id === id) : undefined;
   }
 
+  // Legacy (p1) label for measure 100 — kept as an alias so the p1-vs-p2
+  // comparison (which keys on the legacy data-label name) resolves.
+  const LEGACY_LABEL_ALIAS: Record<number, string> = {
+    100: "Are Ministers or Public Servants representing the line/sector Ministry appointed",
+  };
+
   return Response.json(
     rps.map((urp) => {
       const dlValues = entries
@@ -52,12 +58,15 @@ export async function GET(req: Request) {
         .reduce(
           (acc, e) => {
             const dl = dlMap.get(e.measure_def_id);
+            const value = resolveEntryValue(
+              e,
+              dataTypeNameById.get(e.measure_def_id) ?? null,
+              itemsById,
+            );
+            const legacyAlias = LEGACY_LABEL_ALIAS[e.measure_def_id];
             return {
-              [dl?.name ?? ""]: resolveEntryValue(
-                e,
-                dataTypeNameById.get(e.measure_def_id) ?? null,
-                itemsById,
-              ),
+              [dl?.name ?? ""]: value,
+              ...(legacyAlias ? { [legacyAlias]: value } : {}),
               ...acc,
             };
           },
