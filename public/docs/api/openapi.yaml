@@ -1453,17 +1453,6 @@ paths:
       responses:
         '401':
           description: Unauthorized
-  /api/factAirConnectivity:
-    get:
-      tags:
-        - Facts
-      summary: "Fact: Air transportation connectivity data (API-key gated, proxy to prism-training)"
-      security:
-        - apiKeyAuth: []
-      x-auth: Requires API key in Authorization header
-      responses:
-        '401':
-          description: Unauthorized
   /api/factCountryContextData:
     get:
       tags:
@@ -1497,17 +1486,6 @@ paths:
       responses:
         '401':
           description: Unauthorized
-  /api/factElectricityAccess:
-    get:
-      tags:
-        - Facts
-      summary: "Fact: Electricity access rates (rural, urban, national) (API-key gated, proxy to prism-training)"
-      security:
-        - apiKeyAuth: []
-      x-auth: Requires API key in Authorization header
-      responses:
-        '401':
-          description: Unauthorized
   /api/factEmployee:
     get:
       tags:
@@ -1524,17 +1502,6 @@ paths:
       tags:
         - Facts
       summary: "Fact: Financial account data (revenue, costs, subsidies) (API-key gated, proxy to prism-training)"
-      security:
-        - apiKeyAuth: []
-      x-auth: Requires API key in Authorization header
-      responses:
-        '401':
-          description: Unauthorized
-  /api/factGdpPerCapita:
-    get:
-      tags:
-        - Facts
-      summary: "Fact: GDP per capita economic indicators (API-key gated, proxy to prism-training)"
       security:
         - apiKeyAuth: []
       x-auth: Requires API key in Authorization header
@@ -1574,50 +1541,6 @@ paths:
       responses:
         '401':
           description: Unauthorized
-  /api/factHouseholds:
-    get:
-      tags:
-        - Facts
-      summary: "Fact: Household count and electrification data (API-key gated, proxy to prism-training)"
-      security:
-        - apiKeyAuth: []
-      x-auth: Requires API key in Authorization header
-      responses:
-        '401':
-          description: Unauthorized
-  /api/factInflationRate:
-    get:
-      tags:
-        - Facts
-      summary: "Fact: Inflation rate economic indicators (API-key gated, proxy to prism-training)"
-      security:
-        - apiKeyAuth: []
-      x-auth: Requires API key in Authorization header
-      responses:
-        '401':
-          description: Unauthorized
-  /api/factIslands:
-    get:
-      tags:
-        - Facts
-      summary: "Fact: Island geography and connectivity data (API-key gated, proxy to prism-training)"
-      security:
-        - apiKeyAuth: []
-      x-auth: Requires API key in Authorization header
-      responses:
-        '401':
-          description: Unauthorized
-  /api/factLandArea:
-    get:
-      tags:
-        - Facts
-      summary: "Fact: Geographic land area data (API-key gated, proxy to prism-training)"
-      security:
-        - apiKeyAuth: []
-      x-auth: Requires API key in Authorization header
-      responses:
-        '401':
-          description: Unauthorized
   /api/factLeadership:
     get:
       tags:
@@ -1634,28 +1557,6 @@ paths:
       tags:
         - Facts
       summary: "Fact: Metering infrastructure data (API-key gated, proxy to prism-training)"
-      security:
-        - apiKeyAuth: []
-      x-auth: Requires API key in Authorization header
-      responses:
-        '401':
-          description: Unauthorized
-  /api/factPopulation:
-    get:
-      tags:
-        - Facts
-      summary: "Fact: Population data by country/region (API-key gated, proxy to prism-training)"
-      security:
-        - apiKeyAuth: []
-      x-auth: Requires API key in Authorization header
-      responses:
-        '401':
-          description: Unauthorized
-  /api/factPopulationDistribution:
-    get:
-      tags:
-        - Facts
-      summary: "Fact: Population distribution (urban/rural breakdowns) (API-key gated, proxy to prism-training)"
       security:
         - apiKeyAuth: []
       x-auth: Requires API key in Authorization header
@@ -1700,17 +1601,6 @@ paths:
       tags:
         - Facts
       summary: "Fact: Electricity transmission data (grid, interconnections) (API-key gated, proxy to prism-training)"
-      security:
-        - apiKeyAuth: []
-      x-auth: Requires API key in Authorization header
-      responses:
-        '401':
-          description: Unauthorized
-  /api/factUnemployment:
-    get:
-      tags:
-        - Facts
-      summary: "Fact: Unemployment rate data (API-key gated, proxy to prism-training)"
       security:
         - apiKeyAuth: []
       x-auth: Requires API key in Authorization header
