@@ -13,7 +13,6 @@ import {
 import { buildParentMap, categoryFromTechnology } from "@/lib/energy-taxonomy";
 
 const GENERATOR_MEASURE_NAMES = [
-  "Hours in Period",
   "Electricity Generated",
   "Electricity Sent to Grid",
   "Rated Capacity",
@@ -62,9 +61,6 @@ export async function GET(req: Request) {
     .from(measureDefinitions)
     .where(inArray(measureDefinitions.name, [...GENERATOR_MEASURE_NAMES]));
 
-  const totalHoursId = measureDefs.find(
-    (m) => m.name === "Hours in Period",
-  )?.id;
   const allDlIds = measureDefs.map((m) => m.id);
   if (allDlIds.length === 0) return Response.json([]);
 
@@ -132,10 +128,6 @@ export async function GET(req: Request) {
             ) &&
             !gen.name.includes("Virtual"),
         );
-        const totalHours = entries.find(
-          (d) =>
-            d.measure_def_id === totalHoursId && d.report_period_id === urp.id,
-        );
         const reportType = findItem(urp.report_type_id)?.name;
         return {
           "Utility Report Period ID": urp.id,
@@ -155,7 +147,6 @@ export async function GET(req: Request) {
               EnergyProvider: findItem(g.provider_id)?.name,
               EnergyType: findItem(categoryFromTechnology(g.technology_id, parentById))?.name,
               EnergySource: findItem(g.technology_id)?.name,
-              "Total Hours in Period": Number(valueFor(totalHours)),
               ...genEntries.reduce(
                 (acc, e) => {
                   const def = measureDefs.find((m) => m.id === e.measure_def_id);
