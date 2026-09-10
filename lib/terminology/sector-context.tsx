@@ -11,11 +11,11 @@ import { DEFAULT_SECTOR, type Sector } from "./sectors";
 // Defaults to DEFAULT_SECTOR when NO provider is mounted, so all existing usage
 // is safe today without wrapping any tree — electricity is the only live sector.
 //
-// PHASE 5B: mount <SectorProvider sector={await getActiveSector()}> at the
-// subtree that owns the sector filter (seed the value from the server seam in a
-// server component, pass it into this client provider). The mount point is
-// deliberately NOT chosen now — it depends on where the Phase-5b sector filter
-// lives; until then the default is correct and no provider is required.
+// PHASE 5B (live): the root layout (app/layout.tsx, SessionShell) mounts
+// <SectorProvider sector={await getActiveSector()}> around the whole signed-in
+// tree, so every client `useTerm()` call site follows the request's active
+// sector with zero changes. The default below still covers trees rendered
+// outside that shell (and tests).
 // ─────────────────────────────────────────────────────────────────────────────
 const SectorContext = createContext<Sector>(DEFAULT_SECTOR);
 

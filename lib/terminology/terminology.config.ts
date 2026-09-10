@@ -1,5 +1,6 @@
 import type { Sector } from "./sectors";
 import type { ConceptKey } from "./concepts";
+import { TERMINOLOGY } from "./terminology.generated";
 
 export interface TermLabel {
   label: string;
@@ -9,35 +10,16 @@ export interface TermLabel {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// INTERIM app-config terminology map (ADR 0003 / resolutions doc Q3, Phase 5a).
+// Terminology lookup — Phase 5b.
 //
-// This constant is the ONLY thing that changes when Phase 5b lands the
-// BMO-maintained `sector_terminology(sector_id, concept_key, label, label_plural)`
-// table: repoint `lookupTerm` at the table (async or preloaded map). The resolver
-// (`resolver.ts`), the `useTerm()` hook, and every call site stay untouched —
-// that indirection is the whole point of shipping the label layer now.
-//
-// A (sector, concept) with no entry here falls through to NEUTRAL_DEFAULTS.
-// Labels are Eugene-ratified (2026-07-27); electricity is the only sector
-// surfaced in Phase 5a, but water/sanitation labels are seeded so Phase 5c
-// inherits them.
+// The label map is now sourced from the BMO-maintainable `sector_terminology`
+// table, generated into `terminology.generated.ts` by
+// scripts/build-terminology-config.ts (the interim Phase-5a app-config const is
+// retired). `lookupTerm` stays a pure, synchronous read of that bundled snapshot,
+// so `resolver.ts`, the `useTerm()` hook, and every call site are unchanged — and
+// the client (which cannot read the DB) is safe. Regenerate + redeploy after a
+// label edit. A (sector, concept) with no row falls through to NEUTRAL_DEFAULTS.
 // ─────────────────────────────────────────────────────────────────────────────
-const TERMINOLOGY: Partial<
-  Record<Sector, Partial<Record<ConceptKey, TermLabel>>>
-> = {
-  electricity: {
-    service_area: { label: "Grid", labelPlural: "Grids" },
-  },
-  water: {
-    service_area: { label: "Supply Zone", labelPlural: "Supply Zones" },
-  },
-  sanitation: {
-    service_area: { label: "Catchment", labelPlural: "Catchments" },
-  },
-};
-
-// The single lookup seam. Phase 5b swaps the body for a `sector_terminology`
-// read; nothing else moves.
 export const lookupTerm = (
   sector: Sector,
   concept: ConceptKey,
