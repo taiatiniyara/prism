@@ -7,13 +7,31 @@ import { eq, and } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
 import { getResolvedContextRows } from "@/lib/legacy/context-data";
 
-// Power BI column labels for the country-context measures (measure name ->
-// legacy semantic-model name).
+// Power BI column labels (measure name -> legacy semantic-model name).
 const COUNTRY_CONTEXT_COLUMN_LABELS: Record<string, string> = {
-  Population: "National Population",
-  Islands: "Number of Islands",
-  Households: "Number of Households",
+  "IATA Air Connectivity per 1000 People": "Air Connectivity per 1000 People",
+  "IATA Air Connectivity per Unit GDP": "Air Connectivity per Unit GDP",
 };
+
+// Emission order mirrors prism-training's /api/factCountryContextData.
+const COUNTRY_CONTEXT_COLUMN_ORDER = [
+  "Fuel Supply Access",
+  "Fuel Pricing Regulation",
+  "Access to Electricity",
+  "Unemployment Rate",
+  "Inflation Rate",
+  "GDP Per Capita",
+  "Average Household Size",
+  "Households",
+  "Rural Population",
+  "Urban Population",
+  "Population",
+  "Air Connectivity per Unit GDP",
+  "Air Connectivity per 1000 People",
+  "IATA Air Connectivity Score",
+  "Islands",
+  "Land Area",
+];
 
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
@@ -64,10 +82,13 @@ export async function GET(req: Request) {
           }),
           {} as Record<string, unknown>,
         );
-      // Only publish periods that actually carry country-context data. Empty
-      // periods (e.g. fiscal years with no country_context row yet) must not
-      // surface as null-valued rows to Power BI.
-      if (Object.keys(ccData).length === 0) return [];
+      const orderedCc: Record<string, unknown> = {};
+      for (const col of COUNTRY_CONTEXT_COLUMN_ORDER) {
+        if (col in ccData) orderedCc[col] = ccData[col];
+      }
+      for (const col of Object.keys(ccData)) {
+        if (!(col in orderedCc)) orderedCc[col] = ccData[col];
+      }
       const reportType = findItem(urp.report_type_id)?.name;
       // Emit the report period's own date exactly as stored in report_periods
       // (the column is a naive timestamp; format its local components so the
@@ -82,11 +103,10 @@ export async function GET(req: Request) {
           ReportPeriod: `${y}-${m}-${day}`,
           ReportPeriodId: urp.id,
           CountryId: country?.id,
-          Country: country?.name,
           AlphaCode2: country?.iso_code_alpha2,
           AlphaCode3: country?.iso_code_alpha3,
           UtilityId: u?.id,
-          ...ccData,
+          ...orderedCc,
         },
       ];
     }),

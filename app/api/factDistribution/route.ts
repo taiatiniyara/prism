@@ -1,9 +1,12 @@
 import { db } from "@/db/connection";
 import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
 import { serviceAreas } from "@/db/schema/utility";
-import { reportPeriods, publishedPeriodCondition } from "@/db/schema/reportPeriods";
+import {
+  reportPeriods,
+  publishedPeriodCondition,
+} from "@/db/schema/reportPeriods";
 import { managedLists, managedListItems } from "@/db/schema/managedLists";
-import { eq, and, inArray } from "drizzle-orm";
+import { eq, and, inArray, not, ilike } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
 import { formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
 import {
@@ -11,22 +14,47 @@ import {
   getValueResolutionContext,
 } from "@/lib/legacy/entry-value";
 
-const DISTRIBUTION_MEASURE_NAMES = [
-  "Distribution Transformer Rated Capacity",
-  "Network Length",
-  "Network Unplanned Downtime Events",
-  "FTE Employees",
-] as const;
-
-// Power BI column labels (measure name -> semantic-model column name).
-const DISTRIBUTION_COLUMN_LABELS: Record<string, string> = {
+// The distribution feed mirrors prism-training's /api/factDistribution, which
+// selects the service-area-level (non-aggregated, agg-level 3) measures in the
+// Distribution subcategory (dl_subcategory_id 270) and emits each data label's
+// name as the column. prism's measure defs live under finer physical subgroups
+// (Transformers/Network/Downtime/Consumption) rather than a "Distribution"
+// subgroup, so the set is pinned here as measure name -> the p1 data-label
+// column it maps to. Keep in sync with p1's subcategory-270 data labels.
+const DISTRIBUTION_MEASURE_LABELS: Record<string, string> = {
+  "Customers Served": "Electricity Customers",
+  "Electricity Sold to Customers": "Electricity Sold to Customers",
+  "Distribution Transformer Average Load":
+    "Distribution Network Average Transformer Load",
   "Distribution Transformer Rated Capacity":
     "Distribution Network Transformer Capacity",
   "Network Length": "Distribution Network Length",
+  "Network Planned Downtime Events":
+    "Distribution Network Planned Downtime Events",
+  "Network Planned Downtime Hours": "Distribution Network Planned Downtime",
   "Network Unplanned Downtime Events":
     "Distribution Network Unplanned Downtime Events",
-  "FTE Employees": "FTE Employees in Distribution",
+  "Network Unplanned Downtime Hours": "Distribution Network Unplanned Downtime",
+  "Station Auxilliary Usage":
+    "Electricity Consumed Internally (Station Auxilliaries)",
 };
+
+// Emission order mirrors prism-training's /api/factDistribution Data columns,
+// which reverse the p1 data-label iteration order (and append the generation
+// ECI column, which prism has no source for and emits as null).
+const DISTRIBUTION_COLUMN_ORDER = [
+  "Electricity Consumed Internally (Station Auxilliaries)",
+  "Distribution Network Unplanned Downtime",
+  "Distribution Network Unplanned Downtime Events",
+  "Distribution Network Planned Downtime",
+  "Distribution Network Planned Downtime Events",
+  "Distribution Network Average Transformer Load",
+  "Distribution Network Transformer Capacity",
+  "Distribution Network Length",
+  "Electricity Sold to Customers",
+  "Electricity Customers",
+  "GEN Electricity Consumed Internally",
+];
 
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
@@ -36,10 +64,14 @@ export async function GET(req: Request) {
   const measureDefs = await db
     .select()
     .from(measureDefinitions)
-    .where(inArray(measureDefinitions.name, [...DISTRIBUTION_MEASURE_NAMES]));
+    .where(
+      inArray(measureDefinitions.name, [
+        ...Object.keys(DISTRIBUTION_MEASURE_LABELS),
+      ]),
+    );
 
   const allDlIds = measureDefs.map((m) => m.id);
-  if (allDlIds.length === 0) return Response.json([]);  // Distribution measures are scoped by the Distribution utility function.
+  if (allDlIds.length === 0) return Response.json([]); // Distribution measures are scoped by the Distribution utility function.
   const distributionListId = (
     await db
       .select({ id: managedLists.id })
@@ -78,15 +110,14 @@ export async function GET(req: Request) {
   const allSa = await db
     .select()
     .from(serviceAreas)
-    .where(eq(serviceAreas.is_active, true));
+    .where(not(ilike(serviceAreas.name, "%Utility Tier%")));
   const allItems = await db
     .select()
     .from(managedListItems)
     .where(eq(managedListItems.is_active, true));
 
-  const { dataTypeNameById, itemsById } = await getValueResolutionContext(
-    allDlIds,
-  );
+  const { dataTypeNameById, itemsById } =
+    await getValueResolutionContext(allDlIds);
 
   function findItem(id: number | null) {
     return id ? allItems.find((m) => m.id === id) : undefined;
@@ -124,23 +155,25 @@ export async function GET(req: Request) {
           UtilityId: urp.utility_id,
           Data: allSa
             .filter((sa) => sa.utility_id === urp.utility_id)
-            .map((sa) =>
-              measureDefs.reduce(
-                (acc, dl) => {
-                  const label = DISTRIBUTION_COLUMN_LABELS[dl.name] ?? dl.name;
-                  return {
-                    ...acc,
-                    [label]: findEntryValue(
-                      dl.id,
-                      urp.id,
-                      sa.id,
-                      distributionFunctionId,
-                    ),
-                  };
-                },
-                { ServiceAreaId: sa.id } as Record<string, unknown>,
-              ),
-            ),
+            .map((sa) => {
+              const values: Record<string, unknown> = {};
+              for (const dl of measureDefs) {
+                const label = DISTRIBUTION_MEASURE_LABELS[dl.name] ?? dl.name;
+                if (label in values) continue;
+                values[label] = findEntryValue(
+                  dl.id,
+                  urp.id,
+                  sa.id,
+                  distributionFunctionId,
+                );
+              }
+              const row: Record<string, unknown> = { ServiceAreaId: sa.id };
+              for (const col of DISTRIBUTION_COLUMN_ORDER) {
+                row[col] =
+                  col in values ? values[col] : null;
+              }
+              return row;
+            }),
         };
       }),
   );

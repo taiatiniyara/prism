@@ -32,8 +32,21 @@ const GENERATOR_COLUMN_LABELS: Record<string, string> = {
   "Rated Capacity": "GEN Installed Capacity",
   "Equipment Planned Downtime Hours": "GEN Downtime Planned Hours",
   "Equipment Unplanned Downtime Hours": "GEN Downtime Unplanned Hours",
-  "Lubrication Oil": "Oil for Lubrication",
+  "Lubrication Oil": "Lubrication Oil",
 };
+
+// Emission order (after the six identity columns) mirrors prism-training's
+// /api/factGeneratorData, which lists measures in this exact sequence. Labels
+// not present for a generator fall through; any provider/technology-specific
+// extras append after the pinned ones.
+const GENERATOR_COLUMN_ORDER = [
+  "Lubrication Oil",
+  "Fuel Oil for Diesel Generators",
+  "GEN Downtime Unplanned Hours",
+  "GEN Downtime Planned Hours",
+  "GEN Electricity Generated",
+  "GEN Installed Capacity",
+];
 
 // Solar measures are emitted per-provider so the column name matches the
 // legacy feed (e.g. "Utility G_STC", "IPP Solar Energy output max Theoretical").
@@ -140,6 +153,30 @@ export async function GET(req: Request) {
               (d) =>
                 d.report_period_id === urp.id && d.unit_id === g.id,
             );
+            const measures = genEntries.reduce(
+              (acc, e) => {
+                const def = measureDefs.find((m) => m.id === e.measure_def_id);
+                if (!def) return acc;
+                const techName = findItem(g.technology_id)?.name ?? "";
+                const providerName = findItem(g.provider_id)?.name ?? "";
+                const solarSuffix = SOLAR_COLUMN_SUFFIX[def.name];
+                const label =
+                  def.name === "Fuel Oil"
+                    ? (FUEL_OIL_LABEL_BY_TECHNOLOGY[techName] ?? def.name)
+                    : solarSuffix
+                      ? `${providerName} ${solarSuffix}`.trim()
+                      : (GENERATOR_COLUMN_LABELS[def.name] ?? def.name);
+                return { [label]: valueFor(e), ...acc };
+              },
+              {} as Record<string, unknown>,
+            );
+            const ordered: Record<string, unknown> = {};
+            for (const col of GENERATOR_COLUMN_ORDER) {
+              if (col in measures) ordered[col] = measures[col];
+            }
+            for (const col of Object.keys(measures)) {
+              if (!(col in ordered)) ordered[col] = measures[col];
+            }
             return {
               ServiceAreaId: g.service_area_id,
               GeneratorId: g.id,
@@ -147,26 +184,7 @@ export async function GET(req: Request) {
               EnergyProvider: findItem(g.provider_id)?.name,
               EnergyType: findItem(categoryFromTechnology(g.technology_id, parentById))?.name,
               EnergySource: findItem(g.technology_id)?.name,
-              ...genEntries.reduce(
-                (acc, e) => {
-                  const def = measureDefs.find((m) => m.id === e.measure_def_id);
-                  if (!def) return acc;
-                  const techName = findItem(g.technology_id)?.name ?? "";
-                  const providerName = findItem(g.provider_id)?.name ?? "";
-                  const solarSuffix = SOLAR_COLUMN_SUFFIX[def.name];
-                  const label =
-                    def.name === "Fuel Oil"
-                      ? (FUEL_OIL_LABEL_BY_TECHNOLOGY[techName] ?? def.name)
-                      : solarSuffix
-                        ? `${providerName} ${solarSuffix}`.trim()
-                        : (GENERATOR_COLUMN_LABELS[def.name] ?? def.name);
-                  const value = valueFor(e);
-                  if (label === "Oil for Lubrication")
-                    return { [label]: value, "Lubrication Oil": value, ...acc };
-                  return { [label]: value, ...acc };
-                },
-                {} as Record<string, unknown>,
-              ),
+...ordered,
             };
           }),
         };

@@ -45,33 +45,54 @@ export async function GET(req: Request) {
     return id ? allItems.find((m) => m.id === id) : undefined;
   }
 
-  // Legacy (p1) label for measure 100 — kept as an alias so the p1-vs-p2
-  // comparison (which keys on the legacy data-label name) resolves.
-  const LEGACY_LABEL_ALIAS: Record<number, string> = {
-    100: "Are Ministers or Public Servants representing the line/sector Ministry appointed",
+  // Legacy (p1) labels for measures whose catalogue name drifted from the
+  // p1 semantic-model name. Keyed by the p2 measure-name.
+  const GOVERNANCE_RENAMES: Record<string, string> = {
+    "Are line/sector Ministers or Public Servants appointed to the Board?":
+      "Are Ministers or Public Servants representing the line/sector Ministry appointed to the Board?",
   };
+
+  // Emission order mirrors prism-training's /api/factGovernance question order.
+  const GOVERNANCE_COLUMN_ORDER = [
+    "Is the Strategic Plan implemented?",
+    "Does the Strategic Plan include three or more years of forecasts?",
+    "Has a Strategic Plan been adopted?",
+    "Does the CEO's Performance Contract include Annual Reviews?",
+    "Is the CEO on a Performance Contract?",
+    "Are Ministers or Public Servants representing the line/sector Ministry appointed to the Board?",
+    "Are Ministers appointed to the Board?",
+    "Is a Commercial Mandate implemented?",
+    "Is a Commercial Mandate in place?",
+    "Is a Code of Conduct implemented?",
+    "Is a Code of Conduct in place?",
+    "Is the Annual Report audited?",
+    "Does the Annual Report disclose performance relative to the Strategic Plan?",
+    "Is the Annual Report completed within four months of the end of the Reporting Year?",
+  ];
 
   return Response.json(
     rps.map((urp) => {
-      const dlValues = entries
-        .filter((e) => e.report_period_id === urp.id)
-        .reduce(
-          (acc, e) => {
-            const dl = dlMap.get(e.measure_def_id);
-            const value = resolveEntryValue(
-              e,
-              dataTypeNameById.get(e.measure_def_id) ?? null,
-              itemsById,
-            );
-            const legacyAlias = LEGACY_LABEL_ALIAS[e.measure_def_id];
-            return {
-              [dl?.name ?? ""]: value,
-              ...(legacyAlias ? { [legacyAlias]: value } : {}),
-              ...acc,
-            };
-          },
-          {} as Record<string, unknown>,
+      const values: Record<string, unknown> = {};
+      for (const e of entries) {
+        if (e.report_period_id !== urp.id) continue;
+        const dl = dlMap.get(e.measure_def_id);
+        const label = dl
+          ? (GOVERNANCE_RENAMES[dl.name] ?? dl.name)
+          : "";
+        if (!label) continue;
+        values[label] = resolveEntryValue(
+          e,
+          dataTypeNameById.get(e.measure_def_id) ?? null,
+          itemsById,
         );
+      }
+      const dlValues: Record<string, unknown> = {};
+      for (const col of GOVERNANCE_COLUMN_ORDER) {
+        if (col in values) dlValues[col] = values[col];
+      }
+      for (const col of Object.keys(values)) {
+        if (!(col in dlValues)) dlValues[col] = values[col];
+      }
       const reportType = findItem(urp.report_type_id)?.name;
       return {
         ReportType: reportType,

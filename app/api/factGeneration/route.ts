@@ -136,23 +136,23 @@ export async function GET(req: Request) {
         .filter((sa) => sa.utility_id === urp.utility_id && !sa.is_virtual)
         .map((sa) => ({
           ServiceAreaId: sa.id,
-          "Electricity Demand Average Load": findEntryValue(
-            avgLoadId,
-            urp.id,
-            sa.id,
-          ),
-          "Electricity Demand Peak Load": findEntryValue(
-            peakLoadId,
-            urp.id,
-            sa.id,
-          ),
           "FTE Employees in Generation": findEntryValue(
             fteId,
             urp.id,
             sa.id,
             generationFunctionId,
           ),
-          "Gen Electricity Consumed Internally": findEntryValue(
+          "Electricity Demand Peak Load": findEntryValue(
+            peakLoadId,
+            urp.id,
+            sa.id,
+          ),
+          "Electricity Demand Average Load": findEntryValue(
+            avgLoadId,
+            urp.id,
+            sa.id,
+          ),
+          "GEN Electricity Consumed Internally": findEntryValue(
             consumedInternallyId,
             urp.id,
             sa.id,
@@ -160,8 +160,8 @@ export async function GET(req: Request) {
         }));
 
       return {
-        "Report Type": reportType,
-        "Report Period": reportDate,
+        ReportType: reportType,
+        ReportPeriod: reportDate,
         ReportPeriodId: urp.id,
         UtilityId: urp.utility_id,
         Data: data,

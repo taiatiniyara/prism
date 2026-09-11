@@ -14,6 +14,15 @@ const UTILITY_CONTEXT_COLUMN_LABELS: Record<string, string> = {
   "Utility Ownership Type": "Ownership Type",
 };
 
+// Emission order mirrors prism-training's /api/factUtilityContextData.
+const UTILITY_CONTEXT_COLUMN_ORDER = [
+  "Feeder Type",
+  "Ownership Type",
+  "Power Quality Standards",
+  "Electricity Regulation",
+  "Accounting Standards",
+];
+
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
   if (authorize.success === false)
@@ -64,6 +73,7 @@ export async function GET(req: Request) {
             const label = dl
               ? (UTILITY_CONTEXT_COLUMN_LABELS[dl.name] ?? dl.name)
               : "";
+            if (!label) return acc;
             return {
               [label]: resolveEntryValue(
                 e,
@@ -75,13 +85,20 @@ export async function GET(req: Request) {
           },
           {} as Record<string, unknown>,
         );
+      const ordered: Record<string, unknown> = {};
+      for (const col of UTILITY_CONTEXT_COLUMN_ORDER) {
+        if (col in ucData) ordered[col] = ucData[col];
+      }
+      for (const col of Object.keys(ucData)) {
+        if (!(col in ordered)) ordered[col] = ucData[col];
+      }
       const reportType = findItem(urp.report_type_id)?.name;
       return {
         ReportType: reportType,
         ReportPeriod: formatReportPeriodIso(urp.report_date, reportType),
         ReportPeriodId: urp.id,
         UtilityId: urp.utility_id,
-        ...ucData,
+        ...ordered,
       };
     }),
   );

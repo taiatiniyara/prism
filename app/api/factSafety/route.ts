@@ -20,8 +20,15 @@ const SAFETY_MEASURE_NAMES = [
 // legacy semantic-model name. Keyed by measure name.
 const SAFETY_COLUMN_LABELS: Record<string, string> = {
   "Hours lost to Work Related Injuries": "Hours Lost to Work Related Injuries",
-  "Hours Worked Actual": "Total Hours Worked",
+  "Hours Worked Actual": "Hours Worked",
 };
+
+// Emission order mirrors prism-training's /api/factSafety column order.
+const SAFETY_COLUMN_ORDER = [
+  "Number of Work Related Injuries",
+  "Hours Lost to Work Related Injuries",
+  "Hours Worked",
+];
 
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
@@ -133,13 +140,20 @@ export async function GET(req: Request) {
           },
           {} as Record<string, unknown>,
         );
+        const ordered: Record<string, unknown> = {};
+        for (const col of SAFETY_COLUMN_ORDER) {
+          if (col in dlValues) ordered[col] = dlValues[col];
+        }
+        for (const col of Object.keys(dlValues)) {
+          if (!(col in ordered)) ordered[col] = dlValues[col];
+        }
         const reportType = findItem(urp.report_type_id)?.name;
         return {
           ReportType: reportType,
           ReportPeriod: formatReportPeriodIso(urp.report_date, reportType),
           ReportPeriodId: urp.id,
           UtilityId: urp.utility_id,
-          ...dlValues,
+          ...ordered,
         };
       }),
   );
