@@ -2,7 +2,6 @@ import { db } from "@/db/connection";
 import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
 import { serviceAreas } from "@/db/schema/utility";
 import { reportPeriods, publishedPeriodCondition } from "@/db/schema/reportPeriods";
-import { managedLists, managedListItems } from "@/db/schema/managedLists";
 import { eq, and, inArray } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
 import { formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
@@ -11,8 +10,11 @@ import {
   getValueResolutionContext,
 } from "@/lib/legacy/entry-value";
 
-// Transmission measures, each scoped by the Transmission utility function and
-// mapped to its legacy semantic-model column name.
+// Transmission measures in p1's emission order (its Transmission data-label
+// list). p1 names the hours columns "<name> Downtime" with no unit suffix; FTE
+// and Sent-to-Grid are not part of p1's transmission feed. The measures are
+// already transmission-scoped by definition, so no utility-function filter is
+// applied (entries can live under any function, as in factDistribution).
 const TRANSMISSION_MEASURES: { name: string; label: string }[] = [
   { name: "Network Length", label: "Transmission Network Length" },
   {
@@ -24,16 +26,12 @@ const TRANSMISSION_MEASURES: { name: string; label: string }[] = [
     label: "Transmission Electricity Sold to Customers",
   },
   {
-    name: "Electricity Sent to Grid",
-    label: "Transmission Network Electricity Sent to Grid",
-  },
-  {
     name: "Network Planned Downtime Events",
     label: "Transmission Network Planned Downtime Events",
   },
   {
     name: "Network Planned Downtime Hours",
-    label: "Transmission Network Planned Downtime Minutes",
+    label: "Transmission Network Planned Downtime",
   },
   {
     name: "Network Unplanned Downtime Events",
@@ -41,9 +39,8 @@ const TRANSMISSION_MEASURES: { name: string; label: string }[] = [
   },
   {
     name: "Network Unplanned Downtime Hours",
-    label: "Transmission Network Unplanned Downtime Minutes",
+    label: "Transmission Network Unplanned Downtime",
   },
-  { name: "FTE Employees", label: "FTE Employees in Transmission" },
 ];
 
 export async function GET(req: Request) {
@@ -60,35 +57,9 @@ export async function GET(req: Request) {
         TRANSMISSION_MEASURES.map((m) => m.name),
       ),
     );
-
-  const labelByName = new Map(
-    TRANSMISSION_MEASURES.map((m) => [m.name, m.label]),
-  );
+  const idByName = new Map(measureDefs.map((m) => [m.name, m.id]));
   const prismIds = measureDefs.map((m) => m.id);
   if (prismIds.length === 0) return Response.json([]);
-
-  // Resolve the Transmission utility function member.
-  const functionListId = (
-    await db
-      .select({ id: managedLists.id })
-      .from(managedLists)
-      .where(eq(managedLists.name, "Utility Function"))
-      .limit(1)
-  )[0]?.id;
-  const transmissionFunctionId = functionListId
-    ? (
-        await db
-          .select({ id: managedListItems.id })
-          .from(managedListItems)
-          .where(
-            and(
-              eq(managedListItems.list_id, functionListId),
-              eq(managedListItems.name, "Transmission"),
-            ),
-          )
-          .limit(1)
-      )[0]?.id
-    : undefined;
 
   const entries = await db
     .select()
@@ -130,22 +101,22 @@ export async function GET(req: Request) {
           Data: allSa
             .filter((sa) => sa.utility_id === urp.utility_id)
             .map((sa) =>
-              measureDefs.reduce(
-                (acc, dl) => {
-                  const entry = entries.find(
-                    (l) =>
-                      l.measure_def_id === dl.id &&
-                      l.report_period_id === urp.id &&
-                      l.service_area_id === sa.id &&
-                      (transmissionFunctionId == null ||
-                        l.utility_function_id === transmissionFunctionId),
-                  );
-                  const label = labelByName.get(dl.name) ?? dl.name;
+              TRANSMISSION_MEASURES.reduce(
+                (acc, m) => {
+                  const dl = idByName.get(m.name);
+                  const entry = dl
+                    ? entries.find(
+                        (l) =>
+                          l.measure_def_id === dl &&
+                          l.report_period_id === urp.id &&
+                          l.service_area_id === sa.id,
+                      )
+                    : undefined;
                   return {
                     ...acc,
-                    [label]: resolveEntryValue(
+                    [m.label]: resolveEntryValue(
                       entry,
-                      dataTypeNameById.get(dl.id) ?? null,
+                      dl ? (dataTypeNameById.get(dl) ?? null) : null,
                       itemsById,
                     ),
                   };
