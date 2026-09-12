@@ -1,6 +1,9 @@
 import { db } from "@/db/connection";
 import { dataEntries, measureDefinitions } from "@/db/schema/dataEntry";
-import { reportPeriods, publishedPeriodCondition } from "@/db/schema/reportPeriods";
+import {
+  reportPeriods,
+  publishedPeriodCondition,
+} from "@/db/schema/reportPeriods";
 import { managedLists, managedListItems } from "@/db/schema/managedLists";
 import { eq, and, inArray } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
@@ -53,6 +56,25 @@ export async function GET(req: Request) {
       .where(eq(managedLists.name, "Gender"))
       .limit(1)
   )[0];
+  const divisionList = (
+    await db
+      .select({ id: managedLists.id })
+      .from(managedLists)
+      .where(eq(managedLists.name, "Division"))
+      .limit(1)
+  )[0];
+  const divisionItems = divisionList
+    ? await db
+        .select()
+        .from(managedListItems)
+        .where(
+          and(
+            eq(managedListItems.list_id, divisionList.id),
+            eq(managedListItems.is_active, true),
+          ),
+        )
+    : [];
+  const divisionNameById = new Map(divisionItems.map((d) => [d.id, d.name]));
   const genderItems = genderList
     ? await db
         .select()
@@ -79,14 +101,14 @@ export async function GET(req: Request) {
         urp?.report_date ?? null,
         reportType?.name,
       );
-      const gender =
-        genderNameById.get(l.gender_id) ?? "All";
+      const gender = genderNameById.get(l.gender_id) ?? "All";
+      const division = divisionNameById.get(l.division_id) ?? "All";
       return {
         "Report Type": reportType?.name,
         "Report Period": reportDate,
         ReportPeriodId: urp?.id,
         "Utility ID": urp?.utility_id,
-        Division: "Employees",
+        Division: `${division} ${measureDefs.find((m) => m.id === l.measure_def_id)?.name ?? ""}`,
         Gender: gender,
         "Number of Employees": resolveEntryValue(
           l,
