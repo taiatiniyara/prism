@@ -1,7 +1,10 @@
 import { db } from "@/db/connection";
 import { countries } from "@/db/schema/country";
 import { organisations } from "@/db/schema/utility";
-import { reportPeriods, publishedPeriodCondition } from "@/db/schema/reportPeriods";
+import {
+  reportPeriods,
+  publishedPeriodCondition,
+} from "@/db/schema/reportPeriods";
 import { managedListItems } from "@/db/schema/managedLists";
 import { eq, and } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
@@ -75,11 +78,17 @@ export async function GET(req: Request) {
             r.country_id === (country?.id ?? -1),
         )
         .reduce(
-          (acc, r) => ({
-            [COUNTRY_CONTEXT_COLUMN_LABELS[r.measureName] ?? r.measureName]:
-              r.value,
-            ...acc,
-          }),
+          (acc, r) => {
+            const label =
+              COUNTRY_CONTEXT_COLUMN_LABELS[r.measureName] ?? r.measureName;
+            let value: unknown = r.value;
+            if (typeof value === "string") {
+              const num = Number(value);
+              if (!Number.isNaN(num)) value = num;
+            }
+            acc[label] = value;
+            return acc;
+          },
           {} as Record<string, unknown>,
         );
       const orderedCc: Record<string, unknown> = {};
@@ -93,7 +102,10 @@ export async function GET(req: Request) {
       // Emit the report period's own date exactly as stored in report_periods
       // (the column is a naive timestamp; format its local components so the
       // value matches the table, with no time/timezone artifacts).
-      const d = typeof urp.report_date === "string" ? new Date(urp.report_date) : urp.report_date;
+      const d =
+        typeof urp.report_date === "string"
+          ? new Date(urp.report_date)
+          : urp.report_date;
       const y = d.getFullYear();
       const m = String(d.getMonth() + 1).padStart(2, "0");
       const day = String(d.getDate()).padStart(2, "0");
