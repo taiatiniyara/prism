@@ -70,6 +70,11 @@ export async function GET(req: Request) {
     "Is the Annual Report completed within four months of the end of the Reporting Year?",
   ];
 
+  function formatValue(value: unknown): string | null {
+    if (typeof value === "boolean") return value ? "Yes" : "No";
+    return value == null ? null : String(value);
+  }
+
   return Response.json(
     rps.map((urp) => {
       const values: Record<string, unknown> = {};
@@ -80,10 +85,12 @@ export async function GET(req: Request) {
           ? (GOVERNANCE_RENAMES[dl.name] ?? dl.name)
           : "";
         if (!label) continue;
-        values[label] = resolveEntryValue(
-          e,
-          dataTypeNameById.get(e.measure_def_id) ?? null,
-          itemsById,
+        values[label] = formatValue(
+          resolveEntryValue(
+            e,
+            dataTypeNameById.get(e.measure_def_id) ?? null,
+            itemsById,
+          ),
         );
       }
       const dlValues: Record<string, unknown> = {};
