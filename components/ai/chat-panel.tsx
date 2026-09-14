@@ -51,7 +51,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [stakeholderType, setStakeholderType] = useState<string>("");
-  const [toolProgress, setToolProgress] = useState<Array<{ name: string; status: "running" | "done" | "error"; startTime?: number }>>([]);
+  const [toolProgress, setToolProgress] = useState<Array<{ name: string; label: string; status: "running" | "done" | "error"; startTime?: number }>>([]);
   const abortControllerRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const isStreamingRef = useRef(false);
@@ -344,7 +344,12 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
               if (toolEvent.type === "tool-start") {
                 setToolProgress((prev) => [
                   ...prev,
-                  { name: toolEvent.toolName, status: "running", startTime: toolEvent.timestamp || Date.now() },
+                  {
+                    name: toolEvent.toolName,
+                    label: typeof toolEvent.label === "string" ? toolEvent.label : toolEvent.toolName,
+                    status: "running",
+                    startTime: toolEvent.timestamp || Date.now(),
+                  },
                 ]);
               } else if (toolEvent.type === "tool-end") {
                 setToolProgress((prev) =>
@@ -659,7 +664,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
                       message={msg}
                       isStreaming={msg.id === "streaming"}
                       reasoningContent={msg.reasoningContent}
-                      toolProgress={toolProgress}
+                      toolProgress={msg.id === "streaming" ? toolProgress : undefined}
                       onFeedback={(sentiment: "positive" | "negative", correction?: string) =>
                         handleFeedback(msg.turnId ?? 0, sentiment, correction)
                       }

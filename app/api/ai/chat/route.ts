@@ -9,6 +9,7 @@ import { eq, sql, and } from "drizzle-orm";
 import { getSystemPrompt } from "@/lib/ai/prompt";
 import { checkUserUtility } from "@/lib/ai/data-service/utils";
 import { runAiStream, runAiGenerate, getCircuitState } from "@/lib/ai/service";
+import { describeToolCall, NO_DATA_NARRATION } from "@/lib/ai/tool-narration";
 import { isValidOrigin } from "@/lib/ai/origin";
 import { logger } from "@/lib/logging/logger";
 
@@ -385,18 +386,19 @@ export async function POST(request: Request) {
                 accumulatedText += part.text;
                 enqueue(`0:${JSON.stringify(part.text)}\n`);
                 break;
-              case "tool-call":
+              case "tool-call": {
                 toolCalls.push({ toolName: part.toolName, input: part.input });
-                enqueue(`2:${JSON.stringify({ type: "tool-start", toolName: part.toolName, timestamp: Date.now() })}\n`);
-                enqueue(`1:${JSON.stringify({ type: "reasoning-delta", text: `\n🔍 ${part.toolName}...` })}\n`);
+                const label = describeToolCall(part.toolName);
+                enqueue(`2:${JSON.stringify({ type: "tool-start", toolName: part.toolName, label, timestamp: Date.now() })}\n`);
+                enqueue(`1:${JSON.stringify({ type: "reasoning-delta", text: `${label}...\n` })}\n`);
                 break;
+              }
               case "tool-result":
                 enqueue(`2:${JSON.stringify({ type: "tool-end", toolName: part.toolName, timestamp: Date.now(), resultSummary: "" })}\n`);
-                enqueue(`1:${JSON.stringify({ type: "reasoning-delta", text: `\n✅ ${part.toolName} done\n` })}\n`);
                 break;
               case "tool-error":
                 enqueue(`2:${JSON.stringify({ type: "tool-end", toolName: part.toolName, timestamp: Date.now(), resultSummary: "" })}\n`);
-                enqueue(`1:${JSON.stringify({ type: "reasoning-delta", text: `\n⚠️ ${part.toolName} returned no data\n` })}\n`);
+                enqueue(`1:${JSON.stringify({ type: "reasoning-delta", text: `${NO_DATA_NARRATION}...\n` })}\n`);
                 break;
               case "finish":
                 tokenUsage = {
