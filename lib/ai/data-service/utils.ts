@@ -304,7 +304,6 @@ export const createToolMetadataWithCitation = (
   utility?: string | null,
 ): ReturnType<typeof createToolMetadata> => ({
   ...createToolMetadata({ source, freshness: new Date() }),
-  data_freshness: new Date(),
   data_completeness_pct: period ? 100 : null,
   source: `${source}${period ? ` | Period: ${period}` : ""}${utility ? ` | Utility: ${utility}` : ""}`,
 });
