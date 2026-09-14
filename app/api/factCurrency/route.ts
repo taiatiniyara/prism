@@ -14,6 +14,7 @@ import {
   resolveEntryValue,
   getValueResolutionContext,
 } from "@/lib/legacy/entry-value";
+import { getAllExchangeRates } from "@/lib/exchange-rates";
 
 const FxRateTrainingId = 4213040060;
 
@@ -58,6 +59,8 @@ export async function GET(req: Request) {
     .from(managedListItems)
     .where(eq(managedListItems.is_active, true));
 
+  const exchangeRates = await getAllExchangeRates();
+
   const rpMap = new Map(rps.map((r) => [r.id, r]));
   const uMap = new Map(allUtils.map((u) => [u.id, u]));
   const cMap = new Map(allCountries.map((c) => [c.id, c]));
@@ -72,15 +75,24 @@ export async function GET(req: Request) {
       const u = rp ? uMap.get(rp.utility_id) : undefined;
       const country = u ? cMap.get(u.country_id) : undefined;
       const reportType = findItem(rp?.report_type_id ?? null)?.name;
+      const currencyCode = country ? findItem(country.currency_id)?.name : undefined;
+      const dbRate = prismId != null
+        ? resolveEntryValue(
+            l,
+            dataTypeNameById.get(prismId) ?? null,
+            itemsById,
+          )
+        : null;
       return {
         Date: formatReportPeriodIso(rp?.report_date ?? null, reportType),
         ReportPeriodId: rp?.id,
-        CurrencyCode: country ? findItem(country.currency_id)?.name : undefined,
-        "Local to USD Conversion Rate": resolveEntryValue(
-          l,
-          prismId != null ? dataTypeNameById.get(prismId) ?? null : null,
-          itemsById,
-        ),
+        CurrencyCode: currencyCode,
+        "Local to USD Conversion Rate":
+          dbRate != null && dbRate !== ""
+            ? dbRate
+            : currencyCode
+              ? (exchangeRates[currencyCode] ?? null)
+              : null,
       };
     }),
   );
