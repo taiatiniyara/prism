@@ -8,7 +8,7 @@ import { getCurrentUser } from "@/lib/user.service";
 import { eq, sql, and } from "drizzle-orm";
 import { getSystemPrompt } from "@/lib/ai/prompt";
 import { checkUserUtility } from "@/lib/ai/data-service/utils";
-import { runAiGenerate, getCircuitState } from "@/lib/ai/service";
+import { runAiStream, runAiGenerate, getCircuitState } from "@/lib/ai/service";
 import { isValidOrigin } from "@/lib/ai/origin";
 import { logger } from "@/lib/logging/logger";
 
@@ -333,112 +333,143 @@ export async function POST(request: Request) {
         ? `\n\nNOTE: This conversation has ${conversationTurns} turns. Before answering, briefly summarise the key context from earlier turns in 1-2 sentences, then answer the latest question concisely.`
         : "");
 
-    const { reply, model, wasFallback, promptVersion, tokenUsage, steps } = await runAiGenerate({
+    const { fullStream, model, wasFallback, promptVersion } = await runAiStream({
       messages: cleanMessages,
       user,
       systemPromptOverride: systemPrompt,
     });
 
-    const turnLatencyMs = Date.now() - startedAt;
-    recordLatency("chat", turnLatencyMs);
-
-    try {
-      const finalText = reply.trim() || "I received your question but was unable to generate a response. This may be due to model output limits. Could you try rephrasing or asking a more specific question?";
-
-      const [existingTurn] = await db
-        .select({ assistant_response: aiChatTurn.assistant_response })
-        .from(aiChatTurn)
-        .where(eq(aiChatTurn.id, turnId))
-        .limit(1);
-
-      if (!existingTurn?.assistant_response) {
-        await db
-          .update(aiChatTurn)
-          .set({
-            assistant_response: finalText,
-            model_used: model,
-            model_was_fallback: wasFallback,
-            token_count_input: tokenUsage.input,
-            token_count_output: tokenUsage.output,
-            latency_ms: turnLatencyMs,
-          })
-          .where(eq(aiChatTurn.id, turnId));
-
-        const seenTools = new Set<string>();
-        for (const step of steps) {
-          for (const tc of step.toolCalls) {
-            if (seenTools.has(tc.toolName)) continue;
-            seenTools.add(tc.toolName);
-            try {
-              await db.insert(aiToolCall).values({
-                turn_id: turnId,
-                tool_name: tc.toolName,
-                tool_args: (tc as unknown as { input?: Record<string, unknown> }).input ?? {},
-                status: "success",
-              });
-            } catch {
-              // Non-critical
-            }
-            try {
-              await recordToolCall(user.id);
-            } catch {
-              // Non-critical
-            }
-          }
-        }
-      }
-
-      // Best-effort summarization
-      if (shouldSummarize) {
-        summarizeConversation(sessionId, user.id).catch(() => {});
-      }
-    } catch (err) {
-      logger.error("[ai-chat] Failed to persist turn response", { error: err instanceof Error ? err.message : String(err), turnId, sessionId });
-    }
-
     const encoder = new TextEncoder();
 
     const combined = new ReadableStream({
       async start(controller) {
-        const streamError = (message: string) => {
+        const enqueue = (line: string) => {
           try {
-            controller.enqueue(encoder.encode(`3:${JSON.stringify({ error: message })}\n`));
+            controller.enqueue(encoder.encode(line));
           } catch {
-            // ignore
+            // already closed
           }
         };
+        const streamError = (message: string) => enqueue(`3:${JSON.stringify({ error: message })}\n`);
 
-        // Emit tool-progress + reasoning events derived from the completed generateText steps.
+        let accumulatedText = "";
+        const toolCalls: Array<{ toolName: string; input: unknown }> = [];
+        let tokenUsage = { input: 0, output: 0 };
+        let errorMessage: string | null = null;
+
         try {
-          for (const step of steps) {
-            const doneNames = new Set(step.toolResults.map((r) => r.toolName));
-            for (const tc of step.toolCalls) {
-              const startTime = Date.now();
-              controller.enqueue(encoder.encode(`2:${JSON.stringify({ type: "tool-start", toolName: tc.toolName, timestamp: startTime })}\n`));
-              controller.enqueue(encoder.encode(`1:${JSON.stringify({ type: "reasoning-delta", text: `\n🔍 ${tc.toolName}...` })}\n`));
-              // Always emit a tool-end so the UI never leaves a tool stuck at "running"
-              // (some calls time out or error before producing a tool-result).
-              controller.enqueue(encoder.encode(`2:${JSON.stringify({ type: "tool-end", toolName: tc.toolName, timestamp: Date.now(), resultSummary: "" })}\n`));
-              controller.enqueue(encoder.encode(`1:${JSON.stringify({ type: "reasoning-delta", text: doneNames.has(tc.toolName) ? `\n✅ ${tc.toolName} done\n` : `\n⚠️ ${tc.toolName} returned no data\n` })}\n`));
+          for await (const part of fullStream) {
+            switch (part.type) {
+              case "text-delta":
+                accumulatedText += part.text;
+                enqueue(`0:${JSON.stringify(part.text)}\n`);
+                break;
+              case "tool-call":
+                toolCalls.push({ toolName: part.toolName, input: part.input });
+                enqueue(`2:${JSON.stringify({ type: "tool-start", toolName: part.toolName, timestamp: Date.now() })}\n`);
+                enqueue(`1:${JSON.stringify({ type: "reasoning-delta", text: `\n🔍 ${part.toolName}...` })}\n`);
+                break;
+              case "tool-result":
+                enqueue(`2:${JSON.stringify({ type: "tool-end", toolName: part.toolName, timestamp: Date.now(), resultSummary: "" })}\n`);
+                enqueue(`1:${JSON.stringify({ type: "reasoning-delta", text: `\n✅ ${part.toolName} done\n` })}\n`);
+                break;
+              case "tool-error":
+                enqueue(`2:${JSON.stringify({ type: "tool-end", toolName: part.toolName, timestamp: Date.now(), resultSummary: "" })}\n`);
+                enqueue(`1:${JSON.stringify({ type: "reasoning-delta", text: `\n⚠️ ${part.toolName} returned no data\n` })}\n`);
+                break;
+              case "finish":
+                tokenUsage = {
+                  input: part.totalUsage.inputTokens ?? 0,
+                  output: part.totalUsage.outputTokens ?? 0,
+                };
+                break;
+              case "error":
+                errorMessage = part.error instanceof Error ? part.error.message : String(part.error);
+                streamError(errorMessage);
+                break;
+              default:
+                break;
             }
           }
         } catch (err) {
-          streamError(err instanceof Error ? err.message : "tool_stream_error");
+          errorMessage = err instanceof Error ? err.message : String(err);
+          streamError(errorMessage);
         }
 
-        // Stream the final answer.
-        try {
-          if (reply.length > 0) {
-            controller.enqueue(encoder.encode(`0:${JSON.stringify(reply)}\n`));
+        // Known Anthropic edge case: a tool-using turn can finish with no text.
+        // Reuse the tested retry+nudge logic in runAiGenerate rather than
+        // restarting the stream (nothing has been sent on channel 0 yet, so
+        // this swap-in is invisible to the client).
+        if (!accumulatedText.trim() && toolCalls.length > 0 && !errorMessage) {
+          try {
+            const fallback = await runAiGenerate({ messages: cleanMessages, user, systemPromptOverride: systemPrompt });
+            accumulatedText = fallback.reply;
+            tokenUsage = fallback.tokenUsage;
+            if (accumulatedText) enqueue(`0:${JSON.stringify(accumulatedText)}\n`);
+          } catch (err) {
+            logger.error("[ai-chat] Empty-answer fallback failed", { error: err instanceof Error ? err.message : String(err), turnId });
           }
-        } catch {
-          // already closed
         }
 
         try {
           controller.close();
         } catch {
           // already closed
+        }
+
+        const turnLatencyMs = Date.now() - startedAt;
+        recordLatency("chat", turnLatencyMs);
+
+        try {
+          const finalText = accumulatedText.trim() || "I received your question but was unable to generate a response. This may be due to model output limits. Could you try rephrasing or asking a more specific question?";
+
+          const [existingTurn] = await db
+            .select({ assistant_response: aiChatTurn.assistant_response })
+            .from(aiChatTurn)
+            .where(eq(aiChatTurn.id, turnId))
+            .limit(1);
+
+          if (!existingTurn?.assistant_response) {
+            await db
+              .update(aiChatTurn)
+              .set({
+                assistant_response: finalText,
+                model_used: model,
+                model_was_fallback: wasFallback,
+                token_count_input: tokenUsage.input,
+                token_count_output: tokenUsage.output,
+                latency_ms: turnLatencyMs,
+              })
+              .where(eq(aiChatTurn.id, turnId));
+
+            const seenTools = new Set<string>();
+            for (const tc of toolCalls) {
+              if (seenTools.has(tc.toolName)) continue;
+              seenTools.add(tc.toolName);
+              try {
+                await db.insert(aiToolCall).values({
+                  turn_id: turnId,
+                  tool_name: tc.toolName,
+                  tool_args: (tc.input as Record<string, unknown>) ?? {},
+                  status: "success",
+                });
+              } catch {
+                // Non-critical
+              }
+              try {
+                await recordToolCall(user.id);
+              } catch {
+                // Non-critical
+              }
+            }
+          }
+
+          // Best-effort summarization
+          if (shouldSummarize) {
+            summarizeConversation(sessionId, user.id).catch(() => {});
+          }
+        } catch (err) {
+          logger.error("[ai-chat] Failed to persist turn response", { error: err instanceof Error ? err.message : String(err), turnId, sessionId });
         }
       },
     });
