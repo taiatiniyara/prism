@@ -147,6 +147,13 @@ function recordCircuitFailure(modelName: string): void {
   modelCircuits.set(modelName, circuit);
 }
 
+// Only "user"/"assistant" ever belong in the conversation array — the system
+// prompt is injected separately (systemPromptOverride/buildSystemPrompt), so a
+// "system" role here would be rejected by the SDK, and any other value fails
+// the ModelMessage[] schema outright. Client input is untyped at runtime, so
+// enforce this rather than trusting the AiChatMessage["role"] type.
+const VALID_MESSAGE_ROLES = new Set(["user", "assistant"]);
+
 const prepareMessages = (
   messages: AiChatMessage[],
   maxHistoryTurns: number,
@@ -157,12 +164,16 @@ const prepareMessages = (
   let totalTokens = 0;
   const trimmed: SdkMessage[] = [];
   for (const msg of recentMessages) {
+    if (!VALID_MESSAGE_ROLES.has(msg.role)) {
+      logger.warn("[ai-service] Dropping message with invalid role", { role: msg.role });
+      continue;
+    }
     const content = typeof msg.content === "string" ? msg.content : "";
     const cleaned = content.trim();
     if (!cleaned) continue;
     const msgTokens = estimateTokens(cleaned);
     totalTokens += msgTokens;
-    trimmed.push({ role: msg.role, content: cleaned });
+    trimmed.push({ role: msg.role as "user" | "assistant", content: cleaned });
     if (totalTokens > MAX_INPUT_TOKENS) break;
   }
 

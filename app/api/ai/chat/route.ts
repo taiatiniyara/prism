@@ -350,7 +350,12 @@ export async function POST(request: Request) {
             // already closed
           }
         };
-        const streamError = (message: string) => enqueue(`3:${JSON.stringify({ error: message })}\n`);
+        const GENERIC_STREAM_ERROR = "Sorry, I encountered an error. Please try again.";
+        const streamError = (rawMessage: string) => {
+          logger.error("[ai-chat] Stream error", { error: rawMessage, turnId, sessionId });
+          recordError(user.id).catch(() => {});
+          enqueue(`3:${JSON.stringify({ error: GENERIC_STREAM_ERROR })}\n`);
+        };
 
         let accumulatedText = "";
         const toolCalls: Array<{ toolName: string; input: unknown }> = [];
@@ -439,6 +444,7 @@ export async function POST(request: Request) {
                 token_count_input: tokenUsage.input,
                 token_count_output: tokenUsage.output,
                 latency_ms: turnLatencyMs,
+                ...(errorMessage ? { error_message: errorMessage.slice(0, 500) } : {}),
               })
               .where(eq(aiChatTurn.id, turnId));
 
