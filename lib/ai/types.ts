@@ -141,7 +141,11 @@ export type AiToolName =
   | "pbi_project_impact";
 
 export interface AiToolMetadata {
-  data_freshness?: Date | null;
+  // ISO string, not Date — this object is serialized straight into the tool-result
+  // JSON sent back to the model; a raw Date fails the AI SDK's ModelMessage[] schema
+  // (jsonValueSchema only allows null/string/number/boolean/plain-object/array) on the
+  // next multi-step turn, once the tool result re-enters standardizePrompt.
+  data_freshness?: string | null;
   data_completeness_pct?: number | null;
   source?: string;
 }

@@ -113,7 +113,7 @@ export const createToolMetadata = (options: {
   source?: string;
 }): AiToolMetadata => {
   return {
-    data_freshness: options.freshness ?? null,
+    data_freshness: options.freshness ? options.freshness.toISOString() : null,
     data_completeness_pct: options.completeness_pct ?? null,
     source: options.source,
   };

@@ -118,6 +118,22 @@ ${conversationText}`,
   }
 };
 
+// Unwraps SDK error causes (e.g. AI_InvalidPromptError -> AI_TypeValidationError) so the
+// persisted error_message includes the actual offending value + zod issues, not just the
+// generic outer message — needed to diagnose schema-validation failures after the fact.
+const describeError = (err: unknown): string => {
+  if (!(err instanceof Error)) return String(err);
+  const parts = [err.message];
+  let cause = (err as { cause?: unknown }).cause;
+  let depth = 0;
+  while (cause instanceof Error && depth < 3) {
+    parts.push(cause.message);
+    cause = (cause as { cause?: unknown }).cause;
+    depth++;
+  }
+  return parts.join(" | cause: ");
+};
+
 const sanitizeClientMessages = (messages: AiChatMessage[]): AiChatMessage[] => {
   return messages.map((msg) => {
     if (msg.role === "user" || msg.role === "assistant") {
@@ -389,7 +405,7 @@ export async function POST(request: Request) {
                 };
                 break;
               case "error":
-                errorMessage = part.error instanceof Error ? part.error.message : String(part.error);
+                errorMessage = describeError(part.error);
                 streamError(errorMessage);
                 break;
               default:
@@ -397,7 +413,7 @@ export async function POST(request: Request) {
             }
           }
         } catch (err) {
-          errorMessage = err instanceof Error ? err.message : String(err);
+          errorMessage = describeError(err);
           streamError(errorMessage);
         }
 
@@ -444,7 +460,7 @@ export async function POST(request: Request) {
                 token_count_input: tokenUsage.input,
                 token_count_output: tokenUsage.output,
                 latency_ms: turnLatencyMs,
-                ...(errorMessage ? { error_message: errorMessage.slice(0, 500) } : {}),
+                ...(errorMessage ? { error_message: errorMessage.slice(0, 4000) } : {}),
               })
               .where(eq(aiChatTurn.id, turnId));
 
@@ -499,7 +515,7 @@ export async function POST(request: Request) {
     return new Response(combined, { headers });
 
   } catch (error) {
-    const errMsg = error instanceof Error ? error.message : String(error);
+    const errMsg = describeError(error);
     logger.error("[ai-chat] AI chat error", { error: errMsg, userId: user.id, sessionId, turnId });
     const turnLatencyMs = Date.now() - startedAt;
 
@@ -508,7 +524,7 @@ export async function POST(request: Request) {
         await db
           .update(aiChatTurn)
           .set({
-            error_message: errMsg.slice(0, 500),
+            error_message: errMsg.slice(0, 4000),
             latency_ms: turnLatencyMs,
           })
           .where(eq(aiChatTurn.id, turnId));
