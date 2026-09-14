@@ -21,7 +21,7 @@ interface MessageBubbleProps {
   message: ChatMessage;
   isStreaming?: boolean;
   reasoningContent?: string;
-  toolProgress?: Array<{ name: string; status: "running" | "done" | "error" }>;
+  toolProgress?: Array<{ name: string; label?: string; status: "running" | "done" | "error" }>;
   onFeedback?: (sentiment: "positive" | "negative", correction?: string) => void;
   onCopy?: (content: string) => void;
   onRegenerate?: () => void;
@@ -220,10 +220,10 @@ function MessageBubbleInner({ message, isStreaming, reasoningContent, toolProgre
                           ) : (
                             <span className="inline-block size-1.5 rounded-full bg-success shrink-0" />
                           )}
-                          <span className="text-slate-500 dark:text-slate-400">{tool.name}</span>
-                          {tool.status === "running" && (
-                            <span className="text-slate-400 dark:text-slate-500 animate-pulse">running...</span>
-                          )}
+                          <span className="text-slate-500 dark:text-slate-400">
+                            {tool.label ?? tool.name}
+                            {tool.status === "running" && "…"}
+                          </span>
                         </div>
                       ))}
                     </div>
