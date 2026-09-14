@@ -499,7 +499,10 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
     });
   };
 
-  const displayMessages = streamingContent
+  const hasStreamingActivity =
+    streamingContent || streamingReasoning || toolProgress.length > 0;
+
+  const displayMessages = hasStreamingActivity
     ? [
         ...messages,
         {
@@ -677,7 +680,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
                 </div>
               )}
 
-              {isLoading && !streamingContent && (
+              {isLoading && !hasStreamingActivity && (
                 <div className="flex items-center gap-3">
                   <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-slate-100 text-slate-500 ring-1 ring-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:ring-slate-700">
                     <span className="text-[11px] font-semibold">AI</span>
