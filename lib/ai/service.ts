@@ -86,6 +86,24 @@ const isTransientError = (error: unknown): boolean => {
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
+// The system prompt (~9k tokens) and tool definitions (~70 tools) are identical on
+// every step of a multi-step turn, and often identical turn-to-turn within a session.
+// Anthropic prompt caching skips re-processing that prefix on a cache hit, which is
+// most of what makes time-to-first-token slow on tool-using questions.
+const ANTHROPIC_CACHE_CONTROL = {
+  anthropic: { cacheControl: { type: "ephemeral" as const } },
+};
+
+const withCachedLastTool = <T extends Record<string, unknown>>(tools: T): T => {
+  const keys = Object.keys(tools);
+  const lastKey = keys[keys.length - 1];
+  if (!lastKey) return tools;
+  return {
+    ...tools,
+    [lastKey]: { ...(tools[lastKey] as object), providerOptions: ANTHROPIC_CACHE_CONTROL },
+  } as T;
+};
+
 const RETRY_BACKOFF_MS = [1000, 2000, 4000];
 const MAX_RETRIES = 3;
 
@@ -247,12 +265,8 @@ const prepareRequest = async (
   // Resolve the DEV-configured primary source ONCE so the tool descriptions and the
   // system prompt agree on which source is primary.
   const { primary, secondary } = await getAiSourceConfig();
-  const tools = createAiTools(
-    user,
-    options.abortSignal,
-    options.sessionId,
-    primary,
-    secondary,
+  const tools = withCachedLastTool(
+    createAiTools(user, options.abortSignal, options.sessionId, primary, secondary),
   );
   const systemPrompt =
     systemPromptOverride ?? buildSystemPrompt(primary, secondary);
@@ -366,7 +380,7 @@ const streamWithConfig = (
 ) => {
   return streamText({
     model: config.model,
-    system: req.systemPrompt,
+    instructions: { role: "system", content: req.systemPrompt, providerOptions: ANTHROPIC_CACHE_CONTROL },
     messages: req.sdkMessages,
     tools: req.tools,
     maxOutputTokens: config.maxOutputTokens,
@@ -385,7 +399,7 @@ const generateWithConfig = (
 ) => {
   return generateText({
     model: config.model,
-    system: req.systemPrompt,
+    instructions: { role: "system", content: req.systemPrompt, providerOptions: ANTHROPIC_CACHE_CONTROL },
     messages: req.sdkMessages,
     tools: req.tools,
     maxOutputTokens: config.maxOutputTokens,
