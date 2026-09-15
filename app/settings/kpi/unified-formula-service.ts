@@ -416,6 +416,36 @@ export async function saveUnifiedFormula(
       return { ok: false, error: `Invalid variable name "${c.variableName}".` };
   }
 
+  // Every variable the formula references must be bound by an input card, by
+  // EXACT (case-sensitive) name — otherwise it resolves to nothing and the whole
+  // formula silently skips at compute time (the classic `islands` vs `Islands`
+  // trap). Catch it at save: `analyzeFormula` is the SAME extractor the compute
+  // engine uses, and card variable names are slug identifiers (validated above),
+  // so any formula identifier that is neither a reserved token nor a bound name
+  // is an unresolvable variable. Reserved tokens mirror
+  // aggregated-worker/formula-variables.ts.
+  const RESERVED_FORMULA_TOKENS = new Set([
+    "Math",
+    "true",
+    "false",
+    "null",
+    "undefined",
+    "NaN",
+    "Infinity",
+  ]);
+  const boundNames = new Set(payload.cards.map((c) => c.variableName));
+  const unresolved = analyzeFormula(formula).variables.filter(
+    (name) => !RESERVED_FORMULA_TOKENS.has(name) && !boundNames.has(name),
+  );
+  if (unresolved.length > 0) {
+    const named = unresolved.map((n) => `"${n}"`).join(", ");
+    const bound = [...boundNames].map((n) => `"${n}"`).join(", ") || "none";
+    return {
+      ok: false,
+      error: `Formula references ${named}, but no input is bound to that name (bound inputs: ${bound}). Variable names are case-sensitive — check for a capitalisation mismatch.`,
+    };
+  }
+
   const ownerKind = payload.mode === "kpi" ? "kpi" : "measure";
 
   // derived FormulaInput[] with ALL 10 dims explicit
