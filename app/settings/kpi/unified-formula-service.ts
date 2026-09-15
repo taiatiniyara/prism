@@ -400,7 +400,13 @@ export async function saveUnifiedFormula(
   for (const c of payload.cards) {
     if (!c.measureDefId)
       return { ok: false, error: `Pick a measure for "${c.variableName}".` };
-    if (c.measureDefId === payload.ownerId)
+    // Self-reference is only possible for a calculated MEASURE: inputs are
+    // always measures, so `ownerId` and `measureDefId` share an id-space only
+    // in measure mode. In KPI mode `ownerId` is a kpi_definitions.id, which is
+    // unrelated to a measure_definitions.id even when the numbers collide (e.g.
+    // a KPI and a measure both named "Islands", both id 2) — comparing them
+    // there is a false positive that blocks a legitimate KPI→measure binding.
+    if (payload.mode !== "kpi" && c.measureDefId === payload.ownerId)
       return { ok: false, error: "An input cannot reference the formula itself." };
     if (seen.has(c.measureDefId)) {
       // duplicate input measure is allowed only if sliced differently; keep simple: warn-not-block
