@@ -2,7 +2,7 @@ import { db } from "@/db/connection";
 import { countries, subRegions } from "@/db/schema/country";
 import { eq, sql } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
-import { createToolMetadata, resolvePeriodId } from "./common";
+import { createToolMetadata, resolveComparisonPeriodIds } from "./common";
 import type { AiToolResult } from "../types";
 
 // --- PEER-BASED TARGET SETTING ---
@@ -34,15 +34,15 @@ export const getKpiTargets = async (
     all_utilities?: boolean;
   } = {},
 ): Promise<AiToolResult<TargetSettingData>> => {
-  const periodId = await resolvePeriodId(user, { report_period_id: options.report_period_id, year: options.year, month: options.month });
-  if (!periodId) {
+  const periodIds = await resolveComparisonPeriodIds(user, { report_period_id: options.report_period_id, year: options.year, month: options.month });
+  if (periodIds.length === 0) {
     return { data: { recommendations: [], peer_count: 0, report_period: null }, metadata: createToolMetadata({ source: "kpi_values" }), error: "No period found" };
   }
 
   const result = await db.execute(sql`
     SELECT kpi_name, actual_value, utility_id, utility_acronym, report_date
     FROM gold.fact_kpi
-    WHERE report_period_id = ${periodId}
+    WHERE report_period_id = ANY(${periodIds})
     LIMIT 2000
   `);
 
@@ -122,15 +122,15 @@ export const getKpiCorrelation = async (
     month?: number | null;
   } = {},
 ): Promise<AiToolResult<CorrelationData>> => {
-  const periodId = await resolvePeriodId(user, { report_period_id: options.report_period_id, year: options.year, month: options.month });
-  if (!periodId) {
+  const periodIds = await resolveComparisonPeriodIds(user, { report_period_id: options.report_period_id, year: options.year, month: options.month });
+  if (periodIds.length === 0) {
     return { data: { pairs: [], utility_count: 0, report_period: null }, metadata: createToolMetadata({ source: "kpi_values" }), error: "No period found" };
   }
 
   const result = await db.execute(sql`
     SELECT kpi_name, actual_value, utility_id, report_date
     FROM gold.fact_kpi
-    WHERE report_period_id = ${periodId}
+    WHERE report_period_id = ANY(${periodIds})
     LIMIT 2000
   `);
 
@@ -215,8 +215,8 @@ export const compareKpisAcrossUtilities = async (
     month?: number | null;
   },
 ): Promise<AiToolResult<MultiUtilityKpiData[]>> => {
-  const periodId = await resolvePeriodId(user, { report_period_id: options.report_period_id, year: options.year, month: options.month });
-  if (!periodId) {
+  const periodIds = await resolveComparisonPeriodIds(user, { report_period_id: options.report_period_id, year: options.year, month: options.month });
+  if (periodIds.length === 0) {
     return { data: [], metadata: createToolMetadata({ source: "kpi_values" }), error: "No period found" };
   }
 
@@ -226,7 +226,7 @@ export const compareKpisAcrossUtilities = async (
     const result = await db.execute(sql`
       SELECT kpi_name, actual_value, utility_name, report_date
       FROM gold.fact_kpi
-      WHERE report_period_id = ${periodId}
+      WHERE report_period_id = ANY(${periodIds})
         AND LOWER(kpi_name) LIKE ${`%${kpiName.toLowerCase()}%`}
       LIMIT 100
     `);

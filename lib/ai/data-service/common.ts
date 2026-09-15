@@ -186,6 +186,55 @@ export const resolveRecentPeriodIds = async (
   return periods.map((p) => p.id);
 };
 
+/**
+ * Every accessible report_period_id matching year/month — for cross-utility
+ * comparisons. `report_periods` is one row per (utility, period), so a single
+ * resolved id (resolvePeriodId) can only ever belong to one utility; callers
+ * that compare/correlate/target-set across utilities must query `gold.fact_kpi`
+ * with `report_period_id = ANY(...)` over this full set instead.
+ *
+ * A `report_period_id` is treated as shorthand for "that period's year/month" —
+ * it anchors the comparison window, not a single-utility filter.
+ */
+export const resolveComparisonPeriodIds = async (
+  user: CurrentUser,
+  options: ResolvePeriodOptions = {},
+): Promise<number[]> => {
+  let year = options.year ?? null;
+  let month = options.month ?? null;
+
+  if (options.report_period_id && year == null) {
+    if (!(await isPeriodIdAccessible(user, options.report_period_id))) {
+      return [];
+    }
+    const [period] = await db
+      .select({ reportDate: reportPeriods.report_date })
+      .from(reportPeriods)
+      .where(eq(reportPeriods.id, options.report_period_id))
+      .limit(1);
+    if (!period) return [];
+    year = period.reportDate.getFullYear();
+    month = month ?? period.reportDate.getMonth() + 1;
+  }
+
+  const predicates = [];
+  const access = periodAccessPredicate(user);
+  if (access) predicates.push(access);
+  if (year != null) {
+    predicates.push(sql`EXTRACT(YEAR FROM ${reportPeriods.report_date}) = ${year}`);
+  }
+  if (month != null) {
+    predicates.push(sql`EXTRACT(MONTH FROM ${reportPeriods.report_date}) = ${month}`);
+  }
+
+  const periods = await db
+    .select({ id: reportPeriods.id })
+    .from(reportPeriods)
+    .where(predicates.length > 0 ? and(...predicates) : sql`TRUE`);
+
+  return periods.map((p) => p.id);
+};
+
 export const resolvePeriod = async (
   user: CurrentUser,
   options: ResolvePeriodOptions = {},
