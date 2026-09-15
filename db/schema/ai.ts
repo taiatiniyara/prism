@@ -234,7 +234,11 @@ export const aiRateLimitWindow = pgTable(
     updated_at: timestamp("updated_at").defaultNow().$onUpdate(() => new Date()).notNull(),
   },
   (table) => [
-    index("ai_rate_limit_window_user_type_start_idx").on(
+    // Unique (not just indexed): lets upsertRateLimitWindow use a single atomic
+    // INSERT ... ON CONFLICT DO UPDATE instead of a select-then-insert/update
+    // guarded by a session-level advisory lock, which doesn't serialize requests
+    // that land on different pooled connections.
+    unique("ai_rate_limit_window_user_type_start_unique").on(
       table.user_id,
       table.window_type,
       table.window_start,

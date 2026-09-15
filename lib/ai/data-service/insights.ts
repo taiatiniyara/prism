@@ -1,4 +1,4 @@
-import { getAccessibleReportPeriods } from "./common";
+import { getAccessibleReportPeriods, resolveComparisonPeriodIds } from "./common";
 import { db } from "@/db/connection";
 import { sql } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
@@ -114,21 +114,31 @@ export interface DataQualityData {
 }
 
 export const getDataQualityReport = async (
-  _user: CurrentUser,
+  user: CurrentUser,
   options: {
     report_period_id?: number | null;
     year?: number | null;
   } = {},
 ): Promise<AiToolResult<DataQualityData>> => {
-  let query = sql`SELECT kpi_instance_id, kpi_name, actual_value, utility_name, report_date, limits FROM gold.fact_kpi`;
+  const periodIds = await resolveComparisonPeriodIds(user, {
+    report_period_id: options.report_period_id,
+    year: options.year,
+  });
 
-  if (options.report_period_id) {
-    query = sql`${query} WHERE report_period_id = ${options.report_period_id}`;
+  if (periodIds.length === 0) {
+    return {
+      data: { issues: [], total_issues: 0, by_type: {} },
+      metadata: createToolMetadata({ source: "kpi_values" }),
+      error: "No report period found",
+    };
   }
 
-  query = sql`${query} LIMIT 200`;
-
-  const result = await db.execute(query);
+  const result = await db.execute(sql`
+    SELECT kpi_instance_id, kpi_name, actual_value, utility_name, report_date, limits
+    FROM gold.fact_kpi
+    WHERE report_period_id = ANY(${periodIds})
+    LIMIT 200
+  `);
 
   const rows = result.rows as Array<{
     kpi_instance_id: number;

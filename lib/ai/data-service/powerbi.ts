@@ -134,8 +134,6 @@ export const queryPowerBi = async (
       };
     }
 
-    const cacheKey = `pbi:query:${options.dataset_id || "default"}:${Buffer.from(options.custom_dax).toString("base64").slice(0, 200)}`;
-
     let identity: PowerBiEffectiveIdentity | undefined;
     if (user?.email && user?.role) {
       const customData = user.org_id
@@ -147,6 +145,13 @@ export const queryPowerBi = async (
         customData,
       };
     }
+
+    // Cache key MUST include the effective identity: Power BI applies row-level
+    // security from `identity` (username/roles/customData, which encodes org
+    // access), so caching by query text alone would serve one utility's RLS-
+    // filtered result to a different utility's user.
+    const identityKey = identity ? `${identity.username}:${identity.roles.join(",")}:${identity.customData ?? ""}` : "no-identity";
+    const cacheKey = `pbi:query:${identityKey}:${options.dataset_id || "default"}:${Buffer.from(options.custom_dax).toString("base64").slice(0, 200)}`;
 
     const result: PowerBiQueryResult = await withCache(
       cacheKey,
@@ -330,8 +335,10 @@ export const runPbiQuery = async (
       };
     }
 
+    const identityKey = identity ? `${identity.username}:${identity.roles.join(",")}:${identity.customData ?? ""}` : "no-identity";
+
     const result: PowerBiQueryResult = await withCache(
-      `pbi:query:${options.query}:${JSON.stringify(params)}`,
+      `pbi:query:${identityKey}:${options.query}:${JSON.stringify(params)}`,
       () => executeDaxOnDataset(dax, undefined, identity),
       15000,
     );

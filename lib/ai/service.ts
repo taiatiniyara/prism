@@ -28,7 +28,9 @@ interface AiServiceOptions {
 
 interface AiStreamResult {
   stream: ReturnType<typeof streamText>["textStream"];
-  fullStream: ReturnType<typeof streamText>["fullStream"];
+  fullStream: AsyncIterable<
+    ReturnType<typeof streamText>["fullStream"] extends AsyncIterable<infer P> ? P : never
+  >;
   model: string;
   wasFallback: boolean;
   promptVersion: string;
@@ -371,6 +373,39 @@ const buildOnFinishHandler = (
   };
 };
 
+// streamText() resolves synchronously without waiting on the model call, so a
+// try/catch around the call itself never sees provider errors (429/503/overloaded) —
+// those only surface later as an "error" part inside fullStream. Peek the first part
+// before handing the stream to the caller: an immediate error is thrown here (so the
+// retry/fallback loop below can act on it, since nothing has reached the client yet);
+// anything else is replayed followed by the rest of the stream, unchanged.
+const withFirstChunkCheck = async <T extends { type: string; error?: unknown }>(
+  fullStream: AsyncIterable<T>,
+): Promise<AsyncIterable<T>> => {
+  const iterator = fullStream[Symbol.asyncIterator]();
+  const first = await iterator.next();
+
+  if (!first.done && first.value.type === "error") {
+    const err = first.value.error;
+    throw err instanceof Error ? err : new Error(String(err));
+  }
+
+  return {
+    [Symbol.asyncIterator]() {
+      let firstYielded = first.done ?? false;
+      return {
+        next: (): Promise<IteratorResult<T>> => {
+          if (!firstYielded) {
+            firstYielded = true;
+            return Promise.resolve(first as IteratorResult<T>);
+          }
+          return iterator.next();
+        },
+      };
+    },
+  };
+};
+
 const streamWithConfig = (
   req: PreparedRequest,
   config: ReturnType<typeof getModelConfig>,
@@ -467,11 +502,12 @@ export const runAiStream = async (
     for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
       try {
         const result = streamWithConfig(req, primaryConfig, false, callbacks, options.abortSignal);
+        const fullStream = await withFirstChunkCheck(result.fullStream);
         if (attempt > 0) retries = attempt;
         recordCircuitSuccess(primaryConfig.modelName);
         return {
           stream: result.textStream,
-          fullStream: result.fullStream,
+          fullStream,
           model: primaryConfig.modelName,
           wasFallback: false,
           promptVersion: req.promptVersion,
@@ -501,10 +537,11 @@ export const runAiStream = async (
       for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
         try {
           const result = streamWithConfig(req, fallbackConfig, true, callbacks);
+          const fullStream = await withFirstChunkCheck(result.fullStream);
           recordCircuitSuccess(fallbackConfig.modelName);
           return {
             stream: result.textStream,
-            fullStream: result.fullStream,
+            fullStream,
             model: fallbackConfig.modelName,
             wasFallback: true,
             promptVersion: req.promptVersion,

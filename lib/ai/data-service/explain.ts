@@ -4,6 +4,7 @@ import { customKpiRequests } from "@/db/schema/custom-kpi-requests";
 import { measureDefinitions } from "@/db/schema/dataEntry";
 import { managedListItems } from "@/db/schema/managedLists";
 import { eq, and, or, ilike, sql, desc } from "drizzle-orm";
+import type { CurrentUser } from "@/lib/user.service";
 import { createToolMetadata } from "./common";
 import type { AiToolResult } from "../types";
 
@@ -276,10 +277,14 @@ export interface CustomKpiStatusData {
   };
 }
 
-export const getCustomKpiStatus = async (): Promise<
-  AiToolResult<CustomKpiStatusData>
-> => {
+export const getCustomKpiStatus = async (
+  user: CurrentUser,
+): Promise<AiToolResult<CustomKpiStatusData>> => {
   try {
+    // DEV/BMO review every submission (same access as the settings review queue);
+    // everyone else only sees their own requests, matching listMyCustomKpiRequests.
+    const isAdmin = user.role === "DEV" || user.role === "BMO";
+
     const rows = await db
       .select({
         id: customKpiRequests.id,
@@ -289,6 +294,7 @@ export const getCustomKpiStatus = async (): Promise<
         created: customKpiRequests.created_at,
       })
       .from(customKpiRequests)
+      .where(isAdmin ? undefined : eq(customKpiRequests.submitter_user_id, user.id))
       .orderBy(desc(customKpiRequests.created_at))
       .limit(50);
 

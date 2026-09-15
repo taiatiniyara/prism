@@ -52,7 +52,7 @@ export async function GET(request: Request): Promise<Response> {
           count(CASE WHEN tc.status = 'error' THEN 1 END)::int AS "errorCount",
           round(avg(tc.latency_ms))::int AS "avgLatencyMs"
         FROM "ai_tool_call" tc
-        INNER JOIN ""ai_chat_turn"" ct ON tc.turn_id = ct.id
+        INNER JOIN "ai_chat_turn" ct ON tc.turn_id = ct.id
         WHERE ct.created_at >= now() - make_interval(days => ${days})
         GROUP BY tc.tool_name
         ORDER BY count(*) DESC
