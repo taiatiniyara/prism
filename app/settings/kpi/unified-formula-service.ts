@@ -400,7 +400,13 @@ export async function saveUnifiedFormula(
   for (const c of payload.cards) {
     if (!c.measureDefId)
       return { ok: false, error: `Pick a measure for "${c.variableName}".` };
-    if (c.measureDefId === payload.ownerId)
+    // Self-reference is only possible for a calculated MEASURE: inputs are
+    // always measures, so `ownerId` and `measureDefId` share an id-space only
+    // in measure mode. In KPI mode `ownerId` is a kpi_definitions.id, which is
+    // unrelated to a measure_definitions.id even when the numbers collide (e.g.
+    // a KPI and a measure both named "Islands", both id 2) — comparing them
+    // there is a false positive that blocks a legitimate KPI→measure binding.
+    if (payload.mode !== "kpi" && c.measureDefId === payload.ownerId)
       return { ok: false, error: "An input cannot reference the formula itself." };
     if (seen.has(c.measureDefId)) {
       // duplicate input measure is allowed only if sliced differently; keep simple: warn-not-block
@@ -408,6 +414,36 @@ export async function saveUnifiedFormula(
     seen.add(c.measureDefId);
     if (!c.variableName || !/^[A-Za-z_][A-Za-z0-9_]*$/.test(c.variableName))
       return { ok: false, error: `Invalid variable name "${c.variableName}".` };
+  }
+
+  // Every variable the formula references must be bound by an input card, by
+  // EXACT (case-sensitive) name — otherwise it resolves to nothing and the whole
+  // formula silently skips at compute time (the classic `islands` vs `Islands`
+  // trap). Catch it at save: `analyzeFormula` is the SAME extractor the compute
+  // engine uses, and card variable names are slug identifiers (validated above),
+  // so any formula identifier that is neither a reserved token nor a bound name
+  // is an unresolvable variable. Reserved tokens mirror
+  // aggregated-worker/formula-variables.ts.
+  const RESERVED_FORMULA_TOKENS = new Set([
+    "Math",
+    "true",
+    "false",
+    "null",
+    "undefined",
+    "NaN",
+    "Infinity",
+  ]);
+  const boundNames = new Set(payload.cards.map((c) => c.variableName));
+  const unresolved = analyzeFormula(formula).variables.filter(
+    (name) => !RESERVED_FORMULA_TOKENS.has(name) && !boundNames.has(name),
+  );
+  if (unresolved.length > 0) {
+    const named = unresolved.map((n) => `"${n}"`).join(", ");
+    const bound = [...boundNames].map((n) => `"${n}"`).join(", ") || "none";
+    return {
+      ok: false,
+      error: `Formula references ${named}, but no input is bound to that name (bound inputs: ${bound}). Variable names are case-sensitive — check for a capitalisation mismatch.`,
+    };
   }
 
   const ownerKind = payload.mode === "kpi" ? "kpi" : "measure";
