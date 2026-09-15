@@ -76,7 +76,7 @@ export async function GET(
 }
 
 export async function DELETE(
-  _request: Request,
+  request: Request,
   { params }: { params: Promise<{ sessionId: string }> },
 ) {
   let user;
@@ -84,6 +84,13 @@ export async function DELETE(
     user = await getCurrentUser();
   } catch {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!isValidOrigin(request)) {
+    return Response.json(
+      { message: "Invalid request origin." },
+      { status: 403 },
+    );
   }
 
   const { sessionId } = await params;
@@ -125,6 +132,13 @@ export async function PATCH(
     user = await getCurrentUser();
   } catch {
     return Response.json({ message: "Unauthorized" }, { status: 401 });
+  }
+
+  if (!isValidOrigin(request)) {
+    return Response.json(
+      { message: "Invalid request origin." },
+      { status: 403 },
+    );
   }
 
   const { sessionId } = await params;

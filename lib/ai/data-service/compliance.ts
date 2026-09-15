@@ -1,11 +1,9 @@
 import { db } from "@/db/connection";
 import { sql } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
-import { hasGlobalUtilityAccess } from "@/lib/user.service";
-import { getAccessibleReportPeriods } from "./common";
+import { resolveComparisonPeriodIds } from "./common";
 import { createToolMetadata } from "./common";
 import type { AiToolResult } from "../types";
-import { withCache } from "../cache";
 
 export interface ComplianceIssue {
   kpi_name: string;
@@ -38,15 +36,12 @@ export const getComplianceStatus = async (
     all_utilities?: boolean;
   } = {},
 ): Promise<AiToolResult<ComplianceData>> => {
-  const forceAll = options.all_utilities === true && hasGlobalUtilityAccess(user);
+  const periodIds = await resolveComparisonPeriodIds(user, {
+    report_period_id: options.report_period_id,
+    year: options.year,
+  });
 
-  const periods = await withCache(
-    `report_periods:${forceAll}:${user.id}`,
-    () => getAccessibleReportPeriods(user, { forceAllUtilities: forceAll }),
-  );
-
-  const targetPeriodId = options.report_period_id ?? periods[0]?.Id;
-  if (!targetPeriodId) {
+  if (periodIds.length === 0) {
     return {
       data: { issues: [], summary: { total_kpis_checked: 0, critical: 0, warnings: 0, compliant: 0 }, report_period: null },
       metadata: createToolMetadata({ source: "kpi_limits" }),
@@ -57,7 +52,7 @@ export const getComplianceStatus = async (
   const result = await db.execute(sql`
     SELECT kpi_name, actual_value, limits, utility_name, report_date
     FROM gold.fact_kpi
-    WHERE report_period_id = ${targetPeriodId}
+    WHERE report_period_id = ANY(${periodIds})
       AND limits IS NOT NULL
     LIMIT 500
   `);
@@ -141,8 +136,6 @@ export const getComplianceStatus = async (
   const warnings = issues.filter((i) => i.severity === "warning").length;
   const compliant = issues.filter((i) => i.severity === "ok").length;
 
-  const match = periods.find((p) => p.Id === targetPeriodId);
-
   return {
     data: {
       issues: issues.filter((i) => i.severity !== "ok").sort((a, b) => {
@@ -150,7 +143,7 @@ export const getComplianceStatus = async (
         return a.severity === "critical" ? -1 : 1;
       }).slice(0, 50),
       summary: { total_kpis_checked: issues.length, critical, warnings, compliant },
-      report_period: match?.Period ?? null,
+      report_period: rows[0]?.report_date?.toString() ?? null,
     },
     metadata: createToolMetadata({ freshness: new Date(), source: "kpi_limits" }),
   };

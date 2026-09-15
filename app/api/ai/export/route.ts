@@ -47,11 +47,16 @@ export async function POST(request: Request) {
     return Response.json({ message: `Maximum ${MAX_ROWS} rows allowed.` }, { status: 400 });
   }
 
+  // Neutralize CSV/Excel formula injection: a cell opened in Excel that starts with
+  // =, +, -, or @ is interpreted as a formula, which lets exported data (sourced from
+  // AI tool results) execute arbitrary formulas/DDE commands in the viewer's Excel.
+  // Prefixing with a single quote forces Excel to treat it as literal text.
+  const FORMULA_PREFIX_RE = /^[=+\-@\t\r]/;
   const sanitizedRows = body.data.rows.map((row) =>
     row.map((cell) => {
       if (cell === null || cell === undefined) return "";
       const str = String(cell).slice(0, MAX_CELL_LENGTH);
-      return str;
+      return FORMULA_PREFIX_RE.test(str) ? `'${str}` : str;
     }),
   );
 

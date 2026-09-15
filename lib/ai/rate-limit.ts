@@ -13,8 +13,6 @@ const getTodayStart = (): Date => {
 const PER_MINUTE_MAX_REQUESTS = parseInt(process.env.AI_RATE_LIMIT_PER_MINUTE || "20", 10) || 20;
 const PER_15MIN_MAX_REQUESTS = parseInt(process.env.AI_RATE_LIMIT_PER_15MIN || "100", 10) || 100;
 
-const ADVISORY_LOCK_ID = 4746;
-
 const requestTimestamps = new Map<string, number[]>();
 
 const pruneTimestamps = (timestamps: number[], windowMs: number): number[] => {
@@ -32,49 +30,34 @@ const upsertRateLimitWindow = async (
       ? new Date(Math.floor(now.getTime() / 60_000) * 60_000)
       : new Date(Math.floor(now.getTime() / (15 * 60_000)) * (15 * 60_000));
 
-    await db.execute(sql`SELECT pg_try_advisory_lock(${ADVISORY_LOCK_ID})`);
-
-    const [existing] = await db
-      .select()
-      .from(aiRateLimitWindow)
-      .where(
-        and(
-          eq(aiRateLimitWindow.user_id, userId),
-          eq(aiRateLimitWindow.window_type, windowType),
-          eq(aiRateLimitWindow.window_start, windowStart),
-        ),
-      )
-      .limit(1);
-
-    let count: number;
-    if (existing) {
-      count = existing.request_count + 1;
-      await db
-        .update(aiRateLimitWindow)
-        .set({ request_count: count, updated_at: new Date() })
-        .where(eq(aiRateLimitWindow.id, existing.id));
-    } else {
-      count = 1;
-      await db.insert(aiRateLimitWindow).values({
+    // Single atomic upsert — relies on the unique constraint on
+    // (user_id, window_type, window_start) so concurrent requests for the same
+    // window increment the same row instead of racing on a select-then-write,
+    // and works correctly across pooled connections (unlike a session-level
+    // advisory lock).
+    const [row] = await db
+      .insert(aiRateLimitWindow)
+      .values({
         user_id: userId,
         window_type: windowType,
         window_start: windowStart,
         request_count: 1,
-      });
-    }
+      })
+      .onConflictDoUpdate({
+        target: [aiRateLimitWindow.user_id, aiRateLimitWindow.window_type, aiRateLimitWindow.window_start],
+        set: {
+          request_count: sql`${aiRateLimitWindow.request_count} + 1`,
+          updated_at: new Date(),
+        },
+      })
+      .returning({ count: aiRateLimitWindow.request_count });
 
-    return { count };
+    return { count: row.count };
   } catch (err) {
     logger.warn("[rate-limit] DB-based rate limit check failed, using in-memory fallback", {
       error: err instanceof Error ? err.message : String(err),
     });
     throw err;
-  } finally {
-    try {
-      await db.execute(sql`SELECT pg_advisory_unlock(${ADVISORY_LOCK_ID})`);
-    } catch {
-      // lock cleanup best-effort
-    }
   }
 };
 

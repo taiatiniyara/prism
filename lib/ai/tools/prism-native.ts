@@ -133,7 +133,7 @@ export function createPrismNativeTools(
             "service_area",
             "technology",
             "provider",
-            "category",
+            "energy_type",
             "energy_resource",
             "aggregation_level",
             "customer_type",
@@ -476,10 +476,10 @@ export function createPrismNativeTools(
 
     get_custom_kpi_status: tool({
       description:
-        "Get the status of custom KPI requests in the pipeline. Shows pending, approved, and rejected custom KPI proposals.",
+        "Get the status of custom KPI requests in the pipeline. Shows pending, approved, and rejected custom KPI proposals. Admins (DEV/BMO) see all requests; other users see only their own.",
       inputSchema: z.object({}),
       execute: async () => {
-        return withTimeout(getCustomKpiStatus(), "get_custom_kpi_status");
+        return withTimeout(getCustomKpiStatus(user), "get_custom_kpi_status");
       },
     }),
 
