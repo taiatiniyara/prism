@@ -49,16 +49,6 @@ export const authorizeSensitiveApiKey = async (req: Request) => {
   return { success: false, message: UNAUTHORIZED_MESSAGE };
 };
 
-export function withApiKeyAuth(
-  handler: (req: Request) => Promise<Response>,
-) {
-  return async (req: Request) => {
-    const auth = await authorizeApiKey(req);
-    if (!auth.success) return Response.json(auth.message);
-    return handler(req);
-  };
-}
-
 export function stripSpecialCharacters(input: string): string {
   return input.replace(/[^a-zA-Z0-9-.]/g, "");
 }
