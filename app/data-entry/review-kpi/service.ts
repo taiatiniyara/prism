@@ -753,9 +753,9 @@ const toReviewInputValueFromDataEntry = (
   );
 };
 
-const resolveKpiDefIdForInput = async (
+const resolveKpiDefIdsForInput = async (
   inputDefId: number,
-): Promise<number | null> => {
+): Promise<number[]> => {
   const definitions = await db
     .select({
       id: kpiDefinitions.id,
@@ -764,13 +764,13 @@ const resolveKpiDefIdForInput = async (
     .from(kpiDefinitions)
     .where(eq(kpiDefinitions.is_active, true));
 
-  const definition = definitions.find((item) =>
-    (item.formulaInputs ?? []).some(
-      (formulaInput) => formulaInput.measure_def_id === inputDefId,
-    ),
-  );
-
-  return definition?.id ?? null;
+  return definitions
+    .filter((item) =>
+      (item.formulaInputs ?? []).some(
+        (formulaInput) => formulaInput.measure_def_id === inputDefId,
+      ),
+    )
+    .map((item) => item.id);
 };
 
 const findLatestKpiResult = async (
@@ -824,7 +824,7 @@ const findLatestKpiResult = async (
 
 export const updateReviewKpiInputValue = async (
   dataEntryId: string,
-  payload: { value: string | null; updatedAt: string },
+  payload: { value: string | null; updatedAt: string; kpiDefId: number },
   user: CurrentUser,
 ) => {
   assertReviewKpiWriteAccess(user);
@@ -885,25 +885,41 @@ export const updateReviewKpiInputValue = async (
     user,
   );
 
-  const kpiDefId = await resolveKpiDefIdForInput(updated.inputDefId);
-  const result = await findLatestKpiResult(updated.reportPeriodId, kpiDefId);
-
+  const result = await findLatestKpiResult(
+    updated.reportPeriodId,
+    payload.kpiDefId,
+  );
   const input = toReviewInputValueFromDataEntry(updated);
 
-  publishSyncEvent({
-    eventId: crypto.randomUUID(),
-    eventType: "input-updated",
-    occurredAt: new Date().toISOString(),
-    reportPeriodId: updated.reportPeriodId,
-    serviceAreaId: updated.serviceAreaId,
-    kpiDefId: kpiDefId ?? 0,
-    inputDefId: updated.inputDefId,
-    dataEntryId: updated.id,
-    payload: {
-      input,
-      result,
-    },
-  });
+  // An input can feed more than one KPI's formula — broadcast to every
+  // affected KPI, not just the one the caller is viewing, so sibling
+  // review cards showing the same shared input also refresh live.
+  const affectedKpiDefIds = new Set([
+    payload.kpiDefId,
+    ...(await resolveKpiDefIdsForInput(updated.inputDefId)),
+  ]);
+
+  for (const kpiDefId of affectedKpiDefIds) {
+    const kpiResult =
+      kpiDefId === payload.kpiDefId
+        ? result
+        : await findLatestKpiResult(updated.reportPeriodId, kpiDefId);
+
+    publishSyncEvent({
+      eventId: crypto.randomUUID(),
+      eventType: "input-updated",
+      occurredAt: new Date().toISOString(),
+      reportPeriodId: updated.reportPeriodId,
+      serviceAreaId: updated.serviceAreaId,
+      kpiDefId,
+      inputDefId: updated.inputDefId,
+      dataEntryId: updated.id,
+      payload: {
+        input,
+        result: kpiResult,
+      },
+    });
+  }
 
   return { input, result };
 };
@@ -966,21 +982,25 @@ export const addReviewKpiInputComment = async (
   const serializedComments = nextComments.map((entry) =>
     serializeComment(entry),
   );
-  const kpiDefId = await resolveKpiDefIdForInput(existing.inputDefId);
+  const affectedKpiDefIds = await resolveKpiDefIdsForInput(
+    existing.inputDefId,
+  );
 
-  publishSyncEvent({
-    eventId: crypto.randomUUID(),
-    eventType: "comment-added",
-    occurredAt: new Date().toISOString(),
-    reportPeriodId: existing.reportPeriodId,
-    serviceAreaId: existing.serviceAreaId,
-    kpiDefId: kpiDefId ?? 0,
-    inputDefId: existing.inputDefId,
-    dataEntryId: existing.id,
-    payload: {
-      comments: serializedComments,
-    },
-  });
+  for (const kpiDefId of affectedKpiDefIds) {
+    publishSyncEvent({
+      eventId: crypto.randomUUID(),
+      eventType: "comment-added",
+      occurredAt: new Date().toISOString(),
+      reportPeriodId: existing.reportPeriodId,
+      serviceAreaId: existing.serviceAreaId,
+      kpiDefId,
+      inputDefId: existing.inputDefId,
+      dataEntryId: existing.id,
+      payload: {
+        comments: serializedComments,
+      },
+    });
+  }
 
   return { comments: serializedComments };
 };

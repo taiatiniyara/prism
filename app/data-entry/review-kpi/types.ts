@@ -103,6 +103,7 @@ export interface ReviewKpiConflictResponse {
 export interface UpdateReviewKpiInputPayload {
   value: string | null;
   updatedAt: string;
+  kpiDefId: number;
 }
 
 export interface AddReviewKpiCommentPayload {
