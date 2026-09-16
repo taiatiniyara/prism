@@ -1031,9 +1031,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                 }
               >
                 {isSaving || isComputing
-                  ? computeProgress && computeProgress.total > 0
-                    ? `Computing ${computeProgress.done}/${computeProgress.total}…`
-                    : "Working…"
+                  ? "Computing…"
                   : isDirty
                     ? "Save & Compute"
                     : "Recompute all periods"}
@@ -1043,7 +1041,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
               <div className="ml-auto flex items-center gap-3">
                 {computeProgress && (
                   <div className="flex items-center gap-2" aria-live="polite">
-                    <div className="bg-muted h-2 w-24 overflow-hidden rounded-full">
+                    <div className="bg-muted h-2 w-56 overflow-hidden rounded-full">
                       {computeProgress.total > 0 ? (
                         <div
                           className="bg-primary h-full rounded-full transition-all duration-300"
@@ -1068,15 +1066,55 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                     </span>
                   </div>
                 )}
-                {recompute && (
-                  <span className="text-xs font-semibold tabular-nums whitespace-nowrap">
-                    <span className="text-muted-foreground font-normal">
-                      Recompute ·{" "}
-                    </span>
-                    {recompute.processed} processed · {recompute.failed} failed
-                    {isSaving || isComputing ? " · computing…" : ""}
-                  </span>
-                )}
+                {recompute &&
+                  (() => {
+                    // processed = attempted so far = successful + failed;
+                    // total = the full period count (from the progress plan).
+                    const successful = recompute.processed;
+                    const failed = recompute.failed;
+                    const processed = successful + failed;
+                    const total =
+                      computeProgress && computeProgress.total > 0
+                        ? computeProgress.total
+                        : processed;
+                    const cols: {
+                      label: string;
+                      value: number;
+                      cls?: string;
+                    }[] = [
+                      { label: "Total", value: total },
+                      { label: "Processed", value: processed },
+                      {
+                        label: "Successful",
+                        value: successful,
+                        cls: "text-success",
+                      },
+                      {
+                        label: "Failed",
+                        value: failed,
+                        cls: failed > 0 ? "text-destructive" : undefined,
+                      },
+                    ];
+                    return (
+                      <div className="flex items-center gap-3 text-center">
+                        {cols.map((c) => (
+                          <div key={c.label} className="leading-tight">
+                            <div className="text-muted-foreground text-[10px] font-medium tracking-wide uppercase">
+                              {c.label}
+                            </div>
+                            <div
+                              className={cn(
+                                "text-sm font-semibold tabular-nums",
+                                c.cls,
+                              )}
+                            >
+                              {c.value}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
               </div>
             )}
           </div>
