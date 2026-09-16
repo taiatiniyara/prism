@@ -176,7 +176,27 @@ export function evaluateArithmetic(
     let value = parseFactor();
     while (peek() === "*" || peek() === "/") {
       const op = next();
+      const rhsStart = pos;
       const rhs = parseFactor();
+      if (op === "/" && rhs === 0) {
+        // Name the zero divisor so the failure reads e.g.
+        //   Division by zero — "total_employees" is 0.
+        // instead of the opaque "result is not a finite number". The divisor is
+        // exactly the tokens parseFactor just consumed; strip one wrapping paren
+        // pair for readability (`( total_employees )` → `total_employees`).
+        let divisor = tokens.slice(rhsStart, pos);
+        if (
+          divisor.length > 2 &&
+          divisor[0] === "(" &&
+          divisor[divisor.length - 1] === ")"
+        ) {
+          divisor = divisor.slice(1, -1);
+        }
+        throw new FormulaError(
+          `Division by zero — "${divisor.join(" ")}" is 0.`,
+          "value",
+        );
+      }
       value = op === "*" ? value * rhs : value / rhs;
     }
     return value;

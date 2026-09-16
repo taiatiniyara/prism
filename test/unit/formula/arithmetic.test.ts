@@ -93,6 +93,18 @@ describe("evaluateArithmetic — fail-closed (never coerce / eval)", () => {
       FormulaError,
     );
   });
+
+  it("names the zero divisor in the division-by-zero message", () => {
+    expect(() => evaluateArithmetic("a / b", { a: 1, b: 0 })).toThrow(
+      /Division by zero — "b" is 0/,
+    );
+  });
+
+  it("strips wrapping parens from the named divisor", () => {
+    expect(() => evaluateArithmetic("a / ( b )", { a: 1, b: 0 })).toThrow(
+      /Division by zero — "b" is 0/,
+    );
+  });
 });
 
 describe("evaluateArithmetic — DoS bounds", () => {
