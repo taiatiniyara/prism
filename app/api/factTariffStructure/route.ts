@@ -187,6 +187,16 @@ const CUSTOMER_TYPE_IDS: Record<string, number> = {
   Others: 697,
   Other: 697,
 };
+const CUSTOMER_TYPE_CANONICAL: Record<string, string> = {
+  Residential: "Residential",
+  Commercial: "Commercial",
+  Industrial: "Industrial",
+  Government: "Government",
+  Streetlights: "Streetlights",
+  "Recreational Parks": "Recreational Facilities",
+  Other: "Others",
+  Others: "Others",
+};
 const BLOCK_IDS: Record<string, number> = {
   "Block 1": 1006,
   "Block 2": 1007,
@@ -195,6 +205,27 @@ const BLOCK_IDS: Record<string, number> = {
   "Block 5": 1010,
 };
 const ALL_CONSUMPTION_BAND_ID = 1005;
+
+// Rewrites a tariff label into its canonical wide-column header:
+// <pay_mode> <customer_type> <band> <measure> using canonical dimension names
+// (e.g. "Recreational Facilities", "All"), so the Power BI column set is the
+// same on p1 and p2 regardless of the p1 label wording.
+function canonicalTariffColumn(raw: string): string {
+  const payment = raw.startsWith("Prepaid") ? "Prepaid" : "Postpaid";
+  let rest = raw.slice(payment.length + 1);
+  let customerType = "";
+  for (const [word, canonical] of Object.entries(CUSTOMER_TYPE_CANONICAL)) {
+    if (rest === word || rest.startsWith(`${word} `)) {
+      customerType = canonical;
+      rest = rest.slice(word.length + 1);
+      break;
+    }
+  }
+  const block = rest.match(/^(Block [1-5])/);
+  const band = block ? block[1] : "All";
+  if (block) rest = rest.slice(block[1].length + 1);
+  return `${payment} ${customerType} ${band} ${rest}`.trim();
+}
 
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
@@ -330,12 +361,13 @@ export async function GET(req: Request) {
               const row: Record<string, unknown> = { ServiceAreaId: sa.id };
               for (let i = 0; i < TARIFF_LABEL.length; i++) {
                 const label = TARIFF_LABEL[i];
+                const column = canonicalTariffColumn(label);
                 const value = findValue(r.id, sa.id, label);
                 const usd =
                   typeof value === "number" && Number.isFinite(value)
                     ? value / fxRate
                     : 0;
-                row[label] = value;
+                row[column] = value;
                 if (i === 0) {
                   // p1 interleaves the unit/multiplier columns right after the
                   // first tariff label; both carry the LAST label's values.
@@ -345,7 +377,7 @@ export async function GET(req: Request) {
                   );
                   row.Multiplier = lastEntry?.multiplier || "Ones";
                 }
-                row[`${label} USD`] = usd;
+                row[`${column} USD`] = usd;
               }
               return row;
             }),
