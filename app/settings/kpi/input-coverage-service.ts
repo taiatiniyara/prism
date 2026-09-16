@@ -61,6 +61,8 @@ export interface InputCoverage {
   aggregatePresent: boolean;
   /** the entered coarse-grain value a non-per-unit input displays; null when none */
   aggregateValue: string | null;
+  /** input marked optional — a missing value is treated as 0, not a failure */
+  optional: boolean;
 }
 
 export interface PeriodInputCoverage {
@@ -114,10 +116,12 @@ function inputsFromJson(
       };
       const id = raw.measure_def_id ?? raw.input_def_id;
       if (typeof id !== "number") return null;
-      return allMemberBinding(
+      const binding = allMemberBinding(
         id,
         typeof raw.variable_name === "string" ? raw.variable_name : "",
       );
+      binding.is_optional = fi.is_optional ?? false;
+      return binding;
     })
     .filter((x): x is FormulaInput => x != null);
 }
@@ -452,6 +456,7 @@ export async function getPeriodInputCoverage(args: {
         .sort(byName),
       aggregatePresent: c.aggregatePresent,
       aggregateValue: c.aggregateValue,
+      optional: g.binding.is_optional ?? false,
     };
   });
 

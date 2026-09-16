@@ -45,20 +45,32 @@ export const computeKpiTarget = async ({
   });
 
   const variables: Record<string, number> = { ...resolved.variables };
-  let zeroFilled: string[] = [];
+  const zeroFilled: string[] = [];
 
   if (resolved.missingVariables.length > 0) {
-    if (analyzeFormula(target.formula).isPureAddition) {
-      // An additive term with no value contributes 0 — don't fail the KPI.
-      for (const variableName of resolved.missingVariables) {
+    // A missing input contributes 0 (instead of failing) when the formula is
+    // pure addition OR the input is explicitly marked optional (#3, 2026-09-16).
+    // A missing MANDATORY input in a non-additive formula still fails.
+    const pureAddition = analyzeFormula(target.formula).isPureAddition;
+    const optionalNames = new Set(
+      target.formulaInputs
+        .filter((fi) => fi.is_optional)
+        .map((fi) => fi.variable_name),
+    );
+    const stillMissing: string[] = [];
+    for (const variableName of resolved.missingVariables) {
+      if (pureAddition || optionalNames.has(variableName)) {
         variables[variableName] = 0;
+        zeroFilled.push(variableName);
+      } else {
+        stillMissing.push(variableName);
       }
-      zeroFilled = resolved.missingVariables;
-    } else {
+    }
+    if (stillMissing.length > 0) {
       return {
         status: "failed",
         failureType: "missing-input",
-        reason: `Missing formula inputs: ${resolved.missingVariables.join(", ")}`,
+        reason: `Missing formula inputs: ${stillMissing.join(", ")}`,
       };
     }
   }

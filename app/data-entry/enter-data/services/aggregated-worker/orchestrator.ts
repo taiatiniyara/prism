@@ -140,10 +140,16 @@ const evaluateTargetWithSnapshot = (
     target.formulaInputs,
   );
   const valueMap = buildTargetValueMap(snapshot, target, variables);
+  const optionalVariables = new Set(
+    target.formulaInputs
+      .filter((fi) => fi.is_optional)
+      .map((fi) => fi.variable_name),
+  );
   const classification = classifyDependencies(
     target.formula,
     variables,
     valueMap,
+    optionalVariables,
   );
 
   if (classification.status === "skipped") {

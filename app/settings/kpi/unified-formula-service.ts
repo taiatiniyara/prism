@@ -175,6 +175,7 @@ export async function getUnifiedFormulaBuilderData(
       unitLabel: measure?.unitLabel ?? undefined,
       strataId: measure?.strataId ?? null,
       grainMode: b.grain_mode,
+      isOptional: b.is_optional,
       dims,
     });
     cardsByOwner.set(ownerKey, list);
@@ -346,6 +347,7 @@ function cardsFromLegacyJson(
       unitLabel: measure?.unitLabel ?? undefined,
       strataId: measure?.strataId ?? null,
       grainMode: "inherit" as const,
+      isOptional: fi.is_optional ?? false,
       dims,
     };
   });
@@ -453,6 +455,7 @@ export async function saveUnifiedFormula(
     const fi: FormulaInput = {
       measure_def_id: c.measureDefId as number,
       variable_name: c.variableName,
+      is_optional: c.isOptional ?? false,
     };
     for (const d of DIMENSIONS) {
       const binding = c.dims[d.field];
@@ -519,6 +522,7 @@ export async function saveUnifiedFormula(
             variable_name: c.variableName,
             input_measure_def_id: c.measureDefId as number,
             grain_mode: c.grainMode ?? "inherit",
+            is_optional: c.isOptional ?? false,
             sort_order: i,
           })
           .returning({ id: formulaBinding.id });

@@ -93,6 +93,9 @@ export interface TagCardState {
   unitLabel?: string;
   strataId?: number | null;
   grainMode: GrainMode;
+  /** when true, a missing value for this input is treated as 0 instead of
+   *  failing the formula. Default (absent/false) = mandatory. */
+  isOptional?: boolean;
   /** only fields applicable to the measure are populated */
   dims: Partial<Record<DimensionField, DimBinding>>;
 }

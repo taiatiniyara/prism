@@ -48,6 +48,9 @@ export interface FormulaInput {
   division_id?: number | null;
   gender_id?: number | null;
   utility_function_id?: number | null;
+  // When true, a missing value for this input is treated as 0 (contributes
+  // nothing) instead of failing the formula. Absent/false = mandatory.
+  is_optional?: boolean;
 }
 
 export type MeasureDefinitionAlternativeNames = Record<string, string>;

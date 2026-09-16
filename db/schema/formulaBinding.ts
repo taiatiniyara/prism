@@ -1,4 +1,5 @@
 import {
+  boolean,
   integer,
   pgTable,
   serial,
@@ -53,6 +54,10 @@ export const formulaBinding = pgTable(
       .$type<GrainMode>()
       .notNull()
       .default("inherit"),
+    // Optional input: when TRUE, a missing value for this input is treated as 0
+    // (contributes nothing) instead of failing the whole formula. Default FALSE
+    // = mandatory, so existing formulas are unchanged. (#3, 2026-09-16)
+    is_optional: boolean("is_optional").notNull().default(false),
     sort_order: integer("sort_order").notNull().default(0),
     created_at: timestamp("created_at").notNull().defaultNow(),
     updated_at: timestamp("updated_at").notNull().defaultNow(),
