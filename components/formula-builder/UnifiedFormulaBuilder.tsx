@@ -1235,9 +1235,10 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
           {recompute && (
             <div className="bg-muted/30 rounded-lg border p-3">
               <div className="max-h-48 overflow-auto">
-                {/* content-width (not w-full) so the columns pack to the left
-                    instead of stretching apart across the panel. */}
-                <table className="text-xs">
+                {/* Full-width: the Reason column (w-full) soaks up the slack so
+                    Period/Status/Value stay tight on the left and the Coverage
+                    column sits at the far right. */}
+                <table className="w-full text-xs">
                   <thead>
                     <tr className="text-muted-foreground text-left">
                       <SortableTh
@@ -1266,6 +1267,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                         col="reason"
                         sort={resultSort}
                         onSort={toggleResultSort}
+                        className="w-full"
                       />
                       <th className="bg-muted sticky top-0 z-10 py-1 pl-3 text-left font-medium">
                         Coverage
@@ -1290,7 +1292,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                         <td className="py-1 pr-3 font-mono tabular-nums">
                           {r.value ?? "—"}
                         </td>
-                        <td className="text-muted-foreground max-w-[24rem] py-1 pr-3">
+                        <td className="text-muted-foreground w-full py-1 pr-3">
                           <span className="flex min-w-0 items-center gap-1.5">
                             <span className="truncate">{r.reason ?? ""}</span>
                             {(() => {
