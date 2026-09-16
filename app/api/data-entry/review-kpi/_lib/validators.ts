@@ -88,9 +88,17 @@ export const parseUpdateInputPayload = (payload: unknown) => {
     throw new Error("VALIDATION:value must be a string or null.");
   }
 
+  const kpiDefId =
+    "kpiDefId" in payload ? (payload as { kpiDefId?: unknown }).kpiDefId : undefined;
+
+  if (typeof kpiDefId !== "number" || !Number.isFinite(kpiDefId)) {
+    throw new Error("VALIDATION:kpiDefId is required.");
+  }
+
   return {
     value: value == null ? null : value,
     updatedAt,
+    kpiDefId,
   };
 };
 

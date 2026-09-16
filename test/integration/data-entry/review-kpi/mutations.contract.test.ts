@@ -43,7 +43,11 @@ describe("review kpi mutation routes contract", () => {
     const response = await PATCH(
       new Request("http://localhost", {
         method: "PATCH",
-        body: JSON.stringify({ value: "95", updatedAt: "2026-03-24T00:00:00.000Z" }),
+        body: JSON.stringify({
+          value: "95",
+          updatedAt: "2026-03-24T00:00:00.000Z",
+          kpiDefId: 1001,
+        }),
       }),
       {
         params: Promise.resolve({ dataEntryId: "5f18315d-b2ee-4fc9-a9f2-430b357f3119" }),

@@ -159,6 +159,7 @@ export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
             body: JSON.stringify({
               value: draftValues[input.dataEntryId] ?? null,
               updatedAt: input.updatedAt,
+              kpiDefId: localRow.kpiDefId,
             }),
           },
         );
