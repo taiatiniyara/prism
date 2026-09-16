@@ -27,14 +27,14 @@ export async function GET(_request: Request): Promise<Response> {
     // Table row estimates via pg_stat_user_tables
     let tableSizes: { name: string; rowEstimate: number }[] = [];
     try {
-      const rows = await db.execute(sql`
+      const result = await db.execute(sql`
         SELECT relname AS name, n_live_tup AS "rowEstimate"
         FROM pg_stat_user_tables
         WHERE schemaname = 'public'
         ORDER BY n_live_tup DESC
         LIMIT 20
       `);
-      tableSizes = (rows as unknown as { name: string; rowEstimate: number }[]).map((r) => ({
+      tableSizes = (result.rows as { name: string; rowEstimate: number }[]).map((r) => ({
         name: r.name,
         rowEstimate: Number(r.rowEstimate) || 0,
       }));
@@ -45,10 +45,11 @@ export async function GET(_request: Request): Promise<Response> {
     // Orphan check: stale sessions past expiry
     let staleSessions = 0;
     try {
-      const [result] = await db.execute(sql`
+      const result = await db.execute(sql`
         SELECT count(*)::int AS count FROM session WHERE expires_at < now()
-      `) as unknown as [{ count: number }];
-      staleSessions = result?.count ?? 0;
+      `);
+      const row = result.rows[0] as { count: number } | undefined;
+      staleSessions = row?.count ?? 0;
     } catch { /* */ }
 
     return Response.json({
