@@ -49,10 +49,9 @@ export default function ReportPeriodTable(props: {
       <table className="text-xs w-full">
         <thead className="sticky top-0 bg-slate-200">
           <tr>
-            {props.role === "DEV" ||
-              (props.role === "BMO" && (
-                <th className="text-left py-2 px-3">Utility</th>
-              ))}
+            {(props.role === "DEV" || props.role === "BMO") && (
+              <th className="text-left py-2 px-3">Utility</th>
+            )}
             <th className="text-left py-2 px-3">Period</th>
             <th className="text-left py-2 px-3">Report Type</th>
             {statusCols.map((item, i) => (
@@ -74,8 +73,9 @@ export default function ReportPeriodTable(props: {
               className="border-b"
               key={index}
             >
-              {props.role === "DEV" ||
-                (props.role === "BMO" && <td>{item.Utility}</td>)}
+              {(props.role === "DEV" || props.role === "BMO") && (
+                <td>{item.Utility}</td>
+              )}
               <td className="text-left py-2 px-3">{item.Period}</td>
               <td className="text-left py-2 px-3">{item.Report_Type}</td>
               {statusCols.map((sc, i) => (

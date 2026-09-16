@@ -74,6 +74,7 @@ export interface MeasureEntryRowView {
   valueOptionId: number | null;
   valueString: string | null;
   displayValue: string | null;
+  optionChoices: { id: number; name: string }[];
   energyProviderId: number;
   energyProviderName: string | null;
   energyTypeId: number;

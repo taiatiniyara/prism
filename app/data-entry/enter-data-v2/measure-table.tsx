@@ -99,7 +99,7 @@ export default function MeasureTable({
     row: MeasureEntryRowView,
     value: string,
   ) => {
-    setSavingRow(`${row.measureId}:${row.energySourceId}`);
+    setSavingRow(getRowKey(row));
     startTransition(() => {
       void (async () => {
         try {
@@ -216,7 +216,7 @@ export default function MeasureTable({
         <tbody>
           {rows.map((row, i) => {
             const rowKey = getRowKey(row);
-            const isSaving = savingRow === `${row.measureId}:${row.energySourceId}`;
+            const isSaving = savingRow === rowKey;
             return (
               <tr
                 key={rowKey}
@@ -310,7 +310,11 @@ function InputCell({
   isSaving: boolean;
   onSave: (row: MeasureEntryRowView, value: string) => void;
 }) {
-  const [draft, setDraft] = useState(row.displayValue ?? "");
+  const [draft, setDraft] = useState(
+    row.valueColumn === "value_option_id"
+      ? String(row.valueOptionId ?? "")
+      : (row.displayValue ?? ""),
+  );
 
   // Live client-side validation — same pure rules the server enforces.
   const validationError = useMemo<string | null>(() => {
@@ -409,8 +413,32 @@ function InputCell({
           ) : null}
         </div>
       );
-    case "value_string":
     case "value_option_id":
+      return (
+        <div className="flex items-center gap-1">
+          <select
+            value={draft}
+            onChange={(e) => {
+              setDraft(e.target.value);
+              onSave(row, e.target.value);
+            }}
+            disabled={isSaving}
+            className={`h-8 w-28 text-xs border rounded-md px-1 ${row.displayValue ? "border-success/40" : "border-danger/40"} border-l-4 rounded-l-none`}
+            aria-label={`Value for ${row.measureName}`}
+          >
+            <option value="">—</option>
+            {row.optionChoices.map((opt) => (
+              <option key={opt.id} value={String(opt.id)}>
+                {opt.name}
+              </option>
+            ))}
+          </select>
+          {isSaving ? (
+            <Loader2 className="size-3 animate-spin shrink-0" />
+          ) : null}
+        </div>
+      );
+    case "value_string":
     default:
       return (
         <div className="flex flex-col gap-0.5">
