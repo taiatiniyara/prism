@@ -362,6 +362,28 @@ function coverageForGroup(
   };
 }
 
+/**
+ * Split a per-unit input's coverage against a COMMON unit roster (the union of
+ * units any of the owner's inputs covers). A roster unit with a value is
+ * entered; one without — a blank row, OR no row at all for this input — is
+ * missing. This is what surfaces a unit the measure computes but that a given
+ * input lacks entirely: the "every input shows green yet the record failed"
+ * case (each input was previously judged only against its own unit roster, so a
+ * unit missing one input silently dropped out instead of being flagged).
+ */
+function coverageAgainstRoster(
+  unitValues: Map<number, string | null>,
+  roster: Iterable<number>,
+): { entered: number[]; missing: number[] } {
+  const entered: number[] = [];
+  const missing: number[] = [];
+  for (const u of roster) {
+    const v = unitValues.get(u);
+    (v != null && v !== "" ? entered : missing).push(u);
+  }
+  return { entered, missing };
+}
+
 async function unitNames(
   unitIds: number[],
 ): Promise<Map<number, { name: string; stationName: string | null }>> {
@@ -398,11 +420,12 @@ export async function getPeriodInputCoverage(args: {
   let utilityName: string | null = null;
   if (rp) {
     const [util] = await db
-      .select({ name: organisations.name })
+      .select({ name: organisations.name, acronym: organisations.acronym })
       .from(organisations)
       .where(eq(organisations.id, rp.utilityId))
       .limit(1);
-    utilityName = util?.name ?? null;
+    // Prefer the acronym (e.g. "TAU") over the full utility name in the header.
+    utilityName = util?.acronym ?? util?.name ?? null;
   }
 
   const groups = groupBindings(bindings);
@@ -439,21 +462,24 @@ export async function getPeriodInputCoverage(args: {
   const byName = (a: CoverageUnit, b: CoverageUnit) =>
     a.unitName.localeCompare(b.unitName);
 
+  // Common unit roster = every unit any input covers this period. Each per-unit
+  // input is judged against it (see coverageAgainstRoster) so a unit the measure
+  // computes but that this input lacks is flagged missing, not silently dropped.
+  const roster = new Set(allUnitIds);
   const inputs: InputCoverage[] = cov.map(({ g, c }) => {
     const perUnit = c.entered.size + c.missing.size > 0;
+    const { entered, missing } = perUnit
+      ? coverageAgainstRoster(c.unitValues, roster)
+      : { entered: [] as number[], missing: [] as number[] };
     return {
       variableNames: g.variableNames,
       measureDefId: g.measureDefId,
       measureName: measureName.get(g.measureDefId) ?? `Measure ${g.measureDefId}`,
       sliced: g.sliced,
       perUnit,
-      totalUnits: c.entered.size + c.missing.size,
-      enteredUnits: [...c.entered]
-        .map((u) => toUnit(u, c.unitValues))
-        .sort(byName),
-      missingUnits: [...c.missing]
-        .map((u) => toUnit(u, c.unitValues))
-        .sort(byName),
+      totalUnits: perUnit ? roster.size : 0,
+      enteredUnits: entered.map((u) => toUnit(u, c.unitValues)).sort(byName),
+      missingUnits: missing.map((u) => toUnit(u, c.unitValues)).sort(byName),
       aggregatePresent: c.aggregatePresent,
       aggregateValue: c.aggregateValue,
       optional: g.binding.is_optional ?? false,
@@ -490,20 +516,25 @@ export async function getPeriodsCoverageSummary(args: {
 
   return reportPeriodIds.map((reportPeriodId) => {
     const rows = rowsByPeriod.get(reportPeriodId) ?? [];
+    const covs = groups.map((g) => coverageForGroup(g, rows));
+    // Common unit roster (union of units any input covers), then each per-unit
+    // input is judged against it — so a unit missing an input entirely counts as
+    // blank, matching the modal and the actual compute failure.
+    const roster = new Set<number>();
+    for (const c of covs)
+      for (const u of [...c.entered, ...c.missing]) roster.add(u);
     const missing = new Set<number>();
-    const total = new Set<number>();
     let perUnitInputs = 0;
-    for (const g of groups) {
-      const c = coverageForGroup(g, rows);
-      if (c.entered.size + c.missing.size > 0) perUnitInputs += 1;
-      for (const u of c.missing) missing.add(u);
-      for (const u of c.entered) total.add(u);
-      for (const u of c.missing) total.add(u);
+    for (const c of covs) {
+      if (c.entered.size + c.missing.size === 0) continue; // aggregate input
+      perUnitInputs += 1;
+      for (const u of coverageAgainstRoster(c.unitValues, roster).missing)
+        missing.add(u);
     }
     return {
       reportPeriodId,
       missingUnits: missing.size,
-      totalUnits: total.size,
+      totalUnits: roster.size,
       perUnitInputs,
     };
   });
