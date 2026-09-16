@@ -1039,33 +1039,44 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                     : "Recompute all periods"}
               </Button>
             )}
-            {computeProgress && (
-              <div
-                className="ml-2 flex min-w-[10rem] flex-1 items-center gap-2"
-                aria-live="polite"
-              >
-                <div className="bg-muted h-2 flex-1 overflow-hidden rounded-full">
-                  {computeProgress.total > 0 ? (
-                    <div
-                      className="bg-primary h-full rounded-full transition-all duration-300"
-                      style={{
-                        width: `${
-                          (computeProgress.done / computeProgress.total) * 100
-                        }%`,
-                      }}
-                    />
-                  ) : (
-                    // Indeterminate (save + planning, before the count is known).
-                    <div className="bg-primary/60 h-full w-full animate-pulse rounded-full" />
-                  )}
-                </div>
-                <span className="text-muted-foreground text-xs tabular-nums">
-                  {computeProgress.total > 0
-                    ? `${Math.round(
-                        (computeProgress.done / computeProgress.total) * 100,
-                      )}%`
-                    : "…"}
-                </span>
+            {(computeProgress || recompute) && (
+              <div className="ml-auto flex items-center gap-3">
+                {computeProgress && (
+                  <div className="flex items-center gap-2" aria-live="polite">
+                    <div className="bg-muted h-2 w-24 overflow-hidden rounded-full">
+                      {computeProgress.total > 0 ? (
+                        <div
+                          className="bg-primary h-full rounded-full transition-all duration-300"
+                          style={{
+                            width: `${
+                              (computeProgress.done / computeProgress.total) *
+                              100
+                            }%`,
+                          }}
+                        />
+                      ) : (
+                        // Indeterminate (save + planning, before the count is known).
+                        <div className="bg-primary/60 h-full w-full animate-pulse rounded-full" />
+                      )}
+                    </div>
+                    <span className="text-muted-foreground text-xs tabular-nums">
+                      {computeProgress.total > 0
+                        ? `${Math.round(
+                            (computeProgress.done / computeProgress.total) * 100,
+                          )}%`
+                        : "…"}
+                    </span>
+                  </div>
+                )}
+                {recompute && (
+                  <span className="text-xs font-semibold tabular-nums whitespace-nowrap">
+                    <span className="text-muted-foreground font-normal">
+                      Recompute ·{" "}
+                    </span>
+                    {recompute.processed} processed · {recompute.failed} failed
+                    {isSaving || isComputing ? " · computing…" : ""}
+                  </span>
+                )}
               </div>
             )}
           </div>
@@ -1126,11 +1137,6 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
 
           {recompute && (
             <div className="bg-muted/30 rounded-lg border p-3">
-              <p className="mb-2 text-xs font-semibold">
-                Recompute · {recompute.processed} processed ·{" "}
-                {recompute.failed} failed
-                {isSaving || isComputing ? " · computing…" : ""}
-              </p>
               <div className="max-h-48 overflow-auto">
                 <table className="w-full text-xs">
                   <thead>
@@ -1162,6 +1168,9 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                         sort={resultSort}
                         onSort={toggleResultSort}
                       />
+                      <th className="bg-muted sticky top-0 z-10 py-1 pl-3 text-right font-medium">
+                        Coverage
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
@@ -1182,40 +1191,38 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                         <td className="py-1 pr-3 font-mono tabular-nums">
                           {r.value ?? "—"}
                         </td>
-                        <td className="text-muted-foreground py-1">
-                          <div className="flex items-center justify-between gap-2">
-                            <span className="flex min-w-0 items-center gap-1.5">
-                              <span className="truncate">{r.reason ?? ""}</span>
-                              {(() => {
-                                const s = coverageSummary.get(r.reportPeriodId);
-                                return s && s.missingUnits > 0 ? (
-                                  <span
-                                    className="bg-destructive/10 text-destructive shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium"
-                                    title={`${s.missingUnits} of ${s.totalUnits} generator(s) missing an input this period`}
-                                  >
-                                    {s.missingUnits} blank
-                                  </span>
-                                ) : null;
-                              })()}
-                            </span>
-                            {selectedTargetId != null && (
-                              <button
-                                type="button"
-                                onClick={() =>
-                                  setCoveragePeriod(r.reportPeriodId)
-                                }
-                                className={cn(
-                                  "shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium underline-offset-2 hover:underline",
-                                  r.status === "ok"
-                                    ? "text-muted-foreground"
-                                    : "text-primary",
-                                )}
-                                title="Which generators (units) are missing which inputs, for this period"
-                              >
-                                {r.status === "ok" ? "coverage" : "which units?"}
-                              </button>
-                            )}
-                          </div>
+                        <td className="text-muted-foreground py-1 pr-3">
+                          <span className="flex min-w-0 items-center gap-1.5">
+                            <span className="truncate">{r.reason ?? ""}</span>
+                            {(() => {
+                              const s = coverageSummary.get(r.reportPeriodId);
+                              return s && s.missingUnits > 0 ? (
+                                <span
+                                  className="bg-destructive/10 text-destructive shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium"
+                                  title={`${s.missingUnits} of ${s.totalUnits} generator(s) missing an input this period`}
+                                >
+                                  {s.missingUnits} blank
+                                </span>
+                              ) : null;
+                            })()}
+                          </span>
+                        </td>
+                        <td className="py-1 pl-3 text-right">
+                          {selectedTargetId != null && (
+                            <button
+                              type="button"
+                              onClick={() => setCoveragePeriod(r.reportPeriodId)}
+                              className={cn(
+                                "shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium underline-offset-2 hover:underline",
+                                r.status === "ok"
+                                  ? "text-muted-foreground"
+                                  : "text-primary",
+                              )}
+                              title="Which generators (units) are missing which inputs, for this period"
+                            >
+                              {r.status === "ok" ? "coverage" : "which units?"}
+                            </button>
+                          )}
                         </td>
                       </tr>
                     ))}
@@ -1269,7 +1276,7 @@ function SortableTh({
   const active = sort.col === col;
   return (
     <th
-      className={cn("py-1 font-medium", className)}
+      className={cn("bg-muted sticky top-0 z-10 py-1 font-medium", className)}
       aria-sort={
         active ? (sort.dir === "asc" ? "ascending" : "descending") : "none"
       }
