@@ -66,6 +66,25 @@ export const assertMigrationKey = (request: Request) => {
   }
 };
 
+// Shared error-to-response mapping for assertMigrationKey() failures — every
+// route calling it must catch and map these, or an invalid/missing key
+// crashes uncaught into Next's generic 500 instead of a clean 401/503.
+export const migrationAuthErrorResponse = (error: unknown): Response | null => {
+  if (error instanceof Error && error.message === "Unauthorized") {
+    return Response.json({ error: "Unauthorized" }, { status: 401 });
+  }
+  if (
+    error instanceof Error &&
+    error.message === "MIGRATION_API_KEY is not configured on this server."
+  ) {
+    return Response.json(
+      { error: "MIGRATION_API_KEY is not configured on this server." },
+      { status: 503 },
+    );
+  }
+  return null;
+};
+
 const getRows = async (
   table: SupportedTable,
   limit: number,
