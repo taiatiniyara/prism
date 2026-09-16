@@ -141,6 +141,20 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
   // so a quick tab flick doesn't refetch repeatedly.
   const router = useRouter();
   const lastRefresh = useRef(0);
+  // Per-target cache of the last compute's stats (counter block + reason table +
+  // progress bar), so switching to another formula and back keeps that formula's
+  // results until it is recomputed. Keyed "<mode>:<targetId>"; session-only — a
+  // page refresh clears it (per Eugene). A ref (not state) so writing it never
+  // re-renders or re-feeds the settle effect.
+  const resultsByTarget = useRef<
+    Map<
+      string,
+      {
+        recompute: RecomputeResult;
+        progress: { done: number; total: number } | null;
+      }
+    >
+  >(new Map());
   useEffect(() => {
     const maybeRefresh = () => {
       if (document.visibilityState !== "visible") return;
@@ -207,6 +221,12 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     if (selectedTargetId == null || !recompute || isSaving || isComputing) {
       return;
     }
+    // Retain this settled run for the target so re-selecting it restores the
+    // counter block + reason table + bar (until it is recomputed).
+    resultsByTarget.current.set(`${activeMode}:${selectedTargetId}`, {
+      recompute,
+      progress: computeProgress,
+    });
     const periodIds = recompute.byPeriod.map((p) => p.reportPeriodId);
     if (periodIds.length === 0) return;
     let cancelled = false;
@@ -227,7 +247,14 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     return () => {
       cancelled = true;
     };
-  }, [recompute, selectedTargetId, activeMode, isSaving, isComputing]);
+  }, [
+    recompute,
+    computeProgress,
+    selectedTargetId,
+    activeMode,
+    isSaving,
+    isComputing,
+  ]);
 
   const measuresById = useMemo(() => {
     const m = new Map<number, MeasureCatalogueItem>();
@@ -342,11 +369,13 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     setFormula(target?.formula ?? "");
     setCards(target?.existingCards.map((c) => ({ ...c })) ?? []);
     setTrackAsKpi(target?.isTrackedAsKpi ?? false);
-    setRecompute(null);
+    // Restore this formula's last compute stats (counter block + reason table +
+    // bar) if it has any — so its results persist across target switches until
+    // it is recomputed. Coverage badges re-derive via the settle effect.
+    const cached = resultsByTarget.current.get(`${activeMode}:${id}`);
+    setRecompute(cached?.recompute ?? null);
     setCoverageSummary(new Map());
-    // The progress bar persists after a backfill (Eugene) — clear it only when
-    // the target changes, so the last run's bar + reason table clear together.
-    setComputeProgress(null);
+    setComputeProgress(cached?.progress ?? null);
     setJustSaved(false);
     setSavedSig(
       builderStateSignature(target?.formula ?? "", target?.existingCards ?? []),
@@ -1124,7 +1153,8 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                 computeProgress.done >= computeProgress.total ? (
                   <>
                     Computed all {computeProgress.total} period(s) — results
-                    below. Stays until you switch to another KPI or measure.
+                    below. Kept for this formula until you recompute it (a page
+                    refresh clears it).
                   </>
                 ) : (
                   <>
