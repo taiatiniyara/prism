@@ -259,11 +259,13 @@ export async function getMeasureEntryFilterViewModel(): Promise<MeasureEntryPage
 
   const measureIds = [...new Set(rawRows.map((r) => r.measureId))];
   const dataTypeMap = new Map<number, string | null>();
+  const optionListIdMap = new Map<number, number | null>();
   if (measureIds.length > 0) {
     const dtRows = await db
       .select({
         id: measureDefinitions.id,
         name: sql<string>`ml.name`,
+        optionListId: measureDefinitions.option_list_id,
       })
       .from(measureDefinitions)
       .innerJoin(
@@ -273,6 +275,39 @@ export async function getMeasureEntryFilterViewModel(): Promise<MeasureEntryPage
       .where(inArray(measureDefinitions.id, measureIds));
     for (const row of dtRows) {
       dataTypeMap.set(row.id, row.name);
+      optionListIdMap.set(row.id, row.optionListId);
+    }
+  }
+
+  const optionListIds = [
+    ...new Set(
+      [...optionListIdMap.values()].filter(
+        (id): id is number => id != null,
+      ),
+    ),
+  ];
+  const optionItemsByList = new Map<
+    number,
+    { id: number; name: string }[]
+  >();
+  if (optionListIds.length > 0) {
+    const optionItems = await db
+      .select({
+        listId: managedListItems.list_id,
+        id: managedListItems.id,
+        name: managedListItems.name,
+      })
+      .from(managedListItems)
+      .where(
+        and(
+          inArray(managedListItems.list_id, optionListIds),
+          eq(managedListItems.is_active, true),
+        ),
+      );
+    for (const item of optionItems) {
+      const list = optionItemsByList.get(item.listId) ?? [];
+      list.push({ id: item.id, name: item.name });
+      optionItemsByList.set(item.listId, list);
     }
   }
 
@@ -320,6 +355,12 @@ export async function getMeasureEntryFilterViewModel(): Promise<MeasureEntryPage
       displayValue = r.valueString;
     }
 
+    const optionListId = optionListIdMap.get(r.measureId) ?? null;
+    const optionChoices =
+      valueColumn === "value_option_id" && optionListId != null
+        ? (optionItemsByList.get(optionListId) ?? [])
+        : [];
+
     return {
       dataEntryId: r.dataEntryId ?? undefined,
       measureId: r.measureId,
@@ -335,6 +376,7 @@ export async function getMeasureEntryFilterViewModel(): Promise<MeasureEntryPage
       valueOptionId: r.valueOptionId ?? null,
       valueString: r.valueString ?? null,
       displayValue,
+      optionChoices,
       energyProviderId: r.energyProviderId ?? 0,
       energyProviderName: nameOf(r.energyProviderId),
       energyTypeId: r.energyTypeId ?? 0,
