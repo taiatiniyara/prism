@@ -78,13 +78,13 @@ export function InputTagCard({
         // No overflow-hidden: the dimension-binding popovers (esp. the bottom-
         // row cells like Division/Gender) open downward and must escape the
         // card instead of being clipped.
-        "bg-card mt-3 rounded-xl border",
+        "bg-card mt-2 rounded-xl border",
         measureMissing && "border-destructive/60",
       )}
     >
       <div className="flex items-stretch">
         {/* LEFT 30% */}
-        <div className="flex w-[30%] shrink-0 flex-col items-start gap-2 p-3.5">
+        <div className="flex w-[30%] shrink-0 flex-col items-start gap-1.5 p-2.5">
           <Input
             value={nameDraft}
             placeholder="variable_name"
@@ -100,7 +100,7 @@ export function InputTagCard({
             }}
             className={cn(
               nameColor ?? "text-accent-foreground bg-transparent",
-              "focus-visible:border-ring h-8 rounded-md border-transparent px-1.5 font-mono text-sm font-bold shadow-none",
+              "focus-visible:border-ring h-7 rounded-md border-transparent px-1.5 font-mono text-sm font-bold shadow-none",
             )}
           />
           {measure ? (
@@ -132,63 +132,67 @@ export function InputTagCard({
               </Button>
             </>
           )}
-          {measure && (
-            <div className="mt-1 flex items-center gap-1 text-[11px]">
-              <span className="text-muted-foreground">Input:</span>
-              <div className="inline-flex overflow-hidden rounded-md border">
-                <button
-                  type="button"
-                  onClick={() => onChange({ ...card, isOptional: false })}
-                  title="Required — a missing value fails the formula"
-                  className={cn(
-                    "px-1.5 py-0.5",
-                    !card.isOptional
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground hover:bg-muted",
-                  )}
-                >
-                  Mandatory
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onChange({ ...card, isOptional: true })}
-                  title="Optional — a missing value is treated as 0 instead of failing the formula"
-                  className={cn(
-                    "border-l px-1.5 py-0.5",
-                    card.isOptional
-                      ? "bg-amber-400 text-slate-900"
-                      : "text-muted-foreground hover:bg-muted",
-                  )}
-                >
-                  Optional
-                </button>
-              </div>
-            </div>
-          )}
-          <div className="mt-auto flex w-full items-center justify-between pt-2">
+          {/* One meta row: Mandatory/Optional toggle + change/remove, to keep
+              the card compact. */}
+          <div className="mt-auto flex w-full flex-wrap items-center gap-x-3 gap-y-1 pt-1.5 text-[11px]">
             {measure && (
+              <div className="flex items-center gap-1">
+                <span className="text-muted-foreground">Input:</span>
+                <div className="inline-flex overflow-hidden rounded-md border">
+                  <button
+                    type="button"
+                    onClick={() => onChange({ ...card, isOptional: false })}
+                    title="Required — a missing value fails the formula"
+                    className={cn(
+                      "px-1.5 py-0.5",
+                      !card.isOptional
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground hover:bg-muted",
+                    )}
+                  >
+                    Mandatory
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => onChange({ ...card, isOptional: true })}
+                    title="Optional — a missing value is treated as 0 instead of failing the formula"
+                    className={cn(
+                      "border-l px-1.5 py-0.5",
+                      card.isOptional
+                        ? "bg-amber-400 text-slate-900"
+                        : "text-muted-foreground hover:bg-muted",
+                    )}
+                  >
+                    Optional
+                  </button>
+                </div>
+              </div>
+            )}
+            <div className="ml-auto flex items-center gap-3">
+              {measure && (
+                <button
+                  type="button"
+                  onClick={onPickMeasure}
+                  className="text-muted-foreground underline-offset-2 hover:underline"
+                >
+                  change measure
+                </button>
+              )}
               <button
                 type="button"
-                onClick={onPickMeasure}
-                className="text-muted-foreground text-xs underline-offset-2 hover:underline"
+                onClick={onRemove}
+                className="text-muted-foreground hover:text-destructive underline-offset-2 hover:underline"
               >
-                change measure
+                remove
               </button>
-            )}
-            <button
-              type="button"
-              onClick={onRemove}
-              className="text-muted-foreground hover:text-destructive ml-auto text-xs underline-offset-2 hover:underline"
-            >
-              remove
-            </button>
+            </div>
           </div>
         </div>
 
         {/* RIGHT 70% */}
         <div className="w-[70%] border-l">
           {measureMissing ? (
-            <div className="text-destructive bg-destructive/10 m-3.5 flex items-start gap-2 rounded-lg px-3 py-2 text-xs">
+            <div className="text-destructive bg-destructive/10 m-2.5 flex items-start gap-2 rounded-lg px-3 py-2 text-xs">
               <span aria-hidden>&#9888;</span>
               <span>
                 <b>
@@ -202,14 +206,14 @@ export function InputTagCard({
               </span>
             </div>
           ) : !measure ? (
-            <div className="text-muted-foreground bg-muted/30 m-3.5 rounded-lg border border-dashed p-3.5 text-xs">
+            <div className="text-muted-foreground bg-muted/30 m-2.5 rounded-lg border border-dashed p-2.5 text-xs">
               Dimension tags appear here once a measure is chosen — only the ones
               that measure is scoped on.
             </div>
           ) : (
             <div className="flex items-stretch">
               {/* dimension matrix */}
-              <div className="min-w-0 flex-1 p-3.5">
+              <div className="min-w-0 flex-1 p-2.5">
                 {measure.applicableDims.length === 0 ? (
                   <p className="text-muted-foreground text-xs">
                     This measure has no sliceable dimensions — it reports a
@@ -236,7 +240,7 @@ export function InputTagCard({
                 )}
               </div>
               {/* grain column */}
-              <div className="w-[150px] shrink-0 border-l p-3.5">
+              <div className="w-[150px] shrink-0 border-l p-2.5">
                 <label className="text-muted-foreground block text-[10.5px] font-semibold tracking-wide uppercase">
                   Grain / level
                 </label>
@@ -256,9 +260,6 @@ export function InputTagCard({
                     </option>
                   ))}
                 </select>
-                <p className="text-muted-foreground mt-1.5 text-[10.5px] leading-tight">
-                  Phase 1 · informational
-                </p>
               </div>
             </div>
           )}
