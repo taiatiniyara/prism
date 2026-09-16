@@ -127,6 +127,7 @@ function CoverageCard({ input }: { input: InputCoverage }) {
     missingUnits,
     aggregatePresent,
     aggregateValue,
+    optional,
   } = input;
 
   const complete = perUnit && missingUnits.length === 0;
@@ -141,6 +142,11 @@ function CoverageCard({ input }: { input: InputCoverage }) {
             {sliced && (
               <span className="text-muted-foreground ml-1.5 text-[11px] font-normal">
                 · sliced
+              </span>
+            )}
+            {optional && (
+              <span className="ml-1.5 text-[11px] font-medium text-amber-600 dark:text-amber-400">
+                · optional
               </span>
             )}
           </p>
@@ -168,6 +174,13 @@ function CoverageCard({ input }: { input: InputCoverage }) {
           >
             {fmt(aggregateValue)}
           </Badge>
+        ) : optional ? (
+          <Badge
+            variant="outline"
+            className="border-amber-400/50 bg-amber-400/10 font-mono text-amber-700 dark:text-amber-300"
+          >
+            0 · optional
+          </Badge>
         ) : (
           <Badge
             variant="outline"
@@ -181,7 +194,9 @@ function CoverageCard({ input }: { input: InputCoverage }) {
       {!perUnit && (
         <p className="text-muted-foreground mt-2 text-xs">
           {noData
-            ? "No data entered for this measure this period (no unit-level shells found)."
+            ? optional
+              ? "No value entered — optional, so treated as 0 in the formula."
+              : "No data entered for this measure this period (no unit-level shells found)."
             : "Entered at utility/station level — not tracked per generator."}
         </p>
       )}

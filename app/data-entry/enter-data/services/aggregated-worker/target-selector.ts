@@ -8,7 +8,11 @@ export interface AggregatedFormulaTarget {
   inputDefId: number;
   variableName?: string | null;
   formula: string;
-  formulaInputs: Array<{ measure_def_id: number; variable_name: string }>;
+  formulaInputs: Array<{
+    measure_def_id: number;
+    variable_name: string;
+    is_optional?: boolean;
+  }>;
 }
 
 interface FormulaInputCandidate {
@@ -141,6 +145,7 @@ export const selectAggregatedFormulaTargets = async (): Promise<
         ? bound.map((fi) => ({
             measure_def_id: fi.measure_def_id,
             variable_name: fi.variable_name,
+            is_optional: fi.is_optional ?? false,
           }))
         : row.formulaInputs && row.formulaInputs.length > 0
           ? row.formulaInputs

@@ -20,7 +20,11 @@ const DIMENSION_KEYS = Object.keys(ALL_MEMBER) as Array<keyof typeof ALL_MEMBER>
  * from the same tables at save time.
  */
 export const bindingToFormulaInput = (
-  binding: { input_measure_def_id: number; variable_name: string },
+  binding: {
+    input_measure_def_id: number;
+    variable_name: string;
+    is_optional?: boolean;
+  },
   dimensions: Array<{ dimension_key: string; member_id: number | null }>,
 ): FormulaInput => {
   const pinnedByKey = new Map(
@@ -30,6 +34,7 @@ export const bindingToFormulaInput = (
   const formulaInput: FormulaInput = {
     measure_def_id: binding.input_measure_def_id,
     variable_name: binding.variable_name,
+    is_optional: binding.is_optional ?? false,
   };
   for (const key of DIMENSION_KEYS) {
     const pinned = pinnedByKey.get(key);

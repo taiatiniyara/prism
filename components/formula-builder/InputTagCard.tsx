@@ -132,6 +132,39 @@ export function InputTagCard({
               </Button>
             </>
           )}
+          {measure && (
+            <div className="mt-1 flex items-center gap-1 text-[11px]">
+              <span className="text-muted-foreground">Input:</span>
+              <div className="inline-flex overflow-hidden rounded-md border">
+                <button
+                  type="button"
+                  onClick={() => onChange({ ...card, isOptional: false })}
+                  title="Required — a missing value fails the formula"
+                  className={cn(
+                    "px-1.5 py-0.5",
+                    !card.isOptional
+                      ? "bg-primary text-primary-foreground"
+                      : "text-muted-foreground hover:bg-muted",
+                  )}
+                >
+                  Mandatory
+                </button>
+                <button
+                  type="button"
+                  onClick={() => onChange({ ...card, isOptional: true })}
+                  title="Optional — a missing value is treated as 0 instead of failing the formula"
+                  className={cn(
+                    "border-l px-1.5 py-0.5",
+                    card.isOptional
+                      ? "bg-amber-400 text-slate-900"
+                      : "text-muted-foreground hover:bg-muted",
+                  )}
+                >
+                  Optional
+                </button>
+              </div>
+            </div>
+          )}
           <div className="mt-auto flex w-full items-center justify-between pt-2">
             {measure && (
               <button
