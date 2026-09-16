@@ -75,6 +75,27 @@ export interface UnifiedFormulaBuilderProps {
   mode: BuilderMode;
 }
 
+/** Canonical signature of the builder's editable state — comparing the current
+ *  signature to the last saved/loaded one tells us whether there are unsaved
+ *  edits (which drives the adaptive Save & Compute / Recompute button). */
+function builderStateSignature(formula: string, cards: TagCardState[]): string {
+  return JSON.stringify({
+    f: formula.trim(),
+    c: cards.map((c) => ({
+      v: c.variableName,
+      m: c.measureDefId ?? null,
+      g: c.grainMode,
+      o: !!c.isOptional,
+      d: Object.fromEntries(
+        Object.entries(c.dims)
+          .filter(([, b]) => b != null)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([k, b]) => [k, { mode: b!.mode, member: b!.memberId ?? null }]),
+      ),
+    })),
+  });
+}
+
 export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps) {
   const [activeMode, setActiveMode] = useState<BuilderMode>(mode);
   const targets =
@@ -99,6 +120,12 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     total: number;
   } | null>(null);
   const [justSaved, setJustSaved] = useState(false);
+  // Signature of the last saved/loaded state; when the current state differs
+  // there are unsaved edits — the compute button then offers Save & Compute
+  // (persist + backfill), otherwise Recompute all periods (backfill only).
+  const [savedSig, setSavedSig] = useState<string>(() =>
+    builderStateSignature("", []),
+  );
   // Inline UoM edits, keyed by target id, so the harness's format-adjusted
   // preview reflects a just-changed unit before a reload.
   const [unitOverrides, setUnitOverrides] = useState<Record<number, number>>(
@@ -321,6 +348,9 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     // the target changes, so the last run's bar + reason table clear together.
     setComputeProgress(null);
     setJustSaved(false);
+    setSavedSig(
+      builderStateSignature(target?.formula ?? "", target?.existingCards ?? []),
+    );
   };
 
   const handleModeSwitch = (next: BuilderMode) => {
@@ -333,6 +363,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     setCoverageSummary(new Map());
     setComputeProgress(null);
     setJustSaved(false);
+    setSavedSig(builderStateSignature("", []));
     setOnlyWithoutFormula(false);
     setTrackAsKpi(false);
   };
@@ -569,6 +600,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
         }
         toast.success("Saved ✓");
         setJustSaved(true);
+        setSavedSig(builderStateSignature(formula, cards));
         // Keep the definition on screen after saving — the user can keep
         // editing, save again, or pick another target from the dropdown.
         // (Blanking the form here read as data loss.)
@@ -610,6 +642,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
         return;
       }
       setJustSaved(true);
+      setSavedSig(builderStateSignature(formula, cards));
       if (activeMode === "measure") {
         // Chunked async-with-progress: never a single >1-min request.
         const c = await runChunkedMeasureCompute();
@@ -680,6 +713,11 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
       }
     });
   };
+
+  // Unsaved edits? Drives the adaptive compute button: dirty ⇒ Save & Compute
+  // (persist then backfill), clean ⇒ Recompute all periods (backfill only, so
+  // it never silently computes with a stale saved formula).
+  const isDirty = builderStateSignature(formula, cards) !== savedSig;
 
   // Selected target's effective unit (override if the user just changed it).
   const selectedTarget =
@@ -965,41 +1003,40 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
             >
               {isSaving ? "Saving…" : "Save"}
             </Button>
+            {/* One adaptive compute button: while there are unsaved edits it
+                persists them first (Save & Compute); once clean it re-runs the
+                same backfill (Recompute all periods) without re-saving — so it
+                never computes with a stale formula, and there's no confusing
+                near-duplicate pair. Hidden for KPIs that never compute
+                (pass-through / descriptive projections). */}
             {!(
               activeMode === "kpi" &&
               (isPassThroughKpi || isDescriptiveProjection)
             ) && (
               <Button
                 type="button"
-                onClick={handleSaveAndCompute}
-                disabled={isSaving || isComputing || !canSave}
-                title="Save the formula and immediately compute it across all prior and current periods"
+                variant={isDirty ? "default" : "outline"}
+                onClick={isDirty ? handleSaveAndCompute : handleCompute}
+                disabled={
+                  isSaving ||
+                  isComputing ||
+                  (isDirty
+                    ? !canSave
+                    : activeMode === "kpi" && selectedTargetId == null)
+                }
+                title={
+                  isDirty
+                    ? "Save the formula and compute it across all prior and current periods"
+                    : "Recompute this formula across all prior and current periods (no unsaved changes to save)"
+                }
               >
                 {isSaving || isComputing
                   ? computeProgress && computeProgress.total > 0
                     ? `Computing ${computeProgress.done}/${computeProgress.total}…`
                     : "Working…"
-                  : "Save & Compute"}
-              </Button>
-            )}
-            {!(activeMode === "kpi" && isPassThroughKpi) && (
-              <Button
-                type="button"
-                variant="outline"
-                onClick={handleCompute}
-                disabled={
-                  isComputing ||
-                  (activeMode === "kpi" && selectedTargetId == null) ||
-                  (activeMode === "kpi" && isDescriptiveProjection)
-                }
-              >
-                {isComputing
-                  ? computeProgress && computeProgress.total > 0
-                    ? `Computing ${computeProgress.done}/${computeProgress.total}…`
-                    : "Computing…"
-                  : activeMode === "kpi"
-                    ? "Compute now"
-                    : "Apply to previous and current periods"}
+                  : isDirty
+                    ? "Save & Compute"
+                    : "Recompute all periods"}
               </Button>
             )}
             {computeProgress && (
