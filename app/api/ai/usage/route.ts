@@ -1,5 +1,6 @@
 import { db } from "@/db/connection";
 import { getCurrentUser } from "@/lib/user.service";
+import { isValidOrigin } from "@/lib/ai/origin";
 import { sql } from "drizzle-orm";
 
 export async function GET(request: Request): Promise<Response> {
@@ -7,6 +8,10 @@ export async function GET(request: Request): Promise<Response> {
   if (!currentUser) return Response.json({ message: "Unauthorized" }, { status: 401 });
   if (currentUser.role !== "DEV" && currentUser.role !== "BMO") {
     return Response.json({ message: "Forbidden" }, { status: 403 });
+  }
+
+  if (!isValidOrigin(request)) {
+    return Response.json({ message: "Invalid request origin." }, { status: 403 });
   }
 
   const { searchParams } = new URL(request.url);
