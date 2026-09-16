@@ -309,13 +309,16 @@ export async function generateDeepLink(
       params.push(`pageName=${encodeURIComponent(options.page_name)}`);
     }
 
-    // Power BI URL filters use odata-style syntax
+    // Power BI URL filters use odata-style syntax; escape embedded single quotes
+    // (OData doubles them, like SQL) so a filter value can't break out of its
+    // string literal and inject extra filter clauses.
+    const escapeOData = (s: string): string => s.replace(/'/g, "''");
     const filters: string[] = [];
     if (options.filter_utility) {
-      filters.push(`Utility eq '${options.filter_utility}'`);
+      filters.push(`Utility eq '${escapeOData(options.filter_utility)}'`);
     }
     if (options.filter_fy) {
-      filters.push(`FY eq '${options.filter_fy}'`);
+      filters.push(`FY eq '${escapeOData(options.filter_fy)}'`);
     }
     if (filters.length > 0) {
       params.push(`$filter=${encodeURIComponent(filters.join(" and "))}`);

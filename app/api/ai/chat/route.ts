@@ -260,12 +260,36 @@ export async function POST(request: Request) {
       sessionId = existingSession.id;
       existingContextSummary = existingSession.context_summary;
 
-      const [maxTurn] = await db
-        .select({ max_turn: sql<number>`COALESCE(MAX(${aiChatTurn.turn_number}), 0)` })
-        .from(aiChatTurn)
-        .where(eq(aiChatTurn.session_id, sessionId));
+      // Lock the session row before computing MAX(turn_number)+1 so concurrent
+      // requests for the same session (e.g. a double-submit) serialize on this row
+      // lock instead of racing on the SELECT — row locks work across pooled
+      // connections, unlike a session-level advisory lock.
+      const userMessageContent = lastUserMessage.content as string;
+      const results = await db.transaction(async (tx) => {
+        await tx.execute(sql`SELECT id FROM ai_chat_session WHERE id = ${sessionId} FOR UPDATE`);
 
-      turnNumber = (maxTurn?.max_turn ?? 0) + 1;
+        const [maxTurn] = await tx
+          .select({ max_turn: sql<number>`COALESCE(MAX(${aiChatTurn.turn_number}), 0)` })
+          .from(aiChatTurn)
+          .where(eq(aiChatTurn.session_id, sessionId));
+
+        const nextTurnNumber = (maxTurn?.max_turn ?? 0) + 1;
+
+        const [createdTurn] = await tx
+          .insert(aiChatTurn)
+          .values({
+            session_id: sessionId,
+            turn_number: nextTurnNumber,
+            user_message: userMessageContent,
+            prompt_version: getPromptVersion(),
+          })
+          .returning({ id: aiChatTurn.id });
+
+        return { turnNumber: nextTurnNumber, turnId: createdTurn.id };
+      });
+
+      turnNumber = results.turnNumber;
+      turnId = results.turnId;
     } else {
       const title = deriveSessionTitle(lastUserMessage.content);
       const userMessageContent = lastUserMessage.content as string;
@@ -295,20 +319,6 @@ export async function POST(request: Request) {
 
       sessionId = results.sessionId;
       turnId = results.turnId;
-    }
-
-    if (!turnId) {
-      const [createdTurn] = await db
-        .insert(aiChatTurn)
-        .values({
-          session_id: sessionId,
-          turn_number: turnNumber,
-          user_message: lastUserMessage.content,
-          prompt_version: getPromptVersion(),
-        })
-        .returning({ id: aiChatTurn.id });
-
-      turnId = createdTurn.id;
     }
 
     await db

@@ -38,7 +38,11 @@ export interface PbiQueryTemplate {
   aliases: string[];
 }
 
-const escapeDax = (s: string): string => s.replace(/'/g, "''");
+// Every template below interpolates this into a double-quoted DAX string literal
+// (`"${escapeDax(p.x)}"`), so it's `"` that needs escaping (DAX doubles it, like `""`)
+// — escaping `'` would do nothing to stop a value like `FY2023" || TRUE() || "` from
+// breaking out of the literal and injecting arbitrary DAX into the FILTER(...) call.
+const escapeDax = (s: string): string => s.replace(/"/g, '""');
 
 export const PBI_QUERIES: Record<string, PbiQueryTemplate> = {
   // ═══════════════════════════════════════════

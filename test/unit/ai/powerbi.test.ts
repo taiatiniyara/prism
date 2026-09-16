@@ -111,6 +111,18 @@ describe("DAX sanitizer", () => {
   });
 });
 
+describe("PBI query templates escape double quotes in params", () => {
+  it("neutralizes a param value that tries to break out of the DAX string literal", () => {
+    const template = PBI_QUERIES.saidi_by_utility;
+    const malicious = 'FY2023" || TRUE() || "';
+    const dax = template.dax({ fy: malicious });
+
+    // The injected `"` must come back doubled (`""`), not bare — a bare `"` would
+    // close the literal early and let the rest of `malicious` run as live DAX.
+    expect(dax).toContain('FY2023"" || TRUE() || ""');
+  });
+});
+
 describe("All 55 pre-built PBI query templates pass validation", () => {
   const templates = Object.values(PBI_QUERIES) as Array<{
     name: string;

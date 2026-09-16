@@ -74,7 +74,11 @@ export const aiChatTurn = pgTable(
     created_at: timestamp("created_at").defaultNow().notNull(),
   },
   (table) => [
-    index("ai_chat_turn_session_turn_idx").on(
+    // Unique (not just indexed): the API locks the session row (SELECT ... FOR
+    // UPDATE) before computing MAX(turn_number)+1 and inserting, but this constraint
+    // is the backstop that turns any remaining race into a clean insert failure
+    // instead of two turns silently sharing a turn_number.
+    unique("ai_chat_turn_session_turn_unique").on(
       table.session_id,
       table.turn_number,
     ),
