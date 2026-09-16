@@ -1,0 +1,542 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRISM AI — Status Overview</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --surface2: #334155;
+    --border: #475569;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+    --accent2: #818cf8;
+    --green: #34d399;
+    --yellow: #facc15;
+    --orange: #fb923c;
+    --red: #f87171;
+    --purple: #a78bfa;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.7;
+  }
+  .container { max-width: 1080px; margin: 0 auto; padding: 2.5rem 2rem 4rem; }
+  h1 {
+    font-size: 2.3rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.4rem;
+  }
+  h2 {
+    font-size: 1.4rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-top: 3rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--surface2);
+  }
+  h3 { font-size: 1.05rem; font-weight: 700; color: var(--text); margin-top: 1.5rem; margin-bottom: 0.6rem; }
+  h4 { font-size: 0.95rem; font-weight: 700; color: var(--accent2); margin-top: 1.1rem; margin-bottom: 0.4rem; }
+  p { margin-bottom: 0.85rem; font-size: 1.02rem; }
+  ul, ol { padding-left: 1.4rem; margin-bottom: 1rem; }
+  li { margin: 0.4rem 0; }
+  .subtitle { color: var(--muted); font-size: 1.1rem; margin-bottom: 0.5rem; }
+  .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+  code {
+    background: var(--surface2);
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.85em;
+    color: var(--accent);
+  }
+
+  .hero {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 1.75rem;
+    margin: 1.5rem 0 2rem;
+  }
+  .hero p:last-child { margin-bottom: 0; }
+
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin: 1.5rem 0; }
+  @media (max-width: 800px) { .stat-grid { grid-template-columns: repeat(2, 1fr); } }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem;
+    text-align: center;
+  }
+  .stat .num { font-size: 1.8rem; font-weight: 800; color: var(--accent); display: block; }
+  .stat .label { color: var(--muted); font-size: 0.8rem; margin-top: 0.25rem; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 1rem;
+  }
+  .card h3, .card h4 { margin-top: 0; color: var(--accent2); }
+  .card-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+  @media (max-width: 700px) { .card-grid { grid-template-columns: 1fr; } }
+
+  .badge {
+    display: inline-block;
+    padding: 0.2rem 0.65rem;
+    border-radius: 999px;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+    margin-left: 0.4rem;
+  }
+  .badge.live { background: #14532d; color: #4ade80; }
+  .badge.partial { background: #713f12; color: #facc15; }
+  .badge.planned { background: #4c1d1d; color: #f87171; }
+
+  .tag {
+    display: inline-block;
+    padding: 0.15rem 0.55rem;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    margin-right: 0.3rem;
+  }
+  .tag.tool { background: #1e1b4e; color: var(--accent2); }
+  .tag.db { background: #4e1b1b; color: var(--red); }
+  .tag.api { background: #2d1b4e; color: var(--purple); }
+
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.93rem; }
+  th { text-align: left; color: var(--accent); padding: 0.6rem 0.75rem; border-bottom: 2px solid var(--border); font-weight: 700; }
+  td { padding: 0.55rem 0.75rem; border-bottom: 1px solid var(--surface2); vertical-align: top; }
+
+  .flow { display: flex; align-items: center; gap: 0; flex-wrap: wrap; margin: 1rem 0; }
+  .flow-step {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.6rem 0.9rem;
+    text-align: center;
+    font-size: 0.82rem;
+    white-space: nowrap;
+  }
+  .flow-arrow { color: var(--muted); font-size: 1.1rem; margin: 0 0.4rem; white-space: nowrap; }
+
+  .quote-list { list-style: none; padding-left: 0; }
+  .quote-list li {
+    background: var(--surface2);
+    border-left: 3px solid var(--accent);
+    border-radius: 0 8px 8px 0;
+    padding: 0.5rem 0.85rem;
+    margin: 0.4rem 0;
+    font-style: italic;
+    color: var(--text);
+  }
+
+  .callout {
+    background: #1e3a5f;
+    border-left: 4px solid var(--accent);
+    padding: 0.9rem 1.1rem;
+    border-radius: 0 10px 10px 0;
+    margin: 1.25rem 0;
+    font-size: 0.98rem;
+  }
+  .callout.good { background: #1e3a2a; border-left-color: var(--green); }
+  .callout.warn { background: #3a2a1e; border-left-color: var(--orange); }
+  .callout.risk { background: #3a1e1e; border-left-color: var(--red); }
+
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 2rem;
+  }
+  .toc ol { padding-left: 1.4rem; columns: 2; }
+  .toc li { margin: 0.3rem 0; break-inside: avoid; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  @media (max-width: 700px) { .toc ol { columns: 1; } }
+
+  footer { color: var(--muted); font-size: 0.8rem; text-align: center; margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--surface2); }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>PRISM AI — Status Overview</h1>
+<p class="subtitle">Technical summary for reviewers and stakeholders</p>
+<p class="meta">Prepared 2026-09-16 · reflects <code>lib/ai/</code>, <code>app/api/ai/</code>, <code>components/ai/</code>, <code>db/schema/ai.ts</code> on branch <code>fix-cross-utility-kpi-period-scoping</code>, commit <code>df2d896</code></p>
+
+<div class="hero">
+  <p><strong>PRISM AI is a Claude-powered chat assistant built into the PRISM platform</strong> that lets Pacific utility staff, managers, and executives ask performance and reporting questions in plain English and get grounded, sourced answers instead of digging through dashboards or spreadsheets.</p>
+  <p>It's live and in daily use. This report covers what it does, how it's built, how it decides what to trust, how it's kept safe and cost-controlled, what's changed recently, and what's left to do.</p>
+</div>
+
+<div class="stat-grid">
+  <div class="stat"><span class="num">69</span><span class="label">registered AI tools</span></div>
+  <div class="stat"><span class="num">2</span><span class="label">data sources: PRISM database &amp; Power BI</span></div>
+  <div class="stat"><span class="num">2</span><span class="label">models — Sonnet primary, Haiku fallback</span></div>
+  <div class="stat"><span class="num">15</span><span class="label">dedicated AI test files</span></div>
+</div>
+
+<nav class="toc">
+  <strong style="color:var(--accent)">Contents</strong>
+  <ol>
+    <li><a href="#what">1. What it does</a></li>
+    <li><a href="#where">2. Where people use it</a></li>
+    <li><a href="#flow">3. How a question gets answered</a></li>
+    <li><a href="#persona">4. Persona &amp; reasoning style</a></li>
+    <li><a href="#sources">5. The two data sources &amp; how it picks between them</a></li>
+    <li><a href="#tools">6. The 69 tools</a></li>
+    <li><a href="#resilience">7. Reliability engineering</a></li>
+    <li><a href="#safety">8. Safety, privacy &amp; security</a></li>
+    <li><a href="#cost">9. Usage limits &amp; cost control</a></li>
+    <li><a href="#data">10. What gets stored</a></li>
+    <li><a href="#recent">11. What's changed recently</a></li>
+    <li><a href="#next">12. What's still on the to-do list</a></li>
+    <li><a href="#questions">13. Every kind of question it can answer</a></li>
+    <li><a href="#bottom-line">14. Bottom line</a></li>
+  </ol>
+</nav>
+
+<!-- 1 -->
+<h2 id="what">1. What It Does</h2>
+<p>PRISM AI is built on Anthropic's Claude models (Sonnet primary, Haiku as a cost/latency fallback), wired in through the Vercel AI SDK. Instead of a static dashboard, a user asks a question in their own words — "how's our SAIDI this year?" or "who hasn't submitted their data yet?" — and the assistant works out what's being asked, calls one or more of 69 specialised tools to fetch the real numbers, and answers conversationally, in the voice of a knowledgeable energy-sector advisor rather than a database readout.</p>
+<p>It doesn't just recite figures: it's instructed to diagnose what a number means for a utility of that size, connect it to related metrics, benchmark it against targets and peers, and recommend a next step — while clearly separating stated fact from its own judgment (see §4). Answers stream in token-by-token, and while the assistant is working, the interface shows a live, plain-English list of what it's currently checking rather than a generic spinner.</p>
+
+<!-- 2 -->
+<h2 id="where">2. Where People Use It</h2>
+<div class="card-grid">
+  <div class="card">
+    <h3>Floating chat bubble</h3>
+    <p><code>components/ai/floating-chatbot.tsx</code> — a launcher in the bottom-right corner on every page (except the dedicated chat page, to avoid mounting it twice). Opens a slide-in drawer.</p>
+  </div>
+  <div class="card">
+    <h3>Full chat page</h3>
+    <p><code>app/prism-ai/page.tsx</code> — the same chat surface at full width, with a sidebar for switching between past conversations.</p>
+  </div>
+  <div class="card">
+    <h3>Usage dashboard (DEV/BMO only)</h3>
+    <p><code>app/settings/ai/usage/page.tsx</code> — an admin-only view of usage volume, spend, per-user activity, tool performance, and model health, described fully in §9–10.</p>
+  </div>
+</div>
+
+<!-- 3 -->
+<h2 id="flow">3. How a Question Gets Answered</h2>
+<p>Every chat message goes through the same pipeline, entering at <code>POST app/api/ai/chat/route.ts</code>:</p>
+<div class="flow">
+  <div class="flow-step">Origin + rate-limit + budget checks</div><div class="flow-arrow">→</div>
+  <div class="flow-step">Guardrail input scan</div><div class="flow-arrow">→</div>
+  <div class="flow-step">Load session + resolve data source</div><div class="flow-arrow">→</div>
+  <div class="flow-step">Build prompt + tool list</div><div class="flow-arrow">→</div>
+  <div class="flow-step">Model call (up to 10 tool-use steps)</div><div class="flow-arrow">→</div>
+  <div class="flow-step">Stream answer to browser</div><div class="flow-arrow">→</div>
+  <div class="flow-step">Persist turn + tool calls</div>
+</div>
+<ul>
+  <li><strong>Origin check</strong> — the request's browser origin must exactly match the configured app URL (a full parsed-origin comparison, not a simple prefix match, which closes a subdomain-spoofing gap a naive check would leave open).</li>
+  <li><strong>Rate limit &amp; budget</strong> are checked before the model is ever called, so a blocked request costs nothing (§9).</li>
+  <li><strong>Audience register</strong> — the user's role (CEO, manager, external stakeholder, etc.) selects one of 7 tone/framing presets the prompt uses, so the same fact is explained differently to an executive than to a donor (§4). External users can self-declare their stakeholder type (government, consultant, donor, researcher).</li>
+  <li><strong>Conversation summarization</strong> — once a conversation passes 8 exchanges, a cheap background model call condenses everything said so far (topics, key findings, which utility/period was discussed) into a compact summary that's reused on later turns instead of replaying the entire history — keeps long conversations fast and within the model's context limit.</li>
+  <li><strong>Live progress streaming</strong> — the connection carries text, "thinking" narration, and tool start/end events on separate channels simultaneously, which is what powers the real-time "Checking your KPI submission status…" progress list instead of a static spinner.</li>
+  <li><strong>Empty-answer recovery</strong> — in rare cases a tool-using turn can finish with no visible text (a known model/SDK edge case). The system detects this and silently retries once with a nudge to produce a final answer, invisibly to the user, before giving up.</li>
+</ul>
+
+<!-- 4 -->
+<h2 id="persona">4. Persona &amp; Reasoning Style</h2>
+<p>The assistant's personality and rules live in a single large system prompt (<code>lib/ai/prompt.ts</code>, current version <code>2026-07-13-medallion-v2</code>, roughly 9,000 tokens). Rather than a generic chatbot, it's instructed to behave as an "Energy Expert" for the Pacific Power Association. Key elements:</p>
+<ul>
+  <li><strong>Conversational tone rules</strong> — no narrating its own process ("let me check Power BI…"), contractions allowed, varied sentence length, matches the user's energy level.</li>
+  <li><strong>A 5-step reasoning chain</strong> — Diagnose → Connect → Position → Recommend → Caveat — which the chat interface renders as collapsible sections rather than a wall of text.</li>
+  <li><strong>An opinion-safety rule</strong> — the assistant may offer judgment or a recommendation, but every opinion must be tied to a real retrieved number, clearly labelled as opinion (not fact), and hedged ("this strongly suggests…" rather than "you must…").</li>
+  <li><strong>7 audience registers</strong> — CEO/Executive/Board, Manager/Operations, Staff/Analyst, Government/Regulator, Consultant, Donor/DFI, and Education/Researcher — each shaping emphasis on the same underlying facts (a donor gets impact/value-for-money framing; a researcher gets method and data caveats up front).</li>
+  <li><strong>A hard rule against confusing "submitted" with "performing well"</strong> — tools that check whether paperwork/data has been submitted must never be presented as if they were performance results. This is repeated explicitly in the prompt and covered by tests.</li>
+  <li><strong>A fallback protocol for empty results</strong> — if the most recent period has no data, it's told to step back through the last 3–4 fiscal years/reporting periods before concluding there's a genuine data gap, rather than immediately reporting "no data."</li>
+  <li><strong>An anti-injection clause</strong> — instructed never to reveal its own instructions or comply with "ignore previous instructions"-style requests, backed by a separate input-side filter (§8).</li>
+</ul>
+<div class="callout">
+  <strong>Prompt caching (live).</strong> Because the ~9K-token system prompt and the ~69 tool schemas are usually identical across every step of a multi-step answer, and often across turns within one conversation, they're marked for Anthropic's prompt caching. A cache hit skips reprocessing that fixed prefix, which is the main lever for getting the first word of an answer back faster on tool-using questions.
+</div>
+
+<!-- 5 -->
+<h2 id="sources">5. The Two Data Sources &amp; How It Picks Between Them</h2>
+<p>The assistant can pull performance numbers from two independent places: PRISM's own database (a curated "gold layer" of computed KPIs), or a connected Power BI dataset queried live. Which one is treated as authoritative — and whether the other is used as a backup at all — is a setting an administrator controls, not something fixed in code.</p>
+<table>
+  <tr><th>Setting</th><th>Values</th><th>What it controls</th></tr>
+  <tr><td><code>ai_primary_source</code></td><td><code>webapp</code> | <code>powerbi</code></td><td>Which source is tried first for every performance question.</td></tr>
+  <tr><td><code>ai_secondary_source</code></td><td><code>webapp</code> | <code>powerbi</code> | <code>none</code></td><td>Whether there's a fallback source at all (<code>none</code> = isolation mode, primary-only).</td></tr>
+</table>
+<p>Both the instructions given to the model and the actual list of tools it's allowed to call are derived from this same setting, computed once per request — so the model can never be told to prefer one source while actually being handed tools for the other.</p>
+<div class="callout warn">
+  <strong>Isolation is enforced structurally, not just by instruction.</strong> When the secondary source is set to <code>none</code>, every tool belonging to the non-primary source is physically removed from the list the model sees before the request is sent — the team judged that relying on the prompt alone ("please don't use Power BI") was too leaky a guarantee for a hard boundary like this.
+</div>
+<p>When a backup source <em>is</em> configured, the model follows a strict order: try the primary source; if it succeeds, stop there — it never cross-checks the other source for the same number. If the primary errors or comes back empty, it first tries nearby fiscal years/periods before falling back to the secondary source, and if both are genuinely empty, it says so honestly rather than substituting the wrong kind of data (e.g. submission status standing in for a performance number).</p>
+
+<!-- 6 -->
+<h2 id="tools">6. The 69 Tools</h2>
+<p>Tools are the assistant's only way of touching real data — it cannot query the database or Power BI directly, only through one of these 69 predefined, individually-scoped functions.</p>
+<div class="card-grid">
+  <div class="card">
+    <h4><span class="tag tool">PRISM-native</span> 39 tools</h4>
+    <p>Administrative and workflow tools — review queue, submission/input status, KPI diagnostics, governance audit trail, custom KPI request status, guided data-entry help — plus a set of 6 direct performance tools that read PRISM's own KPI data (targets, correlation between KPIs, cross-utility comparison, compliance status, data quality, what-changed-since-last-time).</p>
+  </div>
+  <div class="card">
+    <h4><span class="tag tool">Power BI</span> 30 tools</h4>
+    <p>Schema discovery, live query execution against a catalog of pre-built templates, risk scoring, peer grouping, donor-report generation, renewable-energy and tariff scenario modelling, forecasting, correlation and anomaly detection, and deep-links back into the relevant Power BI report.</p>
+  </div>
+</div>
+<p>Both tool families sit on top of a large shared data layer (roughly 30 files) that does the actual database/DAX querying, benchmarking math, schema lookups, and a live integration with the World Bank's public API for country income classification and lending-category context (no API key needed).</p>
+<h4>Other notable capabilities</h4>
+<ul>
+  <li><strong>Visualization</strong> — the assistant can render its own answer as a table, bar chart, line chart, leaderboard, scatter plot, radar chart, sankey diagram, or heatmap, drawn client-side.</li>
+  <li><strong>Export</strong> — answers can be exported straight to CSV or Excel via a dedicated export endpoint (§8 covers how that's kept safe).</li>
+  <li><strong>Self-reporting</strong> — a user (or admin) can ask the assistant how much they've used it, and it answers from its own usage records.</li>
+  <li><strong>Admin-gated tools</strong> — the governance-audit and platform-configuration tools are blocked outright for anyone who isn't a DEV or BMO-role user, enforced in code, not just by the prompt.</li>
+</ul>
+<h4>Plain-English tool narration</h4>
+<p>While the assistant works, it doesn't show raw function names — a translation table converts each tool into a present-tense description a non-technical user can follow (e.g. a risk-scoring tool becomes "Calculating a risk score from the Power BI data"). Any tool without an explicit translation still gets a readable auto-generated label rather than showing the internal name.</p>
+<div class="callout warn">
+  <strong>Known small gap:</strong> two real, callable tools (a World Bank context lookup and an input-field explainer) aren't yet listed in that translation table, so they currently fall back to a generic auto-formatted label ("Working on worldbank context") instead of a polished one. Cosmetic only — the tools work correctly — and it's a one-line fix once prioritised.
+</div>
+
+<!-- 7 -->
+<h2 id="resilience">7. Reliability Engineering</h2>
+<p>All model calls funnel through one shared service layer, which layers several independent safety nets so that a hiccup in the AI provider doesn't become a visible failure for the user:</p>
+<table>
+  <tr><th>Mechanism</th><th>What it does</th></tr>
+  <tr><td>Automatic retry</td><td>Up to 3 attempts with increasing delay (1s, 2s, 4s) for temporary failures (overload, timeout, rate-limited). A genuinely bad request (bad auth, malformed input) fails immediately instead of retrying pointlessly.</td></tr>
+  <tr><td>Model fallback</td><td>If the primary model (Sonnet) is still failing after its retries, the whole request is retried against a second, faster/cheaper model (Haiku) with its own retry budget.</td></tr>
+  <tr><td>Circuit breaker</td><td>If a model fails 5 times in a row, calls to it are paused for 30 seconds (rather than continuing to hammer a struggling service), then automatically resume.</td></tr>
+  <tr><td>Empty-answer nudge</td><td>If a turn that used tools somehow finishes with no visible text, one extra attempt is made with an instruction to produce a final answer before the system gives up.</td></tr>
+  <tr><td>First-response error check</td><td>Because a streaming response can technically "start" before the model has actually produced anything, the system peeks at the very first piece of the response so a provider-side error can still trigger the retry/fallback logic, instead of silently reaching the user as a broken stream.</td></tr>
+  <tr><td>Context-length guard</td><td>Very long conversations are automatically trimmed to fit the model's memory limit, with a small portion always reserved for the tool definitions; if a conversation truly can't fit, the user gets a clear "please start a new chat" message rather than a cryptic failure.</td></tr>
+</table>
+<div class="callout risk">
+  <strong>Extended "thinking" mode is currently switched off.</strong> Testing found that combining it with multi-step tool use produced blank final answers — the model's internal reasoning wasn't being carried through correctly across tool steps by the underlying SDK. It will only be re-enabled once that combination is independently verified to work.
+</div>
+
+<!-- 8 -->
+<h2 id="safety">8. Safety, Privacy &amp; Security</h2>
+<div class="card-grid">
+  <div class="card">
+    <h4>Input filtering</h4>
+    <p>Messages are scanned before they ever reach the model: email addresses, phone numbers, requests for private reviewer comments, credential/secret-sounding keywords, bulk-export phrasing, and known prompt-injection patterns ("ignore previous instructions", "reveal your system prompt", etc.) are all blocked. Messages are also capped at 4,000 characters.</p>
+  </div>
+  <div class="card">
+    <h4>Output filtering</h4>
+    <p>The assistant's own response text is scanned again before it's shown or saved, stripping out any email addresses, phone numbers, or similar personal data it might otherwise echo back from something a tool returned.</p>
+  </div>
+  <div class="card">
+    <h4>Restricted tools stay restricted</h4>
+    <p>The governance-audit and platform-configuration tools check the caller's actual role in code — a regular user cannot access them no matter how the question is phrased.</p>
+  </div>
+  <div class="card">
+    <h4>Origin validation</h4>
+    <p>Every AI request is checked against an exact match of the app's configured URL, closing a subdomain-spoofing trick that a looser "starts with" check would have allowed.</p>
+  </div>
+  <div class="card">
+    <h4>Query injection protection</h4>
+    <p>Before any AI-constructed query is sent to Power BI, it's sanitized and validated so a cleverly worded user prompt can't inject an arbitrary query.</p>
+  </div>
+  <div class="card">
+    <h4>Export safety</h4>
+    <p>Exported CSV/Excel files have any cell that could be mistaken for a spreadsheet formula (starting with <code>=</code>, <code>+</code>, <code>-</code>, or <code>@</code>) neutralised, so opening an export can't trigger a hidden command. Row/column/cell-length limits and filename sanitisation are also applied.</p>
+  </div>
+  <div class="card">
+    <h4>Data stays within your organisation</h4>
+    <p>By default, every tool scopes its results to the current user's own utility/organisation; a broader cross-utility comparison only happens when explicitly asked for. This is covered by its own dedicated test suite.</p>
+  </div>
+</div>
+
+<!-- 9 -->
+<h2 id="cost">9. Usage Limits &amp; Cost Control</h2>
+<p>Each question costs a small, real amount to process, so the platform enforces limits automatically, backed by the database (with an in-memory fallback if that write ever fails, so a limiting glitch fails open rather than blocking everyone):</p>
+<ul>
+  <li><strong>Speed limits</strong> — a default of 20 requests per minute and 100 per 15 minutes, per person, so no single user (accidentally or otherwise) can overwhelm the system for everyone else.</li>
+  <li><strong>Daily spending cap</strong> — each user has a daily budget (defaulting to $5.00, configurable). Once a user's estimated spend for the day hits that cap, further requests are blocked with a clear "$X of $Y used" message until it resets.</li>
+  <li><strong>Cost estimation</strong> — every request's cost is estimated from real per-model pricing (the primary and fallback models are priced differently) and logged.</li>
+  <li><strong>Admin usage dashboard</strong> — shows daily volume, per-user spend leaderboards, which tools are used most and how often they error, and how often the system had to fall back from the primary model to the backup one.</li>
+</ul>
+<div class="callout warn">
+  <strong>Backend-only today.</strong> The daily spending cap is fully enforced server-side — a user really is blocked once they hit it — but there's no visible cost indicator or "80% of your budget used" warning inside the chat window itself yet. A user who hits the limit is simply told to wait, without any earlier heads-up. This is the top item on the to-do list below.
+</div>
+
+<!-- 10 -->
+<h2 id="data">10. What Gets Stored</h2>
+<p>Every conversation is persisted so it can be revisited, reviewed, and measured:</p>
+<table>
+  <tr><th>What's stored</th><th>Purpose</th></tr>
+  <tr><td>Conversations</td><td>One record per chat, auto-titled from the opening message, with a rolling summary once it gets long, and the ability to soft-delete.</td></tr>
+  <tr><td>Individual exchanges</td><td>Each question-and-answer pair: which model answered, whether it had to fall back to the backup model, how long it took, and any error.</td></tr>
+  <tr><td>Tool calls</td><td>Every lookup the assistant made to answer a question — what it asked for, what came back, whether it succeeded, and how fresh/complete that data was.</td></tr>
+  <tr><td>Feedback</td><td>Thumbs up/down on any answer, plus an optional written correction.</td></tr>
+  <tr><td>Review queue</td><td>Answers flagged (e.g. by negative feedback) for a human to review and mark approved, rejected, or needing revision.</td></tr>
+  <tr><td>Usage &amp; cost metrics</td><td>Daily per-user totals feeding the admin dashboard and the spending cap.</td></tr>
+</table>
+
+<!-- 11 -->
+<h2 id="recent">11. What's Changed Recently</h2>
+<p>Over the past two weeks, work has focused on making the assistant feel faster, clearer, and more trustworthy:</p>
+<table>
+  <tr><th>Change</th><th>What it means for users</th></tr>
+  <tr><td>Plain-English tool narration</td><td>The assistant now says things like "Checking your KPI submission status" while it works, instead of showing a technical function name.</td></tr>
+  <tr><td>Live progress display</td><td>Users see, in real time, which step the assistant is currently on, instead of a generic "Thinking…" spinner.</td></tr>
+  <tr><td>Prompt caching enabled</td><td>The assistant's large system prompt and tool list are now cached between calls instead of reprocessed every time, speeding up answers — especially ones that need to look something up.</td></tr>
+  <tr><td>Better error diagnostics</td><td>When something does go wrong, the real underlying cause is now captured, which shortens how long any issue takes to fix.</td></tr>
+  <tr><td>Fixed a cross-utility comparison bug</td><td>A tool for comparing a KPI across utilities was only checking one utility instead of all of them; this has been corrected.</td></tr>
+  <tr><td>Export &amp; usage endpoints added</td><td>New CSV/Excel export capability and a usage-reporting API, plus a fix ensuring rate-limit counters can't double-count under concurrent load.</td></tr>
+</table>
+<p>Further back (over the prior few weeks): the "Energy Expert" persona and 5-step reasoning style were introduced, live World Bank country-data integration was added, the choice of primary data source became an admin-configurable setting rather than fixed in code, and the tool registry was split into clean, separately-maintained modules.</p>
+
+<!-- 12 -->
+<h2 id="next">12. What's Still on the To-Do List</h2>
+<p>Of 12 tracked improvement items, <strong>10 are complete</strong>. The remaining 2 are both low-risk and already scoped:</p>
+<table>
+  <tr><th>Item</th><th>Status</th><th>What it would add</th></tr>
+  <tr><td>Visible budget warning</td><td><span class="badge partial">IN PROGRESS</span></td><td>A cost indicator and an "80% of your daily budget used" banner directly in the chat window. The underlying limit already works server-side (§9) — this adds the missing visible warning.</td></tr>
+  <tr><td>Shorter system prompt</td><td><span class="badge planned">PLANNED</span></td><td>Moving a large, mostly-static Power BI reference section out of the prompt and into individual tool descriptions (where it's only loaded when actually relevant), aiming for a meaningful token/cost reduction beyond what caching already provides, with no drop in answer quality.</td></tr>
+</table>
+
+<!-- 13 -->
+<h2 id="questions">13. Every Kind of Question It Can Answer</h2>
+<p>Every question below maps to a real, currently-registered tool — none of this is aspirational. The model also handles paraphrases, follow-ups, and combinations of these, so this is a representative sample of each category rather than the literal complete set of phrasings.</p>
+
+<h3>Performance &amp; KPI values</h3>
+<ul class="quote-list">
+  <li>What's our SAIDI for this fiscal year?</li>
+  <li>How much electricity did we generate last quarter?</li>
+  <li>What are our current system losses?</li>
+  <li>How does our SAIFI compare to last year?</li>
+  <li>What changed in our KPIs since the last reporting period?</li>
+  <li>Are we within our regulatory compliance limits?</li>
+  <li>Is there a correlation between our losses and revenue?</li>
+  <li>Compare [KPI] across all utilities in the Pacific.</li>
+  <li>What's our target for [KPI], and are we meeting it?</li>
+  <li>What would our losses look like if generation increased 10%?</li>
+  <li>Break our performance down by service area.</li>
+</ul>
+
+<h3>Submission &amp; data-entry status</h3>
+<ul class="quote-list">
+  <li>Has [utility] submitted their data for this period yet?</li>
+  <li>What's our data submission completion rate?</li>
+  <li>Which KPIs are still pending review?</li>
+  <li>What inputs are missing to complete [KPI]?</li>
+  <li>Why is this KPI showing as incomplete or in error?</li>
+  <li>What's the status of my custom KPI request?</li>
+  <li>Show me the review queue.</li>
+  <li>Walk me through how to enter data for [KPI] — what do I need and where do I find it?</li>
+  <li>What report periods, categories, and service areas are available?</li>
+</ul>
+
+<h3>Benchmarking &amp; peer comparison</h3>
+<ul class="quote-list">
+  <li>How do we compare against our peer group?</li>
+  <li>Who are the top and bottom performers on [metric]?</li>
+  <li>Which utilities are most similar to ours?</li>
+  <li>What's the PPA target and Pacific regional average for [KPI]?</li>
+  <li>Where do we rank on data completeness among Pacific utilities?</li>
+</ul>
+
+<h3>Trends, anomalies &amp; forecasting</h3>
+<ul class="quote-list">
+  <li>How has our submission completeness trended over the last few periods?</li>
+  <li>Is there anything unusual in our recent data?</li>
+  <li>Forecast our generation for next fiscal year.</li>
+  <li>What's the trend in our tariff recovery?</li>
+  <li>Compare this reporting period against the previous ones.</li>
+</ul>
+
+<h3>Data quality, governance &amp; risk</h3>
+<ul class="quote-list">
+  <li>Run a data quality check on our submissions.</li>
+  <li>What's our risk score, and what's driving it?</li>
+  <li>Show me the governance audit trail — who owns what's still pending?</li>
+  <li>What are the AI review queue's flagged conversations? (admin only)</li>
+</ul>
+
+<h3>Financial, tariff, donor &amp; strategy modelling</h3>
+<ul class="quote-list">
+  <li>Simulate a 10% tariff increase — what's the revenue impact?</li>
+  <li>Model a renewable-energy scenario for our generation mix.</li>
+  <li>What donor-funded projects affect us, and where are the reporting gaps?</li>
+  <li>What's the likely impact of [project] on our KPIs?</li>
+  <li>What should we prioritise this quarter?</li>
+  <li>Give me a briefing on our overall performance.</li>
+  <li>Are we meeting our regulatory reporting requirements?</li>
+</ul>
+
+<h3>Country &amp; economic context</h3>
+<ul class="quote-list">
+  <li>What's [country]'s income classification and lending category?</li>
+  <li>How does our income level affect what "affordable tariffs" means for us?</li>
+  <li>What active World Bank-funded projects are there in our country?</li>
+  <li>Show me the Pacific sub-region/country hierarchy.</li>
+</ul>
+
+<h3>Definitions &amp; explanations</h3>
+<ul class="quote-list">
+  <li>What does SAIDI mean and how is it calculated?</li>
+  <li>What exactly should I enter for [input field]?</li>
+  <li>What are the inclusion/exclusion rules for [KPI]?</li>
+</ul>
+
+<h3>Reports, summaries &amp; alerts</h3>
+<ul class="quote-list">
+  <li>Give me an executive digest for my Monday meeting.</li>
+  <li>Are there any threshold alerts I should know about?</li>
+  <li>Pull up the [utility] Power BI report.</li>
+  <li>Link me straight to the relevant dashboard.</li>
+</ul>
+
+<h3>Visualization &amp; export</h3>
+<ul class="quote-list">
+  <li>Show this as a bar chart / line chart / leaderboard.</li>
+  <li>Export this to Excel or CSV.</li>
+  <li>Chart our generation trend over the last 12 months.</li>
+</ul>
+
+<h3>Power BI platform diagnostics (mostly admin)</h3>
+<ul class="quote-list">
+  <li>What datasets are available in Power BI?</li>
+  <li>What's the schema for [table]?</li>
+  <li>How fresh is the Power BI data right now?</li>
+  <li>Diagnose why the Power BI connection is failing.</li>
+  <li>What report pages are available?</li>
+  <li>List the pre-built query templates.</li>
+</ul>
+
+<h3>AI platform / meta</h3>
+<ul class="quote-list">
+  <li>How much AI usage have I had this month?</li>
+  <li>What follow-up questions should I ask next?</li>
+</ul>
+
+<div class="callout">
+  <strong>The audience shifts the framing, not the tool.</strong> The same question — e.g. "how are we doing?" — is answered differently depending on the asker's role: a CEO gets a decision-and-tradeoff framing, a donor gets impact and value-for-money, a researcher gets method and data caveats first. The underlying data lookup is identical; only the language around it changes.
+</div>
+
+<!-- 14 -->
+<h2 id="bottom-line">14. Bottom Line</h2>
+<div class="callout good">
+  PRISM AI is live, actively used, and built on a solid technical foundation: 69 real tools across two independently-selectable data sources, layered reliability (retries, fallback model, circuit breaker), and concrete guardrails around privacy, security, and cost. 10 of 12 tracked improvement items are shipped. What remains is polish — a visible cost indicator and a prompt-size reduction — neither of which blocks day-to-day use.
+</div>
+
+<footer>PRISM AI — Status Overview · companion to the full technical architecture document (<code>prism-ai-architecture.html</code>) · PRISM 2 project</footer>
+
+</div>
+</body>
+</html>

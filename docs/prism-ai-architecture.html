@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PRISM — PRISM AI Architecture &amp; Status</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --surface2: #334155;
+    --border: #475569;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+    --accent2: #818cf8;
+    --green: #34d399;
+    --yellow: #facc15;
+    --orange: #fb923c;
+    --red: #f87171;
+    --purple: #a78bfa;
+    --pink: #f472b6;
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+  .container { max-width: 1280px; margin: 0 auto; padding: 2rem; }
+  h1 {
+    font-size: 2.4rem;
+    font-weight: 800;
+    background: linear-gradient(135deg, var(--accent), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 0.25rem;
+  }
+  h2 {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--accent);
+    margin-top: 3rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 2px solid var(--surface2);
+  }
+  h3 {
+    font-size: 1.15rem;
+    font-weight: 600;
+    color: var(--text);
+    margin-top: 1.5rem;
+    margin-bottom: 0.75rem;
+  }
+  h4 { font-size: 1rem; font-weight: 600; color: var(--accent2); margin-top: 1.25rem; margin-bottom: 0.5rem; }
+  p { margin-bottom: 0.75rem; }
+  ul, ol { padding-left: 1.4rem; margin-bottom: 0.75rem; }
+  li { margin: 0.25rem 0; }
+  .subtitle { color: var(--muted); font-size: 1.05rem; margin-bottom: 0.5rem; }
+  .meta { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+    margin-bottom: 1rem;
+  }
+  .card-grid { display: grid; gap: 1rem; }
+  .card-grid.cols2 { grid-template-columns: repeat(2, 1fr); }
+  .card-grid.cols3 { grid-template-columns: repeat(3, 1fr); }
+  .card-grid.cols4 { grid-template-columns: repeat(4, 1fr); }
+  @media (max-width: 900px) {
+    .card-grid.cols2, .card-grid.cols3, .card-grid.cols4 { grid-template-columns: 1fr; }
+  }
+  .card h4 { margin-top: 0; }
+  .card .num { font-size: 1.8rem; font-weight: 800; color: var(--accent); }
+  .card .label { color: var(--muted); font-size: 0.8rem; }
+
+  .flow { display: flex; align-items: center; gap: 0; flex-wrap: wrap; margin: 1rem 0; }
+  .flow-step {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+    text-align: center;
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+  .flow-arrow { color: var(--muted); font-size: 1.2rem; margin: 0 0.5rem; white-space: nowrap; }
+
+  .tag {
+    display: inline-block;
+    padding: 0.15rem 0.55rem;
+    border-radius: 4px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    margin-right: 0.3rem;
+  }
+  .tag.page { background: #1e3a5f; color: var(--accent); }
+  .tag.api { background: #2d1b4e; color: var(--purple); }
+  .tag.service { background: #1a3d2e; color: var(--green); }
+  .tag.component { background: #3d2e1a; color: var(--orange); }
+  .tag.db { background: #4e1b1b; color: var(--red); }
+  .tag.tool { background: #1e1b4e; color: var(--accent2); }
+
+  .badge {
+    display: inline-block;
+    padding: 0.15rem 0.5rem;
+    border-radius: 999px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    letter-spacing: 0.02em;
+  }
+  .badge.live { background: #14532d; color: #4ade80; }
+  .badge.partial { background: #713f12; color: #facc15; }
+  .badge.backlog { background: #4c1d1d; color: #f87171; }
+
+  table { width: 100%; border-collapse: collapse; margin: 1rem 0; font-size: 0.9rem; }
+  th { text-align: left; color: var(--accent); padding: 0.6rem 0.75rem; border-bottom: 2px solid var(--border); font-weight: 600; }
+  td { padding: 0.5rem 0.75rem; border-bottom: 1px solid var(--surface2); vertical-align: top; }
+  tr:hover td { background: var(--surface2); }
+  code {
+    background: var(--surface2);
+    padding: 0.15rem 0.4rem;
+    border-radius: 4px;
+    font-size: 0.85em;
+    color: var(--accent);
+  }
+  pre {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 1rem;
+    overflow-x: auto;
+    font-size: 0.82rem;
+    line-height: 1.5;
+    margin: 1rem 0;
+  }
+  pre code { background: none; padding: 0; color: var(--text); }
+
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem 1.5rem;
+    margin-bottom: 2rem;
+  }
+  .toc ol { padding-left: 1.5rem; columns: 2; }
+  .toc li { margin: 0.35rem 0; break-inside: avoid; }
+  .toc a { color: var(--accent); text-decoration: none; }
+  .toc a:hover { text-decoration: underline; }
+  @media (max-width: 700px) { .toc ol { columns: 1; } }
+
+  hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+
+  .callout {
+    background: #1e3a5f;
+    border-left: 4px solid var(--accent);
+    padding: 0.75rem 1rem;
+    border-radius: 0 8px 8px 0;
+    margin: 1rem 0;
+    font-size: 0.9rem;
+  }
+  .callout.warn { background: #3a2a1e; border-left-color: var(--orange); }
+  .callout.risk { background: #3a1e1e; border-left-color: var(--red); }
+  .callout.good { background: #1e3a2a; border-left-color: var(--green); }
+
+  footer { color: var(--muted); font-size: 0.8rem; text-align: center; margin-top: 3rem; padding-top: 1.5rem; border-top: 1px solid var(--surface2); }
+</style>
+</head>
+<body>
+<div class="container">
+
+<h1>PRISM AI — Architecture &amp; Current Status</h1>
+<p class="subtitle">The in-app AI assistant for the PRISM benchmarking platform (Pacific Power Association)</p>
+<p class="meta">Snapshot as of 2026-09-16 · compiled from <code>lib/ai/</code>, <code>app/api/ai/</code>, <code>components/ai/</code>, <code>db/schema/ai.ts</code>, git history, and <code>.scratch/ai-improvements/</code></p>
+
+<nav class="toc">
+  <strong style="color:var(--accent)">Contents</strong>
+  <ol>
+    <li><a href="#overview">1. Overview</a></li>
+    <li><a href="#surfaces">2. Where It Lives (UI Surfaces)</a></li>
+    <li><a href="#request-flow">3. Request Flow</a></li>
+    <li><a href="#persona">4. Persona &amp; System Prompt</a></li>
+    <li><a href="#sources">5. Dual Data Source Model</a></li>
+    <li><a href="#tools">6. Tool Registry (69 tools)</a></li>
+    <li><a href="#resilience">7. Reliability: Retries, Fallback, Circuit Breaker</a></li>
+    <li><a href="#guardrails">8. Guardrails &amp; Security</a></li>
+    <li><a href="#rate-limits">9. Rate Limiting, Cost Tracking &amp; Budgets</a></li>
+    <li><a href="#persistence">10. Persistence &amp; Sessions</a></li>
+    <li><a href="#observability">11. Observability &amp; Admin Views</a></li>
+    <li><a href="#frontend">12. Frontend Components</a></li>
+    <li><a href="#recent">13. Recent Timeline (last ~2 weeks)</a></li>
+    <li><a href="#backlog">14. Known Gaps / Open Backlog</a></li>
+    <li><a href="#tests">15. Test Coverage</a></li>
+    <li><a href="#questions">16. Example Question Bank</a></li>
+    <li><a href="#files">17. File Index</a></li>
+  </ol>
+</nav>
+
+<!-- 1 -->
+<h2 id="overview">1. Overview</h2>
+<p>PRISM AI is a Claude-powered (<code>@ai-sdk/anthropic</code> + Vercel <code>ai</code> SDK v7) chat assistant embedded in the PRISM web app. It answers questions about utility performance (SAIDI/SAIFI, generation, losses, financials, tariffs, renewables) by calling ~70 tools that read either the PRISM database (via a medallion gold/silver layer) or a connected Power BI dataset — whichever the platform is configured to treat as primary. It streams responses, narrates its tool calls in plain English, persists full conversation history, and enforces rate limits, cost budgets, and content guardrails.</p>
+
+<div class="card-grid cols4">
+  <div class="card"><div class="num">69</div><div class="label">AI tool definitions</div></div>
+  <div class="card"><div class="num">2</div><div class="label">models — Sonnet primary, Haiku fallback</div></div>
+  <div class="card"><div class="num">~12.5k</div><div class="label">lines across lib/ai + api/ai + components/ai</div></div>
+  <div class="card"><div class="num">15</div><div class="label">AI-specific test files</div></div>
+</div>
+
+<!-- 2 -->
+<h2 id="surfaces">2. Where It Lives (UI Surfaces)</h2>
+<table>
+  <tr><th>Surface</th><th>Path</th><th>Notes</th></tr>
+  <tr><td>Floating chatbot</td><td><span class="tag component">component</span> <code>components/ai/floating-chatbot.tsx</code></td><td>Bottom-right launcher, present on every page except <code>/prism-ai</code> itself; slide-in drawer, Esc to close.</td></tr>
+  <tr><td>Full-page chat</td><td><span class="tag page">page</span> <code>app/prism-ai/page.tsx</code></td><td>Same <code>ChatPanel</code>, full viewport, with session sidebar.</td></tr>
+  <tr><td>AI usage dashboard</td><td><span class="tag page">page</span> <code>app/settings/ai/usage/page.tsx</code></td><td>DEV/BMO-only. Overview, per-user, tool-analytics, model-health tabs.</td></tr>
+</table>
+
+<!-- 3 -->
+<h2 id="request-flow">3. Request Flow</h2>
+<p>A single chat turn, end to end:</p>
+<div class="flow">
+  <div class="flow-step">Origin + rate-limit + budget checks</div><div class="flow-arrow">→</div>
+  <div class="flow-step">Guardrail input validation</div><div class="flow-arrow">→</div>
+  <div class="flow-step">Load/create session + turn row</div><div class="flow-arrow">→</div>
+  <div class="flow-step">Resolve primary/secondary source</div><div class="flow-arrow">→</div>
+  <div class="flow-step">Build system prompt + tools</div><div class="flow-arrow">→</div>
+  <div class="flow-step">streamText (Sonnet, up to 10 steps)</div><div class="flow-arrow">→</div>
+  <div class="flow-step">SSE stream to client</div><div class="flow-arrow">→</div>
+  <div class="flow-step">Persist turn + tool calls</div>
+</div>
+<p>Entry point: <span class="tag api">POST</span> <code>app/api/ai/chat/route.ts</code>. Key behaviours baked into that route:</p>
+<ul>
+  <li><strong>Origin check</strong> (<code>lib/ai/origin.ts</code>) — request's <code>Origin</code>/<code>Referer</code> must exactly match the configured app URL (parsed-origin comparison, not a prefix check, to close a subdomain-spoofing hole).</li>
+  <li><strong>Rate limit + cost budget</strong> checked before any model call (see §9).</li>
+  <li><strong>Role-aware audience register</strong> — <code>getAudienceRegister()</code> maps the user's role (CEO/BMO/EXT/etc.) to one of 7 registers the prompt uses to calibrate tone; <span class="tag">EXT</span> users can self-declare a stakeholder type (government / consultant / donor / researcher) via <code>stakeholder_type</code> on the request body.</li>
+  <li><strong>Conversation summarization</strong> — once a session passes 8 user turns, a background <code>runAiGenerate</code> call (Haiku-class, cheap) distills prior turns into a JSON <code>context_summary</code> (topics, key findings, utility/period mentions) stored on the session and re-injected on later turns, instead of replaying full history.</li>
+  <li><strong>SSE protocol</strong> — a custom multi-channel line protocol over one stream: <code>0:</code> text delta, <code>1:</code> reasoning delta (tool narration text), <code>2:</code> tool-start/tool-end events (drives the live "Thinking" panel), <code>3:</code> error.</li>
+  <li><strong>Empty-answer recovery</strong> — if a tool-using turn ends with no text (a known Anthropic/AI-SDK-v7 edge case), the route silently re-runs via <code>runAiGenerate</code> with a synthesis nudge before giving up, invisibly to the client since nothing was sent on channel 0 yet.</li>
+</ul>
+
+<!-- 4 -->
+<h2 id="persona">4. Persona &amp; System Prompt</h2>
+<p><code>lib/ai/prompt.ts</code> defines <strong>PRISM AI</strong> — branded as an "Energy Expert" persona for the Pacific Power Association. The prompt (current version tag <code>AI_PROMPT_VERSION = "2026-07-13-medallion-v2"</code>, defined in <code>lib/ai/types.ts</code>) is a single large template (~255 lines / an estimated ~9K tokens per the service-layer comment) with a <code>{{DATA_SOURCE_POLICY}}</code> token substituted at request time based on the configured source (§5).</p>
+<h4>What the prompt encodes</h4>
+<ul>
+  <li><strong>Personality rules</strong> — conversational tone, no process narration ("never say 'let me check Power BI'"), contractions, varied sentence length, matches user's energy.</li>
+  <li><strong>A 5-step expert reasoning chain</strong> — Diagnose → Connect → Position → Recommend → Caveat — formatted as numbered steps the UI renders as collapsible sections (see §12, structured reasoning UI).</li>
+  <li><strong>An opinion-safety protocol</strong> — the model may now offer judgment/recommendations, but every opinion must be grounded in a retrieved figure, labelled separately from fact, and hedged ("this strongly suggests…", never "you must").</li>
+  <li><strong>7 audience registers</strong> — CEO/Executive/Board, Manager/Operations, Staff/Analyst, Government/Regulator, Consultant, Donor/DFI, Education/Researcher — each with a different emphasis on the same underlying facts.</li>
+  <li><strong>Medallion architecture map</strong> — tells the model which gold/silver views back which native tools (<code>gold.fact_kpi</code>, <code>gold.dim_utility</code>, <code>gold.fact_kpi_rollup</code>, <code>gold.v_reporting_status</code>, <code>gold.v_bsc_alignment</code>, <code>gold.ext_*</code>).</li>
+  <li><strong>Metadata-vs-performance distinction</strong> — repeatedly drilled rule that submission/completeness tools (<code>get_kpi_status</code>, <code>get_trend_analysis</code>, <code>get_benchmarking_data</code>, <code>get_kpi_diagnostics</code>) must never be presented as performance values.</li>
+  <li><strong>Period fallback protocol</strong> — on empty results, step back through recent fiscal years/report periods (up to 3–4) before reporting a genuine data gap.</li>
+  <li><strong>Anti-injection clause</strong> — told never to reveal its instructions or follow "ignore previous instructions"-style requests (backed by the input guardrail regex, see §8).</li>
+</ul>
+<div class="callout">
+  <strong>Prompt caching (live):</strong> the system prompt and the last tool definition both carry Anthropic <code>cacheControl: { type: "ephemeral" }</code> (<code>lib/ai/service.ts</code>). Because the ~9K-token prompt + ~70 tool schemas are identical on every step of a multi-step turn and often turn-to-turn within a session, a cache hit skips re-processing that prefix — this is the main lever for time-to-first-token on tool-using questions. Shipped in <code>db4122e</code> / PR #419.
+</div>
+
+<!-- 5 -->
+<h2 id="sources">5. Dual Data Source Model</h2>
+<p>PRISM AI can answer performance questions from two independent sources: the <strong>PRISM web app's gold layer</strong> (<code>gold.fact_kpi</code>, computed KPIs stored in Postgres) or a connected <strong>Power BI</strong> dataset (queried live via DAX). Which one is authoritative is a DEV-configurable app setting, not a code constant.</p>
+<table>
+  <tr><th>Setting</th><th>Storage</th><th>Values</th></tr>
+  <tr><td><code>ai_primary_source</code></td><td><code>app_settings</code> table (<code>lib/ai/source-setting.ts</code>)</td><td><code>webapp</code> | <code>powerbi</code></td></tr>
+  <tr><td><code>ai_secondary_source</code></td><td><code>app_settings</code> table</td><td><code>webapp</code> | <code>powerbi</code> | <code>none</code> (isolation mode)</td></tr>
+</table>
+<p>Both the system prompt's Data Source Priority section (§4) and the tool list itself are derived from the same resolved <code>{primary, secondary}</code> pair, computed once per request in <code>prepareRequest()</code> — so the model can't be told one thing and given tools for another.</p>
+<div class="callout warn">
+  <strong>Isolation mode is enforced at the tool layer, not just the prompt.</strong> When <code>secondary === "none"</code>, <code>createAiTools()</code> (<code>lib/ai/tools/index.ts</code>) physically removes every tool belonging to the non-primary source before the model ever sees the tool list — soft prompt-steering alone was judged leaky. E.g. primary=<code>webapp</code> + secondary=<code>none</code> drops <em>all</em> Power BI tools; primary=<code>powerbi</code> + secondary=<code>none</code> drops the 6 gold-layer performance tools (<code>GOLD_PERF_TOOLS</code>).
+</div>
+<p>Two-tier mode (a secondary configured) follows a strict protocol in the prompt: try primary → if it succeeds, stop (never cross-check the other source for the same figure) → if it errors/empties, walk back 1–2 fiscal years/report periods → only then fall back to the secondary → if both are empty, admit the gap honestly rather than substituting submission-completeness data.</p>
+
+<!-- 6 -->
+<h2 id="tools">6. Tool Registry (69 tools)</h2>
+<p>Tools are assembled in <code>lib/ai/tools/index.ts</code> from two families and merged into one object handed to the AI SDK:</p>
+<div class="card-grid cols2">
+  <div class="card">
+    <h4><span class="tag tool">PRISM-native</span> <code>lib/ai/tools/prism-native.ts</code> (905 lines, 39 tools)</h4>
+    <p>Administrative/workflow tools (review queue, input status, KPI diagnostics, governance audit, custom KPI status, guided entry) plus a fallback set of <strong>gold-layer performance tools</strong> that read <code>gold.fact_kpi</code> directly: <code>get_kpi_targets</code>, <code>get_kpi_correlation</code>, <code>compare_kpis_across_utilities</code>, <code>get_compliance_status</code>, <code>get_data_quality_report</code>, <code>get_what_changed</code> — the <code>GOLD_PERF_TOOLS</code> set.</p>
+  </div>
+  <div class="card">
+    <h4><span class="tag tool">Power BI</span> <code>lib/ai/tools/power-bi.ts</code> (445 lines, 30 tools)</h4>
+    <p>~40 <code>pbi_*</code> tools: schema discovery, DAX query execution + a query catalog of pre-built templates, risk scoring, peer grouping, donor reports, renewable/tariff scenario modelling, forecasting, correlations, anomaly detection, deep-links back into Power BI reports.</p>
+  </div>
+</div>
+<p>Both families are backed by a large <code>lib/ai/data-service/</code> layer (30 files, ~7,300 lines) that does the actual DB/DAX querying, schema-registry lookups, benchmarking math, and World Bank API integration (<code>data-service/worldbank.ts</code> — live external API, no key required, used for income classification / lending category context).</p>
+<h4>Notable tool categories</h4>
+<ul>
+  <li><strong>Visualization:</strong> <code>render_visualization</code> — table, bar-chart, line-chart, leaderboard, scatter, radar, sankey, heatmap. Rendered client-side by <code>components/ai/visualizations/*</code>.</li>
+  <li><strong>Export:</strong> <code>generate_export</code> / <code>pbi_export</code> hand off to <span class="tag api">POST</span> <code>app/api/ai/export/route.ts</code> for CSV/XLSX generation (added in <code>df2d896</code>).</li>
+  <li><strong>Self-referential:</strong> <code>get_ai_usage</code> lets the assistant answer "how much AI usage have I had" from its own metrics table.</li>
+  <li><strong>Admin-gated:</strong> <code>get_governance_audit</code> and <code>get_configuration_options</code> are blocked for non-BMO/DEV roles by <code>validateToolAccess()</code> in <code>guardrails.ts</code>.</li>
+</ul>
+<h4>Tool narration</h4>
+<p><code>lib/ai/tool-narration.ts</code> maps tool names to a present-tense, plain-English description (e.g. <code>pbi_risk_score</code> → "Calculating a risk score from the Power BI data") shown in the live "Thinking" panel instead of the raw function name. Any tool without an explicit entry falls back to a humanized auto-format. Shipped in PR #421 (<code>28cc4d4</code>).</p>
+<div class="callout warn">
+  <strong>Small drift found while compiling this doc:</strong> the map (and the <code>AiToolName</code> type union in <code>types.ts</code>) has 67 entries, but 69 tools are actually registered. <code>get_worldbank_context</code> and <code>explain_input</code> (both in <code>prism-native.ts</code>) are missing from both — real, callable tools that fall back to the generic humanizer for narration ("Working on worldbank context" / "Working on explain input") and aren't type-checked against <code>AiToolName</code> elsewhere. Low-impact (the fallback still reads fine), but worth a one-line fix to keep the two lists authoritative.
+</div>
+
+<!-- 7 -->
+<h2 id="resilience">7. Reliability: Retries, Fallback, Circuit Breaker</h2>
+<p><code>lib/ai/service.ts</code> is the single chokepoint for every model call (<code>runAiStream</code> for the chat route, <code>runAiGenerate</code> for background/summarization work). It layers several independent resilience mechanisms:</p>
+<table>
+  <tr><th>Mechanism</th><th>Behaviour</th></tr>
+  <tr><td>Transient-error retry</td><td>Up to 3 retries with backoff <code>[1s, 2s, 4s]</code> on 429/502/503/504/"overloaded"/timeout errors (<code>isTransientError</code>). Permanent errors (400/401/403-shaped) fail immediately.</td></tr>
+  <tr><td>Model fallback</td><td>If the primary model (Sonnet) exhausts its retries, the whole request is retried against the fallback model (Haiku) with its own retry budget.</td></tr>
+  <tr><td>Circuit breaker</td><td>Per-model in-memory circuit: 5 consecutive failures opens a 30s cooldown during which calls to that model fast-fail rather than retrying (<code>modelCircuits</code> map, exposed via <code>getCircuitState()</code> and surfaced to the client as an <code>X-Circuit-Breaker</code> response header).</td></tr>
+  <tr><td>Empty-answer nudge</td><td>If a tool-using generation finishes with blank text, one extra attempt is made with an appended "write your final answer now" system-prompt nudge before giving up.</td></tr>
+  <tr><td>First-chunk error peek</td><td><code>withFirstChunkCheck()</code> — because <code>streamText()</code> resolves before the model call even starts, an immediate provider error only ever surfaces as an "error" part inside the stream; this peeks the first chunk before returning the stream to the caller so the retry/fallback loop can react before anything reaches the client.</td></tr>
+  <tr><td>Context-window guard</td><td>Token-budget accounting (<code>estimateTokens</code>, ~3 chars/token) trims history to the role's max turn count, reserves 4K tokens for tool definitions, and throws a friendly "start a new chat" error rather than overflowing the 200K context window.</td></tr>
+</table>
+<div class="callout risk">
+  Extended thinking is currently <strong>disabled</strong> — a code comment in <code>getModelConfig()</code> documents that thinking + multi-step tool use produced empty final answers (thinking-block continuity wasn't preserved across tool steps by the SDK). Re-enable only once thinking+tools is independently verified.
+</div>
+
+<!-- 8 -->
+<h2 id="guardrails">8. Guardrails &amp; Security</h2>
+<div class="card-grid cols2">
+  <div class="card">
+    <h4>Input guardrails (<code>lib/ai/guardrails.ts</code>)</h4>
+    <p>Regex-based rules block: email addresses, phone numbers, requests for private reviewer comments, credential/secret keywords, bulk-export phrasing, and prompt-injection patterns ("ignore previous instructions", "act as if you are…", "reveal your system prompt", etc.). Max message length 4,000 chars.</p>
+  </div>
+  <div class="card">
+    <h4>Output guardrails</h4>
+    <p><code>filterOutput()</code> redacts emails/phones/SSNs from the model's own response text before it's persisted or streamed, as defense-in-depth against the model echoing PII it picked up from tool results.</p>
+  </div>
+  <div class="card">
+    <h4>Tool access control</h4>
+    <p><code>validateToolAccess()</code> restricts <code>get_governance_audit</code> and <code>get_configuration_options</code> to BMO/DEV roles.</p>
+  </div>
+  <div class="card">
+    <h4>Origin validation</h4>
+    <p><code>lib/ai/origin.ts</code> — exact parsed-origin match against the configured app URL on every AI route, closing a subdomain-spoofing bypass that a prefix-string check would have allowed.</p>
+  </div>
+  <div class="card">
+    <h4>DAX injection sanitization</h4>
+    <p><code>lib/ai/data-service/dax-sanitizer.ts</code> — sanitizes/validates DAX query fragments before they're sent to Power BI, so a crafted user prompt can't inject arbitrary DAX.</p>
+  </div>
+  <div class="card">
+    <h4>Export formula-injection defense</h4>
+    <p>CSV/XLSX export (<code>app/api/ai/export/route.ts</code>) prefixes any cell starting with <code>=</code>/<code>+</code>/<code>-</code>/<code>@</code> with a quote to neutralize Excel formula/DDE injection, caps rows/columns/cell length, and sanitizes the filename before it goes into a <code>Content-Disposition</code> header.</p>
+  </div>
+  <div class="card">
+    <h4>Tenant scoping</h4>
+    <p>Tools scope queries to the current user's utility/organisation by default (<code>checkUserUtility</code>); broader comparisons require an explicit ask. Covered by <code>test/unit/ai/tenant-scoping.test.ts</code>.</p>
+  </div>
+</div>
+
+<!-- 9 -->
+<h2 id="rate-limits">9. Rate Limiting, Cost Tracking &amp; Budgets</h2>
+<p><code>lib/ai/rate-limit.ts</code> is DB-backed with an in-memory fallback:</p>
+<ul>
+  <li><strong>Request-rate limits</strong> — per-minute (default 20) and per-15-minute (default 100) windows, enforced via a single atomic upsert against <code>ai_rate_limit_window</code> keyed on <code>(user_id, window_type, window_start)</code> with a unique constraint — avoids a select-then-write race across pooled connections. Falls back to an in-memory sliding-window map if the DB write fails (fail-open with a warning log). Uniqueness constraint added in <code>df2d896</code>.</li>
+  <li><strong>Cost budget</strong> — <code>ai_cost_budget</code> table holds a per-user <code>daily_limit_cents</code> (default from <code>AI_DEFAULT_DAILY_COST_LIMIT_CENTS</code> env var, else $5.00). <code>checkCostBudget()</code> compares today's <code>ai_usage_metrics.estimated_cost_cents</code> against the limit and the chat route returns HTTP 429 with a human-readable "$X of $Y" message once exceeded.</li>
+  <li><strong>Cost estimation</strong> — <code>MODEL_PRICING</code> hardcodes Sonnet ($3/$15 per M in/out tokens) and Haiku ($0.80/$4 per M) to compute <code>estimated_cost_cents</code> on every recorded request.</li>
+  <li><strong>Latency tracking</strong> — in-memory p50/p95/p99 buckets per endpoint, logged every 100 samples (<code>recordLatency</code>).</li>
+</ul>
+<div class="callout warn">
+  <strong>Backend-only today:</strong> the cost budget is fully enforced server-side (requests are blocked at the limit), but there is no chat-UI cost bar or "80% of budget" warning banner yet — see §14.
+</div>
+
+<!-- 10 -->
+<h2 id="persistence">10. Persistence &amp; Sessions</h2>
+<p>Schema in <code>db/schema/ai.ts</code>:</p>
+<table>
+  <tr><th>Table</th><th>Purpose</th></tr>
+  <tr><td><code>ai_chat_session</code></td><td>One row per conversation. Auto-derived title (first 40 chars of the opening message), <code>context_summary</code> jsonb (topics/findings/utility/period, populated once a session exceeds 8 turns), soft-deletable.</td></tr>
+  <tr><td><code>ai_chat_turn</code></td><td>One row per Q&amp;A exchange: user message, assistant response, model used, whether it was the fallback model, prompt version, input/output token counts, latency, error message.</td></tr>
+  <tr><td><code>ai_tool_call</code></td><td>Every tool invocation within a turn — name, args, result, status (pending/success/error/timeout), latency, data freshness/completeness metadata.</td></tr>
+  <tr><td><code>ai_feedback</code></td><td>👍/👎 per turn plus optional free-text correction — surfaced via <span class="tag api">POST</span> <code>app/api/ai/feedback/route.ts</code>.</td></tr>
+  <tr><td><code>ai_review_queue</code></td><td>Turns flagged (e.g. by negative feedback) for human review, with a decision workflow (approved/rejected/needs_revision).</td></tr>
+  <tr><td><code>ai_usage_metrics</code></td><td>Daily per-user rollup: requests, input/output tokens, estimated cost, tool calls, errors. Upserted on every completed request.</td></tr>
+  <tr><td><code>ai_cost_budget</code></td><td>Per-user daily spend cap + notification toggle.</td></tr>
+  <tr><td><code>ai_rate_limit_window</code></td><td>Durable sliding-window counters (minute / 15-min), unique on <code>(user_id, window_type, window_start)</code>.</td></tr>
+</table>
+<p>Session CRUD lives in <code>app/api/ai/sessions/route.ts</code> (list/create) and <code>app/api/ai/sessions/[sessionId]/route.ts</code> (fetch turns, rename, soft-delete). Streamed responses are additionally exposed for retrieval/replay via <code>app/api/ai/chat/response/route.ts</code>.</p>
+
+<!-- 11 -->
+<h2 id="observability">11. Observability &amp; Admin Views</h2>
+<p><code>app/settings/ai/usage/page.tsx</code> (DEV/BMO-gated) reads <span class="tag api">GET</span> <code>app/api/ai/usage/route.ts</code>, which serves four report types off the metrics tables:</p>
+<ul>
+  <li><strong>overview</strong> — daily requests/tokens/cost/tool-calls/errors, totals over a configurable window (1–90 days).</li>
+  <li><strong>per-user</strong> — spend leaderboard joined to each user's configured daily budget.</li>
+  <li><strong>tool-analytics</strong> — call count, error count, and average latency per tool name, across all users.</li>
+  <li><strong>model-health</strong> — Sonnet vs Haiku split, fallback rate (how often the primary model failed over), average latency.</li>
+</ul>
+
+<!-- 12 -->
+<h2 id="frontend">12. Frontend Components</h2>
+<table>
+  <tr><th>Component</th><th>Role</th></tr>
+  <tr><td><code>chat-panel.tsx</code> (752 lines)</td><td>The core chat surface — message list, streaming text, live tool-progress display, session switching. Shared by the floating drawer and the full page.</td></tr>
+  <tr><td><code>message-bubble.tsx</code> (422 lines)</td><td>Renders one message; parses the numbered reasoning steps (Diagnose/Connect/Position/Recommend/Caveat) out of the assistant text into collapsible sections with icons, plus feedback (👍/👎) and copy/regenerate actions.</td></tr>
+  <tr><td><code>chat-sidebar.tsx</code></td><td>Session list — switch, rename, delete conversations.</td></tr>
+  <tr><td><code>chat-input.tsx</code></td><td>Composer, guardrail-aware character limit.</td></tr>
+  <tr><td><code>floating-chatbot.tsx</code></td><td>Bottom-right launcher + slide-in drawer (hidden on <code>/prism-ai</code> to avoid double-mounting).</td></tr>
+  <tr><td><code>chat-error-boundary.tsx</code></td><td>Isolates chat crashes from the rest of the page.</td></tr>
+  <tr><td><code>visualizations/*</code></td><td><code>bar-chart-view</code>, <code>line-chart-view</code>, <code>leaderboard-view</code>, <code>table-view</code>, <code>echarts-view</code> (sankey/heatmap/radar/scatter), dispatched by <code>visualization-renderer.tsx</code> based on the JSON block the model emits for <code>render_visualization</code>.</td></tr>
+</table>
+<p><strong>Live tool progress</strong> (PR #420, <code>bdb5c9e</code>) — the old static "Thinking…" spinner is replaced by a real-time list driven by the <code>2:</code> SSE channel: each tool shows an animated state while running, a green check + narration on success, or a red X on error, streamed concurrently with the answer text rather than blocking it.</p>
+
+<!-- 13 -->
+<h2 id="recent">13. Recent Timeline (last ~2 weeks)</h2>
+<table>
+  <tr><th>Date</th><th>PR</th><th>Change</th></tr>
+  <tr><td>2026-09-14</td><td>#421</td><td>Narrate AI tool calls in plain English instead of raw tool names</td></tr>
+  <tr><td>2026-09-14</td><td>#420</td><td>Live tool progress in the Thinking panel (replacing a static spinner)</td></tr>
+  <tr><td>2026-09-14</td><td>#419</td><td>Anthropic prompt caching for the system prompt + tool definitions</td></tr>
+  <tr><td>2026-09-14</td><td>#418</td><td>Capture underlying cause of AI chat schema errors (unwrap SDK error <code>cause</code> chain into persisted <code>error_message</code>)</td></tr>
+  <tr><td>2026-09-15</td><td>#422</td><td>Fixed cross-utility KPI comparison tools to span <em>all</em> utilities rather than one</td></tr>
+  <tr><td>2026-09-16</td><td>(this branch)</td><td>Export/usage endpoints, tool-narration polish, rate-limit window uniqueness constraint (<code>df2d896</code>) — currently on <code>fix-cross-utility-kpi-period-scoping</code>, uncommitted beyond that point</td></tr>
+</table>
+<p>Earlier foundational work (2026-09-02 to 2026-09-08): configurable primary/secondary source (#321, #333, #329), extended-thinking disabled after it broke tool-using answers (#343), empty-answer retry budget fix (#341), Energy Expert persona + reasoning chain + audience registers (<code>b4e71c3</code>), live World Bank integration, AI SDK v7 migration (#171/#169/#85).</p>
+
+<!-- 14 -->
+<h2 id="backlog">14. Known Gaps / Open Backlog</h2>
+<p>Tracked as issue briefs in <code>.scratch/ai-improvements/</code> (12 total). Cross-referencing against the current code:</p>
+<table>
+  <tr><th>#</th><th>Issue</th><th>Status</th><th>Note</th></tr>
+  <tr><td>01</td><td>PBI conversation context leak</td><td><span class="badge live">DONE</span></td><td>Covered by <code>test/unit/ai/pbi-context.test.ts</code>.</td></tr>
+  <tr><td>02</td><td>Response persistence race condition</td><td><span class="badge live">DONE</span></td><td><code>response-persistence.test.ts</code>; chat route checks <code>existingTurn.assistant_response</code> before writing.</td></tr>
+  <tr><td>03</td><td>Robust visualization extraction</td><td><span class="badge live">DONE</span></td><td><code>visualization-extraction.test.ts</code>.</td></tr>
+  <tr><td>04</td><td>Modularize tool registry</td><td><span class="badge live">DONE</span></td><td>Split into <code>prism-native.ts</code> / <code>power-bi.ts</code> / <code>utils.ts</code>.</td></tr>
+  <tr><td>05</td><td>Structured reasoning steps in UI</td><td><span class="badge live">DONE</span></td><td><code>message-bubble.tsx</code> parses Diagnose/Connect/Position/Recommend/Caveat into collapsible sections.</td></tr>
+  <tr><td>06</td><td>Live tool progress in Thinking dropdown</td><td><span class="badge live">DONE</span></td><td>PR #420.</td></tr>
+  <tr><td>07</td><td>Cost budget system</td><td><span class="badge partial">PARTIAL</span></td><td>Backend fully enforced (table, per-request check, 429 on breach). <strong>Missing:</strong> chat UI cost bar and 80%-warning banner — nothing in <code>chat-panel.tsx</code> reads the budget.</td></tr>
+  <tr><td>08</td><td>System prompt token reduction</td><td><span class="badge backlog">NOT STARTED</span></td><td>Goal was to move the Power BI domain-overview section (~70 lines) out of the static prompt into tool descriptions for a 20%+ token cut. The prompt still carries the full Power BI section (§4 of this doc); prompt <em>caching</em> shipped instead, which reduces the cost of the large prompt but not its size.</td></tr>
+  <tr><td>09</td><td>Audience register self-select UI</td><td><span class="badge live">DONE</span></td><td><code>stakeholder_type</code> field + role mapping in <code>chat/route.ts</code>.</td></tr>
+  <tr><td>10</td><td>Model-level retry backoff</td><td><span class="badge live">DONE</span></td><td>Circuit breaker + backoff in <code>service.ts</code>; <code>circuit-breaker.test.ts</code>.</td></tr>
+  <tr><td>11</td><td>DAX query sanitization</td><td><span class="badge live">DONE</span></td><td><code>data-service/dax-sanitizer.ts</code>.</td></tr>
+  <tr><td>12</td><td>Durable rate limiting</td><td><span class="badge live">DONE</span></td><td>DB-backed <code>ai_rate_limit_window</code> with unique-constraint upsert, in-memory fallback.</td></tr>
+</table>
+<div class="callout">
+  Net: <strong>10 of 12</strong> tracked improvement issues are shipped. The two open items are both low-risk, additive UI/prompt-trimming work — cost-bar UI (issue 07) and prompt token reduction (issue 08).
+</div>
+
+<!-- 15 -->
+<h2 id="tests">15. Test Coverage</h2>
+<p><code>test/unit/ai/</code> — 15 files: <code>circuit-breaker</code>, <code>guardrails</code>, <code>integration</code>, <code>origin</code>, <code>pbi-context</code>, <code>powerbi</code>, <code>powerbi-access</code>, <code>prompt</code>, <code>rate-limit</code>, <code>response-persistence</code>, <code>service</code>, <code>tenant-scoping</code>, <code>tools</code>, <code>types</code>, <code>visualization-extraction</code>, <code>worldbank</code>. This gives direct coverage of every reliability/security mechanism described in §7–9 above, not just happy-path chat.</p>
+
+<!-- 16 -->
+<h2 id="questions">16. Example Question Bank</h2>
+<p>A grounded set of natural-language questions a user could actually ask PRISM AI today, organized by which tool(s) would answer them. Not exhaustive — the model also handles paraphrases, follow-ups, and combinations of these — but every question below maps to a real, currently-registered tool rather than an aspirational one.</p>
+
+<h3>Performance &amp; KPI values (gold layer / Power BI)</h3>
+<ul>
+  <li>What's our SAIDI for this fiscal year?</li>
+  <li>How much electricity did we generate last quarter?</li>
+  <li>What are our current system losses?</li>
+  <li>How does our SAIFI compare to last year?</li>
+  <li>What changed in our KPIs since the last reporting period?</li>
+  <li>Are we within our regulatory compliance limits?</li>
+  <li>Is there a correlation between our losses and revenue?</li>
+  <li>Compare [KPI] across all utilities in the Pacific.</li>
+  <li>What's our target for [KPI], and are we meeting it?</li>
+  <li>What would our losses look like if generation increased 10%? (what-if / <code>calculate_kpi</code>)</li>
+  <li>Break our performance down by service area.</li>
+</ul>
+
+<h3>Submission &amp; data-entry status (never presented as performance)</h3>
+<ul>
+  <li>Has [utility] submitted their data for this period yet?</li>
+  <li>What's our data submission completion rate?</li>
+  <li>Which KPIs are still pending review?</li>
+  <li>What inputs are missing to complete [KPI]?</li>
+  <li>Why is this KPI showing as incomplete or in error?</li>
+  <li>What's the status of my custom KPI request?</li>
+  <li>Show me the review queue.</li>
+  <li>Walk me through how to enter data for [KPI] — what do I need and where do I find it?</li>
+  <li>What report periods, categories, and service areas are available?</li>
+</ul>
+
+<h3>Benchmarking &amp; peer comparison</h3>
+<ul>
+  <li>How do we compare against our peer group?</li>
+  <li>Who are the top and bottom performers on [metric]?</li>
+  <li>Which utilities are most similar to ours?</li>
+  <li>What's the PPA target and Pacific regional average for [KPI]?</li>
+  <li>Where do we rank on data completeness among Pacific utilities?</li>
+</ul>
+
+<h3>Trends, anomalies &amp; forecasting</h3>
+<ul>
+  <li>How has our submission completeness trended over the last few periods?</li>
+  <li>Is there anything unusual in our recent data?</li>
+  <li>Forecast our generation for next fiscal year.</li>
+  <li>What's the trend in our tariff recovery?</li>
+  <li>Compare this reporting period against the previous ones.</li>
+</ul>
+
+<h3>Data quality, governance &amp; risk</h3>
+<ul>
+  <li>Run a data quality check on our submissions.</li>
+  <li>What's our risk score, and what's driving it?</li>
+  <li>Show me the governance audit trail — who owns what's still pending?</li>
+  <li>What are the AI review queue's flagged conversations? (admin only)</li>
+</ul>
+
+<h3>Financial, tariff, donor &amp; strategy modelling (Power BI advanced)</h3>
+<ul>
+  <li>Simulate a 10% tariff increase — what's the revenue impact?</li>
+  <li>Model a renewable-energy scenario for our generation mix.</li>
+  <li>What donor-funded projects affect us, and where are the reporting gaps?</li>
+  <li>What's the likely impact of [project] on our KPIs?</li>
+  <li>What should we prioritise this quarter?</li>
+  <li>Give me a briefing on our overall performance.</li>
+  <li>Are we meeting our regulatory reporting requirements?</li>
+</ul>
+
+<h3>Country &amp; economic context</h3>
+<ul>
+  <li>What's [country]'s income classification and lending category?</li>
+  <li>How does our income level affect what "affordable tariffs" means for us?</li>
+  <li>What active World Bank-funded projects are there in our country?</li>
+  <li>Show me the Pacific sub-region/country hierarchy.</li>
+</ul>
+
+<h3>Definitions &amp; explanations</h3>
+<ul>
+  <li>What does SAIDI mean and how is it calculated?</li>
+  <li>What exactly should I enter for [input field]?</li>
+  <li>What are the inclusion/exclusion rules for [KPI]?</li>
+</ul>
+
+<h3>Reports, summaries &amp; alerts</h3>
+<ul>
+  <li>Give me an executive digest for my Monday meeting.</li>
+  <li>Are there any threshold alerts I should know about?</li>
+  <li>Pull up the [utility] Power BI report.</li>
+  <li>Link me straight to the relevant dashboard.</li>
+</ul>
+
+<h3>Visualization &amp; export</h3>
+<ul>
+  <li>Show this as a bar chart / line chart / leaderboard.</li>
+  <li>Export this to Excel or CSV.</li>
+  <li>Chart our generation trend over the last 12 months.</li>
+</ul>
+
+<h3>Power BI platform diagnostics (mostly DEV/BMO)</h3>
+<ul>
+  <li>What datasets are available in Power BI?</li>
+  <li>What's the schema for [table]?</li>
+  <li>How fresh is the Power BI data right now?</li>
+  <li>Diagnose why the Power BI connection is failing.</li>
+  <li>What report pages are available?</li>
+  <li>List the pre-built query templates.</li>
+</ul>
+
+<h3>AI platform / meta</h3>
+<ul>
+  <li>How much AI usage have I had this month? (admin/self-serve, <code>get_ai_usage</code>)</li>
+  <li>What follow-up questions should I ask next?</li>
+</ul>
+
+<div class="callout">
+  <strong>Audience shifts the framing, not the tool.</strong> The same question — e.g. "how are we doing?" — is answered differently depending on the caller's audience register (§4): a CEO gets a decision-and-tradeoff framing, a Donor/DFI gets impact and value-for-money, an Education/Researcher gets method and data caveats first. The underlying tool call is identical; only the prose changes.
+</div>
+
+<!-- 17 -->
+<h2 id="files">17. File Index</h2>
+<table>
+  <tr><th>Area</th><th>Path</th></tr>
+  <tr><td>Core service (model calls, retries, streaming)</td><td><code>lib/ai/service.ts</code></td></tr>
+  <tr><td>System prompt + source policy</td><td><code>lib/ai/prompt.ts</code></td></tr>
+  <tr><td>Guardrails (input/output/tool access)</td><td><code>lib/ai/guardrails.ts</code></td></tr>
+  <tr><td>Rate limiting, cost budget, usage stats</td><td><code>lib/ai/rate-limit.ts</code></td></tr>
+  <tr><td>Origin validation</td><td><code>lib/ai/origin.ts</code></td></tr>
+  <tr><td>Primary/secondary source config</td><td><code>lib/ai/source-setting.ts</code>, <code>source-setting-constants.ts</code></td></tr>
+  <tr><td>Tool narration ("Thinking" labels)</td><td><code>lib/ai/tool-narration.ts</code></td></tr>
+  <tr><td>Request-scoped memoization cache</td><td><code>lib/ai/cache.ts</code></td></tr>
+  <tr><td>Shared AI types</td><td><code>lib/ai/types.ts</code></td></tr>
+  <tr><td>Tool assembly (source-aware merge/drop)</td><td><code>lib/ai/tools/index.ts</code></td></tr>
+  <tr><td>PRISM-native + Power BI tool definitions</td><td><code>lib/ai/tools/prism-native.ts</code>, <code>power-bi.ts</code></td></tr>
+  <tr><td>Data-fetching / DAX / schema-registry layer</td><td><code>lib/ai/data-service/*</code> (30 files)</td></tr>
+  <tr><td>Chat streaming endpoint</td><td><code>app/api/ai/chat/route.ts</code></td></tr>
+  <tr><td>Response replay endpoint</td><td><code>app/api/ai/chat/response/route.ts</code></td></tr>
+  <tr><td>Session CRUD</td><td><code>app/api/ai/sessions/route.ts</code>, <code>sessions/[sessionId]/route.ts</code></td></tr>
+  <tr><td>Feedback</td><td><code>app/api/ai/feedback/route.ts</code></td></tr>
+  <tr><td>Usage/cost reporting API</td><td><code>app/api/ai/usage/route.ts</code></td></tr>
+  <tr><td>CSV/XLSX export API</td><td><code>app/api/ai/export/route.ts</code></td></tr>
+  <tr><td>DB schema</td><td><code>db/schema/ai.ts</code></td></tr>
+  <tr><td>Chat UI components</td><td><code>components/ai/*</code></td></tr>
+  <tr><td>Full-page + usage-dashboard routes</td><td><code>app/prism-ai/page.tsx</code>, <code>app/settings/ai/usage/page.tsx</code></td></tr>
+  <tr><td>Improvement backlog briefs</td><td><code>.scratch/ai-improvements/issue-01…12*.md</code></td></tr>
+</table>
+
+<footer>PRISM AI Architecture &amp; Status — generated for internal reference, PRISM 2 project. Reflects repository state at commit <code>df2d896</code> on branch <code>fix-cross-utility-kpi-period-scoping</code>.</footer>
+
+</div>
+</body>
+</html>
