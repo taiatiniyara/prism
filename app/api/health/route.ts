@@ -177,7 +177,7 @@ export async function GET(_request: Request): Promise<Response> {
     return fallback;
   };
 
-  const db = resolveCheck(dbResult, {
+  const dbCheck = resolveCheck(dbResult, {
     ok: false,
     ms: 0,
     message: dbResult.status === "rejected" ? String(dbResult.reason) : "Unknown error",
@@ -196,7 +196,7 @@ export async function GET(_request: Request): Promise<Response> {
   } as WbCheck);
 
   let status: HealthResponse["status"];
-  if (!db.ok) {
+  if (!dbCheck.ok) {
     status = "down";
   } else if (!powerbi.ok || !sonnetCheck.ok || !haikuCheck.ok || !smtp.ok || !worldbank.ok) {
     status = "degraded";
@@ -208,7 +208,7 @@ export async function GET(_request: Request): Promise<Response> {
     status,
     uptime_seconds: Math.floor(process.uptime()),
     checks: {
-      db,
+      db: dbCheck,
       powerbi,
       ai_models: {
         sonnet: sonnetCheck,
