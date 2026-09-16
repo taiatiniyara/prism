@@ -9,7 +9,11 @@ import {
   serviceAreas,
 } from "@/db/schema/utility";
 import { generateRandomNumber } from "@/lib/utils";
-import { getCurrentUser, resolveUtilityScopeId } from "@/lib/user.service";
+import {
+  getCurrentUser,
+  requireOrgId,
+  resolveUtilityScopeId,
+} from "@/lib/user.service";
 import { and, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 
@@ -55,7 +59,7 @@ export async function AddServiceArea(
     .values({
       ...data,
       id: generateRandomNumber(5),
-      utility_id: user.org_id!,
+      utility_id: requireOrgId(user),
       is_active: true,
       is_virtual: false,
       operations_only: false,
