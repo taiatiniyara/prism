@@ -134,10 +134,9 @@ export function InputTagCard({
           )}
           {/* One meta row: Mandatory/Optional toggle + change/remove, to keep
               the card compact. */}
-          <div className="mt-auto flex w-full flex-wrap items-center gap-x-3 gap-y-1 pt-1.5 text-[11px]">
+          <div className="mt-auto flex w-full items-center gap-x-3 pt-1.5 text-[11px]">
             {measure && (
               <div className="flex items-center gap-1">
-                <span className="text-muted-foreground">Input:</span>
                 <div className="inline-flex overflow-hidden rounded-md border">
                   <button
                     type="button"
