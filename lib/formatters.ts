@@ -70,9 +70,5 @@ export function formatReportPeriodDisplay(
     return yearLabel;
   }
 
-  if (normalizedType.includes("month")) {
-    return monthLabel;
-  }
-
   return monthLabel;
 }
