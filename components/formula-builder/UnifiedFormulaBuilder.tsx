@@ -96,6 +96,38 @@ function builderStateSignature(formula: string, cards: TagCardState[]): string {
   });
 }
 
+// Per-formula compute results (counter block + reason table + bar), persisted so
+// the previous recompute's stats are always shown when you re-open a formula —
+// even after a page refresh (Eugene). Keyed "<mode>:<targetId>". localStorage is
+// a convenience: every access is guarded, and it is only ever touched from
+// client effects (never during render / SSR).
+type ResultsCacheEntry = {
+  recompute: RecomputeResult;
+  progress: { done: number; total: number } | null;
+};
+const RESULTS_CACHE_KEY = "prism.calc.results.v1";
+function loadResultsCache(): Map<string, ResultsCacheEntry> {
+  try {
+    const raw = localStorage.getItem(RESULTS_CACHE_KEY);
+    if (!raw) return new Map();
+    return new Map(
+      Object.entries(JSON.parse(raw) as Record<string, ResultsCacheEntry>),
+    );
+  } catch {
+    return new Map();
+  }
+}
+function saveResultsCache(map: Map<string, ResultsCacheEntry>): void {
+  try {
+    localStorage.setItem(
+      RESULTS_CACHE_KEY,
+      JSON.stringify(Object.fromEntries(map)),
+    );
+  } catch {
+    // quota exceeded / private mode — retention is a convenience, never critical
+  }
+}
+
 export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps) {
   const [activeMode, setActiveMode] = useState<BuilderMode>(mode);
   const targets =
@@ -142,19 +174,16 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
   const router = useRouter();
   const lastRefresh = useRef(0);
   // Per-target cache of the last compute's stats (counter block + reason table +
-  // progress bar), so switching to another formula and back keeps that formula's
-  // results until it is recomputed. Keyed "<mode>:<targetId>"; session-only — a
-  // page refresh clears it (per Eugene). A ref (not state) so writing it never
-  // re-renders or re-feeds the settle effect.
-  const resultsByTarget = useRef<
-    Map<
-      string,
-      {
-        recompute: RecomputeResult;
-        progress: { done: number; total: number } | null;
-      }
-    >
-  >(new Map());
+  // progress bar), so re-opening a formula shows its previous recompute — kept
+  // until it is recomputed, and persisted to localStorage so it survives a page
+  // refresh (Eugene). A ref (not state) so writing it never re-renders or
+  // re-feeds the settle effect; hydrated from localStorage on mount below.
+  const resultsByTarget = useRef<Map<string, ResultsCacheEntry>>(new Map());
+  useEffect(() => {
+    // Hydrate the cache from localStorage after mount (client-only — never
+    // during SSR/render). Selecting a target reads the ref, so it is ready.
+    resultsByTarget.current = loadResultsCache();
+  }, []);
   useEffect(() => {
     const maybeRefresh = () => {
       if (document.visibilityState !== "visible") return;
@@ -227,6 +256,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
       recompute,
       progress: computeProgress,
     });
+    saveResultsCache(resultsByTarget.current);
     const periodIds = recompute.byPeriod.map((p) => p.reportPeriodId);
     if (periodIds.length === 0) return;
     let cancelled = false;
@@ -1153,8 +1183,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                 computeProgress.done >= computeProgress.total ? (
                   <>
                     Computed all {computeProgress.total} period(s) — results
-                    below. Kept for this formula until you recompute it (a page
-                    refresh clears it).
+                    below. Kept for this formula until you recompute it.
                   </>
                 ) : (
                   <>
@@ -1206,7 +1235,9 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
           {recompute && (
             <div className="bg-muted/30 rounded-lg border p-3">
               <div className="max-h-48 overflow-auto">
-                <table className="w-full text-xs">
+                {/* content-width (not w-full) so the columns pack to the left
+                    instead of stretching apart across the panel. */}
+                <table className="text-xs">
                   <thead>
                     <tr className="text-muted-foreground text-left">
                       <SortableTh
@@ -1236,7 +1267,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                         sort={resultSort}
                         onSort={toggleResultSort}
                       />
-                      <th className="bg-muted sticky top-0 z-10 py-1 pl-3 text-right font-medium">
+                      <th className="bg-muted sticky top-0 z-10 py-1 pl-3 text-left font-medium">
                         Coverage
                       </th>
                     </tr>
@@ -1259,7 +1290,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                         <td className="py-1 pr-3 font-mono tabular-nums">
                           {r.value ?? "—"}
                         </td>
-                        <td className="text-muted-foreground py-1 pr-3">
+                        <td className="text-muted-foreground max-w-[24rem] py-1 pr-3">
                           <span className="flex min-w-0 items-center gap-1.5">
                             <span className="truncate">{r.reason ?? ""}</span>
                             {(() => {
@@ -1275,7 +1306,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                             })()}
                           </span>
                         </td>
-                        <td className="py-1 pl-3 text-right">
+                        <td className="py-1 pl-3 text-left">
                           {selectedTargetId != null && (
                             <button
                               type="button"
