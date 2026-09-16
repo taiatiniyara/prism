@@ -40,6 +40,8 @@ export interface CoverageUnit {
   unitId: number;
   unitName: string;
   stationName: string | null;
+  /** entered value for this unit (coalesced value_numeric/value); null when missing */
+  value: string | null;
 }
 
 export interface InputCoverage {
@@ -57,6 +59,8 @@ export interface InputCoverage {
   missingUnits: CoverageUnit[];
   /** any row (unit or coarser grain) in this slice carries a value */
   aggregatePresent: boolean;
+  /** the entered coarse-grain value a non-per-unit input displays; null when none */
+  aggregateValue: string | null;
 }
 
 export interface PeriodInputCoverage {
@@ -302,19 +306,40 @@ const hasValue = (v: string | null): boolean => v != null && v !== "";
 function coverageForGroup(
   group: BindingGroup,
   rows: CoverageRow[],
-): { entered: Set<number>; missing: Set<number>; aggregatePresent: boolean } {
+): {
+  entered: Set<number>;
+  missing: Set<number>;
+  aggregatePresent: boolean;
+  unitValues: Map<number, string | null>;
+  aggregateValue: string | null;
+} {
   const inScope = rows.filter(
     (r) =>
       r.measureDefId === group.measureDefId &&
       candidateInBindingScope(r, group.binding),
   );
   const byUnit = new Map<number, boolean>();
+  const unitValues = new Map<number, string | null>();
+  let aggSum = 0;
+  let aggHas = false;
   for (const r of inScope) {
-    if (r.grainUnitId == null) continue;
-    byUnit.set(
-      r.grainUnitId,
-      (byUnit.get(r.grainUnitId) ?? false) || hasValue(r.value),
-    );
+    if (r.grainUnitId == null) {
+      // coarse (utility/station) rows feed the aggregate value display
+      const n = hasValue(r.value) ? Number(r.value) : NaN;
+      if (Number.isFinite(n)) {
+        aggSum += n;
+        aggHas = true;
+      }
+      continue;
+    }
+    const has = hasValue(r.value);
+    byUnit.set(r.grainUnitId, (byUnit.get(r.grainUnitId) ?? false) || has);
+    // keep the first actual value seen for the unit; a blank shell leaves null
+    if (has && unitValues.get(r.grainUnitId) == null) {
+      unitValues.set(r.grainUnitId, r.value);
+    } else if (!unitValues.has(r.grainUnitId)) {
+      unitValues.set(r.grainUnitId, null);
+    }
   }
   const entered = new Set<number>();
   const missing = new Set<number>();
@@ -323,6 +348,13 @@ function coverageForGroup(
     entered,
     missing,
     aggregatePresent: inScope.some((r) => hasValue(r.value)),
+    unitValues,
+    // Entered coarse-grain total (sum of the in-scope utility/station rows) — the
+    // number a non-per-unit input contributes for an additive measure, so a `0`
+    // (the divide-by-zero trap) is visible. NB not a full resolver pass (no
+    // rule-1 authoritative-vs-Σ), so a measure carrying both an All-aggregate row
+    // AND slices could read high; acceptable for a coverage read-out.
+    aggregateValue: aggHas ? String(aggSum) : null,
   };
 }
 
@@ -391,10 +423,14 @@ export async function getPeriodInputCoverage(args: {
     ...new Set(cov.flatMap(({ c }) => [...c.entered, ...c.missing])),
   ];
   const names = await unitNames(allUnitIds);
-  const toUnit = (uid: number): CoverageUnit => ({
+  const toUnit = (
+    uid: number,
+    unitValues: Map<number, string | null>,
+  ): CoverageUnit => ({
     unitId: uid,
     unitName: names.get(uid)?.name ?? `Unit ${uid}`,
     stationName: names.get(uid)?.stationName ?? null,
+    value: unitValues.get(uid) ?? null,
   });
   const byName = (a: CoverageUnit, b: CoverageUnit) =>
     a.unitName.localeCompare(b.unitName);
@@ -408,9 +444,14 @@ export async function getPeriodInputCoverage(args: {
       sliced: g.sliced,
       perUnit,
       totalUnits: c.entered.size + c.missing.size,
-      enteredUnits: [...c.entered].map(toUnit).sort(byName),
-      missingUnits: [...c.missing].map(toUnit).sort(byName),
+      enteredUnits: [...c.entered]
+        .map((u) => toUnit(u, c.unitValues))
+        .sort(byName),
+      missingUnits: [...c.missing]
+        .map((u) => toUnit(u, c.unitValues))
+        .sort(byName),
       aggregatePresent: c.aggregatePresent,
+      aggregateValue: c.aggregateValue,
     };
   });
 

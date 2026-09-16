@@ -12,9 +12,17 @@ import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import {
   getPeriodInputCoverage,
+  type CoverageUnit,
   type InputCoverage,
   type PeriodInputCoverage,
 } from "@/app/settings/kpi/input-coverage-service";
+
+/** Format an entered value for display: thousands-separated number, else raw. */
+const fmt = (v: string | null): string => {
+  if (v == null || v === "") return "—";
+  const n = Number(v);
+  return Number.isFinite(n) ? n.toLocaleString() : v;
+};
 
 export interface InputCoverageModalProps {
   open: boolean;
@@ -118,6 +126,7 @@ function CoverageCard({ input }: { input: InputCoverage }) {
     enteredUnits,
     missingUnits,
     aggregatePresent,
+    aggregateValue,
   } = input;
 
   const complete = perUnit && missingUnits.length === 0;
@@ -142,12 +151,29 @@ function CoverageCard({ input }: { input: InputCoverage }) {
           )}
         </div>
         {perUnit ? (
-          <Badge variant={complete ? "secondary" : "destructive"}>
+          <Badge
+            variant="outline"
+            className={cn(
+              complete
+                ? "border-success/40 bg-success/10 text-success"
+                : "border-destructive/40 bg-destructive/10 text-destructive",
+            )}
+          >
             {enteredUnits.length}/{totalUnits} units entered
           </Badge>
+        ) : aggregatePresent ? (
+          <Badge
+            variant="outline"
+            className="border-success/40 bg-success/10 font-mono text-success"
+          >
+            {fmt(aggregateValue)}
+          </Badge>
         ) : (
-          <Badge variant={aggregatePresent ? "secondary" : "destructive"}>
-            {aggregatePresent ? "value entered" : "no value"}
+          <Badge
+            variant="outline"
+            className="border-destructive/40 bg-destructive/10 text-destructive"
+          >
+            missing
           </Badge>
         )}
       </div>
@@ -168,13 +194,7 @@ function CoverageCard({ input }: { input: InputCoverage }) {
         />
       )}
 
-      {perUnit && missingUnits.length === 0 && (
-        <p className="mt-2 text-xs font-medium text-success dark:text-success">
-          ✓ All {totalUnits} generators have this input entered.
-        </p>
-      )}
-
-      {perUnit && enteredUnits.length > 0 && missingUnits.length > 0 && (
+      {perUnit && enteredUnits.length > 0 && (
         <UnitList
           label={`Entered (${enteredUnits.length})`}
           tone="entered"
@@ -192,16 +212,14 @@ function UnitList({
 }: {
   label: string;
   tone: "missing" | "entered";
-  units: { unitId: number; unitName: string; stationName: string | null }[];
+  units: CoverageUnit[];
 }) {
   return (
     <div className="mt-2">
       <p
         className={cn(
           "mb-1 text-[11px] font-semibold uppercase tracking-wide",
-          tone === "missing"
-            ? "text-destructive"
-            : "text-muted-foreground",
+          tone === "missing" ? "text-destructive" : "text-success",
         )}
       >
         {label}
@@ -213,12 +231,15 @@ function UnitList({
             className={cn(
               "rounded-md border px-1.5 py-0.5 text-xs",
               tone === "missing"
-                ? "border-destructive/40 bg-destructive/5 text-foreground"
-                : "text-muted-foreground",
+                ? "border-destructive/40 bg-destructive/5 text-destructive"
+                : "border-success/40 bg-success/10 text-success",
             )}
             title={u.stationName ? `${u.stationName} · ${u.unitName}` : u.unitName}
           >
             {u.unitName}
+            {tone === "entered" && u.value != null && (
+              <span className="ml-1 font-mono font-semibold">{fmt(u.value)}</span>
+            )}
           </span>
         ))}
       </div>
