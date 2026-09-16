@@ -1041,7 +1041,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
               <div className="ml-auto flex items-center gap-3">
                 {computeProgress && (
                   <div className="flex items-center gap-2" aria-live="polite">
-                    <div className="bg-muted h-2 w-56 overflow-hidden rounded-full">
+                    <div className="bg-muted h-2 w-[28rem] max-w-[45vw] overflow-hidden rounded-full">
                       {computeProgress.total > 0 ? (
                         <div
                           className="bg-primary h-full rounded-full transition-all duration-300"
