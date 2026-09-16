@@ -45,10 +45,14 @@ export default function TwoFactorSetupClient({
       );
       return;
     }
+    if (data.method !== "totp") {
+      setError("Could not start two-factor setup. Please try again.");
+      return;
+    }
     setEnrol({
       secret: parseSecret(data.totpURI),
       totpURI: data.totpURI,
-      backupCodes: data.backupCodes ?? [],
+      backupCodes: data.backupCodes,
     });
   }
 
