@@ -42,10 +42,13 @@ export default function PowerStationDnD({
     async (targetStationId: number | "unassigned") => {
       if (draggedResourceId === null) return;
 
-      const prev = [...units];
+      const resourceId = draggedResourceId;
+      const previousStationId =
+        units.find((r) => r.id === resourceId)?.power_station_id ?? null;
+
       setUnits((current) =>
         current.map((r) =>
-          r.id === draggedResourceId
+          r.id === resourceId
             ? {
                 ...r,
                 power_station_id:
@@ -57,15 +60,22 @@ export default function PowerStationDnD({
 
       try {
         if (targetStationId === "unassigned") {
-          await RemoveUnitFromPowerStation(draggedResourceId);
+          await RemoveUnitFromPowerStation(resourceId);
         } else {
-          await AssignUnitToPowerStation(
-            draggedResourceId,
-            targetStationId,
-          );
+          await AssignUnitToPowerStation(resourceId, targetStationId);
         }
       } catch {
-        setUnits(prev);
+        // Roll back only this unit's own field via a functional update, not
+        // a captured full-array snapshot — a snapshot taken before a
+        // concurrent drag/remove elsewhere would wipe out that unrelated
+        // change if this request is the one that ends up failing last.
+        setUnits((current) =>
+          current.map((r) =>
+            r.id === resourceId
+              ? { ...r, power_station_id: previousStationId }
+              : r,
+          ),
+        );
       }
 
       setDraggedResourceId(null);
@@ -76,7 +86,9 @@ export default function PowerStationDnD({
 
   const handleRemove = useCallback(
     async (resourceId: number) => {
-      const prev = [...units];
+      const previousStationId =
+        units.find((r) => r.id === resourceId)?.power_station_id ?? null;
+
       setUnits((current) =>
         current.map((r) =>
           r.id === resourceId ? { ...r, power_station_id: null } : r,
@@ -86,7 +98,13 @@ export default function PowerStationDnD({
       try {
         await RemoveUnitFromPowerStation(resourceId);
       } catch {
-        setUnits(prev);
+        setUnits((current) =>
+          current.map((r) =>
+            r.id === resourceId
+              ? { ...r, power_station_id: previousStationId }
+              : r,
+          ),
+        );
       }
     },
     [units],
