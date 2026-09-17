@@ -12,7 +12,7 @@ import { and, desc, eq } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { roles, user } from "@/db/schema/auth-schema";
 import { organisations } from "@/db/schema/utility";
-import { sendEmail } from "@/lib/email/email.service";
+import { sendEmail, escapeHtml } from "@/lib/email/email.service";
 import { getCurrentUser } from "@/lib/user.service";
 import type { CurrentUser } from "@/lib/user.service";
 import { GetReportPeriods } from "@/app/data-entry/service";
@@ -186,9 +186,9 @@ async function sendGlobalSummary(
     const pct = p.Requested > 0 ? Math.round((p.Entered / p.Requested) * 100) : 0;
 
     tableRows += `<tr>
-      <td style="padding:4px 8px;border-bottom:1px solid #e2e8f0;">${p.Utility}</td>
-      <td style="padding:4px 8px;border-bottom:1px solid #e2e8f0;">${p.Period}</td>
-      <td style="padding:4px 8px;border-bottom:1px solid #e2e8f0;">${p.Report_Type}</td>
+      <td style="padding:4px 8px;border-bottom:1px solid #e2e8f0;">${escapeHtml(p.Utility)}</td>
+      <td style="padding:4px 8px;border-bottom:1px solid #e2e8f0;">${escapeHtml(p.Period)}</td>
+      <td style="padding:4px 8px;border-bottom:1px solid #e2e8f0;">${escapeHtml(p.Report_Type)}</td>
       <td style="padding:4px 8px;border-bottom:1px solid #e2e8f0;text-align:right;">${p.Requested}</td>
       <td style="padding:4px 8px;border-bottom:1px solid #e2e8f0;text-align:right;">${p.Entered}</td>
       <td style="padding:4px 8px;border-bottom:1px solid #e2e8f0;text-align:right;">${p.Reviewed}</td>
