@@ -23,23 +23,25 @@ function req() {
   });
 }
 
-function countNonNull(rows: any[], key: string): number {
+type PbiRow = Record<string, unknown>;
+
+function countNonNull(rows: PbiRow[], key: string): number {
   return rows.filter((r) => r[key] != null && r[key] !== "").length;
 }
 
-function distinct(rows: any[], key: string): unknown[] {
+function distinct(rows: PbiRow[], key: string): unknown[] {
   return [...new Set(rows.map((r) => r[key]))].filter(
     (v) => v != null && v !== "",
   );
 }
 
-async function run(name: string, handler: (r: Request) => Promise<Response>) {
+async function run(name: string, handler: (r: Request) => Promise<Response>): Promise<PbiRow[]> {
   const res = await handler(req());
   if (res.status !== 200) {
     console.log(`\n=== ${name} ===  HTTP ${res.status}  ${await res.text()}`);
     return [];
   }
-  return (await res.json()) as any[];
+  return (await res.json()) as PbiRow[];
 }
 
 async function main() {
@@ -71,7 +73,7 @@ async function main() {
   // factDistribution
   {
     const rows = await run("Fact Distribution", factDistribution);
-    const data = rows.flatMap((r) => (r.Data ?? []) as any[]);
+    const data = rows.flatMap((r) => (r.Data ?? []) as PbiRow[]);
     const len = countNonNull(data, "Distribution Network Length");
     const cap = countNonNull(data, "Distribution Network Transformer Capacity");
     const dow = countNonNull(data, "Distribution Network Unplanned Downtime Events");
@@ -113,7 +115,7 @@ async function main() {
   // factMetering
   {
     const rows = await run("Fact Metering", factMetering);
-    const data = rows.flatMap((r) => (r.Data ?? []) as any[]);
+    const data = rows.flatMap((r) => (r.Data ?? []) as PbiRow[]);
     const ec = countNonNull(data, "Electricity Customers");
     const es = countNonNull(data, "Electricity Sold to Customers");
     console.log(
@@ -134,7 +136,7 @@ async function main() {
   // factSaidiAndSaifi
   {
     const rows = await run("Fact SAIDI&SAIFI", factSaidiAndSaifi);
-    const data = rows.flatMap((r) => (r.Data ?? []) as any[]);
+    const data = rows.flatMap((r) => (r.Data ?? []) as PbiRow[]);
     const a = countNonNull(data, "Total Unplanned Interruptions Customers Affected");
     const b = countNonNull(data, "Total Unplanned Interruptions Events");
     const c = countNonNull(data, "Total Planned Interruptions Customer Minutes");
@@ -147,7 +149,7 @@ async function main() {
   // factTariffStructure
   {
     const rows = await run("Fact Tariff Structure", factTariffStructure);
-    const data = rows.flatMap((r) => (r.Data ?? []) as any[]);
+    const data = rows.flatMap((r) => (r.Data ?? []) as PbiRow[]);
     const nz = data.filter((d) =>
       Object.entries(d).some(
         ([k, v]) => !["ServiceAreaId", "Unit", "Multiplier"].includes(k) && v != null && v !== 0,
@@ -159,7 +161,7 @@ async function main() {
   // factTransmission
   {
     const rows = await run("Fact Transmission", factTransmission);
-    const data = rows.flatMap((r) => (r.Data ?? []) as any[]);
+    const data = rows.flatMap((r) => (r.Data ?? []) as PbiRow[]);
     const len = countNonNull(data, "Transmission Network Length");
     const cs = countNonNull(data, "Transmission Network Customers Served");
     const es = countNonNull(data, "Transmission Electricity Sold to Customers");
@@ -183,7 +185,7 @@ async function main() {
   // factGeneratorData
   {
     const rows = await run("Fact Generator Data", factGeneratorData);
-    const data = rows.flatMap((r) => (r["Generator Data"] ?? []) as any[]);
+    const data = rows.flatMap((r) => (r["Generator Data"] ?? []) as PbiRow[]);
     const cap = countNonNull(data, "GEN Installed Capacity");
     const oil = countNonNull(data, "Oil for Lubrication");
     const diesel = countNonNull(data, "Fuel Oil for Diesel Generators");
