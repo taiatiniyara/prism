@@ -21,7 +21,7 @@ export function isBlockedStatus(
 export function assertValidTransition(
   fromStatus: UserStatus,
   decision: StatusDecision,
-) {
+): "active" | "deactivated" {
   if (fromStatus !== "pending") {
     throw new Error("INVALID_TRANSITION: only pending users can be decided");
   }
