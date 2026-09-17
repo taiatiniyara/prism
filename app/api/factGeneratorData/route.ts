@@ -36,12 +36,19 @@ const GENERATOR_COLUMN_LABELS: Record<string, string> = {
 };
 
 // Emission order (after the six identity columns) mirrors prism-training's
-// /api/factGeneratorData, which lists measures in this exact sequence. Labels
-// not present for a generator fall through; any provider/technology-specific
-// extras append after the pinned ones.
+// /api/factGeneratorData, which lists measures in this exact sequence. The
+// solar set comes first so every solar row exposes the full shared solar
+// column set (null-filled below), then fuel/lubrication, then the pinned GEN
+// group. Labels not present for a generator fall through; any provider/
+// technology-specific extras append after the pinned ones.
 const GENERATOR_COLUMN_ORDER = [
+  "G_STC",
+  "G_measured",
+  "H_irradiance",
+  "Solar Energy output max Theoretical",
   "Lubrication Oil",
   "Fuel Oil for Diesel Generators",
+  "Fuel Oil for Heavy Fuel Generators",
   "GEN Downtime Unplanned Hours",
   "GEN Downtime Planned Hours",
   "GEN Electricity Generated",
@@ -59,11 +66,12 @@ const SOLAR_COLUMN_SUFFIX: Record<string, string> = {
   "Solar Electricity Generated Theoretical": "Solar Energy output max Theoretical",
 };
 
-// "Fuel Oil" is split by technology in the semantic model.
+// "Fuel Oil" is split by technology in the semantic model. Solar generators
+// emit no fuel-oil column (mirrors prism-training, where solar never carries
+// a fuel measure), so Solar is absent from this map.
 const FUEL_OIL_LABEL_BY_TECHNOLOGY: Record<string, string> = {
   Diesel: "Fuel Oil for Diesel Generators",
   "Heavy Fuel": "Fuel Oil for Heavy Fuel Generators",
-  Solar: "Fuel Oil for Heavy Fuel Generators",
 };
 
 export async function GET(req: Request) {
@@ -155,11 +163,12 @@ export async function GET(req: Request) {
               (d) =>
                 d.report_period_id === urp.id && d.unit_id === g.id,
             );
+            const energySource = findItem(g.technology_id)?.name ?? "";
             const measures = genEntries.reduce(
               (acc, e) => {
                 const def = measureDefs.find((m) => m.id === e.measure_def_id);
                 if (!def) return acc;
-                const techName = findItem(g.technology_id)?.name ?? "";
+                const techName = energySource;
                 const solarSuffix = SOLAR_COLUMN_SUFFIX[def.name];
                 const label =
                   def.name === "Fuel Oil"
@@ -171,16 +180,25 @@ export async function GET(req: Request) {
               },
               {} as Record<string, unknown>,
             );
-            // Every solar generator exposes the full shared solar column set
-            // (including the irradiance measures) even when a given period has
-            // no entry for that measure, so the Power BI "H_irradiance" /
-            // "G_measured" columns always exist regardless of provider.
-            const hasSolarMeasure = genEntries.some(
-              (e) => SOLAR_COLUMN_SUFFIX[measureDefs.find((m) => m.id === e.measure_def_id)?.name ?? ""] != null,
-            );
-            if (hasSolarMeasure) {
-              for (const suffix of Object.values(SOLAR_COLUMN_SUFFIX)) {
-                if (!(suffix in measures)) measures[suffix] = null;
+            // Every solar generator exposes exactly the shared solar column set
+            // (the four irradiance/theoretical measures plus the GEN group),
+            // null-filled where a period has no entry, and never leaks a fuel
+            // or lubrication column. This mirrors prism-training's
+            // catalogue-driven emission so both feeds share one column
+            // signature per technology.
+            if (energySource === "Solar") {
+              const solarKeys = [
+                ...Object.values(SOLAR_COLUMN_SUFFIX),
+                "GEN Downtime Unplanned Hours",
+                "GEN Downtime Planned Hours",
+                "GEN Electricity Generated",
+                "GEN Installed Capacity",
+              ];
+              for (const key of Object.keys(measures)) {
+                if (!solarKeys.includes(key)) delete measures[key];
+              }
+              for (const key of solarKeys) {
+                if (!(key in measures)) measures[key] = null;
               }
             }
             const ordered: Record<string, unknown> = {};
