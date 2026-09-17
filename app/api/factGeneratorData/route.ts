@@ -170,6 +170,20 @@ export async function GET(req: Request) {
               },
               {} as Record<string, unknown>,
             );
+            // Every solar generator exposes the full provider-scoped solar
+            // column set (including the irradiance measures) even when a given
+            // period has no entry for that measure, so the Power BI "utility
+            // H_irradiance" / "utility G_measured" columns always exist.
+            const hasSolarMeasure = genEntries.some(
+              (e) => SOLAR_COLUMN_SUFFIX[measureDefs.find((m) => m.id === e.measure_def_id)?.name ?? ""] != null,
+            );
+            if (hasSolarMeasure) {
+              const providerName = findItem(g.provider_id)?.name ?? "";
+              for (const suffix of Object.values(SOLAR_COLUMN_SUFFIX)) {
+                const label = `${providerName} ${suffix}`.trim();
+                if (!(label in measures)) measures[label] = null;
+              }
+            }
             const ordered: Record<string, unknown> = {};
             for (const col of GENERATOR_COLUMN_ORDER) {
               if (col in measures) ordered[col] = measures[col];
