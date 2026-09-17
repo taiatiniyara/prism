@@ -127,7 +127,7 @@ export function formatReportPeriodIso(
   if (!reportDate) return null;
   const d = typeof reportDate === "string" ? new Date(reportDate) : reportDate;
   if (isNaN(d.getTime())) return null;
-  return d.toISOString();
+  return d.toISOString().slice(0, 10);
 }
 
 export const dlValue = (
