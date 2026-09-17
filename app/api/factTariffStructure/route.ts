@@ -206,11 +206,14 @@ const BLOCK_IDS: Record<string, number> = {
 };
 const ALL_CONSUMPTION_BAND_ID = 1005;
 
-// Rewrites a tariff label into its canonical wide-column header:
-// <pay_mode> <customer_type> <band> <measure> using canonical dimension names
-// (e.g. "Recreational Facilities", "All"), so the Power BI column set is the
-// same on p1 and p2 regardless of the p1 label wording.
-function canonicalTariffColumn(raw: string): string {
+// Parses a tariff label into its canonical dimensions: pay_mode
+// (Prepaid/Postpaid), customer_type (canonical wording e.g. "Recreational
+// Facilities", "Others"), and consumption_band ("Block 1".."Block 5" or "All").
+function parseTariffLabel(raw: string): {
+  payment: string;
+  customerType: string;
+  band: string;
+} | null {
   const payment = raw.startsWith("Prepaid") ? "Prepaid" : "Postpaid";
   let rest = raw.slice(payment.length + 1);
   let customerType = "";
@@ -221,10 +224,10 @@ function canonicalTariffColumn(raw: string): string {
       break;
     }
   }
+  if (!customerType) return null;
   const block = rest.match(/^(Block [1-5])/);
   const band = block ? block[1] : "All";
-  if (block) rest = rest.slice(block[1].length + 1);
-  return `${payment} ${customerType} ${band} ${rest}`.trim();
+  return { payment, customerType, band };
 }
 
 export async function GET(req: Request) {
@@ -323,15 +326,6 @@ export async function GET(req: Request) {
     const key = `${e.report_period_id}:${e.service_area_id}:${e.measure_def_id}:${e.payment_mode_id}:${e.customer_type_id}:${e.consumption_band_id}`;
     valMap.set(key, e);
   }
-  const findValue = (rpId: number, saId: number, label: string) => {
-    const c = coordinateFor(label);
-    if (!c || c.measureId == null) return null;
-    const entry = valMap.get(
-      `${rpId}:${saId}:${c.measureId}:${c.paymentModeId}:${c.customerTypeId}:${c.bandId}`,
-    );
-    if (!entry || entry.value_numeric == null) return null;
-    return Number(entry.value_numeric);
-  };
 
   const rateMeasurementId = measureIdBySuffix["Rate per kwh"];
   const unitName =
@@ -357,30 +351,37 @@ export async function GET(req: Request) {
           UsdExchangeRate: fxRate,
           Data: allSa
             .filter((sa) => sa.utility_id === r.utility_id)
-            .map((sa) => {
-              const row: Record<string, unknown> = { ServiceAreaId: sa.id };
-              for (let i = 0; i < TARIFF_LABEL.length; i++) {
-                const label = TARIFF_LABEL[i];
-                const column = canonicalTariffColumn(label);
-                const value = findValue(r.id, sa.id, label);
-                const usd =
-                  typeof value === "number" && Number.isFinite(value)
-                    ? value / fxRate
-                    : 0;
-                row[column] = value;
-                if (i === 0) {
-                  // p1 interleaves the unit/multiplier columns right after the
-                  // first tariff label; both carry the LAST label's values.
-                  row.Unit = unitName;
-                  const lastEntry = valMap.get(
-                    `${r.id}:${sa.id}:${rateMeasurementId}:722:697:${BLOCK_IDS["Block 5"]}`,
-                  );
-                  row.Multiplier = lastEntry?.multiplier || "Ones";
-                }
-                row[`${column} USD`] = usd;
-              }
-              return row;
-            }),
+            .flatMap((sa) =>
+              TARIFF_LABEL.map((label) => {
+                const c = coordinateFor(label);
+                const entry =
+                  c && c.measureId != null
+                    ? valMap.get(
+                        `${r.id}:${sa.id}:${c.measureId}:${c.paymentModeId}:${c.customerTypeId}:${c.bandId}`,
+                      )
+                    : undefined;
+                const value =
+                  entry && entry.value_numeric != null
+                    ? Number(entry.value_numeric)
+                    : null;
+                const dims = parseTariffLabel(label);
+                return {
+                  ServiceAreaId: sa.id,
+                  pay_mode: dims?.payment ?? null,
+                  customer_type: dims?.customerType ?? null,
+                  consumption_band: dims?.band ?? null,
+                  measure_id: c?.measureId ?? null,
+                  Label: label,
+                  Value: value,
+                  Unit: unitName,
+                  Multiplier: entry?.multiplier || "Ones",
+                  ValueUsd:
+                    typeof value === "number" && Number.isFinite(value)
+                      ? value / fxRate
+                      : null,
+                };
+              }),
+            ),
         };
       }),
   );
