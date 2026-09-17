@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useFetch } from "@/lib/use-fetch";
 
 interface DeployInfo {
   commitSha: string;
@@ -13,15 +13,7 @@ interface DeployInfo {
 }
 
 export default function DeploymentPage() {
-  const [data, setData] = useState<DeployInfo | null>(null);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch("/api/deployment/info")
-      .then((r) => r.json())
-      .then(setData)
-      .finally(() => setLoading(false));
-  }, []);
+  const { data, loading } = useFetch<DeployInfo>("/api/deployment/info");
 
   if (loading) return <div className="p-6 text-slate-500">Loading deployment info...</div>;
   if (!data) return null;
