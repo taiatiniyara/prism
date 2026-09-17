@@ -1,7 +1,6 @@
 import { db } from "@/db/connection";
 import { inputDlDefMappings } from "@/db/schema/dataEntry";
 import { managedLists, managedListItems } from "@/db/schema/managedLists";
-import { reportPeriods } from "@/db/schema/reportPeriods";
 import { eq, and, inArray } from "drizzle-orm";
 
 export async function getManagedListByName(
@@ -37,17 +36,6 @@ export async function resolveDlId(
   return row?.measure_def_id ?? null;
 }
 
-export async function resolveDlName(
-  trainingDlId: number,
-): Promise<string | null> {
-  const [row] = await db
-    .select({ name: inputDlDefMappings.training_dl_name })
-    .from(inputDlDefMappings)
-    .where(eq(inputDlDefMappings.training_dl_def_id, trainingDlId))
-    .limit(1);
-  return row?.name ?? null;
-}
-
 export async function resolveDlIds(
   trainingDlIds: number[],
 ): Promise<Map<number, number>> {
@@ -56,10 +44,6 @@ export async function resolveDlIds(
     .from(inputDlDefMappings)
     .where(inArray(inputDlDefMappings.training_dl_def_id, trainingDlIds));
   return new Map(rows.map((r) => [r.training_dl_def_id, r.measure_def_id]));
-}
-
-export async function getSubmittedReportPeriods() {
-  return db.select().from(reportPeriods).where(eq(reportPeriods.status_id, 3));
 }
 
 /**
@@ -136,11 +120,4 @@ export const dlValue = (
   if (val === null || val === undefined) return null;
   const n = Number(val);
   return isNaN(n) ? val : n;
-};
-
-export const dlValueOrNull = (
-  val: string | null | undefined,
-): string | null => {
-  if (val === null || val === undefined || val === "0") return null;
-  return val;
 };
