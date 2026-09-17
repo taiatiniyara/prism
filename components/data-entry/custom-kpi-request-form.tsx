@@ -1021,7 +1021,7 @@ export function CustomKpiRequestForm(props: {
                     <tr
                       key={option.id}
                       className={
-                        isUsedInFormula ? "bg-success/10/30" : "bg-background"
+                        isUsedInFormula ? "bg-success/5" : "bg-background"
                       }
                     >
                       <td className="px-3 py-2 text-xs text-foreground">
@@ -1074,7 +1074,7 @@ export function CustomKpiRequestForm(props: {
                           placeholder="Enter sample value"
                           className={`h-8 text-xs ${
                             hasSampleValue
-                              ? "border-success/40 bg-success/10/60"
+                              ? "border-success/40 bg-success/5"
                               : "border-amber-300 bg-amber-50/50"
                           }`}
                         />

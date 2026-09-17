@@ -12,7 +12,7 @@ const sectionClassesByTone: Record<ReviewKpiSectionTone, string> = {
   sky: "space-y-1.5 rounded-md border border-sky-200/80 border-l-7 bg-sky-50/30 p-2 dark:border-sky-900/60 dark:bg-sky-950/15",
   amber:
     "space-y-1.5 rounded-md border border-amber-200/80 border-l-7 bg-amber-50/40 p-2 dark:border-amber-900/60 dark:bg-amber-950/20",
-  lime: "space-y-1.5 rounded-md border border-success/40/80 border-l-7 bg-success/10/40 p-2 dark:border-lime-900/60 dark:bg-lime-950/20",
+  lime: "space-y-1.5 rounded-md border border-success/30 border-l-7 bg-success/5 p-2 dark:border-lime-900/60 dark:bg-lime-950/20",
 };
 
 const headingClassesByTone: Record<ReviewKpiSectionTone, string> = {

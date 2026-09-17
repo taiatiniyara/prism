@@ -269,7 +269,7 @@ export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
           tone="lime"
           title="KPI Result"
         >
-          <div className="rounded-md border border-success/40/60 bg-background p-2 text-xs sm:text-sm dark:border-lime-900/50">
+          <div className="rounded-md border border-success/25 bg-background p-2 text-xs sm:text-sm dark:border-lime-900/50">
             <div className="mb-1 text-sm font-semibold sm:text-base">
               {formattedResultValue}
               {localRow.unitName && localRow.result.value != null ? (
