@@ -19,8 +19,10 @@ import {
   planKpiCompute,
   computeKpiChunk,
   updateTargetUom,
+  renameFormulaTarget,
 } from "@/app/settings/kpi/unified-formula-service";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -130,8 +132,24 @@ function saveResultsCache(map: Map<string, ResultsCacheEntry>): void {
 
 export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps) {
   const [activeMode, setActiveMode] = useState<BuilderMode>(mode);
-  const targets =
+  const rawTargets =
     activeMode === "kpi" ? data.kpiTargets : data.measureTargets;
+  // Local display-name overrides so an inline rename shows immediately (keyed
+  // "<mode>:<id>") without waiting for a full reload.
+  const [nameOverrides, setNameOverrides] = useState<Record<string, string>>(
+    {},
+  );
+  const [renaming, setRenaming] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
+  const [isRenaming, startRename] = useTransition();
+  const targets = useMemo(
+    () =>
+      rawTargets.map((t) => {
+        const ov = nameOverrides[`${activeMode}:${t.id}`];
+        return ov ? { ...t, name: ov } : t;
+      }),
+    [rawTargets, nameOverrides, activeMode],
+  );
   const [selectedTargetId, setSelectedTargetId] = useState<number | null>(null);
   const [formula, setFormula] = useState("");
   const [cards, setCards] = useState<TagCardState[]>([]);
@@ -407,6 +425,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     setCoverageSummary(new Map());
     setComputeProgress(cached?.progress ?? null);
     setJustSaved(false);
+    setRenaming(false);
     setSavedSig(
       builderStateSignature(target?.formula ?? "", target?.existingCards ?? []),
     );
@@ -422,6 +441,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     setCoverageSummary(new Map());
     setComputeProgress(null);
     setJustSaved(false);
+    setRenaming(false);
     setSavedSig(builderStateSignature("", []));
     setOnlyWithoutFormula(false);
     setTrackAsKpi(false);
@@ -807,6 +827,34 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     });
   };
 
+  const startRenaming = () => {
+    if (selectedTargetId == null || !selectedTarget) return;
+    setNameDraft(selectedTarget.name);
+    setRenaming(true);
+  };
+  const commitRename = () => {
+    if (selectedTargetId == null) return;
+    const name = nameDraft.trim();
+    if (!name || name === (selectedTarget?.name ?? "")) {
+      setRenaming(false);
+      return;
+    }
+    const ownerId = selectedTargetId;
+    const mode = activeMode;
+    startRename(() => {
+      void (async () => {
+        const res = await renameFormulaTarget({ mode, ownerId, name });
+        if (!res.ok) {
+          toast.error(res.error ?? "Rename failed.");
+          return;
+        }
+        setNameOverrides((prev) => ({ ...prev, [`${mode}:${ownerId}`]: name }));
+        setRenaming(false);
+        toast.success("Renamed ✓");
+      })();
+    });
+  };
+
   return (
     <div className="space-y-4">
       {/* target selector */}
@@ -868,6 +916,49 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                 triggerClassName="mt-1 w-full"
                 allowEscapeKeyPropagation={false}
               />
+              {selectedTargetId != null &&
+                (renaming ? (
+                  <div className="mt-1 flex items-center gap-1">
+                    <Input
+                      value={nameDraft}
+                      autoFocus
+                      placeholder="Name"
+                      onChange={(e) => setNameDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") commitRename();
+                        if (e.key === "Escape") setRenaming(false);
+                      }}
+                      className="h-8"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-8"
+                      onClick={commitRename}
+                      disabled={isRenaming}
+                    >
+                      {isRenaming ? "Saving…" : "Save"}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-8"
+                      onClick={() => setRenaming(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={startRenaming}
+                    className="text-muted-foreground mt-1 text-xs underline-offset-2 hover:underline"
+                    title={`Rename this ${activeMode === "kpi" ? "KPI" : "calculated measure"}`}
+                  >
+                    &#9998; Rename this {activeMode === "kpi" ? "KPI" : "measure"}
+                  </button>
+                ))}
             </div>
             {selectedTargetId != null && (
               <div className="w-40">

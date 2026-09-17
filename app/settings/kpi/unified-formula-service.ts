@@ -384,6 +384,39 @@ function isTargetConfigured(
 }
 
 // ---------------------------------------------------------------------------
+// Rename a KPI / calculated-measure target (display name only) from the builder.
+// ---------------------------------------------------------------------------
+
+export async function renameFormulaTarget(input: {
+  mode: BuilderMode;
+  ownerId: number;
+  name: string;
+}): Promise<SaveResult> {
+  const name = input.name.trim();
+  if (!input.ownerId || Number.isNaN(input.ownerId))
+    return { ok: false, error: "Choose a KPI/measure first." };
+  if (!name) return { ok: false, error: "Name cannot be empty." };
+  if (name.length > 255)
+    return { ok: false, error: "Name is too long (max 255 characters)." };
+
+  if (input.mode === "kpi") {
+    await db
+      .update(kpiDefinitions)
+      .set({ name })
+      .where(eq(kpiDefinitions.id, input.ownerId));
+  } else {
+    await db
+      .update(measureDefinitions)
+      .set({ name })
+      .where(eq(measureDefinitions.id, input.ownerId));
+  }
+
+  revalidatePath("/settings/kpi");
+  revalidatePath("/settings/inputs");
+  return { ok: true };
+}
+
+// ---------------------------------------------------------------------------
 // Save (formula_binding = source of truth + derived formula_inputs JSON cache)
 // ---------------------------------------------------------------------------
 
