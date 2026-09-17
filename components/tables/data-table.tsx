@@ -19,7 +19,7 @@ import {
   useFormOverrides,
   useReorderableList,
 } from "../dev/form-overrides-provider";
-import BooleanToggle from "./booleanToggle";
+import BooleanToggle from "./boolean-toggle";
 import { FaSquare } from "react-icons/fa";
 import {
   DropdownMenu,
