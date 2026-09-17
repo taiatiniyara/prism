@@ -1269,7 +1269,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                         onSort={toggleResultSort}
                         className="w-full"
                       />
-                      <th className="bg-muted sticky top-0 z-10 py-1 pl-3 text-left font-medium">
+                      <th className="bg-muted sticky top-0 z-10 py-1 pr-2 pl-3 text-left font-medium whitespace-nowrap">
                         Coverage
                       </th>
                     </tr>
@@ -1308,7 +1308,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                             })()}
                           </span>
                         </td>
-                        <td className="py-1 pl-3 text-left">
+                        <td className="py-1 pr-2 pl-3 text-left whitespace-nowrap">
                           {selectedTargetId != null && (
                             <button
                               type="button"
