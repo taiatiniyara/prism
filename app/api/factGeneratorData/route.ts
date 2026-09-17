@@ -48,8 +48,10 @@ const GENERATOR_COLUMN_ORDER = [
   "GEN Installed Capacity",
 ];
 
-// Solar measures are emitted per-provider so the column name matches the
-// legacy feed (e.g. "Utility G_STC", "IPP Solar Energy output max Theoretical").
+// Solar measures emit to a single provider-agnostic column name (H_irradiance,
+// G_measured, G_STC, Solar Energy output max Theoretical), mirroring how fuel
+// oil is already split by technology only. The EnergyProvider identity column
+// on each row distinguishes Utility vs IPP.
 const SOLAR_COLUMN_SUFFIX: Record<string, string> = {
   "Solar Hours of Irradiance (H_irradiance)": "H_irradiance",
   "Solar Average measured irradiance (G_measured)": "G_measured",
@@ -158,30 +160,27 @@ export async function GET(req: Request) {
                 const def = measureDefs.find((m) => m.id === e.measure_def_id);
                 if (!def) return acc;
                 const techName = findItem(g.technology_id)?.name ?? "";
-                const providerName = findItem(g.provider_id)?.name ?? "";
                 const solarSuffix = SOLAR_COLUMN_SUFFIX[def.name];
                 const label =
                   def.name === "Fuel Oil"
                     ? (FUEL_OIL_LABEL_BY_TECHNOLOGY[techName] ?? def.name)
                     : solarSuffix
-                      ? `${providerName} ${solarSuffix}`.trim()
+                      ? solarSuffix
                       : (GENERATOR_COLUMN_LABELS[def.name] ?? def.name);
                 return { [label]: valueFor(e), ...acc };
               },
               {} as Record<string, unknown>,
             );
-            // Every solar generator exposes the full provider-scoped solar
-            // column set (including the irradiance measures) even when a given
-            // period has no entry for that measure, so the Power BI "utility
-            // H_irradiance" / "utility G_measured" columns always exist.
+            // Every solar generator exposes the full shared solar column set
+            // (including the irradiance measures) even when a given period has
+            // no entry for that measure, so the Power BI "H_irradiance" /
+            // "G_measured" columns always exist regardless of provider.
             const hasSolarMeasure = genEntries.some(
               (e) => SOLAR_COLUMN_SUFFIX[measureDefs.find((m) => m.id === e.measure_def_id)?.name ?? ""] != null,
             );
             if (hasSolarMeasure) {
-              const providerName = findItem(g.provider_id)?.name ?? "";
               for (const suffix of Object.values(SOLAR_COLUMN_SUFFIX)) {
-                const label = `${providerName} ${suffix}`.trim();
-                if (!(label in measures)) measures[label] = null;
+                if (!(suffix in measures)) measures[suffix] = null;
               }
             }
             const ordered: Record<string, unknown> = {};
