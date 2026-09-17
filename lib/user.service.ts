@@ -49,6 +49,20 @@ export const resolveUtilityScopeId = (user: {
   return hasGlobalUtilityAccess(user) ? null : user.org_id;
 };
 
+// Narrows a nullable org_id to number, throwing instead of the silent
+// `user.org_id!` non-null assertion a org-scoped write path would otherwise
+// use — a global-access user (DEV/BMO) reaching one of these paths has
+// org_id === null, and the assertion would write `utility_id: null` rather
+// than fail loudly.
+export const requireOrgId = (user: { org_id: number | null }): number => {
+  if (user.org_id == null) {
+    throw new Error(
+      "Expected an organisation-scoped user, but org_id is null",
+    );
+  }
+  return user.org_id;
+};
+
 export const getCurrentUser = async (): Promise<CurrentUser> => {
   const session = await auth.api.getSession({
     headers: await headers(),
