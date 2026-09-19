@@ -2,8 +2,42 @@
 
 import { useEffect, useState, useCallback } from "react";
 
+interface StatusCounts {
+  requested: number;
+  pending: number;
+  entered: number;
+  reviewed: number;
+  approved: number;
+  endorsed: number;
+  notAvailable: number;
+}
+
+interface StuckEntry {
+  id: string;
+  inputDefId: number;
+  statusId: number;
+  serviceAreaId: number;
+  reportPeriodId: number;
+  updatedAt: string;
+}
+
+interface PipelineUtility {
+  id: number;
+  name: string;
+}
+
+interface PipelineData {
+  statusCounts: StatusCounts;
+  totalEntries: number;
+  completedPct: number;
+  stuckCount: number;
+  stuckEntries: StuckEntry[];
+  utilities: PipelineUtility[];
+  stuckThresholdDays: number;
+}
+
 export default function DataPipelinePage() {
-  const [data, setData] = useState<Record<string, unknown> | null>(null);
+  const [data, setData] = useState<PipelineData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -32,19 +66,19 @@ export default function DataPipelinePage() {
   if (error) return <div className="p-6 text-danger">Error: {error}</div>;
   if (!data) return null;
 
-  const sc = data.statusCounts as Record<string, number>;
-  const statuses = ["requested", "pending", "entered", "reviewed", "approved", "endorsed", "notAvailable"];
+  const sc = data.statusCounts;
+  const statuses: (keyof StatusCounts)[] = ["requested", "pending", "entered", "reviewed", "approved", "endorsed", "notAvailable"];
   const maxCount = Math.max(1, ...statuses.map((s) => sc[s] ?? 0));
-  const utilities = data.utilities as Array<{ id: number; name: string }> || [];
+  const utilities = data.utilities;
 
   return (
     <div className="p-4 space-y-6">
       <h2 className="text-lg font-bold">Data Entry Pipeline</h2>
 
       <div className="flex gap-4 text-sm">
-        <div className="px-3 py-1.5 rounded bg-slate-100">Total: {String(data.totalEntries)}</div>
-        <div className="px-3 py-1.5 rounded bg-success/10 text-success">{String(data.completedPct)}% complete</div>
-        <div className="px-3 py-1.5 rounded bg-yellow-100 text-yellow-800">{String(data.stuckCount)} stuck (&gt;{String(data.stuckThresholdDays)}d)</div>
+        <div className="px-3 py-1.5 rounded bg-slate-100">Total: {data.totalEntries}</div>
+        <div className="px-3 py-1.5 rounded bg-success/10 text-success">{data.completedPct}% complete</div>
+        <div className="px-3 py-1.5 rounded bg-yellow-100 text-yellow-800">{data.stuckCount} stuck (&gt;{data.stuckThresholdDays}d)</div>
       </div>
 
       <div>
@@ -77,7 +111,7 @@ export default function DataPipelinePage() {
         </div>
       )}
 
-      {(data.stuckEntries as unknown[])?.length > 0 && (
+      {data.stuckEntries.length > 0 && (
         <div>
           <h3 className="text-sm font-medium mb-2">Stuck Entries</h3>
           <div className="overflow-x-auto">
@@ -90,11 +124,11 @@ export default function DataPipelinePage() {
                 </tr>
               </thead>
               <tbody>
-                {(data.stuckEntries as Array<Record<string, unknown>>).map((e) => (
-                  <tr key={String(e.id)} className="border-b">
-                    <td className="p-1 font-mono">{String(e.id).slice(0, 8)}</td>
-                    <td className="p-1">{String(e.statusId)}</td>
-                    <td className="p-1 text-slate-500">{new Date(String(e.updatedAt)).toLocaleDateString()}</td>
+                {data.stuckEntries.map((e) => (
+                  <tr key={e.id} className="border-b">
+                    <td className="p-1 font-mono">{e.id.slice(0, 8)}</td>
+                    <td className="p-1">{e.statusId}</td>
+                    <td className="p-1 text-slate-500">{new Date(e.updatedAt).toLocaleDateString()}</td>
                   </tr>
                 ))}
               </tbody>

@@ -2,8 +2,35 @@
 
 import { useEffect, useState, useCallback } from "react";
 
+interface CostAnomaly {
+  date: string;
+  costCents: number;
+  avg7dCents: number;
+  ratio: number;
+}
+
+interface CostByUtility {
+  utilityId: number;
+  utilityName: string;
+  spendCents: number;
+  requestCount: number;
+}
+
+interface CostsData {
+  totalSpendCents: number;
+  daily: Array<{ date: string; costCents: number }>;
+  anomalies: CostAnomaly[];
+  byUtility: CostByUtility[];
+  budget: {
+    dailyLimitCents: number;
+    todaySpendCents: number;
+    todayOverBudget: boolean;
+  };
+  days: number;
+}
+
 export default function CostsPage() {
-  const [data, setData] = useState<Record<string, unknown> | null>(null);
+  const [data, setData] = useState<CostsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState(30);
 
@@ -31,9 +58,7 @@ export default function CostsPage() {
   if (loading) return <div className="p-6 text-slate-500">Loading cost data...</div>;
   if (!data) return <div className="p-6 text-danger">Failed to load cost data.</div>;
 
-  const budget = data.budget as Record<string, unknown>;
-  const anomalies = (data.anomalies as Array<Record<string, unknown>>) || [];
-  const byUtility = (data.byUtility as Array<Record<string, unknown>>) || [];
+  const { budget, anomalies, byUtility } = data;
 
   return (
     <div className="p-4 space-y-6">
@@ -49,17 +74,17 @@ export default function CostsPage() {
       <div className="grid grid-cols-4 gap-3">
         <div className="border rounded p-3">
           <div className="text-xs text-slate-500">Total Spend</div>
-          <div className="text-xl font-bold">{formatCost(Number(data.totalSpendCents))}</div>
-          <div className="text-xs text-slate-400">{String(data.days)} days</div>
+          <div className="text-xl font-bold">{formatCost(data.totalSpendCents)}</div>
+          <div className="text-xs text-slate-400">{data.days} days</div>
         </div>
         <div className="border rounded p-3">
           <div className="text-xs text-slate-500">Daily Budget</div>
-          <div className="text-xl font-bold">{formatCost(Number(budget.dailyLimitCents))}</div>
+          <div className="text-xl font-bold">{formatCost(budget.dailyLimitCents)}</div>
         </div>
         <div className={`border rounded p-3 ${budget.todayOverBudget ? "border-danger/40 bg-danger/10" : ""}`}>
           <div className="text-xs text-slate-500">Today</div>
-          <div className="text-xl font-bold">{formatCost(Number(budget.todaySpendCents))}</div>
-          {Boolean(budget.todayOverBudget) && <div className="text-xs text-danger font-medium">OVER BUDGET</div>}
+          <div className="text-xl font-bold">{formatCost(budget.todaySpendCents)}</div>
+          {budget.todayOverBudget && <div className="text-xs text-danger font-medium">OVER BUDGET</div>}
         </div>
         <div className="border rounded p-3">
           <div className="text-xs text-slate-500">Anomalies</div>
@@ -72,10 +97,10 @@ export default function CostsPage() {
         <div className="border border-danger/40 rounded p-3 bg-danger/10">
           <div className="text-sm font-medium text-danger mb-2">Spend Anomalies</div>
           {anomalies.map((a) => (
-            <div key={String(a.date)} className="text-xs text-danger flex gap-4">
-              <span>{new Date(String(a.date)).toLocaleDateString()}</span>
-              <span className="font-medium">{formatCost(Number(a.costCents))}</span>
-              <span>vs avg {formatCost(Number(a.avg7dCents))} ({String(a.ratio)}x)</span>
+            <div key={a.date} className="text-xs text-danger flex gap-4">
+              <span>{new Date(a.date).toLocaleDateString()}</span>
+              <span className="font-medium">{formatCost(a.costCents)}</span>
+              <span>vs avg {formatCost(a.avg7dCents)} ({a.ratio}x)</span>
             </div>
           ))}
         </div>
@@ -94,11 +119,11 @@ export default function CostsPage() {
           </thead>
           <tbody>
             {byUtility.map((u) => (
-              <tr key={String(u.utilityId)} className="border-b">
-                <td className="p-2">{String(u.utilityName)}</td>
-                <td className="p-2 font-medium">{formatCost(Number(u.spendCents))}</td>
-                <td className="p-2">{String(u.requestCount)}</td>
-                <td className="p-2">{Number(data.totalSpendCents) > 0 ? Math.round(Number(u.spendCents) / Number(data.totalSpendCents) * 100) : 0}%</td>
+              <tr key={u.utilityId} className="border-b">
+                <td className="p-2">{u.utilityName}</td>
+                <td className="p-2 font-medium">{formatCost(u.spendCents)}</td>
+                <td className="p-2">{u.requestCount}</td>
+                <td className="p-2">{data.totalSpendCents > 0 ? Math.round((u.spendCents / data.totalSpendCents) * 100) : 0}%</td>
               </tr>
             ))}
           </tbody>
