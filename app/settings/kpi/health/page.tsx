@@ -1,6 +1,25 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
+import {
+  planAllKpiCompute,
+  computeKpiChunk,
+} from "@/app/settings/kpi/unified-formula-service";
+
+// Drive the batch client-side in small per-KPI × period-chunk calls so the
+// server never runs one long in-process operation (the failure that caused the
+// 502 outage). Each call is bounded and returns before the next begins.
+const PERIOD_CHUNK = 20;
+
+interface RecomputeProgress {
+  running: boolean;
+  finished: boolean;
+  done: number; // KPIs completed
+  total: number; // KPIs to do
+  processed: number; // values computed
+  failed: number;
+  error: string | null;
+}
 
 interface Attempt {
   id: string;
@@ -20,6 +39,7 @@ export default function KpiHealthPage() {
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState("");
   const [retrying, setRetrying] = useState(false);
+  const [recompute, setRecompute] = useState<RecomputeProgress | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -67,6 +87,49 @@ export default function KpiHealthPage() {
     fetchData();
   };
 
+  const runRecomputeAll = async () => {
+    if (recompute?.running) return;
+    setRecompute({ running: true, finished: false, done: 0, total: 0, processed: 0, failed: 0, error: null });
+    try {
+      const plan = await planAllKpiCompute();
+      const total = plan.kpis.length;
+      let processed = 0;
+      let failed = 0;
+      let done = 0;
+      setRecompute({ running: true, finished: false, done, total, processed, failed, error: null });
+      for (const k of plan.kpis) {
+        for (let i = 0; i < plan.periodIds.length; i += PERIOD_CHUNK) {
+          const chunk = plan.periodIds.slice(i, i + PERIOD_CHUNK);
+          try {
+            const r = await computeKpiChunk({
+              kpiDefId: k.kpiDefId,
+              reportPeriodIds: chunk,
+              refreshMeasures: k.refreshMeasures,
+            });
+            processed += r.processed ?? 0;
+            failed += r.failed ?? 0;
+          } catch {
+            failed += chunk.length;
+          }
+        }
+        done += 1;
+        setRecompute({ running: true, finished: false, done, total, processed, failed, error: null });
+      }
+      setRecompute({ running: false, finished: true, done, total, processed, failed, error: null });
+      fetchData();
+    } catch (e) {
+      setRecompute((prev) => ({
+        running: false,
+        finished: true,
+        done: prev?.done ?? 0,
+        total: prev?.total ?? 0,
+        processed: prev?.processed ?? 0,
+        failed: prev?.failed ?? 0,
+        error: e instanceof Error ? e.message : "Recompute failed",
+      }));
+    }
+  };
+
   const statusBadge = (s: string) => {
     const colors: Record<string, string> = {
       completed: "bg-success/10 text-success",
@@ -107,6 +170,25 @@ export default function KpiHealthPage() {
         >
           Retry All Failed
         </button>
+        <button
+          onClick={runRecomputeAll}
+          disabled={recompute?.running}
+          title="Recompute every active KPI that has a formula and inputs, across all participating periods. Runs in small chunks so it can't overload the server. KPIs whose inputs are present get a value; the rest stay missing-input. Keep this tab open until it finishes."
+          className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-40"
+        >
+          {recompute?.running
+            ? `Recomputing… ${recompute.done}/${recompute.total}`
+            : "Recompute all KPIs with inputs"}
+        </button>
+        {recompute && (recompute.running || recompute.finished) && (
+          <span className="self-center text-xs text-slate-600">
+            {recompute.running &&
+              `KPI ${recompute.done}/${recompute.total} · ${recompute.processed} computed — keep this tab open`}
+            {recompute.finished && !recompute.error &&
+              `✓ recomputed ${recompute.processed}${recompute.failed ? ` · ${recompute.failed} failed` : ""}`}
+            {recompute.finished && recompute.error && `✗ ${recompute.error}`}
+          </span>
+        )}
       </div>
 
       <div className="overflow-x-auto">
