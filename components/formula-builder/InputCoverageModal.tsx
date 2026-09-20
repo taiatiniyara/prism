@@ -31,6 +31,9 @@ export interface InputCoverageModalProps {
   ownerId: number | null;
   reportPeriodId: number | null;
   ownerName?: string;
+  /** the period produced a value (ok/incomplete) — missing generators are then
+   *  framed as amber "not entered" rather than a red "missing" failure. */
+  computed?: boolean;
 }
 
 /**
@@ -47,6 +50,7 @@ export function InputCoverageModal({
   ownerId,
   reportPeriodId,
   ownerName,
+  computed = false,
 }: InputCoverageModalProps) {
   const [data, setData] = useState<PeriodInputCoverage | null>(null);
   const [loading, setLoading] = useState(false);
@@ -108,7 +112,11 @@ export function InputCoverageModal({
           {!loading &&
             !error &&
             data?.inputs.map((input, idx) => (
-              <CoverageCard key={`${input.measureDefId}-${idx}`} input={input} />
+              <CoverageCard
+                key={`${input.measureDefId}-${idx}`}
+                input={input}
+                computed={computed}
+              />
             ))}
         </div>
       </DialogContent>
@@ -116,7 +124,13 @@ export function InputCoverageModal({
   );
 }
 
-function CoverageCard({ input }: { input: InputCoverage }) {
+function CoverageCard({
+  input,
+  computed,
+}: {
+  input: InputCoverage;
+  computed: boolean;
+}) {
   const {
     measureName,
     variableNames,
@@ -162,7 +176,9 @@ function CoverageCard({ input }: { input: InputCoverage }) {
             className={cn(
               complete
                 ? "border-success/40 bg-success/10 text-success"
-                : "border-destructive/40 bg-destructive/10 text-destructive",
+                : computed
+                  ? "border-amber-400/50 bg-amber-400/10 text-amber-700 dark:text-amber-300"
+                  : "border-destructive/40 bg-destructive/10 text-destructive",
             )}
           >
             {enteredUnits.length}/{totalUnits} units entered
@@ -203,8 +219,12 @@ function CoverageCard({ input }: { input: InputCoverage }) {
 
       {perUnit && missingUnits.length > 0 && (
         <UnitList
-          label={`Missing (${missingUnits.length})`}
-          tone="missing"
+          label={
+            computed
+              ? `Not entered (${missingUnits.length}) — computed without these`
+              : `Missing (${missingUnits.length})`
+          }
+          tone={computed ? "incomplete" : "missing"}
           units={missingUnits}
         />
       )}
@@ -226,15 +246,27 @@ function UnitList({
   units,
 }: {
   label: string;
-  tone: "missing" | "entered";
+  tone: "missing" | "entered" | "incomplete";
   units: CoverageUnit[];
 }) {
+  const headClass =
+    tone === "missing"
+      ? "text-destructive"
+      : tone === "incomplete"
+        ? "text-amber-700 dark:text-amber-300"
+        : "text-success";
+  const chipClass =
+    tone === "missing"
+      ? "border-destructive/40 bg-destructive/5 text-destructive"
+      : tone === "incomplete"
+        ? "border-amber-400/50 bg-amber-400/10 text-amber-700 dark:text-amber-300"
+        : "border-success/40 bg-success/10 text-success";
   return (
     <div className="mt-2">
       <p
         className={cn(
           "mb-1 text-[11px] font-semibold uppercase tracking-wide",
-          tone === "missing" ? "text-destructive" : "text-success",
+          headClass,
         )}
       >
         {label}
@@ -243,12 +275,7 @@ function UnitList({
         {units.map((u) => (
           <span
             key={u.unitId}
-            className={cn(
-              "rounded-md border px-1.5 py-0.5 text-xs",
-              tone === "missing"
-                ? "border-destructive/40 bg-destructive/5 text-destructive"
-                : "border-success/40 bg-success/10 text-success",
-            )}
+            className={cn("rounded-md border px-1.5 py-0.5 text-xs", chipClass)}
             title={u.stationName ? `${u.stationName} · ${u.unitName}` : u.unitName}
           >
             {u.unitName}
