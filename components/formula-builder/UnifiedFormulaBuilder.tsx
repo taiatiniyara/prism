@@ -1366,20 +1366,44 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                     </tr>
                   </thead>
                   <tbody>
-                    {sortedByPeriod.map((r) => (
-                      <tr key={r.reportPeriodId} className="border-t">
-                        <td className="py-1 pr-3 tabular-nums">
-                          {r.reportPeriodId}
-                        </td>
-                        <td className="py-1 pr-3">
-                          <Badge
-                            variant={
-                              r.status === "ok" ? "secondary" : "destructive"
-                            }
-                          >
-                            {r.status}
-                          </Badge>
-                        </td>
+                    {sortedByPeriod.map((r) => {
+                      // Three-state status: a row that computed a value but has
+                      // some mandatory generator inputs still missing is
+                      // "incomplete" (computed on partial data), not "failed".
+                      const missing =
+                        coverageSummary.get(r.reportPeriodId)?.missingUnits ?? 0;
+                      const computed = r.status === "ok";
+                      const effStatus = computed
+                        ? missing > 0
+                          ? "incomplete"
+                          : "ok"
+                        : "failed";
+                      return (
+                        <tr key={r.reportPeriodId} className="border-t">
+                          <td className="py-1 pr-3 tabular-nums">
+                            {r.reportPeriodId}
+                          </td>
+                          <td className="py-1 pr-3">
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "capitalize",
+                                effStatus === "ok" &&
+                                  "border-success/40 bg-success/10 text-success",
+                                effStatus === "incomplete" &&
+                                  "border-amber-400/50 bg-amber-400/10 text-amber-700 dark:text-amber-300",
+                                effStatus === "failed" &&
+                                  "border-destructive/40 bg-destructive/10 text-destructive",
+                              )}
+                              title={
+                                effStatus === "incomplete"
+                                  ? `Computed on partial data — ${missing} generator(s) missing a required input`
+                                  : undefined
+                              }
+                            >
+                              {effStatus}
+                            </Badge>
+                          </td>
                         <td className="py-1 pr-3 font-mono tabular-nums">
                           {r.value ?? "—"}
                         </td>
@@ -1390,10 +1414,10 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                               const s = coverageSummary.get(r.reportPeriodId);
                               return s && s.missingUnits > 0 ? (
                                 <span
-                                  className="bg-destructive/10 text-destructive shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium"
-                                  title={`${s.missingUnits} of ${s.totalUnits} generator(s) missing an input this period`}
+                                  className="shrink-0 rounded bg-amber-400/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300"
+                                  title={`${s.missingUnits} of ${s.totalUnits} generator(s) missing a required input this period`}
                                 >
-                                  {s.missingUnits} blank
+                                  {s.missingUnits} not entered
                                 </span>
                               ) : null;
                             })()}
@@ -1406,18 +1430,19 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                               onClick={() => setCoveragePeriod(r.reportPeriodId)}
                               className={cn(
                                 "shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium underline-offset-2 hover:underline",
-                                r.status === "ok"
+                                computed
                                   ? "text-muted-foreground"
                                   : "text-primary",
                               )}
                               title="Which generators (units) are missing which inputs, for this period"
                             >
-                              {r.status === "ok" ? "coverage" : "which units?"}
+                              {computed ? "coverage" : "which units?"}
                             </button>
                           )}
                         </td>
-                      </tr>
-                    ))}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1447,6 +1472,12 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
         ownerId={selectedTargetId}
         reportPeriodId={coveragePeriod}
         ownerName={selectedTarget?.name}
+        computed={
+          coveragePeriod != null &&
+          (recompute?.byPeriod.find(
+            (bp) => bp.reportPeriodId === coveragePeriod,
+          )?.status ?? "") === "ok"
+        }
       />
     </div>
   );
