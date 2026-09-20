@@ -27,6 +27,7 @@ export interface AiBarChartVisualization {
   unit?: string;
   description?: string;
   reference_line?: { label?: string; value: number };
+  reference_area?: { label?: string; lower: number; upper: number };
   color_key?: string;
   color_positive?: string;
   color_negative?: string;
@@ -46,6 +47,7 @@ export interface AiLineChartVisualization {
   unit?: string;
   description?: string;
   reference_line?: { label?: string; value: number };
+  reference_area?: { label?: string; lower: number; upper: number };
 }
 
 export interface AiLeaderboardVisualization {

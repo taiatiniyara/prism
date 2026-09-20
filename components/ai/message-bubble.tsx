@@ -26,6 +26,7 @@ interface MessageBubbleProps {
   onFeedback?: (sentiment: "positive" | "negative", correction?: string) => void;
   onCopy?: (content: string) => void;
   onRegenerate?: () => void;
+  onAskFollowUp?: (text: string) => void;
   copied?: boolean;
 }
 
@@ -145,7 +146,7 @@ function parseReasoningSteps(text: string): ReasoningStep[] {
   return steps;
 }
 
-function MessageBubbleInner({ message, isStreaming, reasoningContent, toolProgress, onFeedback, onCopy, onRegenerate, copied }: MessageBubbleProps) {
+function MessageBubbleInner({ message, isStreaming, reasoningContent, toolProgress, onFeedback, onCopy, onRegenerate, onAskFollowUp, copied }: MessageBubbleProps) {
   const isUser = message.role === "user";
   const [feedbackGiven, setFeedbackGiven] = useState<"positive" | "negative" | null>(null);
   const [showCorrection, setShowCorrection] = useState(false);
@@ -270,8 +271,8 @@ function MessageBubbleInner({ message, isStreaming, reasoningContent, toolProgre
         </div>
 
         {visualizations.length > 0 && visualizations.map((viz, index) => (
-          <div key={`viz-${index}`} className="mt-2 w-full overflow-hidden rounded-xl border border-slate-200 bg-white p-4 dark:border-slate-700 dark:bg-slate-800">
-            <VisualizationRenderer visualization={viz} />
+          <div key={`viz-${index}`} className="mt-2 w-full">
+            <VisualizationRenderer visualization={viz} onAskFollowUp={onAskFollowUp} />
           </div>
         ))}
 
