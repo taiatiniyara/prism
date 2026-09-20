@@ -8,6 +8,23 @@ import { GetReportPeriods, type ReportPeriodDTO } from "@/app/data-entry/service
 import type { GetReportPeriodsOptions } from "@/app/data-entry/service";
 import type { AiToolMetadata } from "../types";
 
+/**
+ * Render a JS `number[]` as a bound Postgres `int[]` for use with `= ANY(...)`.
+ *
+ * Interpolating a raw JS array into a `sql` template EXPANDS it into a
+ * parenthesised placeholder list — `($1, $2, …, $N)` — so `= ANY(${ids})`
+ * compiles to `= ANY(($1, …, $N))`, i.e. ANY() applied to a ROW/tuple, which
+ * Postgres rejects ("op ANY/ALL (array) requires array on right side"). That
+ * broke every gold-layer multi-period tool. This yields `ARRAY[$1, …, $N]::int[]`
+ * — a real, fully-parameterised array. Callers must still guard empty input
+ * (an empty list yields `ARRAY[]::int[]`, which matches nothing). (#4, 2026-09-20)
+ */
+export const intArrayParam = (ids: number[]): SQL =>
+  sql`ARRAY[${sql.join(
+    ids.map((id) => sql`${id}`),
+    sql`, `,
+  )}]::int[]`;
+
 // PPA access policy: utility Monthly datasets are private to the owning
 // utility. Global-access roles (BMO/DEV) may reach other utilities'
 // Financial Year periods only.
