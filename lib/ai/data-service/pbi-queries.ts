@@ -175,6 +175,21 @@ export const PBI_QUERIES: Record<string, PbiQueryTemplate> = {
     },
   },
 
+  generation_mix_trend: {
+    name: "generation_mix_trend",
+    description:
+      "Electricity generation (MWh) split by energy source for EACH fiscal year — the multi-year energy/fuel mix. This is the query for 'energy mix over 2022–2025'-style questions: pass `utility` to get one utility's diesel/solar/wind/hydro across years as a stacked bar. (generation_by_source is a single year; generation_trend is multi-year but total-only — use THIS when the question spans multiple years AND wants the source split.) MWh may be null for a source-year with no data entered — render as a gap, not zero, and note incomplete coverage.",
+    returns: "Utility, FY, Energy Source, MWh generated — one row per source per year",
+    result_type: "trend",
+    recommended_chart: "bar-chart",
+    aliases: ["energy mix over time", "energy mix by year", "energy mix across years", "generation mix over years", "generation by source over time", "generation by source by year", "fuel mix trend", "generation mix trend", "renewable vs fossil over time", "renewable vs diesel by year", "energy transition over time"],
+    params: { utility: { type: "string", description: "Utility acronym (e.g., TPL). Strongly recommended — one utility gives a clean stacked mix. Omit for all utilities.", required: false } },
+    dax: (p) => {
+      const filter = p.utility ? `FILTER('Fact Generation'[Utility] = "${escapeDax(p.utility)}")` : "";
+      return `EVALUATE SUMMARIZECOLUMNS('Fact Generation'[Utility], 'Fact Generation'[FY], 'Fact Generation'[Energy Source], "MWh", SUM('Fact Generation'[GEN Electricity Generated (MWh)])) ${filter} ORDER BY 'Fact Generation'[FY] ASC, 'Fact Generation'[Energy Source] ASC`;
+    },
+  },
+
   // ═══════════════════════════════════════════
   // DISTRIBUTION
   // ═══════════════════════════════════════════
@@ -1095,7 +1110,7 @@ export function getQueryCatalogByCategory(): string {
 
   const catMap: Record<string, string> = {
     saidi_by_utility: "Reliability", saifi_by_utility: "Reliability", reliability_summary: "Reliability", saidi_trend: "Reliability", outage_trend_by_source: "Reliability",
-    rated_capacity: "Generation & Capacity", rated_capacity_by_utility: "Generation & Capacity", generation_output: "Generation & Capacity", generation_by_source: "Generation & Capacity", peak_demand: "Generation & Capacity", generation_trend: "Generation & Capacity",
+    rated_capacity: "Generation & Capacity", rated_capacity_by_utility: "Generation & Capacity", generation_output: "Generation & Capacity", generation_by_source: "Generation & Capacity", peak_demand: "Generation & Capacity", generation_trend: "Generation & Capacity", generation_mix_trend: "Generation & Capacity",
     system_losses: "Distribution", distribution_overview: "Distribution", losses_trend: "Distribution",
     financial_summary: "Financials", cost_recovery: "Financials", recovery_trend: "Financials",
     customer_overview: "Customers", metering_summary: "Customers", electrification_trend: "Customers",
