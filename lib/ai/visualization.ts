@@ -75,6 +75,7 @@ export interface NormalizedChartOptions {
   colorPositive?: string;
   colorNegative?: string;
   referenceLine?: { label: string; value: number } | null;
+  referenceArea?: { label: string; lower: number; upper: number } | null;
 }
 
 const toNumOrNull = (v: unknown): number | null =>
@@ -88,6 +89,17 @@ export function normalizeLineChart(
       ? {
           label: String(d.reference_line.label ?? ""),
           value: d.reference_line.value,
+        }
+      : null;
+
+  const referenceArea =
+    d.reference_area &&
+    typeof d.reference_area.lower === "number" &&
+    typeof d.reference_area.upper === "number"
+      ? {
+          label: String(d.reference_area.label ?? ""),
+          lower: d.reference_area.lower,
+          upper: d.reference_area.upper,
         }
       : null;
 
@@ -107,7 +119,7 @@ export function normalizeLineChart(
       const rows = (d.series as Array<{ label: string; value: number }>).map(
         (s) => ({ label: String(s.label), value: toNumOrNull(s.value) }),
       );
-      return { title: d.title, rows, seriesKeys: ["value"], referenceLine };
+      return { title: d.title, rows, seriesKeys: ["value"], referenceLine, referenceArea };
     }
 
     // Multi-series shape: series = [{ name, data: [{ ...row }] }]
@@ -137,7 +149,7 @@ export function normalizeLineChart(
         }
       }
     }
-    return { title: d.title, rows, seriesKeys, referenceLine, unit: d.unit };
+    return { title: d.title, rows, seriesKeys, referenceLine, referenceArea, unit: d.unit };
   }
 
   // Flexible shape: data = [{ x_key: ..., [yKey]: value }]
@@ -164,11 +176,12 @@ export function normalizeLineChart(
       rows,
       seriesKeys: yKeys,
       referenceLine,
+      referenceArea,
       unit: d.unit,
     };
   }
 
-  return { title: d.title, rows: [], seriesKeys: [], referenceLine };
+  return { title: d.title, rows: [], seriesKeys: [], referenceLine, referenceArea };
 }
 
 export function normalizeBarChart(
@@ -179,6 +192,17 @@ export function normalizeBarChart(
       ? {
           label: String(d.reference_line.label ?? ""),
           value: d.reference_line.value,
+        }
+      : null;
+
+  const referenceArea =
+    d.reference_area &&
+    typeof d.reference_area.lower === "number" &&
+    typeof d.reference_area.upper === "number"
+      ? {
+          label: String(d.reference_area.label ?? ""),
+          lower: d.reference_area.lower,
+          upper: d.reference_area.upper,
         }
       : null;
 
@@ -196,6 +220,7 @@ export function normalizeBarChart(
       colorPositive: d.color_positive,
       colorNegative: d.color_negative,
       referenceLine,
+      referenceArea,
     };
   }
 
@@ -223,6 +248,7 @@ export function normalizeBarChart(
         colorPositive: d.color_positive,
         colorNegative: d.color_negative,
         referenceLine,
+        referenceArea,
       };
     }
 
@@ -250,6 +276,7 @@ export function normalizeBarChart(
       colorPositive: d.color_positive,
       colorNegative: d.color_negative,
       referenceLine,
+      referenceArea,
     };
   }
 
@@ -262,5 +289,6 @@ export function normalizeBarChart(
     colorPositive: d.color_positive,
     colorNegative: d.color_negative,
     referenceLine,
+    referenceArea,
   };
 }

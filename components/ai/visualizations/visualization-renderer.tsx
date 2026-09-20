@@ -21,25 +21,27 @@ const EChartsView = dynamic(() => import("./echarts-view"), {
 
 interface VisualizationRendererProps {
   visualization: AiVisualization;
+  onAskFollowUp?: (text: string) => void;
 }
 
 export function VisualizationRenderer({
   visualization,
+  onAskFollowUp,
 }: VisualizationRendererProps) {
   switch (visualization.type) {
     case "table":
-      return <TableView data={visualization} />;
+      return <TableView data={visualization} onAskFollowUp={onAskFollowUp} />;
     case "bar-chart":
-      return <BarChartView data={visualization} />;
+      return <BarChartView data={visualization} onAskFollowUp={onAskFollowUp} />;
     case "line-chart":
-      return <LineChartView data={visualization} />;
+      return <LineChartView data={visualization} onAskFollowUp={onAskFollowUp} />;
     case "leaderboard":
-      return <LeaderboardView data={visualization} />;
+      return <LeaderboardView data={visualization} onAskFollowUp={onAskFollowUp} />;
     case "sankey":
     case "heatmap":
     case "radar":
     case "scatter":
-      return <EChartsView visualization={visualization} />;
+      return <EChartsView visualization={visualization} onAskFollowUp={onAskFollowUp} />;
     default:
       return null;
   }

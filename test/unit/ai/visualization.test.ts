@@ -164,6 +164,28 @@ describe("normalizeLineChart", () => {
     expect(result.rows).toEqual([]);
     expect(result.seriesKeys).toEqual([]);
   });
+
+  it("parses a reference_area target band", () => {
+    const result = normalizeLineChart({
+      type: "line-chart",
+      title: "Frequency Trend",
+      data: [
+        { month: "Jan", value: 49.9 },
+        { month: "Feb", value: 50.1 },
+      ],
+      reference_area: { label: "Safe band 49.8–50.2 Hz", lower: 49.8, upper: 50.2 },
+    });
+    expect(result.referenceArea).toEqual({ label: "Safe band 49.8–50.2 Hz", lower: 49.8, upper: 50.2 });
+  });
+
+  it("defaults referenceArea to null when absent", () => {
+    const result = normalizeLineChart({
+      type: "line-chart",
+      title: "Plain",
+      series: [{ label: "Jan", value: 10 }],
+    });
+    expect(result.referenceArea).toBeNull();
+  });
 });
 
 describe("normalizeBarChart", () => {
@@ -221,6 +243,20 @@ describe("normalizeBarChart", () => {
   it("returns empty rows when no data shape matches", () => {
     const result = normalizeBarChart({ type: "bar-chart", title: "Empty" });
     expect(result.rows).toEqual([]);
+  });
+
+  it("parses a reference_area target band alongside a reference_line", () => {
+    const result = normalizeBarChart({
+      type: "bar-chart",
+      title: "Collection Rate",
+      series: [
+        { label: "Jul", value: 88 },
+        { label: "Aug", value: 92 },
+      ],
+      reference_area: { lower: 90, upper: 100 },
+    });
+    expect(result.referenceArea).toEqual({ label: "", lower: 90, upper: 100 });
+    expect(result.referenceLine).toBeNull();
   });
 });
 

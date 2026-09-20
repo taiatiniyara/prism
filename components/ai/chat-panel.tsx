@@ -51,6 +51,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [toolProgress, setToolProgress] = useState<Array<{ name: string; label: string; status: "running" | "done" | "error"; startTime?: number }>>([]);
+  const [chartPending, setChartPending] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const isStreamingRef = useRef(false);
@@ -115,6 +116,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
     setMessages([]);
     setStreamingContent("");
     setStreamingReasoning("");
+    setChartPending(false);
     setSidebarOpen(false);
   };
 
@@ -126,6 +128,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
     setMessages([]);
     setStreamingContent("");
     setStreamingReasoning("");
+    setChartPending(false);
     setIsLoadingHistory(true);
     setSidebarOpen(false);
 
@@ -225,6 +228,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
     setIsLoading(true);
     setStreamingContent("");
     setStreamingReasoning("");
+    setChartPending(false);
     pendingContentRef.current = "";
     pendingVizBlocksRef.current = [];
     reasoningContentRef.current = "";
@@ -342,6 +346,9 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
             try {
               const toolEvent = JSON.parse(line.slice(2));
               if (toolEvent.type === "tool-start") {
+                if (toolEvent.toolName === "render_visualization") {
+                  setChartPending(true);
+                }
                 setToolProgress((prev) => [
                   ...prev,
                   {
@@ -457,6 +464,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
       }
       setIsLoading(false);
       setStreamingContent("");
+      setChartPending(false);
       pendingContentRef.current = "";
       pendingVizBlocksRef.current = [];
       abortControllerRef.current = null;
@@ -690,6 +698,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
                       }
                       onCopy={(content) => handleCopy(content, msg.id)}
                       copied={copiedId === msg.id}
+                      onAskFollowUp={(text) => handleSendMessage(text)}
                     />
                     {msg.isError && (
                       <div className="mt-2 flex justify-center">
@@ -725,6 +734,15 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
                 <div className="mt-2 flex items-center gap-2 px-1 text-xs text-slate-400">
                   <span className="inline-block size-1.5 rounded-full bg-slate-300 animate-pulse" />
                   <span>Typing</span>
+                </div>
+              )}
+              {chartPending && isLoading && (
+                <div className="border-border mt-4 w-full animate-pulse rounded-xl border border-dashed bg-muted/30 p-6 dark:border-border">
+                  <div className="bg-muted dark:bg-muted mx-auto mb-4 h-4 w-36 rounded" />
+                  <div className="bg-muted dark:bg-muted h-44 w-full rounded" />
+                  <p className="text-muted-foreground dark:text-muted-foreground mt-3 text-center text-xs">
+                    Preparing chart…
+                  </p>
                 </div>
               )}
             </div>
