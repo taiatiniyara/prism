@@ -15,19 +15,6 @@ import {
 // and Sent-to-Grid are not part of p1's transmission feed. The measures are
 // already transmission-scoped by definition, so no utility-function filter is
 // applied (entries can live under any function, as in factDistribution).
-//
-// Scope: only two utilities have transmission networks (EFL org 10, PPL org 20).
-// Every other org (incl. CUC, TAU, and their extra/orphaned utility report
-// periods) must be excluded here. The discriminator that isolates exactly
-// {10, 20} is report-period membership in the two transmission utility report
-// period sets below — the same rp ids p1 emits. (services_provided lists do
-// NOT isolate them: "Electricity Only" 732 spans orgs 6,7,9,10,20,27.)
-const TRANSMISSION_UTILITY_REPORT_PERIOD_IDS = new Set<number>([
-  // EFL org 10
-  174, 175, 218, 248,
-  // PPL org 20
-  184, 185, 226, 256,
-]);
 const TRANSMISSION_MEASURES: { name: string; label: string }[] = [
   { name: "Network Length", label: "Transmission Network Length" },
   {
