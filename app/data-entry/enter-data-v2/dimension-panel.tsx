@@ -64,11 +64,13 @@ export default function DimensionPanel({
       } else {
         nextParams.set(cookieKey, String(value));
       }
+      // updateFilterContextAction() already revalidates this route, so
+      // Next.js folds the refreshed table into its response — no extra
+      // router.refresh() round trip needed (costly on slow links).
       router.replace(
         `/data-entry/enter-data?${nextParams.toString()}`,
         { scroll: false },
       );
-      router.refresh();
     })();
   };
 
