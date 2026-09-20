@@ -49,7 +49,7 @@ export const getKpiStatus = async (
       ? "own_utility"
       : "unscoped";
   const accessNote: KpiStatusData["access_note"] = hasBenchmarkAccess(user)
-    ? "BMO/DEV access: showing all utilities with approved Financial Year reporting."
+    ? "Benchmark access: showing all utilities with approved Financial Year reporting."
     : user.org_id != null
       ? `Access is scoped to your own utility only — other utilities' data exists on the platform but is not visible to you.`
       : "No utility scope found in your session — cross-utility data is not visible.";

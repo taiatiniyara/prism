@@ -45,7 +45,7 @@ export const getBenchmarkingData = async (
       ? "own_utility"
       : "unscoped";
   const accessNote: BenchmarkingData["access_note"] = hasBenchmarkAccess(user)
-    ? "BMO/DEV access: benchmarking spans all utilities with approved Financial Year reporting."
+    ? "Benchmark access: benchmarking spans all utilities with approved Financial Year reporting."
     : user.org_id != null
       ? `Benchmarking is scoped to your own utility only — other utilities' data exists on the platform but is not visible to you.`
       : "No utility scope found in your session — cross-utility data is not visible.";

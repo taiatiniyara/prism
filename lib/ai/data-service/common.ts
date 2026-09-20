@@ -26,8 +26,8 @@ export const intArrayParam = (ids: number[]): SQL =>
   )}]::int[]`;
 
 // PPA access policy: utility Monthly datasets are private to the owning
-// utility. Global-access roles (BMO/DEV) may reach other utilities'
-// Financial Year periods only.
+// utility. Benchmark-access roles (platform BMO/DEV + utility BLO/CEO/EXE/MGR/
+// DAOF/DAOH/DAOO) may reach other utilities' Financial Year periods only.
 export const FINANCIAL_YEAR_REPORT_TYPE = "Financial Year";
 
 const fyReportTypePredicate = (): SQL =>
