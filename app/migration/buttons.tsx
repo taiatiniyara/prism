@@ -83,8 +83,12 @@ export default function MigrationButtons() {
   const [deduping, setDeduping] = useState(false);
   const [dedupResult, setDedupResult] = useState<string | null>(null);
 
-  useEffect(() => {
+  function refreshHistory() {
     getMigrationHistory().then(setHistory).catch(() => {});
+  }
+
+  useEffect(() => {
+    refreshHistory();
   }, [running]);
 
   async function syncAll() {
@@ -124,7 +128,7 @@ export default function MigrationButtons() {
 
     setCurrentStep(-1);
     setRunning(false);
-    getMigrationHistory().then(setHistory).catch(() => {});
+    refreshHistory();
   }
 
   async function purgeAll() {
