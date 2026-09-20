@@ -1,4 +1,5 @@
 import { ReactNode } from "react";
+import { cn } from "@/lib/utils";
 
 interface SectionContainerProps {
   children: ReactNode;
@@ -10,13 +11,7 @@ export default function SectionContainer({
   className,
 }: SectionContainerProps) {
   return (
-    <section
-      className={
-        className
-          ? `rounded-xl border bg-card p-4 sm:p-6 ${className}`
-          : "rounded-xl border bg-card p-4 sm:p-6"
-      }
-    >
+    <section className={cn("rounded-xl border bg-card p-4 sm:p-6", className)}>
       {children}
     </section>
   );
