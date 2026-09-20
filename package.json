@@ -21,7 +21,9 @@
     "db-seed-bsc": "npx tsx scripts/seed-bsc-template.ts",
     "deploy": "bash ./scripts/deploy.sh",
     "generate-api-docs": "npx tsx scripts/generate-api-docs.ts",
-    "git-push": "git add . && git commit -m 'Update' && git push"
+    "git-push": "git add . && git commit -m 'Update' && git push",
+    "verify-gold-layer": "npx tsx scripts/verify-gold-layer.ts",
+    "verify-gold-layer:aspa": "npx tsx scripts/verify-gold-layer.ts --aspa"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.52",
