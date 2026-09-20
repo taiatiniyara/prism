@@ -49,6 +49,10 @@ export function buildContextText(title: string, csv: string, maxRows = 60): stri
   return `${title}\n${body}`;
 }
 
+export function downloadCsv(filename: string, csv: string): void {
+  downloadTextFile(filename, csv, "text/csv;charset=utf-8");
+}
+
 export function downloadTextFile(filename: string, content: string, mime = "text/plain"): void {
   const blob = new Blob([content], { type: mime });
   const url = URL.createObjectURL(blob);

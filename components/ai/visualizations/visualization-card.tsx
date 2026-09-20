@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Copy, Download, Maximize2, Tag } from "lucide-react";
+import { Copy, Download, FileDown, Maximize2, Tag } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { VisualizationModal } from "./visualization-modal";
@@ -38,6 +38,7 @@ export interface VisualizationCardProps {
   showLabels?: boolean;
   onToggleLabels?: () => void;
   onCopyCsv?: () => void | boolean | Promise<boolean> | Promise<void>;
+  onDownloadCsv?: () => void;
   onDownloadPng?: () => Promise<void> | void;
   footer?: React.ReactNode;
 }
@@ -50,6 +51,7 @@ export function VisualizationCard({
   showLabels,
   onToggleLabels,
   onCopyCsv,
+  onDownloadCsv,
   onDownloadPng,
   footer,
 }: VisualizationCardProps) {
@@ -62,6 +64,16 @@ export function VisualizationCard({
       toast.success("Copied to clipboard");
     } catch {
       toast.error("Could not copy data");
+    }
+  };
+
+  const handleCsvDownload = () => {
+    if (!onDownloadCsv) return;
+    try {
+      onDownloadCsv();
+      toast.success("Downloaded CSV");
+    } catch {
+      toast.error("Could not download CSV");
     }
   };
 
@@ -94,6 +106,7 @@ export function VisualizationCard({
             />
           )}
           {onCopyCsv && <CardIconButton icon={Copy} label="Copy as CSV" onClick={handleCopy} />}
+          {onDownloadCsv && <CardIconButton icon={FileDown} label="Download CSV" onClick={handleCsvDownload} />}
           {onDownloadPng && <CardIconButton icon={Download} label="Download PNG" onClick={handlePng} />}
           {modal && (
             <CardIconButton icon={Maximize2} label="Expand" onClick={() => setOpen(true)} />

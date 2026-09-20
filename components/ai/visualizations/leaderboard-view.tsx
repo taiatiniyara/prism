@@ -5,6 +5,7 @@ import {
   buildContextText,
   buildCsv,
   copyToClipboard,
+  downloadCsv,
   downloadNodeAsPng,
   fmtNumber,
   slugifyTitle,
@@ -57,6 +58,7 @@ export function LeaderboardView({ data, onAskFollowUp }: LeaderboardViewProps) {
     <VisualizationCard
       title={data.title}
       onCopyCsv={() => copyToClipboard(csv)}
+      onDownloadCsv={csv ? () => downloadCsv(`${filename}.csv`, csv) : undefined}
       onDownloadPng={() => {
         if (!captureRef.current) throw new Error("chart not ready");
         return downloadNodeAsPng(captureRef.current, `${filename}.png`);

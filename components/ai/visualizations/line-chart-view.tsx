@@ -17,6 +17,7 @@ import { normalizeLineChart } from "@/lib/ai/visualization";
 import {
   buildContextText,
   copyToClipboard,
+  downloadCsv,
   downloadNodeAsPng,
   fmtNumber,
   rowsToCsv,
@@ -192,6 +193,7 @@ export function LineChartView({ data, onAskFollowUp }: LineChartViewProps) {
       showLabels={showLabels}
       onToggleLabels={() => setShowLabels((v) => !v)}
       onCopyCsv={() => copyToClipboard(csv)}
+      onDownloadCsv={csv ? () => downloadCsv(`${filename}.csv`, csv) : undefined}
       onDownloadPng={() => {
         if (!captureRef.current) throw new Error("chart not ready");
         return downloadNodeAsPng(captureRef.current, `${filename}.png`);
