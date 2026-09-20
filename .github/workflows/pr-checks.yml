@@ -1,0 +1,34 @@
+name: "PR checks"
+
+# Type checks and builds every PR against main. Placeholder env vars below
+# satisfy module-level config checks (e.g. lib/auth.ts throws without
+# BETTER_AUTH_SECRET/BETTER_AUTH_URL) — no real DB/secrets are used or needed,
+# since the build never queries the database.
+on:
+  pull_request:
+    branches: ["main"]
+
+jobs:
+  build-and-typecheck:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: "postgres://ci:ci@localhost:5432/ci"
+      BETTER_AUTH_SECRET: "ci-placeholder-secret"
+      BETTER_AUTH_URL: "http://localhost:3554"
+      NEXT_PUBLIC_APP_URL: "http://localhost:3554"
+      NEXT_PUBLIC_BETTER_AUTH_URL: "http://localhost:3554"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+
+      - run: npm ci
+
+      - name: Type check
+        run: npm run typecheck
+
+      - name: Build
+        run: npm run build

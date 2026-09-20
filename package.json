@@ -10,6 +10,7 @@
     "start": "next start -p 3555",
     "start:3554": "next start -p 3554",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:unit": "vitest run test/unit",
     "test:integration": "vitest run test/integration",
