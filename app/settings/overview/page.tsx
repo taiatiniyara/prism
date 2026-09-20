@@ -1,23 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
-
-interface FetchState<T> {
-  data: T | null;
-  loading: boolean;
-  error: string | null;
-}
-
-function useFetch<T>(url: string): FetchState<T> {
-  const [state, setState] = useState<FetchState<T>>({ data: null, loading: true, error: null });
-  useEffect(() => {
-    fetch(url)
-      .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
-      .then((data) => setState({ data, loading: false, error: null }))
-      .catch((e) => setState({ data: null, loading: false, error: e.message }));
-  }, [url]);
-  return state;
-}
+import { useFetch } from "@/lib/use-fetch";
 
 function Card({ title, children, href }: { title: string; children: React.ReactNode; href?: string }) {
   return (
