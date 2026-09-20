@@ -12,6 +12,7 @@ import {
   isBenchmarkingPeriod,
   listBenchmarkingPeriodIds,
 } from "@/lib/benchmarking/participation";
+import { logger } from "@/lib/logging/logger";
 
 const HOURS_IN_PERIOD_MEASURE_NAME = "Hours in Period";
 
@@ -260,10 +261,9 @@ export async function backfillHoursInPeriodForAllPeriods(): Promise<{
       processed += 1;
     } catch (err) {
       failed += 1;
-      console.error(
-        `[hours-in-period] backfill failed for report period ${id}:`,
-        err instanceof Error ? err.message : err,
-      );
+      logger.error(`[hours-in-period] backfill failed for report period ${id}`, {
+        error: err instanceof Error ? err.message : String(err),
+      });
     }
   }
   return { processed, failed };
