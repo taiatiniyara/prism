@@ -169,7 +169,9 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     done: number;
     total: number;
   } | null>(null);
-  const [justSaved, setJustSaved] = useState(false);
+  // Kept only to satisfy the many setJustSaved(...) call sites; the "Saved ✓"
+  // banner it drove was removed (Eugene), so the value itself is unused.
+  const [, setJustSaved] = useState(false);
   // Signature of the last saved/loaded state; when the current state differs
   // there are unsaved edits — the compute button then offers Save & Compute
   // (persist + backfill), otherwise Recompute all periods (backfill only).
@@ -860,7 +862,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
       {/* target selector */}
       <Card>
         <CardContent className="space-y-3">
-          <div className="flex flex-wrap items-end gap-4">
+          <div className="flex flex-wrap items-start gap-4">
             <div>
               <Label className="text-xs">What are you building?</Label>
               <div className="mt-1 flex w-fit items-center gap-1 rounded-md border p-1">
@@ -990,12 +992,6 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
               </span>
             </Label>
           </div>
-          {justSaved && (
-            <p className="text-xs font-medium text-success dark:text-success">
-              Saved ✓ — still shown below. Keep editing, or pick another{" "}
-              {activeMode === "kpi" ? "KPI" : "measure"} from the dropdown above.
-            </p>
-          )}
         </CardContent>
       </Card>
 
