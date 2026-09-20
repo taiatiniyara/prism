@@ -41,7 +41,6 @@ export type FieldType =
   | "number"
   | "select"
   | "checkbox"
-  | "radio"
   | "textarea"
   | "email"
   | "boolean"
@@ -155,17 +154,6 @@ function field<T>(field: DataTableCreateFormField<T>, fieldLabel: string) {
     return (
       <Input
         className="h-10 p-0 border-0 shadow-none w-24"
-        required={field.required ?? true}
-        disabled={field.disabled}
-        type={field.type}
-        name={field.key as string}
-      />
-    );
-  }
-
-  if (field.type === "radio") {
-    return (
-      <Input
         required={field.required ?? true}
         disabled={field.disabled}
         type={field.type}
