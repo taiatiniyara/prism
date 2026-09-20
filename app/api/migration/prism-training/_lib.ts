@@ -22,7 +22,7 @@ export const SUPPORTED_TABLES = [
   "service_areas",
   "report_periods",
   "units",
-  "measure_definitions ",
+  "measure_definitions",
   "kpi_definitions",
   "data_entries",
 ] as const;
@@ -130,7 +130,7 @@ const getRows = async (
     return db.select().from(units).limit(limit).offset(offset);
   }
 
-  if (table === "measure_definitions ") {
+  if (table === "measure_definitions") {
     return db.select().from(measureDefinitions).limit(limit).offset(offset);
   }
 
