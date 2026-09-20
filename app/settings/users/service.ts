@@ -19,7 +19,7 @@ import {
   sendEmail,
 } from "@/lib/email/email.service";
 import { assertValidTransition, type StatusDecision } from "@/lib/user-status";
-import { getCurrentUser } from "@/lib/user.service";
+import { getCurrentUser, requireOrgId } from "@/lib/user.service";
 import { tryWriteAuditLog } from "@/lib/logging/audit.service";
 import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
@@ -33,7 +33,7 @@ export async function AllUsers() {
     .leftJoin(organisations, eq(user.organisation_id, organisations.id));
   const currentUser = await getCurrentUser();
   if (currentUser.role === "BLO") {
-    list.where(eq(user.organisation_id, currentUser.org_id!));
+    list.where(eq(user.organisation_id, requireOrgId(currentUser)));
   }
 
   const users = await list;
@@ -49,7 +49,7 @@ export async function CreateUser(
 ): Promise<DataTableFormResponse<User>> {
   const currentUser = await getCurrentUser();
   if (currentUser.role !== "DEV" && currentUser.role !== "BMO") {
-    data.organisation_id = currentUser.org_id!;
+    data.organisation_id = requireOrgId(currentUser);
   }
   await registerUser({
     email: data.email,

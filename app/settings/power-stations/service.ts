@@ -13,6 +13,7 @@ import {
 import {
   getCurrentUser,
   hasGlobalUtilityAccess,
+  requireOrgId,
   resolveUtilityScopeId,
 } from "@/lib/user.service";
 import {
@@ -34,7 +35,7 @@ export async function AllPowerStations(): Promise<PowerStation[]> {
     .leftJoin(organisations, eq(powerStations.utility_id, organisations.id));
 
   if (!hasGlobalUtilityAccess(user) && user.org_id != null) {
-    query.where(eq(powerStations.utility_id, user.org_id!));
+    query.where(eq(powerStations.utility_id, user.org_id));
   }
 
   const res = await query.orderBy(powerStations.name);
@@ -55,7 +56,7 @@ export async function AddPowerStation(
     .insert(powerStations)
     .values({
       ...data,
-      utility_id: user.org_id!,
+      utility_id: requireOrgId(user),
     })
     .returning();
 
@@ -213,14 +214,16 @@ export async function UpdatePowerStation(
     ? eq(powerStations.id, data.id!)
     : and(
         eq(powerStations.id, data.id!),
-        eq(powerStations.utility_id, user.org_id!),
+        eq(powerStations.utility_id, requireOrgId(user)),
       );
 
   const [powerStation] = await db
     .update(powerStations)
     .set({
       ...data,
-      utility_id: hasGlobalUtilityAccess(user) ? data.utility_id : user.org_id!,
+      utility_id: hasGlobalUtilityAccess(user)
+        ? data.utility_id
+        : requireOrgId(user),
     })
     .where(condition)
     .returning();
