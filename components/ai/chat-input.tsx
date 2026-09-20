@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, forwardRef, useImperativeHandle } from "react";
 import { ArrowUp, Square } from "lucide-react";
 import { toast } from "sonner";
 import { Textarea } from "@/components/ui/textarea";
@@ -14,16 +14,29 @@ interface ChatInputProps {
   maxLength?: number;
 }
 
-export function ChatInput({
+export interface ChatInputHandle {
+  setValue: (text: string) => void;
+  focus: () => void;
+}
+
+export const ChatInput = forwardRef<ChatInputHandle, ChatInputProps>(function ChatInput({
   onSend,
   onStop,
   isLoading = false,
   disabled = false,
   placeholder = "Ask PRISM AI...",
   maxLength,
-}: ChatInputProps) {
+}, ref) {
   const [input, setInput] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  useImperativeHandle(ref, () => ({
+    setValue: (text: string) => {
+      setInput(text);
+      textareaRef.current?.focus();
+    },
+    focus: () => textareaRef.current?.focus(),
+  }), []);
 
   useEffect(() => {
     if (textareaRef.current) {
@@ -101,4 +114,4 @@ export function ChatInput({
       </div>
     </div>
   );
-}
+});

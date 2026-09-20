@@ -5,7 +5,7 @@ import { Loader2, ArrowDown, RefreshCw, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { MessageBubble } from "./message-bubble";
-import { ChatInput } from "./chat-input";
+import { ChatInput, type ChatInputHandle } from "./chat-input";
 import { ChatSidebar } from "./chat-sidebar";
 import { ChatErrorBoundary } from "./chat-error-boundary";
 
@@ -54,6 +54,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
   const [chartPending, setChartPending] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const chatInputRef = useRef<ChatInputHandle>(null);
   const isStreamingRef = useRef(false);
   const animFrameRef = useRef<number | null>(null);
   const messagesRef = useRef(messages);
@@ -214,17 +215,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
     }
   };
 
-  const handleSendMessage = async (message: string) => {
-    if (isStreamingRef.current) return;
-
-    const userMessage: ChatMessage = {
-      id: nextMessageId("user"),
-      role: "user",
-      content: message,
-    };
-
-    const updatedMessages = [...messagesRef.current, userMessage];
-    setMessages(updatedMessages);
+  const runTurn = useCallback(async (updatedMessages: ChatMessage[]) => {
     setIsLoading(true);
     setStreamingContent("");
     setStreamingReasoning("");
@@ -470,7 +461,68 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
       abortControllerRef.current = null;
       isStreamingRef.current = false;
     }
-  };
+  }, [activeSessionId, refreshSessions]);
+
+  const handleSendMessage = useCallback(async (message: string) => {
+    if (isStreamingRef.current) return;
+
+    const userMessage: ChatMessage = {
+      id: nextMessageId("user"),
+      role: "user",
+      content: message,
+    };
+
+    const updatedMessages = [...messagesRef.current, userMessage];
+    messagesRef.current = updatedMessages;
+    setMessages(updatedMessages);
+    await runTurn(updatedMessages);
+  }, [runTurn]);
+
+  const handleRegenerate = useCallback(async (assistantMsgId: string) => {
+    if (isStreamingRef.current) return;
+    const msgs = messagesRef.current;
+    const idx = msgs.findIndex((m) => m.id === assistantMsgId);
+    if (idx === -1) return;
+    let userIdx = idx - 1;
+    while (userIdx >= 0 && msgs[userIdx].role !== "user") userIdx--;
+    if (userIdx < 0) return;
+    const truncated = msgs.slice(0, userIdx + 1);
+    messagesRef.current = truncated;
+    setMessages(truncated);
+    await runTurn(truncated);
+  }, [runTurn]);
+
+  const handleEditMessage = useCallback(async (userMsgId: string, newContent: string) => {
+    if (isStreamingRef.current) return;
+    const trimmed = newContent.trim();
+    if (!trimmed) return;
+    const msgs = messagesRef.current;
+    const idx = msgs.findIndex((m) => m.id === userMsgId);
+    if (idx === -1) return;
+    const updated = [...msgs.slice(0, idx), { ...msgs[idx], content: trimmed }];
+    messagesRef.current = updated;
+    setMessages(updated);
+    await runTurn(updated);
+  }, [runTurn]);
+
+  const handleEditLastViaComposer = useCallback(() => {
+    if (isStreamingRef.current) return;
+    const msgs = messagesRef.current;
+    let idx = msgs.length - 1;
+    while (idx >= 0 && msgs[idx].role !== "user") idx--;
+    if (idx < 0) return;
+    const content = msgs[idx].content;
+    const truncated = msgs.slice(0, idx);
+    messagesRef.current = truncated;
+    setMessages(truncated);
+    chatInputRef.current?.setValue(content);
+  }, []);
+
+  useEffect(() => {
+    const handler = () => handleEditLastViaComposer();
+    window.addEventListener("prism-edit-last", handler);
+    return () => window.removeEventListener("prism-edit-last", handler);
+  }, [handleEditLastViaComposer]);
 
   const handleShare = () => {
     if (activeSessionId) {
@@ -699,6 +751,16 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
                       onCopy={(content) => handleCopy(content, msg.id)}
                       copied={copiedId === msg.id}
                       onAskFollowUp={(text) => handleSendMessage(text)}
+                      onRegenerate={
+                        !isLoading && msg.role === "assistant" && msg.id !== "streaming"
+                          ? () => handleRegenerate(msg.id)
+                          : undefined
+                      }
+                      onEditMessage={
+                        !isLoading && msg.role === "user"
+                          ? (newContent: string) => handleEditMessage(msg.id, newContent)
+                          : undefined
+                      }
                     />
                     {msg.isError && (
                       <div className="mt-2 flex justify-center">
@@ -763,6 +825,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
 
         <div className="border-border border-t px-4 py-1.5">
           <ChatInput
+            ref={chatInputRef}
             onSend={handleSendMessage}
             onStop={handleStop}
             isLoading={isLoading}

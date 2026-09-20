@@ -4,10 +4,11 @@ import { useMemo, useState, useCallback, memo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import type { Components } from "react-markdown";
-import { ThumbsUp, ThumbsDown, Copy, Check, RefreshCw, ChevronDown } from "lucide-react";
+import { ThumbsUp, ThumbsDown, Copy, Check, RefreshCw, ChevronDown, Pencil } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { VisualizationRenderer } from "./visualizations/visualization-renderer";
 import { isVisualizationFenceBlock } from "@/lib/ai/visualization";
+import { highlightCode } from "@/lib/ai/highlight";
 import type { AiVisualization } from "@/lib/ai/types";
 
 interface ChatMessage {
@@ -27,10 +28,11 @@ interface MessageBubbleProps {
   onCopy?: (content: string) => void;
   onRegenerate?: () => void;
   onAskFollowUp?: (text: string) => void;
+  onEditMessage?: (newContent: string) => void;
   copied?: boolean;
 }
 
-function CodeBlock({ lang, code, children, ...props }: { lang: string; code: string; children: React.ReactNode } & React.HTMLAttributes<HTMLElement>) {
+function CodeBlock({ lang, code }: { lang: string; code: string; children: React.ReactNode } & React.HTMLAttributes<HTMLElement>) {
   const [blockCopied, setBlockCopied] = useState(false);
   const handleCopyBlock = useCallback(() => {
     navigator.clipboard.writeText(code).then(() => {
@@ -38,6 +40,8 @@ function CodeBlock({ lang, code, children, ...props }: { lang: string; code: str
       setTimeout(() => setBlockCopied(false), 2000);
     }).catch(() => {});
   }, [code]);
+
+  const highlighted = useMemo(() => highlightCode(code, lang), [code, lang]);
 
   return (
     <div className="my-3 overflow-hidden rounded-lg border border-slate-200 dark:border-slate-700">
@@ -52,9 +56,7 @@ function CodeBlock({ lang, code, children, ...props }: { lang: string; code: str
         </button>
       </div>
       <pre className="overflow-x-auto bg-slate-50 p-4 text-[13px] leading-relaxed dark:bg-slate-900">
-        <code className={props.className} {...props}>
-          {children}
-        </code>
+        <code className={`hljs language-${lang}`} dangerouslySetInnerHTML={{ __html: highlighted.html }} />
       </pre>
     </div>
   );
@@ -146,12 +148,33 @@ function parseReasoningSteps(text: string): ReasoningStep[] {
   return steps;
 }
 
-function MessageBubbleInner({ message, isStreaming, reasoningContent, toolProgress, onFeedback, onCopy, onRegenerate, onAskFollowUp, copied }: MessageBubbleProps) {
+function MessageBubbleInner({ message, isStreaming, reasoningContent, toolProgress, onFeedback, onCopy, onRegenerate, onAskFollowUp, onEditMessage, copied }: MessageBubbleProps) {
   const isUser = message.role === "user";
   const [feedbackGiven, setFeedbackGiven] = useState<"positive" | "negative" | null>(null);
   const [showCorrection, setShowCorrection] = useState(false);
   const [correctionText, setCorrectionText] = useState("");
   const [thinkingOpen, setThinkingOpen] = useState(isStreaming ?? false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editText, setEditText] = useState(message.content);
+
+  const startEdit = () => {
+    setEditText(message.content);
+    setIsEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setIsEditing(false);
+  };
+
+  const submitEdit = () => {
+    const trimmed = editText.trim();
+    if (!trimmed || trimmed === message.content) {
+      setIsEditing(false);
+      return;
+    }
+    onEditMessage?.(trimmed);
+    setIsEditing(false);
+  };
 
   const visualizations = useMemo(
     () => extractVisualizations(message.content),
@@ -189,7 +212,34 @@ function MessageBubbleInner({ message, isStreaming, reasoningContent, toolProgre
         {isUser ? "Y" : "AI"}
       </div>
 
-      <div className={`flex max-w-[80%] flex-col ${isUser ? "items-end" : "items-start"}`}>
+      <div className={`group flex max-w-[80%] flex-col ${isUser ? "items-end" : "items-start"}`}>
+        {isUser && isEditing ? (
+          <div className="w-full min-w-[240px] space-y-2 rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
+            <Textarea
+              value={editText}
+              onChange={(e) => setEditText(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === "Enter" && !e.shiftKey) {
+                  e.preventDefault();
+                  submitEdit();
+                } else if (e.key === "Escape") {
+                  cancelEdit();
+                }
+              }}
+              className="min-h-[44px] border-0 p-0 text-sm leading-relaxed shadow-none focus-visible:ring-0 dark:border-0"
+              autoFocus
+              aria-label="Edit message"
+            />
+            <div className="flex justify-end gap-1.5">
+              <button onClick={cancelEdit} className="rounded-lg px-3 py-1.5 text-[11px] font-medium text-slate-500 transition-colors hover:bg-slate-100 dark:hover:bg-slate-700">
+                Cancel
+              </button>
+              <button onClick={submitEdit} className="rounded-lg bg-slate-900 px-3 py-1.5 text-[11px] font-medium text-white transition-colors hover:bg-slate-700 dark:bg-white dark:text-slate-900 dark:hover:bg-slate-200">
+                Save &amp; resend
+              </button>
+            </div>
+          </div>
+        ) : (
         <div
           className={`text-sm leading-relaxed ${
             isUser
@@ -269,12 +319,24 @@ function MessageBubbleInner({ message, isStreaming, reasoningContent, toolProgre
             </ReactMarkdown>
           </div>
         </div>
+        )}
 
         {visualizations.length > 0 && visualizations.map((viz, index) => (
           <div key={`viz-${index}`} className="mt-2 w-full">
             <VisualizationRenderer visualization={viz} onAskFollowUp={onAskFollowUp} />
           </div>
         ))}
+
+        {isUser && !isEditing && onEditMessage && (
+          <button
+            onClick={startEdit}
+            className="mt-1 flex items-center gap-1 rounded-md p-1 text-[11px] text-slate-400 opacity-0 transition-colors group-hover:opacity-100 group-focus-within:opacity-100 hover:bg-slate-100 hover:text-slate-600 dark:hover:bg-slate-800 dark:hover:text-slate-300"
+            aria-label="Edit message"
+          >
+            <Pencil className="size-3" />
+            Edit
+          </button>
+        )}
 
         {!isUser && message.id && message.id !== "streaming" && (
           <div className="mt-1 flex items-center gap-0.5">
