@@ -6,6 +6,7 @@ import {
   buildContextText,
   buildCsv,
   copyToClipboard,
+  downloadCsv,
   downloadNodeAsPng,
   slugifyTitle,
 } from "@/lib/ai/visualization-export";
@@ -141,6 +142,7 @@ export function TableView({ data, onAskFollowUp }: TableViewProps) {
     <VisualizationCard
       title={data.title}
       onCopyCsv={() => copyToClipboard(csv)}
+      onDownloadCsv={csv ? () => downloadCsv(`${filename}.csv`, csv) : undefined}
       onDownloadPng={() => {
         if (!captureRef.current) throw new Error("table not ready");
         return downloadNodeAsPng(captureRef.current, `${filename}.png`);
