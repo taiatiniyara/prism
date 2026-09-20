@@ -18,13 +18,34 @@ export interface AiTableVisualization {
 export interface AiBarChartVisualization {
   type: "bar-chart";
   title: string;
-  series: Array<{ label: string; value: number }>;
+  series?: Array<{ label: string; value: number }>;
+  data?: Array<Record<string, string | number | null>>;
+  x_key?: string;
+  y_keys?: string[];
+  x_label?: string;
+  y_label?: string;
+  unit?: string;
+  description?: string;
+  reference_line?: { label?: string; value: number };
+  color_key?: string;
+  color_positive?: string;
+  color_negative?: string;
 }
 
 export interface AiLineChartVisualization {
   type: "line-chart";
   title: string;
-  series: Array<{ label: string; value: number }>;
+  series?:
+    | Array<{ label: string; value: number }>
+    | Array<{ name: string; data: Array<Record<string, string | number | null>> }>;
+  data?: Array<Record<string, string | number | null>>;
+  x_key?: string;
+  y_keys?: string[];
+  x_label?: string;
+  y_label?: string;
+  unit?: string;
+  description?: string;
+  reference_line?: { label?: string; value: number };
 }
 
 export interface AiLeaderboardVisualization {
