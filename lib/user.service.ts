@@ -41,6 +41,39 @@ export const hasGlobalUtilityAccess = (user: {
   return false;
 };
 
+/**
+ * PRISM AI / benchmarking access. The UI dev-context cookie
+ * (`prism_dev_utility_context_org_id`) scopes a DEV/BMO admin's *web UI* to a
+ * single utility for testing. That transient UI scope must not bleed into the
+ * AI/benchmarking surface: `compareKpisAcrossUtilities`, `getKpiTargets` and
+ * friends promise cross-utility data and the prompt claims all-utility access.
+ * So in the AI surface benchmark-enabled roles are always treated as
+ * cross-utility (Financial-Year scope is enforced downstream: any user may
+ * reach every utility's approved Financial Year periods, and their own
+ * utility's monthly reporting, but never another utility's Monthly datasets).
+ *
+ * Benchmark access is granted to platform roles (BMO/DEV) and every utility
+ * role (BLO, CEO, EXE, MGR, DAOF, DAOH, DAOO) so that utilities can benchmark
+ * their KPIs against any other utility. External stakeholders (EXT) stay
+ * excluded — their data access is limited by design.
+ */
+export const hasBenchmarkAccess = (user: {
+  role: string | null | undefined;
+}): boolean => {
+  const role = (user.role ?? "").toUpperCase();
+  return (
+    role === "BMO" ||
+    role === "DEV" ||
+    "BLO" === role ||
+    "CEO" === role ||
+    "EXE" === role ||
+    "MGR" === role ||
+    "DAOF" === role ||
+    "DAOH" === role ||
+    "DAOO" === role
+  );
+};
+
 export const resolveUtilityScopeId = (user: {
   org_id: number | null;
   role: string | null | undefined;

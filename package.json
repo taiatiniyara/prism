@@ -10,6 +10,7 @@
     "start": "next start -p 3555",
     "start:3554": "next start -p 3554",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:unit": "vitest run test/unit",
     "test:integration": "vitest run test/integration",
@@ -21,7 +22,9 @@
     "db-seed-bsc": "npx tsx scripts/seed-bsc-template.ts",
     "deploy": "bash ./scripts/deploy.sh",
     "generate-api-docs": "npx tsx scripts/generate-api-docs.ts",
-    "git-push": "git add . && git commit -m 'Update' && git push"
+    "git-push": "git add . && git commit -m 'Update' && git push",
+    "verify-gold-layer": "npx tsx scripts/verify-gold-layer.ts",
+    "verify-gold-layer:aspa": "npx tsx scripts/verify-gold-layer.ts --aspa"
   },
   "dependencies": {
     "@ai-sdk/anthropic": "^4.0.52",
@@ -42,6 +45,8 @@
     "echarts": "^6.1.0",
     "echarts-for-react": "^3.0.6",
     "exceljs": "^4.4.0",
+    "highlight.js": "^11.12.0",
+    "html-to-image": "^1.11.13",
     "lucide-react": "^1.44.0",
     "next": "^16.3.4",
     "node-cron": "^4.6.0",

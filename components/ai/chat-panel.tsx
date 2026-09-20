@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useCallback, useRef, useEffect, useMemo } from "react";
-import { Loader2, ArrowDown, RefreshCw, Share2, Users } from "lucide-react";
+import { Loader2, ArrowDown, RefreshCw, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { MessageBubble } from "./message-bubble";
-import { ChatInput } from "./chat-input";
+import { ChatInput, type ChatInputHandle } from "./chat-input";
 import { ChatSidebar } from "./chat-sidebar";
 import { ChatErrorBoundary } from "./chat-error-boundary";
 
@@ -15,6 +15,15 @@ interface ChatSession {
   last_turn_at: string;
 }
 
+type ToolProgressStatus = "running" | "done" | "error" | "cancelled";
+
+interface ToolProgressEntry {
+  name: string;
+  label: string;
+  status: ToolProgressStatus;
+  startTime?: number;
+}
+
 interface ChatMessage {
   id: string;
   role: "user" | "assistant";
@@ -22,11 +31,13 @@ interface ChatMessage {
   turnId?: number;
   isError?: boolean;
   reasoningContent?: string;
+  toolProgress?: ToolProgressEntry[];
 }
 
 interface ChatPanelProps {
   showSidebar?: boolean;
   initialSessionId?: number;
+  onActiveSessionChange?: (sessionId: number | null) => void;
 }
 
 const MAX_CHARS = 4000;
@@ -39,7 +50,7 @@ const nextMessageId = (prefix: string): string => {
   return `${prefix}-${messageSeq}`;
 };
 
-export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelProps) {
+export function ChatPanel({ showSidebar = true, initialSessionId, onActiveSessionChange }: ChatPanelProps) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -50,19 +61,42 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [stakeholderType, setStakeholderType] = useState<string>("");
-  const [toolProgress, setToolProgress] = useState<Array<{ name: string; label: string; status: "running" | "done" | "error"; startTime?: number }>>([]);
+  const [toolProgress, setToolProgress] = useState<ToolProgressEntry[]>([]);
+  const [chartPending, setChartPending] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const chatInputRef = useRef<ChatInputHandle>(null);
   const isStreamingRef = useRef(false);
   const animFrameRef = useRef<number | null>(null);
   const messagesRef = useRef(messages);
   const pendingContentRef = useRef("");
+  const pendingVizBlocksRef = useRef<string[]>([]);
   const reasoningContentRef = useRef("");
+  const toolProgressRef = useRef<ToolProgressEntry[]>([]);
+
+  const updateToolProgress = useCallback(
+    (updater: (prev: ToolProgressEntry[]) => ToolProgressEntry[]) => {
+      setToolProgress((prev) => {
+        const next = updater(prev);
+        toolProgressRef.current = next;
+        return next;
+      });
+    },
+    [],
+  );
 
   useEffect(() => {
     messagesRef.current = messages;
   }, [messages]);
+
+  const onActiveSessionChangeRef = useRef(onActiveSessionChange);
+  useEffect(() => {
+    onActiveSessionChangeRef.current = onActiveSessionChange;
+  });
+
+  useEffect(() => {
+    onActiveSessionChangeRef.current?.(activeSessionId);
+  }, [activeSessionId]);
 
   const sessionList = useMemo(() => sessions, [sessions]);
 
@@ -115,6 +149,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
     setMessages([]);
     setStreamingContent("");
     setStreamingReasoning("");
+    setChartPending(false);
     setSidebarOpen(false);
   };
 
@@ -126,6 +161,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
     setMessages([]);
     setStreamingContent("");
     setStreamingReasoning("");
+    setChartPending(false);
     setIsLoadingHistory(true);
     setSidebarOpen(false);
 
@@ -211,24 +247,16 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
     }
   };
 
-  const handleSendMessage = async (message: string) => {
-    if (isStreamingRef.current) return;
-
-    const userMessage: ChatMessage = {
-      id: nextMessageId("user"),
-      role: "user",
-      content: message,
-    };
-
-    const updatedMessages = [...messagesRef.current, userMessage];
-    setMessages(updatedMessages);
+  const runTurn = useCallback(async (updatedMessages: ChatMessage[]) => {
     setIsLoading(true);
     setStreamingContent("");
     setStreamingReasoning("");
+    setChartPending(false);
     pendingContentRef.current = "";
+    pendingVizBlocksRef.current = [];
     reasoningContentRef.current = "";
     isStreamingRef.current = true;
-    setToolProgress([]);
+    updateToolProgress(() => []);
 
     abortControllerRef.current = new AbortController();
 
@@ -242,7 +270,6 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
             content: m.content,
           })),
           sessionId: activeSessionId,
-          ...(stakeholderType ? { stakeholder_type: stakeholderType } : {}),
         }),
         signal: abortControllerRef.current.signal,
       });
@@ -342,7 +369,10 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
             try {
               const toolEvent = JSON.parse(line.slice(2));
               if (toolEvent.type === "tool-start") {
-                setToolProgress((prev) => [
+                if (toolEvent.toolName === "render_visualization") {
+                  setChartPending(true);
+                }
+                updateToolProgress((prev) => [
                   ...prev,
                   {
                     name: toolEvent.toolName,
@@ -352,7 +382,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
                   },
                 ]);
               } else if (toolEvent.type === "tool-end") {
-                setToolProgress((prev) =>
+                updateToolProgress((prev) =>
                   prev.map((t) => (t.name === toolEvent.toolName ? { ...t, status: "done" as const } : t)),
                 );
               }
@@ -368,6 +398,15 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
             } catch {
               // ignore malformed error events
             }
+          } else if (line.startsWith("4:")) {
+            try {
+              const vizEvent = JSON.parse(line.slice(2));
+              if (vizEvent && typeof vizEvent.json === "string" && vizEvent.json) {
+                pendingVizBlocksRef.current.push(vizEvent.json);
+              }
+            } catch {
+              // ignore malformed visualization events
+            }
           } else if (line.length > 0 && !line.startsWith("0:") && !line.startsWith("2:") && !line.startsWith("3:")) {
             const content = line + "\n";
             pendingContentRef.current += content;
@@ -382,7 +421,12 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
         cancelAnimationFrame(animFrameRef.current);
         animFrameRef.current = null;
       }
-      const fullContent = pendingContentRef.current;
+      const vizSuffix = pendingVizBlocksRef.current.length
+        ? pendingVizBlocksRef.current
+            .map((rawViz) => `\n\n\`\`\`json\n${rawViz}\n\`\`\``)
+            .join("")
+        : "";
+      const fullContent = pendingContentRef.current + vizSuffix;
       const fullReasoning = reasoningContentRef.current;
       setStreamingContent(fullContent);
       setStreamingReasoning("");
@@ -397,6 +441,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
         content: fullContent,
         reasoningContent: fullReasoning || undefined,
         turnId,
+        toolProgress: toolProgressRef.current.length ? toolProgressRef.current : undefined,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -413,22 +458,35 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
       }
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
-        if (pendingContentRef.current) {
+        const cancelledProgress = toolProgressRef.current.map((t) =>
+          t.status === "running" ? { ...t, status: "cancelled" as const } : t,
+        );
+        if (pendingContentRef.current || cancelledProgress.length) {
+          const vizSuffix = pendingVizBlocksRef.current.length
+            ? pendingVizBlocksRef.current
+                .map((rawViz) => `\n\n\`\`\`json\n${rawViz}\n\`\`\``)
+                .join("")
+            : "";
           const partialAssistant: ChatMessage = {
             id: nextMessageId("assistant"),
             role: "assistant",
-            content: pendingContentRef.current + "\n\n*[Generation stopped]*",
+            content: pendingContentRef.current + vizSuffix + "\n\n*[Generation stopped]*",
+            toolProgress: cancelledProgress.length ? cancelledProgress : undefined,
           };
           setMessages((prev) => [...prev, partialAssistant]);
         }
         return;
       }
+      const erroredProgress = toolProgressRef.current.map((t) =>
+        t.status === "running" ? { ...t, status: "error" as const } : t,
+      );
       const msg = error instanceof Error ? error.message : "Sorry, I encountered an error. Please try again.";
       const errorMessage: ChatMessage = {
         id: nextMessageId("error"),
         role: "assistant",
         content: msg,
         isError: true,
+        toolProgress: erroredProgress.length ? erroredProgress : undefined,
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
@@ -438,11 +496,75 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
       }
       setIsLoading(false);
       setStreamingContent("");
+      updateToolProgress(() => []);
+      setChartPending(false);
       pendingContentRef.current = "";
+      pendingVizBlocksRef.current = [];
       abortControllerRef.current = null;
       isStreamingRef.current = false;
     }
-  };
+  }, [activeSessionId, refreshSessions, updateToolProgress]);
+
+  const handleSendMessage = useCallback(async (message: string) => {
+    if (isStreamingRef.current) return;
+
+    const userMessage: ChatMessage = {
+      id: nextMessageId("user"),
+      role: "user",
+      content: message,
+    };
+
+    const updatedMessages = [...messagesRef.current, userMessage];
+    messagesRef.current = updatedMessages;
+    setMessages(updatedMessages);
+    await runTurn(updatedMessages);
+  }, [runTurn]);
+
+  const handleRegenerate = useCallback(async (assistantMsgId: string) => {
+    if (isStreamingRef.current) return;
+    const msgs = messagesRef.current;
+    const idx = msgs.findIndex((m) => m.id === assistantMsgId);
+    if (idx === -1) return;
+    let userIdx = idx - 1;
+    while (userIdx >= 0 && msgs[userIdx].role !== "user") userIdx--;
+    if (userIdx < 0) return;
+    const truncated = msgs.slice(0, userIdx + 1);
+    messagesRef.current = truncated;
+    setMessages(truncated);
+    await runTurn(truncated);
+  }, [runTurn]);
+
+  const handleEditMessage = useCallback(async (userMsgId: string, newContent: string) => {
+    if (isStreamingRef.current) return;
+    const trimmed = newContent.trim();
+    if (!trimmed) return;
+    const msgs = messagesRef.current;
+    const idx = msgs.findIndex((m) => m.id === userMsgId);
+    if (idx === -1) return;
+    const updated = [...msgs.slice(0, idx), { ...msgs[idx], content: trimmed }];
+    messagesRef.current = updated;
+    setMessages(updated);
+    await runTurn(updated);
+  }, [runTurn]);
+
+  const handleEditLastViaComposer = useCallback(() => {
+    if (isStreamingRef.current) return;
+    const msgs = messagesRef.current;
+    let idx = msgs.length - 1;
+    while (idx >= 0 && msgs[idx].role !== "user") idx--;
+    if (idx < 0) return;
+    const content = msgs[idx].content;
+    const truncated = msgs.slice(0, idx);
+    messagesRef.current = truncated;
+    setMessages(truncated);
+    chatInputRef.current?.setValue(content);
+  }, []);
+
+  useEffect(() => {
+    const handler = () => handleEditLastViaComposer();
+    window.addEventListener("prism-edit-last", handler);
+    return () => window.removeEventListener("prism-edit-last", handler);
+  }, [handleEditLastViaComposer]);
 
   const handleShare = () => {
     if (activeSessionId) {
@@ -664,12 +786,23 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
                       message={msg}
                       isStreaming={msg.id === "streaming"}
                       reasoningContent={msg.reasoningContent}
-                      toolProgress={msg.id === "streaming" ? toolProgress : undefined}
+                      toolProgress={msg.id === "streaming" ? toolProgress : msg.toolProgress}
                       onFeedback={(sentiment: "positive" | "negative", correction?: string) =>
                         handleFeedback(msg.turnId ?? 0, sentiment, correction)
                       }
                       onCopy={(content) => handleCopy(content, msg.id)}
                       copied={copiedId === msg.id}
+                      onAskFollowUp={(text) => handleSendMessage(text)}
+                      onRegenerate={
+                        !isLoading && msg.role === "assistant" && msg.id !== "streaming"
+                          ? () => handleRegenerate(msg.id)
+                          : undefined
+                      }
+                      onEditMessage={
+                        !isLoading && msg.role === "user"
+                          ? (newContent: string) => handleEditMessage(msg.id, newContent)
+                          : undefined
+                      }
                     />
                     {msg.isError && (
                       <div className="mt-2 flex justify-center">
@@ -707,6 +840,15 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
                   <span>Typing</span>
                 </div>
               )}
+              {chartPending && isLoading && (
+                <div className="border-border mt-4 w-full animate-pulse rounded-xl border border-dashed bg-muted/30 p-6 dark:border-border">
+                  <div className="bg-muted dark:bg-muted mx-auto mb-4 h-4 w-36 rounded" />
+                  <div className="bg-muted dark:bg-muted h-44 w-full rounded" />
+                  <p className="text-muted-foreground dark:text-muted-foreground mt-3 text-center text-xs">
+                    Preparing chart…
+                  </p>
+                </div>
+              )}
             </div>
           </div>
 
@@ -724,22 +866,8 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
         </div>
 
         <div className="border-border border-t px-4 py-1.5">
-          <div className="flex items-center gap-2">
-            <Users className="text-muted-foreground size-3.5" />
-            <span className="text-muted-foreground text-xs">Speaking as:</span>
-            <select
-              value={stakeholderType}
-              onChange={(e) => setStakeholderType(e.target.value)}
-              className="text-muted-foreground hover:text-foreground focus:text-foreground rounded border-none bg-transparent text-xs outline-none transition-colors"
-            >
-              <option value="">Consultant (default)</option>
-              <option value="government">Government / Regulator</option>
-              <option value="donor">Donor / DFI</option>
-              <option value="researcher">Education / Researcher</option>
-            </select>
-          </div>
-        </div>
-        <ChatInput
+          <ChatInput
+            ref={chatInputRef}
             onSend={handleSendMessage}
             onStop={handleStop}
             isLoading={isLoading}
@@ -747,6 +875,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
           />
         </div>
       </div>
+    </div>
     </ChatErrorBoundary>
   );
 }

@@ -12,6 +12,20 @@ interface ChatSession {
   last_turn_at: string;
 }
 
+function formatRelativeTime(dateStr: string): string {
+  const date = new Date(dateStr);
+  if (Number.isNaN(date.getTime())) return "";
+  const diffMs = Date.now() - date.getTime();
+  const diffMinutes = Math.round(diffMs / 60_000);
+  if (diffMinutes < 1) return "Just now";
+  if (diffMinutes < 60) return `${diffMinutes}m ago`;
+  const diffHours = Math.round(diffMinutes / 60);
+  if (diffHours < 24) return `${diffHours}h ago`;
+  const diffDays = Math.round(diffHours / 24);
+  if (diffDays < 7) return `${diffDays}d ago`;
+  return date.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+}
+
 interface ChatSidebarProps {
   sessions: ChatSession[];
   activeSessionId: number | null;
@@ -128,7 +142,12 @@ export function ChatSidebar({
                       </Button>
                     </div>
                   ) : (
-                    <span className="flex-1 truncate dark:text-foreground">{session.title}</span>
+                    <span className="flex flex-1 min-w-0 items-baseline gap-1.5">
+                      <span className="truncate dark:text-foreground">{session.title}</span>
+                      <span className="text-muted-foreground dark:text-muted-foreground shrink-0 text-[10px]">
+                        {formatRelativeTime(session.last_turn_at)}
+                      </span>
+                    </span>
                   )}
 
                   {confirmDeleteId === session.id ? (
@@ -146,7 +165,7 @@ export function ChatSidebar({
                       </Button>
                     </div>
                   ) : (
-                    <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
+                    <div className="flex items-center gap-1 opacity-40 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100 hover:opacity-100">
                       <Button
                         variant="ghost"
                         size="icon-xs"

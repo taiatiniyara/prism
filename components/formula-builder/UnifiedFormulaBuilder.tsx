@@ -19,8 +19,10 @@ import {
   planKpiCompute,
   computeKpiChunk,
   updateTargetUom,
+  renameFormulaTarget,
 } from "@/app/settings/kpi/unified-formula-service";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -130,8 +132,24 @@ function saveResultsCache(map: Map<string, ResultsCacheEntry>): void {
 
 export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps) {
   const [activeMode, setActiveMode] = useState<BuilderMode>(mode);
-  const targets =
+  const rawTargets =
     activeMode === "kpi" ? data.kpiTargets : data.measureTargets;
+  // Local display-name overrides so an inline rename shows immediately (keyed
+  // "<mode>:<id>") without waiting for a full reload.
+  const [nameOverrides, setNameOverrides] = useState<Record<string, string>>(
+    {},
+  );
+  const [renaming, setRenaming] = useState(false);
+  const [nameDraft, setNameDraft] = useState("");
+  const [isRenaming, startRename] = useTransition();
+  const targets = useMemo(
+    () =>
+      rawTargets.map((t) => {
+        const ov = nameOverrides[`${activeMode}:${t.id}`];
+        return ov ? { ...t, name: ov } : t;
+      }),
+    [rawTargets, nameOverrides, activeMode],
+  );
   const [selectedTargetId, setSelectedTargetId] = useState<number | null>(null);
   const [formula, setFormula] = useState("");
   const [cards, setCards] = useState<TagCardState[]>([]);
@@ -151,7 +169,9 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     done: number;
     total: number;
   } | null>(null);
-  const [justSaved, setJustSaved] = useState(false);
+  // Kept only to satisfy the many setJustSaved(...) call sites; the "Saved ✓"
+  // banner it drove was removed (Eugene), so the value itself is unused.
+  const [, setJustSaved] = useState(false);
   // Signature of the last saved/loaded state; when the current state differs
   // there are unsaved edits — the compute button then offers Save & Compute
   // (persist + backfill), otherwise Recompute all periods (backfill only).
@@ -407,6 +427,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     setCoverageSummary(new Map());
     setComputeProgress(cached?.progress ?? null);
     setJustSaved(false);
+    setRenaming(false);
     setSavedSig(
       builderStateSignature(target?.formula ?? "", target?.existingCards ?? []),
     );
@@ -422,6 +443,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     setCoverageSummary(new Map());
     setComputeProgress(null);
     setJustSaved(false);
+    setRenaming(false);
     setSavedSig(builderStateSignature("", []));
     setOnlyWithoutFormula(false);
     setTrackAsKpi(false);
@@ -807,12 +829,40 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
     });
   };
 
+  const startRenaming = () => {
+    if (selectedTargetId == null || !selectedTarget) return;
+    setNameDraft(selectedTarget.name);
+    setRenaming(true);
+  };
+  const commitRename = () => {
+    if (selectedTargetId == null) return;
+    const name = nameDraft.trim();
+    if (!name || name === (selectedTarget?.name ?? "")) {
+      setRenaming(false);
+      return;
+    }
+    const ownerId = selectedTargetId;
+    const mode = activeMode;
+    startRename(() => {
+      void (async () => {
+        const res = await renameFormulaTarget({ mode, ownerId, name });
+        if (!res.ok) {
+          toast.error(res.error ?? "Rename failed.");
+          return;
+        }
+        setNameOverrides((prev) => ({ ...prev, [`${mode}:${ownerId}`]: name }));
+        setRenaming(false);
+        toast.success("Renamed ✓");
+      })();
+    });
+  };
+
   return (
     <div className="space-y-4">
       {/* target selector */}
       <Card>
         <CardContent className="space-y-3">
-          <div className="flex flex-wrap items-end gap-4">
+          <div className="flex flex-wrap items-start gap-4">
             <div>
               <Label className="text-xs">What are you building?</Label>
               <div className="mt-1 flex w-fit items-center gap-1 rounded-md border p-1">
@@ -868,6 +918,49 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                 triggerClassName="mt-1 w-full"
                 allowEscapeKeyPropagation={false}
               />
+              {selectedTargetId != null &&
+                (renaming ? (
+                  <div className="mt-1 flex items-center gap-1">
+                    <Input
+                      value={nameDraft}
+                      autoFocus
+                      placeholder="Name"
+                      onChange={(e) => setNameDraft(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") commitRename();
+                        if (e.key === "Escape") setRenaming(false);
+                      }}
+                      className="h-8"
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-8"
+                      onClick={commitRename}
+                      disabled={isRenaming}
+                    >
+                      {isRenaming ? "Saving…" : "Save"}
+                    </Button>
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="ghost"
+                      className="h-8"
+                      onClick={() => setRenaming(false)}
+                    >
+                      Cancel
+                    </Button>
+                  </div>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={startRenaming}
+                    className="text-muted-foreground mt-1 text-xs underline-offset-2 hover:underline"
+                    title={`Rename this ${activeMode === "kpi" ? "KPI" : "calculated measure"}`}
+                  >
+                    &#9998; Rename this {activeMode === "kpi" ? "KPI" : "measure"}
+                  </button>
+                ))}
             </div>
             {selectedTargetId != null && (
               <div className="w-40">
@@ -899,12 +992,6 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
               </span>
             </Label>
           </div>
-          {justSaved && (
-            <p className="text-xs font-medium text-success dark:text-success">
-              Saved ✓ — still shown below. Keep editing, or pick another{" "}
-              {activeMode === "kpi" ? "KPI" : "measure"} from the dropdown above.
-            </p>
-          )}
         </CardContent>
       </Card>
 
@@ -1235,9 +1322,10 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
           {recompute && (
             <div className="bg-muted/30 rounded-lg border p-3">
               <div className="max-h-48 overflow-auto">
-                {/* content-width (not w-full) so the columns pack to the left
-                    instead of stretching apart across the panel. */}
-                <table className="text-xs">
+                {/* Full-width: the Reason column (w-full) soaks up the slack so
+                    Period/Status/Value stay tight on the left and the Coverage
+                    column sits at the far right. */}
+                <table className="w-full text-xs">
                   <thead>
                     <tr className="text-muted-foreground text-left">
                       <SortableTh
@@ -1266,65 +1354,91 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                         col="reason"
                         sort={resultSort}
                         onSort={toggleResultSort}
+                        className="w-full"
                       />
-                      <th className="bg-muted sticky top-0 z-10 py-1 pl-3 text-left font-medium">
+                      <th className="bg-muted sticky top-0 z-10 py-1 pr-2 pl-3 text-left font-medium whitespace-nowrap">
                         Coverage
                       </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {sortedByPeriod.map((r) => (
-                      <tr key={r.reportPeriodId} className="border-t">
-                        <td className="py-1 pr-3 tabular-nums">
-                          {r.reportPeriodId}
-                        </td>
-                        <td className="py-1 pr-3">
-                          <Badge
-                            variant={
-                              r.status === "ok" ? "secondary" : "destructive"
-                            }
-                          >
-                            {r.status}
-                          </Badge>
-                        </td>
+                    {sortedByPeriod.map((r) => {
+                      // Three-state status: a row that computed a value but has
+                      // some mandatory generator inputs still missing is
+                      // "incomplete" (computed on partial data), not "failed".
+                      const missing =
+                        coverageSummary.get(r.reportPeriodId)?.missingUnits ?? 0;
+                      const computed = r.status === "ok";
+                      const effStatus = computed
+                        ? missing > 0
+                          ? "incomplete"
+                          : "ok"
+                        : "failed";
+                      return (
+                        <tr key={r.reportPeriodId} className="border-t">
+                          <td className="py-1 pr-3 tabular-nums">
+                            {r.reportPeriodId}
+                          </td>
+                          <td className="py-1 pr-3">
+                            <Badge
+                              variant="outline"
+                              className={cn(
+                                "capitalize",
+                                effStatus === "ok" &&
+                                  "border-success/40 bg-success/10 text-success",
+                                effStatus === "incomplete" &&
+                                  "border-amber-400/50 bg-amber-400/10 text-amber-700 dark:text-amber-300",
+                                effStatus === "failed" &&
+                                  "border-destructive/40 bg-destructive/10 text-destructive",
+                              )}
+                              title={
+                                effStatus === "incomplete"
+                                  ? `Computed on partial data — ${missing} generator(s) missing a required input`
+                                  : undefined
+                              }
+                            >
+                              {effStatus}
+                            </Badge>
+                          </td>
                         <td className="py-1 pr-3 font-mono tabular-nums">
                           {r.value ?? "—"}
                         </td>
-                        <td className="text-muted-foreground max-w-[24rem] py-1 pr-3">
+                        <td className="text-muted-foreground w-full max-w-0 py-1 pr-3">
                           <span className="flex min-w-0 items-center gap-1.5">
                             <span className="truncate">{r.reason ?? ""}</span>
                             {(() => {
                               const s = coverageSummary.get(r.reportPeriodId);
                               return s && s.missingUnits > 0 ? (
                                 <span
-                                  className="bg-destructive/10 text-destructive shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium"
-                                  title={`${s.missingUnits} of ${s.totalUnits} generator(s) missing an input this period`}
+                                  className="shrink-0 rounded bg-amber-400/10 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300"
+                                  title={`${s.missingUnits} of ${s.totalUnits} generator(s) missing a required input this period`}
                                 >
-                                  {s.missingUnits} blank
+                                  {s.missingUnits} not entered
                                 </span>
                               ) : null;
                             })()}
                           </span>
                         </td>
-                        <td className="py-1 pl-3 text-left">
+                        <td className="py-1 pr-2 pl-3 text-left whitespace-nowrap">
                           {selectedTargetId != null && (
                             <button
                               type="button"
                               onClick={() => setCoveragePeriod(r.reportPeriodId)}
                               className={cn(
                                 "shrink-0 rounded px-1.5 py-0.5 text-[11px] font-medium underline-offset-2 hover:underline",
-                                r.status === "ok"
+                                computed
                                   ? "text-muted-foreground"
                                   : "text-primary",
                               )}
                               title="Which generators (units) are missing which inputs, for this period"
                             >
-                              {r.status === "ok" ? "coverage" : "which units?"}
+                              {computed ? "coverage" : "which units?"}
                             </button>
                           )}
                         </td>
-                      </tr>
-                    ))}
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
@@ -1354,6 +1468,12 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
         ownerId={selectedTargetId}
         reportPeriodId={coveragePeriod}
         ownerName={selectedTarget?.name}
+        computed={
+          coveragePeriod != null &&
+          (recompute?.byPeriod.find(
+            (bp) => bp.reportPeriodId === coveragePeriod,
+          )?.status ?? "") === "ok"
+        }
       />
     </div>
   );

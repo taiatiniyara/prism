@@ -1,5 +1,6 @@
 import { authorizeApiKey } from "@/app/api/service";
 import { getManagedListByName } from "@/lib/legacy/legacy-dl-resolver";
+import { isAllSentinelName } from "@/lib/managed-lists";
 
 export async function dimManagedListRoute(
   req: Request,
@@ -16,7 +17,7 @@ export async function dimManagedListRoute(
     list
       .filter(
         (item) =>
-          !item.name.includes("All") && !item.name.includes("Every"),
+          !isAllSentinelName(item.name) && !item.name.includes("Every"),
       )
       .map((item) => ({ [outputKey]: item.name })),
   );

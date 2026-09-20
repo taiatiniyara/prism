@@ -10,6 +10,11 @@ import { getSystemPrompt } from "@/lib/ai/prompt";
 import { checkUserUtility } from "@/lib/ai/data-service/utils";
 import { runAiStream, runAiGenerate, getCircuitState } from "@/lib/ai/service";
 import { describeToolCall, NO_DATA_NARRATION } from "@/lib/ai/tool-narration";
+import {
+  MAX_VISUALIZATIONS_PER_TURN,
+  appendVisualizationFence,
+  visualizationJsonFromToolInput,
+} from "@/lib/ai/visualization";
 import { isValidOrigin } from "@/lib/ai/origin";
 import { logger } from "@/lib/logging/logger";
 
@@ -19,23 +24,8 @@ const ADMIN_ROLES = new Set(["BMO", "DEV"]);
 const isAdminRole = (role: string | null | undefined): boolean =>
   role != null && ADMIN_ROLES.has(role.toUpperCase());
 
-const getAudienceRegister = (role: string | null | undefined, override?: string | null): string => {
+const getAudienceRegister = (role: string | null | undefined): string => {
   const upper = (role ?? "").toUpperCase();
-
-  // External stakeholders (EXT) can self-identify via stakeholder_type override
-  if (upper === "EXT" && override) {
-    const map: Record<string, string> = {
-      government: "Government / Regulator",
-      regulator: "Government / Regulator",
-      consultant: "Consultant",
-      donor: "Donor / DFI",
-      dfi: "Donor / DFI",
-      researcher: "Education / Researcher",
-      education: "Education / Researcher",
-    };
-    const mapped = map[override.toLowerCase()];
-    if (mapped) return mapped;
-  }
 
   switch (upper) {
     case "CEO":
@@ -195,7 +185,7 @@ export async function POST(request: Request) {
     );
   }
 
-  let body: { messages: AiChatMessage[]; sessionId?: number; stakeholder_type?: string };
+  let body: { messages: AiChatMessage[]; sessionId?: number };
   try {
     body = await request.json();
   } catch {
@@ -341,12 +331,12 @@ export async function POST(request: Request) {
     }
 
     const roleContext = user.role
-      ? `\n\nCurrent audience register: ${getAudienceRegister(user.role, body.stakeholder_type)}.${
+      ? `\n\nCurrent audience register: ${getAudienceRegister(user.role)}.${
           isAdminRole(user.role)
-            ? " This user is a platform administrator — they can access all utilities, approve custom KPIs, and manage configuration."
+            ? " This user is a platform administrator (BMO/DEV) — they can access all utilities' approved Financial Year data, approve custom KPIs, and manage configuration. Cross-utility benchmarking across all utilities is fully available to them."
             : user.role === "EXT"
-              ? " This user is an external stakeholder with limited data access."
-              : ""
+              ? " This user is an external stakeholder. Their data access may be limited — do not claim other utilities' data is missing when it simply may not be visible to this user."
+              : " This user is a utility role (BLO/CEO/EXE/MGR/DAOF/DAOH/DAOO). They can benchmark their KPIs against every utility's approved Financial Year data and are fully entitled to cross-utility benchmarking results. BMO/DEV platform-admin powers (approving custom KPIs, managing configuration) remain admin-only."
         }`
       : "";
 
@@ -386,6 +376,7 @@ export async function POST(request: Request) {
 
         let accumulatedText = "";
         const toolCalls: Array<{ toolName: string; input: unknown }> = [];
+        const visualizationJsonList: string[] = [];
         let tokenUsage = { input: 0, output: 0 };
         let errorMessage: string | null = null;
 
@@ -398,6 +389,10 @@ export async function POST(request: Request) {
                 break;
               case "tool-call": {
                 toolCalls.push({ toolName: part.toolName, input: part.input });
+                const rawViz = visualizationJsonFromToolInput(part.toolName, part.input);
+                if (rawViz && visualizationJsonList.length < MAX_VISUALIZATIONS_PER_TURN) {
+                  visualizationJsonList.push(rawViz);
+                }
                 const label = describeToolCall(part.toolName);
                 enqueue(`2:${JSON.stringify({ type: "tool-start", toolName: part.toolName, label, timestamp: Date.now() })}\n`);
                 enqueue(`1:${JSON.stringify({ type: "reasoning-delta", text: `${label}...\n` })}\n`);
@@ -442,6 +437,20 @@ export async function POST(request: Request) {
           } catch (err) {
             logger.error("[ai-chat] Empty-answer fallback failed", { error: err instanceof Error ? err.message : String(err), turnId });
           }
+        }
+
+        // Deliver collected visualization JSON on channel 4, and persist the same
+        // content as fenced blocks inside the assistant text so it survives
+        // reloads and matches what the client renders after streaming. The fence
+        // is the client-side contract for extractVisualizations(); the markdown
+        // renderer hides the raw block once the chart is extracted.
+        if (visualizationJsonList.length > 0) {
+          for (const rawViz of visualizationJsonList) {
+            enqueue(`4:${JSON.stringify({ json: rawViz })}\n`);
+          }
+          accumulatedText +=
+            "\n\n" +
+            visualizationJsonList.map((rawViz) => appendVisualizationFence("", rawViz)).join("\n\n");
         }
 
         try {

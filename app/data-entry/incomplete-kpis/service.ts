@@ -121,6 +121,10 @@ export async function GetIncompleteKpis(): Promise<IncompleteKpiRow[]> {
             report_period_id: dataEntries.report_period_id,
             measure_def_id: dataEntries.measure_def_id,
             value: dataEntries.value,
+            value_numeric: dataEntries.value_numeric,
+            value_boolean: dataEntries.value_boolean,
+            value_option_id: dataEntries.value_option_id,
+            no_data_reason: dataEntries.no_data_reason,
           })
           .from(dataEntries)
           .where(
@@ -160,9 +164,20 @@ export async function GetIncompleteKpis(): Promise<IncompleteKpiRow[]> {
         .map((id) => periodEntryByInputDef.get(id))
         .filter((e): e is NonNullable<typeof e> => e != null);
 
-      const hasEmpty = relevantEntries.some(
-        (e) => e.value == null || e.value.trim() === "",
-      );
+      // An input counts as PROVIDED when it holds a value in ANY column — the
+      // medallion migration types values into value_numeric/boolean/option and
+      // leaves the legacy `value` text column null, so checking `value` alone
+      // false-flagged ~4 in 5 entered inputs as empty. A value explicitly
+      // declared not-available (no_data_reason) is a valid response, not a gap;
+      // only a truly-blank entry (no value in any column, no reason) is empty.
+      const hasEmpty = relevantEntries.some((e) => {
+        const hasValue =
+          e.value_numeric != null ||
+          e.value_boolean != null ||
+          e.value_option_id != null ||
+          (e.value != null && e.value.trim() !== "");
+        return !hasValue && e.no_data_reason == null;
+      });
 
       if (!hasEmpty) continue;
 

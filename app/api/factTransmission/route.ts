@@ -12,9 +12,17 @@ import {
 
 // Transmission measures in p1's emission order (its Transmission data-label
 // list). p1 names the hours columns "<name> Downtime" with no unit suffix; FTE
-// and Sent-to-Grid are not part of p1's transmission feed. The measures are
-// already transmission-scoped by definition, so no utility-function filter is
-// applied (entries can live under any function, as in factDistribution).
+// and Sent-to-Grid are not part of p1's transmission feed.
+//
+// Entries are scoped to utility_function_id 1026 (Transmission): the same
+// measures (301, 302, 341, 343, 420) also carry Distribution (1025) rows whose
+// values must NOT leak into this feed — fn-1025 values are orders of magnitude
+// larger (network length 9260 vs 147, customers 212k vs 209k, …) and only the
+// 1026 rows reproduce p1's live output exactly (verified per-service-area for
+// rp 174 / SA 9). The two "…Downtime Events" measures (340, 342) have no 1026
+// rows in p2's data, so those columns resolve to null until transmission
+// events data exists.
+const TRANSMISSION_FUNCTION_ID = 1026;
 const TRANSMISSION_MEASURES: { name: string; label: string }[] = [
   { name: "Network Length", label: "Transmission Network Length" },
   {
@@ -67,6 +75,7 @@ export async function GET(req: Request) {
     .where(
       and(
         inArray(dataEntries.measure_def_id, prismIds),
+        eq(dataEntries.utility_function_id, TRANSMISSION_FUNCTION_ID),
         eq(dataEntries.is_deleted, false),
       ),
     );
@@ -89,7 +98,17 @@ export async function GET(req: Request) {
 
   return Response.json(
     rps
-      .filter((r) => entries.some((l) => l.report_period_id === r.id))
+      // Ground truth (user-confirmed + reconciliation §3.11): only EFL (org
+      // 10) and PPL (org 20) have transmission networks. Everything else (CUC,
+      // TAU, their orphaned/extended report periods) must be excluded. The
+      // org-level managed lists do NOT isolate this set: services_provided
+      // 732 ("Electricity Only") covers 6 orgs (6,7,9,10,20,27). The only
+      // discriminator matching ground truth is utility_id ∈ {10,20}.
+      .filter(
+        (r) =>
+          (r.utility_id === 10 || r.utility_id === 20) &&
+          entries.some((l) => l.report_period_id === r.id),
+      )
       .sort((a, b) => a.utility_id - b.utility_id)
       .map((urp) => {
         const reportType = findItem(urp.report_type_id);

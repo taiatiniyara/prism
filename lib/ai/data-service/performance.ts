@@ -3,7 +3,7 @@ import { db } from "@/db/connection";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { eq } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
-import { hasGlobalUtilityAccess } from "@/lib/user.service";
+import { hasBenchmarkAccess } from "@/lib/user.service";
 import { createToolMetadata, resolvePeriodId, getSeverityScore } from "./common";
 import type { AiToolResult } from "../types";
 
@@ -47,7 +47,7 @@ export const getPerformanceSnapshot = async (
     };
   }
 
-  if (!hasGlobalUtilityAccess(user) && user.org_id != null) {
+  if (!hasBenchmarkAccess(user) && user.org_id != null) {
     const [period] = await db
       .select({ utility_id: reportPeriods.utility_id })
       .from(reportPeriods)

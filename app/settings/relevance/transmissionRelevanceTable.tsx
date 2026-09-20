@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import BorderedPanel from "@/components/ui/bordered-panel";
+import BorderedBox from "@/components/ui/bordered-box";
 import { useState, useTransition } from "react";
 import { toast } from "sonner";
 
@@ -114,7 +114,7 @@ export default function TransmissionRelevanceTable(props: {
   };
 
   return (
-    <BorderedPanel className="space-y-3">
+    <BorderedBox className="space-y-3">
       <div className="flex items-center justify-between gap-2">
         <Button
           type="button"
@@ -148,6 +148,6 @@ export default function TransmissionRelevanceTable(props: {
           </li>
         ))}
       </ul>
-    </BorderedPanel>
+    </BorderedBox>
   );
 }

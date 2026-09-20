@@ -1,7 +1,7 @@
 import { db } from "@/db/connection";
 import { sql } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
-import { hasGlobalUtilityAccess } from "@/lib/user.service";
+import { hasBenchmarkAccess } from "@/lib/user.service";
 import { getAccessibleReportPeriods } from "./common";
 import { listReviewKpiRows } from "@/app/data-entry/review-kpi/service";
 import { createToolMetadata, resolvePeriod } from "./common";
@@ -70,7 +70,7 @@ export const getServiceAreaBreakdown = async (
     }))
     .sort((a, b) => a.completeness_pct - b.completeness_pct);
 
-  const periods = await getAccessibleReportPeriods(user, { forceAllUtilities: hasGlobalUtilityAccess(user) });
+  const periods = await getAccessibleReportPeriods(user, { forceAllUtilities: hasBenchmarkAccess(user) });
   const match = periods.find((p) => p.Id === period.id);
 
   return {
@@ -107,7 +107,7 @@ export const getPeerGroupAnalysis = async (
     group_value?: string;
   } = {},
 ): Promise<AiToolResult<PeerGroupData>> => {
-  const periods = await getAccessibleReportPeriods(user, { forceAllUtilities: hasGlobalUtilityAccess(user) });
+  const periods = await getAccessibleReportPeriods(user, { forceAllUtilities: hasBenchmarkAccess(user) });
   if (periods.length === 0) {
     return {
       data: { peers: [], group_average_completion: 0, group_average_score: null, user_utility_rank: null, total_peers: 0 },

@@ -1,7 +1,7 @@
 import { db } from "@/db/connection";
 import { sql } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
-import { resolveComparisonPeriodIds } from "./common";
+import { resolveComparisonPeriodIds, intArrayParam } from "./common";
 import { createToolMetadata } from "./common";
 import type { AiToolResult } from "../types";
 
@@ -52,7 +52,7 @@ export const getComplianceStatus = async (
   const result = await db.execute(sql`
     SELECT kpi_name, actual_value, limits, utility_name, report_date
     FROM gold.fact_kpi
-    WHERE report_period_id = ANY(${periodIds})
+WHERE report_period_id = ANY(${intArrayParam(periodIds)})
       AND limits IS NOT NULL
     LIMIT 500
   `);

@@ -5,6 +5,7 @@ import { organisations } from "@/db/schema/utility";
 import { managedListItems, managedLists } from "@/db/schema/managedLists";
 import { eq, and, isNotNull } from "drizzle-orm";
 import { authorizeApiKey } from "../service";
+import { formatReportPeriodIso } from "@/lib/legacy/legacy-dl-resolver";
 
 export async function GET(req: Request) {
   const authorize = await authorizeApiKey(req);
@@ -71,7 +72,7 @@ export async function GET(req: Request) {
 
     return {
       ReportType: reportTypeItem?.name,
-      ReportPeriod: period.report_date?.toISOString() ?? null,
+      ReportPeriod: formatReportPeriodIso(period.report_date),
       Utility: utility?.acronym ?? "",
       ...catPercentages,
     };

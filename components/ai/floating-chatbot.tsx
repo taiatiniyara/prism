@@ -6,9 +6,36 @@ import { Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ChatPanel } from "./chat-panel";
 
+const FLOATING_SESSION_STORAGE_KEY = "prism-ai-floating-session-id";
+
+function readStoredFloatingSessionId(): number | undefined {
+  if (typeof window === "undefined") return undefined;
+  try {
+    const stored = window.localStorage.getItem(FLOATING_SESSION_STORAGE_KEY);
+    const parsed = stored ? parseInt(stored, 10) : NaN;
+    return Number.isNaN(parsed) ? undefined : parsed;
+  } catch {
+    // localStorage unavailable (private mode, blocked, etc.) — fall back to a fresh chat
+    return undefined;
+  }
+}
+
 export function FloatingChatbot() {
   const [isOpen, setIsOpen] = useState(false);
+  const [initialSessionId] = useState<number | undefined>(readStoredFloatingSessionId);
   const pathname = usePathname();
+
+  const handleActiveSessionChange = useCallback((sessionId: number | null) => {
+    try {
+      if (sessionId) {
+        window.localStorage.setItem(FLOATING_SESSION_STORAGE_KEY, String(sessionId));
+      } else {
+        window.localStorage.removeItem(FLOATING_SESSION_STORAGE_KEY);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   const close = useCallback(() => setIsOpen(false), []);
 
@@ -81,7 +108,11 @@ export function FloatingChatbot() {
         </div>
 
         <div className="min-h-0 flex-1 overflow-hidden">
-          <ChatPanel showSidebar={true} />
+          <ChatPanel
+            showSidebar={true}
+            initialSessionId={initialSessionId}
+            onActiveSessionChange={handleActiveSessionChange}
+          />
         </div>
       </div>
     </>

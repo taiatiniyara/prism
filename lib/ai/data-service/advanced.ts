@@ -1,9 +1,18 @@
 import { db } from "@/db/connection";
 import { countries, subRegions } from "@/db/schema/country";
-import { eq, sql } from "drizzle-orm";
+import { kpiDefinitions } from "@/db/schema/kpi";
+import { and, eq, ilike, or, sql } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
-import { createToolMetadata, resolveComparisonPeriodIds } from "./common";
+import { hasBenchmarkAccess } from "@/lib/user.service";
+import { createToolMetadata, resolveComparisonPeriodIds, intArrayParam } from "./common";
 import type { AiToolResult } from "../types";
+
+const buildKpiAccessInfo = (user: CurrentUser): KpiAccessInfo => ({
+  scope: hasBenchmarkAccess(user) ? "all_utilities" : "own_utility",
+  note: hasBenchmarkAccess(user)
+    ? "Benchmark access: includes every utility with approved Financial Year reporting in the selected period(s)."
+    : "Access is scoped to your own utility only — other utilities' data exists on the platform but is not visible to you.",
+});
 
 // --- PEER-BASED TARGET SETTING ---
 
@@ -23,6 +32,7 @@ export interface TargetSettingData {
   recommendations: KpiTargetRecommendation[];
   peer_count: number;
   report_period: string | null;
+  access: KpiAccessInfo;
 }
 
 export const getKpiTargets = async (
@@ -36,13 +46,13 @@ export const getKpiTargets = async (
 ): Promise<AiToolResult<TargetSettingData>> => {
   const periodIds = await resolveComparisonPeriodIds(user, { report_period_id: options.report_period_id, year: options.year, month: options.month });
   if (periodIds.length === 0) {
-    return { data: { recommendations: [], peer_count: 0, report_period: null }, metadata: createToolMetadata({ source: "kpi_values" }), error: "No period found" };
+    return { data: { recommendations: [], peer_count: 0, report_period: null, access: buildKpiAccessInfo(user) }, metadata: createToolMetadata({ source: "kpi_values" }), error: "No period found" };
   }
 
   const result = await db.execute(sql`
     SELECT kpi_name, actual_value, utility_id, utility_acronym, report_date
     FROM gold.fact_kpi
-    WHERE report_period_id = ANY(${periodIds})
+    WHERE report_period_id = ANY(${intArrayParam(periodIds)})
     LIMIT 2000
   `);
 
@@ -93,7 +103,7 @@ export const getKpiTargets = async (
   recommendations.sort((a, b) => b.gap_to_top_quartile - a.gap_to_top_quartile);
 
   return {
-    data: { recommendations, peer_count: new Set(rows.map((r) => r.utility_id)).size, report_period: rows[0]?.report_date?.toString() ?? null },
+    data: { recommendations, peer_count: new Set(rows.map((r) => r.utility_id)).size, report_period: rows[0]?.report_date?.toString() ?? null, access: buildKpiAccessInfo(user) },
     metadata: createToolMetadata({ freshness: new Date(), source: "kpi_values" }),
   };
 };
@@ -112,6 +122,7 @@ export interface CorrelationData {
   pairs: CorrelationPair[];
   utility_count: number;
   report_period: string | null;
+  access: KpiAccessInfo;
 }
 
 export const getKpiCorrelation = async (
@@ -124,13 +135,13 @@ export const getKpiCorrelation = async (
 ): Promise<AiToolResult<CorrelationData>> => {
   const periodIds = await resolveComparisonPeriodIds(user, { report_period_id: options.report_period_id, year: options.year, month: options.month });
   if (periodIds.length === 0) {
-    return { data: { pairs: [], utility_count: 0, report_period: null }, metadata: createToolMetadata({ source: "kpi_values" }), error: "No period found" };
+    return { data: { pairs: [], utility_count: 0, report_period: null, access: buildKpiAccessInfo(user) }, metadata: createToolMetadata({ source: "kpi_values" }), error: "No period found" };
   }
 
   const result = await db.execute(sql`
     SELECT kpi_name, actual_value, utility_id, report_date
     FROM gold.fact_kpi
-    WHERE report_period_id = ANY(${periodIds})
+    WHERE report_period_id = ANY(${intArrayParam(periodIds)})
     LIMIT 2000
   `);
 
@@ -173,7 +184,7 @@ export const getKpiCorrelation = async (
   pairs.sort((a, b) => Math.abs(b.coefficient) - Math.abs(a.coefficient));
 
   return {
-    data: { pairs: pairs.slice(0, 30), utility_count: byUtility.size, report_period: rows[0]?.report_date?.toString() ?? null },
+    data: { pairs: pairs.slice(0, 30), utility_count: byUtility.size, report_period: rows[0]?.report_date?.toString() ?? null, access: buildKpiAccessInfo(user) },
     metadata: createToolMetadata({ freshness: new Date(), source: "kpi_values" }),
   };
 };
@@ -192,6 +203,11 @@ const pearson = (xs: number[], ys: number[]): number => {
 
 // --- MULTI-UTILITY KPI COMPARISON ---
 
+export interface KpiAccessInfo {
+  scope: "all_utilities" | "own_utility";
+  note: string;
+}
+
 export interface MultiUtilityKpiValue {
   utility_name: string;
   kpi_name: string;
@@ -202,9 +218,67 @@ export interface MultiUtilityKpiValue {
 export interface MultiUtilityKpiData {
   values: MultiUtilityKpiValue[];
   kpi_name: string;
+  matched_kpi_names: string[];
   utility_count: number;
   report_period: string | null;
+  access: KpiAccessInfo;
 }
+
+// Aliases bridging common industry terms to their canonical gold-layer KPI
+// names. `kpi_definitions.synonyms` is consulted first; this map only covers
+// terms users/LMs actually say that the definitions don't, so comparisons like
+// "System Loss", "Tariff Recovery" or "Renewable Penetration" resolve to the
+// real gold facts (Network Delivery Losses, Operating Cost Recovery, Renewable
+// Energy to Grid) instead of returning nothing.
+const KPI_ALIASES: Record<string, string[]> = {
+  "system loss": ["Network Delivery Losses", "Transmission Network Losses"],
+  "losses": ["Network Delivery Losses", "Transmission Network Losses"],
+  "tariff recovery": ["Operating Cost Recovery", "Operating Cost Covered by Subsidies"],
+  "operating cost recovery": ["Operating Cost Recovery", "Operating Cost Covered by Subsidies"],
+  "renewable penetration": ["Renewable Energy to Grid"],
+  "renewable energy": ["Renewable Energy to Grid"],
+  "capacity factor": ["Generator Capacity Factor"],
+  "saidi": ["Planned SAIDI"],
+  "saifi": ["Planned SAIFI"],
+  "reliability": ["Planned SAIDI", "Planned SAIFI", "Distribution Reliability"],
+};
+
+const resolveKpiPatterns = async (term: string): Promise<string[]> => {
+  const raw = term.trim();
+  const like = `%${raw}%`;
+
+  const defs = await db
+    .select({
+      name: kpiDefinitions.name,
+      synonyms: kpiDefinitions.synonyms,
+    })
+    .from(kpiDefinitions)
+    .where(
+      and(
+        eq(kpiDefinitions.is_active, true),
+        or(
+          ilike(kpiDefinitions.name, like),
+          sql`${kpiDefinitions.synonyms}::text ILIKE ${like}`,
+        ),
+      ),
+    )
+    .limit(20);
+
+  const patterns = new Set<string>();
+  for (const def of defs) {
+    if (def.name) patterns.add(def.name);
+    for (const synonym of def.synonyms ?? []) {
+      if (synonym) patterns.add(synonym);
+    }
+  }
+
+  const aliases = KPI_ALIASES[raw.toLowerCase()];
+  if (aliases) for (const aliasName of aliases) patterns.add(aliasName);
+
+  if (patterns.size === 0) patterns.add(like); // fall back to substring match
+
+  return [...patterns];
+};
 
 export const compareKpisAcrossUtilities = async (
   user: CurrentUser,
@@ -213,6 +287,8 @@ export const compareKpisAcrossUtilities = async (
     report_period_id?: number | null;
     year?: number | null;
     month?: number | null;
+    all_utilities?: boolean;
+    utility_id?: number | null;
   },
 ): Promise<AiToolResult<MultiUtilityKpiData[]>> => {
   const periodIds = await resolveComparisonPeriodIds(user, { report_period_id: options.report_period_id, year: options.year, month: options.month });
@@ -220,15 +296,32 @@ export const compareKpisAcrossUtilities = async (
     return { data: [], metadata: createToolMetadata({ source: "kpi_values" }), error: "No period found" };
   }
 
+  const canBenchmark = hasBenchmarkAccess(user);
+
+  if (options.utility_id != null && !canBenchmark && user.org_id !== options.utility_id) {
+    return {
+      data: [],
+      metadata: createToolMetadata({ source: "kpi_values" }),
+      error: `Access denied: comparisons are scoped to your own utility only, so utility_id=${options.utility_id} is not available to you.`,
+    };
+  }
+
+  const accessScope = buildKpiAccessInfo(user);
+
   const results: MultiUtilityKpiData[] = [];
 
-  for (const kpiName of options.kpi_names) {
+  for (const reqName of options.kpi_names) {
+    const patterns = await resolveKpiPatterns(reqName);
+
+    const filter = sql`report_period_id = ANY(${intArrayParam(periodIds)})
+      AND kpi_name ILIKE ANY(${sql.param(patterns)}::text[])`;
+
     const result = await db.execute(sql`
       SELECT kpi_name, actual_value, utility_name, report_date
       FROM gold.fact_kpi
-      WHERE report_period_id = ANY(${periodIds})
-        AND LOWER(kpi_name) LIKE ${`%${kpiName.toLowerCase()}%`}
-      LIMIT 100
+      WHERE ${filter}
+      ${options.utility_id != null ? sql`AND utility_id = ${options.utility_id}` : sql``}
+      LIMIT 200
     `);
 
     const rows = result.rows as Array<{
@@ -249,11 +342,15 @@ export const compareKpisAcrossUtilities = async (
 
     values.forEach((v, i) => { v.rank = i + 1; });
 
+    const matchedKpiNames = [...new Set(rows.map((r) => r.kpi_name))];
+
     results.push({
       values,
-      kpi_name: kpiName,
+      kpi_name: reqName,
+      matched_kpi_names: matchedKpiNames,
       utility_count: values.length,
       report_period: rows[0]?.report_date?.toString() ?? null,
+      access: accessScope,
     });
   }
 

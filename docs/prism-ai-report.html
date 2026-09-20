@@ -857,7 +857,7 @@
 
 <table>
   <tr><th>Route</th><th>Method</th><th>Purpose</th></tr>
-  <tr><td><code>/api/ai/chat</code></td><td>POST</td><td>Main chat endpoint. Accepts <code>{ messages, sessionId?, stakeholder_type? }</code>. Returns SSE stream. Max duration 120s. Enforces rate limits, guardrails, cost budget. Handles session creation, turn recording, conversation summarization.</td></tr>
+  <tr><td><code>/api/ai/chat</code></td><td>POST</td><td>Main chat endpoint. Accepts <code>{ messages, sessionId? }</code>. Returns SSE stream. Max duration 120s. Enforces rate limits, guardrails, cost budget. Handles session creation, turn recording, conversation summarization.</td></tr>
   <tr><td><code>/api/ai/chat/response</code></td><td>POST</td><td>Post-stream content sync. Called by client after stream completion.</td></tr>
   <tr><td><code>/api/ai/sessions</code></td><td>GET</td><td>List all sessions for current user</td></tr>
   <tr><td><code>/api/ai/sessions/[sessionId]</code></td><td>GET / DELETE / PATCH</td><td>Get turns, delete session, rename session</td></tr>

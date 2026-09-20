@@ -20,7 +20,7 @@ import {
 } from "@/lib/email/email.service";
 import { assertValidTransition, type StatusDecision } from "@/lib/user-status";
 import { getCurrentUser, requireOrgId } from "@/lib/user.service";
-import { writeAuditLog } from "@/lib/logging/audit.service";
+import { tryWriteAuditLog } from "@/lib/logging/audit.service";
 import { and, eq, inArray } from "drizzle-orm";
 import { revalidatePath } from "next/cache";
 import { createHmac, timingSafeEqual } from "node:crypto";
@@ -69,7 +69,7 @@ export async function CreateUser(
     .where(eq(user.email, data.email))
     .returning();
 
-  writeAuditLog({
+  tryWriteAuditLog({
     action: "user.activate",
     actorUserId: currentUser.id,
     actorEmail: currentUser.email,
@@ -81,7 +81,7 @@ export async function CreateUser(
       roleId: data.role_id,
       organisationId: data.organisation_id,
     },
-  }).catch((err) => console.error("[audit] user.create failed", err));
+  });
 
   revalidatePath("/settings/users");
   return {
@@ -127,7 +127,7 @@ export async function UpdateUser(
 
   await db.update(user).set(allFields).where(eq(user.id, id));
 
-  writeAuditLog({
+  tryWriteAuditLog({
     action: "user.role_change",
     actorUserId: currentUser.id,
     actorEmail: currentUser.email,
@@ -135,7 +135,7 @@ export async function UpdateUser(
     targetType: "user",
     targetId: id,
     details: allFields as Record<string, unknown>,
-  }).catch((err) => console.error("[audit] user.update failed", err));
+  });
 
   revalidatePath("/settings/users");
   return {
