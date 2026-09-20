@@ -119,7 +119,7 @@ export function TableView({ data, onAskFollowUp }: TableViewProps) {
     </div>
   );
 
-  if (!data.columns?.length || !data.rows?.length) {
+  if (!data.columns?.length) {
     return (
       <VisualizationCard
         title={data.title}
@@ -131,6 +131,50 @@ export function TableView({ data, onAskFollowUp }: TableViewProps) {
       >
         <div className="text-muted-foreground dark:text-muted-foreground rounded-md border border-dashed p-4 text-center text-sm">
           No data available
+        </div>
+      </VisualizationCard>
+    );
+  }
+
+  if (!data.rows?.length) {
+    // Unlike a fully empty result, the column schema is known here — show
+    // the table shell instead of collapsing to a bare message, matching
+    // how bar/line charts still surface a raw table when they have some
+    // underlying data they just couldn't chart.
+    return (
+      <VisualizationCard
+        title={data.title}
+        footer={
+          onAskFollowUp ? (
+            <ChartFollowUp contextText={contextText} onAsk={onAskFollowUp} />
+          ) : undefined
+        }
+      >
+        <div className="border-border overflow-x-auto rounded-md border dark:border-border">
+          <table className="w-full text-sm" aria-label={data.title || "Data table"}>
+            <thead className="bg-muted/50 dark:bg-muted/30">
+              <tr>
+                {data.columns.map((col, i) => (
+                  <th
+                    key={i}
+                    className="text-muted-foreground dark:text-muted-foreground whitespace-nowrap border-border border-b px-3 py-2 text-left text-xs font-medium dark:border-border"
+                  >
+                    {col}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td
+                  colSpan={data.columns.length}
+                  className="text-muted-foreground dark:text-muted-foreground px-3 py-4 text-center text-sm"
+                >
+                  No rows available
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </VisualizationCard>
     );
