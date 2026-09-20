@@ -15,6 +15,15 @@ interface ChatSession {
   last_turn_at: string;
 }
 
+type ToolProgressStatus = "running" | "done" | "error" | "cancelled";
+
+interface ToolProgressEntry {
+  name: string;
+  label: string;
+  status: ToolProgressStatus;
+  startTime?: number;
+}
+
 interface ChatMessage {
   id: string;
   role: "user" | "assistant";
@@ -22,6 +31,7 @@ interface ChatMessage {
   turnId?: number;
   isError?: boolean;
   reasoningContent?: string;
+  toolProgress?: ToolProgressEntry[];
 }
 
 interface ChatPanelProps {
@@ -50,7 +60,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
   const [isAtBottom, setIsAtBottom] = useState(true);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [copiedId, setCopiedId] = useState<string | null>(null);
-  const [toolProgress, setToolProgress] = useState<Array<{ name: string; label: string; status: "running" | "done" | "error"; startTime?: number }>>([]);
+  const [toolProgress, setToolProgress] = useState<ToolProgressEntry[]>([]);
   const [chartPending, setChartPending] = useState(false);
   const abortControllerRef = useRef<AbortController | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -61,6 +71,18 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
   const pendingContentRef = useRef("");
   const pendingVizBlocksRef = useRef<string[]>([]);
   const reasoningContentRef = useRef("");
+  const toolProgressRef = useRef<ToolProgressEntry[]>([]);
+
+  const updateToolProgress = useCallback(
+    (updater: (prev: ToolProgressEntry[]) => ToolProgressEntry[]) => {
+      setToolProgress((prev) => {
+        const next = updater(prev);
+        toolProgressRef.current = next;
+        return next;
+      });
+    },
+    [],
+  );
 
   useEffect(() => {
     messagesRef.current = messages;
@@ -224,7 +246,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
     pendingVizBlocksRef.current = [];
     reasoningContentRef.current = "";
     isStreamingRef.current = true;
-    setToolProgress([]);
+    updateToolProgress(() => []);
 
     abortControllerRef.current = new AbortController();
 
@@ -340,7 +362,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
                 if (toolEvent.toolName === "render_visualization") {
                   setChartPending(true);
                 }
-                setToolProgress((prev) => [
+                updateToolProgress((prev) => [
                   ...prev,
                   {
                     name: toolEvent.toolName,
@@ -350,7 +372,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
                   },
                 ]);
               } else if (toolEvent.type === "tool-end") {
-                setToolProgress((prev) =>
+                updateToolProgress((prev) =>
                   prev.map((t) => (t.name === toolEvent.toolName ? { ...t, status: "done" as const } : t)),
                 );
               }
@@ -409,6 +431,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
         content: fullContent,
         reasoningContent: fullReasoning || undefined,
         turnId,
+        toolProgress: toolProgressRef.current.length ? toolProgressRef.current : undefined,
       };
 
       setMessages((prev) => [...prev, assistantMessage]);
@@ -425,7 +448,10 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
       }
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
-        if (pendingContentRef.current) {
+        const cancelledProgress = toolProgressRef.current.map((t) =>
+          t.status === "running" ? { ...t, status: "cancelled" as const } : t,
+        );
+        if (pendingContentRef.current || cancelledProgress.length) {
           const vizSuffix = pendingVizBlocksRef.current.length
             ? pendingVizBlocksRef.current
                 .map((rawViz) => `\n\n\`\`\`json\n${rawViz}\n\`\`\``)
@@ -435,17 +461,22 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
             id: nextMessageId("assistant"),
             role: "assistant",
             content: pendingContentRef.current + vizSuffix + "\n\n*[Generation stopped]*",
+            toolProgress: cancelledProgress.length ? cancelledProgress : undefined,
           };
           setMessages((prev) => [...prev, partialAssistant]);
         }
         return;
       }
+      const erroredProgress = toolProgressRef.current.map((t) =>
+        t.status === "running" ? { ...t, status: "error" as const } : t,
+      );
       const msg = error instanceof Error ? error.message : "Sorry, I encountered an error. Please try again.";
       const errorMessage: ChatMessage = {
         id: nextMessageId("error"),
         role: "assistant",
         content: msg,
         isError: true,
+        toolProgress: erroredProgress.length ? erroredProgress : undefined,
       };
       setMessages((prev) => [...prev, errorMessage]);
     } finally {
@@ -455,13 +486,14 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
       }
       setIsLoading(false);
       setStreamingContent("");
+      updateToolProgress(() => []);
       setChartPending(false);
       pendingContentRef.current = "";
       pendingVizBlocksRef.current = [];
       abortControllerRef.current = null;
       isStreamingRef.current = false;
     }
-  }, [activeSessionId, refreshSessions]);
+  }, [activeSessionId, refreshSessions, updateToolProgress]);
 
   const handleSendMessage = useCallback(async (message: string) => {
     if (isStreamingRef.current) return;
@@ -744,7 +776,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
                       message={msg}
                       isStreaming={msg.id === "streaming"}
                       reasoningContent={msg.reasoningContent}
-                      toolProgress={msg.id === "streaming" ? toolProgress : undefined}
+                      toolProgress={msg.id === "streaming" ? toolProgress : msg.toolProgress}
                       onFeedback={(sentiment: "positive" | "negative", correction?: string) =>
                         handleFeedback(msg.turnId ?? 0, sentiment, correction)
                       }

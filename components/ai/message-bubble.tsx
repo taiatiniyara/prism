@@ -23,7 +23,7 @@ interface MessageBubbleProps {
   message: ChatMessage;
   isStreaming?: boolean;
   reasoningContent?: string;
-  toolProgress?: Array<{ name: string; label?: string; status: "running" | "done" | "error" }>;
+  toolProgress?: Array<{ name: string; label?: string; status: "running" | "done" | "error" | "cancelled" }>;
   onFeedback?: (sentiment: "positive" | "negative", correction?: string) => void;
   onCopy?: (content: string) => void;
   onRegenerate?: () => void;
@@ -249,7 +249,7 @@ function MessageBubbleInner({ message, isStreaming, reasoningContent, toolProgre
                 : "px-1 py-0.5 text-slate-700 dark:text-slate-300"
           }`}
         >
-          {!isUser && (reasoningContent || message.reasoningContent) && (() => {
+          {!isUser && (reasoningContent || message.reasoningContent || (toolProgress && toolProgress.length > 0)) && (() => {
             const reasoningText = reasoningContent || message.reasoningContent || "";
             const steps = parseReasoningSteps(reasoningText);
 
@@ -272,12 +272,15 @@ function MessageBubbleInner({ message, isStreaming, reasoningContent, toolProgre
                             <span className="inline-block size-1.5 rounded-full bg-amber-400 animate-pulse shrink-0" />
                           ) : tool.status === "error" ? (
                             <span className="inline-block size-1.5 rounded-full bg-red-400 shrink-0" />
+                          ) : tool.status === "cancelled" ? (
+                            <span className="inline-block size-1.5 rounded-full bg-slate-300 dark:bg-slate-600 shrink-0" />
                           ) : (
                             <span className="inline-block size-1.5 rounded-full bg-success shrink-0" />
                           )}
                           <span className="text-slate-500 dark:text-slate-400">
                             {tool.label ?? tool.name}
                             {tool.status === "running" && "…"}
+                            {tool.status === "cancelled" && " (cancelled)"}
                           </span>
                         </div>
                       ))}
@@ -298,13 +301,13 @@ function MessageBubbleInner({ message, isStreaming, reasoningContent, toolProgre
                         </div>
                       </details>
                     ))
-                  ) : (
+                  ) : reasoningText ? (
                     <div className="px-3 py-2 text-xs leading-relaxed text-slate-400 dark:text-slate-500">
                       <ReactMarkdown remarkPlugins={[remarkGfm]}>
                         {reasoningText}
                       </ReactMarkdown>
                     </div>
-                  )}
+                  ) : null}
                 </div>
               )}
             </div>
