@@ -1,6 +1,6 @@
 # AI Dimensional Drill Tool — Scope & Design
 
-**Status:** Draft for review · **Author:** session `eugen-61` (#3 calculator), scoping at Eugene's request 2026-09-20
+**Status:** Decisions locked (Eugene 2026-09-20) — ready for AI/PBI stream to implement, starting P0 · **Author:** session `eugen-61` (#3 calculator)
 **Owner (implementation):** AI/PBI stream · **Consulted:** #3 (calculator resolver / dimension model)
 **Related:** [PR #490](https://github.com/taiatiniyara/prism/pull/490) (the tactical `generation_mix_trend` fix that surfaced this gap), [calculator-engine-spec.md](calculator-engine-spec.md) §4.6 (fact resolution + rollup), [per-period-participation-spec.md](per-period-participation-spec.md)
 
@@ -74,12 +74,16 @@ inputSchema: z.object({
   over_time: z.boolean().optional().describe(
     "Return one row per fiscal year (time series) instead of a single period."),
   utility: z.string().optional().describe(
-    "Utility acronym/name. Defaults to the user's own utility; cross-utility requires global access + is FY-only."),
+    "Utility acronym/name. Defaults to the user's own utility."),
+  all_utilities: z.boolean().optional().describe(
+    "Benchmarking/global-access users only: widen to every accessible utility (FY periods only). Ignored — and never widens — for scoped users."),
   fiscal_year: z.string().optional().describe(
     "Single FY (e.g. 'FY2023'). Ignored when over_time is true."),
   // NB: no free-form filters, no raw SQL, no arbitrary columns.
 })
 ```
+
+**Auto-widen (Q2, decided):** for a benchmarking/global-access user, an omitted `utility` (or `all_utilities: true`) **may auto-widen to all accessible utilities** — a peer view, not just their own. This is bounded strictly by `periodAccessPredicate`: cross-utility rows are **Financial-Year only**, never another utility's Monthly private data, and a scoped (non-global) user never widens past their own org regardless of the flag.
 
 **Output** (`AiToolResult`): tidy long-format rows the viz layer already understands —
 `{ measure, unit, is_additive, rows: [{ fiscal_year?, <dimension>?: memberName, value, coverage: { entered, total } }], notes: string[], access_scope }`
@@ -97,6 +101,21 @@ inputSchema: z.object({
 - **Sliced vs aggregate:** a measure may be entered as an aggregate ("All" member) OR split per member. Surface both honestly; don't double-count aggregate + members (the "All" trap from the coverage work).
 - **Blanks are gaps, not zeros.** A member-year with no row (or a shell with no value) is *missing*, reported in `coverage`, and rendered as a gap. Only zero-fill where the measure/input is genuinely optional (mirrors the optional/mandatory model already in the engine).
 
+### 5.4 Source resolution — gold-first, fact for finer grain (Q3, decided)
+
+The tool resolves each request against the **cheapest source that actually satisfies the requested cut**, in this order:
+
+1. **Try `gold.*` first.** If a pre-aggregated gold table/measure already carries the measure **at the requested grain and dimension split**, read it — it's cheaper, faster, and keeps the assistant's numbers identical to the dashboards.
+2. **Fall through to `data_entries` when gold can't satisfy it** — i.e. the requested breakdown is **finer than gold offers**. This is precisely the #490 case: gold had only "Renewable Energy to Grid %", so a `resource_type` (diesel/solar/wind) split must come from the fact grain.
+
+**Critical guardrail — capability probe, not assumption.** The fallback trigger must be a real check that gold *has* the requested (measure × dimensions × grain), **never** an assumption that "gold covers generation". The #490 bug was exactly a false assumption that a gold aggregate covered a cut it didn't. So: probe gold's declared capability for this cut; only claim gold if it genuinely provides it; otherwise drop to `data_entries` **and say which source answered** (surface `source: "gold" | "fact"` in the result so a coarse gold number is never silently passed off as a fine-grained one). When gold and fact disagree for the *same* cut, prefer fact (closer to source) and flag the discrepancy.
+
+### 5.5 Lockstep with the calculator engine (Q4, decided)
+
+Ownership: the AI/PBI stream builds the tool; **#3 owns the dimension map + rollup**, and the two must stay in lockstep. Mechanism, not just intent:
+- The drill tool and the calculator resolve dimensions and roll up through the **same** modules (the centralized dimension map from §3.1 + the resolver's additive-rollup) — no parallel reimplementation.
+- Add a **contract test** asserting that, for a sampled (measure × dimension × period), `drill_measure`'s rolled-up total **equals** the calculator engine's value for the same address. If they ever diverge, CI fails — so a change to one can't silently drift from the other.
+
 ---
 
 ## 6. Access control & safety (hard requirements)
@@ -112,8 +131,8 @@ inputSchema: z.object({
 
 ## 7. Design options & trade-offs
 
-**Option A — Parameterized structured drill tool over `data_entries` (RECOMMENDED).**
-Whitelisted measure + dimension enums → server assembles the SQL. ➕ Injection-proof, reuses access/rollup, predictable cost, tidy output the viz layer takes as-is. ➖ Only the shapes we parameterize (measure × dims × time); exotic cross-measure math still needs the calculator. *This is the right 90% tool.*
+**Option A — Parameterized structured drill tool, gold-first over `data_entries` (RECOMMENDED, confirmed).**
+Whitelisted measure + dimension enums → server picks the source (§5.4: gold when it satisfies the cut, fact for finer grain) and assembles the SQL. ➕ Injection-proof, reuses access/rollup, predictable cost, dashboard-consistent when gold answers, tidy output the viz layer takes as-is. ➖ Only the shapes we parameterize (measure × dims × time); exotic cross-measure math still needs the calculator. *This is the right 90% tool.*
 
 **Option B — Guarded read-only SQL sandbox** (model writes SELECTs against a restricted role/views).
 ➕ Maximally flexible. ➖ Huge attack surface (injection, resource exhaustion, data-scope leaks through joins), very hard to guarantee `periodAccessPredicate` on every generated query, and the RLS story on `data_entries` would have to be airtight. **Rejected for now** — reconsider only behind a per-utility RLS role, never as the first step.
@@ -138,9 +157,9 @@ Whitelisted measure + dimension enums → server assembles the SQL. ➕ Injectio
 
 ## 9. Phasing
 
-1. **P0 — Centralize the dimension map** (`DIMENSION → {column, managedList, alias, canonicalName}`), refactor `completeness.ts` onto it. *Unblocks everything; independently valuable.*
-2. **P1 — `drill_measure` MVP:** numeric measure, single FY, one optional `breakdown_by`, own-utility scope, tidy rows + coverage. No rollup beyond SUM-additive.
-3. **P2 — Time series + cross-utility** (`over_time`, `utility` with `periodAccessPredicate`), stacked-bar chart hint, `render_visualization` handoff.
+1. **P0 — Centralize the dimension map** (`DIMENSION → {column, managedList, alias, canonicalName}`), refactor `completeness.ts` (and, repo-wide, the enter-data / aggregated-worker copies) onto it. *Unblocks everything; independently valuable; confirmed repo-wide (Q1).*
+2. **P1 — `drill_measure` MVP:** numeric measure, single FY, one optional `breakdown_by`, own-utility scope, tidy rows + coverage. Fact-only to start; SUM-additive rollup; report `source: "fact"`.
+3. **P2 — Gold-first resolution + time series + cross-utility** (§5.4 gold probe with fact fallback; `over_time`; `all_utilities` auto-widen for global users via `periodAccessPredicate`), stacked-bar chart hint, `render_visualization` handoff.
 4. **P3 — Rollup depth & non-numeric** (grain + multi-dimension rollup via the calculator resolver; boolean/text/option counts).
 5. **P4 — Guardrail hardening & eval:** row caps, fan-out limits, prompt-catalog description so the LLM prefers this over the ratio fallback; add eval cases (the energy-mix question as a regression).
 
@@ -148,12 +167,14 @@ MVP that would have prevented the PR #490 incident = **P0 + P1 + the `over_time`
 
 ---
 
-## 10. Open questions (for Eugene / AI stream)
+## 10. Resolved decisions (Eugene, 2026-09-20)
 
-1. **Scope of P0 refactor** — centralize the dimension map repo-wide (touches `completeness.ts`, enter-data, aggregated-worker), or a local map for the tool now and refactor later? (Recommend repo-wide; it's the root cause of a class of "wrong column" bugs — but it's cross-stream.)
-2. **Cross-utility default** — should the tool ever auto-widen to all utilities for a benchmarking user, or always require an explicit `utility`/`all_utilities: true` like `get_benchmarking_data`?
-3. **Gold vs fact** — some measures also live pre-aggregated in `gold.*` (e.g. `gold.dim_utility`). Prefer gold when the cut matches (cheaper) and fall to `data_entries` for finer grain, or always fact for consistency?
-4. **Ownership** — AI/PBI stream implements; **#3 (calculator)** owns the resolver/rollup + dimension-map reuse so the drill tool and the engine stay in lockstep. Confirm this split.
+1. **P0 refactor scope → CENTRALIZE REPO-WIDE.** One authoritative `DIMENSION → {column, managedList, alias, canonicalName}` map; refactor `completeness.ts`, enter-data, and the aggregated-worker onto it (not a throwaway local map). Root-causes the "wrong column" bug class. Cross-stream — coordinate with the touched streams.
+2. **Cross-utility → AUTO-WIDEN ALLOWED.** A benchmarking/global-access user may auto-widen to all accessible utilities (peer view), bounded by `periodAccessPredicate` (FY-only cross-utility; scoped users never widen). See §4.
+3. **Source → GOLD-FIRST, FACT FOR FINER GRAIN.** Prefer pre-aggregated `gold.*` when it genuinely satisfies the requested cut; fall through to `data_entries` when the breakdown is finer than gold offers. Enforced via the capability probe + `source` reporting in §5.4 (guards against the #490 "assumed gold covered it" failure).
+4. **Ownership → CONFIRMED, ENSURE LOCKSTEP.** AI/PBI stream implements; #3 owns the dimension map + rollup. Lockstep enforced by shared modules + a CI contract test (§5.5), so the tool and the engine cannot silently diverge.
+
+*No open questions remain; spec is ready for the AI/PBI stream to implement, starting P0.*
 
 ---
 
