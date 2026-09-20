@@ -14,12 +14,23 @@ interface Attempt {
   createdAt: string;
 }
 
+interface RecomputeJob {
+  status: "idle" | "running" | "done" | "error";
+  startedAt: string | null;
+  finishedAt: string | null;
+  processed: number;
+  failed: number;
+  error: string | null;
+}
+
 export default function KpiHealthPage() {
   const [data, setData] = useState<{ attempts: Attempt[]; summary: Record<string, number> } | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [statusFilter, setStatusFilter] = useState("");
   const [retrying, setRetrying] = useState(false);
+  const [job, setJob] = useState<RecomputeJob | null>(null);
+  const [startError, setStartError] = useState<string | null>(null);
 
   const fetchData = useCallback(async () => {
     setLoading(true);
@@ -67,6 +78,50 @@ export default function KpiHealthPage() {
     fetchData();
   };
 
+  const fetchJob = useCallback(async () => {
+    try {
+      const res = await fetch("/api/kpi/recompute-all");
+      if (res.ok) setJob(await res.json());
+    } catch {
+      /* status poll is best-effort */
+    }
+  }, []);
+
+  // Load any in-flight/last recompute job on mount.
+  useEffect(() => {
+    void fetchJob();
+  }, [fetchJob]);
+
+  // Poll while a recompute runs; refresh the attempts table once it finishes.
+  useEffect(() => {
+    if (job?.status !== "running") return;
+    const t = setInterval(() => void fetchJob(), 3000);
+    return () => clearInterval(t);
+  }, [job?.status, fetchJob]);
+
+  useEffect(() => {
+    if (job?.status === "done") void fetchData();
+  }, [job?.status, fetchData]);
+
+  const startRecompute = async () => {
+    setStartError(null);
+    try {
+      const res = await fetch("/api/kpi/recompute-all", { method: "POST" });
+      const json = (await res.json()) as RecomputeJob & { message?: string };
+      if (res.status === 409) {
+        setJob(json);
+        return;
+      }
+      if (!res.ok) {
+        setStartError(json.message ?? "Failed to start recompute");
+        return;
+      }
+      await fetchJob();
+    } catch (e) {
+      setStartError(e instanceof Error ? e.message : "Failed to start recompute");
+    }
+  };
+
   const statusBadge = (s: string) => {
     const colors: Record<string, string> = {
       completed: "bg-success/10 text-success",
@@ -107,6 +162,26 @@ export default function KpiHealthPage() {
         >
           Retry All Failed
         </button>
+        <button
+          onClick={startRecompute}
+          disabled={job?.status === "running"}
+          title="Recompute every active KPI that has a formula and inputs, across all participating periods. KPIs whose inputs are present get a value; the rest stay missing-input."
+          className="px-3 py-1 text-xs bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-40"
+        >
+          {job?.status === "running" ? "Recomputing…" : "Recompute all KPIs with inputs"}
+        </button>
+        {job && job.status !== "idle" && (
+          <span className="self-center text-xs text-slate-600">
+            {job.status === "running" &&
+              `running${job.startedAt ? ` since ${new Date(job.startedAt).toLocaleTimeString()}` : ""}…`}
+            {job.status === "done" &&
+              `✓ recomputed ${job.processed}${job.failed ? ` · ${job.failed} failed` : ""}`}
+            {job.status === "error" && `✗ ${job.error ?? "recompute failed"}`}
+          </span>
+        )}
+        {startError && (
+          <span className="self-center text-xs text-danger">{startError}</span>
+        )}
       </div>
 
       <div className="overflow-x-auto">
