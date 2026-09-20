@@ -900,6 +900,72 @@ export async function planKpiCompute(kpiDefId: number): Promise<KpiComputePlan> 
   return { periodIds, refreshMeasures };
 }
 
+export interface AllKpiComputePlan {
+  /** Participating periods, shared by every KPI (one row per utility×period). */
+  periodIds: number[];
+  /** Every active KPI that has a formula + inputs, with whether it needs an
+   *  upstream calculated-measure refresh. */
+  kpis: { kpiDefId: number; refreshMeasures: boolean }[];
+}
+
+/**
+ * Plan a full "recompute ALL KPIs" run for the client to drive in small chunks
+ * (one `computeKpiChunk` per KPI × period-chunk), so the batch is never a single
+ * long in-process operation — the failure mode that took the app down. Returns
+ * the shared period set once plus, per recomputable KPI, whether it depends on a
+ * calculated measure. DEV/BMO only.
+ */
+export async function planAllKpiCompute(): Promise<AllKpiComputePlan> {
+  const user = await getCurrentUser();
+  if (user.role !== "DEV" && user.role !== "BMO") {
+    throw new Error("Forbidden: recompute-all is restricted to DEV/BMO.");
+  }
+
+  const defs = await db
+    .select({
+      id: kpiDefinitions.id,
+      formula: kpiDefinitions.formula,
+      formula_inputs: kpiDefinitions.formula_inputs,
+    })
+    .from(kpiDefinitions)
+    .where(eq(kpiDefinitions.is_active, true));
+
+  const recomputable = defs.filter(
+    (d) =>
+      Boolean(d.formula?.trim()) &&
+      inputMeasureIds(d.formula_inputs).length > 0,
+  );
+
+  // Which input measures are calculated (a chunk must refresh those first)?
+  // Resolve once for the whole set instead of per-KPI.
+  const allInputIds = [
+    ...new Set(recomputable.flatMap((d) => inputMeasureIds(d.formula_inputs))),
+  ];
+  const calculatedIds = new Set<number>();
+  if (allInputIds.length) {
+    const rows = await db
+      .select({ id: measureDefinitions.id })
+      .from(measureDefinitions)
+      .where(
+        and(
+          inArray(measureDefinitions.id, allInputIds),
+          eq(measureDefinitions.is_calculated, true),
+        ),
+      );
+    for (const r of rows) calculatedIds.add(r.id);
+  }
+
+  const kpis = recomputable.map((d) => ({
+    kpiDefId: d.id,
+    refreshMeasures: inputMeasureIds(d.formula_inputs).some((id) =>
+      calculatedIds.has(id),
+    ),
+  }));
+
+  const periodIds = await allReportPeriodIds();
+  return { periodIds, kpis };
+}
+
 /**
  * Compute ONE chunk of report periods for a KPI. When the KPI depends on
  * calculated measures, refresh those measure VALUES for just this chunk's
