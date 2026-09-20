@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import { useToggleSet } from "@/lib/use-toggle-set";
 
 interface ErrorEntry {
   id: number;
@@ -29,7 +30,7 @@ export default function ErrorLogsPage() {
   const [loading, setLoading] = useState(true);
   const [severity, setSeverity] = useState("");
   const [source, setSource] = useState("");
-  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const { expanded, toggle: toggleExpand } = useToggleSet<number>();
   const [resolving, setResolving] = useState<Set<number>>(new Set());
 
   const fetchErrors = useCallback(async () => {
@@ -55,14 +56,6 @@ export default function ErrorLogsPage() {
       await fetchErrors();
     })();
   }, [fetchErrors]);
-
-  const toggleExpand = (id: number) => {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  };
 
   const markResolved = async (ids: number[]) => {
     setResolving(new Set(ids));

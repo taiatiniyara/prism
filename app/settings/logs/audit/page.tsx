@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState, useCallback } from "react";
+import { useToggleSet } from "@/lib/use-toggle-set";
 
 interface AuditEvent {
   id: number;
@@ -20,7 +21,7 @@ export default function AuditLogsPage() {
   const [loading, setLoading] = useState(true);
   const [actionFilter, setActionFilter] = useState("");
   const [actorFilter, setActorFilter] = useState("");
-  const [expanded, setExpanded] = useState<Set<number>>(new Set());
+  const { expanded, toggle: toggleExpand } = useToggleSet<number>();
   const [page, setPage] = useState(0);
   const pageSize = 50;
 
@@ -47,14 +48,6 @@ export default function AuditLogsPage() {
       await fetchEvents();
     })();
   }, [fetchEvents]);
-
-  const toggleExpand = (id: number) => {
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id); else next.add(id);
-      return next;
-    });
-  };
 
   const exportCSV = () => {
     const params = new URLSearchParams({ format: "csv" });
