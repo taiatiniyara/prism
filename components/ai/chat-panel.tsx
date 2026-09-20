@@ -37,6 +37,7 @@ interface ChatMessage {
 interface ChatPanelProps {
   showSidebar?: boolean;
   initialSessionId?: number;
+  onActiveSessionChange?: (sessionId: number | null) => void;
 }
 
 const MAX_CHARS = 4000;
@@ -49,7 +50,7 @@ const nextMessageId = (prefix: string): string => {
   return `${prefix}-${messageSeq}`;
 };
 
-export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelProps) {
+export function ChatPanel({ showSidebar = true, initialSessionId, onActiveSessionChange }: ChatPanelProps) {
   const [sessions, setSessions] = useState<ChatSession[]>([]);
   const [activeSessionId, setActiveSessionId] = useState<number | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
@@ -87,6 +88,15 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
   useEffect(() => {
     messagesRef.current = messages;
   }, [messages]);
+
+  const onActiveSessionChangeRef = useRef(onActiveSessionChange);
+  useEffect(() => {
+    onActiveSessionChangeRef.current = onActiveSessionChange;
+  });
+
+  useEffect(() => {
+    onActiveSessionChangeRef.current?.(activeSessionId);
+  }, [activeSessionId]);
 
   const sessionList = useMemo(() => sessions, [sessions]);
 
