@@ -75,33 +75,33 @@ function extractMethods(source: string): string[] {
   return methods;
 }
 
-function detectAuthType(source: string): { authType: RouteInfo["methods"][0]["authType"]; requiresRole: string | null } {
+function detectAuthType(source: string): RouteInfo["methods"][0]["authType"] {
   // Session auth via getCurrentUser
   if (source.includes("getCurrentUser") || source.includes("requireUser()")) {
-    return { authType: "session", requiresRole: null };
+    return "session";
   }
 
   // API key auth
   if (source.includes("authorizeApiKey") || source.includes("withApiKeyAuth")) {
-    return { authType: "apiKey", requiresRole: null };
+    return "apiKey";
   }
 
   // Migration key
   if (source.includes("assertMigrationKey") || source.includes("x-migration-key")) {
-    return { authType: "migrationKey", requiresRole: null };
+    return "migrationKey";
   }
 
   // Cron secret
   if (source.includes("CRON_SECRET") || source.includes("cron_secret")) {
-    return { authType: "cronKey", requiresRole: null };
+    return "cronKey";
   }
 
   // Auth handler (Better Auth all route)
   if (source.includes("toNextJsHandler") || source.includes("auth.handler")) {
-    return { authType: "session", requiresRole: null };
+    return "session";
   }
 
-  return { authType: "none", requiresRole: null };
+  return "none";
 }
 
 function extractQueryParams(source: string): { name: string; required: boolean }[] {
@@ -404,7 +404,6 @@ function extractRequestBodyDescription(source: string, method: string): string |
 
 function normalizeAuthForMethod(
   authType: RouteInfo["methods"][0]["authType"],
-  _requiresRole: string | null,
 ): { type: string; description: string } {
   switch (authType) {
     case "session":
@@ -434,13 +433,12 @@ function parseRouteFile(filePath: string, apiDir: string): RouteInfo | null {
   const tag = inferTag(routePath);
 
   // We don't need to resolve full imports for auth detection
-  const { authType: _authType } = detectAuthType(source);
+  const authType = detectAuthType(source);
 
   return {
     path: routePath,
     file: filePath,
     methods: methods.map((method) => {
-      const { authType } = detectAuthType(source);
       return {
         method,
         authType,
@@ -563,7 +561,7 @@ function generateOpenApiYaml(routes: RouteInfo[], projectName: string): string {
 
       // Security
       let securityScheme = "";
-      const auth = normalizeAuthForMethod(endpoint.authType, null);
+      const auth = normalizeAuthForMethod(endpoint.authType);
       if (endpoint.authType === "session") {
         securityScheme = "sessionAuth";
       } else if (endpoint.authType === "apiKey") {
