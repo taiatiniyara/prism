@@ -3,7 +3,7 @@ import { organisations } from "@/db/schema/utility";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { eq, desc, and, or, sql, type SQL } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
-import { hasGlobalUtilityAccess } from "@/lib/user.service";
+import { hasBenchmarkAccess } from "@/lib/user.service";
 import { GetReportPeriods, type ReportPeriodDTO } from "@/app/data-entry/service";
 import type { GetReportPeriodsOptions } from "@/app/data-entry/service";
 import type { AiToolMetadata } from "../types";
@@ -20,7 +20,7 @@ const fyReportTypePredicate = (): SQL =>
   )`;
 
 export const periodAccessPredicate = (user: CurrentUser): SQL | undefined => {
-  if (!hasGlobalUtilityAccess(user)) {
+  if (!hasBenchmarkAccess(user)) {
     return user.org_id != null
       ? eq(reportPeriods.utility_id, user.org_id)
       : undefined;
@@ -48,7 +48,7 @@ export const isPeriodIdAccessible = async (
 
   if (!row) return false;
   if (user.org_id != null && row.utilityId === user.org_id) return true;
-  if (!hasGlobalUtilityAccess(user)) return user.org_id == null;
+  if (!hasBenchmarkAccess(user)) return user.org_id == null;
   return row.typeName === FINANCIAL_YEAR_REPORT_TYPE;
 };
 
@@ -56,7 +56,7 @@ export const filterAccessibleReportPeriods = (
   user: CurrentUser,
   periods: ReportPeriodDTO[],
 ): ReportPeriodDTO[] => {
-  if (!hasGlobalUtilityAccess(user)) return periods;
+  if (!hasBenchmarkAccess(user)) return periods;
   return periods.filter(
     (p) =>
       p.Report_Type === FINANCIAL_YEAR_REPORT_TYPE ||

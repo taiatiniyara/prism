@@ -2,7 +2,7 @@ import { getAccessibleReportPeriods, resolveComparisonPeriodIds } from "./common
 import { db } from "@/db/connection";
 import { sql } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
-import { hasGlobalUtilityAccess } from "@/lib/user.service";
+import { hasBenchmarkAccess } from "@/lib/user.service";
 import { createToolMetadata } from "./common";
 import type { AiToolResult } from "../types";
 
@@ -30,7 +30,7 @@ export const getRiskAssessment = async (
   } = {},
 ): Promise<AiToolResult<RiskAssessmentData>> => {
   const periods = await getAccessibleReportPeriods(user, {
-    forceAllUtilities: options.all_utilities === true && hasGlobalUtilityAccess(user),
+    forceAllUtilities: options.all_utilities ?? hasBenchmarkAccess(user),
   });
 
   if (periods.length === 0) {
@@ -136,7 +136,7 @@ export const getDataQualityReport = async (
   const result = await db.execute(sql`
     SELECT kpi_instance_id, kpi_name, actual_value, utility_name, report_date, limits
     FROM gold.fact_kpi
-    WHERE report_period_id = ANY(${periodIds})
+    WHERE report_period_id = ANY(${sql.param(periodIds)}::int[])
     LIMIT 200
   `);
 

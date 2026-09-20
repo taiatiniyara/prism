@@ -19,23 +19,8 @@ const ADMIN_ROLES = new Set(["BMO", "DEV"]);
 const isAdminRole = (role: string | null | undefined): boolean =>
   role != null && ADMIN_ROLES.has(role.toUpperCase());
 
-const getAudienceRegister = (role: string | null | undefined, override?: string | null): string => {
+const getAudienceRegister = (role: string | null | undefined): string => {
   const upper = (role ?? "").toUpperCase();
-
-  // External stakeholders (EXT) can self-identify via stakeholder_type override
-  if (upper === "EXT" && override) {
-    const map: Record<string, string> = {
-      government: "Government / Regulator",
-      regulator: "Government / Regulator",
-      consultant: "Consultant",
-      donor: "Donor / DFI",
-      dfi: "Donor / DFI",
-      researcher: "Education / Researcher",
-      education: "Education / Researcher",
-    };
-    const mapped = map[override.toLowerCase()];
-    if (mapped) return mapped;
-  }
 
   switch (upper) {
     case "CEO":
@@ -195,7 +180,7 @@ export async function POST(request: Request) {
     );
   }
 
-  let body: { messages: AiChatMessage[]; sessionId?: number; stakeholder_type?: string };
+  let body: { messages: AiChatMessage[]; sessionId?: number };
   try {
     body = await request.json();
   } catch {
@@ -341,12 +326,12 @@ export async function POST(request: Request) {
     }
 
     const roleContext = user.role
-      ? `\n\nCurrent audience register: ${getAudienceRegister(user.role, body.stakeholder_type)}.${
+      ? `\n\nCurrent audience register: ${getAudienceRegister(user.role)}.${
           isAdminRole(user.role)
-            ? " This user is a platform administrator — they can access all utilities, approve custom KPIs, and manage configuration."
+            ? " This user is a platform administrator (BMO/DEV) — they can access all utilities' approved Financial Year data, approve custom KPIs, and manage configuration. Cross-utility benchmarking across all utilities is fully available to them."
             : user.role === "EXT"
-              ? " This user is an external stakeholder with limited data access."
-              : ""
+              ? " This user is an external stakeholder. Their data access may be limited — do not claim other utilities' data is missing when it simply may not be visible to this user."
+              : " This user is not a platform administrator. Their data access is scoped to their own utility (their approved Financial Year and monthly reporting). Other utilities' data DOES exist in the platform but is outside their access — do not say it is absent, say it is not visible in their scope."
         }`
       : "";
 

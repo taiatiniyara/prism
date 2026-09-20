@@ -122,7 +122,7 @@
   "120": "BSC Builder",
   "121": "pg",
   "122": "Apportioned-costs contextual label — electricity-only financials for multi-service utilities",
-  "123": "Proposed changes",
+  "123": "Multi-level data hierarchy — agreed grain convention + requirements (RULED)",
   "124": "guardrails.ts",
   "125": "`kpi_actual` DDL design (DRAFT)",
   "126": "Measure catalogue — change log",
@@ -339,7 +339,7 @@
   "337": "nodemailer",
   "338": "generate-sample-medallion-entries.ts",
   "339": "update-p2-ids.ts",
-  "340": "Multi-level data hierarchy — agreed grain convention + requirements (RULED)",
+  "340": "eslint-plugin-security",
   "341": "@radix-ui/react-dropdown-menu",
   "342": "Environment Variables",
   "343": "@radix-ui/react-separator",
@@ -423,12 +423,10 @@
   "421": "getDlItemId Pattern (lookup managed list item ID by name)",
   "422": "@types/pg",
   "423": "TestHarness.tsx",
-  "424": "filterStatePanel.tsx",
   "425": "Data Entry Validation Service (data type, range, polarity validation)",
   "426": "Enter Data Page",
   "427": "Migration History",
   "428": "Get Range Or Polarity Validation Message",
   "429": "Is Value Valid For Data Type",
-  "430": "Scorecard Page Client (BSC builder UI, autosave, Excel templates)",
-  "431": "eslint-config-next"
+  "430": "Scorecard Page Client (BSC builder UI, autosave, Excel templates)"
 }

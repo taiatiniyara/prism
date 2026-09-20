@@ -41,6 +41,22 @@ export const hasGlobalUtilityAccess = (user: {
   return false;
 };
 
+/**
+ * PRISM AI / benchmarking access. The UI dev-context cookie
+ * (`prism_dev_utility_context_org_id`) scopes a DEV/BMO admin's *web UI* to a
+ * single utility for testing. That transient UI scope must not bleed into the
+ * AI/benchmarking surface: `compareKpisAcrossUtilities`, `getKpiTargets` and
+ * friends promise cross-utility data and the admin prompt claims all-utility
+ * access. So in the AI surface BMO/DEV are always treated as cross-utility
+ * (Financial-Year scope is enforced downstream for non-admin roles).
+ */
+export const hasBenchmarkAccess = (user: {
+  role: string | null | undefined;
+}): boolean => {
+  const role = (user.role ?? "").toUpperCase();
+  return role === "BMO" || role === "DEV";
+};
+
 export const resolveUtilityScopeId = (user: {
   org_id: number | null;
   role: string | null | undefined;

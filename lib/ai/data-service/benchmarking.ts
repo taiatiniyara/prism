@@ -1,6 +1,6 @@
 import { getAccessibleReportPeriods } from "./common";
 import type { CurrentUser } from "@/lib/user.service";
-import { hasGlobalUtilityAccess } from "@/lib/user.service";
+import { hasBenchmarkAccess } from "@/lib/user.service";
 import { createToolMetadata } from "./common";
 import type { AiToolResult } from "../types";
 
@@ -26,6 +26,8 @@ export interface BenchmarkingData {
   peer_average: number;
   top_performers: BenchmarkingRecord[];
   bottom_performers: BenchmarkingRecord[];
+  access_scope: "all_utilities" | "own_utility" | "unscoped";
+  access_note: string;
 }
 
 export const getBenchmarkingData = async (
@@ -36,7 +38,17 @@ export const getBenchmarkingData = async (
     all_utilities?: boolean;
   } = {},
 ): Promise<AiToolResult<BenchmarkingData>> => {
-  const forceAllUtilities = options.all_utilities === true && hasGlobalUtilityAccess(user);
+  const forceAllUtilities = options.all_utilities ?? hasBenchmarkAccess(user);
+  const accessScope: BenchmarkingData["access_scope"] = hasBenchmarkAccess(user)
+    ? "all_utilities"
+    : user.org_id != null
+      ? "own_utility"
+      : "unscoped";
+  const accessNote: BenchmarkingData["access_note"] = hasBenchmarkAccess(user)
+    ? "BMO/DEV access: benchmarking spans all utilities with approved Financial Year reporting."
+    : user.org_id != null
+      ? `Benchmarking is scoped to your own utility only — other utilities' data exists on the platform but is not visible to you.`
+      : "No utility scope found in your session — cross-utility data is not visible.";
   const periods = await getAccessibleReportPeriods(user, { forceAllUtilities });
 
   if (periods.length === 0) {
@@ -47,6 +59,8 @@ export const getBenchmarkingData = async (
         peer_average: 0,
         top_performers: [],
         bottom_performers: [],
+        access_scope: accessScope,
+        access_note: accessNote,
       },
       metadata: createToolMetadata({
         completeness_pct: 0,
@@ -121,6 +135,8 @@ export const getBenchmarkingData = async (
       peer_average: peerAverage,
       top_performers: topPerformers,
       bottom_performers: bottomPerformers,
+      access_scope: accessScope,
+      access_note: accessNote,
     },
     metadata: createToolMetadata({
       freshness: new Date(),

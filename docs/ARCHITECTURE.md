@@ -33,7 +33,7 @@ Decisions recorded here, with rationale. Superseded decisions go in `docs/adr/`.
 | Framework | Better Auth v1.6 + Drizzle adapter | Email/password + magic link; built-in session management, rate limiting |
 | Rate limiting | 100 requests / 15 min on auth endpoints | Brute-force protection |
 | Route protection | Custom `proxy.ts` middleware (not Next.js middleware.ts) | Session lookup, role gating, email verification redirect; 7 protected path groups |
-| Roles | 9 roles (DEV, BMO, BLO, CEO, EXE, DAOF, DAOH, DAOO, MGR, EXT) + EXT stakeholder_type self-ID | Role-based route access + sidebar visibility + AI audience register |
+| Roles | 9 roles (DEV, BMO, BLO, CEO, EXE, DAOF, DAOH, DAOO, MGR, EXT) | Role-based route access + sidebar visibility + AI audience register |
 | Sessions | 24-hour cookie-based | Standard Better Auth defaults |
 
 ## AI

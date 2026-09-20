@@ -674,25 +674,35 @@ export function createPrismNativeTools(
     compare_kpis_across_utilities: tool({
       description:
         goldTag +
-        "Compare actual KPI values across multiple utilities from the gold layer. Returns per-utility values with rankings — use for 'top N utilities by <metric>', peer comparisons, and any 'which utilities have the most/least <KPI>' question (KPIs include workforce/employee counts like 'Executive Employees Total', financials, reliability, generation, etc.).",
+        "Compare actual KPI values across multiple utilities from the gold layer. Returns per-utility values with rankings — use for 'top N utilities by <metric>', peer comparisons, and any 'which utilities have the most/least <KPI>' question (KPIs include workforce/employee counts like 'Executive Employees Total', financials, reliability, generation, etc.). KPI names are resolved via synonyms and common industry terms (e.g. 'System Loss' resolves to Network Delivery Losses, 'Tariff Recovery' to Operating Cost Recovery, 'Renewable Penetration' to Renewable Energy to Grid). Each result reports the resolved gold-layer KPI names in matched_kpi_names and an access scope. BMO/DEV users get all approved utilities with Financial Year reporting; scoped users only their own utility.",
       inputSchema: z.object({
         kpi_names: z
           .array(z.string())
-          .describe("KPI names to compare (e.g. ['SAIDI', 'System Loss'])."),
+          .describe("KPI names or industry terms to compare (e.g. ['SAIDI', 'System Loss', 'Renewable Penetration'])."),
         report_period_id: z.number().optional().describe("Report period ID."),
         year: z.number().optional().describe("Year to query (e.g. 2023)."),
         month: z
           .number()
           .optional()
           .describe("Month (1-12) for monthly granularity."),
+        all_utilities: z
+          .boolean()
+          .optional()
+          .describe("Set to true to compare all utilities with approved Financial Year data (BMO/DEV only)."),
+        utility_id: z
+          .number()
+          .optional()
+          .describe("Restrict the comparison to a specific utility ID (BMO/DEV only)."),
       }),
-      execute: async ({ kpi_names, report_period_id, year, month }) => {
+      execute: async ({ kpi_names, report_period_id, year, month, all_utilities, utility_id }) => {
         return withTimeout(
           compareKpisAcrossUtilities(user, {
             kpi_names,
             report_period_id,
             year,
             month,
+            all_utilities,
+            utility_id,
           }),
           "compare_kpis_across_utilities",
         );

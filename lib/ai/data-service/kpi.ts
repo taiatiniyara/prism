@@ -1,6 +1,6 @@
 import { getAccessibleReportPeriods } from "./common";
 import type { CurrentUser } from "@/lib/user.service";
-import { hasGlobalUtilityAccess } from "@/lib/user.service";
+import { hasBenchmarkAccess } from "@/lib/user.service";
 import { withCache } from "../cache";
 import { createToolMetadata, formatPercent } from "./common";
 import type { AiToolResult } from "../types";
@@ -30,6 +30,8 @@ export interface KpiStatusData {
   };
   scope: "single_utility" | "all_utilities";
   default_utility: string | null;
+  access_scope: "all_utilities" | "own_utility" | "unscoped";
+  access_note: string;
 }
 
 export const getKpiStatus = async (
@@ -40,7 +42,17 @@ export const getKpiStatus = async (
     all_utilities?: boolean;
   } = {},
 ): Promise<AiToolResult<KpiStatusData>> => {
-  const forceAllUtilities = options.all_utilities === true && hasGlobalUtilityAccess(user);
+  const forceAllUtilities = options.all_utilities ?? hasBenchmarkAccess(user);
+  const accessScope: KpiStatusData["access_scope"] = hasBenchmarkAccess(user)
+    ? "all_utilities"
+    : user.org_id != null
+      ? "own_utility"
+      : "unscoped";
+  const accessNote: KpiStatusData["access_note"] = hasBenchmarkAccess(user)
+    ? "BMO/DEV access: showing all utilities with approved Financial Year reporting."
+    : user.org_id != null
+      ? `Access is scoped to your own utility only — other utilities' data exists on the platform but is not visible to you.`
+      : "No utility scope found in your session — cross-utility data is not visible.";
   const periods = await withCache(
     `report_periods:${forceAllUtilities}:${user.id}`,
     () => getAccessibleReportPeriods(user, { forceAllUtilities }),
@@ -58,6 +70,8 @@ export const getKpiStatus = async (
         },
         scope: forceAllUtilities ? "all_utilities" : "single_utility",
         default_utility: null,
+        access_scope: accessScope,
+        access_note: accessNote,
       },
       metadata: createToolMetadata({
         completeness_pct: 0,
@@ -118,6 +132,8 @@ export const getKpiStatus = async (
       aggregate,
       scope: forceAllUtilities ? "all_utilities" : "single_utility",
       default_utility: defaultUtility,
+      access_scope: accessScope,
+      access_note: accessNote,
     },
     metadata: createToolMetadata({
       freshness: new Date(),
