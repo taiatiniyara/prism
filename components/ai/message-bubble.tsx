@@ -7,6 +7,7 @@ import type { Components } from "react-markdown";
 import { ThumbsUp, ThumbsDown, Copy, Check, RefreshCw, ChevronDown } from "lucide-react";
 import { Textarea } from "@/components/ui/textarea";
 import { VisualizationRenderer } from "./visualizations/visualization-renderer";
+import { isVisualizationFenceBlock } from "@/lib/ai/visualization";
 import type { AiVisualization } from "@/lib/ai/types";
 
 interface ChatMessage {
@@ -64,6 +65,9 @@ const markdownComponents: Components = {
     if (isBlock && className) {
       const lang = className.replace("language-", "");
       const codeString = String(children).replace(/\n$/, "");
+      if (isVisualizationFenceBlock(codeString)) {
+        return null;
+      }
       return <CodeBlock lang={lang} code={codeString} {...props}>{children}</CodeBlock>;
     }
     return (

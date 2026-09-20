@@ -57,6 +57,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
   const animFrameRef = useRef<number | null>(null);
   const messagesRef = useRef(messages);
   const pendingContentRef = useRef("");
+  const pendingVizBlocksRef = useRef<string[]>([]);
   const reasoningContentRef = useRef("");
 
   useEffect(() => {
@@ -225,6 +226,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
     setStreamingContent("");
     setStreamingReasoning("");
     pendingContentRef.current = "";
+    pendingVizBlocksRef.current = [];
     reasoningContentRef.current = "";
     isStreamingRef.current = true;
     setToolProgress([]);
@@ -366,6 +368,15 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
             } catch {
               // ignore malformed error events
             }
+          } else if (line.startsWith("4:")) {
+            try {
+              const vizEvent = JSON.parse(line.slice(2));
+              if (vizEvent && typeof vizEvent.json === "string" && vizEvent.json) {
+                pendingVizBlocksRef.current.push(vizEvent.json);
+              }
+            } catch {
+              // ignore malformed visualization events
+            }
           } else if (line.length > 0 && !line.startsWith("0:") && !line.startsWith("2:") && !line.startsWith("3:")) {
             const content = line + "\n";
             pendingContentRef.current += content;
@@ -380,7 +391,12 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
         cancelAnimationFrame(animFrameRef.current);
         animFrameRef.current = null;
       }
-      const fullContent = pendingContentRef.current;
+      const vizSuffix = pendingVizBlocksRef.current.length
+        ? pendingVizBlocksRef.current
+            .map((rawViz) => `\n\n\`\`\`json\n${rawViz}\n\`\`\``)
+            .join("")
+        : "";
+      const fullContent = pendingContentRef.current + vizSuffix;
       const fullReasoning = reasoningContentRef.current;
       setStreamingContent(fullContent);
       setStreamingReasoning("");
@@ -412,10 +428,15 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
     } catch (error) {
       if (error instanceof Error && error.name === "AbortError") {
         if (pendingContentRef.current) {
+          const vizSuffix = pendingVizBlocksRef.current.length
+            ? pendingVizBlocksRef.current
+                .map((rawViz) => `\n\n\`\`\`json\n${rawViz}\n\`\`\``)
+                .join("")
+            : "";
           const partialAssistant: ChatMessage = {
             id: nextMessageId("assistant"),
             role: "assistant",
-            content: pendingContentRef.current + "\n\n*[Generation stopped]*",
+            content: pendingContentRef.current + vizSuffix + "\n\n*[Generation stopped]*",
           };
           setMessages((prev) => [...prev, partialAssistant]);
         }
@@ -437,6 +458,7 @@ export function ChatPanel({ showSidebar = true, initialSessionId }: ChatPanelPro
       setIsLoading(false);
       setStreamingContent("");
       pendingContentRef.current = "";
+      pendingVizBlocksRef.current = [];
       abortControllerRef.current = null;
       isStreamingRef.current = false;
     }
