@@ -4,7 +4,7 @@ import { kpiDefinitions } from "@/db/schema/kpi";
 import { and, eq, ilike, or, sql } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
 import { hasBenchmarkAccess } from "@/lib/user.service";
-import { createToolMetadata, resolveComparisonPeriodIds } from "./common";
+import { createToolMetadata, resolveComparisonPeriodIds, intArrayParam } from "./common";
 import type { AiToolResult } from "../types";
 
 const buildKpiAccessInfo = (user: CurrentUser): KpiAccessInfo => ({
@@ -52,7 +52,7 @@ export const getKpiTargets = async (
   const result = await db.execute(sql`
     SELECT kpi_name, actual_value, utility_id, utility_acronym, report_date
     FROM gold.fact_kpi
-    WHERE report_period_id = ANY(${sql.param(periodIds)}::int[])
+    WHERE report_period_id = ANY(${intArrayParam(periodIds)})
     LIMIT 2000
   `);
 
@@ -141,7 +141,7 @@ export const getKpiCorrelation = async (
   const result = await db.execute(sql`
     SELECT kpi_name, actual_value, utility_id, report_date
     FROM gold.fact_kpi
-    WHERE report_period_id = ANY(${sql.param(periodIds)}::int[])
+    WHERE report_period_id = ANY(${intArrayParam(periodIds)})
     LIMIT 2000
   `);
 
@@ -313,7 +313,7 @@ export const compareKpisAcrossUtilities = async (
   for (const reqName of options.kpi_names) {
     const patterns = await resolveKpiPatterns(reqName);
 
-    const filter = sql`report_period_id = ANY(${sql.param(periodIds)}::int[])
+    const filter = sql`report_period_id = ANY(${intArrayParam(periodIds)})
       AND kpi_name ILIKE ANY(${sql.param(patterns)}::text[])`;
 
     const result = await db.execute(sql`

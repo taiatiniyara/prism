@@ -1,21 +1,39 @@
 import { listReviewKpiRows } from "@/app/data-entry/review-kpi/service";
 import { db } from "@/db/connection";
 import { reportPeriods } from "@/db/schema/reportPeriods";
-import { eq } from "drizzle-orm";
+import { dataEntries } from "@/db/schema/dataEntry";
+import { and, eq, inArray } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
 import { hasBenchmarkAccess } from "@/lib/user.service";
 import { createToolMetadata, resolvePeriodId } from "./common";
 import type { AiToolResult } from "../types";
 
+// Why a KPI has no computed value. NOT every "missing-input" is a data-entry
+// gap: an input the utility has explicitly declared "not available"
+// (no_data_reason set) is a legitimate response, not pending work. Splitting
+// these keeps the AI's completeness reporting honest.
+export type MissingInputReason =
+  | "awaiting_input" // >=1 required input not entered yet — a real gap
+  | "declared_unavailable" // all unmet inputs are declared not-available by the utility
+  | "compute_pending"; // all inputs present, value just not (re)computed yet
+
+export interface MissingInputBreakdown {
+  awaiting_input: number;
+  declared_unavailable: number;
+  compute_pending: number;
+}
+
 export interface KpiDiagnostic {
   name: string;
   status: string;
   has_unresolved_comments: boolean;
+  reason?: MissingInputReason;
 }
 
 export interface KpiDiagnosticsData {
   status_counts: Record<string, number>;
   missing_input_kpis: KpiDiagnostic[];
+  missing_input_breakdown: MissingInputBreakdown;
   error_kpis: KpiDiagnostic[];
   stale_kpis: KpiDiagnostic[];
   unresolved_comments_count: number;
@@ -36,6 +54,7 @@ export const getKpiDiagnostics = async (
       data: {
         status_counts: {},
         missing_input_kpis: [],
+        missing_input_breakdown: { awaiting_input: 0, declared_unavailable: 0, compute_pending: 0 },
         error_kpis: [],
         stale_kpis: [],
         unresolved_comments_count: 0,
@@ -63,6 +82,7 @@ export const getKpiDiagnostics = async (
         data: {
           status_counts: {},
           missing_input_kpis: [],
+          missing_input_breakdown: { awaiting_input: 0, declared_unavailable: 0, compute_pending: 0 },
           error_kpis: [],
           stale_kpis: [],
           unresolved_comments_count: 0,
@@ -93,12 +113,92 @@ export const getKpiDiagnostics = async (
     {} as Record<string, number>,
   );
 
-  const missingInputKpis: KpiDiagnostic[] = rows
-    .filter((row) => row.result.status === "missing-input")
+  const missingRows = rows.filter(
+    (row) => row.result.status === "missing-input",
+  );
+
+  // Determine, per required input of the missing KPIs, whether it actually has
+  // a value (in ANY value column — the medallion migration types values into
+  // value_numeric/boolean/option, leaving the legacy `value` text column null)
+  // or has been declared not-available (no_data_reason). The review rows don't
+  // carry this, so read data_entries directly for the period.
+  const missingInputDefIds = [
+    ...new Set(missingRows.flatMap((row) => row.inputs.map((i) => i.inputDefId))),
+  ];
+  const availabilityByInput = new Map<
+    number,
+    { hasValue: boolean; declaredUnavailable: boolean }
+  >();
+  if (missingInputDefIds.length > 0) {
+    const entryRows = await db
+      .select({
+        measureDefId: dataEntries.measure_def_id,
+        value: dataEntries.value,
+        valueNumeric: dataEntries.value_numeric,
+        valueBoolean: dataEntries.value_boolean,
+        valueOptionId: dataEntries.value_option_id,
+        noDataReason: dataEntries.no_data_reason,
+      })
+      .from(dataEntries)
+      .where(
+        and(
+          eq(dataEntries.report_period_id, resolvedPeriodId),
+          eq(dataEntries.is_deleted, false),
+          eq(dataEntries.is_relevant, true),
+          inArray(dataEntries.measure_def_id, missingInputDefIds),
+        ),
+      );
+    for (const e of entryRows) {
+      const hasValue =
+        e.valueNumeric != null ||
+        e.valueBoolean != null ||
+        e.valueOptionId != null ||
+        (e.value != null && e.value.trim() !== "");
+      const prev = availabilityByInput.get(e.measureDefId);
+      // With multiple entries per input (e.g. per service area), the input is
+      // satisfied if ANY entry has a value; declared-unavailable only counts
+      // for entries that have no value but carry a no_data_reason.
+      availabilityByInput.set(e.measureDefId, {
+        hasValue: hasValue || (prev?.hasValue ?? false),
+        declaredUnavailable:
+          (!hasValue && e.noDataReason != null) ||
+          (prev?.declaredUnavailable ?? false),
+      });
+    }
+  }
+
+  const classifyMissing = (
+    row: (typeof rows)[number],
+  ): MissingInputReason => {
+    const unmet = row.inputs.filter(
+      (i) => !(availabilityByInput.get(i.inputDefId)?.hasValue ?? false),
+    );
+    if (unmet.length === 0) return "compute_pending";
+    // "awaiting" if any unmet input is genuinely absent (not a declared N/A);
+    // "declared_unavailable" only when every unmet input was declared N/A.
+    const anyGenuinelyAbsent = unmet.some(
+      (i) => !(availabilityByInput.get(i.inputDefId)?.declaredUnavailable ?? false),
+    );
+    return anyGenuinelyAbsent ? "awaiting_input" : "declared_unavailable";
+  };
+
+  const missing_input_breakdown: MissingInputBreakdown = {
+    awaiting_input: 0,
+    declared_unavailable: 0,
+    compute_pending: 0,
+  };
+  const missingWithReason = missingRows.map((row) => {
+    const reason = classifyMissing(row);
+    missing_input_breakdown[reason]++;
+    return { row, reason };
+  });
+
+  const missingInputKpis: KpiDiagnostic[] = missingWithReason
     .slice(0, 10)
-    .map((row) => ({
+    .map(({ row, reason }) => ({
       name: row.kpiName,
       status: row.result.status,
+      reason,
       has_unresolved_comments: row.inputs.some((input) =>
         input.comments.some((c) => c.resolved !== true),
       ),
@@ -136,6 +236,7 @@ export const getKpiDiagnostics = async (
     data: {
       status_counts: statusCounts,
       missing_input_kpis: missingInputKpis,
+      missing_input_breakdown,
       error_kpis: errorKpis,
       stale_kpis: staleKpis,
       unresolved_comments_count: unresolvedCommentsCount,

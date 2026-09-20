@@ -1,4 +1,4 @@
-import { getAccessibleReportPeriods, resolveComparisonPeriodIds } from "./common";
+import { getAccessibleReportPeriods, resolveComparisonPeriodIds, intArrayParam } from "./common";
 import { db } from "@/db/connection";
 import { sql } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
@@ -136,7 +136,7 @@ export const getDataQualityReport = async (
   const result = await db.execute(sql`
     SELECT kpi_instance_id, kpi_name, actual_value, utility_name, report_date, limits
     FROM gold.fact_kpi
-    WHERE report_period_id = ANY(${sql.param(periodIds)}::int[])
+WHERE report_period_id = ANY(${intArrayParam(periodIds)})
     LIMIT 200
   `);
 

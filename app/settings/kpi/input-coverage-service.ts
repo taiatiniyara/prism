@@ -516,18 +516,22 @@ export async function getPeriodsCoverageSummary(args: {
 
   return reportPeriodIds.map((reportPeriodId) => {
     const rows = rowsByPeriod.get(reportPeriodId) ?? [];
-    const covs = groups.map((g) => coverageForGroup(g, rows));
+    const covs = groups.map((g) => ({ g, c: coverageForGroup(g, rows) }));
     // Common unit roster (union of units any input covers), then each per-unit
     // input is judged against it — so a unit missing an input entirely counts as
-    // blank, matching the modal and the actual compute failure.
+    // blank, matching the modal and the actual compute.
     const roster = new Set<number>();
-    for (const c of covs)
+    for (const { c } of covs)
       for (const u of [...c.entered, ...c.missing]) roster.add(u);
     const missing = new Set<number>();
     let perUnitInputs = 0;
-    for (const c of covs) {
+    for (const { g, c } of covs) {
       if (c.entered.size + c.missing.size === 0) continue; // aggregate input
       perUnitInputs += 1;
+      // Optional inputs are zero-filled by design — a missing optional unit does
+      // NOT make the period "incomplete" (Eugene 2026-09-20). Count only
+      // mandatory inputs' missing units.
+      if (g.binding.is_optional) continue;
       for (const u of coverageAgainstRoster(c.unitValues, roster).missing)
         missing.add(u);
     }
