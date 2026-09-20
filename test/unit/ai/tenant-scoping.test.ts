@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { hasGlobalUtilityAccess } from "@/lib/user.service";
+import { hasGlobalUtilityAccess, hasBenchmarkAccess } from "@/lib/user.service";
 import {
   filterAccessibleReportPeriods,
   FINANCIAL_YEAR_REPORT_TYPE,
@@ -13,16 +13,21 @@ import type { ReportPeriodDTO } from "@/app/data-entry/service";
 // here that widens access would silently break tenant isolation, so we pin
 // the exact policy:
 //   - Only BMO (always) and DEV (unless pinned to a utility context) get
-//     cross-utility "global" access. Every other role is confined to its org.
-//   - Even a global-access user may only reach OTHER utilities' "Financial
-//     Year" periods — never another utility's Monthly datasets.
+//     cross-utility "global" access in the WEB UI. Every other role is
+//     confined to its org there.
+//   - PRISM AI benchmarking is broader: benchmark-enabled roles (platform
+//     BMO/DEV plus utility BLO/CEO/EXE/MGR/DAOF/DAOH/DAOO) may benchmark
+//     against other utilities; external stakeholders (EXT) may not.
+//   - Even a benchmark-access user may only reach OTHER utilities'
+//     "Financial Year" periods — never another utility's Monthly datasets.
 //
 // Note on the tool `utility_id` argument: the AI tools accept a `utility_id`
 // parameter, but the data-service scopes queries by the SESSION user
 // (`resolveUtilityScopeId(user)` / `hasGlobalUtilityAccess(user)`), not by that
-// request-supplied value — so a non-admin passing a foreign `utility_id`
-// cannot read another utility's data. That enforcement is exercised end-to-end
-// by the integration suite; here we lock the pure primitives it builds on.
+// request-supplied value — so a user without benchmark access passing a
+// foreign `utility_id` cannot read another utility's data. That enforcement is
+// exercised end-to-end by the integration suite; here we lock the pure
+// primitives it builds on.
 
 const mkUser = (
   role: string | null,
@@ -61,6 +66,26 @@ describe("hasGlobalUtilityAccess — cross-utility access is role-gated", () => 
   });
 });
 
+describe("hasBenchmarkAccess — PRISM AI benchmarking is role-gated", () => {
+  it("grants benchmark access to platform roles", () => {
+    for (const role of ["BMO", "DEV"]) {
+      expect(hasBenchmarkAccess(mkUser(role, 5))).toBe(true);
+    }
+  });
+
+  it("grants benchmark access to every utility role (BLO/CEO/EXE/MGR/DAOF/DAOH/DAOO)", () => {
+    for (const role of ["BLO", "CEO", "EXE", "MGR", "DAOF", "DAOH", "DAOO"]) {
+      expect(hasBenchmarkAccess(mkUser(role, 5))).toBe(true);
+    }
+  });
+
+  it("denies benchmark access to external stakeholders and unknown roles", () => {
+    for (const role of ["EXT", null, "UNKNOWN"]) {
+      expect(hasBenchmarkAccess(mkUser(role, 5))).toBe(false);
+    }
+  });
+});
+
 describe("filterAccessibleReportPeriods — Monthly data stays private", () => {
   const ownMonthly = mkPeriod(5, "Monthly");
   const ownFy = mkPeriod(5, FINANCIAL_YEAR_REPORT_TYPE);
@@ -68,21 +93,23 @@ describe("filterAccessibleReportPeriods — Monthly data stays private", () => {
   const otherFy = mkPeriod(9, FINANCIAL_YEAR_REPORT_TYPE);
   const all = [ownMonthly, ownFy, otherMonthly, otherFy];
 
-  it("is a no-op for non-global users (upstream query already scopes them to their org)", () => {
-    const result = filterAccessibleReportPeriods(mkUser("BLO", 5), all);
+  it("is a no-op for non-benchmark users (upstream query already scopes them to their org)", () => {
+    const result = filterAccessibleReportPeriods(mkUser("EXT", 5), all);
     expect(result).toEqual(all);
   });
 
-  it("lets a global user see own utility fully but only OTHER utilities' Financial Year periods", () => {
-    const result = filterAccessibleReportPeriods(mkUser("BMO", 5), all);
-    expect(result).toContain(ownMonthly);
-    expect(result).toContain(ownFy);
-    expect(result).toContain(otherFy);
-    // The critical assertion: another utility's Monthly dataset is filtered out.
-    expect(result).not.toContain(otherMonthly);
+  it("lets a benchmark user see own utility fully but only OTHER utilities' Financial Year periods", () => {
+    for (const role of ["BMO", "DEV", "BLO", "CEO", "EXE", "MGR", "DAOF", "DAOH", "DAOO"]) {
+      const result = filterAccessibleReportPeriods(mkUser(role, 5), all);
+      expect(result).toContain(ownMonthly);
+      expect(result).toContain(ownFy);
+      expect(result).toContain(otherFy);
+      // The critical assertion: another utility's Monthly dataset is filtered out.
+      expect(result).not.toContain(otherMonthly);
+    }
   });
 
-  it("blocks all foreign Monthly periods for a global user with no org of their own", () => {
+  it("blocks all foreign Monthly periods for a benchmark user with no org of their own", () => {
     const result = filterAccessibleReportPeriods(mkUser("BMO", null), all);
     expect(result).not.toContain(ownMonthly);
     expect(result).not.toContain(otherMonthly);

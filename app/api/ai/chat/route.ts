@@ -331,7 +331,7 @@ export async function POST(request: Request) {
             ? " This user is a platform administrator (BMO/DEV) — they can access all utilities' approved Financial Year data, approve custom KPIs, and manage configuration. Cross-utility benchmarking across all utilities is fully available to them."
             : user.role === "EXT"
               ? " This user is an external stakeholder. Their data access may be limited — do not claim other utilities' data is missing when it simply may not be visible to this user."
-              : " This user is not a platform administrator. Their data access is scoped to their own utility (their approved Financial Year and monthly reporting). Other utilities' data DOES exist in the platform but is outside their access — do not say it is absent, say it is not visible in their scope."
+              : " This user is a utility role (BLO/CEO/EXE/MGR/DAOF/DAOH/DAOO). They can benchmark their KPIs against every utility's approved Financial Year data and are fully entitled to cross-utility benchmarking results. BMO/DEV platform-admin powers (approving custom KPIs, managing configuration) remain admin-only."
         }`
       : "";
 

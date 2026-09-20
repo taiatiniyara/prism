@@ -674,7 +674,7 @@ export function createPrismNativeTools(
     compare_kpis_across_utilities: tool({
       description:
         goldTag +
-        "Compare actual KPI values across multiple utilities from the gold layer. Returns per-utility values with rankings — use for 'top N utilities by <metric>', peer comparisons, and any 'which utilities have the most/least <KPI>' question (KPIs include workforce/employee counts like 'Executive Employees Total', financials, reliability, generation, etc.). KPI names are resolved via synonyms and common industry terms (e.g. 'System Loss' resolves to Network Delivery Losses, 'Tariff Recovery' to Operating Cost Recovery, 'Renewable Penetration' to Renewable Energy to Grid). Each result reports the resolved gold-layer KPI names in matched_kpi_names and an access scope. BMO/DEV users get all approved utilities with Financial Year reporting; scoped users only their own utility.",
+        "Compare actual KPI values across multiple utilities from the gold layer. Returns per-utility values with rankings — use for 'top N utilities by <metric>', peer comparisons, and any 'which utilities have the most/least <KPI>' question (KPIs include workforce/employee counts like 'Executive Employees Total', financials, reliability, generation, etc.). KPI names are resolved via synonyms and common industry terms (e.g. 'System Loss' resolves to Network Delivery Losses, 'Tariff Recovery' to Operating Cost Recovery, 'Renewable Penetration' to Renewable Energy to Grid). Each result reports the resolved gold-layer KPI names in matched_kpi_names and an access scope. Users with benchmark access (platform BMO/DEV and utility BLO/CEO/EXE/MGR/DAOF/DAOH/DAOO roles) get all approved utilities with Financial Year reporting; scoped users only their own utility.",
       inputSchema: z.object({
         kpi_names: z
           .array(z.string())
@@ -688,11 +688,11 @@ export function createPrismNativeTools(
         all_utilities: z
           .boolean()
           .optional()
-          .describe("Set to true to compare all utilities with approved Financial Year data (BMO/DEV only)."),
+          .describe("Set to true to compare all utilities with approved Financial Year data (benchmark-access roles only)."),
         utility_id: z
           .number()
           .optional()
-          .describe("Restrict the comparison to a specific utility ID (BMO/DEV only)."),
+          .describe("Restrict the comparison to a specific utility ID (benchmark-access roles only)."),
       }),
       execute: async ({ kpi_names, report_period_id, year, month, all_utilities, utility_id }) => {
         return withTimeout(

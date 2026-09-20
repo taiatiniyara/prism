@@ -10,7 +10,7 @@ import type { AiToolResult } from "../types";
 const buildKpiAccessInfo = (user: CurrentUser): KpiAccessInfo => ({
   scope: hasBenchmarkAccess(user) ? "all_utilities" : "own_utility",
   note: hasBenchmarkAccess(user)
-    ? "BMO/DEV access: includes every utility with approved Financial Year reporting in the selected period(s)."
+    ? "Benchmark access: includes every utility with approved Financial Year reporting in the selected period(s)."
     : "Access is scoped to your own utility only — other utilities' data exists on the platform but is not visible to you.",
 });
 

@@ -129,6 +129,7 @@ A glossary of domain terms, not a spec. No stack choices or implementation detai
 - **PRISM AI (Energy Expert)** — Anthropic Claude-powered assistant with 5-step reasoning chain (Diagnose → Connect → Position → Recommend → Caveat), opinion-safety protocol, 7 audience registers.
 - **AI Tools** — 67 functions (38 PRISM-native + 29 Power BI domain) for data retrieval, analysis, visualization.
 - **Data Source Priority** — Power BI first, PRISM-native fallback on failure, then honest gap reporting.
+- **Benchmark Access** — PRISM AI cross-utility KPI benchmarking (`compareKpisAcrossUtilities`, KPI targets, status, trends, anomalies, governance, analysis, performance, diagnostics) is available to platform roles (DEV, BMO) and every utility role (BLO, CEO, EXE, MGR, DAOF, DAOH, DAOO); external stakeholders (EXT) are excluded. Benchmark users may reach all utilities' approved **Financial Year** periods plus their own utility's Monthly reporting — never another utility's Monthly datasets (multi-tenant isolation, S9).
 - **Audience Register** — 7 communication personas: CEO/Board, Manager/Ops, Staff/Analyst, Government/Regulator, Consultant, Donor/DFI, Education/Researcher; derived from platform role (EXT → Consultant).
 - **AI Chat Session** — conversation thread per user with context summary.
 - **AI Chat Turn** — single user-assistant exchange with token counts, latency, model info.
