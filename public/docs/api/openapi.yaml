@@ -1737,6 +1737,39 @@ paths:
           description: Forbidden
         '500':
           description: Internal Server Error
+  /api/kpi/recompute-all:
+    get:
+      tags:
+        - KPIs
+      summary: Get recompute all
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '202':
+          description: HTTP 202
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '409':
+          description: Conflict
+    post:
+      tags:
+        - KPIs
+      summary: Create recompute all
+      security:
+        - sessionAuth: []
+      x-auth: Requires valid Better Auth session (getCurrentUser)
+      responses:
+        '202':
+          description: HTTP 202
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '409':
+          description: Conflict
   /api/kpiDefinitions:
     get:
       tags:
