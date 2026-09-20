@@ -91,15 +91,28 @@ export default function DimensionPanel({
     return ctxMap[cookieKey] ?? null;
   };
 
+  const activeFilterCount = DIMENSION_CONFIG.filter(
+    (dim) => getContextValue(dim.cookieKey) != null,
+  ).length;
+
   return (
     <div className="border rounded-lg bg-muted/30">
       <button
         type="button"
         className="flex items-center gap-2 w-full px-3 py-2 text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
         onClick={() => setExpanded(!expanded)}
+        aria-expanded={expanded}
       >
         <Filter className="size-3.5" />
         Dimensions
+        {activeFilterCount > 0 ? (
+          <span
+            className="inline-flex items-center justify-center min-w-4 h-4 px-1 rounded-full bg-brand/15 text-brand text-[11px] font-semibold"
+            title={`${activeFilterCount} dimension filter${activeFilterCount === 1 ? "" : "s"} narrowing the rows below`}
+          >
+            {activeFilterCount}
+          </span>
+        ) : null}
         {expanded ? (
           <ChevronUp className="size-3.5 ml-auto" />
         ) : (

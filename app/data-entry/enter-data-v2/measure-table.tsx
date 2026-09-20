@@ -1,11 +1,10 @@
 "use client";
 
-import { useMemo, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { useMemo, useState } from "react";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
-import { Loader2, MessageSquare } from "lucide-react";
+import { AlertCircle, CheckCircle2, Loader2, MessageSquare } from "lucide-react";
 import {
   getDataTypeValidationMessage,
   getRangeOrPolarityValidationMessage,
@@ -82,95 +81,110 @@ const DIMENSION_COLUMNS: {
   },
 ];
 
+// Moves focus to the value input in the row directly above/below the one
+// containing `el`, so entering many values in a column doesn't require
+// reaching for the mouse between every cell.
+function focusAdjacentValueInput(el: HTMLElement, direction: 1 | -1) {
+  const currentRow = el.closest("tr");
+  if (!currentRow) return;
+  const targetRow = (
+    direction === 1 ? currentRow.nextElementSibling : currentRow.previousElementSibling
+  ) as HTMLElement | null;
+  if (!targetRow) return;
+  const nextInput = targetRow.querySelector<HTMLElement>("[data-value-input]");
+  if (!nextInput) return;
+  nextInput.focus();
+  if (nextInput instanceof HTMLInputElement) nextInput.select();
+}
+
 export default function MeasureTable({
   rows,
   context,
   applicableDimensions,
 }: MeasureTableProps) {
-  const router = useRouter();
-  const [isPending, startTransition] = useTransition();
   const [savingRow, setSavingRow] = useState<string | null>(null);
+  const [savingDnaRow, setSavingDnaRow] = useState<string | null>(null);
+  const [errorByRow, setErrorByRow] = useState<Record<string, string>>({});
 
   const visibleDimensions = DIMENSION_COLUMNS.filter((d) =>
     applicableDimensions.includes(d.dimName),
   );
 
-  const handleValueSave = (
-    row: MeasureEntryRowView,
-    value: string,
-  ) => {
-    setSavingRow(getRowKey(row));
-    startTransition(() => {
-      void (async () => {
-        try {
-          await updateMeasureEntryValueAction({
-            dataEntryId: row.dataEntryId,
-            measureId: row.measureId,
-            energyProviderId: row.energyProviderId || 20,
-            energyTypeId: row.energyTypeId || 30,
-            energySourceId: row.energySourceId || 40,
-            customerTypeId: row.customerTypeId || 690,
-            paymentModeId: row.paymentModeId || 720,
-            consumptionBandId: row.consumptionBandId || 0,
-            divisionId: row.divisionId || 0,
-            genderId: row.genderId || 0,
-            unitId: row.unitId,
-            valueNumeric:
-              row.valueColumn === "value_numeric"
-                ? Number(value)
-                : undefined,
-            valueBoolean:
-              row.valueColumn === "value_boolean"
-                ? value === "Yes"
-                : undefined,
-            valueOptionId:
-              row.valueColumn === "value_option_id"
-                ? Number(value)
-                : undefined,
-            valueString:
-              row.valueColumn === "value_string" ? value : undefined,
-          });
-          router.refresh();
-          toast.success("Value saved.");
-        } catch (e) {
-          toast.error(
-            e instanceof Error ? e.message : "Failed to save value.",
-          );
-        } finally {
-          setSavingRow(null);
-        }
-      })();
+  const clearRowError = (rowKey: string) => {
+    setErrorByRow((prev) => {
+      if (!(rowKey in prev)) return prev;
+      const next = { ...prev };
+      delete next[rowKey];
+      return next;
     });
   };
 
-  const handleDnaToggle = (
-    row: MeasureEntryRowView,
-    checked: boolean,
-  ) => {
-    startTransition(() => {
-      void (async () => {
-        try {
-          await updateMeasureEntryAvailabilityAction({
-            dataEntryId: row.dataEntryId,
-            measureId: row.measureId,
-            energyProviderId: row.energyProviderId || 20,
-            energyTypeId: row.energyTypeId || 30,
-            energySourceId: row.energySourceId || 40,
-            customerTypeId: row.customerTypeId || 690,
-            paymentModeId: row.paymentModeId || 720,
-            consumptionBandId: row.consumptionBandId || 0,
-            divisionId: row.divisionId || 0,
-            genderId: row.genderId || 0,
-            unitId: row.unitId,
-            isDataNotAvailable: checked,
-          });
-          router.refresh();
-          toast.success("Availability updated.");
-        } catch {
-          toast.error("Failed to update availability.");
-        }
-      })();
-    });
+  const handleValueSave = async (row: MeasureEntryRowView, value: string) => {
+    const rowKey = getRowKey(row);
+    setSavingRow(rowKey);
+    try {
+      await updateMeasureEntryValueAction({
+        dataEntryId: row.dataEntryId,
+        measureId: row.measureId,
+        energyProviderId: row.energyProviderId || 20,
+        energyTypeId: row.energyTypeId || 30,
+        energySourceId: row.energySourceId || 40,
+        customerTypeId: row.customerTypeId || 690,
+        paymentModeId: row.paymentModeId || 720,
+        consumptionBandId: row.consumptionBandId || 0,
+        divisionId: row.divisionId || 0,
+        genderId: row.genderId || 0,
+        unitId: row.unitId,
+        valueNumeric:
+          row.valueColumn === "value_numeric" ? Number(value) : undefined,
+        valueBoolean:
+          row.valueColumn === "value_boolean" ? value === "Yes" : undefined,
+        valueOptionId:
+          row.valueColumn === "value_option_id" ? Number(value) : undefined,
+        valueString: row.valueColumn === "value_string" ? value : undefined,
+      });
+      // The server action already calls revalidatePath, which Next.js uses
+      // to refresh this route's data as part of the action response — no
+      // separate router.refresh() round trip needed (costly on slow links).
+      clearRowError(rowKey);
+      toast.success("Value saved.");
+    } catch (e) {
+      const message = e instanceof Error ? e.message : "Failed to save value.";
+      setErrorByRow((prev) => ({ ...prev, [rowKey]: message }));
+      toast.error(message);
+    } finally {
+      setSavingRow(null);
+    }
+  };
+
+  const handleDnaToggle = async (row: MeasureEntryRowView, checked: boolean) => {
+    const rowKey = getRowKey(row);
+    setSavingDnaRow(rowKey);
+    try {
+      await updateMeasureEntryAvailabilityAction({
+        dataEntryId: row.dataEntryId,
+        measureId: row.measureId,
+        energyProviderId: row.energyProviderId || 20,
+        energyTypeId: row.energyTypeId || 30,
+        energySourceId: row.energySourceId || 40,
+        customerTypeId: row.customerTypeId || 690,
+        paymentModeId: row.paymentModeId || 720,
+        consumptionBandId: row.consumptionBandId || 0,
+        divisionId: row.divisionId || 0,
+        genderId: row.genderId || 0,
+        unitId: row.unitId,
+        isDataNotAvailable: checked,
+      });
+      clearRowError(rowKey);
+      toast.success("Availability updated.");
+    } catch (e) {
+      const message =
+        e instanceof Error ? e.message : "Failed to update availability.";
+      setErrorByRow((prev) => ({ ...prev, [rowKey]: message }));
+      toast.error(message);
+    } finally {
+      setSavingDnaRow(null);
+    }
   };
 
   const getRowKey = (row: MeasureEntryRowView): string =>
@@ -185,6 +199,13 @@ export default function MeasureTable({
       </div>
     );
   }
+
+  const completeCount = rows.filter(
+    (r) => r.displayValue != null || r.isDataNotAvailable,
+  ).length;
+  const requiredMissingCount = rows.filter(
+    (r) => r.isMandatory && r.displayValue == null && !r.isDataNotAvailable,
+  ).length;
 
   return (
     <div className="overflow-x-auto border rounded-lg">
@@ -206,7 +227,12 @@ export default function MeasureTable({
               Value
             </th>
             <th className="text-center px-2 py-2 font-medium text-muted-foreground w-[50px]">
-              DNA
+              <abbr
+                title="Data Not Available"
+                className="no-underline decoration-dotted"
+              >
+                N/A
+              </abbr>
             </th>
             <th className="text-left px-3 py-2 font-medium text-muted-foreground w-[180px]">
               Comments
@@ -217,6 +243,8 @@ export default function MeasureTable({
           {rows.map((row, i) => {
             const rowKey = getRowKey(row);
             const isSaving = savingRow === rowKey;
+            const isSavingDna = savingDnaRow === rowKey;
+            const serverError = errorByRow[rowKey];
             return (
               <tr
                 key={rowKey}
@@ -225,6 +253,15 @@ export default function MeasureTable({
                 <td className="px-3 py-2 sticky left-0 bg-inherit z-10">
                   <div className="font-medium truncate max-w-[200px]">
                     {row.measureName}
+                    {row.isMandatory ? (
+                      <span
+                        className="text-danger ml-0.5"
+                        aria-hidden="true"
+                        title="Required"
+                      >
+                        *
+                      </span>
+                    ) : null}
                   </div>
                   {row.uomName ? (
                     <div className="text-xs text-muted-foreground">
@@ -242,27 +279,38 @@ export default function MeasureTable({
                 ))}
                 <td className="px-2 py-1.5">
                   {row.isDataNotAvailable ? (
-                    <span className="text-xs text-amber-600 italic">
+                    <span className="inline-flex items-center gap-1 text-xs text-warning italic">
+                      <AlertCircle className="size-3 shrink-0" aria-hidden="true" />
                       Not Available
                     </span>
                   ) : (
                     <InputCell
                       row={row}
-                      isSaving={isPending || isSaving}
+                      isSaving={isSaving}
+                      serverError={serverError}
                       onSave={handleValueSave}
+                      onDraftChange={() => clearRowError(rowKey)}
                     />
                   )}
                 </td>
                 <td className="px-2 py-2 text-center">
-                  <Checkbox
-                    checked={row.isDataNotAvailable}
-                    disabled={isPending}
-                    onCheckedChange={(checked) =>
-                      handleDnaToggle(row, checked === true)
-                    }
-                    className="size-4"
-                    aria-label={`Data not available for ${row.measureName}`}
-                  />
+                  <div className="inline-flex items-center gap-1">
+                    <Checkbox
+                      checked={row.isDataNotAvailable}
+                      disabled={isSavingDna}
+                      onCheckedChange={(checked) =>
+                        void handleDnaToggle(row, checked === true)
+                      }
+                      className="size-4"
+                      aria-label={`Mark ${row.measureName} as data not available`}
+                    />
+                    {isSavingDna ? (
+                      <Loader2
+                        className="size-3 animate-spin shrink-0 text-muted-foreground"
+                        aria-hidden="true"
+                      />
+                    ) : null}
+                  </div>
                 </td>
                 <td className="px-2 py-2">
                   {row.comments ? (
@@ -290,12 +338,17 @@ export default function MeasureTable({
           })}
         </tbody>
       </table>
-      <div className="px-3 py-2 border-t bg-muted/20 text-xs text-muted-foreground">
-        {rows.length} rows
-        {" · "}
-        {rows.filter((r) => r.displayValue != null || r.isDataNotAvailable)
-          .length}{" "}
-        complete
+      <div className="px-3 py-2 border-t bg-muted/20 text-xs text-muted-foreground flex items-center gap-3">
+        <span>
+          {rows.length} rows · {completeCount} complete
+        </span>
+        {requiredMissingCount > 0 ? (
+          <span className="inline-flex items-center gap-1 text-danger">
+            <AlertCircle className="size-3" aria-hidden="true" />
+            {requiredMissingCount} required{" "}
+            {requiredMissingCount === 1 ? "value" : "values"} missing
+          </span>
+        ) : null}
       </div>
     </div>
   );
@@ -304,11 +357,15 @@ export default function MeasureTable({
 function InputCell({
   row,
   isSaving,
+  serverError,
   onSave,
+  onDraftChange,
 }: {
   row: MeasureEntryRowView;
   isSaving: boolean;
+  serverError: string | undefined;
   onSave: (row: MeasureEntryRowView, value: string) => void;
+  onDraftChange: () => void;
 }) {
   const [draft, setDraft] = useState(
     row.valueColumn === "value_option_id"
@@ -340,6 +397,13 @@ function InputCell({
     );
   }, [draft, row]);
 
+  const displayedError = validationError ?? serverError ?? null;
+
+  const handleChange = (value: string) => {
+    setDraft(value);
+    onDraftChange();
+  };
+
   const handleBlur = () => {
     if (validationError) return; // don't save an invalid value
     if (draft.trim() !== (row.displayValue ?? "")) {
@@ -347,21 +411,50 @@ function InputCell({
     }
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+  const handleKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement | HTMLSelectElement>,
+  ) => {
     if (e.key === "Enter") {
       e.preventDefault();
       if (!validationError && draft.trim() !== (row.displayValue ?? "")) {
         onSave(row, draft);
       }
-      (e.target as HTMLInputElement).blur();
+      focusAdjacentValueInput(e.currentTarget, 1);
     }
   };
 
-  const borderClass = validationError
-    ? "border-danger"
+  // Saved values get a neutral/success cue; empty required fields are
+  // flagged — but never by colour alone (icon + text always pair with it),
+  // and an empty optional field is not treated as an error.
+  const fieldState: "error" | "saved" | "required" | "neutral" = displayedError
+    ? "error"
     : row.displayValue
-      ? "border-success/40"
-      : "border-danger/40";
+      ? "saved"
+      : row.isMandatory
+        ? "required"
+        : "neutral";
+
+  const borderClass = {
+    error: "border-danger",
+    saved: "border-success/40",
+    required: "border-danger/40",
+    neutral: "border-input",
+  }[fieldState];
+
+  const statusIcon = isSaving ? (
+    <Loader2 className="size-3 animate-spin shrink-0" aria-hidden="true" />
+  ) : fieldState === "saved" ? (
+    <CheckCircle2 className="size-3 shrink-0 text-success" aria-hidden="true" />
+  ) : fieldState === "required" ? (
+    <span title="Required">
+      <AlertCircle className="size-3 shrink-0 text-danger/70" aria-hidden="true" />
+    </span>
+  ) : null;
+
+  const sharedInputClass = `h-8 w-28 text-xs ${borderClass} border-l-4 rounded-l-none`;
+  const requiredHint = row.isMandatory ? (
+    <span className="sr-only">Required</span>
+  ) : null;
 
   switch (row.valueColumn) {
     case "value_numeric":
@@ -372,21 +465,23 @@ function InputCell({
               type="number"
               inputMode="decimal"
               value={draft}
-              onChange={(e) => setDraft(e.target.value)}
+              onChange={(e) => handleChange(e.target.value)}
               onBlur={handleBlur}
               onKeyDown={handleKeyDown}
               disabled={isSaving}
-              aria-invalid={validationError ? true : undefined}
-              className={`h-8 w-28 text-xs ${borderClass} border-l-4 rounded-l-none`}
-              aria-label={`Value for ${row.measureName}`}
+              aria-invalid={displayedError ? true : undefined}
+              aria-required={row.isMandatory || undefined}
+              data-value-input
+              className={sharedInputClass}
+              aria-label={`Value for ${row.measureName}${row.isMandatory ? " (required)" : ""}`}
             />
-            {isSaving ? (
-              <Loader2 className="size-3 animate-spin shrink-0" />
-            ) : null}
+            {requiredHint}
+            {statusIcon}
           </div>
-          {validationError ? (
-            <p className="max-w-40 text-[11px] leading-tight text-danger">
-              {validationError}
+          {displayedError ? (
+            <p className="max-w-40 text-[11px] leading-tight text-danger flex items-start gap-0.5">
+              <AlertCircle className="size-3 shrink-0 mt-0.5" aria-hidden="true" />
+              <span>{displayedError}</span>
             </p>
           ) : null}
         </div>
@@ -397,20 +492,22 @@ function InputCell({
           <select
             value={draft}
             onChange={(e) => {
-              setDraft(e.target.value);
+              handleChange(e.target.value);
               onSave(row, e.target.value);
             }}
+            onKeyDown={handleKeyDown}
             disabled={isSaving}
-            className={`h-8 w-20 text-xs border rounded-md px-1 ${row.displayValue ? "border-success/40" : "border-danger/40"} border-l-4 rounded-l-none`}
-            aria-label={`Boolean value for ${row.measureName}`}
+            data-value-input
+            className={`h-8 w-20 text-xs border rounded-md px-1 ${borderClass} border-l-4 rounded-l-none`}
+            aria-label={`Boolean value for ${row.measureName}${row.isMandatory ? " (required)" : ""}`}
+            aria-required={row.isMandatory || undefined}
           >
             <option value="">—</option>
             <option value="Yes">Yes</option>
             <option value="No">No</option>
           </select>
-          {isSaving ? (
-            <Loader2 className="size-3 animate-spin shrink-0" />
-          ) : null}
+          {requiredHint}
+          {statusIcon}
         </div>
       );
     case "value_option_id":
@@ -419,12 +516,15 @@ function InputCell({
           <select
             value={draft}
             onChange={(e) => {
-              setDraft(e.target.value);
+              handleChange(e.target.value);
               onSave(row, e.target.value);
             }}
+            onKeyDown={handleKeyDown}
             disabled={isSaving}
-            className={`h-8 w-28 text-xs border rounded-md px-1 ${row.displayValue ? "border-success/40" : "border-danger/40"} border-l-4 rounded-l-none`}
-            aria-label={`Value for ${row.measureName}`}
+            data-value-input
+            className={`h-8 w-28 text-xs border rounded-md px-1 ${borderClass} border-l-4 rounded-l-none`}
+            aria-label={`Value for ${row.measureName}${row.isMandatory ? " (required)" : ""}`}
+            aria-required={row.isMandatory || undefined}
           >
             <option value="">—</option>
             {row.optionChoices.map((opt) => (
@@ -433,9 +533,8 @@ function InputCell({
               </option>
             ))}
           </select>
-          {isSaving ? (
-            <Loader2 className="size-3 animate-spin shrink-0" />
-          ) : null}
+          {requiredHint}
+          {statusIcon}
         </div>
       );
     case "value_string":
@@ -446,21 +545,23 @@ function InputCell({
             <Input
               type="text"
               value={draft}
-              onChange={(e) => setDraft(e.target.value)}
+              onChange={(e) => handleChange(e.target.value)}
               onBlur={handleBlur}
               onKeyDown={handleKeyDown}
               disabled={isSaving}
-              aria-invalid={validationError ? true : undefined}
-              className={`h-8 w-28 text-xs ${borderClass} border-l-4 rounded-l-none`}
-              aria-label={`Value for ${row.measureName}`}
+              aria-invalid={displayedError ? true : undefined}
+              aria-required={row.isMandatory || undefined}
+              data-value-input
+              className={sharedInputClass}
+              aria-label={`Value for ${row.measureName}${row.isMandatory ? " (required)" : ""}`}
             />
-            {isSaving ? (
-              <Loader2 className="size-3 animate-spin shrink-0" />
-            ) : null}
+            {requiredHint}
+            {statusIcon}
           </div>
-          {validationError ? (
-            <p className="max-w-40 text-[11px] leading-tight text-danger">
-              {validationError}
+          {displayedError ? (
+            <p className="max-w-40 text-[11px] leading-tight text-danger flex items-start gap-0.5">
+              <AlertCircle className="size-3 shrink-0 mt-0.5" aria-hidden="true" />
+              <span>{displayedError}</span>
             </p>
           ) : null}
         </div>
