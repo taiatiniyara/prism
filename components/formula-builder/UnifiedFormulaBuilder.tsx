@@ -1403,7 +1403,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                         <td className="py-1 pr-3 font-mono tabular-nums">
                           {r.value ?? "—"}
                         </td>
-                        <td className="text-muted-foreground w-full py-1 pr-3">
+                        <td className="text-muted-foreground w-full max-w-0 py-1 pr-3">
                           <span className="flex min-w-0 items-center gap-1.5">
                             <span className="truncate">{r.reason ?? ""}</span>
                             {(() => {
