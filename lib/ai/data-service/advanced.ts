@@ -2,7 +2,7 @@ import { db } from "@/db/connection";
 import { countries, subRegions } from "@/db/schema/country";
 import { eq, sql } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
-import { createToolMetadata, resolveComparisonPeriodIds } from "./common";
+import { createToolMetadata, resolveComparisonPeriodIds, intArrayParam } from "./common";
 import type { AiToolResult } from "../types";
 
 // --- PEER-BASED TARGET SETTING ---
@@ -42,7 +42,7 @@ export const getKpiTargets = async (
   const result = await db.execute(sql`
     SELECT kpi_name, actual_value, utility_id, utility_acronym, report_date
     FROM gold.fact_kpi
-    WHERE report_period_id = ANY(${periodIds})
+    WHERE report_period_id = ANY(${intArrayParam(periodIds)})
     LIMIT 2000
   `);
 
@@ -130,7 +130,7 @@ export const getKpiCorrelation = async (
   const result = await db.execute(sql`
     SELECT kpi_name, actual_value, utility_id, report_date
     FROM gold.fact_kpi
-    WHERE report_period_id = ANY(${periodIds})
+    WHERE report_period_id = ANY(${intArrayParam(periodIds)})
     LIMIT 2000
   `);
 
@@ -226,7 +226,7 @@ export const compareKpisAcrossUtilities = async (
     const result = await db.execute(sql`
       SELECT kpi_name, actual_value, utility_name, report_date
       FROM gold.fact_kpi
-      WHERE report_period_id = ANY(${periodIds})
+      WHERE report_period_id = ANY(${intArrayParam(periodIds)})
         AND LOWER(kpi_name) LIKE ${`%${kpiName.toLowerCase()}%`}
       LIMIT 100
     `);
