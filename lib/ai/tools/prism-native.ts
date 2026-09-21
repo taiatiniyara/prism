@@ -2,6 +2,7 @@ import { z } from "zod";
 import { tool } from "ai";
 import type { CurrentUser } from "@/lib/user.service";
 import type { AiToolResult } from "../types";
+import { visualizationInputSchema } from "../visualization-schema";
 import { isConfiguredForDax, isConfigured, isPbiHealthy } from "@/lib/powerbi";
 import { validateToolAccess } from "../guardrails";
 import { logger } from "@/lib/logging/logger";
@@ -254,24 +255,14 @@ export function createPrismNativeTools(
 
     render_visualization: tool({
       description:
-        "Render a visualization in the chat. Use this when the user's question would benefit from a visual representation (charts, tables, leaderboards, etc.).",
+        "Render a chart or table in the chat when it makes the data clearer than prose. " +
+        "Choose the type that fits the data: leaderboard for rankings ('top/bottom performing'); " +
+        "bar-chart to compare ONE metric across categories; line-chart for trends over periods; " +
+        "scatter for correlation between two metrics; table for detailed multi-column data. " +
+        "Always give a specific title, label both axes, and set the unit. Provide the actual data " +
+        "you retrieved — never invent values. Add a reference_line for a target/benchmark (e.g. the PPA target) when relevant.",
       inputSchema: z.object({
-        visualization: z
-          .object({
-            type: z.enum([
-              "table",
-              "bar-chart",
-              "line-chart",
-              "leaderboard",
-              "sankey",
-              "heatmap",
-              "radar",
-              "scatter",
-            ]),
-            title: z.string(),
-          })
-          .passthrough()
-          .describe("The visualization configuration."),
+        visualization: visualizationInputSchema,
       }),
       execute: async ({ visualization }) => {
         return { rendered: true, visualization };

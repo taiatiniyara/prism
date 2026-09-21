@@ -82,6 +82,8 @@ export interface AiScatterVisualization {
   type: "scatter";
   title: string;
   points: Array<{ x: number; y: number; label?: string }>;
+  x_label?: string;
+  y_label?: string;
 }
 
 export type AiVisualization =
@@ -226,7 +228,7 @@ export interface AiGuardrailResult {
   reason?: string;
 }
 
-export const AI_PROMPT_VERSION = "2026-07-13-medallion-v2";
+export const AI_PROMPT_VERSION = "2026-09-21-viz-guidance";
 
 export const AI_MODELS = {
   primary: "claude-sonnet-4-6",
