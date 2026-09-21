@@ -3,6 +3,7 @@ import { tool } from "ai";
 import type { CurrentUser } from "@/lib/user.service";
 import type { AiToolResult } from "../types";
 import { visualizationInputSchema } from "../visualization-schema";
+import { CANONICAL_DIMENSIONS } from "@/lib/dimensions/dimension-map";
 import { isConfiguredForDax, isConfigured, isPbiHealthy } from "@/lib/powerbi";
 import { validateToolAccess } from "../guardrails";
 import { logger } from "@/lib/logging/logger";
@@ -33,6 +34,7 @@ import {
   getKpiTargets,
   getKpiCorrelation,
   compareKpisAcrossUtilities,
+  getMeasureDrill,
   generateExport,
   getCountryHierarchy,
   getIndustryBenchmarks,
@@ -266,6 +268,38 @@ export function createPrismNativeTools(
       }),
       execute: async ({ visualization }) => {
         return { rendered: true, visualization };
+      },
+    }),
+
+    drill_measure: tool({
+      description:
+        "Drill into a raw MEASURE at fact grain (data_entries) — any measure, optionally split by one canonical dimension, for one utility and fiscal year. Use it for 'break down / drill into X by Y' questions the curated tools don't cover (e.g. generation by energy source, employees by gender). Reads value_numeric, sums only additive measures, treats blanks as gaps (never zero), and reports coverage. Own-utility scope; source is the fact grain.",
+      inputSchema: z.object({
+        measure: z
+          .string()
+          .describe(
+            "Measure name or synonym, e.g. 'Electricity Generated', 'generation', 'employees'.",
+          ),
+        breakdown_by: z
+          .enum(CANONICAL_DIMENSIONS as unknown as [string, ...string[]])
+          .optional()
+          .describe(
+            "One canonical dimension to split by, e.g. 'source' (energy source/fuel → Technology), 'gender', 'customer_type'. Omit for the utility-level total.",
+          ),
+        fiscal_year: z
+          .string()
+          .optional()
+          .describe("Fiscal year, e.g. 'FY2024' or '2024'. Omit for the latest available."),
+        utility: z
+          .string()
+          .optional()
+          .describe("Utility acronym or name. Defaults to your own utility."),
+      }),
+      execute: async ({ measure, breakdown_by, fiscal_year, utility }) => {
+        return withTimeout(
+          getMeasureDrill(user, { measure, breakdown_by, fiscal_year, utility }),
+          "drill_measure",
+        );
       },
     }),
 

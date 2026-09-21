@@ -15,6 +15,7 @@ export * from "./analysis";
 export * from "./insights";
 export * from "./compliance";
 export * from "./advanced";
+export * from "./drill";
 export * from "./benchmarks";
 export * from "./utils";
 export * from "./powerbi";

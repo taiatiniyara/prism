@@ -29,6 +29,7 @@ const TOOL_NARRATION: Record<AiToolName, string> = {
   get_kpi_targets: "Looking up the targets set for this KPI",
   get_kpi_correlation: "Checking how these KPIs relate to each other",
   compare_kpis_across_utilities: "Comparing this KPI across utilities",
+  drill_measure: "Drilling into the underlying data",
   generate_export: "Preparing an export of this data",
   get_country_hierarchy: "Looking up the country and regional structure",
   get_industry_benchmarks: "Pulling in industry benchmark figures",
