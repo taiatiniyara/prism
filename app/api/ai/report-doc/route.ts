@@ -9,6 +9,22 @@ export const runtime = "nodejs";
 
 const MAX_SECTIONS = 50;
 
+/**
+ * Sanitize a download filename. Replace unsafe chars, cap length, then trim
+ * leading/trailing separators with a LINEAR scan (not a `^[._-]+|[._-]+$`
+ * regex, which is polynomial on many repeated separators — a ReDoS risk on
+ * user-controlled input).
+ */
+function safeDocFilename(raw: string): string {
+  const replaced = raw.replace(/[^A-Za-z0-9._-]+/g, "_").slice(0, 100);
+  const isSep = (c: string) => c === "." || c === "_" || c === "-";
+  let start = 0;
+  let end = replaced.length;
+  while (start < end && isSep(replaced[start])) start++;
+  while (end > start && isSep(replaced[end - 1])) end--;
+  return replaced.slice(start, end) || "report";
+}
+
 export async function POST(request: Request) {
   try {
     await getCurrentUser();
@@ -40,12 +56,7 @@ export async function POST(request: Request) {
     );
   }
 
-  const rawFilename = body.filename || body.title || "report";
-  const filename =
-    rawFilename
-      .replace(/[^A-Za-z0-9._-]+/g, "_")
-      .replace(/^[._-]+|[._-]+$/g, "")
-      .slice(0, 100) || "report";
+  const filename = safeDocFilename(body.filename || body.title || "report");
 
   const style = await getPdfReportStyle();
   const html = renderReportDoc(
