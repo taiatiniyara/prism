@@ -9,6 +9,7 @@ import { recordRequest, recordError } from "./rate-limit";
 import { AI_MODELS, AI_DEFAULTS, type AiChatMessage } from "./types";
 import { prepareMessages as trimHistory, estimateTokens, type SdkMessage } from "./history";
 import { toTokenUsage, estimateCostCents, type AiTokenUsage } from "./usage";
+import { ANTHROPIC_CACHE_CONTROL, withCachedLastTool, withMovingCacheBreakpoint } from "./cache-control";
 import { logger } from "@/lib/logging/logger";
 
 interface AiServiceOptions {
@@ -90,23 +91,11 @@ const isTransientError = (error: unknown): boolean => {
 
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 
-// The system prompt (~9k tokens) and tool definitions (~70 tools) are identical on
-// every step of a multi-step turn, and often identical turn-to-turn within a session.
-// Anthropic prompt caching skips re-processing that prefix on a cache hit, which is
-// most of what makes time-to-first-token slow on tool-using questions.
-const ANTHROPIC_CACHE_CONTROL = {
-  anthropic: { cacheControl: { type: "ephemeral" as const } },
-};
-
-const withCachedLastTool = <T extends Record<string, unknown>>(tools: T): T => {
-  const keys = Object.keys(tools);
-  const lastKey = keys[keys.length - 1];
-  if (!lastKey) return tools;
-  return {
-    ...tools,
-    [lastKey]: { ...(tools[lastKey] as object), providerOptions: ANTHROPIC_CACHE_CONTROL },
-  } as T;
-};
+// The system prompt (~7.6k tokens) and tool definitions (~70 tools, ~17.6k) are identical
+// on every step of a multi-step turn and across users; the conversation grows each step.
+// Anthropic prompt caching skips re-processing whatever prefix is already cached — see
+// lib/ai/cache-control.ts for the three breakpoints.
+const MAX_TOOL_LOOP_STEPS = 10;
 
 const recordUsage = (userId: string, usage: AiTokenUsage, modelName: string): Promise<void> =>
   recordRequest(userId, {
@@ -404,7 +393,8 @@ const streamWithConfig = (
     messages: req.sdkMessages,
     tools: req.tools,
     maxOutputTokens: config.maxOutputTokens,
-    stopWhen: stepCountIs(10),
+    stopWhen: stepCountIs(MAX_TOOL_LOOP_STEPS),
+    prepareStep: ({ messages }) => ({ messages: withMovingCacheBreakpoint(messages) }),
     ...(config.temperature != null ? { temperature: config.temperature } : {}),
     ...(config.providerOptions ? { providerOptions: config.providerOptions } : {}),
     ...(abortSignal ? { abortSignal } : {}),
@@ -423,7 +413,8 @@ const generateWithConfig = (
     messages: req.sdkMessages,
     tools: req.tools,
     maxOutputTokens: config.maxOutputTokens,
-    stopWhen: stepCountIs(10),
+    stopWhen: stepCountIs(MAX_TOOL_LOOP_STEPS),
+    prepareStep: ({ messages }) => ({ messages: withMovingCacheBreakpoint(messages) }),
     ...(config.temperature != null ? { temperature: config.temperature } : {}),
     ...(config.providerOptions ? { providerOptions: config.providerOptions } : {}),
     ...(abortSignal ? { abortSignal } : {}),
