@@ -20,6 +20,7 @@ export * from "./migrationRejections";
 export * from "./migrationScorecard";
 export * from "./reportPeriods";
 export * from "./rls";
+export * from "./period";
 export * from "./sector";
 export * from "./sectorTerminology";
 export * from "./ui-style";
