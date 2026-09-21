@@ -3,6 +3,7 @@
 import { useMemo, useRef, useState } from "react";
 import {
   CartesianGrid,
+  Label,
   LabelList,
   Line,
   LineChart as RechartsLineChart,
@@ -29,17 +30,6 @@ import { VisualizationCard } from "./visualization-card";
 import { useChartTheme } from "./visualization-theme";
 import type { AiLineChartVisualization } from "@/lib/ai/types";
 
-const SERIES_COLORS = [
-  "#6366f1",
-  "#f59e0b",
-  "#10b981",
-  "#ef4444",
-  "#8b5cf6",
-  "#06b6d4",
-  "#84cc16",
-  "#f97316",
-];
-
 interface LineChartViewProps {
   data: AiLineChartVisualization;
   onAskFollowUp?: (text: string) => void;
@@ -49,6 +39,10 @@ export function LineChartView({ data, onAskFollowUp }: LineChartViewProps) {
   const { title, rows, seriesKeys, unit, referenceLine, referenceArea } = normalizeLineChart(data);
   const theme = useChartTheme();
   const [showLabels, setShowLabels] = useState(false);
+  const xAxisTitle = data.x_label?.trim() || undefined;
+  const yAxisTitle =
+    [data.y_label?.trim(), unit ? `(${unit})` : ""].filter(Boolean).join(" ") ||
+    undefined;
   const [suggestion, setSuggestion] = useState("");
   const captureRef = useRef<HTMLDivElement>(null);
 
@@ -80,6 +74,12 @@ export function LineChartView({ data, onAskFollowUp }: LineChartViewProps) {
         <RechartsLineChart
           data={rows}
           onClick={seriesKeys.length === 1 ? handlePointClick : undefined}
+          margin={{
+            top: 8,
+            right: 16,
+            bottom: xAxisTitle ? 24 : 4,
+            left: yAxisTitle ? 12 : 0,
+          }}
         >
           <CartesianGrid
             strokeDasharray="3 3"
@@ -90,12 +90,31 @@ export function LineChartView({ data, onAskFollowUp }: LineChartViewProps) {
             dataKey="label"
             tick={{ fontSize: 12, fill: theme.mutedColor }}
             tickFormatter={(v: string) => (v.length > 20 ? `${v.slice(0, 18)}…` : v)}
-          />
+            height={xAxisTitle ? 44 : 30}
+          >
+            {xAxisTitle && (
+              <Label
+                value={xAxisTitle}
+                position="insideBottom"
+                offset={-2}
+                style={{ fontSize: 12, fill: theme.mutedColor, textAnchor: "middle" }}
+              />
+            )}
+          </XAxis>
           <YAxis
             tick={{ fontSize: 12, fill: theme.mutedColor }}
             tickFormatter={(v: number) => fmtNumber(v)}
-            width={56}
-          />
+            width={yAxisTitle ? 72 : 56}
+          >
+            {yAxisTitle && (
+              <Label
+                value={yAxisTitle}
+                angle={-90}
+                position="insideLeft"
+                style={{ fontSize: 12, fill: theme.mutedColor, textAnchor: "middle" }}
+              />
+            )}
+          </YAxis>
           <Tooltip
             formatter={(value) =>
               unit ? `${fmtNumber(Number(value))} ${unit}` : fmtNumber(Number(value))
@@ -115,10 +134,10 @@ export function LineChartView({ data, onAskFollowUp }: LineChartViewProps) {
               key={key}
               type="monotone"
               dataKey={key}
-              stroke={seriesKeys.length === 1 ? "hsl(var(--primary))" : SERIES_COLORS[idx % SERIES_COLORS.length]}
+              stroke={theme.seriesColors[idx % theme.seriesColors.length]}
               strokeWidth={2}
-              dot={{ r: 3, fill: "hsl(var(--primary))" }}
-              activeDot={{ r: 5 }}
+              dot={{ r: 3, fill: theme.seriesColors[idx % theme.seriesColors.length], strokeWidth: 0 }}
+              activeDot={{ r: 6 }}
             >
               {showLabels && (
                 <LabelList

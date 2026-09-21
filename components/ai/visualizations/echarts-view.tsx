@@ -193,13 +193,28 @@ export default function EChartsView({ visualization, onAskFollowUp }: EChartsVie
             animation: false,
             textStyle: baseText,
             tooltip,
-            xAxis: { axisLabel, splitLine },
-            yAxis: { axisLabel, splitLine },
+            grid: { bottom: scatter.x_label ? 48 : undefined, left: scatter.y_label ? 64 : undefined, containLabel: true },
+            xAxis: {
+              axisLabel,
+              splitLine,
+              name: scatter.x_label,
+              nameLocation: "middle",
+              nameGap: 30,
+              nameTextStyle: axisLabel,
+            },
+            yAxis: {
+              axisLabel,
+              splitLine,
+              name: scatter.y_label,
+              nameLocation: "middle",
+              nameGap: 48,
+              nameTextStyle: axisLabel,
+            },
             series: [
               {
                 type: "scatter",
                 symbolSize: 10,
-                itemStyle: { color: theme.primaryColor },
+                itemStyle: { color: theme.seriesColors[0] ?? theme.primaryColor },
                 data: scatter.points.map((p, i) => ({
                   value: [p.x, p.y],
                   name: p.label ?? `Point ${i + 1}`,
