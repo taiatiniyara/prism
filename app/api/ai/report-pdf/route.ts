@@ -1,6 +1,7 @@
 import { getCurrentUser } from "@/lib/user.service";
 import { isValidOrigin } from "@/lib/ai/origin";
 import { renderReportPdf, type ReportPdfInput } from "@/lib/ai/report-pdf";
+import { getPdfReportStyle } from "@/lib/ai/pdf-settings";
 
 // pdfkit needs the Node runtime (built-in font metrics + Buffers).
 export const runtime = "nodejs";
@@ -45,12 +46,16 @@ export async function POST(request: Request) {
       .replace(/^[._-]+|[._-]+$/g, "")
       .slice(0, 100) || "report";
 
-  const pdf = await renderReportPdf({
-    title: body.title,
-    generated_at: body.generated_at,
-    executive_summary: body.executive_summary,
-    sections: body.sections,
-  });
+  const style = await getPdfReportStyle();
+  const pdf = await renderReportPdf(
+    {
+      title: body.title,
+      generated_at: body.generated_at,
+      executive_summary: body.executive_summary,
+      sections: body.sections,
+    },
+    style,
+  );
 
   return new Response(new Uint8Array(pdf), {
     headers: {

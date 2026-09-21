@@ -1,10 +1,19 @@
 import PDFDocument from "pdfkit";
+import {
+  DEFAULT_PDF_REPORT_STYLE,
+  type PdfReportStyle,
+} from "./pdf-settings-constants";
 
 /**
  * Server-side PDF generation for the AI performance report (the shape returned
  * by generatePerformanceReport → AutomatedReport). Uses pdfkit's built-in
  * Helvetica fonts only (no external font files), and is declared in
  * next.config `serverExternalPackages` so it loads from node_modules at runtime.
+ *
+ * The visual style (colours, type sizes, page size + margin) is supplied by a
+ * `PdfReportStyle` — DEV/BMO configurable in AI Settings, persisted in
+ * app_settings. It defaults to DEFAULT_PDF_REPORT_STYLE (the original hardcoded
+ * look), so callers that don't pass one render exactly as before.
  */
 
 export interface ReportPdfSection {
@@ -21,19 +30,23 @@ export interface ReportPdfInput {
   sections: ReportPdfSection[];
 }
 
-const INK = "#111827";
-const MUTED = "#6b7280";
-const RULE = "#e5e7eb";
-const ACCENT = "#1d4ed8";
 const MAX_TABLE_ROWS = 200;
 
 const cell = (value: unknown): string =>
   value === null || value === undefined ? "" : String(value);
 
-export async function renderReportPdf(report: ReportPdfInput): Promise<Buffer> {
+export async function renderReportPdf(
+  report: ReportPdfInput,
+  style: PdfReportStyle = DEFAULT_PDF_REPORT_STYLE,
+): Promise<Buffer> {
+  const INK = style.ink;
+  const MUTED = style.muted;
+  const RULE = style.rule;
+  const ACCENT = style.accent;
+
   const doc = new PDFDocument({
-    size: "A4",
-    margin: 50,
+    size: style.pageSize,
+    margin: style.margin,
     bufferPages: true,
     info: { Title: report.title || "PRISM Report" },
   });
@@ -55,7 +68,7 @@ export async function renderReportPdf(report: ReportPdfInput): Promise<Buffer> {
     .text("PRISM · Pacific Power Association", left, doc.y);
   doc
     .font("Helvetica-Bold")
-    .fontSize(20)
+    .fontSize(style.titleSize)
     .fillColor(INK)
     .text(report.title || "Performance Report", { width: usableWidth });
   doc
@@ -76,11 +89,18 @@ export async function renderReportPdf(report: ReportPdfInput): Promise<Buffer> {
 
   // ── Executive summary ────────────────────────────────────
   if (report.executive_summary) {
-    doc.font("Helvetica-Bold").fontSize(12).fillColor(INK).text("Executive Summary");
+    // Original hierarchy: the exec-summary heading sat 1pt below section
+    // headings (12 vs 13). Keep that relationship so an unset style renders
+    // byte-identically, while still tracking the configurable heading size.
+    doc
+      .font("Helvetica-Bold")
+      .fontSize(style.headingSize - 1)
+      .fillColor(INK)
+      .text("Executive Summary");
     doc.moveDown(0.2);
     doc
       .font("Helvetica")
-      .fontSize(10)
+      .fontSize(style.bodySize)
       .fillColor(INK)
       .text(report.executive_summary, { width: usableWidth });
     doc.moveDown(0.8);
@@ -92,7 +112,7 @@ export async function renderReportPdf(report: ReportPdfInput): Promise<Buffer> {
 
     doc
       .font("Helvetica-Bold")
-      .fontSize(13)
+      .fontSize(style.headingSize)
       .fillColor(INK)
       .text(section.heading || "", { width: usableWidth });
     doc.moveDown(0.2);
@@ -100,7 +120,7 @@ export async function renderReportPdf(report: ReportPdfInput): Promise<Buffer> {
     if (section.content) {
       doc
         .font("Helvetica")
-        .fontSize(10)
+        .fontSize(style.bodySize)
         .fillColor(INK)
         .text(section.content, { width: usableWidth });
       doc.moveDown(0.3);
@@ -114,6 +134,7 @@ export async function renderReportPdf(report: ReportPdfInput): Promise<Buffer> {
         bottom,
         section.data_table.columns,
         section.data_table.rows ?? [],
+        style,
       );
       doc.moveDown(0.3);
     }
@@ -121,7 +142,7 @@ export async function renderReportPdf(report: ReportPdfInput): Promise<Buffer> {
     if (section.insight) {
       doc
         .font("Helvetica-Oblique")
-        .fontSize(10)
+        .fontSize(style.bodySize)
         .fillColor(ACCENT)
         .text(`Insight: ${section.insight}`, { width: usableWidth });
     }
@@ -140,6 +161,7 @@ function drawTable(
   bottom: number,
   columns: string[],
   rows: Record<string, unknown>[],
+  style: PdfReportStyle,
 ): void {
   const colWidth = usableWidth / columns.length;
   const rowHeight = 18;
@@ -149,8 +171,8 @@ function drawTable(
     const y = doc.y;
     doc
       .font(header ? "Helvetica-Bold" : "Helvetica")
-      .fontSize(9)
-      .fillColor(header ? INK : "#374151");
+      .fontSize(style.tableFontSize)
+      .fillColor(header ? style.ink : "#374151");
     values.forEach((value, i) => {
       doc.text(value, left + i * colWidth + 2, y + 4, {
         width: colWidth - 4,
@@ -163,7 +185,7 @@ function drawTable(
       .moveTo(left, y + rowHeight)
       .lineTo(left + usableWidth, y + rowHeight)
       .lineWidth(0.5)
-      .strokeColor(RULE)
+      .strokeColor(style.rule)
       .stroke();
     doc.x = left;
     doc.y = y + rowHeight;
@@ -180,7 +202,7 @@ function drawTable(
     doc
       .font("Helvetica-Oblique")
       .fontSize(8)
-      .fillColor(MUTED)
+      .fillColor(style.muted)
       .text(`… ${rows.length - MAX_TABLE_ROWS} more rows omitted`, left, doc.y + 2);
     doc.y += 12;
   }
