@@ -1,3 +1,8 @@
+import {
+  ALL_MEMBER_BY_FIELD,
+  type DimensionField,
+} from "@/lib/dimensions/dimension-map";
+
 /**
  * Canonical "All" member id for each of the ten NOT-NULL dimension columns on
  * `data_entries` (medallion schema — see `docs/schema-redesign-medallion.md` §1.2).
@@ -6,32 +11,13 @@
  * dimension is not sliced, the row carries that dimension's **All** member id
  * explicitly — never NULL and never a silent zero (design principle §0.4,
  * "No NULL-as-All").
+ *
+ * The ids (and the column set) are sourced from the single dimension map at
+ * `lib/dimensions/dimension-map.ts` — do NOT hard-code a second copy here.
  */
-export const ALL_MEMBER = {
-  provider_id: 20,
-  category_id: 30,
-  technology_id: 40,
-  asset_class_id: 983,
-  customer_type_id: 690,
-  payment_mode_id: 720,
-  consumption_band_id: 1005,
-  division_id: 1011,
-  gender_id: 1022,
-  utility_function_id: 1023,
-} as const;
+export const ALL_MEMBER: Record<DimensionField, number> = ALL_MEMBER_BY_FIELD;
 
-export interface DimensionMembers {
-  provider_id: number;
-  category_id: number;
-  technology_id: number;
-  asset_class_id: number;
-  customer_type_id: number;
-  payment_mode_id: number;
-  consumption_band_id: number;
-  division_id: number;
-  gender_id: number;
-  utility_function_id: number;
-}
+export type DimensionMembers = Record<DimensionField, number>;
 
 /**
  * A partial slice of dimension members, keyed by column name. Any dimension left
