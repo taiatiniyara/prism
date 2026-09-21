@@ -3,19 +3,29 @@ import { getReviewKpiFilterContextFromCookies } from "@/app/data-entry/review-kp
 import { applyFilterCascade } from "@/app/data-entry/filterContext.rules";
 import { mapDataTypeToControlType } from "@/app/data-entry/inputControlType.mapper";
 import {
+  ReviewKpiBulkAdvanceResult,
   ReviewKpiFilterContext,
   ReviewKpiFilterOption,
   ReviewKpiFilterOptions,
+  ReviewKpiInputFlag,
+  ReviewKpiInputStatus,
   ReviewKpiInputValue,
   ReviewKpiPageViewModel,
+  ReviewKpiPermissions,
   ReviewKpiRow,
 } from "@/app/data-entry/review-kpi/types";
 import { db } from "@/db/connection";
 import {
   dataEntries,
+  DATA_ENTRY_STATUS_META,
   DataEntryComment,
+  DataEntryStatusId,
   measureDefinitions,
 } from "@/db/schema/dataEntry";
+import {
+  DataEntryValidationMetadata,
+  getRangeOrPolarityValidationMessage,
+} from "@/app/data-entry/enter-data/services/dataEntryValidation.service";
 import { kpiDefinitions } from "@/db/schema/kpi";
 import { kpi } from "@/db/schema/kpi";
 import { managedListItems, managedLists } from "@/db/schema/managedLists";
@@ -50,9 +60,88 @@ import { writeAuditLog } from "@/lib/logging/audit.service";
 const EDIT_ROLES = new Set(["DEV", "BMO", "BLO", "DAOO", "DAOF"]);
 const CUSTOM_KPI_REVIEWER_ROLES = new Set(["DEV"]);
 
+// The BLO check: Entered -> Reviewed, and sending a Reviewed entry back to Entered. Deliberately
+// excludes DAOO/DAOF (the maker) so the same person can't both enter and vouch (maker-checker).
+const REVIEW_ROLES = new Set(["DEV", "BMO", "BLO"]);
+// The CEO sign-off: Reviewed -> Approved, and un-approving Approved -> Reviewed. Excludes BLO so
+// the reviewer can't also be the approver (docs/lean-data-entry-workflow-spec.md §2.3).
+const APPROVE_ROLES = new Set(["DEV", "BMO", "CEO"]);
+
 const hasRoleAccess = (allowedRoles: Set<string>, role: string | null) => {
   const normalizedRole = role?.trim().toUpperCase();
   return normalizedRole != null && allowedRoles.has(normalizedRole);
+};
+
+export const getReviewKpiPermissions = (
+  user: CurrentUser,
+): ReviewKpiPermissions => ({
+  canReview: hasRoleAccess(REVIEW_ROLES, user.role),
+  canApprove: hasRoleAccess(APPROVE_ROLES, user.role),
+});
+
+/**
+ * The review-kpi status state machine. Only these four moves are legal from this screen —
+ * forward one step at a time (never skip a check), or one step back to correct a mistake.
+ * Pending is out of scope here: an input with nothing entered yet isn't a real review target.
+ */
+const STATUS_TRANSITIONS: Array<{
+  from: DataEntryStatusId;
+  to: DataEntryStatusId;
+  roles: Set<string>;
+}> = [
+  { from: DataEntryStatusId.Entered, to: DataEntryStatusId.Reviewed, roles: REVIEW_ROLES },
+  { from: DataEntryStatusId.Reviewed, to: DataEntryStatusId.Approved, roles: APPROVE_ROLES },
+  {
+    from: DataEntryStatusId.Reviewed,
+    to: DataEntryStatusId.Entered,
+    roles: new Set([...REVIEW_ROLES, ...APPROVE_ROLES]),
+  },
+  { from: DataEntryStatusId.Approved, to: DataEntryStatusId.Reviewed, roles: APPROVE_ROLES },
+];
+
+const assertValidReviewKpiStatusTransition = (
+  fromStatusId: number | null,
+  toStatusId: number,
+  user: CurrentUser,
+): void => {
+  const transition = STATUS_TRANSITIONS.find(
+    (candidate) => candidate.from === fromStatusId && candidate.to === toStatusId,
+  );
+
+  if (!transition) {
+    throw new Error(
+      `VALIDATION:Cannot move this input from its current status to the requested one.`,
+    );
+  }
+
+  if (!hasRoleAccess(transition.roles, user.role)) {
+    throw new Error(
+      "FORBIDDEN:You are not allowed to make this status change.",
+    );
+  }
+};
+
+const getInputStatusPresentation = (
+  statusId: number | null,
+): ReviewKpiInputStatus => {
+  const resolvedId = statusId ?? DataEntryStatusId.Pending;
+  const meta = DATA_ENTRY_STATUS_META[resolvedId];
+
+  return {
+    id: resolvedId,
+    code: meta?.code ?? "Pending",
+    label: meta?.label ?? "Pending",
+    color: meta?.color ?? DATA_ENTRY_STATUS_META[DataEntryStatusId.Pending].color,
+    publishable: meta?.publishable ?? false,
+  };
+};
+
+const computeInputFlag = (
+  value: string | null,
+  metadata: DataEntryValidationMetadata,
+): ReviewKpiInputFlag | null => {
+  const message = getRangeOrPolarityValidationMessage(metadata, value);
+  return message ? { message } : null;
 };
 
 const getKpiVisibilityFilterForUser = (user: CurrentUser) => {
@@ -510,6 +599,11 @@ export const listReviewKpiRows = async (
             limit 1
           )`,
           dataTypeName: managedListItems.name,
+          isMandatory: measureDefinitions.is_mandatory,
+          isCurrency: measureDefinitions.is_currency,
+          validRangeMin: measureDefinitions.valid_range_min,
+          validRangeMax: measureDefinitions.valid_range_max,
+          validPolarityId: measureDefinitions.valid_polarity_id,
         })
         .from(measureDefinitions)
         .leftJoin(
@@ -549,6 +643,7 @@ export const listReviewKpiRows = async (
           comments: dataEntries.comments,
           updatedAt: dataEntries.updatedAt,
           updatedById: dataEntries.updatedById,
+          statusId: dataEntries.status_id,
         })
         .from(dataEntries)
         .where(and(...dataEntryWhereConditions))
@@ -618,9 +713,24 @@ export const listReviewKpiRows = async (
             comments: [],
             updatedAt: new Date(0).toISOString(),
             updatedById: null,
+            status: getInputStatusPresentation(null),
+            flag: null,
           },
         ];
       }
+
+      const rangeMetadata: DataEntryValidationMetadata | null = def
+        ? {
+            inputName: def.name,
+            isMandatory: def.isMandatory,
+            dataTypeName: def.dataTypeName,
+            isCurrency: def.isCurrency,
+            validRangeMin: def.validRangeMin == null ? null : Number(def.validRangeMin),
+            validRangeMax: def.validRangeMax == null ? null : Number(def.validRangeMax),
+            validPolarityId: def.validPolarityId,
+            validPolarityName: null,
+          }
+        : null;
 
       return sourceRows.map((row) => ({
         dataEntryId: row.id,
@@ -634,6 +744,8 @@ export const listReviewKpiRows = async (
         ),
         updatedAt: row.updatedAt.toISOString(),
         updatedById: row.updatedById,
+        status: getInputStatusPresentation(row.statusId),
+        flag: rangeMetadata ? computeInputFlag(row.value, rangeMetadata) : null,
       }));
     });
 
@@ -664,11 +776,13 @@ export const getReviewKpiPageViewModel =
   async (): Promise<ReviewKpiPageViewModel> => {
     const { context, options } = await bootstrapReviewKpiContextAndOptions();
     const rows = await listReviewKpiRows(context);
+    const user = await getCurrentUser();
 
     return {
       context,
       options,
       rows,
+      permissions: getReviewKpiPermissions(user),
     };
   };
 
@@ -680,10 +794,12 @@ const toReviewInputValue = (
     comments: DataEntryComment[] | null;
     updatedAt: Date;
     updatedById: string | null;
+    statusId: number | null;
   },
   inputName: string,
   unitName: string | null,
   dataTypeName?: string | null,
+  rangeMetadata?: DataEntryValidationMetadata | null,
 ): ReviewKpiInputValue => ({
   dataEntryId: row.id,
   inputDefId: row.inputDefId,
@@ -694,6 +810,8 @@ const toReviewInputValue = (
   comments: (row.comments ?? []).map((comment) => serializeComment(comment)),
   updatedAt: row.updatedAt.toISOString(),
   updatedById: row.updatedById,
+  status: getInputStatusPresentation(row.statusId),
+  flag: rangeMetadata ? computeInputFlag(row.value, rangeMetadata) : null,
 });
 
 const getReviewKpiDataEntryById = async (dataEntryId: string) => {
@@ -705,6 +823,7 @@ const getReviewKpiDataEntryById = async (dataEntryId: string) => {
       comments: dataEntries.comments,
       updatedAt: dataEntries.updatedAt,
       updatedById: dataEntries.updatedById,
+      statusId: dataEntries.status_id,
       reportPeriodId: dataEntries.report_period_id,
       serviceAreaId: dataEntries.service_area_id,
       inputName: measureDefinitions.name,
@@ -715,6 +834,11 @@ const getReviewKpiDataEntryById = async (dataEntryId: string) => {
         limit 1
       )`,
       dataTypeName: managedListItems.name,
+      isMandatory: measureDefinitions.is_mandatory,
+      isCurrency: measureDefinitions.is_currency,
+      validRangeMin: measureDefinitions.valid_range_min,
+      validRangeMax: measureDefinitions.valid_range_max,
+      validPolarityId: measureDefinitions.valid_polarity_id,
     })
     .from(dataEntries)
     .innerJoin(
@@ -746,10 +870,21 @@ const toReviewInputValueFromDataEntry = (
       comments: row.comments,
       updatedAt: row.updatedAt,
       updatedById: row.updatedById,
+      statusId: row.statusId,
     },
     row.inputName,
     row.unitName,
     row.dataTypeName,
+    {
+      inputName: row.inputName,
+      isMandatory: row.isMandatory,
+      dataTypeName: row.dataTypeName,
+      isCurrency: row.isCurrency,
+      validRangeMin: row.validRangeMin == null ? null : Number(row.validRangeMin),
+      validRangeMax: row.validRangeMax == null ? null : Number(row.validRangeMax),
+      validPolarityId: row.validPolarityId,
+      validPolarityName: null,
+    },
   );
 };
 
@@ -824,7 +959,12 @@ const findLatestKpiResult = async (
 
 export const updateReviewKpiInputValue = async (
   dataEntryId: string,
-  payload: { value: string | null; updatedAt: string; kpiDefId: number },
+  payload: {
+    value: string | null;
+    updatedAt: string;
+    kpiDefId: number;
+    confirmed?: boolean;
+  },
   user: CurrentUser,
 ) => {
   assertReviewKpiWriteAccess(user);
@@ -841,6 +981,23 @@ export const updateReviewKpiInputValue = async (
     throw Object.assign(new Error("CONFLICT:Input value is stale."), {
       latest,
     });
+  }
+
+  // This input is already CEO Approved and published (feeds Power BI / benchmarking). Editing it
+  // here doesn't un-publish anything downstream, so require an explicit confirm rather than
+  // letting a routine review edit silently drift from what's already live.
+  if (
+    getInputStatusPresentation(existing.statusId).publishable &&
+    !payload.confirmed
+  ) {
+    const latest = toReviewInputValueFromDataEntry(existing);
+
+    throw Object.assign(
+      new Error(
+        "CONFIRM_REQUIRED:This value is CEO Approved and already published. Confirm to edit it anyway.",
+      ),
+      { latest },
+    );
   }
 
   await db
@@ -922,6 +1079,174 @@ export const updateReviewKpiInputValue = async (
   }
 
   return { input, result };
+};
+
+export const updateReviewKpiInputStatus = async (
+  dataEntryId: string,
+  payload: { statusId: number; updatedAt: string; kpiDefId: number },
+  user: CurrentUser,
+) => {
+  assertReviewKpiReadAccess(user);
+
+  const existing = await getReviewKpiDataEntryById(dataEntryId);
+
+  if (!existing) {
+    throw new Error("VALIDATION:Input value does not exist.");
+  }
+
+  if (existing.updatedAt.toISOString() !== payload.updatedAt) {
+    const latest = toReviewInputValueFromDataEntry(existing);
+
+    throw Object.assign(new Error("CONFLICT:Input value is stale."), {
+      latest,
+    });
+  }
+
+  assertValidReviewKpiStatusTransition(existing.statusId, payload.statusId, user);
+
+  await db
+    .update(dataEntries)
+    .set({
+      status_id: payload.statusId,
+      updatedAt: new Date(),
+      updatedById: user.id,
+    })
+    .where(eq(dataEntries.id, dataEntryId));
+
+  writeAuditLog({
+    action: "data_entry.status_update",
+    actorUserId: user.id,
+    actorEmail: user.email,
+    actorRole: user.role,
+    targetType: "data_entry",
+    targetId: dataEntryId,
+    details: {
+      fromStatusId: existing.statusId,
+      toStatusId: payload.statusId,
+    },
+  }).catch((err) => console.error("[audit] data_entry.status_update failed", err));
+
+  const updated = await getReviewKpiDataEntryById(dataEntryId);
+
+  if (!updated) {
+    throw new Error("Unable to read updated input value.");
+  }
+
+  const result = await findLatestKpiResult(
+    updated.reportPeriodId,
+    payload.kpiDefId,
+  );
+  const input = toReviewInputValueFromDataEntry(updated);
+
+  // Reuse the same "input-updated" event the value-edit path publishes — the client already
+  // merges any fresh `input` payload (status included) into its local state, so no new event
+  // type or client handling is needed to keep other viewers' status badges live.
+  const affectedKpiDefIds = new Set([
+    payload.kpiDefId,
+    ...(await resolveKpiDefIdsForInput(updated.inputDefId)),
+  ]);
+
+  for (const kpiDefId of affectedKpiDefIds) {
+    const kpiResult =
+      kpiDefId === payload.kpiDefId
+        ? result
+        : await findLatestKpiResult(updated.reportPeriodId, kpiDefId);
+
+    publishSyncEvent({
+      eventId: crypto.randomUUID(),
+      eventType: "input-updated",
+      occurredAt: new Date().toISOString(),
+      reportPeriodId: updated.reportPeriodId,
+      serviceAreaId: updated.serviceAreaId,
+      kpiDefId,
+      inputDefId: updated.inputDefId,
+      dataEntryId: updated.id,
+      payload: {
+        input,
+        result: kpiResult,
+      },
+    });
+  }
+
+  return { input, result };
+};
+
+/**
+ * The lean-workflow bulk action (docs/lean-data-entry-workflow-spec.md §4 #2/#11): advance every
+ * Entered input currently in view to Reviewed in one pass, EXCEPT any whose value trips the
+ * measure's valid-range/polarity safety net — those are held at Entered for explicit attention
+ * instead of silently advancing.
+ */
+export const bulkAdvanceEnteredToReviewed = async (
+  context: ReviewKpiFilterContext,
+  user: CurrentUser,
+): Promise<ReviewKpiBulkAdvanceResult> => {
+  assertReviewKpiReadAccess(user);
+
+  if (!hasRoleAccess(REVIEW_ROLES, user.role)) {
+    throw new Error(
+      "FORBIDDEN:You are not allowed to advance entries to Reviewed.",
+    );
+  }
+
+  const rows = await listReviewKpiRows(context);
+
+  const seenDataEntryIds = new Set<string>();
+  const dataEntryIdsToAdvance: string[] = [];
+  let held = 0;
+
+  for (const row of rows) {
+    for (const input of row.inputs) {
+      if (input.dataEntryId.startsWith("missing-")) {
+        continue;
+      }
+
+      if (seenDataEntryIds.has(input.dataEntryId)) {
+        continue;
+      }
+      seenDataEntryIds.add(input.dataEntryId);
+
+      if (input.status.id !== DataEntryStatusId.Entered) {
+        continue;
+      }
+
+      if (input.flag) {
+        held += 1;
+        continue;
+      }
+
+      dataEntryIdsToAdvance.push(input.dataEntryId);
+    }
+  }
+
+  if (dataEntryIdsToAdvance.length > 0) {
+    await db
+      .update(dataEntries)
+      .set({
+        status_id: DataEntryStatusId.Reviewed,
+        updatedAt: new Date(),
+        updatedById: user.id,
+      })
+      .where(inArray(dataEntries.id, dataEntryIdsToAdvance));
+
+    writeAuditLog({
+      action: "data_entry.bulk_status_update",
+      actorUserId: user.id,
+      actorEmail: user.email,
+      actorRole: user.role,
+      targetType: "data_entry",
+      targetId: `report_period:${context.reportPeriodId}`,
+      details: {
+        toStatusId: DataEntryStatusId.Reviewed,
+        dataEntryIds: dataEntryIdsToAdvance,
+        held,
+      },
+    }).catch((err) =>
+      console.error("[audit] data_entry.bulk_status_update failed", err),
+    );
+  }
+
+  return { advanced: dataEntryIdsToAdvance.length, held };
 };
 
 export const addReviewKpiInputComment = async (

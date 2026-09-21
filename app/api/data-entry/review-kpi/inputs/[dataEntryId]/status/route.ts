@@ -1,8 +1,8 @@
 import {
   parseRequiredUuid,
-  parseUpdateInputPayload,
+  parseUpdateInputStatusPayload,
 } from "@/app/api/data-entry/review-kpi/_lib/validators";
-import { updateReviewKpiInputValue } from "@/app/data-entry/review-kpi/service";
+import { updateReviewKpiInputStatus } from "@/app/data-entry/review-kpi/service";
 import { getCurrentUser } from "@/lib/user.service";
 
 export async function PATCH(
@@ -19,9 +19,13 @@ export async function PATCH(
   try {
     const { dataEntryId } = await params;
     const safeDataEntryId = parseRequiredUuid(dataEntryId, "dataEntryId");
-    const payload = parseUpdateInputPayload(await request.json());
+    const payload = parseUpdateInputStatusPayload(await request.json());
 
-    const result = await updateReviewKpiInputValue(safeDataEntryId, payload, user);
+    const result = await updateReviewKpiInputStatus(
+      safeDataEntryId,
+      payload,
+      user,
+    );
     return Response.json(result);
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unexpected error";
@@ -55,24 +59,8 @@ export async function PATCH(
       );
     }
 
-    if (message.startsWith("CONFIRM_REQUIRED:")) {
-      const latest =
-        typeof error === "object" && error !== null && "latest" in error
-          ? (error as { latest?: unknown }).latest
-          : null;
-
-      return Response.json(
-        {
-          message: message.replace("CONFIRM_REQUIRED:", ""),
-          requiresConfirmation: true,
-          latest,
-        },
-        { status: 422 },
-      );
-    }
-
     return Response.json(
-      { message: "Unable to update review KPI input." },
+      { message: "Unable to update review KPI input status." },
       { status: 500 },
     );
   }

@@ -33,6 +33,7 @@ describe("review kpi row mutations", () => {
       <ReviewKpiRowCard
         row={reviewKpiPageFixture.rows[0]}
         context={reviewKpiPageFixture.context}
+        permissions={reviewKpiPageFixture.permissions}
       />,
     );
 

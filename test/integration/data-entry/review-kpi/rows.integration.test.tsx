@@ -16,6 +16,7 @@ describe("review kpi row layout", () => {
       <ReviewKpiRowCard
         row={row}
         context={reviewKpiPageFixture.context}
+        permissions={reviewKpiPageFixture.permissions}
       />,
     );
 

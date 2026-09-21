@@ -18,6 +18,21 @@ export interface InputComment {
   replies?: InputComment[];
 }
 
+/** Workflow status of a single input's underlying data_entries row (Pending/Entered/Reviewed/Approved). */
+export interface ReviewKpiInputStatus {
+  id: number;
+  code: string;
+  label: string;
+  color: string;
+  /** True once this input is CEO Approved — the terminal, published state. */
+  publishable: boolean;
+}
+
+/** Safety-net flag: the input's value falls outside its configured valid range/polarity. */
+export interface ReviewKpiInputFlag {
+  message: string;
+}
+
 export interface ReviewKpiInputValue {
   dataEntryId: string;
   inputDefId: number;
@@ -28,6 +43,8 @@ export interface ReviewKpiInputValue {
   comments: InputComment[];
   updatedAt: string;
   updatedById: string | null;
+  status: ReviewKpiInputStatus;
+  flag: ReviewKpiInputFlag | null;
 }
 
 export type ReviewKpiResultStatus =
@@ -71,10 +88,19 @@ export interface ReviewKpiFilterOptions {
   serviceAreas: ReviewKpiFilterOption[];
 }
 
+/** What the viewing user is allowed to do on this page — computed server-side from their role. */
+export interface ReviewKpiPermissions {
+  /** Can advance Entered -> Reviewed, and send back Reviewed -> Entered (the BLO check). */
+  canReview: boolean;
+  /** Can advance Reviewed -> Approved, and send back Approved -> Reviewed (the CEO sign-off). */
+  canApprove: boolean;
+}
+
 export interface ReviewKpiPageViewModel {
   context: ReviewKpiFilterContext;
   options: ReviewKpiFilterOptions;
   rows: ReviewKpiRow[];
+  permissions: ReviewKpiPermissions;
 }
 
 export type SyncEventType =
@@ -104,8 +130,21 @@ export interface UpdateReviewKpiInputPayload {
   value: string | null;
   updatedAt: string;
   kpiDefId: number;
+  /** Set true to proceed after a CONFIRM_REQUIRED response for an already-Approved input. */
+  confirmed?: boolean;
 }
 
 export interface AddReviewKpiCommentPayload {
   comment: string;
+}
+
+export interface UpdateReviewKpiInputStatusPayload {
+  statusId: number;
+  updatedAt: string;
+  kpiDefId: number;
+}
+
+export interface ReviewKpiBulkAdvanceResult {
+  advanced: number;
+  held: number;
 }

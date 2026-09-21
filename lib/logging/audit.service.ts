@@ -12,6 +12,8 @@ export type AuditAction =
   | "data_entry.create"
   | "data_entry.update"
   | "data_entry.delete"
+  | "data_entry.status_update"
+  | "data_entry.bulk_status_update"
   | "settings.kpi.update"
   | "settings.managed_list.update"
   | "settings.report_period.update"

@@ -29,6 +29,7 @@ describe("review kpi async states", () => {
       <ReviewKpiRowCard
         row={reviewKpiPageFixture.rows[0]}
         context={reviewKpiPageFixture.context}
+        permissions={reviewKpiPageFixture.permissions}
       />,
     );
 
@@ -78,6 +79,7 @@ describe("review kpi async states", () => {
       <ReviewKpiRowCard
         row={reviewKpiPageFixture.rows[0]}
         context={reviewKpiPageFixture.context}
+        permissions={reviewKpiPageFixture.permissions}
       />,
     );
 

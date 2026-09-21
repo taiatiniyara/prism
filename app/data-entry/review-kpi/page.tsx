@@ -1,6 +1,7 @@
 import { getReviewKpiPageViewModel } from "@/app/data-entry/review-kpi/service";
 import { ReviewKpiShell } from "@/components/data-entry/review-kpi-shell";
 import { ReviewKpiRowCard } from "@/components/data-entry/review-kpi-row";
+import { ReviewKpiBulkAdvance } from "@/components/data-entry/review-kpi-bulk-advance";
 import ReviewKpiFiltersClient from "@/app/data-entry/review-kpi/filters.client";
 import StateMessage from "@/components/ui/state-message";
 
@@ -33,6 +34,8 @@ export default async function ReviewKpiPage() {
           options={viewModel.options}
         />
 
+        {viewModel.permissions.canReview ? <ReviewKpiBulkAdvance /> : null}
+
         {viewModel.rows.length === 0 ? (
           <StateMessage>
             No KPI rows are available for the selected filters.
@@ -44,6 +47,7 @@ export default async function ReviewKpiPage() {
             key={row.kpiDefId}
             row={row}
             context={viewModel.context}
+            permissions={viewModel.permissions}
           />
         ))}
       </div>
