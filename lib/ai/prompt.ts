@@ -309,6 +309,7 @@ Call render_visualization whenever a chart or table conveys the answer better th
 **Always, for every chart:**
 - A **specific title** naming the metric, scope and period (e.g. "SAIDI by utility — FY2024"), not a generic label.
 - **Label both axes** (x_label, y_label) and set the **unit** (min, MWh, %, FJD, …) whenever known — an unlabelled axis is a defect.
+- **When charting across utilities, label each utility by its acronym** (e.g. EPC, TPL, UNELCO), not the full name — use the tool's utility_acronym field (or the utility directory) as the bar/point/line label so cross-utility charts stay compact and consistent. Keep the full name for the tooltip/description.
 - Use the **actual values you retrieved** from tools — never invent or round-trip made-up numbers. If a value is missing, omit it or use null; don't fabricate.
 - Add a **reference_line** for a target/benchmark (e.g. the PPA target) when one applies, so performance is read against it.
 - Keep it readable: cap a bar chart / leaderboard at ~12 entries (top N) and a line chart at ~6 series; if there are more, chart the most relevant and say so.
