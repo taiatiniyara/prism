@@ -6,51 +6,19 @@
 
 export type BuilderMode = "kpi" | "measure";
 
-/** Physical dimension id columns (match FormulaInput fields on db/schema/dataEntry.ts). */
-export type DimensionField =
-  | "provider_id"
-  | "category_id"
-  | "technology_id"
-  | "asset_class_id"
-  | "customer_type_id"
-  | "payment_mode_id"
-  | "consumption_band_id"
-  | "division_id"
-  | "gender_id"
-  | "utility_function_id";
-
 /**
- * The 10 canonical dimensions.
- * - `field`      physical id column on data_entries / FormulaInput
- * - `scopeKey`   the (legacy) name used in measure_dimension_scope.dimension
- * - `listName`   the managed_lists.name whose items are this dim's members
- * - `allMember`  canonical "All" member id (lib/data-entry/dimensions.ts ALL_MEMBER)
+ * The 10 canonical dimensions now live in the shared, single-source-of-truth
+ * map at `lib/dimensions/dimension-map.ts` (which also carries code aliases +
+ * query synonyms). Re-exported here so existing formula-builder imports keep
+ * working unchanged — do NOT redefine the mapping in this file.
  */
-export const DIMENSIONS: ReadonlyArray<{
-  field: DimensionField;
-  scopeKey: string;
-  listName: string;
-  allMember: number;
-  label: string;
-}> = [
-  { field: "provider_id", scopeKey: "provider", listName: "Provider", allMember: 20, label: "Provider" },
-  { field: "category_id", scopeKey: "type", listName: "Category", allMember: 30, label: "Category" },
-  { field: "technology_id", scopeKey: "source", listName: "Technology", allMember: 40, label: "Technology" },
-  { field: "asset_class_id", scopeKey: "resource_type", listName: "Asset Class", allMember: 983, label: "Asset Class" },
-  { field: "customer_type_id", scopeKey: "customer_type", listName: "Customer Type", allMember: 690, label: "Customer Type" },
-  { field: "payment_mode_id", scopeKey: "payment_mode", listName: "Payment Mode", allMember: 720, label: "Payment Mode" },
-  { field: "consumption_band_id", scopeKey: "band", listName: "Consumption Band", allMember: 1005, label: "Consumption Band" },
-  { field: "division_id", scopeKey: "division", listName: "Division", allMember: 1011, label: "Division" },
-  { field: "gender_id", scopeKey: "gender", listName: "Gender", allMember: 1022, label: "Gender" },
-  { field: "utility_function_id", scopeKey: "utility_function", listName: "Utility Function", allMember: 1023, label: "Utility Function" },
-];
-
-export const SCOPE_KEY_TO_FIELD: Record<string, DimensionField> = Object.fromEntries(
-  DIMENSIONS.map((d) => [d.scopeKey, d.field]),
-);
-export const ALL_MEMBER_BY_FIELD: Record<DimensionField, number> = Object.fromEntries(
-  DIMENSIONS.map((d) => [d.field, d.allMember]),
-) as Record<DimensionField, number>;
+import type { DimensionField } from "@/lib/dimensions/dimension-map";
+export {
+  DIMENSIONS,
+  SCOPE_KEY_TO_FIELD,
+  ALL_MEMBER_BY_FIELD,
+} from "@/lib/dimensions/dimension-map";
+export type { DimensionField };
 
 export type DimMode = "pin" | "all" | "inherit";
 export type GrainMode = "inherit" | "rollup" | "pin";
