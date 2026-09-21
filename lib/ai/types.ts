@@ -228,7 +228,7 @@ export interface AiGuardrailResult {
   reason?: string;
 }
 
-export const AI_PROMPT_VERSION = "2026-09-21-viz-guidance";
+export const AI_PROMPT_VERSION = "2026-09-21-utility-directory";
 
 export const AI_MODELS = {
   primary: "claude-sonnet-4-6",
