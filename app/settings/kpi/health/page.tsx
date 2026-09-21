@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import {
   planAllKpiCompute,
   computeKpiChunk,
@@ -41,7 +41,10 @@ export default function KpiHealthPage() {
   const [retrying, setRetrying] = useState(false);
   const [recompute, setRecompute] = useState<RecomputeProgress | null>(null);
 
+  const requestIdRef = useRef(0);
+
   const fetchData = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     const params = new URLSearchParams({ limit: "100" });
     if (statusFilter) params.set("status", statusFilter);
@@ -49,12 +52,14 @@ export default function KpiHealthPage() {
       const res = await fetch(`/api/kpi/calculation-status?${params}`);
       const json = await res.json();
       if (!res.ok) throw new Error(json.message || "Failed to load");
+      if (requestIdRef.current !== requestId) return;
       setData(json);
       setError(null);
     } catch (e) {
+      if (requestIdRef.current !== requestId) return;
       setError(e instanceof Error ? e.message : "Failed");
     } finally {
-      setLoading(false);
+      if (requestIdRef.current === requestId) setLoading(false);
     }
   }, [statusFilter]);
 

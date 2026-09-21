@@ -109,6 +109,32 @@ type DataTableColumn<T> =
       display: string;
     };
 
+function SortIcon({
+  column,
+  sortColumn,
+  sortDirection,
+}: {
+  column: PropertyKey;
+  sortColumn: PropertyKey | null;
+  sortDirection: SortDirection;
+}) {
+  const isActive = sortColumn === column;
+  // Active sort: a solid, direction-aware chevron (accent, always shown).
+  // Unsorted: a faint up/down chevron that only appears on header hover.
+  if (isActive && sortDirection === "asc") {
+    return <ChevronUp className="ml-1 size-3.5 text-primary" aria-hidden />;
+  }
+  if (isActive && sortDirection === "desc") {
+    return <ChevronDown className="ml-1 size-3.5 text-primary" aria-hidden />;
+  }
+  return (
+    <ChevronsUpDown
+      className="ml-1 size-3.5 text-muted-foreground/50 opacity-0 transition-opacity group-hover/th:opacity-100"
+      aria-hidden
+    />
+  );
+}
+
 export default function DataTable<T extends DataTableRecord>(
   props: DataTableProps<T>,
 ) {
@@ -632,24 +658,6 @@ export default function DataTable<T extends DataTableRecord>(
     }
   }
 
-  function SortIcon({ column }: { column: keyof T }) {
-    const isActive = sortColumn === column;
-    // Active sort: a solid, direction-aware chevron (accent, always shown).
-    // Unsorted: a faint up/down chevron that only appears on header hover.
-    if (isActive && sortDirection === "asc") {
-      return <ChevronUp className="ml-1 size-3.5 text-primary" aria-hidden />;
-    }
-    if (isActive && sortDirection === "desc") {
-      return <ChevronDown className="ml-1 size-3.5 text-primary" aria-hidden />;
-    }
-    return (
-      <ChevronsUpDown
-        className="ml-1 size-3.5 text-muted-foreground/50 opacity-0 transition-opacity group-hover/th:opacity-100"
-        aria-hidden
-      />
-    );
-  }
-
   function cell(col: keyof T, row: T) {
     if (typeof row[col] === "boolean") {
       if (updateFormProps?.formAction) {
@@ -1003,7 +1011,11 @@ export default function DataTable<T extends DataTableRecord>(
                     >
                       {getLabel(formId, String(column.name), column.display)}
                     </span>
-                    <SortIcon column={column.name} />
+                    <SortIcon
+                      column={column.name}
+                      sortColumn={sortColumn}
+                      sortDirection={sortDirection}
+                    />
                     {columnFilterMenu(column.name, column.display)}
                   </span>
                 </th>

@@ -12,6 +12,7 @@ import {
 } from "../ui/select";
 import { FieldGroup } from "../ui/field-group";
 import BorderedBox from "../ui/bordered-box";
+import { collapseExpandedCustomKpiRequests } from "./collapse-expanded-custom-kpi-requests";
 
 type DecisionType = "APPROVE" | "REJECT" | "REPLACE";
 
@@ -57,18 +58,6 @@ export function CustomKpiReviewActions({
   proposedInputs,
 }: CustomKpiReviewActionsProps) {
   const router = useRouter();
-  const collapseExpandedCustomKpiRequests = () => {
-    if (typeof document === "undefined") {
-      return;
-    }
-
-    const expandedRequests = document.querySelectorAll<HTMLDetailsElement>(
-      'details[data-custom-kpi-request-details="true"][open]',
-    );
-    expandedRequests.forEach((panel) => {
-      panel.open = false;
-    });
-  };
   const [decisionType, setDecisionType] = useState<DecisionType>("APPROVE");
   const [categoryId, setCategoryId] = useState("");
   const [subcategoryId, setSubcategoryId] = useState("");

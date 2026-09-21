@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
 export default function AiUsagePage() {
   const [tab, setTab] = useState<"overview" | "per-user" | "tools" | "models">("overview");
@@ -9,19 +9,24 @@ export default function AiUsagePage() {
   const [error, setError] = useState<string | null>(null);
   const [days, setDays] = useState(30);
 
+  const requestIdRef = useRef(0);
+
   const fetchData = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     const type = tab === "overview" ? "overview" : tab === "per-user" ? "per-user" : tab === "tools" ? "tool-analytics" : "model-health";
     try {
       const res = await fetch(`/api/ai/usage?type=${type}&days=${days}`);
       const json = await res.json();
       if (!res.ok) throw new Error(json.message || "Failed to load");
+      if (requestIdRef.current !== requestId) return;
       setData(json);
       setError(null);
     } catch (e) {
+      if (requestIdRef.current !== requestId) return;
       setError(e instanceof Error ? e.message : "Failed");
     } finally {
-      setLoading(false);
+      if (requestIdRef.current === requestId) setLoading(false);
     }
   }, [tab, days]);
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useToggleSet } from "@/lib/use-toggle-set";
 
 interface ErrorEntry {
@@ -33,7 +33,10 @@ export default function ErrorLogsPage() {
   const { expanded, toggle: toggleExpand } = useToggleSet<number>();
   const [resolving, setResolving] = useState<Set<number>>(new Set());
 
+  const requestIdRef = useRef(0);
+
   const fetchErrors = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     const params = new URLSearchParams({ limit: "100" });
     if (severity) params.set("severity", severity);
@@ -42,12 +45,14 @@ export default function ErrorLogsPage() {
       const res = await fetch(`/api/logs/errors?${params}`);
       if (!res.ok) throw new Error("Failed to load");
       const data = await res.json();
+      if (requestIdRef.current !== requestId) return;
       setErrors(data.errors);
       setStats(data.stats);
     } catch {
+      if (requestIdRef.current !== requestId) return;
       setErrors([]);
     } finally {
-      setLoading(false);
+      if (requestIdRef.current === requestId) setLoading(false);
     }
   }, [severity, source]);
 

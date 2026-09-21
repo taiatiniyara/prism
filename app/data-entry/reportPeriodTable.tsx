@@ -68,10 +68,10 @@ export default function ReportPeriodTable(props: {
           </tr>
         </thead>
         <tbody>
-          {props.list.map((item, index) => (
+          {props.list.map((item) => (
             <tr
               className="border-b"
-              key={index}
+              key={item.Id}
             >
               {(props.role === "DEV" || props.role === "BMO") && (
                 <td>{item.Utility}</td>
