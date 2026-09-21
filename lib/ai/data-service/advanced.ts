@@ -370,11 +370,21 @@ export const compareKpisAcrossUtilities = async (
 // --- EXPORT / REPORT ---
 
 export interface ExportReportData {
-  url: string;
-  format: string;
+  status: "render_table";
+  format: "csv" | "excel";
   filename: string;
+  row_count: number;
+  instruction: string;
 }
 
+/**
+ * "Export" in this chat means: render the data as a `table` visualization in the
+ * reply — the table UI carries Download CSV / Download Excel buttons, so the user
+ * gets a real file. There is no server-persisted link to hand back (a bare URL
+ * would 404: the export route is POST-with-body and the rows aren't persisted).
+ * So this tool doesn't invent a link — it tells the model to render the table it
+ * already has, and the download happens client-side from that table.
+ */
 export const generateExport = async (
   _user: CurrentUser,
   options: {
@@ -388,9 +398,12 @@ export const generateExport = async (
 
   return {
     data: {
-      url: `/api/ai/export?format=${options.format}`,
+      status: "render_table",
       format: options.format,
       filename,
+      row_count: options.rows.length,
+      instruction:
+        'Render this data as a `table` visualization in your reply — a fenced ```json {"type":"table","title":"…","columns":[…],"rows":[[…]]}``` block using the exact rows you passed here. The table displays with Download CSV and Download Excel buttons, so the user downloads the file directly. Do NOT claim or output a download URL/link — there is none.',
     },
     metadata: createToolMetadata({ source: "export" }),
   };
