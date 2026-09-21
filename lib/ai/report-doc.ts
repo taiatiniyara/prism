@@ -2,7 +2,7 @@ import {
   DEFAULT_PDF_REPORT_STYLE,
   type PdfReportStyle,
 } from "./pdf-settings-constants";
-import type { ReportPdfInput } from "./report-pdf";
+import { sanitizeForPdf, type ReportPdfInput } from "./report-pdf";
 
 /**
  * Word (.doc) export of the AI performance report. Emits a Word-openable HTML
@@ -13,6 +13,11 @@ import type { ReportPdfInput } from "./report-pdf";
  * A custom brand TTF applies to the PDF only — HTML .doc can't embed a font
  * file, so Word renders these in its own font stack. Values are HTML-escaped to
  * keep report content from breaking the markup.
+ *
+ * Model-authored text is run through the SAME sanitizeForPdf() the PDF uses, so
+ * the two exports read identically: RAG status emoji (✅⚠️🔴 …) become words
+ * ("On track"/"At risk"/"Off track") in Word too, not coloured emoji. (Eugene's
+ * call — match the PDF wording.) HTML-escaping is applied after, on top.
  */
 
 const MAX_TABLE_ROWS = 200;
@@ -24,8 +29,11 @@ const esc = (v: unknown): string =>
     .replace(/>/g, "&gt;")
     .replace(/"/g, "&quot;");
 
+/** Model text → PDF-consistent sanitize, then HTML-escape. */
+const mtext = (v: unknown): string => esc(sanitizeForPdf(String(v ?? "")));
+
 const cell = (v: unknown): string =>
-  v === null || v === undefined ? "" : esc(v);
+  v === null || v === undefined ? "" : mtext(v);
 
 export function renderReportDoc(
   report: ReportPdfInput,
@@ -36,16 +44,16 @@ export function renderReportDoc(
     report.generated_at || new Date().toISOString().slice(0, 10);
 
   const exec = report.executive_summary
-    ? `<h2 class="sec exech">Executive Summary</h2>\n<p class="body">${esc(report.executive_summary)}</p>`
+    ? `<h2 class="sec exech">Executive Summary</h2>\n<p class="body">${mtext(report.executive_summary)}</p>`
     : "";
 
   const sectionsHtml = (report.sections ?? [])
     .map((s) => {
-      const parts: string[] = [`<h2 class="sec">${esc(s.heading || "")}</h2>`];
-      if (s.content) parts.push(`<p class="body">${esc(s.content)}</p>`);
+      const parts: string[] = [`<h2 class="sec">${mtext(s.heading || "")}</h2>`];
+      if (s.content) parts.push(`<p class="body">${mtext(s.content)}</p>`);
       if (s.data_table?.columns?.length) {
         const cols = s.data_table.columns;
-        const head = `<tr>${cols.map((c) => `<th>${esc(c)}</th>`).join("")}</tr>`;
+        const head = `<tr>${cols.map((c) => `<th>${mtext(c)}</th>`).join("")}</tr>`;
         const allRows = s.data_table.rows ?? [];
         const body = allRows
           .slice(0, MAX_TABLE_ROWS)
@@ -62,7 +70,7 @@ export function renderReportDoc(
           );
         }
       }
-      if (s.insight) parts.push(`<p class="insight">Insight: ${esc(s.insight)}</p>`);
+      if (s.insight) parts.push(`<p class="insight">Insight: ${mtext(s.insight)}</p>`);
       return parts.join("\n");
     })
     .join("\n");
@@ -71,7 +79,7 @@ export function renderReportDoc(
 <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:w="urn:schemas-microsoft-com:office:word" xmlns="http://www.w3.org/TR/REC-html40">
 <head>
 <meta charset="utf-8">
-<title>${esc(report.title || "PRISM Report")}</title>
+<title>${mtext(report.title || "PRISM Report")}</title>
 <!--[if gte mso 9]><xml><w:WordDocument><w:View>Print</w:View><w:Zoom>100</w:Zoom></w:WordDocument></xml><![endif]-->
 <style>
 @page { size: ${pageSize}; margin: ${style.margin}pt; }
@@ -93,7 +101,7 @@ hr { border: none; border-top: 1px solid ${style.rule}; margin: 8pt 0; }
 </head>
 <body>
 <div class="eyebrow">PRISM &middot; Pacific Power Association</div>
-<div class="title">${esc(report.title || "Performance Report")}</div>
+<div class="title">${mtext(report.title || "Performance Report")}</div>
 <div class="gen">Generated ${esc(generated)}</div>
 <hr>
 ${exec}
