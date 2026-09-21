@@ -39,8 +39,33 @@ interface Faces {
 
 const MAX_TABLE_ROWS = 200;
 
+// RAG status emoji the AI emits in report cells/prose have no glyph in
+// pdfkit's built-in Helvetica (WinAnsi/cp1252) nor in typical brand .ttf
+// uploads, so they render as blank .notdef boxes. Map the known ones to plain
+// words, then strip any remaining non-Latin-1 codepoint so nothing prints as an
+// empty box. Applied to every model-authored string before it reaches doc.text.
+const STATUS_GLYPHS: Record<string, string> = {
+  "✅": "On track",
+  "🟢": "On track",
+  "⚠️": "At risk",
+  "🟡": "At risk",
+  "🔴": "Off track",
+  "🟠": "At risk",
+};
+
+export const sanitizeForPdf = (value: string): string => {
+  let out = value;
+  for (const [emoji, word] of Object.entries(STATUS_GLYPHS)) {
+    if (out.includes(emoji)) out = out.split(emoji).join(word);
+  }
+  return out
+    .replace(/[^\x00-\xFF]/g, "") // drop anything the font can't draw
+    .replace(/[ \t]{2,}/g, " ")
+    .trim();
+};
+
 const cell = (value: unknown): string =>
-  value === null || value === undefined ? "" : String(value);
+  value === null || value === undefined ? "" : sanitizeForPdf(String(value));
 
 export async function renderReportPdf(
   report: ReportPdfInput,
@@ -105,7 +130,9 @@ export async function renderReportPdf(
     .font(faces.bold)
     .fontSize(style.titleSize)
     .fillColor(INK)
-    .text(report.title || "Performance Report", { width: usableWidth });
+    .text(sanitizeForPdf(report.title || "Performance Report"), {
+      width: usableWidth,
+    });
   doc
     .font(faces.base)
     .fontSize(9)
@@ -137,7 +164,7 @@ export async function renderReportPdf(
       .font(faces.base)
       .fontSize(style.bodySize)
       .fillColor(INK)
-      .text(report.executive_summary, { width: usableWidth });
+      .text(sanitizeForPdf(report.executive_summary), { width: usableWidth });
     doc.moveDown(0.8);
   }
 
@@ -149,7 +176,7 @@ export async function renderReportPdf(
       .font(faces.bold)
       .fontSize(style.headingSize)
       .fillColor(INK)
-      .text(section.heading || "", { width: usableWidth });
+      .text(sanitizeForPdf(section.heading || ""), { width: usableWidth });
     doc.moveDown(0.2);
 
     if (section.content) {
@@ -157,7 +184,7 @@ export async function renderReportPdf(
         .font(faces.base)
         .fontSize(style.bodySize)
         .fillColor(INK)
-        .text(section.content, { width: usableWidth });
+        .text(sanitizeForPdf(section.content), { width: usableWidth });
       doc.moveDown(0.3);
     }
 
@@ -180,7 +207,9 @@ export async function renderReportPdf(
         .font(faces.italic)
         .fontSize(style.bodySize)
         .fillColor(ACCENT)
-        .text(`Insight: ${section.insight}`, { width: usableWidth });
+        .text(`Insight: ${sanitizeForPdf(section.insight)}`, {
+          width: usableWidth,
+        });
     }
     doc.moveDown(0.8);
   }
@@ -228,7 +257,7 @@ function drawTable(
     doc.y = y + rowHeight;
   };
 
-  drawRow(columns, true);
+  drawRow(columns.map(sanitizeForPdf), true);
   for (const row of rows.slice(0, MAX_TABLE_ROWS)) {
     drawRow(
       columns.map((col) => cell(row[col])),
