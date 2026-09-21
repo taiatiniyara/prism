@@ -6,9 +6,9 @@ import { recordError, recordToolCall, checkRateLimit, checkCostBudget, recordLat
 import type { AiChatMessage } from "@/lib/ai/types";
 import { getCurrentUser } from "@/lib/user.service";
 import { eq, sql, and } from "drizzle-orm";
-import { getSystemPrompt } from "@/lib/ai/prompt";
 import { checkUserUtility } from "@/lib/ai/data-service/utils";
-import { runAiStream, runAiGenerate, getCircuitState } from "@/lib/ai/service";
+import { runAiStream, runAiGenerate, runAiMiniGenerate, getCircuitState } from "@/lib/ai/service";
+import { toTokenUsage } from "@/lib/ai/usage";
 import { describeToolCall, NO_DATA_NARRATION } from "@/lib/ai/tool-narration";
 import {
   MAX_VISUALIZATIONS_PER_TURN,
@@ -74,11 +74,11 @@ const summarizeConversation = async (
       .map((t, i) => `[Turn ${i + 1}] User: ${t.user_message}\nAssistant: ${(t.assistant_response ?? "").slice(0, 300)}`)
       .join("\n\n");
 
-    const { reply } = await runAiGenerate({
-      messages: [
-        {
-          role: "user",
-          content: `Summarise the following PRISM AI conversation into a concise JSON object with these keys:
+    // Mini model, no tools, no PRISM system prompt — a JSON summary needs none of the
+    // ~25k-token tools+system prefix the main chat path carries.
+    const reply = await runAiMiniGenerate({
+      userId,
+      prompt: `Summarise the following PRISM AI conversation into a concise JSON object with these keys:
 - utility_ids (array of mentioned utility IDs or names)
 - report_periods (array of mentioned period IDs or years)
 - topics (array of 3-5 main topics discussed)
@@ -88,10 +88,6 @@ Only use information explicitly present in the conversation. Return valid JSON o
 
 Conversation:
 ${conversationText}`,
-        },
-      ],
-      user: { id: userId, role: null, org_id: null } as never,
-      maxHistoryTurns: 1,
     });
 
     const jsonStart = reply.indexOf("{");
@@ -340,7 +336,9 @@ export async function POST(request: Request) {
         }`
       : "";
 
-    const systemPrompt = (await getSystemPrompt()) +
+    // Per-request context only. The static base prompt is built (and cached) inside the
+    // service; this rides after the cache breakpoint as its own uncached system block.
+    const systemPromptSuffix =
       roleContext +
       contextBlock +
       (!utilityCheck.valid
@@ -353,7 +351,7 @@ export async function POST(request: Request) {
     const { fullStream, model, wasFallback, promptVersion } = await runAiStream({
       messages: cleanMessages,
       user,
-      systemPromptOverride: systemPrompt,
+      systemPromptSuffix,
     });
 
     const encoder = new TextEncoder();
@@ -377,7 +375,7 @@ export async function POST(request: Request) {
         let accumulatedText = "";
         const toolCalls: Array<{ toolName: string; input: unknown }> = [];
         const visualizationJsonList: string[] = [];
-        let tokenUsage = { input: 0, output: 0 };
+        let tokenUsage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
         let errorMessage: string | null = null;
 
         try {
@@ -406,10 +404,15 @@ export async function POST(request: Request) {
                 enqueue(`1:${JSON.stringify({ type: "reasoning-delta", text: `${NO_DATA_NARRATION}...\n` })}\n`);
                 break;
               case "finish":
-                tokenUsage = {
-                  input: part.totalUsage.inputTokens ?? 0,
-                  output: part.totalUsage.outputTokens ?? 0,
-                };
+                {
+                  const usage = toTokenUsage(part.totalUsage);
+                  tokenUsage = {
+                    input: usage.inputTokens,
+                    output: usage.outputTokens,
+                    cacheRead: usage.cacheReadTokens,
+                    cacheWrite: usage.cacheWriteTokens,
+                  };
+                }
                 break;
               case "error":
                 errorMessage = describeError(part.error);
@@ -430,9 +433,15 @@ export async function POST(request: Request) {
         // this swap-in is invisible to the client).
         if (!accumulatedText.trim() && toolCalls.length > 0 && !errorMessage) {
           try {
-            const fallback = await runAiGenerate({ messages: cleanMessages, user, systemPromptOverride: systemPrompt });
+            const fallback = await runAiGenerate({ messages: cleanMessages, user, systemPromptSuffix });
             accumulatedText = fallback.reply;
-            tokenUsage = fallback.tokenUsage;
+            // The streamed attempt's tokens were spent too — add, don't overwrite.
+            tokenUsage = {
+              input: tokenUsage.input + fallback.tokenUsage.input,
+              output: tokenUsage.output + fallback.tokenUsage.output,
+              cacheRead: tokenUsage.cacheRead + fallback.tokenUsage.cacheRead,
+              cacheWrite: tokenUsage.cacheWrite + fallback.tokenUsage.cacheWrite,
+            };
             if (accumulatedText) enqueue(`0:${JSON.stringify(accumulatedText)}\n`);
           } catch (err) {
             logger.error("[ai-chat] Empty-answer fallback failed", { error: err instanceof Error ? err.message : String(err), turnId });
@@ -480,6 +489,8 @@ export async function POST(request: Request) {
                 model_was_fallback: wasFallback,
                 token_count_input: tokenUsage.input,
                 token_count_output: tokenUsage.output,
+                token_count_cache_read: tokenUsage.cacheRead,
+                token_count_cache_write: tokenUsage.cacheWrite,
                 latency_ms: turnLatencyMs,
                 ...(errorMessage ? { error_message: errorMessage.slice(0, 4000) } : {}),
               })

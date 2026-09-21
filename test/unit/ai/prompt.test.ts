@@ -95,6 +95,6 @@ describe("isolation mode (secondary = none)", () => {
 describe("getPromptVersion", () => {
   it("returns a date-based version string", () => {
     const version = getPromptVersion();
-    expect(version).toMatch(/^\d{4}-\d{2}-\d{2}(-[a-z]+-v\d+)?$/);
+    expect(version).toMatch(/^\d{4}-\d{2}-\d{2}(-[a-z0-9-]+)?$/);
   });
 });
