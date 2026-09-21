@@ -1,18 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { safeReportFilename } from "@/lib/ai/report-filename";
 import type { AiReportVisualization } from "@/lib/ai/types";
 
 interface ReportViewProps {
   data: AiReportVisualization;
   onAskFollowUp?: (text: string) => void;
 }
-
-const safeFilename = (title: string): string =>
-  (title || "report")
-    .replace(/[^A-Za-z0-9._-]+/g, "_")
-    .replace(/^[._-]+|[._-]+$/g, "")
-    .slice(0, 100) || "report";
 
 type ReportFormat = "pdf" | "doc";
 
@@ -55,7 +50,7 @@ async function downloadReport(
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `${safeFilename(data.title)}.${ext}`;
+  anchor.download = `${safeReportFilename(data.title)}.${ext}`;
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
