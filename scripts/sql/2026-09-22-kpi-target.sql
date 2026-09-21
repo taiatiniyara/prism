@@ -57,7 +57,7 @@ CREATE TABLE IF NOT EXISTS kpi_target (
   gender_id            integer NOT NULL REFERENCES managed_list_items(id),
   utility_function_id  integer NOT NULL REFERENCES managed_list_items(id),
 
-  value                numeric,                                   -- the utility's own target; nullable (§4 forward-compat: authority-only cell)
+  value                numeric,                                   -- the utility's own target; column nullable for §4 forward-compat but CHECK-enforced NOT NULL today (see chk_kt_value_present)
 
   -- target provenance (§2)
   source               varchar(16) NOT NULL,                      -- how the utility entered it: direct | bsc (both are the utility)
@@ -79,6 +79,12 @@ CREATE TABLE IF NOT EXISTS kpi_target (
 
   CONSTRAINT chk_kt_grain_level CHECK (grain_level IN ('unit','station','area','utility','country','subregion','region')),
   CONSTRAINT chk_kt_source CHECK (source IN ('direct','bsc')),
+  -- value is nullable in the DESIGN only for the §4 authority-only cell (value NULL +
+  -- authority fields set). Those authority fields aren't built yet, so under the schema
+  -- shipping today a NULL-value row is an empty declaration with no meaning — hard-block
+  -- it now (#8 review). When §4 lands, this is replaced (same ALTER) with an
+  -- at-least-one-of(value, authority_target_value) check.
+  CONSTRAINT chk_kt_value_present CHECK (value IS NOT NULL),
   -- §2.1 ruling B: utility-or-finer only. utility_id present ⇒ grain_level ∈ {utility,area,station,unit}
   -- (chain-consistency, enforced on the write contract per §7, keeps the finer levels honest).
   CONSTRAINT chk_kt_utility_or_finer CHECK (utility_id IS NOT NULL)
