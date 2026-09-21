@@ -7,6 +7,7 @@ import {
   CartesianGrid,
   Label,
   LabelList,
+  Legend,
   ReferenceArea,
   ReferenceLine,
   ResponsiveContainer,
@@ -152,6 +153,25 @@ export function AreaChartView({ data, onAskFollowUp }: AreaChartViewProps) {
             itemStyle={{ color: theme.tooltipText }}
             labelStyle={{ color: theme.mutedColor }}
           />
+          {!singleSeries && (
+            <Legend
+              verticalAlign="top"
+              height={28}
+              content={() => (
+                <ul className="flex flex-wrap justify-center gap-x-4 gap-y-1 p-0 pb-1 m-0 list-none">
+                  {seriesKeys.map((key, idx) => (
+                    <li key={key} className="flex items-center gap-1.5">
+                      <span
+                        className="inline-block size-2.5 rounded-full"
+                        style={{ background: theme.seriesColors[idx % theme.seriesColors.length] }}
+                      />
+                      <span style={{ color: theme.mutedColor, fontSize: 12 }}>{key}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            />
+          )}
           {seriesKeys.map((key, idx) => {
             const color = theme.seriesColors[idx % theme.seriesColors.length];
             return (
