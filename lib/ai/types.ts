@@ -7,7 +7,27 @@ export type AiVisualizationType =
   | "sankey"
   | "heatmap"
   | "radar"
-  | "scatter";
+  | "scatter"
+  | "report";
+
+/** One section of a performance report (mirrors AutomatedReport / pbi_report). */
+export interface AiReportSection {
+  heading: string;
+  content?: string;
+  insight?: string;
+  data_table?: { columns: string[]; rows: Record<string, unknown>[] };
+}
+
+/** A multi-section performance report — renders inline with a Download PDF
+ *  button (POSTs to /api/ai/report-pdf). Its shape matches the report-pdf
+ *  route's input so the button can post it verbatim. */
+export interface AiReportVisualization {
+  type: "report";
+  title: string;
+  generated_at?: string;
+  executive_summary?: string;
+  sections: AiReportSection[];
+}
 
 export interface AiTableVisualization {
   type: "table";
@@ -115,7 +135,8 @@ export type AiVisualization =
   | AiSankeyVisualization
   | AiHeatmapVisualization
   | AiRadarVisualization
-  | AiScatterVisualization;
+  | AiScatterVisualization
+  | AiReportVisualization;
 
 export type AiToolName =
   | "get_kpi_status"

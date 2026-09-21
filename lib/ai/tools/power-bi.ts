@@ -185,7 +185,7 @@ export function createPowerBiTools(
     }),
 
     pbi_report: tool({
-      description: "Generate an automated performance report for a utility. Includes sections on reliability, losses, financials, customers, and recommendations. Use for donor reporting, board presentations, or quarterly reviews. Combine with pbi_query results.",
+      description: "Generate an automated performance report for a utility. Includes sections on reliability, losses, financials, customers, and recommendations. Use for donor reporting, board presentations, or quarterly reviews. Combine with pbi_query results. Present the result to the user as a `report` visualization block (```json {\"type\":\"report\", ...}```) — it renders inline with a Download PDF button.",
       inputSchema: z.object({
         utility: z.string().describe("Utility acronym (e.g., EPC)."),
         fy: z.string().describe("Fiscal year (e.g., FY2023)."),

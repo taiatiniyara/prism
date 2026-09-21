@@ -7,6 +7,7 @@ import { BarChartView } from "./bar-chart-view";
 import { LineChartView } from "./line-chart-view";
 import { AreaChartView } from "./area-chart-view";
 import { LeaderboardView } from "./leaderboard-view";
+import { ReportView } from "./report-view";
 import { VisualizationCard } from "./visualization-card";
 import { RawDataFallback } from "./raw-data-fallback";
 
@@ -42,6 +43,8 @@ export function VisualizationRenderer({
       return <AreaChartView data={visualization} onAskFollowUp={onAskFollowUp} />;
     case "leaderboard":
       return <LeaderboardView data={visualization} onAskFollowUp={onAskFollowUp} />;
+    case "report":
+      return <ReportView data={visualization} onAskFollowUp={onAskFollowUp} />;
     case "sankey":
     case "heatmap":
     case "radar":
