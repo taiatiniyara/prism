@@ -88,4 +88,56 @@ describe("drill_measure ⋈ calculator rollup — lockstep contract (pure)", () 
     expect(drill).toBe(engine); // the contract
     expect(engine).toBe(100); // documents the expected value
   });
+
+  // Rule 1 (spec §4.6): when an authoritative All-member aggregate row exists,
+  // the engine USES it and never adds the detail slices on top. drill must match
+  // by reading only the aggregate — summing aggregate + slices would double-count.
+  it("rule 1 — an authoritative All-member aggregate wins over its detail slices", () => {
+    const withAggregate: RollupCandidate[] = [
+      row(ALL_MEMBER.technology_id, "200"), // the "All source" aggregate row
+      row(DIESEL, "100"),
+      row(SOLAR, "50"),
+    ];
+    const engine = pickInputValue({
+      candidateRows: withAggregate,
+      binding: baseBinding(), // All on every dim (utility total)
+      scope: {},
+      grainRollup: true,
+      isAdditive: true,
+    });
+    // The aggregate (200) wins — NOT the 150 Σ of slices, and NOT 350 (agg+slices).
+    expect(engine).toBe(200);
+    // To match, drill must select the authoritative aggregate row alone.
+    const drill = sumDrillNumericValues(
+      withAggregate
+        .filter((r) => r.energySourceId === ALL_MEMBER.technology_id)
+        .map((r) => r.value),
+    );
+    expect(drill).toBe(engine); // the contract
+  });
+
+  // Non-additive (spec §4.6, #4): with no authoritative aggregate, the engine
+  // must NOT Σ the detail slices — it resolves as missing. So the SAME slices
+  // that total 150 when additive resolve to null when the measure is not
+  // additive; drill mirrors this by emitting no grand total (is_additive gate).
+  it("non-additive — no aggregate ⇒ engine is missing, never Σ of slices", () => {
+    const slices: RollupCandidate[] = [row(DIESEL, "100"), row(SOLAR, "50")];
+    const missing = pickInputValue({
+      candidateRows: slices,
+      binding: baseBinding(),
+      scope: {},
+      grainRollup: true,
+      isAdditive: false,
+    });
+    expect(missing).toBeNull();
+    // contrast: the identical slices DO sum to 150 when the measure is additive.
+    const additive = pickInputValue({
+      candidateRows: slices,
+      binding: baseBinding(),
+      scope: {},
+      grainRollup: true,
+      isAdditive: true,
+    });
+    expect(additive).toBe(150);
+  });
 });
