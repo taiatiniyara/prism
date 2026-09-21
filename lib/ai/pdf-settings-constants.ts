@@ -81,6 +81,48 @@ export const PDF_PAGE_SIZES: ReadonlyArray<{ value: PdfPageSize; label: string }
   { value: "LETTER", label: "US Letter (8.5 × 11 in)" },
 ];
 
+// ── Custom brand font (Phase 2) ──────────────────────────────────────────────
+// TTF/OTF bytes are stored base64 in app_settings under their own keys (kept out
+// of the small PdfReportStyle JSON). The renderer uses three faces; a slot left
+// empty falls back to Regular. Regular must be present for any custom font to
+// apply — otherwise the report renders in Helvetica exactly as before.
+
+export const PDF_FONT_SLOTS = ["regular", "bold", "italic"] as const;
+export type PdfFontSlot = (typeof PDF_FONT_SLOTS)[number];
+
+export const PDF_FONT_KEY: Record<PdfFontSlot, string> = {
+  regular: "pdf_report_font_regular",
+  bold: "pdf_report_font_bold",
+  italic: "pdf_report_font_italic",
+};
+
+/** Max accepted font upload (raw bytes). */
+export const PDF_FONT_MAX_BYTES = 2 * 1024 * 1024;
+
+export const PDF_FONT_SLOT_FIELDS: ReadonlyArray<{
+  slot: PdfFontSlot;
+  label: string;
+  help: string;
+  required: boolean;
+}> = [
+  { slot: "regular", label: "Regular", help: "Body text. Required for a custom font to apply.", required: true },
+  { slot: "bold", label: "Bold", help: "Headings. Falls back to Regular if unset.", required: false },
+  { slot: "italic", label: "Italic", help: "“Insight:” lines. Falls back to Regular if unset.", required: false },
+];
+
+/** What the settings form shows per slot — presence + filename, never the bytes. */
+export interface PdfFontSlotMeta {
+  present: boolean;
+  filename: string | null;
+}
+export type PdfFontSlotsMeta = Record<PdfFontSlot, PdfFontSlotMeta>;
+
+export const EMPTY_PDF_FONT_META: PdfFontSlotsMeta = {
+  regular: { present: false, filename: null },
+  bold: { present: false, filename: null },
+  italic: { present: false, filename: null },
+};
+
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;
 
 const isHex = (v: unknown): v is string => typeof v === "string" && HEX_RE.test(v);

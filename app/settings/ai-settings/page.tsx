@@ -3,7 +3,7 @@ import SectionContainer from "@/components/layout/section-container";
 import StateMessage from "@/components/ui/state-message";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { getAiSourceConfig } from "@/lib/ai/source-setting";
-import { getPdfReportStyle } from "@/lib/ai/pdf-settings";
+import { getPdfReportStyle, getPdfFontSlotsMeta } from "@/lib/ai/pdf-settings";
 import AiSettingsForm from "./ai-settings-form";
 import PdfSettingsForm from "./pdf-settings-form";
 
@@ -24,7 +24,10 @@ export default async function AiSettingsPage() {
 
   // Data-source config is DEV-only; the PDF style is editable by DEV and BMO.
   const sourceConfig = isDev ? await getAiSourceConfig() : null;
-  const pdfStyle = await getPdfReportStyle();
+  const [pdfStyle, pdfFontMeta] = await Promise.all([
+    getPdfReportStyle(),
+    getPdfFontSlotsMeta(),
+  ]);
 
   return (
     <div className="mx-auto w-full max-w-350 space-y-6 pb-8">
@@ -64,7 +67,7 @@ export default async function AiSettingsPage() {
               type sizes, and page layout. Changes apply to every report
               downloaded after saving.
             </p>
-            <PdfSettingsForm initialStyle={pdfStyle} />
+            <PdfSettingsForm initialStyle={pdfStyle} initialFontMeta={pdfFontMeta} />
           </TabsContent>
         </Tabs>
       </SectionContainer>

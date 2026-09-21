@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useRef, useState, useTransition } from "react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,19 +15,24 @@ import {
 import {
   DEFAULT_PDF_REPORT_STYLE,
   PDF_COLOUR_FIELDS,
+  PDF_FONT_SLOT_FIELDS,
   PDF_PAGE_SIZES,
   PDF_SIZE_FIELDS,
   normalizePdfStyle,
+  type PdfFontSlot,
+  type PdfFontSlotsMeta,
   type PdfReportStyle,
 } from "@/lib/ai/pdf-settings-constants";
-import { updatePdfReportStyle } from "./service";
+import { removePdfFont, updatePdfReportStyle, uploadPdfFont } from "./service";
 
 const HEX_RE = /^#[0-9a-fA-F]{6}$/;
 
 export default function PdfSettingsForm({
   initialStyle,
+  initialFontMeta,
 }: {
   initialStyle: PdfReportStyle;
+  initialFontMeta: PdfFontSlotsMeta;
 }) {
   const [style, setStyle] = useState<PdfReportStyle>(initialStyle);
   const [saved, setSaved] = useState<PdfReportStyle>(initialStyle);
@@ -140,6 +145,17 @@ export default function PdfSettingsForm({
             <span className="text-destructive text-xs">Colours must be #rrggbb.</span>
           )}
         </div>
+
+        <fieldset className="space-y-3">
+          <legend className="text-sm font-medium">Brand font</legend>
+          <p className="text-muted-foreground text-xs">
+            Optional. Upload a <strong>.ttf</strong> or <strong>.otf</strong>{" "}
+            (max 2&nbsp;MB) to replace Helvetica. Regular is required; Bold and
+            Italic fall back to Regular if left unset. Saved separately from the
+            style above — an upload applies immediately.
+          </p>
+          <FontSlots initialMeta={initialFontMeta} />
+        </fieldset>
       </div>
 
       {/* ── Live preview ─────────────────────────────────────── */}
@@ -224,6 +240,113 @@ function PdfPreview({ style }: { style: PdfReportStyle }) {
           programme.
         </p>
       </div>
+    </div>
+  );
+}
+
+function FontSlots({ initialMeta }: { initialMeta: PdfFontSlotsMeta }) {
+  const [meta, setMeta] = useState<PdfFontSlotsMeta>(initialMeta);
+  const [busy, setBusy] = useState<PdfFontSlot | null>(null);
+  const inputs = useRef<Record<PdfFontSlot, HTMLInputElement | null>>({
+    regular: null,
+    bold: null,
+    italic: null,
+  });
+
+  const onPick = async (slot: PdfFontSlot, file: File | null) => {
+    if (!file) return;
+    setBusy(slot);
+    try {
+      const fd = new FormData();
+      fd.set("slot", slot);
+      fd.set("file", file);
+      const res = await uploadPdfFont(fd);
+      if (res.success) {
+        setMeta((m) => ({
+          ...m,
+          [slot]: { present: true, filename: res.filename ?? file.name },
+        }));
+        toast.success(res.message);
+      } else {
+        toast.error(res.message);
+      }
+    } finally {
+      setBusy(null);
+      const el = inputs.current[slot];
+      if (el) el.value = ""; // allow re-selecting the same file
+    }
+  };
+
+  const onRemove = async (slot: PdfFontSlot) => {
+    setBusy(slot);
+    try {
+      const res = await removePdfFont(slot);
+      if (res.success) {
+        setMeta((m) => ({ ...m, [slot]: { present: false, filename: null } }));
+        toast.success(res.message);
+      } else {
+        toast.error(res.message);
+      }
+    } finally {
+      setBusy(null);
+    }
+  };
+
+  return (
+    <div className="space-y-3">
+      {PDF_FONT_SLOT_FIELDS.map((f) => {
+        const state = meta[f.slot];
+        return (
+          <div
+            key={f.slot}
+            className="border-border flex items-center gap-3 rounded-md border p-3"
+          >
+            <div className="min-w-0 flex-1">
+              <div className="text-sm font-medium">
+                {f.label}
+                {f.required && (
+                  <span className="text-muted-foreground"> (required)</span>
+                )}
+              </div>
+              <div className="text-muted-foreground truncate text-xs">
+                {state.present ? `Uploaded: ${state.filename}` : "Not set"}
+              </div>
+              <p className="text-muted-foreground mt-0.5 text-xs">{f.help}</p>
+            </div>
+            <input
+              ref={(el) => {
+                inputs.current[f.slot] = el;
+              }}
+              type="file"
+              accept=".ttf,.otf,font/ttf,font/otf"
+              className="hidden"
+              onChange={(e) => onPick(f.slot, e.target.files?.[0] ?? null)}
+            />
+            <div className="flex shrink-0 gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                disabled={busy !== null}
+                onClick={() => inputs.current[f.slot]?.click()}
+              >
+                {busy === f.slot ? "Uploading…" : state.present ? "Replace" : "Upload"}
+              </Button>
+              {state.present && (
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  disabled={busy !== null}
+                  onClick={() => onRemove(f.slot)}
+                >
+                  Remove
+                </Button>
+              )}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
