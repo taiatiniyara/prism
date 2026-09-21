@@ -16,7 +16,6 @@ const nextConfig: NextConfig = {
     "dotenv",
     "node-cron",
     "fstream",
-    "pdfkit",
   ],
   outputFileTracingRoot: projectRoot,
   async headers() {
