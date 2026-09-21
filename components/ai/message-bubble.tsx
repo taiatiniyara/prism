@@ -469,7 +469,7 @@ function extractVisualizations(content: string): AiVisualization[] {
   }
 
   if (visualizations.length === 0) {
-    const vizTypes = "(bar-chart|line-chart|table|leaderboard|scatter|radar|sankey|heatmap)";
+    const vizTypes = "(bar-chart|line-chart|area-chart|table|leaderboard|scatter|radar|sankey|heatmap)";
     const jsonObjectRegex = new RegExp(`\\{[\\s\\S]*?"type"\\s*:\\s*"${vizTypes}"[\\s\\S]*?\\}`, "g");
     let match;
     while ((match = jsonObjectRegex.exec(content)) !== null) {

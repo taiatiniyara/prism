@@ -4,10 +4,12 @@ import {
   appendVisualizationFence,
   isVisualizationFenceBlock,
   isVisualizationType,
+  normalizeAreaChart,
   normalizeBarChart,
   normalizeLineChart,
   visualizationJsonFromToolInput,
 } from "@/lib/ai/visualization";
+import { visualizationInputSchema } from "@/lib/ai/visualization-schema";
 
 describe("visualizationJsonFromToolInput", () => {
   it("returns raw JSON for render_visualization tool input", () => {
@@ -257,6 +259,62 @@ describe("normalizeBarChart", () => {
     });
     expect(result.referenceArea).toEqual({ label: "", lower: 90, upper: 100 });
     expect(result.referenceLine).toBeNull();
+  });
+});
+
+describe("area-chart", () => {
+  it("is a recognized visualization type", () => {
+    expect(isVisualizationType("area-chart")).toBe(true);
+  });
+
+  it("normalizeAreaChart reads the single-series {label,value} shape", () => {
+    const result = normalizeAreaChart({
+      type: "area-chart",
+      title: "Total generation — Fiji",
+      series: [
+        { label: "FY2022", value: 900 },
+        { label: "FY2023", value: 950 },
+      ],
+      unit: "GWh",
+    });
+    expect(result.seriesKeys).toEqual(["value"]);
+    expect(result.rows).toEqual([
+      { label: "FY2022", value: 900 },
+      { label: "FY2023", value: 950 },
+    ]);
+  });
+
+  it("normalizeAreaChart reads the multi-series {name,data} shape for a stacked mix", () => {
+    const result = normalizeAreaChart({
+      type: "area-chart",
+      title: "Generation mix over time",
+      stacked: true,
+      series: [
+        { name: "Hydro", data: [{ label: "FY2022", value: 500 }, { label: "FY2023", value: 520 }] },
+        { name: "Diesel", data: [{ label: "FY2022", value: 400 }, { label: "FY2023", value: 430 }] },
+      ],
+    });
+    expect(result.seriesKeys).toEqual(["Hydro", "Diesel"]);
+    expect(result.rows).toEqual([
+      { label: "FY2022", Hydro: 500, Diesel: 400 },
+      { label: "FY2023", Hydro: 520, Diesel: 430 },
+    ]);
+  });
+
+  it("the tool input schema accepts a valid stacked area-chart spec", () => {
+    const parsed = visualizationInputSchema.safeParse({
+      type: "area-chart",
+      title: "Generation mix — Fiji FY2020–2024",
+      stacked: true,
+      x_label: "Financial year",
+      y_label: "Generation",
+      unit: "GWh",
+      series: [
+        { name: "Hydro", data: [{ label: "FY2023", value: 520 }] },
+        { name: "Diesel", data: [{ label: "FY2023", value: 430 }] },
+      ],
+    });
+    expect(parsed.success).toBe(true);
   });
 });
 

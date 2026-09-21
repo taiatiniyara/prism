@@ -81,6 +81,37 @@ const lineChartViz = z.object({
   description: z.string().optional().describe("One-line takeaway."),
 });
 
+const areaChartViz = z.object({
+  type: z.literal("area-chart"),
+  title: z.string().describe("Specific title, e.g. 'Generation mix — Fiji FY2024'."),
+  series: z
+    .union([
+      z.array(labelValue).describe("Single area: one {label, value} per point, label = the period/year."),
+      z
+        .array(
+          z.object({
+            name: z.string().describe("Series name, e.g. an energy source or a utility."),
+            data: z.array(labelValue).describe("Points for this series: {label = x (period), value = y}."),
+          }),
+        )
+        .describe("Multiple areas: one entry per series, each with its own points."),
+    ])
+    .describe(
+      "Use area-chart for a trend over ordered periods where the FILLED magnitude matters, or to show composition over time (stack the series). For a plain trend comparison prefer line-chart.",
+    ),
+  stacked: z
+    .boolean()
+    .optional()
+    .describe(
+      "Stack the series into a cumulative total (e.g. energy generation mix over time). Only for additive parts-of-a-whole; leave off for independent trends.",
+    ),
+  x_label: z.string().optional().describe("X-axis title, e.g. 'Financial year'. Always provide."),
+  y_label: z.string().optional().describe("Y-axis title — the metric. Always provide."),
+  unit: z.string().optional().describe("Unit of the values, e.g. 'GWh', 'FJD'. Provide whenever known."),
+  reference_line: referenceLine.optional(),
+  description: z.string().optional().describe("One-line takeaway."),
+});
+
 const leaderboardViz = z.object({
   type: z.literal("leaderboard"),
   title: z.string().describe("e.g. 'Top utilities by SAIDI — FY2024'."),
@@ -161,6 +192,7 @@ export const visualizationInputSchema = z
     tableViz,
     barChartViz,
     lineChartViz,
+    areaChartViz,
     leaderboardViz,
     sankeyViz,
     heatmapViz,
@@ -168,5 +200,5 @@ export const visualizationInputSchema = z
     scatterViz,
   ])
   .describe(
-    "A single visualization. Pick the type that fits the data: leaderboard for rankings; bar-chart to compare one metric across categories; line-chart for trends over periods; scatter for correlation between two metrics; table for detailed multi-column data; radar to profile an entity across metrics; sankey/heatmap for flows/matrices.",
+    "A single visualization. Pick the type that fits the data: leaderboard for rankings; bar-chart to compare one metric across categories; line-chart for trends over periods; area-chart for a trend where filled magnitude matters or composition-over-time (stacked); scatter for correlation between two metrics; table for detailed multi-column data; radar to profile an entity across metrics; sankey/heatmap for flows/matrices.",
   );

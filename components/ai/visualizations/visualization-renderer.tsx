@@ -5,6 +5,7 @@ import type { AiVisualization } from "@/lib/ai/types";
 import { TableView } from "./table-view";
 import { BarChartView } from "./bar-chart-view";
 import { LineChartView } from "./line-chart-view";
+import { AreaChartView } from "./area-chart-view";
 import { LeaderboardView } from "./leaderboard-view";
 import { VisualizationCard } from "./visualization-card";
 import { RawDataFallback } from "./raw-data-fallback";
@@ -37,6 +38,8 @@ export function VisualizationRenderer({
       return <BarChartView data={visualization} onAskFollowUp={onAskFollowUp} />;
     case "line-chart":
       return <LineChartView data={visualization} onAskFollowUp={onAskFollowUp} />;
+    case "area-chart":
+      return <AreaChartView data={visualization} onAskFollowUp={onAskFollowUp} />;
     case "leaderboard":
       return <LeaderboardView data={visualization} onAskFollowUp={onAskFollowUp} />;
     case "sankey":

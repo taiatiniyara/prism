@@ -260,6 +260,7 @@ export function createPrismNativeTools(
         "Render a chart or table in the chat when it makes the data clearer than prose. " +
         "Choose the type that fits the data: leaderboard for rankings ('top/bottom performing'); " +
         "bar-chart to compare ONE metric across categories; line-chart for trends over periods; " +
+        "area-chart for a trend where filled magnitude matters or composition-over-time (stacked); " +
         "scatter for correlation between two metrics; table for detailed multi-column data. " +
         "Always give a specific title, label both axes, and set the unit. Provide the actual data " +
         "you retrieved — never invent values. Add a reference_line for a target/benchmark (e.g. the PPA target) when relevant.",
