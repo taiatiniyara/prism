@@ -89,9 +89,12 @@ export async function renderReportPdf(
 
   // ── Executive summary ────────────────────────────────────
   if (report.executive_summary) {
+    // Original hierarchy: the exec-summary heading sat 1pt below section
+    // headings (12 vs 13). Keep that relationship so an unset style renders
+    // byte-identically, while still tracking the configurable heading size.
     doc
       .font("Helvetica-Bold")
-      .fontSize(style.headingSize)
+      .fontSize(style.headingSize - 1)
       .fillColor(INK)
       .text("Executive Summary");
     doc.moveDown(0.2);
