@@ -18,17 +18,27 @@ export type ManagedList = typeof managedLists.$inferSelect & {
 };
 export type NewManagedList = typeof managedLists.$inferInsert;
 
-export const managedListItems = pgTable("managed_list_items", {
-  id: serial("id").primaryKey().notNull(),
-  list_id: integer("list_id")
-    .notNull()
-    .references(() => managedLists.id),
-  parent_id: integer("parent_id"),
-  name: varchar("name", { length: 255 }).notNull(),
-  description: varchar("description", { length: 255 }),
-  is_active: boolean("is_active").default(true).notNull(),
-  color: varchar("color").notNull().default("#EE32DD"),
-});
+export const managedListItems = pgTable(
+  "managed_list_items",
+  {
+    id: serial("id").primaryKey().notNull(),
+    list_id: integer("list_id")
+      .notNull()
+      .references(() => managedLists.id),
+    parent_id: integer("parent_id"),
+    name: varchar("name", { length: 255 }).notNull(),
+    description: varchar("description", { length: 255 }),
+    is_active: boolean("is_active").default(true).notNull(),
+    color: varchar("color").notNull().default("#EE32DD"),
+  },
+  (table) => [
+    // Nearly every fact/dim route filters `is_active = true` and/or joins on
+    // `list_id`; this table previously had zero indexes despite backing the
+    // busiest lookups in the app.
+    index("managed_list_items_list_idx").on(table.list_id),
+    index("managed_list_items_active_idx").on(table.is_active),
+  ],
+);
 export type ManagedListItem = typeof managedListItems.$inferSelect & {
   list?: string;
   parent?: string | null;

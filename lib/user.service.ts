@@ -1,12 +1,9 @@
-import { db } from "@/db/connection";
 import {
-  roles,
-  user,
   type UserStatus,
 } from "@/db/schema/auth-schema";
 import { auth } from "@/lib/auth";
 import { resolveDevOrganisationContext } from "@/lib/utility-context";
-import { eq } from "drizzle-orm";
+import { getCachedUserAndRole } from "@/lib/user-role-cache";
 import { headers } from "next/headers";
 
 
@@ -105,28 +102,22 @@ export const getCurrentUser = async (): Promise<CurrentUser> => {
     throw new Error("Unauthorized");
   }
 
-  const [u] = await db
-    .select()
-    .from(user)
-    .where(eq(user.id, session.user.id))
-    .limit(1);
-
-  if (!u) {
+  const cached = await getCachedUserAndRole(session.user.id);
+  if (!cached) {
     throw new Error("Unauthorized");
   }
-
-  const [role] = await db
-    .select()
-    .from(roles)
-    .where(eq(roles.id, u.role_id!))
-    .limit(1);
+  const { user: u, roleName } = cached;
 
   const { effectiveOrganisationId: scopedOrgId, isUtilityContextScoped } =
-    await resolveDevOrganisationContext(u.organisation_id, role?.name);
+    await resolveDevOrganisationContext(u.organisation_id, roleName);
 
   return {
     name: u.name,
-    role: role?.name,
+    // CurrentUser.role is typed as a required `string`, but a user with no
+    // role assigned yields `roleName === null` here — same pre-existing gap
+    // as the prior `role?.name` (typed `string` despite being `undefined`
+    // at runtime when role_id was null). Preserved as-is, not introduced.
+    role: roleName as string,
     email: u.email,
     id: u.id,
     role_id: u.role_id,

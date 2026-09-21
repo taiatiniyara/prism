@@ -339,6 +339,14 @@ export const dataEntries = pgTable(
     updatedById: text("updated_by_id").references(() => user.id),
   },
   (table) => [
+    // Every fact/dim export route and the review-kpi/data-entry listers filter
+    // on exactly (report_period_id, measure_def_id) with is_deleted = false —
+    // the only prior index was the 17-column uniq_entry_address constraint,
+    // whose leading column alone can't serve `measure_def_id IN (...)` scans.
+    index("idx_data_entries_period_measure")
+      .on(table.report_period_id, table.measure_def_id)
+      .where(sql`${table.is_deleted} = false`),
+    index("idx_data_entries_measure_def").on(table.measure_def_id),
     // At most one typed value column is non-null (all null = awaiting entry;
     // status_id carries the reason). The measure's data_type dictates WHICH one,
     // enforced by lib/data-entry/value-router.ts on every write path.

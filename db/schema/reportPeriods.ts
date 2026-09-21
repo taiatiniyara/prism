@@ -2,6 +2,7 @@ import { eq, sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  index,
   integer,
   pgTable,
   serial,
@@ -49,6 +50,14 @@ export const reportPeriods = pgTable(
     statusLifecycle: check(
       "chk_rp_status_lifecycle",
       sql`${t.status_id} IN (2, 3, 4, 5)`,
+    ),
+    // publishedPeriodCondition (status_id = Approved) is reused by ~25 fact/dim
+    // routes; utility_id is the other near-universal filter/join key. Neither
+    // had an index.
+    statusIdx: index("report_periods_status_idx").on(t.status_id),
+    utilityStatusIdx: index("report_periods_utility_status_idx").on(
+      t.utility_id,
+      t.status_id,
     ),
   }),
 );
