@@ -787,13 +787,13 @@
 <div class="grid">
   <div class="card">
     <h3>Request Rate Limits</h3>
-    <p><strong>20 requests/minute</strong> (env: <code>AI_RATE_LIMIT_PER_MINUTE</code>)<br>
-    <strong>100 requests/15 minutes</strong> (env: <code>AI_RATE_LIMIT_PER_15MIN</code>)<br>
+    <p><strong>100 requests/minute</strong> (env: <code>AI_RATE_LIMIT_PER_MINUTE</code>)<br>
+    <strong>300 requests/15 minutes</strong> (env: <code>AI_RATE_LIMIT_PER_15MIN</code>)<br>
     Returns 429 with <code>Retry-After</code> header.</p>
   </div>
   <div class="card">
     <h3>Daily Cost Budget</h3>
-    <p><strong>$5.00/day default</strong> (env: <code>AI_DEFAULT_DAILY_COST_LIMIT_CENTS</code>)<br>
+    <p><strong>$20.00/day default</strong> (env: <code>AI_DEFAULT_DAILY_COST_LIMIT_CENTS</code>)<br>
     Per-user configurable via <code>aiCostBudget</code> table. Fails open on DB error.</p>
   </div>
 </div>

@@ -3,15 +3,15 @@ import { aiUsageMetrics, aiCostBudget, aiRateLimitWindow } from "@/db/schema/ai"
 import { eq, and, sql } from "drizzle-orm";
 import { logger } from "@/lib/logging/logger";
 
-const DEFAULT_DAILY_COST_LIMIT_CENTS = parseInt(process.env.AI_DEFAULT_DAILY_COST_LIMIT_CENTS || "500", 10) || 500;
+const DEFAULT_DAILY_COST_LIMIT_CENTS = parseInt(process.env.AI_DEFAULT_DAILY_COST_LIMIT_CENTS || "2000", 10) || 2000;
 
 const getTodayStart = (): Date => {
   const now = new Date();
   return new Date(now.getFullYear(), now.getMonth(), now.getDate());
 };
 
-const PER_MINUTE_MAX_REQUESTS = parseInt(process.env.AI_RATE_LIMIT_PER_MINUTE || "20", 10) || 20;
-const PER_15MIN_MAX_REQUESTS = parseInt(process.env.AI_RATE_LIMIT_PER_15MIN || "100", 10) || 100;
+const PER_MINUTE_MAX_REQUESTS = parseInt(process.env.AI_RATE_LIMIT_PER_MINUTE || "100", 10) || 100;
+const PER_15MIN_MAX_REQUESTS = parseInt(process.env.AI_RATE_LIMIT_PER_15MIN || "300", 10) || 300;
 
 const requestTimestamps = new Map<string, number[]>();
 

@@ -56,3 +56,5 @@ dist/
 *.tsbuildinfo
 next-env.d.ts
 .claude/launch.json
+
+graphify-out/

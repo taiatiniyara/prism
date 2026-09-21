@@ -1,8 +1,8 @@
 import { describe, it, expect } from "vitest";
 
 describe("AI rate limiting", () => {
-  const PER_MINUTE_MAX = 20;
-  const PER_15MIN_MAX = 100;
+  const PER_MINUTE_MAX = 100;
+  const PER_15MIN_MAX = 300;
 
   const createRateLimiter = () => {
     const stamps: number[] = [];
@@ -21,7 +21,7 @@ describe("AI rate limiting", () => {
 
   it("allows requests under limit", () => {
     const rl = createRateLimiter();
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 50; i++) {
       expect(rl.check()).toBe(true);
     }
   });
@@ -29,7 +29,7 @@ describe("AI rate limiting", () => {
   it("blocks after per-minute limit", () => {
     const rl = createRateLimiter();
     const now = Date.now();
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 100; i++) {
       expect(rl.check(now)).toBe(true);
     }
     expect(rl.check(now)).toBe(false);
@@ -38,7 +38,7 @@ describe("AI rate limiting", () => {
   it("allows after time passes", () => {
     const rl = createRateLimiter();
     const now = Date.now();
-    for (let i = 0; i < 20; i++) {
+    for (let i = 0; i < 100; i++) {
       rl.check(now);
     }
     expect(rl.check(now + 61000)).toBe(true);
