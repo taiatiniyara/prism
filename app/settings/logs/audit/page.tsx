@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import { useToggleSet } from "@/lib/use-toggle-set";
 
 interface AuditEvent {
@@ -25,7 +25,10 @@ export default function AuditLogsPage() {
   const [page, setPage] = useState(0);
   const pageSize = 50;
 
+  const requestIdRef = useRef(0);
+
   const fetchEvents = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     const params = new URLSearchParams({ limit: String(pageSize), offset: String(page * pageSize) });
     if (actionFilter) params.set("action", actionFilter);
@@ -34,12 +37,14 @@ export default function AuditLogsPage() {
       const res = await fetch(`/api/logs/audit?${params}`);
       if (!res.ok) throw new Error("Failed to load");
       const data = await res.json();
+      if (requestIdRef.current !== requestId) return;
       setEvents(data.events);
       setTotal(data.total);
     } catch {
+      if (requestIdRef.current !== requestId) return;
       setEvents([]);
     } finally {
-      setLoading(false);
+      if (requestIdRef.current === requestId) setLoading(false);
     }
   }, [actionFilter, actorFilter, page]);
 

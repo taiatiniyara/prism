@@ -20,6 +20,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import { Plus } from "lucide-react";
+import { collapseExpandedCustomKpiRequests } from "@/components/data-entry/collapse-expanded-custom-kpi-requests";
 
 type InputOption = {
   id: number;
@@ -58,19 +59,6 @@ export function CustomKpiRequestDialog(props: {
 }) {
   const [open, setOpen] = useState(false);
   const router = useRouter();
-
-  const collapseExpandedCustomKpiRequests = () => {
-    if (typeof document === "undefined") {
-      return;
-    }
-
-    const expandedRequests = document.querySelectorAll<HTMLDetailsElement>(
-      'details[data-custom-kpi-request-details="true"][open]',
-    );
-    expandedRequests.forEach((panel) => {
-      panel.open = false;
-    });
-  };
 
   return (
     <Dialog

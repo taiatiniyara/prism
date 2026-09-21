@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 
 interface CostAnomaly {
   date: string;
@@ -34,16 +34,22 @@ export default function CostsPage() {
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState(30);
 
+  const requestIdRef = useRef(0);
+
   const fetchData = useCallback(async () => {
+    const requestId = ++requestIdRef.current;
     setLoading(true);
     try {
       const res = await fetch(`/api/costs/overview?days=${days}`);
       if (!res.ok) throw new Error("Failed");
-      setData(await res.json());
+      const json = await res.json();
+      if (requestIdRef.current !== requestId) return;
+      setData(json);
     } catch {
+      if (requestIdRef.current !== requestId) return;
       setData(null);
     } finally {
-      setLoading(false);
+      if (requestIdRef.current === requestId) setLoading(false);
     }
   }, [days]);
 
