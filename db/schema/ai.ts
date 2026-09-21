@@ -69,6 +69,10 @@ export const aiChatTurn = pgTable(
     prompt_version: text("prompt_version"),
     token_count_input: integer("token_count_input"),
     token_count_output: integer("token_count_output"),
+    // Subsets of token_count_input (which is the TOTAL prompt size): tokens served from /
+    // written to the Anthropic prompt cache. NULL on turns recorded before 2026-09-22.
+    token_count_cache_read: integer("token_count_cache_read"),
+    token_count_cache_write: integer("token_count_cache_write"),
     latency_ms: integer("latency_ms"),
     error_message: text("error_message"),
     created_at: timestamp("created_at").defaultNow().notNull(),

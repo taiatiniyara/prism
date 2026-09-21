@@ -40,6 +40,7 @@ This file is read and written by multiple concurrent Claude Code sessions (the "
 | 12 | Security hardening | PRISM security | 🟢 | independent; **feeds a requirement into #2/#8** (RLS) |
 | 13 | Multi-sector (water/sanitation) | PRISM 2 #13 multi-sector | 🟢 | Phase 5a label layer MERGED (#58); **UN M49 now the countries/sub_regions PK + dups cleaned (#60 merged, DB changed)**; #59 superseded |
 | 15 | Pending-work tracker | PRISM 2 #15 pending-tracker | 🟢 | cross-stream; owns [docs/PENDING.md](PENDING.md) — the always-current "what's pending" dashboard |
+| 16 | AI optimisation (cost / latency / quality of the PRISM AI assistant) | PRISM 2 #16 ai optimisation | 🟢 | independent; touches `lib/ai/**` + `app/api/ai/**` — coordinate if you edit those |
 
 > ⚠️ Rows 4, 7 are seeded from the session names only — the **owning session must confirm status, real scope, and dependencies** and correct anything wrong here.
 
@@ -213,6 +214,14 @@ This file is read and written by multiple concurrent Claude Code sessions (the "
 - **Depends on:** nothing · **Blocks:** nothing (read-only across all streams)
 - **Scope:** maintain [docs/PENDING.md](PENDING.md) — the always-current dashboard of what is *pending* across every stream (uncommitted → committed → pushed → merged → DB-applied) so Eugene doesn't have to keep asking. Reads git/`gh`/the board; does not do feature work.
 - **Last update 2026-09-01:** mature + actively maintained; [docs/PENDING.md](PENDING.md) is the live dashboard (open items only — settled decisions live in specs, not the tracker). Conventions in force: verify vs `origin` via `scripts/repo-truth.sh`; single `.env` DB = future prod (no prod-cutover apply step); git-first. **Other streams:** ping #15 on commit/push/merge/DB-apply — or just update your own board row — and it's reflected on the next refresh.
+
+### 16. AI optimisation — 🟢 active
+
+- **Owner:** PRISM 2 #16 ai optimisation
+- **Depends on:** nothing · **Blocks:** nothing
+- **Scope:** cost, latency and answer quality of the PRISM AI assistant (`lib/ai/**`, `app/api/ai/**`): prompt caching, token hygiene, tool-result size, model/effort choice, and the eval set that gates any quality-trading change.
+- **Baseline (30d to 2026-09-22, 116 turns, `claude-sonnet-4-6`):** fixed prefix ≈ 25k tokens (70 tools 17.6k + system 7.6k) re-sent every tool step; avg 72k in / 1.2k out per turn; p50 22s / p90 46s; report/PDF turns 200–385k tokens and 97–123s (at the route's 120s `maxDuration`). Prompt caching verified working; cached tokens were being priced at full rate.
+- **Last update 2026-09-22:** stream opened. **PR 1** (behaviour-neutral): per-turn cache read/write columns on `ai_chat_turn` (additive; SQL PR → apply → model+code PR), cache-aware cost estimate, static-cached + dynamic-uncached system blocks (role/context variants no longer re-write the 7.6k system cache), conversation summariser moved to Haiku with no tools, history-trim bug fixed (over-budget trim dropped the NEWEST messages). **Next:** PR 2 — tool-result size caps + moving cache breakpoint across tool steps (targets report turns); then an eval set before any model / tool-surface change.
 
 ---
 

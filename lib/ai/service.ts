@@ -1,5 +1,5 @@
 import { anthropic } from "@ai-sdk/anthropic";
-import { streamText, generateText, stepCountIs } from "ai";
+import { streamText, generateText, stepCountIs, type SystemModelMessage } from "ai";
 import type { CurrentUser } from "@/lib/user.service";
 import { createAiTools } from "./tools";
 import { buildSystemPrompt, getPromptVersion } from "./prompt";
@@ -7,6 +7,8 @@ import { getAiSourceConfig } from "./source-setting";
 import { validateInput, filterOutput } from "./guardrails";
 import { recordRequest, recordError } from "./rate-limit";
 import { AI_MODELS, AI_DEFAULTS, type AiChatMessage } from "./types";
+import { prepareMessages as trimHistory, estimateTokens, type SdkMessage } from "./history";
+import { toTokenUsage, estimateCostCents, type AiTokenUsage } from "./usage";
 import { logger } from "@/lib/logging/logger";
 
 interface AiServiceOptions {
@@ -15,10 +17,14 @@ interface AiServiceOptions {
   sessionId?: number;
   maxHistoryTurns?: number;
   systemPromptOverride?: string;
+  // Per-request context (audience register, conversation summary, notices). Sent as a
+  // second, UNCACHED system block after the cache breakpoint, so it never invalidates
+  // the shared tools+system cache entry the way concatenating it into the base did.
+  systemPromptSuffix?: string;
   abortSignal?: AbortSignal;
   onFinish?: (info: {
     text: string;
-    usage: { inputTokens: number; outputTokens: number };
+    usage: AiTokenUsage;
     toolCalls: Array<{ toolName: string; input: unknown }>;
     model: string;
     wasFallback: boolean;
@@ -44,6 +50,8 @@ interface AiGenerateResult {
   tokenUsage: {
     input: number;
     output: number;
+    cacheRead: number;
+    cacheWrite: number;
   };
   steps: Array<{
     toolCalls: Array<{ toolName: string }>;
@@ -54,20 +62,14 @@ interface AiGenerateResult {
 const EMPTY_ANSWER_NUDGE =
   "IMPORTANT: You have already gathered the data needed to answer. You MUST now write your complete final answer to the user in full, directly addressing their question. Do not make any further tool calls, and do not end your turn with an empty response. Write the answer now.";
 
-type SdkMessage = { role: "user" | "assistant" | "system"; content: string };
-
-const APPROX_CHARS_PER_TOKEN = 3;
-const MAX_INPUT_TOKENS = 18000;
-const TOOL_DEFINITIONS_TOKENS_RESERVE = 4000;
+// Measured 2026-09-22: the ~70 tool definitions are ~17.6k tokens (system prompt ~7.6k).
+const TOOL_DEFINITIONS_TOKENS_RESERVE = 18000;
 
 const getModelContextLimit = (modelName: string): number => {
   if (/sonnet/i.test(modelName)) return 200000;
   if (/haiku/i.test(modelName)) return 200000;
   return 200000;
 };
-
-const estimateTokens = (text: string): number =>
-  Math.ceil(text.length / APPROX_CHARS_PER_TOKEN);
 
 const getRoleBasedMaxTurns = (role: string | null | undefined): number => {
   const upper = (role ?? "").toUpperCase();
@@ -105,6 +107,21 @@ const withCachedLastTool = <T extends Record<string, unknown>>(tools: T): T => {
     [lastKey]: { ...(tools[lastKey] as object), providerOptions: ANTHROPIC_CACHE_CONTROL },
   } as T;
 };
+
+const recordUsage = (userId: string, usage: AiTokenUsage, modelName: string): Promise<void> =>
+  recordRequest(userId, {
+    tokenCount: usage.inputTokens + usage.outputTokens,
+    inputTokens: usage.inputTokens,
+    outputTokens: usage.outputTokens,
+    estimatedCostCents: estimateCostCents(modelName, usage),
+  });
+
+const toGenerateTokenUsage = (usage: AiTokenUsage): AiGenerateResult["tokenUsage"] => ({
+  input: usage.inputTokens,
+  output: usage.outputTokens,
+  cacheRead: usage.cacheReadTokens,
+  cacheWrite: usage.cacheWriteTokens,
+});
 
 const RETRY_BACKOFF_MS = [1000, 2000, 4000];
 const MAX_RETRIES = 3;
@@ -167,38 +184,10 @@ function recordCircuitFailure(modelName: string): void {
   modelCircuits.set(modelName, circuit);
 }
 
-// Only "user"/"assistant" ever belong in the conversation array — the system
-// prompt is injected separately (systemPromptOverride/buildSystemPrompt), so a
-// "system" role here would be rejected by the SDK, and any other value fails
-// the ModelMessage[] schema outright. Client input is untyped at runtime, so
-// enforce this rather than trusting the AiChatMessage["role"] type.
-const VALID_MESSAGE_ROLES = new Set(["user", "assistant"]);
-
-const prepareMessages = (
-  messages: AiChatMessage[],
-  maxHistoryTurns: number,
-): SdkMessage[] => {
-  const maxMessages = maxHistoryTurns * 2;
-  const recentMessages = messages.slice(-maxMessages);
-
-  let totalTokens = 0;
-  const trimmed: SdkMessage[] = [];
-  for (const msg of recentMessages) {
-    if (!VALID_MESSAGE_ROLES.has(msg.role)) {
-      logger.warn("[ai-service] Dropping message with invalid role", { role: msg.role });
-      continue;
-    }
-    const content = typeof msg.content === "string" ? msg.content : "";
-    const cleaned = content.trim();
-    if (!cleaned) continue;
-    const msgTokens = estimateTokens(cleaned);
-    totalTokens += msgTokens;
-    trimmed.push({ role: msg.role as "user" | "assistant", content: cleaned });
-    if (totalTokens > MAX_INPUT_TOKENS) break;
-  }
-
-  return trimmed;
-};
+const prepareMessages = (messages: AiChatMessage[], maxHistoryTurns: number): SdkMessage[] =>
+  trimHistory(messages, maxHistoryTurns, (role) =>
+    logger.warn("[ai-service] Dropping message with invalid role", { role }),
+  );
 
 const getModelConfig = (fallback: boolean) => {
   const modelName = fallback ? AI_MODELS.fallback : AI_MODELS.primary;
@@ -223,21 +212,17 @@ interface PreparedRequest {
   sdkMessages: SdkMessage[];
   tools: ReturnType<typeof createAiTools>;
   systemPrompt: string;
+  systemPromptSuffix: string;
   promptVersion: string;
   config: ReturnType<typeof getModelConfig>;
   availableOutput: number;
 }
 
 interface ModelCallbacks {
-  onRecording: (params: {
-    tokenCount: number;
-    inputTokens: number;
-    outputTokens: number;
-    modelName: string;
-  }) => Promise<void>;
+  onRecording: (usage: AiTokenUsage, modelName: string) => Promise<void>;
   onCompletion?: (info: {
     text: string;
-    usage: { inputTokens: number; outputTokens: number };
+    usage: AiTokenUsage;
     toolCalls: Array<{ toolName: string; input: unknown }>;
     model: string;
     wasFallback: boolean;
@@ -249,6 +234,7 @@ const prepareRequest = async (
   options: AiServiceOptions,
 ): Promise<PreparedRequest> => {
   const { messages, user, maxHistoryTurns, systemPromptOverride } = options;
+  const systemPromptSuffix = (options.systemPromptSuffix ?? "").trim();
 
   const effectiveMaxTurns = maxHistoryTurns ?? getRoleBasedMaxTurns(user.role);
 
@@ -276,7 +262,7 @@ const prepareRequest = async (
   const config = getModelConfig(false);
 
   const contextLimit = getModelContextLimit(config.modelName);
-  const systemPromptTokens = estimateTokens(systemPrompt);
+  const systemPromptTokens = estimateTokens(systemPrompt) + estimateTokens(systemPromptSuffix);
   const messageTokens = sdkMessages.reduce((sum, m) => sum + estimateTokens(m.content), 0);
   const estimatedTotalInput = systemPromptTokens + messageTokens + TOOL_DEFINITIONS_TOKENS_RESERVE;
   const availableOutput = contextLimit - estimatedTotalInput;
@@ -297,21 +283,16 @@ const prepareRequest = async (
     throw new Error("Conversation is too long. Please start a new chat to continue.");
   }
 
-  return { sdkMessages, tools, systemPrompt, promptVersion, config, availableOutput };
+  return { sdkMessages, tools, systemPrompt, systemPromptSuffix, promptVersion, config, availableOutput };
 };
 
 const createCallbacks = (
   user: CurrentUser,
   onFinish: AiServiceOptions["onFinish"],
 ): ModelCallbacks => {
-  const onRecording = async (params: {
-    tokenCount: number;
-    inputTokens: number;
-    outputTokens: number;
-    modelName: string;
-  }) => {
+  const onRecording = async (usage: AiTokenUsage, modelName: string) => {
     try {
-      await recordRequest(user.id, params);
+      await recordUsage(user.id, usage, modelName);
     } catch {
       // best-effort
     }
@@ -320,7 +301,7 @@ const createCallbacks = (
   const onCompletion = onFinish
     ? async (info: {
         text: string;
-        usage: { inputTokens: number; outputTokens: number };
+        usage: AiTokenUsage;
         toolCalls: Array<{ toolName: string; input: unknown }>;
         model: string;
         wasFallback: boolean;
@@ -347,23 +328,17 @@ const buildOnFinishHandler = (
 ) => {
   return async (finish: {
     text: string;
-    usage?: { inputTokens?: number; outputTokens?: number };
+    usage?: Parameters<typeof toTokenUsage>[0];
     toolCalls: Array<{ toolName: string; input: unknown }>;
   }) => {
-    await callbacks.onRecording({
-      tokenCount: (finish.usage?.inputTokens ?? 0) + (finish.usage?.outputTokens ?? 0),
-      inputTokens: finish.usage?.inputTokens ?? 0,
-      outputTokens: finish.usage?.outputTokens ?? 0,
-      modelName,
-    });
+    // ai@7: `usage` on the finish event is already aggregated across every step.
+    const usage = toTokenUsage(finish.usage);
+    await callbacks.onRecording(usage, modelName);
 
     if (callbacks.onCompletion) {
       await callbacks.onCompletion({
         text: finish.text,
-        usage: {
-          inputTokens: finish.usage?.inputTokens ?? 0,
-          outputTokens: finish.usage?.outputTokens ?? 0,
-        },
+        usage,
         toolCalls: finish.toolCalls.map((tc) => ({ toolName: tc.toolName, input: tc.input })),
         model: modelName,
         wasFallback: isFallback,
@@ -406,6 +381,16 @@ const withFirstChunkCheck = async <T extends { type: string; error?: unknown }>(
   };
 };
 
+// Block 1 = the static base prompt, carrying the cache breakpoint (tools render before
+// system, so this one marker caches tools + base together, shared across every user).
+// Block 2 = per-request context, deliberately AFTER the breakpoint and unmarked.
+const buildInstructions = (req: PreparedRequest): SystemModelMessage[] => [
+  { role: "system", content: req.systemPrompt, providerOptions: ANTHROPIC_CACHE_CONTROL },
+  ...(req.systemPromptSuffix
+    ? [{ role: "system" as const, content: req.systemPromptSuffix }]
+    : []),
+];
+
 const streamWithConfig = (
   req: PreparedRequest,
   config: ReturnType<typeof getModelConfig>,
@@ -415,7 +400,7 @@ const streamWithConfig = (
 ) => {
   return streamText({
     model: config.model,
-    instructions: { role: "system", content: req.systemPrompt, providerOptions: ANTHROPIC_CACHE_CONTROL },
+    instructions: buildInstructions(req),
     messages: req.sdkMessages,
     tools: req.tools,
     maxOutputTokens: config.maxOutputTokens,
@@ -434,7 +419,7 @@ const generateWithConfig = (
 ) => {
   return generateText({
     model: config.model,
-    instructions: { role: "system", content: req.systemPrompt, providerOptions: ANTHROPIC_CACHE_CONTROL },
+    instructions: buildInstructions(req),
     messages: req.sdkMessages,
     tools: req.tools,
     maxOutputTokens: config.maxOutputTokens,
@@ -464,7 +449,8 @@ const generateWithRetry = async (
     logger.warn(`[ai-service] Empty final answer after tool use (${config.modelName}); retrying with synthesis nudge`);
     const nudgedReq: PreparedRequest = {
       ...req,
-      systemPrompt: `${req.systemPrompt}\n\n${EMPTY_ANSWER_NUDGE}`,
+      // In the uncached suffix so the retry still reads the tools+system cache entry.
+      systemPromptSuffix: [req.systemPromptSuffix, EMPTY_ANSWER_NUDGE].filter(Boolean).join("\n\n"),
     };
     const retried = await withRetry(
       () => generateWithConfig(nudgedReq, config, abortSignal),
@@ -584,17 +570,9 @@ export const runAiGenerate = async (
 
     const { filtered } = filterOutput(result.text);
 
-    const tokenUsage = {
-      input: result.usage?.inputTokens ?? 0,
-      output: result.usage?.outputTokens ?? 0,
-    };
-
-    await recordRequest(options.user.id, {
-      tokenCount: tokenUsage.input + tokenUsage.output,
-      inputTokens: tokenUsage.input,
-      outputTokens: tokenUsage.output,
-      modelName: primaryConfig.modelName,
-    });
+    const usage = toTokenUsage(result.usage);
+    const tokenUsage = toGenerateTokenUsage(usage);
+    await recordUsage(options.user.id, usage, primaryConfig.modelName);
 
     return {
       reply: filtered,
@@ -619,17 +597,9 @@ export const runAiGenerate = async (
 
       const { filtered } = filterOutput(result.text);
 
-      const tokenUsage = {
-        input: result.usage?.inputTokens ?? 0,
-        output: result.usage?.outputTokens ?? 0,
-      };
-
-      await recordRequest(options.user.id, {
-        tokenCount: tokenUsage.input + tokenUsage.output,
-        inputTokens: tokenUsage.input,
-        outputTokens: tokenUsage.output,
-        modelName: fallbackConfig.modelName,
-      });
+      const usage = toTokenUsage(result.usage);
+      const tokenUsage = toGenerateTokenUsage(usage);
+      await recordUsage(options.user.id, usage, fallbackConfig.modelName);
 
       return {
         reply: filtered,
@@ -648,4 +618,35 @@ export const runAiGenerate = async (
       throw fallbackError;
     }
   }
+};
+
+// Single-shot housekeeping call (e.g. conversation summaries) on the mini model with NO
+// tools and NO PRISM system prompt. runAiGenerate would send the full ~25k-token
+// tools+system prefix to the primary model for a task that needs neither.
+export const runAiMiniGenerate = async (options: {
+  userId: string;
+  prompt: string;
+  system?: string;
+  maxOutputTokens?: number;
+}): Promise<string> => {
+  const modelName = AI_MODELS.mini;
+  const { result } = await withRetry(
+    () =>
+      generateText({
+        model: anthropic(modelName),
+        ...(options.system ? { instructions: options.system } : {}),
+        prompt: options.prompt,
+        maxOutputTokens: options.maxOutputTokens ?? 800,
+        temperature: 0,
+      }),
+    `mini-generate:${modelName}`,
+  );
+
+  try {
+    await recordUsage(options.userId, toTokenUsage(result.usage), modelName);
+  } catch {
+    // best-effort
+  }
+
+  return result.text;
 };

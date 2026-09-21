@@ -151,17 +151,12 @@ export const checkCostBudget = async (userId: string): Promise<{ allowed: boolea
   }
 };
 
-const MODEL_PRICING: Record<string, { inputPerM: number; outputPerM: number }> = {
-  "claude-sonnet-4-6": { inputPerM: 3, outputPerM: 15 },
-  "claude-haiku-4-5-20251001": { inputPerM: 0.80, outputPerM: 4 },
-  "claude-haiku-4-5": { inputPerM: 0.80, outputPerM: 4 },
-};
-
 interface RecordRequestParams {
   tokenCount: number;
   inputTokens: number;
   outputTokens: number;
-  modelName: string;
+  // Cache-aware; computed by the caller via estimateCostCents (lib/ai/usage.ts).
+  estimatedCostCents: number;
 }
 
 export const recordRequest = async (
@@ -169,11 +164,7 @@ export const recordRequest = async (
   params: RecordRequestParams,
 ): Promise<void> => {
   const todayStart = getTodayStart();
-  const pricing = MODEL_PRICING[params.modelName] ?? { inputPerM: 3, outputPerM: 15 };
-  const estimatedCostCents = Math.round(
-    (params.inputTokens / 1_000_000) * pricing.inputPerM * 100 +
-    (params.outputTokens / 1_000_000) * pricing.outputPerM * 100,
-  );
+  const { estimatedCostCents } = params;
 
   await db
     .insert(aiUsageMetrics)
