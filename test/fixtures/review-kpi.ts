@@ -41,6 +41,14 @@ export const reviewKpiPageFixture: ReviewKpiPageViewModel = {
           comments: [],
           updatedAt: "2026-03-24T00:00:00.000Z",
           updatedById: "u-1",
+          status: {
+            id: 3,
+            code: "Entered",
+            label: "Entered",
+            color: "#a3e635",
+            publishable: false,
+          },
+          flag: null,
         },
       ],
       result: {
@@ -52,4 +60,8 @@ export const reviewKpiPageFixture: ReviewKpiPageViewModel = {
       },
     },
   ],
+  permissions: {
+    canReview: true,
+    canApprove: false,
+  },
 };

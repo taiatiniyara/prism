@@ -5,6 +5,7 @@ import { useMemo, useState, useTransition } from "react";
 import {
   ReviewKpiFilterContext,
   ReviewKpiInputValue,
+  ReviewKpiPermissions,
   ReviewKpiRow,
   SyncEventEnvelope,
 } from "@/app/data-entry/review-kpi/types";
@@ -16,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 interface ReviewKpiRowProps {
   row: ReviewKpiRow;
   context: ReviewKpiFilterContext;
+  permissions: ReviewKpiPermissions;
 }
 
 const getResultBadgeVariant = (status: ReviewKpiRow["result"]["status"]) => {
@@ -59,7 +61,7 @@ const formatResultValue = (
   return parsed.toFixed(1);
 };
 
-export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
+export function ReviewKpiRowCard({ row, context, permissions }: ReviewKpiRowProps) {
   const [localRow, setLocalRow] = useState(row);
   const [prevRow, setPrevRow] = useState(row);
   const [draftValues, setDraftValues] = useState<Record<string, string>>(
@@ -68,6 +70,16 @@ export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
   const [activeSaveId, setActiveSaveId] = useState<string | null>(null);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isSaving, startSaveTransition] = useTransition();
+  const [confirmRequiredId, setConfirmRequiredId] = useState<string | null>(
+    null,
+  );
+  const [statusActionPending, setStatusActionPending] = useState<{
+    dataEntryId: string;
+    toStatusId: number;
+  } | null>(null);
+  const [statusActionError, setStatusActionError] = useState<string | null>(
+    null,
+  );
 
   if (prevRow !== row) {
     setPrevRow(row);
@@ -141,7 +153,7 @@ export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
     [localRow.inputs],
   );
 
-  const saveInput = (input: ReviewKpiInputValue) => {
+  const saveInput = (input: ReviewKpiInputValue, confirmed = false) => {
     if (input.dataEntryId.startsWith("missing-")) {
       return;
     }
@@ -160,6 +172,7 @@ export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
               value: draftValues[input.dataEntryId] ?? null,
               updatedAt: input.updatedAt,
               kpiDefId: localRow.kpiDefId,
+              confirmed,
             }),
           },
         );
@@ -169,7 +182,14 @@ export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
           result?: ReviewKpiRow["result"];
           message?: string;
           latest?: ReviewKpiInputValue;
+          requiresConfirmation?: boolean;
         } | null;
+
+        if (response.status === 422 && body?.requiresConfirmation) {
+          setConfirmRequiredId(input.dataEntryId);
+          setSaveError(body.message ?? "Confirmation required to save.");
+          return;
+        }
 
         if (response.status === 409 && body?.latest) {
           const latest = body.latest;
@@ -194,6 +214,7 @@ export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
           throw new Error(body?.message ?? "Failed to save input value.");
         }
 
+        setConfirmRequiredId(null);
         setLocalRow((prev) => ({
           ...prev,
           inputs: prev.inputs.map((candidate) =>
@@ -211,6 +232,74 @@ export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
         );
       } finally {
         setActiveSaveId(null);
+      }
+    });
+  };
+
+  const saveStatus = (input: ReviewKpiInputValue, toStatusId: number) => {
+    if (input.dataEntryId.startsWith("missing-")) {
+      return;
+    }
+
+    setStatusActionError(null);
+    setStatusActionPending({ dataEntryId: input.dataEntryId, toStatusId });
+
+    startSaveTransition(async () => {
+      try {
+        const response = await fetch(
+          `/api/data-entry/review-kpi/inputs/${input.dataEntryId}/status`,
+          {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              statusId: toStatusId,
+              updatedAt: input.updatedAt,
+              kpiDefId: localRow.kpiDefId,
+            }),
+          },
+        );
+
+        const body = (await response.json().catch(() => null)) as {
+          input?: ReviewKpiInputValue;
+          result?: ReviewKpiRow["result"];
+          message?: string;
+          latest?: ReviewKpiInputValue;
+        } | null;
+
+        if (response.status === 409 && body?.latest) {
+          const latest = body.latest;
+
+          setLocalRow((prev) => ({
+            ...prev,
+            inputs: prev.inputs.map((candidate) =>
+              candidate.dataEntryId === latest.dataEntryId ? latest : candidate,
+            ),
+          }));
+          setStatusActionError(
+            body.message ?? "This input changed elsewhere — refreshed, try again.",
+          );
+          return;
+        }
+
+        if (!response.ok || !body?.input) {
+          throw new Error(body?.message ?? "Failed to update status.");
+        }
+
+        setLocalRow((prev) => ({
+          ...prev,
+          inputs: prev.inputs.map((candidate) =>
+            candidate.dataEntryId === body.input!.dataEntryId
+              ? body.input!
+              : candidate,
+          ),
+          result: body.result ?? prev.result,
+        }));
+      } catch (error) {
+        setStatusActionError(
+          error instanceof Error ? error.message : "Failed to update status.",
+        );
+      } finally {
+        setStatusActionPending(null);
       }
     });
   };
@@ -234,13 +323,23 @@ export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
                 value={draftValues[input.dataEntryId] ?? ""}
                 disabled={isSaving || input.dataEntryId.startsWith("missing-")}
                 saving={activeSaveId === input.dataEntryId}
-                onValueChange={(value) =>
+                requiresConfirmation={confirmRequiredId === input.dataEntryId}
+                onValueChange={(value) => {
                   setDraftValues((prev) => ({
                     ...prev,
                     [input.dataEntryId]: value,
-                  }))
+                  }));
+                  if (confirmRequiredId === input.dataEntryId) {
+                    setConfirmRequiredId(null);
+                  }
+                }}
+                onSave={() =>
+                  saveInput(input, confirmRequiredId === input.dataEntryId)
                 }
-                onSave={() => saveInput(input)}
+                onCancelConfirm={() => {
+                  setConfirmRequiredId(null);
+                  setSaveError(null);
+                }}
                 onCommentsUpdated={(comments) => {
                   setLocalRow((prev) => ({
                     ...prev,
@@ -251,9 +350,24 @@ export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
                     ),
                   }));
                 }}
+                permissions={permissions}
+                statusActionPending={
+                  statusActionPending?.dataEntryId === input.dataEntryId
+                    ? statusActionPending.toStatusId
+                    : null
+                }
+                onStatusChange={(toStatusId) => saveStatus(input, toStatusId)}
               />
             ))}
           </ul>
+          {statusActionError ? (
+            <p
+              className="mt-2 text-xs text-destructive"
+              role="alert"
+            >
+              {statusActionError}
+            </p>
+          ) : null}
         </ReviewKpiSection>
 
         <ReviewKpiSection

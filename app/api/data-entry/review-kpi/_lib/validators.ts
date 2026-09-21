@@ -95,11 +95,54 @@ export const parseUpdateInputPayload = (payload: unknown) => {
     throw new Error("VALIDATION:kpiDefId is required.");
   }
 
+  const confirmed =
+    "confirmed" in payload
+      ? (payload as { confirmed?: unknown }).confirmed
+      : undefined;
+
   return {
     value: value == null ? null : value,
     updatedAt,
     kpiDefId,
+    confirmed: confirmed === true,
   };
+};
+
+export const parseUpdateInputStatusPayload = (payload: unknown) => {
+  if (typeof payload !== "object" || payload == null) {
+    throw new Error("VALIDATION:Payload must be an object.");
+  }
+
+  const statusId =
+    "statusId" in payload
+      ? (payload as { statusId?: unknown }).statusId
+      : undefined;
+
+  if (typeof statusId !== "number" || !Number.isInteger(statusId)) {
+    throw new Error("VALIDATION:statusId is required.");
+  }
+
+  const updatedAt =
+    "updatedAt" in payload
+      ? (payload as { updatedAt?: unknown }).updatedAt
+      : undefined;
+
+  if (typeof updatedAt !== "string" || updatedAt.trim().length === 0) {
+    throw new Error("VALIDATION:updatedAt is required.");
+  }
+
+  if (Number.isNaN(Date.parse(updatedAt))) {
+    throw new Error("VALIDATION:updatedAt must be a valid ISO date.");
+  }
+
+  const kpiDefId =
+    "kpiDefId" in payload ? (payload as { kpiDefId?: unknown }).kpiDefId : undefined;
+
+  if (typeof kpiDefId !== "number" || !Number.isFinite(kpiDefId)) {
+    throw new Error("VALIDATION:kpiDefId is required.");
+  }
+
+  return { statusId, updatedAt, kpiDefId };
 };
 
 export const parseAddCommentPayload = (payload: unknown) => {
