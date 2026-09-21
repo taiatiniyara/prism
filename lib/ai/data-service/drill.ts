@@ -17,6 +17,33 @@ import type { AiToolResult } from "../types";
 // utility auto-widen are P2. Access is delegated to periodAccessPredicate;
 // dimensions resolve through resolveDimension (no hand-rolled dim→column map).
 
+/**
+ * Drill's additive summation over fact values — the SAME semantics as the SQL
+ * `SUM(value_numeric)` the tool runs: non-numeric/blank values are ignored, and
+ * an all-empty set sums to null (a gap), never 0. Exported so the lockstep
+ * contract test (vs the calculator engine's rollup) drives drill's real
+ * summation code rather than a re-mirror.
+ */
+export function sumDrillNumericValues(
+  values: Array<string | number | null>,
+): number | null {
+  let sum = 0;
+  let any = false;
+  for (const v of values) {
+    const n =
+      typeof v === "number"
+        ? v
+        : v == null || String(v).trim() === ""
+          ? NaN
+          : Number(v);
+    if (!Number.isNaN(n)) {
+      sum += n;
+      any = true;
+    }
+  }
+  return any ? sum : null;
+}
+
 export interface DrillRow {
   member?: string;
   value: number | null;
@@ -251,7 +278,7 @@ export const getMeasureDrill = async (
 
   // Grand total (additive only, when broken down).
   if (dimField && additive) {
-    total = rows.reduce((s, r) => s + (r.value ?? 0), 0);
+    total = sumDrillNumericValues(rows.map((r) => r.value));
   } else if (!dimField) {
     total = additive ? rows[0]?.value ?? null : null;
   }
