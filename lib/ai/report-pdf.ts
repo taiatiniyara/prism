@@ -3,17 +3,17 @@ import {
   DEFAULT_PDF_REPORT_STYLE,
   type PdfReportStyle,
 } from "./pdf-settings-constants";
+import type { PdfFontBuffers } from "./pdf-settings";
 
 /**
  * Server-side PDF generation for the AI performance report (the shape returned
- * by generatePerformanceReport → AutomatedReport). Uses pdfkit's built-in
- * Helvetica fonts only (no external font files), and is declared in
- * next.config `serverExternalPackages` so it loads from node_modules at runtime.
+ * by generatePerformanceReport → AutomatedReport). Declared in next.config
+ * `serverExternalPackages` so pdfkit loads from node_modules at runtime.
  *
- * The visual style (colours, type sizes, page size + margin) is supplied by a
- * `PdfReportStyle` — DEV/BMO configurable in AI Settings, persisted in
- * app_settings. It defaults to DEFAULT_PDF_REPORT_STYLE (the original hardcoded
- * look), so callers that don't pass one render exactly as before.
+ * Style (colours, type sizes, page size + margin) comes from a `PdfReportStyle`,
+ * and an optional `PdfFontBuffers` supplies a custom brand font — both DEV/BMO
+ * configurable in AI Settings, persisted in app_settings. With neither argument
+ * the report renders byte-identically to the original (Helvetica, default look).
  */
 
 export interface ReportPdfSection {
@@ -30,6 +30,13 @@ export interface ReportPdfInput {
   sections: ReportPdfSection[];
 }
 
+/** The three resolved face names used across the document. */
+interface Faces {
+  base: string;
+  bold: string;
+  italic: string;
+}
+
 const MAX_TABLE_ROWS = 200;
 
 const cell = (value: unknown): string =>
@@ -38,6 +45,7 @@ const cell = (value: unknown): string =>
 export async function renderReportPdf(
   report: ReportPdfInput,
   style: PdfReportStyle = DEFAULT_PDF_REPORT_STYLE,
+  fonts?: PdfFontBuffers,
 ): Promise<Buffer> {
   const INK = style.ink;
   const MUTED = style.muted;
@@ -51,6 +59,19 @@ export async function renderReportPdf(
     info: { Title: report.title || "PRISM Report" },
   });
 
+  // A custom brand font applies only when a Regular face is present; Bold/Italic
+  // fall back to Regular. Otherwise we use pdfkit's built-in Helvetica faces —
+  // so an unset font renders exactly as before.
+  const faces: Faces = { base: "Helvetica", bold: "Helvetica-Bold", italic: "Helvetica-Oblique" };
+  if (fonts?.regular) {
+    doc.registerFont("Brand", fonts.regular);
+    doc.registerFont("Brand-Bold", fonts.bold ?? fonts.regular);
+    doc.registerFont("Brand-Italic", fonts.italic ?? fonts.regular);
+    faces.base = "Brand";
+    faces.bold = "Brand-Bold";
+    faces.italic = "Brand-Italic";
+  }
+
   const chunks: Buffer[] = [];
   doc.on("data", (c: Buffer) => chunks.push(c));
   const done = new Promise<void>((resolve) => doc.on("end", () => resolve()));
@@ -62,17 +83,17 @@ export async function renderReportPdf(
 
   // ── Header ───────────────────────────────────────────────
   doc
-    .font("Helvetica-Bold")
+    .font(faces.bold)
     .fontSize(9)
     .fillColor(ACCENT)
     .text("PRISM · Pacific Power Association", left, doc.y);
   doc
-    .font("Helvetica-Bold")
+    .font(faces.bold)
     .fontSize(style.titleSize)
     .fillColor(INK)
     .text(report.title || "Performance Report", { width: usableWidth });
   doc
-    .font("Helvetica")
+    .font(faces.base)
     .fontSize(9)
     .fillColor(MUTED)
     .text(
@@ -93,13 +114,13 @@ export async function renderReportPdf(
     // headings (12 vs 13). Keep that relationship so an unset style renders
     // byte-identically, while still tracking the configurable heading size.
     doc
-      .font("Helvetica-Bold")
+      .font(faces.bold)
       .fontSize(style.headingSize - 1)
       .fillColor(INK)
       .text("Executive Summary");
     doc.moveDown(0.2);
     doc
-      .font("Helvetica")
+      .font(faces.base)
       .fontSize(style.bodySize)
       .fillColor(INK)
       .text(report.executive_summary, { width: usableWidth });
@@ -111,7 +132,7 @@ export async function renderReportPdf(
     if (doc.y + 60 > bottom) doc.addPage();
 
     doc
-      .font("Helvetica-Bold")
+      .font(faces.bold)
       .fontSize(style.headingSize)
       .fillColor(INK)
       .text(section.heading || "", { width: usableWidth });
@@ -119,7 +140,7 @@ export async function renderReportPdf(
 
     if (section.content) {
       doc
-        .font("Helvetica")
+        .font(faces.base)
         .fontSize(style.bodySize)
         .fillColor(INK)
         .text(section.content, { width: usableWidth });
@@ -135,13 +156,14 @@ export async function renderReportPdf(
         section.data_table.columns,
         section.data_table.rows ?? [],
         style,
+        faces,
       );
       doc.moveDown(0.3);
     }
 
     if (section.insight) {
       doc
-        .font("Helvetica-Oblique")
+        .font(faces.italic)
         .fontSize(style.bodySize)
         .fillColor(ACCENT)
         .text(`Insight: ${section.insight}`, { width: usableWidth });
@@ -162,6 +184,7 @@ function drawTable(
   columns: string[],
   rows: Record<string, unknown>[],
   style: PdfReportStyle,
+  faces: Faces,
 ): void {
   const colWidth = usableWidth / columns.length;
   const rowHeight = 18;
@@ -170,7 +193,7 @@ function drawTable(
     if (doc.y + rowHeight > bottom) doc.addPage();
     const y = doc.y;
     doc
-      .font(header ? "Helvetica-Bold" : "Helvetica")
+      .font(header ? faces.bold : faces.base)
       .fontSize(style.tableFontSize)
       .fillColor(header ? style.ink : "#374151");
     values.forEach((value, i) => {
@@ -200,7 +223,7 @@ function drawTable(
   }
   if (rows.length > MAX_TABLE_ROWS) {
     doc
-      .font("Helvetica-Oblique")
+      .font(faces.italic)
       .fontSize(8)
       .fillColor(style.muted)
       .text(`… ${rows.length - MAX_TABLE_ROWS} more rows omitted`, left, doc.y + 2);
