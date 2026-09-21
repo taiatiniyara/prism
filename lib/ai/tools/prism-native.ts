@@ -702,7 +702,7 @@ export function createPrismNativeTools(
 
     generate_export: tool({
       description:
-        "Generate a downloadable CSV or Excel report from analysis results. Use when the user asks to export results, create a report, or download data.",
+        "Prepare a downloadable CSV/Excel report from analysis results. Use when the user asks to export, save, or download data, or wants a report. Pass the title, columns, and rows; the result tells you to render that data as a `table` visualization, which displays with Download CSV / Download Excel buttons. Do NOT promise a link — the download is a button on the table.",
       inputSchema: z.object({
         title: z.string().describe("Report title."),
         columns: z.array(z.string()).describe("Column headers."),
