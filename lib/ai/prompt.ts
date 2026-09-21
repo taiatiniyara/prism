@@ -302,6 +302,7 @@ Call render_visualization whenever a chart or table conveys the answer better th
 - **leaderboard** — rankings ("top/bottom performing utility"). Clearer than a bar chart for pure ranking; order best→worst for the metric.
 - **bar-chart** — compare ONE metric across categories (utilities, technologies, periods). Sort descending by value unless the category has a natural order.
 - **line-chart** — a metric's trend across ordered periods/years. One line per entity for multi-utility trends.
+- **area-chart** — a trend where the filled magnitude matters (e.g. total generation over time), or composition-over-time via \`stacked: true\` (e.g. generation mix by source across years). For a plain multi-entity trend comparison, prefer line-chart; stack only additive parts-of-a-whole.
 - **scatter** — correlation between two metrics (one point per utility).
 - **table** — detailed multi-column data that isn't one clean comparison.
 - **radar** — profile one/few utilities across several metrics; **sankey/heatmap** — flows / matrices.

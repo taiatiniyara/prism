@@ -1,4 +1,5 @@
 import type {
+  AiAreaChartVisualization,
   AiBarChartVisualization,
   AiLineChartVisualization,
 } from "./types";
@@ -10,6 +11,7 @@ export const VISUALIZATION_TYPES = new Set([
   "table",
   "bar-chart",
   "line-chart",
+  "area-chart",
   "leaderboard",
   "sankey",
   "heatmap",
@@ -82,7 +84,7 @@ const toNumOrNull = (v: unknown): number | null =>
   typeof v === "number" && Number.isFinite(v) ? v : null;
 
 export function normalizeLineChart(
-  d: AiLineChartVisualization,
+  d: AiLineChartVisualization | AiAreaChartVisualization,
 ): NormalizedChartOptions {
   const referenceLine =
     d.reference_line && typeof d.reference_line.value === "number"
@@ -182,6 +184,18 @@ export function normalizeLineChart(
   }
 
   return { title: d.title, rows: [], seriesKeys: [], referenceLine, referenceArea };
+}
+
+/**
+ * Area charts carry the exact same data model as line charts (single-series
+ * {label,value}, multi-series {name,data}, or the flexible data/x_key/y_keys
+ * form) — only the mark differs (filled area, optionally stacked). Reuse the
+ * line normalizer so the two can never drift in how they read a spec.
+ */
+export function normalizeAreaChart(
+  d: AiAreaChartVisualization,
+): NormalizedChartOptions {
+  return normalizeLineChart(d);
 }
 
 export function normalizeBarChart(

@@ -2,6 +2,7 @@ export type AiVisualizationType =
   | "table"
   | "bar-chart"
   | "line-chart"
+  | "area-chart"
   | "leaderboard"
   | "sankey"
   | "heatmap"
@@ -50,6 +51,25 @@ export interface AiLineChartVisualization {
   reference_area?: { label?: string; lower: number; upper: number };
 }
 
+export interface AiAreaChartVisualization {
+  type: "area-chart";
+  title: string;
+  series?:
+    | Array<{ label: string; value: number }>
+    | Array<{ name: string; data: Array<Record<string, string | number | null>> }>;
+  data?: Array<Record<string, string | number | null>>;
+  x_key?: string;
+  y_keys?: string[];
+  x_label?: string;
+  y_label?: string;
+  unit?: string;
+  description?: string;
+  /** Stack multiple series into a cumulative area (e.g. energy mix over time). */
+  stacked?: boolean;
+  reference_line?: { label?: string; value: number };
+  reference_area?: { label?: string; lower: number; upper: number };
+}
+
 export interface AiLeaderboardVisualization {
   type: "leaderboard";
   title: string;
@@ -90,6 +110,7 @@ export type AiVisualization =
   | AiTableVisualization
   | AiBarChartVisualization
   | AiLineChartVisualization
+  | AiAreaChartVisualization
   | AiLeaderboardVisualization
   | AiSankeyVisualization
   | AiHeatmapVisualization
@@ -229,7 +250,7 @@ export interface AiGuardrailResult {
   reason?: string;
 }
 
-export const AI_PROMPT_VERSION = "2026-09-21-viz-acronym";
+export const AI_PROMPT_VERSION = "2026-09-21-area-chart";
 
 export const AI_MODELS = {
   primary: "claude-sonnet-4-6",
