@@ -36,6 +36,15 @@ export default async function SettingsHomePage() {
         href: "/settings/kpi-formula-guide",
       });
     }
+    // AI Settings hosts the DEV-only data-source config plus the DEV/BMO PDF
+    // report styling — surface it for BMO too (the DB sidebar row is DEV-only),
+    // de-duped against the DB-driven list above. The page enforces DEV/BMO.
+    if (!cards.some((c) => c.href === "/settings/ai-settings")) {
+      cards.push({
+        label: "AI Settings",
+        href: "/settings/ai-settings",
+      });
+    }
   }
 
   return (
