@@ -6,6 +6,7 @@ import {
   BarChart as RechartsBarChart,
   CartesianGrid,
   Cell,
+  Label,
   LabelList,
   ReferenceArea,
   ReferenceLine,
@@ -30,17 +31,6 @@ import { VisualizationCard } from "./visualization-card";
 import { useChartTheme } from "./visualization-theme";
 import type { AiBarChartVisualization } from "@/lib/ai/types";
 
-const SERIES_COLORS = [
-  "#6366f1",
-  "#f59e0b",
-  "#10b981",
-  "#ef4444",
-  "#8b5cf6",
-  "#06b6d4",
-  "#84cc16",
-  "#f97316",
-];
-
 interface BarChartViewProps {
   data: AiBarChartVisualization;
   onAskFollowUp?: (text: string) => void;
@@ -50,7 +40,14 @@ export function BarChartView({ data, onAskFollowUp }: BarChartViewProps) {
   const { title, rows, seriesKeys, unit, colorPositive, colorNegative, referenceLine, referenceArea } =
     normalizeBarChart(data);
   const theme = useChartTheme();
-  const [showLabels, setShowLabels] = useState(false);
+  const singleSeriesInit = seriesKeys.length === 1;
+  // Small single-metric comparisons read best with the values on the bars, so
+  // default them on; dense/multi-series charts stay clean (toggle available).
+  const [showLabels, setShowLabels] = useState(singleSeriesInit && rows.length <= 12);
+  const xAxisTitle = data.x_label?.trim() || undefined;
+  const yAxisTitle =
+    [data.y_label?.trim(), unit ? `(${unit})` : ""].filter(Boolean).join(" ") ||
+    undefined;
   const [suggestion, setSuggestion] = useState("");
   const captureRef = useRef<HTMLDivElement>(null);
 
@@ -83,7 +80,15 @@ export function BarChartView({ data, onAskFollowUp }: BarChartViewProps) {
   const renderChart = (height: number) => (
     <div className="w-full">
       <ResponsiveContainer width="100%" height={height}>
-        <RechartsBarChart data={rows}>
+        <RechartsBarChart
+          data={rows}
+          margin={{
+            top: showLabels ? 20 : 8,
+            right: 12,
+            bottom: xAxisTitle ? 24 : 4,
+            left: yAxisTitle ? 12 : 0,
+          }}
+        >
           <CartesianGrid
             strokeDasharray="3 3"
             stroke={theme.gridColor}
@@ -93,12 +98,31 @@ export function BarChartView({ data, onAskFollowUp }: BarChartViewProps) {
             dataKey="label"
             tick={{ fontSize: 12, fill: theme.mutedColor }}
             tickFormatter={(v: string) => (v.length > 20 ? `${v.slice(0, 18)}…` : v)}
-          />
+            height={xAxisTitle ? 44 : 30}
+          >
+            {xAxisTitle && (
+              <Label
+                value={xAxisTitle}
+                position="insideBottom"
+                offset={-2}
+                style={{ fontSize: 12, fill: theme.mutedColor, textAnchor: "middle" }}
+              />
+            )}
+          </XAxis>
           <YAxis
             tick={{ fontSize: 12, fill: theme.mutedColor }}
             tickFormatter={(v: number) => fmtNumber(v)}
-            width={56}
-          />
+            width={yAxisTitle ? 72 : 56}
+          >
+            {yAxisTitle && (
+              <Label
+                value={yAxisTitle}
+                angle={-90}
+                position="insideLeft"
+                style={{ fontSize: 12, fill: theme.mutedColor, textAnchor: "middle" }}
+              />
+            )}
+          </YAxis>
           <Tooltip
             cursor={{ fill: theme.gridColor, fillOpacity: 0.1 }}
             formatter={(value) =>
@@ -118,7 +142,7 @@ export function BarChartView({ data, onAskFollowUp }: BarChartViewProps) {
             <Bar
               key={key}
               dataKey={key}
-              fill={singleSeries ? "hsl(var(--primary))" : SERIES_COLORS[idx % SERIES_COLORS.length]}
+              fill={singleSeries ? theme.seriesColors[0] : theme.seriesColors[idx % theme.seriesColors.length]}
               radius={[4, 4, 0, 0]}
               onClick={singleSeries ? handleCellClick : undefined}
             >
