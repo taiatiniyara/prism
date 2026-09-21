@@ -64,12 +64,21 @@ export async function renderReportPdf(
   // so an unset font renders exactly as before.
   const faces: Faces = { base: "Helvetica", bold: "Helvetica-Bold", italic: "Helvetica-Oblique" };
   if (fonts?.regular) {
-    doc.registerFont("Brand", fonts.regular);
-    doc.registerFont("Brand-Bold", fonts.bold ?? fonts.regular);
-    doc.registerFont("Brand-Italic", fonts.italic ?? fonts.regular);
-    faces.base = "Brand";
-    faces.bold = "Brand-Bold";
-    faces.italic = "Brand-Italic";
+    // A font can pass magic-byte validation yet still be corrupt/unsupported by
+    // pdfkit's parser — registerFont would throw and 500 the whole download.
+    // Fall back to Helvetica rather than fail the report.
+    try {
+      doc.registerFont("Brand", fonts.regular);
+      doc.registerFont("Brand-Bold", fonts.bold ?? fonts.regular);
+      doc.registerFont("Brand-Italic", fonts.italic ?? fonts.regular);
+      faces.base = "Brand";
+      faces.bold = "Brand-Bold";
+      faces.italic = "Brand-Italic";
+    } catch {
+      faces.base = "Helvetica";
+      faces.bold = "Helvetica-Bold";
+      faces.italic = "Helvetica-Oblique";
+    }
   }
 
   const chunks: Buffer[] = [];
