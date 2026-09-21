@@ -15,6 +15,14 @@ export interface AiReportSection {
   heading: string;
   content?: string;
   insight?: string;
+  /**
+   * INTENTIONAL divergence from AiTableVisualization (agreed #3↔#4): a report's
+   * table uses **keyed rows** (`{ Column: value }`) — the model can't misalign a
+   * value to the wrong column, and it matches the /api/ai/report-pdf input
+   * verbatim. AiTableVisualization uses compact **positional** rows because it's
+   * Zod-validated via render_visualization. If ever unified, we go keyed-rows
+   * everywhere — a separate deliberate change, not a bug to reconcile.
+   */
   data_table?: { columns: string[]; rows: Record<string, unknown>[] };
 }
 
@@ -271,7 +279,7 @@ export interface AiGuardrailResult {
   reason?: string;
 }
 
-export const AI_PROMPT_VERSION = "2026-09-21-area-chart";
+export const AI_PROMPT_VERSION = "2026-09-21-report-pdf";
 
 export const AI_MODELS = {
   primary: "claude-sonnet-4-6",
