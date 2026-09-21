@@ -99,6 +99,7 @@ export const getRiskAssessment = async (
 export interface DataQualityIssue {
   kpi_name: string;
   utility_name: string;
+  utility_acronym: string;
   period: string;
   actual_value: number | null;
   expected_range: string;
@@ -134,7 +135,7 @@ export const getDataQualityReport = async (
   }
 
   const result = await db.execute(sql`
-    SELECT kpi_instance_id, kpi_name, actual_value, utility_name, report_date, limits
+    SELECT kpi_instance_id, kpi_name, actual_value, utility_name, utility_acronym, report_date, limits
     FROM gold.fact_kpi
 WHERE report_period_id = ANY(${intArrayParam(periodIds)})
     LIMIT 200
@@ -145,6 +146,7 @@ WHERE report_period_id = ANY(${intArrayParam(periodIds)})
     kpi_name: string;
     actual_value: string | null;
     utility_name: string;
+    utility_acronym: string | null;
     report_date: string;
     limits: Array<{ lower?: number | null; upper?: number | null }> | null;
   }>;
@@ -159,6 +161,7 @@ WHERE report_period_id = ANY(${intArrayParam(periodIds)})
       issues.push({
         kpi_name: row.kpi_name,
         utility_name: row.utility_name,
+        utility_acronym: row.utility_acronym ?? row.utility_name,
         period: String(row.report_date),
         actual_value: val,
         expected_range: ">= 0",
@@ -175,6 +178,7 @@ WHERE report_period_id = ANY(${intArrayParam(periodIds)})
         issues.push({
           kpi_name: row.kpi_name,
           utility_name: row.utility_name,
+          utility_acronym: row.utility_acronym ?? row.utility_name,
           period: String(row.report_date),
           actual_value: val,
           expected_range: `${min} - ${max ?? "∞"}`,
@@ -187,6 +191,7 @@ WHERE report_period_id = ANY(${intArrayParam(periodIds)})
         issues.push({
           kpi_name: row.kpi_name,
           utility_name: row.utility_name,
+          utility_acronym: row.utility_acronym ?? row.utility_name,
           period: String(row.report_date),
           actual_value: val,
           expected_range: `${min ?? "0"} - ${max}`,

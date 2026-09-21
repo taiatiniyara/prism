@@ -210,6 +210,9 @@ export interface KpiAccessInfo {
 
 export interface MultiUtilityKpiValue {
   utility_name: string;
+  /** Short utility abbreviation from gold.dim_utility — use for chart axis
+   *  labels / legends so cross-utility charts stay compact and consistent. */
+  utility_acronym: string;
   kpi_name: string;
   value: number;
   rank: number;
@@ -317,7 +320,7 @@ export const compareKpisAcrossUtilities = async (
       AND kpi_name ILIKE ANY(${sql.param(patterns)}::text[])`;
 
     const result = await db.execute(sql`
-      SELECT kpi_name, actual_value, utility_name, report_date
+      SELECT kpi_name, actual_value, utility_name, utility_acronym, report_date
       FROM gold.fact_kpi
       WHERE ${filter}
       ${options.utility_id != null ? sql`AND utility_id = ${options.utility_id}` : sql``}
@@ -328,6 +331,7 @@ export const compareKpisAcrossUtilities = async (
       kpi_name: string;
       actual_value: string | null;
       utility_name: string;
+      utility_acronym: string | null;
       report_date: string;
     }>;
 
@@ -335,7 +339,13 @@ export const compareKpisAcrossUtilities = async (
       .map((r) => {
         const val = r.actual_value ? parseFloat(r.actual_value) : NaN;
         if (isNaN(val)) return null;
-        return { utility_name: r.utility_name ?? "N/A", kpi_name: r.kpi_name, value: Math.round(val * 100) / 100, rank: 0 };
+        return {
+          utility_name: r.utility_name ?? "N/A",
+          utility_acronym: r.utility_acronym ?? r.utility_name ?? "N/A",
+          kpi_name: r.kpi_name,
+          value: Math.round(val * 100) / 100,
+          rank: 0,
+        };
       })
       .filter((v): v is MultiUtilityKpiValue => v != null)
       .sort((a, b) => a.value - b.value);

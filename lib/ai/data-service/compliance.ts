@@ -8,6 +8,7 @@ import type { AiToolResult } from "../types";
 export interface ComplianceIssue {
   kpi_name: string;
   utility_name: string;
+  utility_acronym: string;
   period: string;
   actual_value: string;
   limit_lower: number | null;
@@ -50,7 +51,7 @@ export const getComplianceStatus = async (
   }
 
   const result = await db.execute(sql`
-    SELECT kpi_name, actual_value, limits, utility_name, report_date
+    SELECT kpi_name, actual_value, limits, utility_name, utility_acronym, report_date
     FROM gold.fact_kpi
 WHERE report_period_id = ANY(${intArrayParam(periodIds)})
       AND limits IS NOT NULL
@@ -62,6 +63,7 @@ WHERE report_period_id = ANY(${intArrayParam(periodIds)})
     actual_value: string | null;
     limits: Array<{ lower?: number | null; upper?: number | null }> | null;
     utility_name: string;
+    utility_acronym: string | null;
     report_date: string;
   }>;
 
@@ -78,6 +80,7 @@ WHERE report_period_id = ANY(${intArrayParam(periodIds)})
       issues.push({
         kpi_name: row.kpi_name,
         utility_name: row.utility_name ?? "N/A",
+        utility_acronym: row.utility_acronym ?? row.utility_name ?? "N/A",
         period: String(row.report_date),
         actual_value: row.actual_value ?? "N/A",
         limit_lower: limits.lower ?? null,
@@ -93,6 +96,7 @@ WHERE report_period_id = ANY(${intArrayParam(periodIds)})
       issues.push({
         kpi_name: row.kpi_name,
         utility_name: row.utility_name ?? "N/A",
+        utility_acronym: row.utility_acronym ?? row.utility_name ?? "N/A",
         period: String(row.report_date),
         actual_value: row.actual_value ?? "N/A",
         limit_lower: limits.lower,
@@ -108,6 +112,7 @@ WHERE report_period_id = ANY(${intArrayParam(periodIds)})
       issues.push({
         kpi_name: row.kpi_name,
         utility_name: row.utility_name ?? "N/A",
+        utility_acronym: row.utility_acronym ?? row.utility_name ?? "N/A",
         period: String(row.report_date),
         actual_value: row.actual_value ?? "N/A",
         limit_lower: limits.lower ?? null,
@@ -122,6 +127,7 @@ WHERE report_period_id = ANY(${intArrayParam(periodIds)})
     issues.push({
       kpi_name: row.kpi_name,
       utility_name: row.utility_name ?? "N/A",
+      utility_acronym: row.utility_acronym ?? row.utility_name ?? "N/A",
       period: String(row.report_date),
       actual_value: row.actual_value ?? "N/A",
       limit_lower: limits.lower ?? null,
