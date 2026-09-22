@@ -1,6 +1,6 @@
 import { getAccessibleReportPeriods } from "./common";
 import type { CurrentUser } from "@/lib/user.service";
-import { hasBenchmarkAccess } from "@/lib/user.service";
+import { hasGlobalUtilityAccess } from "@/lib/user.service";
 import { createToolMetadata } from "./common";
 import type { AiToolResult } from "../types";
 
@@ -26,7 +26,13 @@ export const getTrendAnalysis = async (
     all_utilities?: boolean;
   } = {},
 ): Promise<AiToolResult<TrendData>> => {
-  const forceAllUtilities = options.all_utilities ?? hasBenchmarkAccess(user);
+  // Family A (#10 ruling): "submission/data-entry status is own-utility
+  // operational/workflow data, never cross-utility for a utility persona." A
+  // completion rate is submission status aggregated, so only a global caller
+  // (BMO/DEV) sees other utilities' progress. Hard-gate — a non-global caller
+  // can't force it via all_utilities either (matches getKpiStatus, #566).
+  const canSeeAll = hasGlobalUtilityAccess(user);
+  const forceAllUtilities = canSeeAll ? options.all_utilities ?? true : false;
   const periods = await getAccessibleReportPeriods(user, {
     forceAllUtilities,
   });
