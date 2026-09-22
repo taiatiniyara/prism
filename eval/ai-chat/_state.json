@@ -1,0 +1,70 @@
+{
+  "flow": "ai-chat",
+  "entry_point": "lib/ai/service.ts runAiStream (same path as app/api/ai/chat/route.ts)",
+  "metrics": [
+    {
+      "id": "faithful",
+      "label": "Faithful",
+      "kind": "binary"
+    },
+    {
+      "id": "answers",
+      "label": "Answers Q",
+      "kind": "binary"
+    },
+    {
+      "id": "scoped",
+      "label": "Right scope",
+      "kind": "binary"
+    },
+    {
+      "id": "honest",
+      "label": "Honest gaps",
+      "kind": "binary"
+    },
+    {
+      "id": "tenancy",
+      "label": "Tenancy",
+      "kind": "binary"
+    },
+    {
+      "id": "non_empty",
+      "label": "Non-empty",
+      "kind": "binary"
+    },
+    {
+      "id": "no_fake_link",
+      "label": "No fake link",
+      "kind": "binary"
+    },
+    {
+      "id": "viz_ok",
+      "label": "Viz ok",
+      "kind": "binary"
+    }
+  ],
+  "perf_fields": [
+    {
+      "id": "latency_s",
+      "label": "Latency",
+      "unit": "s"
+    },
+    {
+      "id": "tool_calls",
+      "label": "Tool calls"
+    },
+    {
+      "id": "out_tokens",
+      "label": "Out tokens"
+    },
+    {
+      "id": "cost_usd",
+      "label": "Cost",
+      "unit": "$"
+    }
+  ],
+  "harness_paths": [
+    "scripts/ai-eval.ts",
+    "eval/ai-chat/cases.json"
+  ]
+}

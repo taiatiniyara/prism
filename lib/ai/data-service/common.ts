@@ -3,7 +3,7 @@ import { organisations } from "@/db/schema/utility";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { eq, desc, and, or, sql, type SQL } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
-import { hasBenchmarkAccess } from "@/lib/user.service";
+import { hasBenchmarkAccess, hasGlobalUtilityAccess } from "@/lib/user.service";
 import { GetReportPeriods, type ReportPeriodDTO } from "@/app/data-entry/service";
 import type { GetReportPeriodsOptions } from "@/app/data-entry/service";
 import type { AiToolMetadata } from "../types";
@@ -307,6 +307,130 @@ export const resolvePeriod = async (
     .limit(1);
 
   return period ?? null;
+};
+
+// ── Own-utility period access (§3.6 primitive, period grain — #10 ruling) ─────
+// Family-A OPERATIONAL tools (review queue, input status, completeness,
+// compliance) must NEVER reach another utility's period. Unlike
+// periodAccessPredicate (which grants benchmark-access roles the cross-utility
+// FY escape — correct for Family-B benchmarking), these gate on
+// hasGlobalUtilityAccess only: global (BMO/DEV) → all; a utility role → own org
+// ONLY (no FY escape); a non-global user with a null org → FAIL CLOSED.
+// periodAccessPredicate + resolvePeriod/resolveComparisonPeriodIds stay unchanged
+// for Family-B.
+
+export const ownUtilityPeriodPredicate = (user: CurrentUser): SQL | undefined => {
+  if (hasGlobalUtilityAccess(user)) return undefined; // BMO/DEV → all utilities
+  if (user.org_id == null) return sql`false`; // non-global + no org → match nothing
+  return eq(reportPeriods.utility_id, user.org_id);
+};
+
+export const isOwnUtilityPeriodAccessible = async (
+  user: CurrentUser,
+  periodId: number,
+): Promise<boolean> => {
+  if (hasGlobalUtilityAccess(user)) return true;
+  if (user.org_id == null) return false;
+  const [row] = await db
+    .select({ utilityId: reportPeriods.utility_id })
+    .from(reportPeriods)
+    .where(eq(reportPeriods.id, periodId))
+    .limit(1);
+  return !!row && row.utilityId === user.org_id;
+};
+
+/** Own-utility variant of resolvePeriod (own-org only; foreign/absent → own). */
+export const resolveOwnUtilityPeriod = async (
+  user: CurrentUser,
+  options: ResolvePeriodOptions = {},
+): Promise<{
+  id: number;
+  display: Date;
+  utility: string | null;
+  utilityId: number;
+} | null> => {
+  if (options.report_period_id) {
+    if (!(await isOwnUtilityPeriodAccessible(user, options.report_period_id))) {
+      return null;
+    }
+    const [period] = await db
+      .select({
+        id: reportPeriods.id,
+        display: reportPeriods.report_date,
+        utility: organisations.acronym,
+        utilityId: reportPeriods.utility_id,
+      })
+      .from(reportPeriods)
+      .innerJoin(organisations, eq(reportPeriods.utility_id, organisations.id))
+      .where(eq(reportPeriods.id, options.report_period_id))
+      .limit(1);
+    return period ?? null;
+  }
+
+  const predicates: SQL[] = [];
+  const access = ownUtilityPeriodPredicate(user);
+  if (access) predicates.push(access);
+  if (options.year) {
+    predicates.push(sql`EXTRACT(YEAR FROM ${reportPeriods.report_date}) = ${options.year}`);
+  }
+  if (options.month) {
+    predicates.push(sql`EXTRACT(MONTH FROM ${reportPeriods.report_date}) = ${options.month}`);
+  }
+
+  const [period] = await db
+    .select({
+      id: reportPeriods.id,
+      display: reportPeriods.report_date,
+      utility: organisations.acronym,
+      utilityId: reportPeriods.utility_id,
+    })
+    .from(reportPeriods)
+    .innerJoin(organisations, eq(reportPeriods.utility_id, organisations.id))
+    .where(predicates.length > 0 ? and(...predicates) : sql`TRUE`)
+    .orderBy(desc(reportPeriods.report_date))
+    .limit(1);
+
+  return period ?? null;
+};
+
+/** Own-utility variant of resolveComparisonPeriodIds (own-org period ids only). */
+export const resolveOwnUtilityComparisonPeriodIds = async (
+  user: CurrentUser,
+  options: ResolvePeriodOptions = {},
+): Promise<number[]> => {
+  let year = options.year ?? null;
+  let month = options.month ?? null;
+
+  if (options.report_period_id && year == null) {
+    if (!(await isOwnUtilityPeriodAccessible(user, options.report_period_id))) {
+      return [];
+    }
+    const [period] = await db
+      .select({ reportDate: reportPeriods.report_date })
+      .from(reportPeriods)
+      .where(eq(reportPeriods.id, options.report_period_id))
+      .limit(1);
+    if (!period) return [];
+    year = period.reportDate.getFullYear();
+    month = month ?? period.reportDate.getMonth() + 1;
+  }
+
+  const predicates: SQL[] = [];
+  const access = ownUtilityPeriodPredicate(user);
+  if (access) predicates.push(access);
+  if (year != null) {
+    predicates.push(sql`EXTRACT(YEAR FROM ${reportPeriods.report_date}) = ${year}`);
+  }
+  if (month != null) {
+    predicates.push(sql`EXTRACT(MONTH FROM ${reportPeriods.report_date}) = ${month}`);
+  }
+
+  const periods = await db
+    .select({ id: reportPeriods.id })
+    .from(reportPeriods)
+    .where(predicates.length > 0 ? and(...predicates) : sql`TRUE`);
+
+  return periods.map((p) => p.id);
 };
 
 export const MANAGED_LIST_PARENT_IDS = {

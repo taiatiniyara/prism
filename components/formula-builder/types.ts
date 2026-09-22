@@ -158,6 +158,12 @@ export interface SaveResult {
 export interface RecomputeResult {
   processed: number;
   failed: number;
+  /**
+   * Periods where the KPI/measure does not apply (no inputs reported) — surfaced
+   * separately so they don't inflate the failure count. Optional for back-compat
+   * with callers/paths that don't distinguish it (treated as 0).
+   */
+  notApplicable?: number;
   byPeriod: Array<{
     reportPeriodId: number;
     kpiDefId: number;

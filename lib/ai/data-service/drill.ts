@@ -176,6 +176,15 @@ export const getMeasureDrill = async (
       )
       .limit(1);
     if (!org) return empty(notes, `Utility "${u}" not found.`);
+    // Own-utility scope (#10 Family A): drill_measure exposes RAW fact-grain
+    // measures (data_entries value_numeric, sub-dimensional), which are NOT part
+    // of the approved cross-utility benchmarking surface. A non-global caller may
+    // therefore only name their OWN utility. Without this guard the period filter
+    // below relies on periodAccessPredicate, whose FY-report-type allowance lets a
+    // benchmark-access utility role read another utility's fact grain — a leak.
+    if (!hasGlobalUtilityAccess(user) && org.id !== user.org_id) {
+      return empty(notes, `Drill-down is scoped to your own utility; "${u}" isn't available to you.`);
+    }
     utilityId = org.id;
     utilityLabel = org.acronym ?? org.name;
   } else if (user.org_id != null) {

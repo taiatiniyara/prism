@@ -58,3 +58,9 @@ next-env.d.ts
 .claude/launch.json
 
 graphify-out/
+
+# AI eval (scripts/ai-eval.ts): bulky/derived outputs stay out; cases, metrics, results.jsonl are committed
+eval/**/traces/
+eval/**/report.html
+eval/**/state.json
+eval/**/trajectory/

@@ -174,6 +174,7 @@ export type AiToolName =
   | "get_kpi_correlation"
   | "compare_kpis_across_utilities"
   | "drill_measure"
+  | "get_benchmark_report_data"
   | "generate_export"
   | "get_country_hierarchy"
   | "get_industry_benchmarks"
@@ -279,7 +280,7 @@ export interface AiGuardrailResult {
   reason?: string;
 }
 
-export const AI_PROMPT_VERSION = "2026-09-21-lean-reports";
+export const AI_PROMPT_VERSION = "2026-09-22-report-activation";
 
 export const AI_MODELS = {
   primary: "claude-sonnet-4-6",

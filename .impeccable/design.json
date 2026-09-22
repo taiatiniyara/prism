@@ -1,0 +1,162 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-09-22T00:00:00Z",
+  "title": "Design System: PRISM",
+  "extensions": {
+    "colorMeta": {
+      "signal-amber": { "role": "primary", "displayName": "Signal Amber", "canonical": "oklch(0.769 0.163 70.4)", "hexApprox": "#f59e0b", "tonalRamp": ["oklch(0.25 0.09 70.4)", "oklch(0.35 0.12 70.4)", "oklch(0.45 0.15 70.4)", "oklch(0.55 0.163 70.4)", "oklch(0.65 0.163 70.4)", "oklch(0.769 0.163 70.4)", "oklch(0.87 0.11 70.4)", "oklch(0.95 0.05 70.4)"] },
+      "console-navy": { "role": "primary", "displayName": "Console Navy", "canonical": "oklch(0.21 0.034 264.665)", "tonalRamp": ["oklch(0.13 0.028 261.7)", "oklch(0.21 0.034 264.665)", "oklch(0.278 0.033 256.8)", "oklch(0.37 0.034 264.7)", "oklch(0.551 0.027 264.4)", "oklch(0.707 0.022 261.3)", "oklch(0.928 0.006 264.5)", "oklch(0.985 0.002 247.8)"] },
+      "ink": { "role": "neutral", "displayName": "Ink", "canonical": "oklch(0.13 0.028 261.692)", "tonalRamp": ["oklch(0.13 0.028 261.692)", "oklch(0.21 0.034 264.665)", "oklch(0.278 0.033 256.848)", "oklch(0.37 0.03 262)", "oklch(0.551 0.027 264.364)", "oklch(0.707 0.022 261.325)", "oklch(0.928 0.006 264.531)", "oklch(0.993 0.002 264.5)"] },
+      "cool-paper": { "role": "neutral", "displayName": "Cool Paper", "canonical": "oklch(0.993 0.002 264.5)", "hexApprox": "#fbfcfd" },
+      "sheet-white": { "role": "neutral", "displayName": "Sheet White", "canonical": "oklch(1 0 0)" },
+      "panel-grey": { "role": "neutral", "displayName": "Panel Grey", "canonical": "oklch(0.967 0.003 264.542)" },
+      "annotation-grey": { "role": "neutral", "displayName": "Annotation Grey", "canonical": "oklch(0.551 0.027 264.364)" },
+      "rule-line": { "role": "neutral", "displayName": "Rule Line", "canonical": "oklch(0.928 0.006 264.531)" },
+      "focus-slate": { "role": "neutral", "displayName": "Focus Slate", "canonical": "oklch(0.707 0.022 261.325)" },
+      "approved-green": { "role": "secondary", "displayName": "Approved Green", "canonical": "oklch(0.598 0.145 148)", "hexApprox": "#16a34a", "tonalRamp": ["oklch(0.2 0.06 148)", "oklch(0.3 0.09 148)", "oklch(0.4 0.12 148)", "oklch(0.5 0.14 148)", "oklch(0.598 0.145 148)", "oklch(0.72 0.13 148)", "oklch(0.86 0.08 148)", "oklch(0.95 0.03 148)"] },
+      "caution-amber": { "role": "secondary", "displayName": "Caution Amber", "canonical": "oklch(0.705 0.162 57)", "hexApprox": "#d97706", "tonalRamp": ["oklch(0.25 0.08 57)", "oklch(0.35 0.11 57)", "oklch(0.45 0.14 57)", "oklch(0.55 0.16 57)", "oklch(0.705 0.162 57)", "oklch(0.8 0.13 57)", "oklch(0.9 0.08 57)", "oklch(0.96 0.03 57)"] },
+      "fault-red": { "role": "secondary", "displayName": "Fault Red", "canonical": "oklch(0.577 0.245 27.325)", "hexApprox": "#dc2626", "tonalRamp": ["oklch(0.2 0.09 27)", "oklch(0.3 0.13 27)", "oklch(0.4 0.18 27)", "oklch(0.5 0.22 27)", "oklch(0.577 0.245 27.325)", "oklch(0.7 0.19 27)", "oklch(0.85 0.1 27)", "oklch(0.95 0.03 27)"] },
+      "reference-sky": { "role": "secondary", "displayName": "Reference Sky", "canonical": "oklch(0.588 0.142 242)", "hexApprox": "#0284c7", "tonalRamp": ["oklch(0.2 0.06 242)", "oklch(0.3 0.09 242)", "oklch(0.4 0.12 242)", "oklch(0.5 0.14 242)", "oklch(0.588 0.142 242)", "oklch(0.72 0.12 242)", "oklch(0.86 0.07 242)", "oklch(0.95 0.025 242)"] },
+      "chart-amber": { "role": "tertiary", "displayName": "Chart Amber", "canonical": "oklch(0.769 0.163 70.4)" },
+      "chart-teal": { "role": "tertiary", "displayName": "Chart Teal", "canonical": "oklch(0.7 0.115 195)" },
+      "chart-indigo": { "role": "tertiary", "displayName": "Chart Indigo", "canonical": "oklch(0.55 0.15 268)" },
+      "chart-rose": { "role": "tertiary", "displayName": "Chart Rose", "canonical": "oklch(0.62 0.18 12)" },
+      "chart-lime": { "role": "tertiary", "displayName": "Chart Lime", "canonical": "oklch(0.72 0.16 135)" },
+      "shell-navy-deep": { "role": "neutral", "displayName": "Shell Navy (deep)", "canonical": "#0f172a", "note": "raw slate-900 utility in topNav; not yet a token" },
+      "shell-navy-mid": { "role": "neutral", "displayName": "Shell Navy (mid)", "canonical": "#1e293b", "note": "raw slate-800" },
+      "shell-navy-light": { "role": "neutral", "displayName": "Shell Navy (light)", "canonical": "#334155", "note": "raw slate-700" }
+    },
+    "typographyMeta": {
+      "headline": { "displayName": "Headline", "purpose": "Page title on the few full-page surfaces. Rare." },
+      "title": { "displayName": "Title", "purpose": "The workhorse page/section heading (text-lg font-bold)." },
+      "body": { "displayName": "Body", "purpose": "Controls, form text, prose. Buttons/inputs at 500." },
+      "data": { "displayName": "Data", "purpose": "Table cells, helper text, pills; tabular numerals. The most used size." },
+      "label": { "displayName": "Label", "purpose": "Uppercase tracked column headers and section eyebrows, always muted-foreground." },
+      "mono": { "displayName": "Mono", "purpose": "Ids, codes, formulas, commit SHAs, measured values. Never prose." }
+    },
+    "shadows": [
+      { "name": "whisper", "value": "0 1px 2px 0 rgb(0 0 0 / 0.05)", "purpose": "shadow-xs on cards, outline buttons, dialogs; pairs with ring-1 ring-foreground/10." },
+      { "name": "lift", "value": "0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)", "purpose": "shadow-md on menus, popovers, floating chatbot, DEV tools handle." },
+      { "name": "hairline-ring", "value": "0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent)", "purpose": "The real depth mechanism on sheets." }
+    ],
+    "motion": [
+      { "name": "overlay", "value": "100ms ease-out", "purpose": "Dialog/sheet enter and exit (fade + zoom-95 / slide-10)." },
+      { "name": "menu", "value": "200ms ease-out", "purpose": "Mobile nav slide-down, dropdowns." },
+      { "name": "structure", "value": "300ms ease-in-out", "purpose": "Sidebar collapse/expand." },
+      { "name": "thinking-orb", "value": "1s linear infinite + 1.5s ease-in-out glow", "purpose": "AI thinking indicator only; stops under prefers-reduced-motion." }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" },
+      { "name": "xl", "value": "1280px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Console Navy action button; the default.",
+      "html": "<button class=\"ds-btn ds-btn-primary\">Save changes</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 10px; border: 1px solid transparent; border-radius: 8px; font-family: var(--font-sans, 'IBM Plex Sans', system-ui, sans-serif); font-size: 14px; font-weight: 500; white-space: nowrap; cursor: pointer; transition: all 150ms ease-out; outline: none; } .ds-btn-primary { background: var(--primary); color: var(--primary-foreground); } .ds-btn-primary:hover { opacity: 0.8; } .ds-btn:focus-visible { border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 50%, transparent); } .ds-btn:disabled { opacity: 0.5; pointer-events: none; }"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Hairline secondary action.",
+      "html": "<button class=\"ds-btn ds-btn-outline\">Cancel</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 10px; border: 1px solid transparent; border-radius: 8px; font-family: var(--font-sans, 'IBM Plex Sans', system-ui, sans-serif); font-size: 14px; font-weight: 500; white-space: nowrap; cursor: pointer; transition: all 150ms ease-out; outline: none; } .ds-btn-outline { background: var(--background); color: var(--foreground); border-color: var(--border); box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); } .ds-btn-outline:hover { background: var(--muted); } .ds-btn:focus-visible { border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 50%, transparent); }"
+    },
+    {
+      "name": "Destructive Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Fault Red tint; never a solid red fill.",
+      "html": "<button class=\"ds-btn ds-btn-danger\">Delete</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: 6px; height: 36px; padding: 0 10px; border: 1px solid transparent; border-radius: 8px; font-family: var(--font-sans, 'IBM Plex Sans', system-ui, sans-serif); font-size: 14px; font-weight: 500; white-space: nowrap; cursor: pointer; transition: all 150ms ease-out; outline: none; } .ds-btn-danger { background: color-mix(in oklab, var(--danger) 10%, transparent); color: var(--danger); } .ds-btn-danger:hover { background: color-mix(in oklab, var(--danger) 20%, transparent); } .ds-btn-danger:focus-visible { border-color: color-mix(in oklab, var(--danger) 40%, transparent); box-shadow: 0 0 0 3px color-mix(in oklab, var(--danger) 20%, transparent); }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Transparent field with hairline border and 3px focus halo.",
+      "html": "<input class=\"ds-input\" placeholder=\"Enter Name\" />",
+      "css": ".ds-input { width: 100%; min-width: 0; height: 36px; padding: 0 12px; border: 1px solid var(--input); border-radius: 8px; background: transparent; color: var(--foreground); font-family: var(--font-sans, 'IBM Plex Sans', system-ui, sans-serif); font-size: 14px; box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05); outline: none; transition: color 150ms, box-shadow 150ms; } .ds-input::placeholder { color: var(--muted-foreground); } .ds-input:focus-visible { border-color: var(--ring); box-shadow: 0 0 0 3px color-mix(in oklab, var(--ring) 50%, transparent); } .ds-input[aria-invalid='true'] { border-color: var(--danger); box-shadow: 0 0 0 3px color-mix(in oklab, var(--danger) 20%, transparent); } .ds-input:disabled { opacity: 0.5; cursor: not-allowed; }"
+    },
+    {
+      "name": "Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "White sheet on cool paper, hairline ring, whisper shadow.",
+      "html": "<div class=\"ds-card\"><div class=\"ds-card-title\">Deployment</div><div class=\"ds-card-desc\">Commit and uptime of the running build.</div><div class=\"ds-card-body\">Commit <span class=\"ds-mono\">3c3c62b</span></div></div>",
+      "css": ".ds-card { display: flex; flex-direction: column; gap: 24px; padding: 24px; background: var(--card); color: var(--card-foreground); border-radius: 14px; box-shadow: 0 0 0 1px color-mix(in oklab, var(--foreground) 10%, transparent), 0 1px 2px 0 rgb(0 0 0 / 0.05); font-family: var(--font-sans, 'IBM Plex Sans', system-ui, sans-serif); font-size: 14px; } .ds-card-title { font-size: 16px; font-weight: 500; line-height: 1.5; } .ds-card-desc { margin-top: -20px; color: var(--muted-foreground); font-size: 14px; } .ds-mono { font-family: var(--font-mono, 'IBM Plex Mono', ui-monospace, monospace); font-weight: 500; }"
+    },
+    {
+      "name": "Status Pill",
+      "kind": "chip",
+      "refersTo": "status-pill",
+      "description": "The standard tint + text pattern for approved / warning / fault / info.",
+      "html": "<span class=\"ds-pill ds-pill-success\">Approved</span> <span class=\"ds-pill ds-pill-warning\">Pending</span> <span class=\"ds-pill ds-pill-danger\">Rejected</span> <span class=\"ds-pill ds-pill-info\">In review</span>",
+      "css": ".ds-pill { display: inline-flex; align-items: center; gap: 4px; padding: 2px 10px; border-radius: 9999px; font-family: var(--font-sans, 'IBM Plex Sans', system-ui, sans-serif); font-size: 12px; font-weight: 500; white-space: nowrap; } .ds-pill-success { background: color-mix(in oklab, var(--success) 10%, transparent); color: var(--success); } .ds-pill-warning { background: color-mix(in oklab, var(--warning) 10%, transparent); color: var(--warning); } .ds-pill-danger { background: color-mix(in oklab, var(--danger) 10%, transparent); color: var(--danger); } .ds-pill-info { background: color-mix(in oklab, var(--info) 10%, transparent); color: var(--info); }"
+    },
+    {
+      "name": "Data Table",
+      "kind": "custom",
+      "refersTo": "table-header",
+      "description": "Sticky Panel Grey header with uppercase labels; 12px tabular body; navy-tint selection.",
+      "html": "<table class=\"ds-table\"><thead><tr><th>Utility</th><th class=\"ds-num\">Generated (MWh)</th><th>Status</th></tr></thead><tbody><tr><td>EFL</td><td class=\"ds-num\">1,024,560</td><td class=\"ds-ok\">Approved</td></tr><tr class=\"ds-selected\"><td>TPL</td><td class=\"ds-num\">86,410</td><td class=\"ds-muted\">Pending</td></tr></tbody></table>",
+      "css": ".ds-table { width: 100%; border-collapse: collapse; font-family: var(--font-sans, 'IBM Plex Sans', system-ui, sans-serif); font-size: 12px; font-variant-numeric: tabular-nums; color: var(--foreground); } .ds-table thead { position: sticky; top: 0; background: var(--muted); } .ds-table th { padding: 10px 16px; text-align: left; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted-foreground); white-space: nowrap; cursor: pointer; transition: color 150ms, background 150ms; } .ds-table th:hover { color: var(--foreground); } .ds-table td { padding: 8px; border-top: 1px solid var(--border); } .ds-table tbody tr:hover { background: color-mix(in oklab, var(--muted) 40%, transparent); } .ds-table tr.ds-selected { background: color-mix(in oklab, var(--primary) 10%, transparent); } .ds-num { text-align: right; } .ds-ok { color: var(--success); } .ds-muted { color: var(--muted-foreground); }"
+    },
+    {
+      "name": "Top Navigation",
+      "kind": "nav",
+      "refersTo": "nav-top",
+      "description": "Navy console gradient; the active item is the one amber signal.",
+      "html": "<nav class=\"ds-nav\"><span class=\"ds-nav-logo\">PRISM</span><a href=\"#\">Home</a><a href=\"#\" class=\"ds-active\">Data Entry</a><a href=\"#\">Settings</a><span class=\"ds-role\">BLO</span></nav>",
+      "css": ".ds-nav { display: flex; align-items: center; gap: 32px; padding: 12px; background: linear-gradient(to right, #0f172a, #1e293b, #334155); color: #fff; font-family: var(--font-sans, 'IBM Plex Sans', system-ui, sans-serif); font-size: 14px; font-weight: 500; } .ds-nav-logo { font-weight: 700; letter-spacing: 0.05em; margin-right: 32px; } .ds-nav a { color: inherit; text-decoration: none; transition: color 150ms; } .ds-nav a:hover { color: #94a3b8; } .ds-nav a.ds-active { color: var(--brand); font-weight: 700; } .ds-nav a:focus-visible { outline: 2px solid var(--brand); outline-offset: 4px; border-radius: 4px; } .ds-role { margin-left: auto; padding: 4px 8px; border-radius: 4px; background: var(--brand); color: var(--brand-foreground); font-size: 12px; font-weight: 500; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Engineer's Ledger",
+    "overview": "PRISM looks like a well-kept engineering ledger read under a dark control-room console. The shell (top navigation) is deep navy and stays put; everything beneath it is paper: a barely-cool off-white ground with pure white sheets (cards, tables, dialogs) resting on it. Type is IBM Plex, a family drawn for technical documents, set small and dense because the primary user is a data officer entering hundreds of values per period on an older, narrow screen. Figures line up because every table uses tabular numerals by default.\n\nColour is rationed. One amber signal marks the current place (active navigation, the role badge, the brand accent) and four status hues say exactly one thing each: approved, caution, fault, reference. Nothing else is coloured. Depth comes from a hairline ring and the paper-on-paper contrast, not from shadow. Motion only reports state (a menu opening, a sheet sliding, an AI turn thinking) and is over in 100 to 300 ms.\n\nThis is an Operate surface. Familiarity is the feature: a category-fluent user should trust every control on sight.",
+    "keyCharacteristics": [
+      "Navy console shell over cool-paper ground and white sheets",
+      "One amber signal; four single-meaning status hues; everything else neutral",
+      "IBM Plex Sans at 12–14 px density, tabular numerals in every table",
+      "Hairline-ring depth (1 px at 10% ink) with near-zero shadow",
+      "8 px corners on controls, 14 px on sheets, pills for badges",
+      "State-only motion, 100–300 ms, reduced-motion honoured"
+    ],
+    "rules": [
+      { "name": "The One Signal Rule", "body": "Amber marks where you are (active nav, role, brand). It never marks status, never fills a surface, and never appears twice in one component.", "section": "colors" },
+      { "name": "The Single Meaning Rule", "body": "Green, amber, red and sky each carry one meaning app-wide. New UI reaches for success/warning/danger/info tokens, never green-*/red-*/blue-* utilities.", "section": "colors" },
+      { "name": "The Never-Colour-Alone Rule", "body": "Status is always colour plus a word or an icon (WCAG 2.1 AA, PRODUCT.md). A green dot with no label is a defect.", "section": "colors" },
+      { "name": "The Twelve-Fourteen Rule", "body": "Almost everything a data officer reads is 12 px or 14 px. Reach for 18 px only for a page or section title, 24 px only when a page has a single heading.", "section": "typography" },
+      { "name": "The Real Numerals Rule", "body": "Any column of figures is tabular. Inherit it from table; add tabular-nums yourself on non-table numeric layouts.", "section": "typography" },
+      { "name": "The Hairline Lift Rule", "body": "A surface lifts with a 1 px 10%-ink ring and paper contrast first; shadow is a whisper, never the mechanism. No zero-offset coloured glows on static UI.", "section": "elevation" }
+    ],
+    "dos": [
+      "Do use the semantic tokens for every colour decision: bg-brand, text-success, bg-danger/10, text-info, text-muted-foreground, border-border.",
+      "Do show status as colour plus a word or lucide icon, every time.",
+      "Do keep data surfaces at 12 px with tabular numerals and 8 px cell padding; keep controls at 14 px / 36 px tall.",
+      "Do lift a surface with the hairline ring + whisper shadow and paper contrast (bg-card on bg-background).",
+      "Do use 8 px corners on controls, 14 px on sheets, pills on badges — derive from --radius.",
+      "Do keep motion to state changes at 100–300 ms with an ease-out, and honour prefers-reduced-motion.",
+      "Do put Signal Amber only on \"you are here\" (active nav, role badge, brand mark).",
+      "Do design for ~1366 px, slow links and once-a-year users: labels and empty states carry the instructions (PRODUCT.md).",
+      "Do read sector words from lib/terminology (useTerm / resolveTerm); never hardcode \"Grid\"."
+    ],
+    "donts": [
+      "Don't use raw red-*, green-*, blue-*, lime-*, sky-* utilities in new UI; the detector and the token sweep both flag them.",
+      "Don't put a second opacity on a token class (bg-success/10/40 emits nothing).",
+      "Don't nest cards, or build a page from same-size icon-heading-text cards.",
+      "Don't add thick coloured left/right borders (>1 px) to new cards, alerts or inputs.",
+      "Don't use gradient text, zero-offset coloured glows, or decorative page-load choreography.",
+      "Don't use IBM Plex Mono as a \"technical\" costume for prose; it is for ids, codes, formulas and measured values.",
+      "Don't render a gap as 0: \"not available\" stays visibly not available (PRODUCT.md).",
+      "Don't introduce a display face, a fluid clamp() heading, or a modal for a task that needs neither interruption nor protected focus."
+    ]
+  }
+}

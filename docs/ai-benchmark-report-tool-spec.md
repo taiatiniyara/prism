@@ -65,3 +65,22 @@ Add one line to the system prompt (Data Strategy / the report guidance): *"For a
 
 ## 8. Ownership
 #4 implements (tool + service fn + prompt line). #3 available for the gold-rollup ranking/polarity math and to keep the output shape aligned with the `report` block that feeds `renderReportPdf`.
+
+## 9. Server-filled tables (`table_ref`) — addendum 2026-09-22 (#16 + #4)
+
+**Why §7's payoff needs this.** Measured per step (#16, 2026-09-22): report turns are **output-bound**. Sonnet 4.6 emits ~45 tokens/s and production report turns write 5–6.5k output tokens ≈ 100–130 s; gathering is the minority of the wall-clock. The `report` block is the big emitter because the model **re-types every table row** it just read from a tool result. Collapsing the round-trips (§2) removes the gather time; this addendum removes the output bulk. Target: the model writes structure + narrative only (~1–1.5k tokens).
+
+**Contract**
+
+1. **Producer (any data tool; `get_benchmark_report_data` first — #4).** `execute` returns the full bundle with tables under a stable key:
+   `data.tables: Record<string, { columns: string[]; rows: Record<string, unknown>[] }>` — rows **pre-sorted** in display order, row-capped by the tool (rankings = top/bottom-N).
+   The tool's **`toModelOutput`** (AI SDK tool option) maps that to what the model reads: a per-table **digest** — key, columns, `row_count`, the first/last few rows, plus the best / worst / `pacific_avg` / `most_improved` stats the model needs for insight. Full rows never enter the model's context. `truncateResult`/`withSizeLimit` must not be applied to the full output.
+2. **Reference (report block schema — #4; block owner #3).** A section's table may be a reference instead of inline rows:
+   `data_table: { table_ref: "<key>", columns?: string[], limit?: number }` — `columns` = subset/order to show, `limit` = first N rows. `"<toolCallId>:<key>"` pins a specific bundle if a turn holds two. Inline `{ columns, rows }` stays valid (small ad-hoc tables; backward compatible).
+3. **Resolution (#16 — shipped, `lib/ai/report-tables.ts`).** The chat route keeps a **request-scoped** `ReportTableRegistry`, fed from every `tool-result` stream part (generic: any tool output carrying `tables`). When the `render_visualization` tool call arrives, `visualizationJsonFromToolInput` resolves each ref to today's inline `{ columns, rows }` **once, before channel 4 and before the fence is persisted**. Consequences: `ReportView`, `renderReportPdf` and the Word export receive fully populated JSON and need **no change**; a reloaded conversation needs no registry (persisted fences hold the rows).
+4. **Failure behaviour.** Unknown ref → that section's `data_table` is dropped (narrative still renders) and the route logs the ref; the turn never fails. Resolved rows are capped (100) and the cap halves until the block fits `MAX_VISUALIZATION_JSON_SIZE` (50 KB).
+5. **Tool path only.** A `table_ref` report must be sent through the **`render_visualization` tool**, never typed as a ```json text fence: text streams to the client on channel 0 before the server can rewrite it. The report guidance in the (cached, static) base prompt says so — with an `AI_PROMPT_VERSION` bump (#4).
+
+**Opt-in for single-utility reports.** The heaviest production turns are single-utility ("performance report for Tonga Power"), which the fleet tool does not cover. Because the registry is generic, `compare_kpis_across_utilities`, `drill_measure` etc. can opt in later by returning `tables` + a `toModelOutput` digest — no route change.
+
+**Verification.** `test/unit/ai/report-tables.test.ts` (resolution, columns/limit, unknown ref, size fitting, no-registry callers unchanged). End-to-end quality is gated by #16's report eval before the prompt line ships.

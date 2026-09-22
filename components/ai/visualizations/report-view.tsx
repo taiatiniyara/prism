@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { safeReportFilename } from "@/lib/ai/report-filename";
 import type { AiReportVisualization } from "@/lib/ai/types";
 
 interface ReportViewProps {
@@ -8,15 +9,23 @@ interface ReportViewProps {
   onAskFollowUp?: (text: string) => void;
 }
 
-const safeFilename = (title: string): string =>
-  (title || "report")
-    .replace(/[^A-Za-z0-9._-]+/g, "_")
-    .replace(/^[._-]+|[._-]+$/g, "")
-    .slice(0, 100) || "report";
+type ReportFormat = "pdf" | "doc";
 
-/** POST the report to the server PDF route and trigger a download of the blob. */
-async function downloadReportPdf(data: AiReportVisualization): Promise<void> {
-  const res = await fetch("/api/ai/report-pdf", {
+const FORMAT_META: Record<
+  ReportFormat,
+  { route: string; ext: string; label: string }
+> = {
+  pdf: { route: "/api/ai/report-pdf", ext: "pdf", label: "PDF" },
+  doc: { route: "/api/ai/report-doc", ext: "doc", label: "Word" },
+};
+
+/** POST the report to the server export route and trigger a download of the blob. */
+async function downloadReport(
+  data: AiReportVisualization,
+  format: ReportFormat,
+): Promise<void> {
+  const { route, ext, label } = FORMAT_META[format];
+  const res = await fetch(route, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -28,7 +37,7 @@ async function downloadReportPdf(data: AiReportVisualization): Promise<void> {
     }),
   });
   if (!res.ok) {
-    let message = `PDF export failed (HTTP ${res.status}).`;
+    let message = `${label} export failed (HTTP ${res.status}).`;
     try {
       const body = (await res.json()) as { message?: string };
       if (body?.message) message = body.message;
@@ -41,7 +50,7 @@ async function downloadReportPdf(data: AiReportVisualization): Promise<void> {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = `${safeFilename(data.title)}.pdf`;
+  anchor.download = `${safeReportFilename(data.title)}.${ext}`;
   document.body.appendChild(anchor);
   anchor.click();
   anchor.remove();
@@ -52,18 +61,22 @@ const fmtCell = (value: unknown): string =>
   value === null || value === undefined ? "-" : String(value);
 
 export function ReportView({ data }: ReportViewProps) {
-  const [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState<ReportFormat | null>(null);
   const [error, setError] = useState<string | null>(null);
 
-  const handleDownload = async () => {
+  const handleDownload = async (format: ReportFormat) => {
     setError(null);
-    setBusy(true);
+    setBusy(format);
     try {
-      await downloadReportPdf(data);
+      await downloadReport(data, format);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "PDF export failed.");
+      setError(
+        err instanceof Error
+          ? err.message
+          : `${FORMAT_META[format].label} export failed.`,
+      );
     } finally {
-      setBusy(false);
+      setBusy(null);
     }
   };
 
@@ -80,14 +93,24 @@ export function ReportView({ data }: ReportViewProps) {
             </p>
           )}
         </div>
-        <button
-          type="button"
-          onClick={handleDownload}
-          disabled={busy}
-          className="border-border shrink-0 rounded-md border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-border"
-        >
-          {busy ? "Preparing PDF…" : "Download PDF"}
-        </button>
+        <div className="flex shrink-0 gap-2">
+          <button
+            type="button"
+            onClick={() => handleDownload("pdf")}
+            disabled={busy !== null}
+            className="border-border shrink-0 rounded-md border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-border"
+          >
+            {busy === "pdf" ? "Preparing PDF…" : "Download PDF"}
+          </button>
+          <button
+            type="button"
+            onClick={() => handleDownload("doc")}
+            disabled={busy !== null}
+            className="border-border shrink-0 rounded-md border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-muted/50 disabled:cursor-not-allowed disabled:opacity-60 dark:border-border"
+          >
+            {busy === "doc" ? "Preparing Word…" : "Download Word"}
+          </button>
+        </div>
       </div>
 
       <div className="max-h-[440px] space-y-4 overflow-auto px-4 py-3">
@@ -126,7 +149,12 @@ export function ReportView({ data }: ReportViewProps) {
                     </tr>
                   </thead>
                   <tbody>
-                    {section.data_table.rows.map((row, ri) => (
+                    {/* rows is typed required, but this JSON is untrusted model
+                        output: a hand-typed report fence carrying an unresolved
+                        { table_ref } (never server-filled) can arrive with
+                        columns but no rows. Guard so it renders empty, not a
+                        crash — mirrors renderReportPdf's `rows ?? []`. */}
+                    {(section.data_table.rows ?? []).map((row, ri) => (
                       <tr key={ri}>
                         {section.data_table!.columns.map((col, ci) => (
                           <td

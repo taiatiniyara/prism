@@ -1,6 +1,9 @@
 # PRISM 2 — Pending Work Tracker
 
-**Owned by session `PRISM 2 #15` (pending-tracker).** Single place that answers *"what is pending — uncommitted, unpushed, unmerged, or un-applied — across every stream?"* so nobody has to keep asking.
+> # ⛔ RETIRED 2026-09-22 — DO NOT RELY ON THIS FILE
+> **Eugene's call: lean on the board.** This standalone tracker is **no longer maintained.** The live source of truth for stream state, pending work, and awaiting-Eugene items is **[`docs/WORKSTREAMS.md`](WORKSTREAMS.md)** — the board every stream updates as it works (it stayed current through a 3-week gap that left this file stale, which is why it won). Journey changes live in [`USER-IMPACT.md`](USER-IMPACT.md) (streams add their own rows; #11 owns instructions). Everything below is **history**, accurate only up to its dates. Kept for reference, not deleted.
+
+**(Historical)** Owned by session `PRISM 2 #15` (pending-tracker). Was the single place answering *"what is pending across every stream?"* — now superseded by the board.
 
 > Absolute path (sessions run from different folders / worktrees):
 > `C:\Users\eugen\prism\docs\PENDING.md`
@@ -13,14 +16,13 @@ A row is *pending* if it has not cleared all the gates that apply to it. Docs-on
 
 ---
 
-## ⚡ TL;DR (snapshot 2026-07-28, refresh 4)
+## ⚡ TL;DR (snapshot 2026-09-22, refresh 5)
 
-- **Tree clean and in sync with `origin/main`.** ⚠ deps changed → run `npm install` after your next pull.
-- **Only one uncommitted file:** **#3's `calculator-engine-spec.md`** (active WIP, left for #3).
-- **Open PRs (2026-08-31c): 1 human** — `#179` (#2 new-org onboarding step, mergeable/ready). `#198` (retire `is_aggregated`) **merged @14:52** + column dropped on dev; #77 & #104 also merged. Dependabot in active flux (Eugene's engineer working them).
-- **Cleared this session:** #8 schema-convention ruling (`7c01627`); #12 D2 API_KEY split merged (`167f080`); both sentinel-deletion confirmations (#2 views, #10 access); safe Dependabot subset merged.
-- **Awaiting Eugene — 3:** **#2 imminent full-migration run (later today)** — Eugene's data inputs: **tariff (Standard/Lifeline) + 340/342 downtime-events** extracts, one run, **+ new-org onboarding workbook if the run adds new utilities** (step built PR #179; skip if none). ⚠ the general medallion reload is ✅ DONE (PR #107). **FYE for 3 placeholder utilities** (Vanuatu/Pitcairn/NZ — forward pre-req, no live impact; FYE *column mechanism* landed #159/#162, values still owed). **VPS disk/health check** (infra risk, #1-flagged — 2 npm corruption deploy-failures in ~1h [ENOTEMPTY then ENOENT] suggest an underlying VPS disk issue; deploys now self-heal via #269/#297 but the root cause is unchecked — worth a `df -h`/health look). *(#10 ✅ RULED; #4 country-context ✅ DONE; #2 consolidation ✅ COMPLETE #266.)*
-- **Applied DB changes today** (informational, all backed up): sentinel-chain deletion, `measure_definitions.description` drop, managed-lists vocab rename — plus the follow-on `units.category_id`/`type_id` DROP still owed by #2.
+> ⚠ **This tracker went stale 2026-09-03 → 09-22** — #15 wasn't invoked for ~19 days while ~238 PRs landed (main #298 → #536). Core refreshed now vs `origin/main` + the WORKSTREAMS board; **the board (`docs/WORKSTREAMS.md`) is the fuller live source for that window** — a deeper per-PR reconciliation is still pending. Treat older sections below as history unless re-confirmed.
+- **Open PRs: 18** — **5 human** (`#534` kpi_target DDL [Tier-2 Step 3] · `#520` React anti-pattern fixes · `#515` review-kpi workflow status/gating · `#501` data-entry UX gaps · `#256` #11 checkbox update-form binding) + ~13 Dependabot. Re-scan for the live list.
+- **✅ Cleared since last refresh:** FYE for Vanuatu(46)/Pitcairn(51)/NZ(52) = **31 Dec, DONE** (PR #524 — all 28 utilities now have an FY-end); tariff **first load done** (Load #16, 2026-09-08, 3,004 rows); #2 consolidation program complete; new-org step (#179) resolved.
+- **New stream #16 (AI optimiser):** PR #536 (`c5ebcec`, SQL-only) — `ai_chat_turn` +2 additive cache-token cols, **applied to p2**; paired Drizzle model + code PR (1b) about to open.
+- **Still open / awaiting:** the **340/342 downtime measures = 0** (extract omission, needs a data slice) · the **Tier-2 structural campaign** (period dim #524 landed → kpi_target #534 open → kpi_actual roll-up …; Eugene greenlights each step, #8 gives semantics sign-offs) · **#16 AI answer-quality eval** — awaiting Eugene's sign-off on inputs + grading (no paid run yet) · **report-latency fix — #4's half** (schema `table_ref` → `get_benchmark_report_data` composite tool → base-prompt line + heartbeat; #16's server half #544 merged but inert until this) — awaiting Eugene's **direct confirm in #4's session** · re-verify the 2026-09-03 **VPS disk/health** flag (status unknown after the gap).
 
 ---
 
@@ -111,8 +113,11 @@ Legend: ✅ nothing pending · 📝 uncommitted · ⬆️ committed-not-pushed �
 
 ### Recently applied DB changes (done — do NOT re-run; informational)
 > **📌 POLICY (Eugene via #1, effective 2026-08-31, no exceptions): git FIRST, then DB.** Code/migration must be **committed AND pushed** (ideally merged to main via PR) **before** any DDL/DML is applied to a real DB (dev or prod). Order is always (1) git, then (2) apply. Keeps the DB from drifting ahead of code. Being added to durable project instructions. *(Historically some entries below were applied ahead of their PR; that pattern is now disallowed going forward.)*
+> **📌 POLICY (Eugene via #1, CLAUDE.md #541 2026-09-22): DB apply needs Eugene's DIRECT in-session word** — in the *applying* stream's own session. A coordinator (#1) or peer greenlight sequences/authorizes the **work**, but **never fires the irreversible DB write**. (Authorization, distinct from git-first's *ordering*.) This is why a stream won't apply on a relayed ruling (cf. #2 Stage 2). Also **never `db-push --force` without a fresh backup** — use `npm run db-push-safe` (snapshots `data_entries`/`data_entry_logs` first).
 
 DML/DDL applied to the single `.env` DB (= future prod; no separate cutover apply — see the ruling below). Recorded so no session re-runs them and everyone knows the DB state:
+> ⚠ **Log gap 2026-09-03 → 09-22:** DB changes in this window (period dim #524, kpi_target #534, sector_terminology/organisation_sector #402/#403, Load #16 reload #383, etc.) are captured on the WORKSTREAMS board, not yet back-filled here. This log resumes at #536.
+- **2026-09-22 (#16) — `ai_chat_turn` +2 cache-token cols** (PR #536 `c5ebcec`, SQL-only, applied to p2): additive nullable ints `token_count_cache_read` / `token_count_cache_write` (prompt-cache telemetry for the AI optimiser). SQL columns = internal telemetry (no row); the **code half** (#537/#540, merged+live) added USER-IMPACT **row 22** (AI Usage cost figures become cache-aware from 2026-09-22 — accounting fix). #16 PR 1/2 complete, nothing pending. (Open #16 items → awaiting bullet, not here.)
 - **2026-09-01 (#2) — org/user rationalisation** (PR #247, applied to p2; Eugene-directed cleanse; backups taken): `organisations` **54→44** — deleted 10 empty person-rows, renamed 12 person-rows → institutions, reassigned 9 users (`organisation_id` only). Vanuatu(46) + NPC(17) kept; NPC now `bm_participates=true`. Data cleanse of junk rows → **no USER-IMPACT row** (per #2; the journey change in this program is Stage 2, not this).
 - **2026-09-01 (#2) — dead legacy tables `utility_context_data` + `governance_data` DROPPED** (PR #241 `df48cf0`, applied to p2): both 0 rows, pre-medallion; orphaned settings pages/routes removed too. **Stage 1** of the utility-context/governance consolidation (see net-pending). Dead/orphaned → **no USER-IMPACT row**.
 - **2026-09-01 (#2/#3) — `measure_definitions.is_kpi` + `is_kpi_input` columns DROPPED** (PR #211, applied to `.env` DB, backup taken): Eugene-directed; #3 verified drop-safe (computed measures as KPI inputs still compute via the reactive path). `kpi_definitions.is_kpi_input` untouched. Effect: formula-builder picker now offers all active measures. Picker not a live surface yet (calculator builder DEV-gated, r10) → **no USER-IMPACT row**. *(The related "Compute now refreshes computed-measure inputs first" hardening — #3 already landed it, PR #216; not parked.)*
