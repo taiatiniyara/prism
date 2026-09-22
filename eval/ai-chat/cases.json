@@ -1,0 +1,675 @@
+[
+  {
+    "prompt_id": "c004",
+    "tags": [
+      "own-performance",
+      "BLO@TAU"
+    ],
+    "prompt": "How was the performance of my utility in 2023?",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 4,
+      "times_asked": 14
+    }
+  },
+  {
+    "prompt_id": "c018",
+    "tags": [
+      "own-performance",
+      "BLO@TAU"
+    ],
+    "prompt": "Which KPIs are our weakest?",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 18,
+      "times_asked": 7
+    }
+  },
+  {
+    "prompt_id": "c077",
+    "tags": [
+      "own-performance",
+      "BLO@TAU"
+    ],
+    "prompt": "How did my utility perform in the latest reporting period?",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 77,
+      "times_asked": 13
+    }
+  },
+  {
+    "prompt_id": "c080",
+    "tags": [
+      "own-performance",
+      "BLO@TAU"
+    ],
+    "prompt": "Which KPIs need attention in the latest period?",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 80,
+      "times_asked": 2
+    }
+  },
+  {
+    "prompt_id": "c069",
+    "tags": [
+      "own-performance",
+      "BLO@TAU"
+    ],
+    "prompt": "Are we trending in the right direction on reliability?",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 69,
+      "times_asked": 2
+    }
+  },
+  {
+    "prompt_id": "c094",
+    "tags": [
+      "own-performance",
+      "BLO@TAU"
+    ],
+    "prompt": "How have our key KPIs trended over the past 3 years?",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 94,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c105",
+    "tags": [
+      "own-performance",
+      "BLO@TAU"
+    ],
+    "prompt": "How has our SAIDI changed over the years?",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 105,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c088",
+    "tags": [
+      "own-performance",
+      "BLO@TAU"
+    ],
+    "prompt": "Which areas of our utility are at highest risk?",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 88,
+      "times_asked": 2
+    }
+  },
+  {
+    "prompt_id": "c023",
+    "tags": [
+      "own-performance",
+      "BLO@TAU"
+    ],
+    "prompt": "What targets should we set for next year?",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 23,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c020",
+    "tags": [
+      "cross-utility",
+      "DEV@INNOV8"
+    ],
+    "prompt": "Compare SAIDI across all utilities.",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 20,
+      "times_asked": 3
+    }
+  },
+  {
+    "prompt_id": "c074",
+    "tags": [
+      "cross-utility",
+      "DEV@INNOV8"
+    ],
+    "prompt": "How do we compare to other Pacific utilities?",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 74,
+      "times_asked": 17
+    }
+  },
+  {
+    "prompt_id": "c072",
+    "tags": [
+      "cross-utility",
+      "DEV@INNOV8"
+    ],
+    "prompt": "How do system losses compare across utilities?",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 72,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c073",
+    "tags": [
+      "cross-utility",
+      "DEV@INNOV8"
+    ],
+    "prompt": "How much diesel does each utility depend on?",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 73,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c104",
+    "tags": [
+      "cross-utility",
+      "DEV@INNOV8"
+    ],
+    "prompt": "Show me Total SAIDI for all utilities in FY2023",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 104,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c169",
+    "tags": [
+      "cross-utility",
+      "DEV@INNOV8"
+    ],
+    "prompt": "which is the best performing utility?",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 169,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c172",
+    "tags": [
+      "cross-utility",
+      "DEV@INNOV8"
+    ],
+    "prompt": "which is the most financially stable utility, consistently?",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 172,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c159",
+    "tags": [
+      "cross-utility",
+      "DEV@INNOV8"
+    ],
+    "prompt": "Which utilities have made the biggest improvement in renewables over the past few years?",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 159,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c122",
+    "tags": [
+      "cross-utility",
+      "DEV@INNOV8"
+    ],
+    "prompt": "How does ASPA's generator capacity factor compare to peer utilities in the Pacific?",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 122,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c099",
+    "tags": [
+      "definitions-howto",
+      "BLO@TAU"
+    ],
+    "prompt": "what exactly does Operating Cost Recovery measure?",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 99,
+      "times_asked": 2
+    }
+  },
+  {
+    "prompt_id": "c071",
+    "tags": [
+      "definitions-howto",
+      "BLO@TAU"
+    ],
+    "prompt": "What queries can I run?",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 71,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c055",
+    "tags": [
+      "definitions-howto",
+      "BLO@TAU"
+    ],
+    "prompt": "Are you able to distinguish between monthly and financial year data?",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 55,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c108",
+    "tags": [
+      "definitions-howto",
+      "BLO@TAU"
+    ],
+    "prompt": "how much data has been loaded into prism?",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 108,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c030",
+    "tags": [
+      "definitions-howto",
+      "BLO@TAU"
+    ],
+    "prompt": "Can you show me the guided entry steps for EBITDA Margin?",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 30,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c029",
+    "tags": [
+      "definitions-howto",
+      "BLO@TAU"
+    ],
+    "prompt": "Which KPIs are missing input data and what needs to be entered to fix them?",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 29,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c044",
+    "tags": [
+      "definitions-howto",
+      "BLO@TAU"
+    ],
+    "prompt": "What is the progress of my data entry?",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 44,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c106",
+    "tags": [
+      "definitions-howto",
+      "BLO@TAU"
+    ],
+    "prompt": "Which reporting periods have we submitted SAIDI data for?",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 106,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c202",
+    "tags": [
+      "charts",
+      "DEV@INNOV8"
+    ],
+    "prompt": "Compare SAIDI across all utilities for the latest year as a bar chart",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 202,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c207",
+    "tags": [
+      "charts",
+      "DEV@INNOV8"
+    ],
+    "prompt": "Show EFL's electricity generation by source over the last 5 years as a stacked area chart",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 207,
+      "times_asked": 3
+    }
+  },
+  {
+    "prompt_id": "c211",
+    "tags": [
+      "charts",
+      "DEV@INNOV8"
+    ],
+    "prompt": "Compare SAIDI trend over the last 3 years for EFL, EPC and TPL as an area chart",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 211,
+      "times_asked": 2
+    }
+  },
+  {
+    "prompt_id": "c209",
+    "tags": [
+      "charts",
+      "DEV@INNOV8"
+    ],
+    "prompt": "Plot total electricity generated over time for Solomon Power as an area chart",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 209,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c185",
+    "tags": [
+      "charts",
+      "DEV@INNOV8"
+    ],
+    "prompt": "plot the energy mix for TPL for 2022-25",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 185,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c181",
+    "tags": [
+      "charts",
+      "DEV@INNOV8"
+    ],
+    "prompt": "Which utilities have the best cost recovery ratios in the Pacific? Show me on a graph please.",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 181,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c170",
+    "tags": [
+      "charts",
+      "DEV@INNOV8"
+    ],
+    "prompt": "can you plot me a chart showing the top said and saifi performers for the past 4 years",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 170,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c141",
+    "tags": [
+      "charts",
+      "DEV@INNOV8"
+    ],
+    "prompt": "can you show me a chart of employee distribution by gender and function in the pacific?",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 141,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c212",
+    "tags": [
+      "reports",
+      "DEV@INNOV8"
+    ],
+    "prompt": "Give me a performance report for Tonga Power for FY2024",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 212,
+      "times_asked": 2
+    }
+  },
+  {
+    "prompt_id": "c214",
+    "tags": [
+      "reports",
+      "DEV@INNOV8"
+    ],
+    "prompt": "create a pdf report about TPL's performance",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 214,
+      "times_asked": 2
+    }
+  },
+  {
+    "prompt_id": "c218",
+    "tags": [
+      "reports",
+      "DEV@INNOV8"
+    ],
+    "prompt": "generate the 2024 utility benchmarking report in PDF including an executive summary, key insights based on global or regional goals, notable performances and analytics of kpis including commentaries on best performing utilities, most improved performing utilities and utilities needing the most improvement",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 218,
+      "times_asked": 2
+    }
+  },
+  {
+    "prompt_id": "c223",
+    "tags": [
+      "reports",
+      "DEV@INNOV8"
+    ],
+    "prompt": "Can you generate PPA's Utility Benchmarking Report for 2024 using all data available. Ensure it has an Executive Summary, Key Insights and Notable Achievements, Analytics of KPIs, Top performing utilities, Most Improved Utilities and Utilities in need of most improvements. Add in any other section you believe will be helpful. Make it exportable to Microsoft Word",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 223,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c208",
+    "tags": [
+      "reports",
+      "DEV@INNOV8"
+    ],
+    "prompt": "can you generate the 2024 Benchmarking Report in PDF containing Executive Summary, Key Insights, KPI analytics and assessments etc",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 208,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c086",
+    "tags": [
+      "follow-ups",
+      "BLO@TAU"
+    ],
+    "prompt": "What about the previous years?",
+    "prefix": [
+      {
+        "role": "user",
+        "content": "How did my utility perform in the latest reporting period?"
+      },
+      {
+        "role": "assistant",
+        "content": "👉 [Open Data Entry](/data-entry/enter-data)\n\nWould it help to see which specific KPI inputs are missing — so you know exactly what to prioritise filling in first?"
+      }
+    ],
+    "meta": {
+      "source_turn_id": 86,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c182",
+    "tags": [
+      "follow-ups",
+      "BLO@TAU"
+    ],
+    "prompt": "What about SAIDI and SAIFI?",
+    "prefix": [
+      {
+        "role": "user",
+        "content": "Which utilities have the best cost recovery ratios in the Pacific? Show me on a graph please."
+      },
+      {
+        "role": "assistant",
+        "content": "Now let me render this cleanly, filtering to the most meaningful Operating Cost Recovery values (excluding the outliers like Tuvalu and Public Utilities Board which skew heavily due to subsidy accounting).Here's the picture across the Pacific. A few things stand out:\n\n**Top performers (well above 1.0x):**\n- **Solomon Power** leads at ~1.65x — generating significantly more revenue than operating costs\n- **UNELCO Engie** (Vanuatu) at ~1.54x is similarly strong\n- **Nauru Utilities Corporation** at ~1.41x is impressive given its small island context\n- **Chuuk PUC** at ~1.35x is a surprising outperformer for an FSM state utility\n\n**Around the PPA target (1.0x) — viable but tight:**\n- **Tonga Power**, **Kosrae**, **Électricité et Eau de Calédonie**, and **Te Aponga Uira** are all clustered just above 1.0x — healthy, but without much buffer\n\n**Below the line — financial stress:**\n- **Electric Power Corporation (Samoa)** at ~0.87x and **Marshalls Energy Company** at ~0.74x are both recovering less than their costs — a structural gap that typically means reliance on government transfers or deferred maintenance\n- **PNG Power** is the most critical case at **–0.07x** — negative cost recovery, meaning operating expenses exceed all revenue. That's a serious fiscal sustainability concern\n\n> **Note:** Tuvalu Electricity Corporation (106x) and Public Utilities Board (Kiribati, 16–23x) are excluded from the chart — their extreme values reflect government subsidy accounting rather than genuine"
+      }
+    ],
+    "meta": {
+      "source_turn_id": 182,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c163",
+    "tags": [
+      "follow-ups",
+      "BLO@TAU"
+    ],
+    "prompt": "Can you show this in a chart?",
+    "prefix": [
+      {
+        "role": "user",
+        "content": "Can you show me a renewable penetration trend over time for the top-performing utilities?"
+      },
+      {
+        "role": "assistant",
+        "content": "Let me pull the renewable penetration data across multiple years for the top performers.Here's the trend across FY2022–FY2024. A few standout stories:\n\n**🚀 Nauru — the most dramatic transformation.** From just 8% in FY2022 to 100% in FY2024. That's a complete diesel-to-renewable transition in two years — almost certainly driven by a major solar+storage project. Remarkable for a small island nation.\n\n**🍃 Te Aponga (Cook Islands) — a similar leap.** Sitting at ~12–13% for two years, then jumping to 92% in FY2024. Another large-scale renewable investment clearly came online.\n\n**🇫🇯 Energy Fiji — the long-standing leader, but slipping slightly.** At 96% in FY2022, dropping to 88% in FY2023, and no FY2024 data submitted yet. Worth watching — a drop of that size usually reflects either increased diesel backup use or a hydro shortfall year.\n\n**📈 PNG Power — steady, consistent growth.** 45% → 52% → 65%. Not flashy, but disciplined progress. They're now well above the 50% PPA target.\n\n**⚠️ EPC Samoa — going backwards.** A slight but consistent decline from 34% to 30%. That's a flag — it could mean generation demand is growing faster than renewable capacity is being added.\n\nThe PPA target of 50% is shown as the dashed line — only PNG Power and the two FY2024 breakout utilities (Nauru, Te Aponga) are clearly above it among this group.- *What's driving Nauru's jump to 100% renewable — what projects came online?*\n- *Why is EPC Samoa's renewable penetration declining, and what would it"
+      }
+    ],
+    "meta": {
+      "source_turn_id": 163,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c147",
+    "tags": [
+      "follow-ups",
+      "DEV@INNOV8"
+    ],
+    "prompt": "compare saidi performance for the top 5 utilities",
+    "prefix": [
+      {
+        "role": "user",
+        "content": "generate a chart of the best performing utility"
+      },
+      {
+        "role": "assistant",
+        "content": "Let me pull the benchmarking and KPI data to find the top performers.The gold layer query hit an error, so let me try fetching actual KPI performance values using the targets tool, which reads from the same gold layer.The gold layer is returning query errors across multiple periods right now, so actual KPI performance values aren't accessible. What I **do** have is solid data submission completeness rankings for 2025. Here's a chart based on that — it shows which utilities have the strongest data discipline (100% submission rate), which is a meaningful proxy for operational maturity:A quick note on what this shows — and what it doesn't:\n\n**17 utilities achieved 100% completion in 2025**, so the leaderboard above is ranked by volume of KPIs submitted as a tiebreaker. EFL leads on sheer data volume (706 KPIs), while PUB ranks #1 in the platform's official standings.\n\n**Important caveat:** This measures *data submission completeness*, not operational performance. The gold layer (which holds actual SAIDI, system losses, tariff recovery, etc.) is experiencing query errors right now, so I can't pull a true performance-based ranking at this moment. To get a chart of the best performers by a specific metric — say, lowest system losses or best reliability — I'd need the gold layer to be back online.\n\nWould you like me to:\n- Try a specific KPI comparison (e.g. SAIDI or system losses) once the gold layer recovers?\n- Dig into a particular utility from this list?\n- Show the bottom perform"
+      }
+    ],
+    "meta": {
+      "source_turn_id": 147,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c112",
+    "tags": [
+      "edge-and-complaints",
+      "DEV@INNOV8"
+    ],
+    "prompt": "show me the top 5 utilities with the most executive employees",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 112,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c114",
+    "tags": [
+      "edge-and-complaints",
+      "DEV@INNOV8"
+    ],
+    "prompt": "which utility has the highest total cost",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 114,
+      "times_asked": 3
+    }
+  },
+  {
+    "prompt_id": "c192",
+    "tags": [
+      "edge-and-complaints",
+      "DEV@INNOV8"
+    ],
+    "prompt": "can I ask why you keep picking FY2024 as your most recent data source when FY2025 is the most recent data source?",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 192,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c174",
+    "tags": [
+      "edge-and-complaints",
+      "DEV@INNOV8"
+    ],
+    "prompt": "what is Public Utilities Board (Brunei)? the only PUB we know is Kiribati's Public Utilities Board. Please update your records to remember that Prism is for Pacific Island Utilities datasets",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 174,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c003",
+    "tags": [
+      "edge-and-complaints",
+      "DEV@INNOV8"
+    ],
+    "prompt": "How was ASPA performance in 2025?",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 3,
+      "times_asked": 1
+    }
+  },
+  {
+    "prompt_id": "c038",
+    "tags": [
+      "edge-and-complaints",
+      "DEV@INNOV8"
+    ],
+    "prompt": "Show me a KPI summary from Power BI",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 38,
+      "times_asked": 11
+    }
+  }
+]
