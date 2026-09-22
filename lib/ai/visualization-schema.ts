@@ -187,6 +187,59 @@ const scatterViz = z.object({
   y_label: z.string().optional().describe("Y-axis metric name + unit. Always provide."),
 });
 
+// ── report (multi-section performance report) ────────────────────────────────
+// A report section's table can be supplied two ways: inline rows (small tables
+// you assembled yourself) OR a table_ref to a table a data tool already returned
+// this turn — the server fills those rows before render, so you never re-type
+// (and re-emit) thousands of tokens of table data. table_ref is the cheap path.
+
+const reportTableInline = z.object({
+  columns: z.array(z.string()).min(1).describe("Column headers, in display order."),
+  rows: z
+    .array(z.record(z.string(), z.unknown()))
+    .describe(
+      'Rows as objects keyed by column name, e.g. {"Utility":"EFL","SAIDI (min)":360}. Inline rows are for SMALL tables you assembled yourself.',
+    ),
+});
+
+const reportTableRef = z.object({
+  table_ref: z
+    .string()
+    .describe(
+      "Key of a table a data tool returned THIS turn (e.g. get_benchmark_report_data's `tables`) — the server fills the rows, so do NOT re-type them. Prefer this for any table that came from a tool.",
+    ),
+  columns: z
+    .array(z.string())
+    .optional()
+    .describe("Optional subset/order of columns to show; omit to show all."),
+  limit: z
+    .number()
+    .int()
+    .positive()
+    .optional()
+    .describe("Optional max rows to show (the tool's tables arrive pre-sorted)."),
+});
+
+const reportSection = z.object({
+  heading: z.string().describe("Section heading."),
+  content: z.string().optional().describe("The section's prose."),
+  insight: z.string().optional().describe("One-line 'so what' takeaway, shown emphasised."),
+  data_table: z
+    .union([reportTableRef, reportTableInline])
+    .optional()
+    .describe(
+      "Optional table for the section. Use table_ref to reference a tool-returned table (server fills rows — cheaper + accurate); use inline columns/rows ONLY for a small table you assembled yourself.",
+    ),
+});
+
+const reportViz = z.object({
+  type: z.literal("report"),
+  title: z.string().describe("Report title naming subject + period, e.g. 'Tonga Power — FY2024 Performance Report'."),
+  generated_at: z.string().optional().describe("ISO date (YYYY-MM-DD); defaults to today."),
+  executive_summary: z.string().optional().describe("2–4 sentence overview up top."),
+  sections: z.array(reportSection).min(1).describe("Report sections, in order."),
+});
+
 export const visualizationInputSchema = z
   .discriminatedUnion("type", [
     tableViz,
@@ -198,7 +251,8 @@ export const visualizationInputSchema = z
     heatmapViz,
     radarViz,
     scatterViz,
+    reportViz,
   ])
   .describe(
-    "A single visualization. Pick the type that fits the data: leaderboard for rankings; bar-chart to compare one metric across categories; line-chart for trends over periods; area-chart for a trend where filled magnitude matters or composition-over-time (stacked); scatter for correlation between two metrics; table for detailed multi-column data; radar to profile an entity across metrics; sankey/heatmap for flows/matrices.",
+    "A single visualization. Pick the type that fits the data: report for a multi-section performance write-up (renders with Download PDF/Word — reference tool tables via table_ref, don't re-type them); leaderboard for rankings; bar-chart to compare one metric across categories; line-chart for trends over periods; area-chart for a trend where filled magnitude matters or composition-over-time (stacked); scatter for correlation between two metrics; table for detailed multi-column data; radar to profile an entity across metrics; sankey/heatmap for flows/matrices.",
   );
