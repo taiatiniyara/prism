@@ -68,7 +68,7 @@ const OWN_UTILITY_TOOLS = new Set([
   "get_review_queue_entries", "get_guided_entry", "get_custom_kpi_status", "get_governance_audit",
   "get_kpi_diagnostics", "get_risk_assessment", "get_data_quality_report", "drill_measure",
   "get_service_area_breakdown", "compare_periods", "get_what_changed", "get_trend_analysis",
-  "get_anomaly_insights", "calculate_kpi",
+  "get_anomaly_insights", "calculate_kpi", "get_compliance_status",
 ]);
 // Identifiers the persona's OWN utility may appear under in tool output.
 const PERSONA_ORG_NAMES: Record<string, string[]> = {
