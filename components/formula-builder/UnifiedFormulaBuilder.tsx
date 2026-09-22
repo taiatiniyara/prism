@@ -593,7 +593,9 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
         const snapshot = [...accum];
         setRecompute({
           processed: snapshot.filter((p) => p.status === "ok").length,
-          failed: snapshot.filter((p) => p.status !== "ok").length,
+          failed: snapshot.filter((p) => p.status === "failed").length,
+          notApplicable: snapshot.filter((p) => p.status === "not_applicable")
+            .length,
           byPeriod: snapshot,
         });
       }
@@ -630,6 +632,7 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
       const accum: RecomputeResult["byPeriod"] = [];
       let processed = 0;
       let failed = 0;
+      let notApplicable = 0;
       let done = 0;
       for (let i = 0; i < plan.periodIds.length; i += CHUNK_SIZE) {
         const chunk = plan.periodIds.slice(i, i + CHUNK_SIZE);
@@ -640,17 +643,20 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
         });
         processed += c.processed;
         failed += c.failed;
+        notApplicable += c.notApplicable ?? 0;
         if (c.byPeriod.length) accum.push(...c.byPeriod);
         done += chunk.length;
         setComputeProgress({ done, total });
         const snapshot = [...accum];
         setRecompute({
           processed: snapshot.filter((p) => p.status === "ok").length,
-          failed: snapshot.filter((p) => p.status !== "ok").length,
+          failed: snapshot.filter((p) => p.status === "failed").length,
+          notApplicable: snapshot.filter((p) => p.status === "not_applicable")
+            .length,
           byPeriod: snapshot,
         });
       }
-      return { processed, failed, byPeriod: accum };
+      return { processed, failed, notApplicable, byPeriod: accum };
     } finally {
       setComputeProgress((p) => (p && p.total > 0 ? p : null));
     }
@@ -1214,11 +1220,14 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                 )}
                 {recompute &&
                   (() => {
-                    // processed = attempted so far = successful + failed;
+                    // processed = attempted so far = successful + failed + N/A;
                     // total = the full period count (from the progress plan).
+                    // N/A = periods the KPI doesn't apply to (no inputs reported)
+                    // — kept out of Failed so it isn't inflated (#3, 2026-09-22).
                     const successful = recompute.processed;
                     const failed = recompute.failed;
-                    const processed = successful + failed;
+                    const notApplicable = recompute.notApplicable ?? 0;
+                    const processed = successful + failed + notApplicable;
                     const total =
                       computeProgress && computeProgress.total > 0
                         ? computeProgress.total
@@ -1240,6 +1249,15 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                         value: failed,
                         cls: failed > 0 ? "text-destructive" : undefined,
                       },
+                      ...(notApplicable > 0
+                        ? [
+                            {
+                              label: "N/A",
+                              value: notApplicable,
+                              cls: "text-muted-foreground",
+                            },
+                          ]
+                        : []),
                     ];
                     return (
                       <div className="flex items-center gap-3 text-center">
@@ -1369,11 +1387,15 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                       const missing =
                         coverageSummary.get(r.reportPeriodId)?.missingUnits ?? 0;
                       const computed = r.status === "ok";
-                      const effStatus = computed
-                        ? missing > 0
-                          ? "incomplete"
-                          : "ok"
-                        : "failed";
+                      const notApplicable = r.status === "not_applicable";
+                      const effStatus: "ok" | "incomplete" | "failed" | "na" =
+                        notApplicable
+                          ? "na"
+                          : computed
+                            ? missing > 0
+                              ? "incomplete"
+                              : "ok"
+                            : "failed";
                       return (
                         <tr key={r.reportPeriodId} className="border-t">
                           <td className="py-1 pr-3 tabular-nums">
@@ -1390,14 +1412,18 @@ export function UnifiedFormulaBuilder({ data, mode }: UnifiedFormulaBuilderProps
                                   "border-amber-400/50 bg-amber-400/10 text-amber-700 dark:text-amber-300",
                                 effStatus === "failed" &&
                                   "border-destructive/40 bg-destructive/10 text-destructive",
+                                effStatus === "na" &&
+                                  "border-border bg-muted text-muted-foreground",
                               )}
                               title={
                                 effStatus === "incomplete"
                                   ? `Computed on partial data — ${missing} generator(s) missing a required input`
-                                  : undefined
+                                  : effStatus === "na"
+                                    ? "Not applicable — no inputs reported this period (e.g. the utility has no transmission network)"
+                                    : undefined
                               }
                             >
-                              {effStatus}
+                              {effStatus === "na" ? "Not applicable" : effStatus}
                             </Badge>
                           </td>
                         <td className="py-1 pr-3 font-mono tabular-nums">

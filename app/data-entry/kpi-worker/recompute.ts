@@ -19,6 +19,8 @@ export interface RecomputeKpiNowArgs {
 export interface RecomputeKpiNowResult {
   processed: number;
   failed: number;
+  /** Periods where the KPI does not apply (no inputs reported) — not failures. */
+  notApplicable: number;
   byPeriod: Array<{
     reportPeriodId: number;
     kpiDefId: number;
@@ -70,6 +72,7 @@ export async function recomputeKpiNow(
   const result: RecomputeKpiNowResult = {
     processed: 0,
     failed: 0,
+    notApplicable: 0,
     byPeriod: [],
   };
 
@@ -153,6 +156,14 @@ export async function recomputeKpiNow(
             kpiDefId: target.kpiDefId,
             status: "ok",
             value: outcome.value,
+          });
+        } else if (outcome.status === "not_applicable") {
+          result.notApplicable += 1;
+          result.byPeriod.push({
+            reportPeriodId: period.id,
+            kpiDefId: target.kpiDefId,
+            status: "not_applicable",
+            reason: outcome.reason,
           });
         } else {
           result.failed += 1;

@@ -11,6 +11,18 @@ import type { KpiCalculationFailureType, KpiWorkerScope } from "./types";
 export type ComputeKpiOutcome =
   | { status: "ok"; value: string; zeroFilled: string[] }
   | {
+      // The KPI does not apply for this (utility × period): NONE of its formula
+      // inputs were reported, so the absence is expected, not a data gap (e.g. a
+      // transmission KPI on a period where the utility has no transmission
+      // network). Distinct from "failed" so it is excluded from the failure
+      // tally and any coverage denominator rather than inflating them (#3,
+      // 2026-09-22). Heuristic for now (no inputs present ⇒ not applicable);
+      // will defer to the explicit `transmission_relevance` signal once that is
+      // populated.
+      status: "not_applicable";
+      reason: string;
+    }
+  | {
       status: "failed";
       failureType: KpiCalculationFailureType;
       reason: string;
@@ -67,6 +79,16 @@ export const computeKpiTarget = async ({
       }
     }
     if (stillMissing.length > 0) {
+      // If NONE of the formula's inputs resolved to a value, the utility
+      // reported nothing this KPI consumes — treat as NOT APPLICABLE (out of
+      // scope), not a failure. A partial gap (some inputs present, a mandatory
+      // one missing) is a genuine failure worth surfacing.
+      if (Object.keys(resolved.variables).length === 0) {
+        return {
+          status: "not_applicable",
+          reason: `Not applicable — no inputs reported this period (${stillMissing.join(", ")}).`,
+        };
+      }
       return {
         status: "failed",
         failureType: "missing-input",
