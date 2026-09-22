@@ -40,8 +40,9 @@ export function renderReportDoc(
   style: PdfReportStyle = DEFAULT_PDF_REPORT_STYLE,
 ): string {
   const pageSize = style.pageSize === "LETTER" ? "8.5in 11.0in" : "21.0cm 29.7cm";
-  const generated =
-    report.generated_at || new Date().toISOString().slice(0, 10);
+  // Stamped server-side: the model has invented generated_at (e.g. a 2025 date on a 2026
+  // report). Mirrors renderReportPdf.
+  const generated = new Date().toISOString().slice(0, 10);
 
   const exec = report.executive_summary
     ? `<h2 class="sec exech">Executive Summary</h2>\n<p class="body">${mtext(report.executive_summary)}</p>`
