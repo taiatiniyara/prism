@@ -174,6 +174,7 @@ export type AiToolName =
   | "get_kpi_correlation"
   | "compare_kpis_across_utilities"
   | "drill_measure"
+  | "get_benchmark_report_data"
   | "generate_export"
   | "get_country_hierarchy"
   | "get_industry_benchmarks"
