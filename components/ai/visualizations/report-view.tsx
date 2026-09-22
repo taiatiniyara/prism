@@ -149,7 +149,12 @@ export function ReportView({ data }: ReportViewProps) {
                     </tr>
                   </thead>
                   <tbody>
-                    {section.data_table.rows.map((row, ri) => (
+                    {/* rows is typed required, but this JSON is untrusted model
+                        output: a hand-typed report fence carrying an unresolved
+                        { table_ref } (never server-filled) can arrive with
+                        columns but no rows. Guard so it renders empty, not a
+                        crash — mirrors renderReportPdf's `rows ?? []`. */}
+                    {(section.data_table.rows ?? []).map((row, ri) => (
                       <tr key={ri}>
                         {section.data_table!.columns.map((col, ci) => (
                           <td
