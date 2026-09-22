@@ -41,9 +41,22 @@ export interface BenchmarkReportPerUtility {
   acronym: string;
   utility_name: string;
   value: number;
+  /** `value` rendered with its unit ("57.6 min", "6%", "0.94×") — report this
+   *  verbatim so the number never loses its scale. */
+  display: string;
   target: number | null;
   meets_target: boolean | null;
   prior_year_value: number | null;
+  report_period: string | null;
+}
+
+/** A value excluded from ranking as implausible (unit/scale error) — surfaced, not hidden. */
+export interface BenchmarkReportDataQuality {
+  kpi_name: string;
+  acronym: string;
+  value: number;
+  display: string;
+  reason: string;
 }
 
 export interface BenchmarkReportKpi {
@@ -53,9 +66,9 @@ export interface BenchmarkReportKpi {
   pacific_avg: number | null;
   ppa_target: number | null;
   per_utility: BenchmarkReportPerUtility[];
-  best: { acronym: string; value: number } | null;
-  worst: { acronym: string; value: number } | null;
-  most_improved: { acronym: string; delta: number } | null;
+  best: { acronym: string; value: number; display: string } | null;
+  worst: { acronym: string; value: number; display: string } | null;
+  most_improved: { acronym: string; delta: number; display: string } | null;
 }
 
 export interface BenchmarkReportTable {
@@ -68,6 +81,7 @@ export interface BenchmarkReportData {
   utilities: BenchmarkReportUtility[];
   kpis: BenchmarkReportKpi[];
   tables: Record<string, BenchmarkReportTable>;
+  data_quality: BenchmarkReportDataQuality[];
   notes: string[];
 }
 
@@ -84,6 +98,39 @@ const parseYear = (v: unknown): number | null => {
 };
 
 const round2 = (n: number): number => Math.round(n * 100) / 100;
+
+/**
+ * Is this a believable value for a per-utility benchmark KPI? These metrics are
+ * rates, percentages, ratios and durations (SAIDI minutes, losses %, cost
+ * recovery ×) — none legitimately reaches a million in magnitude, so a value
+ * that large is unit/scale confusion (a raw count landing in a normalized
+ * field). #16 hit exactly this on a real report: "System Losses" of −1,040,180
+ * ranked as a KPI and dragged the pacific average off a cliff. Implausible
+ * values are surfaced in `data_quality` + a note (never hidden — faithfulness),
+ * but kept OUT of ranking / best / worst / most-improved / pacific_avg and never
+ * marked meets_target. Deliberately conservative: only egregious cases are cut.
+ */
+export const isPlausible = (value: number, unit: string | null): boolean => {
+  if (!Number.isFinite(value)) return false;
+  if (Math.abs(value) >= 1_000_000) return false;
+  const u = (unit ?? "").toLowerCase();
+  const isPct = u.includes("%") || u.includes("percent");
+  // Percentages get generous headroom (cost recovery > 100%, small negatives)
+  // but a value orders of magnitude outside that band is a scale error.
+  if (isPct && (value < -100 || value > 10_000)) return false;
+  return true;
+};
+
+/** Human-readable value with its unit: 57.6 → "57.6 min", 6 → "6%", 0.94 → "0.94×". */
+export const formatValue = (value: number, unit: string | null): string => {
+  const n = Number.isInteger(value) ? String(value) : String(round2(value));
+  const u = (unit ?? "").trim();
+  if (!u) return n;
+  if (u === "%" || u.startsWith("%")) return `${n}%`;
+  const ul = u.toLowerCase();
+  if (u === "×" || ul === "x" || ul === "ratio") return `${n}×`;
+  return `${n} ${u}`;
+};
 
 /** Normalize a KPI name for fuzzy matching against ai_benchmark.kpi_name. */
 const norm = (s: string): string => s.toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
@@ -141,6 +188,7 @@ export const getBenchmarkReportData = async (
   const utilityMap = new Map<string, BenchmarkReportUtility>();
   const kpis: BenchmarkReportKpi[] = [];
   const tables: Record<string, BenchmarkReportTable> = {};
+  const dataQuality: BenchmarkReportDataQuality[] = [];
   let resolvedYear = year;
 
   for (const k of current.data) {
@@ -151,20 +199,24 @@ export const getBenchmarkReportData = async (
     const direction = bench?.direction ?? null;
     const target = bench?.ppa_target ?? null;
     const pacificAvg = bench?.pacific_regional_average ?? null;
-    const unit = bench?.unit ?? null;
+    // Unit from the fact rows (the KPI definition's own unit for these values) is
+    // authoritative for what the numbers mean; fall back to the benchmark's unit.
+    const unit = k.values.find((v) => v.unit)?.unit ?? bench?.unit ?? null;
     if (!direction) {
       notes.push(`No benchmark direction for "${k.kpi_name}" — values shown, but best/worst omitted.`);
     }
 
     const priorMap = priorByKpiAcronym.get(k.kpi_name);
-    const perUtility: BenchmarkReportPerUtility[] = k.values.map((v) => {
+    const perUtilityAll: BenchmarkReportPerUtility[] = k.values.map((v) => {
       utilityMap.set(v.utility_acronym, {
         utility_name: v.utility_name,
         acronym: v.utility_acronym,
       });
       const priorVal = priorMap?.get(v.utility_acronym) ?? null;
+      const plausible = isPlausible(v.value, unit);
+      // Never claim meets_target on a value we don't trust.
       const meets =
-        target != null && direction != null
+        plausible && target != null && direction != null
           ? direction === "lower_is_better"
             ? v.value <= target
             : v.value >= target
@@ -173,11 +225,35 @@ export const getBenchmarkReportData = async (
         acronym: v.utility_acronym,
         utility_name: v.utility_name,
         value: v.value,
+        display: formatValue(v.value, unit),
         target,
         meets_target: meets,
         prior_year_value: priorVal,
+        report_period: v.report_period,
       };
     });
+
+    // Split implausible values out of the ranking (still surfaced in data_quality
+    // + a note). Everything downstream — best/worst/most-improved/pacific_avg and
+    // the ranking table — sees only the plausible set.
+    const perUtility = perUtilityAll.filter((u) => isPlausible(u.value, unit));
+    const excluded = perUtilityAll.filter((u) => !isPlausible(u.value, unit));
+    for (const u of excluded) {
+      dataQuality.push({
+        kpi_name: k.kpi_name,
+        acronym: u.acronym,
+        value: u.value,
+        display: u.display,
+        reason: "Out of plausible range — likely a unit/scale error; excluded from ranking.",
+      });
+    }
+    if (excluded.length > 0) {
+      notes.push(
+        `${k.kpi_name}: ${excluded.length} value(s) excluded from ranking as implausible (${excluded
+          .map((u) => `${u.acronym} ${u.display}`)
+          .join(", ")}). See data_quality.`,
+      );
+    }
 
     // Direction-aware best/worst (skip when no direction).
     let best: BenchmarkReportKpi["best"] = null;
@@ -188,23 +264,23 @@ export const getBenchmarkReportData = async (
       const sorted = [...perUtility].sort((a, b) =>
         lowerBetter ? a.value - b.value : b.value - a.value,
       );
-      best = { acronym: sorted[0].acronym, value: sorted[0].value };
-      worst = {
-        acronym: sorted[sorted.length - 1].acronym,
-        value: sorted[sorted.length - 1].value,
-      };
-      // Most improved = biggest FAVOURABLE prior→current delta.
+      best = { acronym: sorted[0].acronym, value: sorted[0].value, display: sorted[0].display };
+      const w = sorted[sorted.length - 1];
+      worst = { acronym: w.acronym, value: w.value, display: w.display };
+      // Most improved = biggest FAVOURABLE prior→current delta (plausible only).
       for (const u of perUtility) {
         if (u.prior_year_value == null) continue;
+        if (!isPlausible(u.prior_year_value, unit)) continue;
         const raw = u.value - u.prior_year_value;
         const favourable = lowerBetter ? -raw : raw; // improvement magnitude
         if (favourable > 0 && (!mostImproved || favourable > mostImproved.delta)) {
-          mostImproved = { acronym: u.acronym, delta: round2(favourable) };
+          mostImproved = { acronym: u.acronym, delta: round2(favourable), display: formatValue(round2(favourable), unit) };
         }
       }
     }
 
-    // pacific_avg: prefer the benchmark's regional average; else mean of values.
+    // pacific_avg: prefer the benchmark's regional average; else mean of the
+    // plausible values (implausible ones would wreck the mean).
     const meanOfValues =
       perUtility.length > 0
         ? round2(perUtility.reduce((s, u) => s + u.value, 0) / perUtility.length)
@@ -223,6 +299,8 @@ export const getBenchmarkReportData = async (
     });
 
     // Ranking table (pre-sorted best→worst when direction known, else as-returned).
+    // Values render WITH their unit so the report never shows a bare, scaleless
+    // number; sorting still happens on the numeric value above.
     const orderedForTable =
       direction != null
         ? [...perUtility].sort((a, b) =>
@@ -238,11 +316,14 @@ export const getBenchmarkReportData = async (
       rows: orderedForTable.slice(0, MAX_TABLE_ROWS).map((u) => {
         const row: Record<string, unknown> = {
           Utility: u.acronym,
-          [valueCol]: u.value,
-          Target: u.target ?? "—",
+          [valueCol]: u.display,
+          Target: u.target != null ? formatValue(u.target, unit) : "—",
           "Meets target": u.meets_target == null ? "—" : u.meets_target ? "Yes" : "No",
         };
-        if (includePrior) row["Prior year"] = u.prior_year_value ?? "—";
+        if (includePrior) {
+          row["Prior year"] =
+            u.prior_year_value != null ? formatValue(u.prior_year_value, unit) : "—";
+        }
         return row;
       }),
     };
@@ -261,6 +342,7 @@ export const getBenchmarkReportData = async (
       utilities: [...utilityMap.values()].sort((a, b) => a.acronym.localeCompare(b.acronym)),
       kpis,
       tables,
+      data_quality: dataQuality,
       notes,
     },
     metadata: createToolMetadata({ freshness: new Date(), source: "kpi_values" }),
@@ -272,6 +354,7 @@ const emptyData = (year: number | null): BenchmarkReportData => ({
   utilities: [],
   kpis: [],
   tables: {},
+  data_quality: [],
   notes: [],
 });
 
@@ -307,8 +390,9 @@ export function benchmarkReportDigest(data: BenchmarkReportData) {
         },
       ]),
     ),
+    data_quality: data.data_quality,
     notes: data.notes,
     guidance:
-      "Write the report from these stats. In each section's data_table use { table_ref: \"<the kpi's table_ref>\" } — do NOT re-type the rows; the server fills them.",
+      "Write the report from these stats. In each section's data_table use { table_ref: \"<the kpi's table_ref>\" } — do NOT re-type the rows; the server fills them. Report each value with its unit as shown in `display` / the table (e.g. \"57.6 min\", not \"57.6\"). If `data_quality` is non-empty, add a short data-quality note flagging those excluded values as likely unit/scale errors — do not rank or average them.",
   };
 }
