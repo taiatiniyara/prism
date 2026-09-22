@@ -235,6 +235,10 @@ How the entitlement model (§3.2) is **enforced in Power BI**. Verified against 
 **Two enforcement surfaces — both must scope, or it leaks:**
 1. **Embed (dashboard):** per-user embed token — `lib/powerbi/operations.ts GenerateToken` sends `identities:[{ username: email, roles:[…resolved], datasets:[…] }]`. Mechanism already built; the extension is sending the *resolved* roles, not the user's workflow-role.
 2. **AI / DAX (PRISM AI answers):** DAX runs under `impersonatedUserName = the requesting user's email` (same RLS), replacing the single env identity — else a Basic user's AI could surface Premium/input content the dashboard gates. DAX cache must be **entitlement-keyed**. (#4's data-service domain.)
+   - **AI data-service tools obey the same tenancy scope as the token — by data class (ruling 2026-09-22, #10, prompted by #16 eval case c044).** A context-scoped **utility-provider** user (BLO/DAO/CEO/etc.) calling a tool with no explicit `utility_id` must **default to the caller's own org**, and an explicit **foreign `utility_id` must be denied** — a tool must never let a utility persona read another utility's data by omission or by asking. Split:
+     - **Own-utility operational / input / workflow tools** (e.g. `getKpiStatus` / submission-status/data-entry-progress, and anything exposing KPI **inputs** or entry state) → **hard own-org scope** for context-scoped users. *(The c044 defect: `getKpiStatus({})` by a BLO returned other utilities' submission counts — a tenancy leak; fix = default to caller's org.)*
+     - **Cross-utility benchmarking tools** (e.g. `get_benchmarking_data`) → may return cross-utility rows, but **only approved (`status_id=5`) KPI-level results** (`SCOPE_BENCHMARKING` + `KPI_ONLY`); never another utility's inputs or submission status.
+     Every data-service tool must be audited against this split (the AI-path counterpart of the RLS role model above).
 
 **Hard vs soft (reality-check):**
 - **Hard (RLS):** *view* + *which content* (`kpi` vs `kpi_input`) + row-scope — a user provably cannot see excluded data.
