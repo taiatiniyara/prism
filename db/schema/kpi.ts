@@ -20,6 +20,7 @@ import {
   FormulaInput,
 } from "./dataEntry";
 import { reportPeriods } from "./reportPeriods";
+import { period } from "./period";
 import { managedListItems } from "./managedLists";
 import { organisations, powerStations, serviceAreas, units } from "./utility";
 import { countries, subRegions } from "./country";
@@ -43,7 +44,10 @@ interface Limit {
   month?: number | null;
 }
 
-interface KpiTarget {
+// Legacy JSON-target shape stored in kpi_definitions.targets — being superseded
+// by the relational `kpi_target` table (below). Renamed off "KpiTarget" so that
+// canonical name is the table's row type.
+interface KpiDefinitionTargetJson {
   utility_id: number;
   year: number;
   month?: number | null;
@@ -86,7 +90,7 @@ export const kpiDefinitions = pgTable("kpi_definitions", {
     .notNull()
     .$type<"benchmarking" | "custom">(),
   limits: json("limits").$type<Limit[]>(),
-  targets: json("targets").$type<KpiTarget[]>(),
+  targets: json("targets").$type<KpiDefinitionTargetJson[]>(),
   is_kpi_input: boolean("is_kpi_input").default(true).notNull(),
   owner_user_id: text("owner_user_id").references(() => user.id),
   is_private: boolean("is_private").default(false).notNull(),
@@ -354,4 +358,120 @@ END`),
 );
 export type KpiActual = typeof kpiActual.$inferSelect;
 export type NewKpiActual = typeof kpiActual.$inferInsert;
+
+// kpi_target — the utility's own target, mirroring kpi_actual's shared address
+// (docs/kpi-target-actual-contract.md). Model-after-apply: the table was applied
+// via scripts/sql/2026-09-22-kpi-target.sql (#534); this model matches it so
+// drift-check sees model == DB. Divergences from kpi_actual: period_id FKs the
+// canonical `period` dim; target provenance (source/set_by/set_at) instead of
+// compute provenance; no availability machinery; CHECK utility_id IS NOT NULL
+// (utility-or-finer, §2.1) + CHECK value IS NOT NULL (until §4 authority fields).
+export const kpiTarget = pgTable(
+  "kpi_target",
+  {
+    id: uuid("id").primaryKey().notNull().defaultRandom(),
+    kpi_def_id: integer("kpi_def_id")
+      .notNull()
+      .references(() => kpiDefinitions.id),
+    period_id: integer("period_id")
+      .notNull()
+      .references(() => period.id),
+    utility_id: integer("utility_id").references(() => organisations.id),
+    country_id: integer("country_id").references(() => countries.id),
+    subregion_id: integer("subregion_id").references(() => subRegions.id),
+    region: text("region").notNull(),
+    service_area_id: integer("service_area_id").references(
+      () => serviceAreas.id,
+    ),
+    power_station_id: integer("power_station_id").references(
+      () => powerStations.id,
+    ),
+    unit_id: integer("unit_id").references(() => units.id),
+    provider_id: integer("provider_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    category_id: integer("category_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    technology_id: integer("technology_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    asset_class_id: integer("asset_class_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    customer_type_id: integer("customer_type_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    payment_mode_id: integer("payment_mode_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    consumption_band_id: integer("consumption_band_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    division_id: integer("division_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    gender_id: integer("gender_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    utility_function_id: integer("utility_function_id")
+      .notNull()
+      .references(() => managedListItems.id),
+    value: numeric("value"),
+    source: varchar("source", { length: 16 }).notNull(),
+    set_by: text("set_by").references(() => user.id),
+    set_at: timestamp("set_at"),
+    owning_org_id: integer("owning_org_id").references(() => organisations.id),
+    updated_at: timestamp("updated_at"),
+    // Coarse, derived grain label — the finest address level populated.
+    grain_level: text("grain_level").generatedAlwaysAs(sql`
+CASE
+    WHEN (unit_id IS NOT NULL) THEN 'unit'::text
+    WHEN (power_station_id IS NOT NULL) THEN 'station'::text
+    WHEN (service_area_id IS NOT NULL) THEN 'area'::text
+    WHEN (utility_id IS NOT NULL) THEN 'utility'::text
+    WHEN (country_id IS NOT NULL) THEN 'country'::text
+    WHEN (subregion_id IS NOT NULL) THEN 'subregion'::text
+    ELSE 'region'::text
+END`),
+  },
+  (table) => [
+    index("ix_kt_grain").on(table.grain_level),
+    index("ix_kt_kpi_period").on(table.kpi_def_id, table.period_id),
+    // Unique physical address: kpi + period + full grain + all ten dimensions.
+    uniqueIndex("uq_kt_address").on(
+      table.kpi_def_id,
+      table.period_id,
+      table.utility_id,
+      table.country_id,
+      table.subregion_id,
+      table.region,
+      table.service_area_id,
+      table.power_station_id,
+      table.unit_id,
+      table.provider_id,
+      table.category_id,
+      table.technology_id,
+      table.asset_class_id,
+      table.customer_type_id,
+      table.payment_mode_id,
+      table.consumption_band_id,
+      table.division_id,
+      table.gender_id,
+      table.utility_function_id,
+    ),
+    check(
+      "chk_kt_grain_level",
+      sql`grain_level = ANY (ARRAY['unit'::text, 'station'::text, 'area'::text, 'utility'::text, 'country'::text, 'subregion'::text, 'region'::text])`,
+    ),
+    check(
+      "chk_kt_source",
+      sql`(source)::text = ANY ((ARRAY['direct'::character varying, 'bsc'::character varying])::text[])`,
+    ),
+    check("chk_kt_value_present", sql`value IS NOT NULL`),
+    check("chk_kt_utility_or_finer", sql`utility_id IS NOT NULL`),
+  ],
+);
+export type KpiTarget = typeof kpiTarget.$inferSelect;
+export type NewKpiTarget = typeof kpiTarget.$inferInsert;
 
