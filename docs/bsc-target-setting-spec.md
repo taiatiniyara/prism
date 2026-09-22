@@ -233,9 +233,9 @@ migration the `kpi_definitions.targets` column is retired (destructive — apply
 ## 10. Build sequencing & handoffs
 
 Nothing here builds until:
-1. **#2 applies `kpi_target` (#534) to p2** (awaiting Eugene's direct in-session word).
-2. **#3 builds the guarded set-target service** (§2) — itself pending Eugene
-   prioritising the target write-path.
+1. ~~#2 applies `kpi_target` (#534) to p2~~ **DONE — live on p2 (Eugene-greenlit, 2026-09-22).**
+2. **#3 builds the guarded set-target service** (§2) — the remaining gate; itself
+   pending Eugene prioritising the target write-path.
 
 Then, in order (all mine unless noted):
 1. Repoint **both** `SaveKpiTargets` (direct) and BSC `saveKpiTargets` off the
