@@ -15,6 +15,7 @@ import {
   appendVisualizationFence,
   visualizationJsonFromToolInput,
 } from "@/lib/ai/visualization";
+import { ReportTableRegistry } from "@/lib/ai/report-tables";
 import { isValidOrigin } from "@/lib/ai/origin";
 import { logger } from "@/lib/logging/logger";
 
@@ -375,6 +376,9 @@ export async function POST(request: Request) {
         let accumulatedText = "";
         const toolCalls: Array<{ toolName: string; input: unknown }> = [];
         const visualizationJsonList: string[] = [];
+        // Tables returned by data tools this turn; a report block may reference them by key
+        // (`data_table: { table_ref }`) instead of the model re-typing the rows.
+        const reportTables = new ReportTableRegistry();
         let tokenUsage = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
         let errorMessage: string | null = null;
 
@@ -387,7 +391,7 @@ export async function POST(request: Request) {
                 break;
               case "tool-call": {
                 toolCalls.push({ toolName: part.toolName, input: part.input });
-                const rawViz = visualizationJsonFromToolInput(part.toolName, part.input);
+                const rawViz = visualizationJsonFromToolInput(part.toolName, part.input, reportTables);
                 if (rawViz && visualizationJsonList.length < MAX_VISUALIZATIONS_PER_TURN) {
                   visualizationJsonList.push(rawViz);
                 }
@@ -397,6 +401,7 @@ export async function POST(request: Request) {
                 break;
               }
               case "tool-result":
+                reportTables.addToolResult(part.toolCallId, part.output);
                 enqueue(`2:${JSON.stringify({ type: "tool-end", toolName: part.toolName, timestamp: Date.now(), resultSummary: "" })}\n`);
                 break;
               case "tool-error":
@@ -446,6 +451,13 @@ export async function POST(request: Request) {
           } catch (err) {
             logger.error("[ai-chat] Empty-answer fallback failed", { error: err instanceof Error ? err.message : String(err), turnId });
           }
+        }
+
+        if (reportTables.unresolvedRefs.length > 0) {
+          logger.warn("[ai-chat] Report referenced unknown tables; those sections rendered without a table", {
+            refs: reportTables.unresolvedRefs,
+            turnId,
+          });
         }
 
         // Deliver collected visualization JSON on channel 4, and persist the same

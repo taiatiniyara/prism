@@ -3,6 +3,7 @@ import type {
   AiBarChartVisualization,
   AiLineChartVisualization,
 } from "./types";
+import { resolveReportToJson, type ReportTableRegistry } from "./report-tables";
 
 export const MAX_VISUALIZATIONS_PER_TURN = 5;
 export const MAX_VISUALIZATION_JSON_SIZE = 50_000;
@@ -26,14 +27,22 @@ export const isVisualizationType = (v: unknown): boolean =>
  * Extracts the raw visualization JSON from a `render_visualization` tool input.
  * Returns null for any other tool or when the payload is absent/oversized (the
  * client caps each extracted block at 50KB and 5 charts per message).
+ *
+ * When `reportTables` holds tables from earlier tool results, a report block's
+ * `data_table: { table_ref }` sections are filled with the referenced rows here — once,
+ * before the block is streamed or persisted (see lib/ai/report-tables.ts).
  */
 export function visualizationJsonFromToolInput(
   toolName: string,
   input: unknown,
+  reportTables?: ReportTableRegistry,
 ): string | null {
   if (toolName !== "render_visualization") return null;
   const viz = (input as { visualization?: unknown } | null)?.visualization;
   if (!viz || typeof viz !== "object" || viz === null) return null;
+  if (reportTables && (viz as { type?: unknown }).type === "report") {
+    return resolveReportToJson(viz, reportTables, MAX_VISUALIZATION_JSON_SIZE)?.json ?? null;
+  }
   const raw = JSON.stringify(viz);
   if (!raw || raw.length > MAX_VISUALIZATION_JSON_SIZE) return null;
   return raw;
