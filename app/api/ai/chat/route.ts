@@ -19,7 +19,7 @@ import { ReportTableRegistry } from "@/lib/ai/report-tables";
 import { isValidOrigin } from "@/lib/ai/origin";
 import { logger } from "@/lib/logging/logger";
 
-export const maxDuration = 120;
+export const maxDuration = 240;
 
 const ADMIN_ROLES = new Set(["BMO", "DEV"]);
 const isAdminRole = (role: string | null | undefined): boolean =>
@@ -337,10 +337,19 @@ export async function POST(request: Request) {
         }`
       : "";
 
+    // Per-request: tell the model the caller's OWN utility so it never asks "which
+    // utility are you from?" (14× in prod) and resolves "my/our utility" correctly.
+    // Uses user.org_id → belongs in the uncached suffix, not the cached base prompt.
+    const ownUtilityContext =
+      !isAdminRole(user.role) && user.org_id != null
+        ? `\n\nThis user belongs to utility_id ${user.org_id} — resolve it via the utility directory; "my/our utility" means that one. Don't ask which utility they belong to.`
+        : "";
+
     // Per-request context only. The static base prompt is built (and cached) inside the
     // service; this rides after the cache breakpoint as its own uncached system block.
     const systemPromptSuffix =
       roleContext +
+      ownUtilityContext +
       contextBlock +
       (!utilityCheck.valid
         ? `\n\nIMPORTANT: ${utilityCheck.message}`

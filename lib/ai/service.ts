@@ -191,7 +191,7 @@ const getModelConfig = (fallback: boolean) => {
   return {
     model: anthropic(modelName),
     modelName,
-    maxOutputTokens: 6000, // ample for a full data answer without a reasoning budget
+    maxOutputTokens: 12000, // headroom for multi-section report blocks — 6000 truncated fleet reports mid-render (stop_reason:length); table_ref keeps rows out of the model so this is ample
     temperature: fallback ? 0.3 : 0.4,
     providerOptions: undefined,
   };
