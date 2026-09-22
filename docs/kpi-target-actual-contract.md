@@ -163,8 +163,40 @@ arrives as an additive change. `gold_fact` (§6) treats the authority target as 
   cannot use `report_periods` (§0), so it is blocked until the period dim exists —
   this is a real dependency in front of the work, not just prioritisation.
 - Both facts FK the **same** period dim.
-- Design-only until Eugene prioritises the `kpi_actual` write path (the (a) full
-  write path vs (b) interim `kpi → kpi_actual` bridge decision, per #4's thread).
+
+### 5.1 Status (2026-09-22)
+
+- **`kpi_target` is BUILT + LIVE** on p2 (PR #534, #2, Eugene-greenlit). Empty
+  greenfield; `period_id` FK → `period(id)` (canonical period dim). The **target**
+  side of §0 is done.
+- **`kpi_actual` write path — RULED (Eugene, 2026-09-22): (a) FULL RECOMPUTE**, not
+  the (b) interim `kpi → kpi_actual` bridge. The calculator computes actuals fresh
+  from `data_entries` straight into `kpi_actual` on the period dim. Rationale: the
+  ~7,622 legacy `kpi` rows are stale (measure-id collapse + hand-rebuilds during
+  calculator testing), so porting them would carry bad data forward; a
+  `data_entries` reload (Run #17) is imminent, so a recompute lands on final data.
+
+### 5.2 Step-4 sequence & gating (the recompute)
+
+Runs **after the migration**, never before:
+
+1. **Migration / `data_entries` reimport (Run #17) + structural campaign** (#2) —
+   the recompute must land on final, correct data.
+2. **Settle the KPI rebuild ("Track B")** — KPI definitions repointed correctly
+   first (the manual rebuild Eugene paused after hand-fixing some). The recompute is
+   only as correct as the defs it computes from.
+3. **Recompute into `kpi_actual`** (#3) — full recompute from `data_entries`.
+
+**Write-path key-space rule (JOIN-CRITICAL):** the recompute MUST emit
+`kpi_actual.period_id = period(id)` (canonical period dim), **never** `report_period`
+ids — else the exact-address `target ⋈ actual` join hits mismatched key spaces and
+silently returns nothing. `kpi_actual.period_id` is currently a bare int (no FK,
+table empty), so adding `FK → period(id)` is a clean additive step landed with the
+recompute.
+
+**Gate:** no `kpi_actual` write work until **Eugene directly greenlights Step 4**
+post-migration (per the "DB apply needs Eugene's direct word" discipline). #2's
+migration/reimport gates the start; #3 owns the recompute.
 
 ---
 
