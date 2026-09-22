@@ -280,7 +280,7 @@ export interface AiGuardrailResult {
   reason?: string;
 }
 
-export const AI_PROMPT_VERSION = "2026-09-21-lean-reports";
+export const AI_PROMPT_VERSION = "2026-09-22-report-activation";
 
 export const AI_MODELS = {
   primary: "claude-sonnet-4-6",
