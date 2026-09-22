@@ -214,7 +214,7 @@ This file is read and written by multiple concurrent Claude Code sessions (the "
 
 - **Owner:** PRISM 2 #15 pending-tracker (retired)
 - **Status:** **Sunset by Eugene 2026-09-22 — "lean on the board."** The separate `docs/PENDING.md` dashboard is RETIRED (bannered, kept for history). **This board is now the single source of truth** for stream state / pending work / awaiting-Eugene; journey changes live in [USER-IMPACT.md](USER-IMPACT.md) (streams own their rows, #11 owns instructions). The 3-week stale gap (09-03→09-22, tracker not invoked while ~238 PRs landed) confirmed a standalone tracker only stays current when its session runs, whereas the board never rotted.
-- **Other streams:** no need to ping #15 anymore — just keep your own board row current (the existing protocol). Any remaining `#15`-owned duties (e.g. the USER-IMPACT reconciliation audit) are for #1/Eugene to reassign or drop.
+- **Other streams:** no need to ping #15 anymore — just keep your own board row current (the existing protocol). The one #15-owned duty — the **USER-IMPACT reconciliation audit** — was **reassigned to #11** by Eugene 2026-09-22 (#11 now owns both the audit and instruction-writing). No #15 duties remain.
 
 ### 16. AI optimisation — 🟢 active
 
