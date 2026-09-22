@@ -70,6 +70,30 @@ describe("computeKpiTarget", () => {
     expect(mocks.upsertCalculatedKpiValue).not.toHaveBeenCalled();
   });
 
+  it("classifies ALL-inputs-absent (non-additive) as not_applicable, not failed", async () => {
+    // No input resolved to a value → the utility reported nothing this KPI
+    // consumes (e.g. no transmission network), so it's out of scope, not a gap.
+    mocks.resolveFormulaInputValues.mockResolvedValue({
+      variables: {},
+      missingVariables: ["a", "b"],
+    });
+    const outcome = await computeKpiTarget({ target: target("a / b"), scope });
+    expect(outcome.status).toBe("not_applicable");
+    expect(mocks.upsertCalculatedKpiValue).not.toHaveBeenCalled();
+  });
+
+  it("keeps a PARTIAL gap (some inputs present) as a genuine missing-input failure", async () => {
+    mocks.resolveFormulaInputValues.mockResolvedValue({
+      variables: { a: 4 },
+      missingVariables: ["b"],
+    });
+    const outcome = await computeKpiTarget({ target: target("a / b"), scope });
+    expect(outcome).toMatchObject({
+      status: "failed",
+      failureType: "missing-input",
+    });
+  });
+
   it("maps an evaluation error", async () => {
     mocks.resolveFormulaInputValues.mockResolvedValue({
       variables: { a: 1, b: 0 },

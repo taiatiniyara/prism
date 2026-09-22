@@ -113,6 +113,14 @@ export async function runKpiWorker(
         continue;
       }
 
+      if (outcome.status === "not_applicable") {
+        // Not a failure and not a computed value — the KPI simply does not apply
+        // for this scope/period (no inputs reported). Close the attempt without
+        // counting it as processed or failed, and write no value.
+        await markAttemptCompleted(attempt.id);
+        continue;
+      }
+
       await markAttemptCompleted(attempt.id);
       processedKpiCount += 1;
 
