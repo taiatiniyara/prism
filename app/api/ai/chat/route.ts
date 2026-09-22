@@ -16,37 +16,12 @@ import {
   visualizationJsonFromToolInput,
 } from "@/lib/ai/visualization";
 import { ReportTableRegistry } from "@/lib/ai/report-tables";
+import { buildRequestContext, SUMMARISE_AFTER_TURNS } from "@/lib/ai/request-context";
 import { isValidOrigin } from "@/lib/ai/origin";
 import { logger } from "@/lib/logging/logger";
 
 export const maxDuration = 240;
 
-const ADMIN_ROLES = new Set(["BMO", "DEV"]);
-const isAdminRole = (role: string | null | undefined): boolean =>
-  role != null && ADMIN_ROLES.has(role.toUpperCase());
-
-const getAudienceRegister = (role: string | null | undefined): string => {
-  const upper = (role ?? "").toUpperCase();
-
-  switch (upper) {
-    case "CEO":
-    case "EXE":
-      return "CEO / Executive / Board";
-    case "BMO":
-    case "MGR":
-      return "Manager / Operations";
-    case "DEV":
-    case "BLO":
-    case "DAOF":
-    case "DAOH":
-    case "DAOO":
-      return "Staff / Analyst";
-    case "EXT":
-      return "Consultant";
-    default:
-      return "Manager / Operations";
-  }
-};
 
 const deriveSessionTitle = (message: string): string => {
   const normalized = message.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
@@ -314,49 +289,18 @@ export async function POST(request: Request) {
       .where(eq(aiChatSession.id, sessionId));
 
     const conversationTurns = cleanMessages.filter((m) => m.role === "user").length;
-    const shouldSummarize = conversationTurns > 8;
-
+    const shouldSummarize = conversationTurns > SUMMARISE_AFTER_TURNS;
     const utilityCheck = checkUserUtility(user);
-    let contextBlock = "";
 
-    const validatedContext = validateContextSummary(existingContextSummary);
-    if (validatedContext) {
-      const parts: string[] = [];
-      if (Array.isArray(validatedContext.topics)) parts.push(`Previous topics: ${validatedContext.topics.join(", ")}`);
-      if (Array.isArray(validatedContext.key_findings)) parts.push(`Previous findings: ${validatedContext.key_findings.join(", ")}`);
-      if (parts.length) contextBlock = `\n\nConversation context from earlier turns: ${parts.join(". ")}`;
-    }
-
-    const roleContext = user.role
-      ? `\n\nCurrent audience register: ${getAudienceRegister(user.role)}.${
-          isAdminRole(user.role)
-            ? " This user is a platform administrator (BMO/DEV) — they can access all utilities' approved Financial Year data, approve custom KPIs, and manage configuration. Cross-utility benchmarking across all utilities is fully available to them."
-            : user.role === "EXT"
-              ? " This user is an external stakeholder. Their data access may be limited — do not claim other utilities' data is missing when it simply may not be visible to this user."
-              : " This user is a utility role (BLO/CEO/EXE/MGR/DAOF/DAOH/DAOO). They can benchmark their KPIs against every utility's approved Financial Year data and are fully entitled to cross-utility benchmarking results. BMO/DEV platform-admin powers (approving custom KPIs, managing configuration) remain admin-only."
-        }`
-      : "";
-
-    // Per-request: tell the model the caller's OWN utility so it never asks "which
-    // utility are you from?" (14× in prod) and resolves "my/our utility" correctly.
-    // Uses user.org_id → belongs in the uncached suffix, not the cached base prompt.
-    const ownUtilityContext =
-      !isAdminRole(user.role) && user.org_id != null
-        ? `\n\nThis user belongs to utility_id ${user.org_id} — resolve it via the utility directory; "my/our utility" means that one. Don't ask which utility they belong to.`
-        : "";
-
-    // Per-request context only. The static base prompt is built (and cached) inside the
-    // service; this rides after the cache breakpoint as its own uncached system block.
-    const systemPromptSuffix =
-      roleContext +
-      ownUtilityContext +
-      contextBlock +
-      (!utilityCheck.valid
-        ? `\n\nIMPORTANT: ${utilityCheck.message}`
-        : "") +
-      (shouldSummarize
-        ? `\n\nNOTE: This conversation has ${conversationTurns} turns. Before answering, briefly summarise the key context from earlier turns in 1-2 sentences, then answer the latest question concisely.`
-        : "");
+    // Per-request context only (audience register, the caller's own utility, earlier-turn
+    // summary, notices). The static base prompt is built and cached inside the service; this
+    // rides after the cache breakpoint as its own uncached system block. Shared with the
+    // eval harness so the two can't drift.
+    const systemPromptSuffix = buildRequestContext(user, {
+      contextSummary: validateContextSummary(existingContextSummary),
+      utilityNotice: utilityCheck.valid ? null : utilityCheck.message,
+      conversationTurns,
+    });
 
     const { fullStream, model, wasFallback, promptVersion } = await runAiStream({
       messages: cleanMessages,

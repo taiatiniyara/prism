@@ -32,6 +32,7 @@ import { ReportTableRegistry } from "../lib/ai/report-tables";
 import { toTokenUsage, estimateCostCents, type AiTokenUsage } from "../lib/ai/usage";
 import type { AiChatMessage } from "../lib/ai/types";
 import type { CurrentUser } from "../lib/user.service";
+import { buildRequestContext } from "../lib/ai/request-context";
 
 // ---------- CLI ----------
 const arg = (name: string, def?: string): string | undefined => {
@@ -113,18 +114,9 @@ const PERSONAS: Record<string, CurrentUser> = {
   },
 };
 
-// Same per-request suffix app/api/ai/chat/route.ts builds (kept in step by hand — the route
-// doesn't export it). Utility check / context summary are omitted: fresh session, valid org.
-const audienceRegister = (role: string) =>
-  ["CEO", "EXE"].includes(role) ? "CEO / Executive / Board"
-  : ["BMO", "MGR"].includes(role) ? "Manager / Operations"
-  : role === "EXT" ? "Consultant" : "Staff / Analyst";
-const roleSuffix = (u: CurrentUser) =>
-  `Current audience register: ${audienceRegister(u.role)}.${
-    ["BMO", "DEV"].includes(u.role)
-      ? " This user is a platform administrator (BMO/DEV) — they can access all utilities' approved Financial Year data, approve custom KPIs, and manage configuration. Cross-utility benchmarking across all utilities is fully available to them."
-      : " This user is a utility role (BLO/CEO/EXE/MGR/DAOF/DAOH/DAOO). They can benchmark their KPIs against every utility's approved Financial Year data and are fully entitled to cross-utility benchmarking results. BMO/DEV platform-admin powers (approving custom KPIs, managing configuration) remain admin-only."
-  }`;
+// The SAME per-request suffix the chat route sends — one builder, no hand copy.
+// Fresh session, valid org: no context summary / utility notice / recap note.
+const roleSuffix = (u: CurrentUser) => buildRequestContext(u).trim();
 
 // ---------- cases ----------
 interface EvalCase {
