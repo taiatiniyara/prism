@@ -3,7 +3,7 @@ import { db } from "@/db/connection";
 import { reportPeriods } from "@/db/schema/reportPeriods";
 import { eq } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
-import { createToolMetadata, resolvePeriod } from "./common";
+import { createToolMetadata, resolveOwnUtilityPeriod } from "./common";
 import type { AiToolResult } from "../types";
 
 export interface ReviewQueueItem {
@@ -31,7 +31,7 @@ export const getReviewQueue = async (
     year?: number | null;
   } = {},
 ): Promise<AiToolResult<ReviewQueueData>> => {
-  const period = await resolvePeriod(user, options);
+  const period = await resolveOwnUtilityPeriod(user, options);
   if (!period) {
     return {
       data: { items: [], summary: { total: 0, by_status: {} }, report_period: null },
@@ -103,7 +103,7 @@ export const getInputStatus = async (
     year?: number | null;
   } = { kpi_name: "" },
 ): Promise<AiToolResult<InputStatusData>> => {
-  const period = await resolvePeriod(user, options);
+  const period = await resolveOwnUtilityPeriod(user, options);
   if (!period) {
     return {
       data: { kpi_name: options.kpi_name, formula: null, inputs: [], missing_inputs: [] },

@@ -1,6 +1,6 @@
 import { listReviewKpiRows, getReviewKpiFilterOptions } from "@/app/data-entry/review-kpi/service";
 import type { CurrentUser } from "@/lib/user.service";
-import { createToolMetadata } from "./common";
+import { createToolMetadata, isOwnUtilityPeriodAccessible } from "./common";
 import type { AiToolResult } from "../types";
 
 export type CompletenessDimension =
@@ -52,6 +52,21 @@ export const getCompletenessBreakdown = async (
       data: { dimension, items: [], total: 0 },
       metadata: createToolMetadata({ source: `completeness_${dimension}` }),
       error: `Completeness breakdown by "${dimension}" isn't available yet — data entries aren't tagged with this dimension per row, only per KPI/measure definition. Use category, subcategory, or service_area instead.`,
+    };
+  }
+
+  // Own-utility operational tool (#10 ruling): a report_period_id is trusted
+  // straight into the row query below, so a non-global caller must not be able to
+  // pass another utility's period. Reject a foreign/inaccessible period.
+  if (
+    options.report_period_id != null &&
+    !(await isOwnUtilityPeriodAccessible(user, options.report_period_id))
+  ) {
+    return {
+      data: { dimension, items: [], total: 0 },
+      metadata: createToolMetadata({ source: `completeness_${dimension}` }),
+      error:
+        "Completeness is scoped to your own utility; that report period isn't available to you.",
     };
   }
 
