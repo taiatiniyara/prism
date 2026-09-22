@@ -39,7 +39,7 @@ This file is read and written by multiple concurrent Claude Code sessions (the "
 | 11 | UI / frontend | PRISM 2 ui | 🟢 | owns look & feel (Eugene mandate 2026-09-09); DEV form editor + branding tokens + `/settings/design` LIVE; **Phase 5b #11 half DONE 2026-09-10** (`getActiveSector`→`organisation_sector` + `<SectorProvider>` mounted, behaviour-neutral) — #13's `lookupTerm`→table half remains |
 | 12 | Security hardening | PRISM security | 🟢 | independent; **feeds a requirement into #2/#8** (RLS) |
 | 13 | Multi-sector (water/sanitation) | PRISM 2 #13 multi-sector | 🟢 | Phase 5a label layer MERGED (#58); **UN M49 now the countries/sub_regions PK + dups cleaned (#60 merged, DB changed)**; #59 superseded |
-| 15 | Pending-work tracker | PRISM 2 #15 pending-tracker | 🟢 | cross-stream; owns [docs/PENDING.md](PENDING.md) — the always-current "what's pending" dashboard |
+| 15 | Pending-work tracker | PRISM 2 #15 pending-tracker | ⏹️ | **WOUND DOWN 2026-09-22** — `PENDING.md` retired; lean on this board (see §15) |
 | 16 | AI optimisation (cost / latency / quality of the PRISM AI assistant) | PRISM 2 #16 ai optimisation | 🟢 | independent; touches `lib/ai/**` + `app/api/ai/**` — coordinate if you edit those |
 
 > ⚠️ Rows 4, 7 are seeded from the session names only — the **owning session must confirm status, real scope, and dependencies** and correct anything wrong here.
@@ -210,12 +210,11 @@ This file is read and written by multiple concurrent Claude Code sessions (the "
 - **2026-07-28 (`units.is_aggregated` dropped — commit `3ead895`):** removed the unused `is_aggregated` boolean from `units` (all 501 rows false, no view/index deps) + its Drizzle schema field (`db/schema/utility.ts`) + the units settings form's create+update fields (`energy-resources/page.tsx`). `tsc` clean; code pushed then DB column dropped (code-first, guarded, verified). Backup `backup.units_is_aggregated_20260728` (501 rows). Follows #2's derive-not-store `category_id`/`type_id` precedent. Broadcast to #4/#2/#11/#15.
 - **Board convention:** this row edited uncommitted — rides the next doc sweep.
 
-### 15. Pending-work tracker — 🟢
+### 15. Pending-work tracker — ⏹️ WOUND DOWN (2026-09-22)
 
-- **Owner:** PRISM 2 #15 pending-tracker
-- **Depends on:** nothing · **Blocks:** nothing (read-only across all streams)
-- **Scope:** maintain [docs/PENDING.md](PENDING.md) — the always-current dashboard of what is *pending* across every stream (uncommitted → committed → pushed → merged → DB-applied) so Eugene doesn't have to keep asking. Reads git/`gh`/the board; does not do feature work.
-- **Last update 2026-09-01:** mature + actively maintained; [docs/PENDING.md](PENDING.md) is the live dashboard (open items only — settled decisions live in specs, not the tracker). Conventions in force: verify vs `origin` via `scripts/repo-truth.sh`; single `.env` DB = future prod (no prod-cutover apply step); git-first. **Other streams:** ping #15 on commit/push/merge/DB-apply — or just update your own board row — and it's reflected on the next refresh.
+- **Owner:** PRISM 2 #15 pending-tracker (retired)
+- **Status:** **Sunset by Eugene 2026-09-22 — "lean on the board."** The separate `docs/PENDING.md` dashboard is RETIRED (bannered, kept for history). **This board is now the single source of truth** for stream state / pending work / awaiting-Eugene; journey changes live in [USER-IMPACT.md](USER-IMPACT.md) (streams own their rows, #11 owns instructions). The 3-week stale gap (09-03→09-22, tracker not invoked while ~238 PRs landed) confirmed a standalone tracker only stays current when its session runs, whereas the board never rotted.
+- **Other streams:** no need to ping #15 anymore — just keep your own board row current (the existing protocol). Any remaining `#15`-owned duties (e.g. the USER-IMPACT reconciliation audit) are for #1/Eugene to reassign or drop.
 
 ### 16. AI optimisation — 🟢 active
 

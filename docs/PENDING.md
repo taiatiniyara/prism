@@ -1,6 +1,9 @@
 # PRISM 2 — Pending Work Tracker
 
-**Owned by session `PRISM 2 #15` (pending-tracker).** Single place that answers *"what is pending — uncommitted, unpushed, unmerged, or un-applied — across every stream?"* so nobody has to keep asking.
+> # ⛔ RETIRED 2026-09-22 — DO NOT RELY ON THIS FILE
+> **Eugene's call: lean on the board.** This standalone tracker is **no longer maintained.** The live source of truth for stream state, pending work, and awaiting-Eugene items is **[`docs/WORKSTREAMS.md`](WORKSTREAMS.md)** — the board every stream updates as it works (it stayed current through a 3-week gap that left this file stale, which is why it won). Journey changes live in [`USER-IMPACT.md`](USER-IMPACT.md) (streams add their own rows; #11 owns instructions). Everything below is **history**, accurate only up to its dates. Kept for reference, not deleted.
+
+**(Historical)** Owned by session `PRISM 2 #15` (pending-tracker). Was the single place answering *"what is pending across every stream?"* — now superseded by the board.
 
 > Absolute path (sessions run from different folders / worktrees):
 > `C:\Users\eugen\prism\docs\PENDING.md`
