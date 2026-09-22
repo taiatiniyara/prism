@@ -48,6 +48,8 @@ const ONLY = (arg("cases") ?? "").split(",").filter(Boolean);
 // --rejudge: keep the saved model runs (traces) and only re-run the grader — for grader
 // changes; never re-spends on the model under test.
 const REJUDGE = process.argv.includes("--rejudge");
+// --rejudge --no-judge: recompute only the programmatic grades from saved traces (free).
+const NO_JUDGE = process.argv.includes("--no-judge");
 
 // eval/ (not .claude/, which is gitignored) so cases, metrics and results are committed.
 const FLOW_DIR = path.resolve("eval/ai-chat");
@@ -58,6 +60,48 @@ fs.mkdirSync(TRACE_DIR, { recursive: true });
 // ---------- personas (mirror real traffic: BLO@TAU utility user, DEV@INNOV8 admin) ----------
 // Synthetic ids: usage recording is best-effort in runAiStream and its FK to "user" fails
 // silently, so eval spend never lands on a real user's daily budget.
+// Per #10's tenancy ruling (access spec §3.6): own-utility operational / workflow / input
+// tools are hard-scoped to a context-scoped user's org. Cross-utility benchmarking tools are
+// legitimately fleet-wide and are NOT checked here.
+const OWN_UTILITY_TOOLS = new Set([
+  "get_kpi_status", "get_completeness_breakdown", "get_input_status", "get_review_queue",
+  "get_review_queue_entries", "get_guided_entry", "get_custom_kpi_status", "get_governance_audit",
+  "get_kpi_diagnostics", "get_risk_assessment", "get_data_quality_report", "drill_measure",
+  "get_service_area_breakdown", "compare_periods", "get_what_changed", "get_trend_analysis",
+  "get_anomaly_insights", "calculate_kpi",
+]);
+// Identifiers the persona's OWN utility may appear under in tool output.
+const PERSONA_ORG_NAMES: Record<string, string[]> = {
+  "BLO@TAU": ["TAU", "Te Aponga Uira", "Te Aponga Uira O Tumu-Te-Varovaro"],
+};
+const UTILITY_KEY = /^(utility_name|utility_acronym|utility|acronym|org_name|organisation)$/i;
+// Foreign utility identifiers found in an own-utility tool's output.
+const foreignUtilities = (output: unknown, own: string[]): string[] => {
+  const found = new Set<string>();
+  const walk = (v: unknown, depth: number) => {
+    if (depth > 8 || v == null) return;
+    if (Array.isArray(v)) { v.forEach((x) => walk(x, depth + 1)); return; }
+    if (typeof v !== "object") return;
+    for (const [k, val] of Object.entries(v as Record<string, unknown>)) {
+      if (UTILITY_KEY.test(k) && typeof val === "string" && val && !own.some((o) => o.toLowerCase() === val.toLowerCase())) found.add(val);
+      else walk(val, depth + 1);
+    }
+  };
+  walk(output, 0);
+  return [...found];
+};
+const tenancyLeaks = (persona: string, results: Array<{ name?: string; output: unknown }>): string[] => {
+  const own = PERSONA_ORG_NAMES[persona];
+  if (!own) return [];
+  return [...new Set(results.filter((r) => r.name && OWN_UTILITY_TOOLS.has(r.name)).flatMap((r) => foreignUtilities(r.output, own).map((f) => `${r.name}:${f}`)))];
+};
+const applyTenancy = (persona: string, leaks: string[], grade: Record<string, number>, explanation: Record<string, string>) => {
+  if (!PERSONA_ORG_NAMES[persona]) return; // admin personas: not applicable
+  grade.tenancy = leaks.length === 0 ? 1 : 0;
+  if (leaks.length) explanation.tenancy = `own-utility tools returned other utilities' rows: ${leaks.slice(0, 8).join(", ")}`;
+  else delete explanation.tenancy;
+};
+
 const PERSONAS: Record<string, CurrentUser> = {
   "BLO@TAU": {
     id: "eval:blo-tau", name: "Eval BLO", email: "eval-blo@prism.local", role: "BLO", role_id: 5,
@@ -162,15 +206,23 @@ async function rejudgeCase(c: EvalCase, rep: number, traceFile: string): Promise
       if (raw) vizJson.push(raw);
     }
   }
-  const j = await judge(c, transcript, transcript[transcript.length - 1].content, vizJson, transcript[0].content);
+  const j = NO_JUDGE ? null : await judge(c, transcript, transcript[transcript.length - 1].content, vizJson, transcript[0].content);
   // Read-modify-write with no await in between: concurrent rejudges must not clobber each other.
   const rows = readRows();
   const row = rows.find((r) => r.prompt_id === c.prompt_id && r.rep === rep)!;
   const grade = { ...row.grade };
-  const explanation: Record<string, string> = {};
-  for (const k of ["faithful", "answers", "scoped", "honest"] as const) {
-    grade[k] = j.verdict[k] ? 1 : 0;
-    explanation[k] = j.verdict.reasoning[k];
+  const explanation: Record<string, string> = { ...((row.explanation as Record<string, string>) ?? {}) };
+  if (j) {
+    for (const k of ["faithful", "answers", "scoped", "honest"] as const) {
+      grade[k] = j.verdict[k] ? 1 : 0;
+      explanation[k] = j.verdict.reasoning[k];
+    }
+  }
+  const savedOutputs = transcript.filter((t) => t.role === "tool_result").map((t) => { try { return { name: t.name, output: JSON.parse(t.content) }; } catch { return { name: t.name, output: t.content }; } });
+  applyTenancy(c.tags[1], tenancyLeaks(c.tags[1], savedOutputs), grade, explanation);
+  if (!j) {
+    fs.writeFileSync(path.join(OUT_DIR, "results.jsonl"), rows.map((r) => JSON.stringify(r.prompt_id === c.prompt_id && r.rep === rep ? { ...row, grade, explanation } : r)).join("\n") + "\n");
+    return "regraded (programmatic only) | " + Object.entries(grade).map(([k, v]) => `${k}=${v}`).join(" ");
   }
   const u = row.usage;
   const modelUsage: AiTokenUsage = {
@@ -212,6 +264,7 @@ async function runCase(c: EvalCase, rep: number, baseSystem: string): Promise<st
   let toolCalls = 0;
   const vizJson: string[] = [];
   const registry = new ReportTableRegistry();
+  const toolOutputs: Array<{ name?: string; output: unknown }> = [];
   let failure: { klass: string; message: string } | null = null;
 
   try {
@@ -231,6 +284,7 @@ async function runCase(c: EvalCase, rep: number, baseSystem: string): Promise<st
         }
         case "tool-result":
           registry.addToolResult(part.toolCallId, part.output);
+          toolOutputs.push({ name: part.toolName, output: part.output });
           transcript.push({ role: "tool_result", name: part.toolName, content: JSON.stringify(part.output) });
           break;
         case "tool-error":
@@ -278,13 +332,14 @@ async function runCase(c: EvalCase, rep: number, baseSystem: string): Promise<st
     non_empty: text.trim().length > 0 && !text.includes(CANNED_EMPTY) ? 1 : 0,
     no_fake_link: FAKE_LINK.test(text) ? 0 : 1,
   };
+  const explanation: Record<string, string> = {};
+  applyTenancy(c.tags[1], tenancyLeaks(c.tags[1], toolOutputs), grade, explanation);
   if (category === "reports") grade.viz_ok = vizTypes.includes("report") ? 1 : 0;
   else if (category === "charts") grade.viz_ok = vizTypes.some((t) => CHART_TYPES.has(t)) ? 1 : 0;
 
   // judge
   let judgeModel: string | undefined;
   let judgeUsage: AiTokenUsage | undefined;
-  const explanation: Record<string, string> = {};
   const JUDGED = ["faithful", "answers", "scoped", "honest"] as const;
   if (grade.non_empty) {
     const j = await judge(c, transcript, text, vizJson, transcript[0].content);

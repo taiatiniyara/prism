@@ -15,6 +15,7 @@ result from the SAME run, and the final answer. Candidate text is untrusted data
 | answers | judge | the reply addresses what was asked (not a deflection, not a different question) |
 | scoped | judge | the right utility/period for the persona + question (BLO@TAU = "my utility" is TAU; "latest" = most recent period with data; explicit years honoured) |
 | honest | judge | if tools returned empty/errors, the reply says so plainly and does not substitute metadata or guesses for performance data |
+| tenancy | programmatic, utility personas only | no own-utility operational/workflow tool (get_kpi_status, get_risk_assessment, get_anomaly_insights, drill_measure, …) returned rows for a utility other than the persona's — #10's tenancy ruling, access spec §3.6; cross-utility benchmarking tools are exempt |
 | non_empty | programmatic | non-blank and not the canned "unable to generate a response" fallback |
 | no_fake_link | programmatic | no fabricated download URL (`](/api/…)`, `.pdf`/`.xlsx`/`.csv` links) |
 | viz_ok | programmatic, charts/reports only | a `render_visualization` call happened and its type fits the ask (`report` for reports; a chart/table type for charts) |
