@@ -53,13 +53,26 @@ const STATUS_GLYPHS: Record<string, string> = {
   "🟠": "At risk",
 };
 
+// Common typographic characters the model emits that sit ABOVE Latin-1 (so the
+// blanket non-Latin-1 drop below would delete them, turning "20–27" into "2027"
+// and stripping curly quotes / ellipses). Fold them to ASCII equivalents FIRST
+// so the meaning survives (#16 caught this on a real downloaded report).
+const normalizeTypography = (value: string): string =>
+  value
+    .replace(/[‐-―−]/g, "-") // hyphen/en/em/fig dashes + minus → -
+    .replace(/[‘’‚‛]/g, "'") // curly/low single quotes → '
+    .replace(/[“”„‟]/g, '"') // curly/low double quotes → "
+    .replace(/…/g, "...") // ellipsis → ...
+    .replace(/[   ]/g, " ") // no-break / figure / narrow spaces → space
+    .replace(/[•‣⁃]/g, "-"); // bullets → -
+
 export const sanitizeForPdf = (value: string): string => {
   let out = value;
   for (const [emoji, word] of Object.entries(STATUS_GLYPHS)) {
     if (out.includes(emoji)) out = out.split(emoji).join(word);
   }
-  return out
-    .replace(/[^\x00-\xFF]/g, "") // drop anything the font can't draw
+  return normalizeTypography(out)
+    .replace(/[^\x00-\xFF]/g, "") // drop anything the font still can't draw
     .replace(/[ \t]{2,}/g, " ")
     .trim();
 };
@@ -137,9 +150,10 @@ export async function renderReportPdf(
     .font(faces.base)
     .fontSize(9)
     .fillColor(MUTED)
-    .text(
-      `Generated ${report.generated_at || new Date().toISOString().slice(0, 10)}`,
-    );
+    // Server-authoritative date. The model has no reliable clock (it invented
+    // e.g. "Generated 2025-07-11" on a real report), so ignore any model-sent
+    // generated_at and stamp the actual generation date. (#16, 2026-09-22)
+    .text(`Generated ${new Date().toISOString().slice(0, 10)}`);
   doc.moveDown(0.4);
   doc
     .moveTo(left, doc.y)
