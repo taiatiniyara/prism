@@ -1,6 +1,6 @@
 import { getAccessibleReportPeriods } from "./common";
 import type { CurrentUser } from "@/lib/user.service";
-import { hasBenchmarkAccess } from "@/lib/user.service";
+import { hasGlobalUtilityAccess } from "@/lib/user.service";
 import { withCache } from "../cache";
 import { createToolMetadata, formatPercent } from "./common";
 import type { AiToolResult } from "../types";
@@ -42,14 +42,47 @@ export const getKpiStatus = async (
     all_utilities?: boolean;
   } = {},
 ): Promise<AiToolResult<KpiStatusData>> => {
-  const forceAllUtilities = options.all_utilities ?? hasBenchmarkAccess(user);
-  const accessScope: KpiStatusData["access_scope"] = hasBenchmarkAccess(user)
+  // Submission / data-entry STATUS is own-utility OPERATIONAL data (#10 ruling,
+  // spec §3.6): only globally-scoped admins (BMO/DEV) may see all utilities.
+  // Utility roles (BLO/CEO/…) have benchmark access to APPROVED KPI results but
+  // NOT to another utility's submission status — so gate this on
+  // hasGlobalUtilityAccess, NEVER hasBenchmarkAccess, and reject an explicit
+  // foreign utility_id (a BLO cannot read another utility's status by passing it).
+  const canSeeAll = hasGlobalUtilityAccess(user);
+  if (
+    !canSeeAll &&
+    options.utility_id != null &&
+    options.utility_id !== user.org_id
+  ) {
+    return {
+      data: {
+        periods: [],
+        aggregate: {
+          total_requested: 0,
+          total_pending: 0,
+          total_completed: 0,
+          overall_completion_rate: 0,
+        },
+        scope: "single_utility",
+        default_utility: null,
+        access_scope: "own_utility",
+        access_note:
+          "Data-entry status is scoped to your own utility; another utility's status is not visible to you.",
+      },
+      metadata: createToolMetadata({ completeness_pct: 0, source: "report_periods" }),
+      error: `Access denied: data-entry status is own-utility only — utility_id=${options.utility_id} is not available to you.`,
+    };
+  }
+  // Scoped users are ALWAYS own-org here, even if all_utilities=true is passed
+  // (fail closed). Only global admins can request all utilities.
+  const forceAllUtilities = canSeeAll ? options.all_utilities ?? true : false;
+  const accessScope: KpiStatusData["access_scope"] = canSeeAll
     ? "all_utilities"
     : user.org_id != null
       ? "own_utility"
       : "unscoped";
-  const accessNote: KpiStatusData["access_note"] = hasBenchmarkAccess(user)
-    ? "Benchmark access: showing all utilities with approved Financial Year reporting."
+  const accessNote: KpiStatusData["access_note"] = canSeeAll
+    ? "Admin access: showing all utilities' data-entry status."
     : user.org_id != null
       ? `Access is scoped to your own utility only — other utilities' data exists on the platform but is not visible to you.`
       : "No utility scope found in your session — cross-utility data is not visible.";
