@@ -4,7 +4,7 @@ import { reportPeriods } from "@/db/schema/reportPeriods";
 import { dataEntries } from "@/db/schema/dataEntry";
 import { and, eq, inArray } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
-import { hasBenchmarkAccess } from "@/lib/user.service";
+import { hasGlobalUtilityAccess } from "@/lib/user.service";
 import { createToolMetadata, resolvePeriodId } from "./common";
 import type { AiToolResult } from "../types";
 
@@ -70,7 +70,7 @@ export const getKpiDiagnostics = async (
     };
   }
 
-  if (!hasBenchmarkAccess(user) && user.org_id != null) {
+  if (!hasGlobalUtilityAccess(user) && user.org_id != null) {
     const [period] = await db
       .select({ utility_id: reportPeriods.utility_id })
       .from(reportPeriods)
