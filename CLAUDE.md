@@ -25,6 +25,15 @@ Code goes into git **before** any change is applied to the database. Never run a
 
 Rationale: a DB change with no committed code leaves the schema ahead of the code, so every session that pulls is out of sync with the live database. Git is the source of truth; the DB reflects it, never the reverse. (Set by Eugene 2026-08-24; single-instance clarification added 2026-09-01.)
 
+## A DB apply needs Eugene's direct in-session word — not a relay
+
+The trigger for **applying** a DB change (migration / DDL / DML to p2) is **Eugene's own confirmation, given directly in the applying stream's own session** — never a coordinator or peer relay, however authoritative it is labelled.
+
+- **#1 (coordination) sequences and greenlights the WORK** — which step happens, in what order, behind which gates. That is authoritative *for sequencing*, and streams should act on it to build/draft/prepare.
+- **The DB apply itself waits for Eugene's direct word in the session that will run it.** A greenlight relayed through #1 or a sibling authorizes the work but does **not** fire the irreversible write. If you are the applying stream and you hold only a relay, **hold and ask Eugene to confirm in your session** — this is correct discipline, not doubt.
+
+Rationale: the apply is the irreversible, all-sessions-affecting step (one shared p2 instance — see Git before DB). Keeping its trigger on Eugene's direct in-session word is the firebreak; a relay chain, however well-intentioned, must never be what fires it. Complements Git-before-DB: git-first governs *ordering* (code committed before apply); this governs *authorization* (Eugene's direct nod fires the apply). (Set by Eugene 2026-09-22.)
+
 ## Verify against ORIGIN, not the local checkout
 
 The source of truth for repo state is **`origin`**, never the local checkout. In this shared multi-session tree the working directory is routinely checked out on someone else's feature branch, left dirty, or tens of commits behind — so the local `main` ref, `HEAD`, and the working tree all **lie** about "what is in the repo." Verifying against them is the root of every recurring false "divergence" alarm.
