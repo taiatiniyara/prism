@@ -35,4 +35,21 @@ describe("sanitizeForPdf", () => {
     expect(sanitizeForPdf("weird 🚀 rocket")).toBe("weird rocket");
     expect(sanitizeForPdf("trailing 🎉")).toBe("trailing");
   });
+
+  it("folds typographic punctuation to ASCII instead of dropping it", () => {
+    // The blanket non-Latin-1 drop used to delete these, turning ranges into
+    // mashed numbers (#16, 2026-09-22).
+    expect(sanitizeForPdf("20–27 utilities")).toBe("20-27 utilities");
+    expect(sanitizeForPdf("8—13 range")).toBe("8-13 range");
+    expect(sanitizeForPdf("value −5")).toBe("value -5");
+    expect(sanitizeForPdf("— particularly small utilities —")).toBe(
+      "- particularly small utilities -",
+    );
+    expect(sanitizeForPdf("the utility’s target")).toBe(
+      "the utility's target",
+    );
+    expect(sanitizeForPdf("“benchmark”")).toBe('"benchmark"');
+    expect(sanitizeForPdf("and so on…")).toBe("and so on...");
+    expect(sanitizeForPdf("A B")).toBe("A B"); // non-breaking space
+  });
 });
