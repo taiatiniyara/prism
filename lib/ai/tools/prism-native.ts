@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { tool } from "ai";
+import { tool, type JSONValue } from "ai";
 import type { CurrentUser } from "@/lib/user.service";
 import type { AiToolResult } from "../types";
 import { visualizationInputSchema } from "../visualization-schema";
@@ -35,6 +35,8 @@ import {
   getKpiCorrelation,
   compareKpisAcrossUtilities,
   getMeasureDrill,
+  getBenchmarkReportData,
+  benchmarkReportDigest,
   generateExport,
   getCountryHierarchy,
   getIndustryBenchmarks,
@@ -267,8 +269,12 @@ export function createPrismNativeTools(
       inputSchema: z.object({
         visualization: visualizationInputSchema,
       }),
-      execute: async ({ visualization }) => {
-        return { rendered: true, visualization };
+      execute: async () => {
+        // The chart is rendered from the tool INPUT (server appends the fence via
+        // visualizationJsonFromToolInput), so the model doesn't need the block
+        // echoed back — returning just { rendered: true } saves re-reading a big
+        // report/chart block (~3k tokens on a report turn).
+        return { rendered: true };
       },
     }),
 
@@ -302,6 +308,37 @@ export function createPrismNativeTools(
           "drill_measure",
         );
       },
+    }),
+
+    get_benchmark_report_data: tool({
+      description:
+        "Gather EVERYTHING a fleet-wide / benchmarking / 'all utilities' performance report needs in ONE call — per-utility values, targets, meets-target, best/worst (direction-aware), most-improved, and pacific averages across the standard benchmark KPIs (or a given set) for a fiscal year. Call this ONCE and compile the report from its result — do NOT loop compare_kpis_across_utilities or the per-metric tools (the slow multi-round-trip path). Its `tables` are referenced from the report block via table_ref, so you don't re-type the rows.",
+      inputSchema: z.object({
+        fiscal_year: z
+          .string()
+          .optional()
+          .describe("Fiscal year, e.g. 'FY2024' or '2024'. Omit for the latest with data."),
+        kpi_names: z
+          .array(z.string())
+          .optional()
+          .describe("KPIs to include; omit for the standard benchmark set (SAIDI, SAIFI, losses, cost recovery, renewables, electrification)."),
+        include_prior_year: z
+          .boolean()
+          .optional()
+          .describe("Include prior-year values for most-improved (default true)."),
+      }),
+      execute: async ({ fiscal_year, kpi_names, include_prior_year }) => {
+        return withTimeout(
+          getBenchmarkReportData(user, { fiscal_year, kpi_names, include_prior_year }),
+          "get_benchmark_report_data",
+        );
+      },
+      // The model reads only a compact digest; the full `tables` stay in the tool
+      // result for the route's table_ref registry to fill the report block.
+      toModelOutput: ({ output }) => ({
+        type: "json",
+        value: benchmarkReportDigest(output.data) as unknown as JSONValue,
+      }),
     }),
 
     suggest_follow_ups: tool({
