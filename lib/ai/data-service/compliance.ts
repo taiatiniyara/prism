@@ -1,7 +1,7 @@
 import { db } from "@/db/connection";
 import { sql } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
-import { resolveComparisonPeriodIds, intArrayParam } from "./common";
+import { resolveOwnUtilityComparisonPeriodIds, intArrayParam } from "./common";
 import { createToolMetadata } from "./common";
 import type { AiToolResult } from "../types";
 
@@ -37,7 +37,7 @@ export const getComplianceStatus = async (
     all_utilities?: boolean;
   } = {},
 ): Promise<AiToolResult<ComplianceData>> => {
-  const periodIds = await resolveComparisonPeriodIds(user, {
+  const periodIds = await resolveOwnUtilityComparisonPeriodIds(user, {
     report_period_id: options.report_period_id,
     year: options.year,
   });
