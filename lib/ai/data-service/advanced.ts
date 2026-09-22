@@ -215,6 +215,14 @@ export interface MultiUtilityKpiValue {
   utility_acronym: string;
   kpi_name: string;
   value: number;
+  /** Unit of `value` (e.g. "min", "%", "×") straight from the KPI definition.
+   *  Present so the model reports the number with its real unit instead of
+   *  guessing one — report it verbatim, never convert. */
+  unit: string | null;
+  /** The report_date (ISO `YYYY-MM-DD`) this specific value belongs to. Each
+   *  utility is shown at its LATEST period, so periods can differ across rows —
+   *  never assign a fiscal year a row doesn't carry. */
+  report_period: string | null;
   rank: number;
 }
 
@@ -319,20 +327,32 @@ export const compareKpisAcrossUtilities = async (
     const filter = sql`report_period_id = ANY(${intArrayParam(periodIds)})
       AND kpi_name ILIKE ANY(${sql.param(patterns)}::text[])`;
 
+    // DISTINCT ON (utility_id) collapses each utility to a SINGLE row — its
+    // latest period (ORDER BY report_date DESC). A year query resolves to every
+    // period that year, so without this a utility appears once per period: it
+    // would be ranked several times, skew avg/best/worst, and — because the old
+    // shape carried no per-row period — leave the model to invent a fiscal year
+    // for the extra rows. One comparable value per utility, each stamped with
+    // its own unit + report_date, is what a cross-utility ranking needs.
     const result = await db.execute(sql`
-      SELECT kpi_name, actual_value, utility_name, utility_acronym, report_date
+      SELECT DISTINCT ON (utility_id)
+        kpi_name, actual_value, utility_id, utility_name, utility_acronym,
+        report_date, unit_name
       FROM gold.fact_kpi
       WHERE ${filter}
       ${options.utility_id != null ? sql`AND utility_id = ${options.utility_id}` : sql``}
+      ORDER BY utility_id, report_date DESC
       LIMIT 200
     `);
 
     const rows = result.rows as Array<{
       kpi_name: string;
       actual_value: string | null;
+      utility_id: number | null;
       utility_name: string;
       utility_acronym: string | null;
       report_date: string;
+      unit_name: string | null;
     }>;
 
     const values: MultiUtilityKpiValue[] = rows
@@ -344,6 +364,8 @@ export const compareKpisAcrossUtilities = async (
           utility_acronym: r.utility_acronym ?? r.utility_name ?? "N/A",
           kpi_name: r.kpi_name,
           value: Math.round(val * 100) / 100,
+          unit: r.unit_name ?? null,
+          report_period: r.report_date ? String(r.report_date).slice(0, 10) : null,
           rank: 0,
         };
       })
@@ -354,12 +376,21 @@ export const compareKpisAcrossUtilities = async (
 
     const matchedKpiNames = [...new Set(rows.map((r) => r.kpi_name))];
 
+    // Each utility sits at its own latest period, so periods can differ across
+    // rows; surface the most recent one seen as the KPI-level label. Per-row
+    // report_period is authoritative for any single value.
+    const latestPeriod = rows
+      .map((r) => (r.report_date ? String(r.report_date).slice(0, 10) : null))
+      .filter((d): d is string => d != null)
+      .sort()
+      .at(-1) ?? null;
+
     results.push({
       values,
       kpi_name: reqName,
       matched_kpi_names: matchedKpiNames,
       utility_count: values.length,
-      report_period: rows[0]?.report_date?.toString() ?? null,
+      report_period: latestPeriod,
       access: accessScope,
     });
   }
