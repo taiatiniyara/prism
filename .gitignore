@@ -47,6 +47,11 @@ dist/
 
 # agent tooling (local, not part of the app)
 .claude/
+# Impeccable design skill: shared config (.impeccable/config.json, design.json) is committed;
+# per-developer consent + hook cache stay local
+.impeccable/config.local.json
+.impeccable/hook.cache.json
+.impeccable/live/
 .serena/
 
 # vercel
