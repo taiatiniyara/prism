@@ -1,7 +1,7 @@
 import { db } from "@/db/connection";
 import { sql } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
-import { hasBenchmarkAccess } from "@/lib/user.service";
+import { hasBenchmarkAccess, hasGlobalUtilityAccess } from "@/lib/user.service";
 import { getAccessibleReportPeriods } from "./common";
 import { listReviewKpiRows } from "@/app/data-entry/review-kpi/service";
 import { createToolMetadata, resolvePeriod } from "./common";
@@ -70,7 +70,10 @@ export const getServiceAreaBreakdown = async (
     }))
     .sort((a, b) => a.completeness_pct - b.completeness_pct);
 
-  const periods = await getAccessibleReportPeriods(user, { forceAllUtilities: hasBenchmarkAccess(user) });
+  // Family A (own-utility operational, #10 ruling): service-area breakdown is a
+  // utility's own areas — gate all-utilities on hasGlobalUtilityAccess (BMO/DEV),
+  // NOT hasBenchmarkAccess (true for every utility role → cross-utility leak).
+  const periods = await getAccessibleReportPeriods(user, { forceAllUtilities: hasGlobalUtilityAccess(user) });
   const match = periods.find((p) => p.Id === period.id);
 
   return {

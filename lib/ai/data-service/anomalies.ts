@@ -1,6 +1,6 @@
 import { getAccessibleReportPeriods } from "./common";
 import type { CurrentUser } from "@/lib/user.service";
-import { hasBenchmarkAccess } from "@/lib/user.service";
+import { hasGlobalUtilityAccess } from "@/lib/user.service";
 import { createToolMetadata } from "./common";
 import type { AiToolResult } from "../types";
 
@@ -37,7 +37,7 @@ export const getAnomalyInsights = async (
     all_utilities?: boolean;
   } = {},
 ): Promise<AiToolResult<AnomalyData>> => {
-  const forceAllUtilities = options.all_utilities ?? hasBenchmarkAccess(user);
+  const forceAllUtilities = options.all_utilities ?? hasGlobalUtilityAccess(user);
   const periods = await getAccessibleReportPeriods(user, {
     forceAllUtilities,
   });

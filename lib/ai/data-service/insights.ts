@@ -2,7 +2,7 @@ import { getAccessibleReportPeriods, resolveComparisonPeriodIds, intArrayParam }
 import { db } from "@/db/connection";
 import { sql } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
-import { hasBenchmarkAccess } from "@/lib/user.service";
+import { hasGlobalUtilityAccess } from "@/lib/user.service";
 import { createToolMetadata } from "./common";
 import type { AiToolResult } from "../types";
 
@@ -30,7 +30,7 @@ export const getRiskAssessment = async (
   } = {},
 ): Promise<AiToolResult<RiskAssessmentData>> => {
   const periods = await getAccessibleReportPeriods(user, {
-    forceAllUtilities: options.all_utilities ?? hasBenchmarkAccess(user),
+    forceAllUtilities: options.all_utilities ?? hasGlobalUtilityAccess(user),
   });
 
   if (periods.length === 0) {
