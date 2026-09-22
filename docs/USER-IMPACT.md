@@ -15,10 +15,12 @@ commit.** Written by the stream that lands the change (you understand it best, f
 rows terse; link the spec/PR. Instruction writing happens later, per role, from this ledger —
 the row is the obligation, not the manual.
 
-**Audit:** #15 (pendings tracker) reconciles this ledger against merged journey-affecting changes
-on each refresh — a landed change with no row is a gap to flag. **Instruction-writing owner:
-#11 (UI) — assigned by Eugene 2026-07-28.** #11 turns ledger rows into role-based user guides /
-help text as the relevant surfaces stabilize; row authors remain responsible for row accuracy.
+**Audit:** **#11 (UI)** reconciles this ledger against merged journey-affecting changes — a landed
+change with no row is a gap to flag back to the landing stream. **(Reassigned from #15 to #11 by
+Eugene 2026-09-22 when the #15 pending-tracker was wound down; #11 now owns BOTH the audit and
+instruction-writing.)** **Instruction-writing owner: #11 (UI) — assigned by Eugene 2026-07-28.**
+#11 turns ledger rows into role-based user guides / help text as the relevant surfaces stabilize;
+row authors remain responsible for row accuracy.
 
 **Roles vocabulary** (from the tiered-access spec + board): `DAO` data-entry officer · `BLO`
 Utility Liaison · `org-admin` utility org admin · `BMO` benchmarking-mgmt admin (PPA) · `PPA_FIN`
