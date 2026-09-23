@@ -697,5 +697,19 @@
       "source": "synthetic (tenancy probe) — own-utility workflow tool asked about another utility by name; must not return EFL submission status to a TAU user",
       "times_asked": 0
     }
+  },
+  {
+    "prompt_id": "c232",
+    "tags": [
+      "own-performance",
+      "BLO@TAU"
+    ],
+    "prompt": "can you give me a breakdown of TAU's generation by each generator for 2024 and 2025",
+    "prefix": [],
+    "meta": {
+      "source_turn_id": 232,
+      "times_asked": 1,
+      "note": "Eugene 2026-09-24: generator grain exists (data_entries.unit_id → units; 6 unit-level measures). Expected: per-unit table (G3, G7, G11–G15, Hire Sets, TAU Solar, IPP Solar, Net-meter Solar) for FY2024 + FY2025 — NOT a technology-level table with a claim that PRISM lacks per-generator data."
+    }
   }
 ]
