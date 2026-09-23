@@ -280,7 +280,7 @@ export function createPrismNativeTools(
 
     drill_measure: tool({
       description:
-        "Drill into a raw MEASURE at fact grain (data_entries) — any measure, optionally split by one canonical dimension, for one utility and fiscal year. Use it for 'break down / drill into X by Y' questions the curated tools don't cover (e.g. generation by energy source, employees by gender). Reads value_numeric, sums only additive measures, treats blanks as gaps (never zero), and reports coverage. Own-utility scope; source is the fact grain.",
+        "Drill into a raw MEASURE at fact grain (data_entries) — any measure, optionally split by one canonical dimension OR by generating unit, for one utility and fiscal year. Use it for 'break down / drill into X by Y' questions the curated tools don't cover (e.g. generation by energy source, employees by gender, generation by generator). Per-generating-unit ('by unit') data EXISTS for: Electricity Generated, Equipment Planned/Unplanned Downtime Hours, Rated Capacity, Fuel Oil, Lubrication Oil — use breakdown_by:'unit' for those; a generation drill also returns each unit's rated_capacity so capacity factor can be computed. Reads value_numeric, sums only additive measures, treats blanks as gaps (never zero), and reports coverage. Own-utility scope; source is the fact grain.",
       inputSchema: z.object({
         measure: z
           .string()
@@ -288,10 +288,10 @@ export function createPrismNativeTools(
             "Measure name or synonym, e.g. 'Electricity Generated', 'generation', 'employees'.",
           ),
         breakdown_by: z
-          .enum(CANONICAL_DIMENSIONS as unknown as [string, ...string[]])
+          .enum([...CANONICAL_DIMENSIONS, "unit"] as unknown as [string, ...string[]])
           .optional()
           .describe(
-            "One canonical dimension to split by, e.g. 'source' (energy source/fuel → Technology), 'gender', 'customer_type'. Omit for the utility-level total.",
+            "One canonical dimension to split by, e.g. 'source' (energy source/fuel → Technology), 'gender', 'customer_type'; OR 'unit' to split by individual generating unit / generator (per-generator grain, for the 6 unit-level measures above). Omit for the utility-level total.",
           ),
         fiscal_year: z
           .string()

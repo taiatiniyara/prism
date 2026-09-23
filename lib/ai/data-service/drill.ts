@@ -48,6 +48,12 @@ export interface DrillRow {
   member?: string;
   value: number | null;
   coverage: { entered: number; shells: number };
+  // Per-generating-unit grain only (breakdown_by: "unit"): the unit's technology
+  // (fuel), asset class, and — for a generation measure — its rated capacity in
+  // the same FY, so capacity factor can be computed honestly.
+  technology?: string | null;
+  asset_class?: string | null;
+  rated_capacity?: number | null;
 }
 
 export interface DrillMeasureData {
@@ -90,6 +96,50 @@ export interface DrillMeasureOptions {
   breakdown_by?: string[] | string | null;
   fiscal_year?: string | number | null;
   utility?: string | null;
+}
+
+/** Terms that request the per-generating-unit fact grain (not a canonical dim). */
+const UNIT_GRAIN_TERMS = new Set([
+  "unit", "units", "generator", "generators", "genset", "gensets",
+  "generating unit", "generating units", "generating set", "generating sets",
+  "plant unit", "plant units", "per unit", "per generator", "by unit", "by generator",
+]);
+
+/**
+ * Rated capacity per unit for the FY, keyed by unit name. Capacity is a STOCK,
+ * not additive across sub-periods, so this takes the latest period's value per
+ * unit (DISTINCT ON report_date DESC) rather than summing. Best-effort: returns
+ * an empty map if the Rated Capacity measure can't be resolved. Lets the caller
+ * attach capacity → the model can compute capacity factor without guessing.
+ */
+async function ratedCapacityByUnit(
+  periodIds: number[],
+  utilityId: number | null,
+): Promise<Map<string, number>> {
+  const out = new Map<string, number>();
+  const [cap] = await db
+    .select({ id: measureDefinitions.id })
+    .from(measureDefinitions)
+    .where(and(eq(measureDefinitions.is_active, true), ilike(measureDefinitions.name, "rated capacity")))
+    .limit(1);
+  if (!cap) return out;
+  const res = await db.execute(sql`
+    SELECT DISTINCT ON (de.unit_id) u.name AS name, de.value_numeric::float8 AS cap
+    FROM data_entries de
+    JOIN units u ON u.id = de.unit_id
+    JOIN report_periods rp ON rp.id = de.report_period_id
+    WHERE de.measure_def_id = ${cap.id}
+      AND de.report_period_id = ANY(${intArrayParam(periodIds)})
+      AND de.value_numeric IS NOT NULL
+      AND de.is_deleted = false AND de.is_relevant = true
+      AND u.is_virtual = false
+      ${utilityId != null ? sql`AND u.utility_id = ${utilityId}` : sql``}
+    ORDER BY de.unit_id, rp.report_date DESC
+  `);
+  for (const r of res.rows as Array<{ name: string; cap: number | null }>) {
+    if (r.cap != null) out.set(r.name, r.cap);
+  }
+  return out;
 }
 
 export const getMeasureDrill = async (
@@ -141,8 +191,12 @@ export const getMeasureDrill = async (
   const measureIds = [measure.id];
 
   // 2. Resolve the breakdown dimension (optional, single for P1).
+  //    "unit"/"generator" is NOT one of the 10 canonical dimensions — it is the
+  //    fact grain itself (a generating unit), reached by joining `units` on
+  //    data_entries.unit_id. Intercept it before the dimension resolver.
   let dimField: DimensionField | null = null;
   let dimLabel: string | null = null;
+  let unitGrain = false;
   const breakdownTerm = Array.isArray(options.breakdown_by)
     ? options.breakdown_by[0]
     : options.breakdown_by;
@@ -152,12 +206,17 @@ export const getMeasureDrill = async (
     );
   }
   if (breakdownTerm) {
-    const dim = resolveDimension(String(breakdownTerm));
-    if (!dim) {
-      return empty(notes, `Unknown dimension "${breakdownTerm}".`);
+    if (UNIT_GRAIN_TERMS.has(String(breakdownTerm).trim().toLowerCase())) {
+      unitGrain = true;
+      dimLabel = "Unit";
+    } else {
+      const dim = resolveDimension(String(breakdownTerm));
+      if (!dim) {
+        return empty(notes, `Unknown dimension "${breakdownTerm}".`);
+      }
+      dimField = dim.field;
+      dimLabel = dim.label;
     }
-    dimField = dim.field;
-    dimLabel = dim.label;
   }
 
   // 3. Resolve utility scope (P1 = own utility, or a named one within access).
@@ -241,7 +300,53 @@ export const getMeasureDrill = async (
   const rows: DrillRow[] = [];
   let total: number | null = null;
 
-  if (dimField) {
+  if (unitGrain) {
+    // Per-generating-unit fact grain. On these rows data_entries.utility_id is
+    // NULL — the utility comes via units.utility_id — so scope + exclude virtual
+    // roll-ups here. (periodIds are already utility-scoped when a utility is set;
+    // the u.utility_id filter is belt-and-suspenders + covers the global case.)
+    const result = await db.execute(sql`
+      SELECT u.name AS member,
+             (SELECT mli.name FROM managed_list_items mli WHERE mli.id = u.technology_id) AS technology,
+             (SELECT mli.name FROM managed_list_items mli WHERE mli.id = u.asset_class_id) AS asset_class,
+             SUM(de.value_numeric)::float8 AS total,
+             count(de.value_numeric)::int AS entered,
+             count(*)::int AS shells
+      FROM data_entries de
+      JOIN units u ON u.id = de.unit_id
+      WHERE de.measure_def_id = ANY(${intArrayParam(measureIds)})
+        AND de.report_period_id = ANY(${intArrayParam(periodIds)})
+        AND de.is_deleted = false
+        AND de.is_relevant = true
+        AND u.is_virtual = false
+        ${utilityId != null ? sql`AND u.utility_id = ${utilityId}` : sql``}
+      GROUP BY u.name, u.technology_id, u.asset_class_id
+      ORDER BY total DESC NULLS LAST
+    `);
+    const uRows = result.rows as Array<{
+      member: string; technology: string | null; asset_class: string | null;
+      total: number | null; entered: number; shells: number;
+    }>;
+    if (uRows.length === 0) {
+      notes.push(
+        `"${measure.name}" is not recorded per generating unit. Per-unit ("by unit") data exists for: Electricity Generated, Equipment Planned/Unplanned Downtime Hours, Rated Capacity, Fuel Oil, Lubrication Oil.`,
+      );
+    }
+    // Attach rated capacity for a generation measure so capacity factor is honest.
+    const capByUnit = /generat/i.test(measure.name)
+      ? await ratedCapacityByUnit(periodIds, utilityId)
+      : null;
+    for (const r of uRows) {
+      rows.push({
+        member: r.member,
+        value: r.total, // note[] flags when the measure is non-additive
+        coverage: { entered: r.entered, shells: r.shells },
+        technology: r.technology,
+        asset_class: r.asset_class,
+        rated_capacity: capByUnit?.get(r.member) ?? null,
+      });
+    }
+  } else if (dimField) {
     // dimField is a typed DimensionField literal from the central map (not user
     // text), so raw-interpolating the column name is safe.
     const col = sql.raw(`de.${dimField}`);
@@ -285,14 +390,15 @@ export const getMeasureDrill = async (
     rows.push({ value: r.total, coverage: { entered: r.entered, shells: r.shells } });
   }
 
-  // Grand total (additive only, when broken down).
-  if (dimField && additive) {
+  // Grand total (additive only, when broken down by a dimension OR by unit).
+  const brokenDown = dimField != null || unitGrain;
+  if (brokenDown && additive) {
     total = sumDrillNumericValues(rows.map((r) => r.value));
-  } else if (!dimField) {
+  } else if (!brokenDown) {
     total = additive ? rows[0]?.value ?? null : null;
   }
 
-  const recommended_chart: DrillMeasureData["recommended_chart"] = dimField
+  const recommended_chart: DrillMeasureData["recommended_chart"] = brokenDown
     ? rows.length > 8
       ? "leaderboard"
       : "bar-chart"

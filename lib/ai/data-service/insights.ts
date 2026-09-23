@@ -221,6 +221,9 @@ WHERE report_period_id = ANY(${intArrayParam(periodIds)})
 export interface WhatChangedItem {
   kpi_name: string;
   utility_name: string;
+  /** Unit of value_a/value_b ("min", "%", "×") — report the numbers with it,
+   *  never guess a unit for a ratio-type KPI. */
+  unit: string | null;
   period_a: string;
   period_b: string;
   value_a: number | null;
@@ -255,7 +258,7 @@ export const getWhatChanged = async (
   const previous = periods[1];
 
   const result = await db.execute(sql`
-    SELECT kpi_name, actual_value, report_period_id
+    SELECT kpi_name, actual_value, report_period_id, unit_name
     FROM gold.fact_kpi
     WHERE report_period_id IN (${latest.Id}, ${previous.Id})
   `);
@@ -264,13 +267,15 @@ export const getWhatChanged = async (
     kpi_name: string;
     actual_value: string | null;
     report_period_id: number;
+    unit_name: string | null;
   }>;
 
-  const byName = new Map<string, { current?: number; previous?: number }>();
+  const byName = new Map<string, { current?: number; previous?: number; unit?: string | null }>();
   for (const row of rows) {
     const entry = byName.get(row.kpi_name) ?? {};
     if (row.report_period_id === latest.Id) entry.current = row.actual_value ? parseFloat(row.actual_value) : undefined;
     if (row.report_period_id === previous.Id) entry.previous = row.actual_value ? parseFloat(row.actual_value) : undefined;
+    if (entry.unit == null && row.unit_name != null) entry.unit = row.unit_name;
     byName.set(row.kpi_name, entry);
   }
 
@@ -288,6 +293,7 @@ export const getWhatChanged = async (
     items.push({
       kpi_name: name,
       utility_name: latest.Utility || "N/A",
+      unit: vals.unit ?? null,
       period_a: previous.Period,
       period_b: latest.Period,
       value_a: vals.previous,

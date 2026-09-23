@@ -7,6 +7,17 @@ import { hasBenchmarkAccess } from "@/lib/user.service";
 import { createToolMetadata, resolveComparisonPeriodIds, intArrayParam } from "./common";
 import type { AiToolResult } from "../types";
 
+/** Human-readable value with its unit: 57.6 → "57.6 min", 6 → "6%", 0.94 → "0.94×". */
+const formatValueWithUnit = (value: number, unit: string | null): string => {
+  const n = Number.isInteger(value) ? String(value) : String(Math.round(value * 100) / 100);
+  const u = (unit ?? "").trim();
+  if (!u) return n;
+  if (u === "%" || u.startsWith("%")) return `${n}%`;
+  const ul = u.toLowerCase();
+  if (u === "×" || ul === "x" || ul === "ratio") return `${n}×`;
+  return `${n} ${u}`;
+};
+
 const buildKpiAccessInfo = (user: CurrentUser): KpiAccessInfo => ({
   scope: hasBenchmarkAccess(user) ? "all_utilities" : "own_utility",
   note: hasBenchmarkAccess(user)
@@ -18,6 +29,11 @@ const buildKpiAccessInfo = (user: CurrentUser): KpiAccessInfo => ({
 
 export interface KpiTargetRecommendation {
   kpi_name: string;
+  /** Unit of every value in this recommendation ("min", "%", "×") — report the
+   *  numbers with it, never guess a unit for a ratio-type KPI. */
+  unit: string | null;
+  /** The report_date (ISO `YYYY-MM-DD`) these peer values are drawn from. */
+  report_period: string | null;
   current_value: number;
   peer_median: number;
   peer_top_quartile: number;
@@ -50,7 +66,7 @@ export const getKpiTargets = async (
   }
 
   const result = await db.execute(sql`
-    SELECT kpi_name, actual_value, utility_id, utility_acronym, report_date
+    SELECT kpi_name, actual_value, utility_id, utility_acronym, report_date, unit_name
     FROM gold.fact_kpi
     WHERE report_period_id = ANY(${intArrayParam(periodIds)})
     LIMIT 2000
@@ -62,15 +78,26 @@ export const getKpiTargets = async (
     utility_id: number;
     utility_acronym: string;
     report_date: string;
+    unit_name: string | null;
   }>;
 
   const byKpi = new Map<string, number[]>();
+  // Per-KPI unit + the latest report_date the peer values are drawn from, so a
+  // recommendation carries its scale + period instead of the model guessing.
+  const byKpiMeta = new Map<string, { unit: string | null; period: string | null }>();
   for (const row of rows) {
     const val = row.actual_value ? parseFloat(row.actual_value) : NaN;
     if (isNaN(val)) continue;
     const arr = byKpi.get(row.kpi_name) ?? [];
     arr.push(val);
     byKpi.set(row.kpi_name, arr);
+    const date = row.report_date ? String(row.report_date).slice(0, 10) : null;
+    const meta = byKpiMeta.get(row.kpi_name);
+    if (!meta) {
+      byKpiMeta.set(row.kpi_name, { unit: row.unit_name ?? null, period: date });
+    } else if (date && (!meta.period || date > meta.period)) {
+      meta.period = date;
+    }
   }
 
   const recommendations: KpiTargetRecommendation[] = [];
@@ -87,8 +114,11 @@ export const getKpiTargets = async (
     const difficulty: KpiTargetRecommendation["difficulty"] =
       gapToTopQ <= 0 ? "easy" : gapToTopQ < median * 0.2 ? "moderate" : gapToTopQ < median * 0.5 ? "stretch" : "extreme";
 
+    const meta = byKpiMeta.get(name);
     recommendations.push({
       kpi_name: name,
+      unit: meta?.unit ?? null,
+      report_period: meta?.period ?? null,
       current_value: Math.round(current * 100) / 100,
       peer_median: Math.round(median * 100) / 100,
       peer_top_quartile: Math.round(topQ * 100) / 100,
@@ -219,6 +249,9 @@ export interface MultiUtilityKpiValue {
    *  Present so the model reports the number with its real unit instead of
    *  guessing one — report it verbatim, never convert. */
   unit: string | null;
+  /** `value` rendered with its unit ("57.6 min", "6%", "0.94×") — report this
+   *  verbatim so the number never loses its scale. */
+  display: string;
   /** The report_date (ISO `YYYY-MM-DD`) this specific value belongs to. Each
    *  utility is shown at its LATEST period, so periods can differ across rows —
    *  never assign a fiscal year a row doesn't carry. */
@@ -365,6 +398,7 @@ export const compareKpisAcrossUtilities = async (
           kpi_name: r.kpi_name,
           value: Math.round(val * 100) / 100,
           unit: r.unit_name ?? null,
+          display: formatValueWithUnit(Math.round(val * 100) / 100, r.unit_name ?? null),
           report_period: r.report_date ? String(r.report_date).slice(0, 10) : null,
           rank: 0,
         };
