@@ -6,23 +6,21 @@ on:
     paths-ignore:
       # Coordination docs / markdown never affect the running app — skip the VPS
       # deploy for docs-only pushes (e.g. #15's PENDING.md / USER-IMPACT.md updates).
-      # A mixed code+docs push still deploys; the VPS picks up any skipped docs on
-      # the next code deploy's `git pull`.
+      # SQL-only pushes are applied manually per the expand/contract DB rules, so
+      # they also skip the VPS. A mixed code push still deploys; the fresh clone
+      # on the VPS picks up ALL files (including any skipped docs/SQL from earlier).
       - "docs/**"
       - "**.md"
       # Raw SQL migration/data scripts are applied to p2 MANUALLY (git-first) and are
       # never executed by this deploy — they change no runtime code. Deploying on a
-      # SQL-only PR just rebuilds+restarts for nothing, incurring the ~1-2 min in-place
-      # build/restart 500 window for zero benefit. Skip them. A mixed code+SQL push
+      # SQL-only PR just rebuilds for nothing. Skip them. A mixed code+SQL push
       # still deploys (paths-ignore only skips when EVERY changed file matches).
       - "scripts/sql/**"
 
-# Serialize deploys: only ONE deploy runs at a time. Concurrent deploys SSH into the
-# SAME /root/prism on the VPS and race on `rm -rf node_modules` / `npm ci`, corrupting
-# node_modules + the npm cache (the ENOTEMPTY + ENOENT pipeline outages of 2026-09-02,
-# root-caused to concurrent merges/deploys). Extra pushes now QUEUE their deploy instead
-# of colliding. cancel-in-progress:false so a running deploy is never interrupted
-# mid-install (which would itself leave corrupted deps).
+# Serialize deploys: only ONE deploy runs at a time. Concurrent deploys race on
+# the same /root/prism-app releases dir and would corrupt a release mid-build.
+# cancel-in-progress: false so a running deploy is never interrupted mid-install
+# (which would itself leave a partial release behind).
 concurrency:
   group: deploy-to-vps
   cancel-in-progress: false
@@ -37,18 +35,55 @@ jobs:
           host: ${{ secrets.VPS_HOST }}
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
+          envs: GITHUB_SHA
           script: |
             set -e
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
-            cd /root/prism
-            git checkout .
-            git clean -fd
-            git pull
-            rm -rf node_modules   # force-clear any corrupted deps so npm ci can't fail on ENOTEMPTY (e.g. echarts/theme, 2026-09-02)
+
+            APP=/root/prism-app
+            CURRENT=/root/prism
+            REPO=https://github.com/taiatiniyara/prism.git
+
+            # Zero-downtime release-dir deploy.
+            #
+            # Layout (set up once on the VPS, needs root):
+            #   /root/prism-app/releases/<id>/   one dir per deploy (node_modules + build inside)
+            #   /root/prism-app/shared/          .env / .env.local (symlinked into every release)
+            #   /root/prism                      symlink -> active release; pm2 runs --cwd /root/prism
+            # pm2 runs prism-v2 in CLUSTER mode (-i 2), so `pm2 reload` cycles
+            # workers one at a time and requests are never dropped.
+            #
+            # If the layout is unexpectedly missing, fail loudly instead of guessing.
+            if [ ! -d "$APP/releases" ]; then
+              echo "ERROR: zero-downtime layout missing ($APP/releases not found). Run the one-time VPS setup first." >&2
+              exit 1
+            fi
+
+            # ROLLBACK (run on the VPS, no rebuild):
+            #   ln -sfn /root/prism-app/releases/<previous-release> /root/prism
+            #   pm2 reload prism-v2 --update-env
+
+            REL="$APP/releases/$(date +%Y%m%d%H%M%S)-$$-${GITHUB_SHA:0:7}"
+
+            # 1. Fetch the new code into a FRESH release dir (current release keeps serving).
+            git clone --depth 1 --branch main "$REPO" "$REL"
+            ln -sfn "$APP/shared/.env" "$REL/.env"
+            if [ -e "$APP/shared/.env.local" ]; then
+              ln -sfn "$APP/shared/.env.local" "$REL/.env.local"
+            fi
+
+            # 2. Build the new release OFF-LINE (live app untouched).
+            cd "$REL"
             # Happy path uses the npm cache (fast). If npm ci fails (e.g. ENOENT chmod
             # from a CORRUPT npm cache — sharp/semver, 2026-09-02), clear the cache and
             # node_modules and retry a clean install. set -e still aborts if the retry fails.
             npm ci || { echo "npm ci failed — clearing npm cache + node_modules, retrying clean"; npm cache clean --force; rm -rf node_modules; npm ci; }
             npm run build
-            pm2 restart prism-v2 --update-env
+
+            # 3. Atomic switch + gapless reload.
+            ln -sfn "$REL" "$CURRENT"
+            pm2 reload prism-v2 --update-env
+
+            # 4. Keep the last 5 releases for instant rollback; prune older.
+            ls -1dt "$APP"/releases/*/ | tail -n +6 | xargs -r rm -rf
