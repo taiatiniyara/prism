@@ -10,6 +10,12 @@ on:
       # the next code deploy's `git pull`.
       - "docs/**"
       - "**.md"
+      # Raw SQL migration/data scripts are applied to p2 MANUALLY (git-first) and are
+      # never executed by this deploy — they change no runtime code. Deploying on a
+      # SQL-only PR just rebuilds+restarts for nothing, incurring the ~1-2 min in-place
+      # build/restart 500 window for zero benefit. Skip them. A mixed code+SQL push
+      # still deploys (paths-ignore only skips when EVERY changed file matches).
+      - "scripts/sql/**"
 
 # Serialize deploys: only ONE deploy runs at a time. Concurrent deploys SSH into the
 # SAME /root/prism on the VPS and race on `rm -rf node_modules` / `npm ci`, corrupting
