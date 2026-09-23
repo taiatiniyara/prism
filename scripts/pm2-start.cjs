@@ -1,21 +1,28 @@
-// pm2-ready-aware launcher for `next start`.
+// pm2-ready-aware launcher for `next start`, used by the blue/green deploy.
 //
-// pm2 runs this file as the app process. `next start` is spawned as a child
-// (it is not cluster-aware, so each pm2 worker runs its own Next server; on
-// this box they share port 3555 via SO_REUSEPORT). Once the port accepts
-// connections we send pm2 the `ready` signal so `pm2 reload` holds the old
-// worker until the new one can take traffic -> zero dropped requests per deploy.
+// Each pm2 app (prism-blue on 3555, prism-green on 3556) runs this wrapper. The
+// release dir and port come from env vars so a standby app can be pointed at a
+// freshly-built release without touching the active app:
+//   PRISM_RELEASE_DIR  the release dir containing `.next` (default: process.cwd())
+//   PRISM_PORT         port to serve on (default: 3555)
+//
+// Traffic is switched between the two apps by nginx (`/etc/nginx/prism-upstream.conf`
+// include + `nginx -s reload`), which is what makes deploys zero-dropped-requests.
+// This wrapper intentionally runs `next start` as a child subprocess; Next.js is
+// NOT cluster/SO_REUSEPORT-safe, so pm2 cluster mode cannot be used for gapless
+// reloads — the nginx flip is the switch mechanism instead.
 const { spawn } = require('node:child_process');
 const net = require('node:net');
 const path = require('node:path');
 
-const PORT = Number(process.env.PORT || 3555);
 const HOST = '127.0.0.1';
-const NEXT_BIN = path.join(process.cwd(), 'node_modules', 'next', 'dist', 'bin', 'next');
+const NEXT_DIR = process.env.PRISM_RELEASE_DIR || process.cwd();
+const PORT = Number(process.env.PRISM_PORT || 3555);
+const NEXT_BIN = path.join(NEXT_DIR, 'node_modules', 'next', 'dist', 'bin', 'next');
 
 const next = spawn(process.execPath, [NEXT_BIN, 'start', '-p', String(PORT)], {
   stdio: 'inherit',
-  cwd: process.cwd(),
+  cwd: NEXT_DIR,
 });
 
 let readySent = false;

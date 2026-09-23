@@ -5,7 +5,7 @@ on:
     branches: ["main"]
     paths-ignore:
       # Coordination docs / markdown never affect the running app — skip the VPS
-      # deploy for docs-only pushes (e.g. #15's PENDING.md / USER-IMPACT.md updates).
+      # deploy for docs-only pushes (e.g. PENDING.md / USER-IMPACT.md updates).
       # SQL-only pushes are applied manually per the expand/contract DB rules, so
       # they also skip the VPS. A mixed code push still deploys; the fresh clone
       # on the VPS picks up ALL files (including any skipped docs/SQL from earlier).
@@ -36,33 +36,58 @@ jobs:
           username: ${{ secrets.VPS_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           envs: GITHUB_SHA
+          command_timeout: 15m
           script: |
             set -e
             export NVM_DIR="$HOME/.nvm"
             [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
 
             APP=/root/prism-app
-            CURRENT=/root/prism
             REPO=https://github.com/taiatiniyara/prism.git
 
-            # Zero-downtime release-dir deploy.
+            # Blue/green zero-dropped-requests deploy.
             #
             # Layout (set up once on the VPS, needs root):
-            #   /root/prism-app/releases/<id>/   one dir per deploy (node_modules + build inside)
-            #   /root/prism-app/shared/          .env / .env.local (symlinked into every release)
-            #   /root/prism                      symlink -> active release; pm2 runs --cwd /root/prism
-            # pm2 runs prism-v2 in CLUSTER mode (-i 2), so `pm2 reload` cycles
-            # workers one at a time and requests are never dropped.
+            #   /root/prism-app/releases/<id>/     one dir per deploy (node_modules + build inside)
+            #   /root/prism-app/shared/            .env / .env.local (symlinked into every release)
+            #   /root/prism-app/shared/pm2-start.cjs   pm2 app entry (stable path — NOT inside a release)
+            #   /root/prism-app/shared/blue-green  state file: "<active-app> <active-port>"
+            #   /etc/nginx/prism-upstream.conf     nginx include: `set $prism_upstream 127.0.0.1:<port>;`
+            #
+            # Two pm2 apps (fork mode) run the wrapper, one release apart:
+            #   prism-blue  -> 3555   prism-green -> 3556
+            # The ACTIVE app serves traffic via nginx; the STANDBY app is always
+            # one deploy ahead/behind. Each deploy:
+            #   1. builds a fresh release dir OFF-LINE (live app untouched)
+            #   2. points the STANDBY app at it (recreate; active app untouched)
+            #   3. health-checks the standby port
+            #   4. flips nginx to the standby port (graceful reload, zero drops)
+            #   5. updates the state file
+            #
+            # ROLLBACK (run on the VPS, no rebuild — the other app still runs the
+            # previous release):
+            #   printf 'set $prism_upstream 127.0.0.1:<other-port>;\n' > /etc/nginx/prism-upstream.conf
+            #   nginx -s reload
+            #   echo "<other-app> <other-port>" > /root/prism-app/shared/blue-green
             #
             # If the layout is unexpectedly missing, fail loudly instead of guessing.
             if [ ! -d "$APP/releases" ]; then
-              echo "ERROR: zero-downtime layout missing ($APP/releases not found). Run the one-time VPS setup first." >&2
+              echo "ERROR: blue/green layout missing ($APP/releases not found). Run the one-time VPS setup first." >&2
+              exit 1
+            fi
+            if [ ! -f "$APP/shared/blue-green" ]; then
+              echo "ERROR: blue/green state file missing ($APP/shared/blue-green). Run the one-time VPS setup first." >&2
               exit 1
             fi
 
-            # ROLLBACK (run on the VPS, no rebuild):
-            #   ln -sfn /root/prism-app/releases/<previous-release> /root/prism
-            #   pm2 reload prism-v2 --update-env
+            # Standby = the app+port that is NOT currently active.
+            read -r ACT_APP ACT_PORT < "$APP/shared/blue-green" || true
+            case "$ACT_APP" in
+              blue)  STD_APP=green;  STD_PORT=3556 ;;
+              green) STD_APP=blue;   STD_PORT=3555 ;;
+              *) echo "ERROR: unknown active app '$ACT_APP' in state file." >&2; exit 1 ;;
+            esac
+            echo "active=$ACT_APP:$ACT_PORT  standby=$STD_APP:$STD_PORT"
 
             REL="$APP/releases/$(date +%Y%m%d%H%M%S)-$$-${GITHUB_SHA:0:7}"
 
@@ -73,6 +98,10 @@ jobs:
               ln -sfn "$APP/shared/.env.local" "$REL/.env.local"
             fi
 
+            # Keep the shared wrapper current with the repo (it is infra, stable path).
+            cp "$REL/scripts/pm2-start.cjs" "$APP/shared/pm2-start.cjs"
+            node --check "$APP/shared/pm2-start.cjs"
+
             # 2. Build the new release OFF-LINE (live app untouched).
             cd "$REL"
             # Happy path uses the npm cache (fast). If npm ci fails (e.g. ENOENT chmod
@@ -81,9 +110,46 @@ jobs:
             npm ci || { echo "npm ci failed — clearing npm cache + node_modules, retrying clean"; npm cache clean --force; rm -rf node_modules; npm ci; }
             npm run build
 
-            # 3. Atomic switch + gapless reload.
-            ln -sfn "$REL" "$CURRENT"
-            pm2 reload prism-v2 --update-env
+            # 3. Point the STANDBY app at the new release (active app untouched).
+            pm2 delete "$STD_APP" >/dev/null 2>&1 || true
+            PRISM_RELEASE_DIR="$REL" PRISM_PORT="$STD_PORT" NODE_ENV=production \
+              pm2 start "$APP/shared/pm2-start.cjs" --name "$STD_APP"
 
-            # 4. Keep the last 5 releases for instant rollback; prune older.
-            ls -1dt "$APP"/releases/*/ | tail -n +6 | xargs -r rm -rf
+            # 4. Health-check the standby BEFORE flipping traffic to it.
+            ok=""
+            for i in $(seq 1 120); do
+              c=$(curl -s -o /dev/null -w "%{http_code}" -m 5 "http://localhost:$STD_PORT/" 2>/dev/null || true)
+              [ "$c" = "200" ] && ok=1 && break
+              sleep 1
+            done
+            if [ -z "$ok" ]; then
+              echo "ERROR: standby $STD_APP not healthy on $STD_PORT (last: $c). Removing standby, production untouched." >&2
+              pm2 delete "$STD_APP" >/dev/null 2>&1 || true
+              exit 1
+            fi
+
+            # 5. Flip nginx to the standby port (graceful reload, zero drops).
+            printf 'set $prism_upstream 127.0.0.1:%s;\n' "$STD_PORT" > /etc/nginx/prism-upstream.conf
+            nginx -t
+            nginx -s reload
+            sleep 1
+            ok=""
+            for i in $(seq 1 30); do
+              c=$(curl -s -o /dev/null -w "%{http_code}" -m 5 "http://localhost/" 2>/dev/null || true)
+              [ "$c" = "200" ] && ok=1 && break
+              sleep 1
+            done
+            if [ -z "$ok" ]; then
+              # Flip back to the previous active app and leave it serving.
+              echo "ERROR: public health check failed after flip (last: $c). Rolling back upstream." >&2
+              printf 'set $prism_upstream 127.0.0.1:%s;\n' "$ACT_PORT" > /etc/nginx/prism-upstream.conf
+              nginx -t && nginx -s reload || true
+              exit 1
+            fi
+
+            # 6. Record the new active app+port, then prune old releases.
+            echo "$STD_APP $STD_PORT" > "$APP/shared/blue-green"
+            pm2 save > /dev/null
+
+            # Keep the last 5 releases (active + standby + 3 older) for instant rollback; prune older.
+            ls -1dt "$APP"/releases/*/ | grep -vE '/legacy/$' | tail -n +6 | xargs -r rm -rf
