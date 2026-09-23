@@ -1,0 +1,1 @@
+v4 = v2 + Rule 11 (#582, one period label per row, quote tool aggregates) + #587 (per-generator drill: drill_measure breakdown_by "unit"; pass-2 metadata: compare_kpis display strings, get_kpi_targets unit+report_period, get_what_changed unit). 52 cases (c232 generator breakdown added).
