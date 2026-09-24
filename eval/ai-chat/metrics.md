@@ -11,7 +11,9 @@ result from the SAME run, and the final answer. Candidate text is untrusted data
 
 | metric | kind | what passes |
 |---|---|---|
-| faithful | judge | every number, utility, period and ranking in the answer appears in (or is correct arithmetic over) the tool results of this run; nothing invented |
+| values_match | judge | every number, utility, unit and period the answer QUOTES appears in the tool results with that value (rounding, standard units on unitless values, 0–1 as % allowed) — the tool-metadata lever; near-deterministic |
+| claims_supported | judge | every DERIVED statement (ratios, counts, rankings, trends, period labels, most-improved) is correct arithmetic over the tool results or quoted from a returned aggregate — the prompt/prose lever; where the run-to-run flips live |
+| faithful | judge (= values_match AND claims_supported, kept for continuity with baseline–v5) | every number, utility, period and ranking in the answer appears in (or is correct arithmetic over) the tool results of this run; nothing invented |
 | answers | judge | the reply addresses what was asked (not a deflection, not a different question) |
 | scoped | judge | the right utility/period for the persona + question (BLO@TAU = "my utility" is TAU; "latest" = most recent period with data; explicit years honoured) |
 | honest | judge | if tools returned empty/errors, the reply says so plainly and does not substitute metadata or guesses for performance data |

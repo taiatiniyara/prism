@@ -3,6 +3,16 @@
   "entry_point": "lib/ai/service.ts runAiStream (same path as app/api/ai/chat/route.ts)",
   "metrics": [
     {
+      "id": "values_match",
+      "label": "Values match",
+      "kind": "binary"
+    },
+    {
+      "id": "claims_supported",
+      "label": "Claims OK",
+      "kind": "binary"
+    },
+    {
       "id": "faithful",
       "label": "Faithful",
       "kind": "binary"
