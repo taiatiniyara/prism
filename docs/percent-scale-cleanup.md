@@ -15,9 +15,14 @@ fix for the bug where the PPA report showed "Renewable 0.06" for 6%.
 
 ## Ownership
 
-- **#4 — gold / display layer.** Own the single unit-driven `× 100` formatter at the shared read
-  surface (gold is the read surface for Power BI + AI + exports). One enforcement point so no
-  consumer re-derives scale and shows `0.06%`. Also fold in a `ratio` unit that displays as-is.
+- **#4 — display formatter.** Own the single unit-driven `× 100` scaling. **Correction (#4 grep,
+  2026-09-25): it is NOT gold-only** — only `lib/ai/**` reads `gold.fact_kpi`; the webapp UI
+  (review-kpi, BSC, KPI / entry screens) reads value+unit from silver / `data_entries`, never gold.
+  So the source of truth is a **shared TS formatter** that webapp + AI + exports all call, with a
+  **gold SQL mirror for Power BI** (the only non-TS consumer). Built inert as `lib/units/format.ts`
+  (PR #612, 11 tests); not wired to any read path until the invariant below holds. **Unit-detection
+  is EXACT `unit == '%'`** — the rate units `% per unit GDP` and `% per 1000 persons`, and `Ratio`
+  (133 rows, shown as-is), must **never** be ×100'd, in the formatter *or* the cleanup.
 - **#2 / #8 — data cleanup.** Correct Populations A + B below in `country_context` / `data_entries`
   so every `%` quantity is a fraction. Git-first; applied on Eugene's direct in-session word.
 - **#3 (calculator).** Formulas already output natural ratios (0–1) — **no formula change needed**;
@@ -94,14 +99,22 @@ that row.
 single `hours_in_period` (8760); the capacity-weighting cancels instead of dividing by the units'
 actual operating hours. 41,138/8760 = 4.70 — far too high.
 
-**Correct denominator (ruled — #8, unit-lifecycle spec / §4.6.1): the capacity-hours silver measure
-= Σ over units of (stint-hours ∩ period)** — a unit commissioned mid-year or deactivated contributes
-only its actual operating hours, capacity-weighted. `n_units × flat hours_in_period` (e.g. 10×8760)
-is only the naive special case where every unit ran the whole period; for exactly the churn
-utilities (worst outage data quality) it **understates** the indicator, so the fix must use the
-capacity-hours measure, not a unit count. Same guard applies to every per-unit-hours denominator in
-the §4.6.1 fix (Capacity Factor, Planned/Forced Outage). **Removed from the data-cleanup scope; #3
-owns the fix; #8 to review the denominator expression.**
+**Correct denominators (ruled — #8, unit-lifecycle spec / §4.6.1) — TWO dimensionally-distinct
+stint-derived measures, NOT interchangeable:**
+- **Capacity Factor** (energy numerator, MWh) → **capacity-hours** = Σ over stints of
+  (rated_capacity × stint-hours ∩ period), units **MW·h**. Energy ÷ MW·h is dimensionless ✓.
+- **Outage indicators** (forced / planned; downtime-hours numerator, h) → **unit-hours** = Σ over
+  stints of (stint-hours ∩ period), units **h**, **UNWEIGHTED**. Hours ÷ h ✓. Hours ÷ MW·h is *not*
+  a rate — never mix. (A capacity-weighted outage KPI would be a *different* KPI whose numerator is
+  also cap-weighted: Σ cap×downtime ÷ Σ cap×hours.)
+
+Each unit contributes only its **actual operating hours** (a unit commissioned mid-year / deactivated
+≠ full period); `n_units × flat hours_in_period` (e.g. 10×8760) is only the naive all-active special
+case and **understates** the indicator for churn utilities. So PUC stays 41,138 ÷ Σ(unit-hours). The
+§4.6.1 fix needs **both** stint-derived measures (or one stint roster feeding two aggregations), each
+ratio bound to its dimensionally-matching one. **Removed from data-cleanup scope; #3 owns the fix
+(Capacity / Forced / Planned generator ratios); #8 reviews BOTH denominator expressions before it
+lands.**
 
 **(B4) PENDING — Transformer Utilization Factor:** the flat input aggregate (load 73.74 / cap 49.73 =
 1.48) diverges from the engine's value (148.29) by ×100, so the engine resolves these inputs
@@ -118,13 +131,35 @@ the **unit** (it is not a percentage), not the scale.
 
 ---
 
+## Population D — entry-side (go-forward defect prevention) — #2 / #11
+
+Storing fractions means `%` entry fields must **accept human percent and store the fraction** (a
+`type 6` % field: user types "6" → store `0.06`). Without this, every new `%` entry after cleanup
+**re-introduces** the 0–100 defect. #2 / #11 domain (raised by #4 per Eugene, 2026-09-25).
+
+**Recommended UX — storage-only:** the user still types "6" and sees "6" on edit; only the *stored*
+value becomes `0.06`. Per #8 that is **no USER-IMPACT journey change → no ledger row**; only if users
+must type fractions does it need a row. Whoever lands it (#2 / #11) decides; storage-only is the clean
+default.
+
+**⚠ SEQUENCING HAZARD (#8 / #2 apply-plan rule):** the entry-form switch and the data cleanup
+(Pop A/B) **must apply in the same window** — or data entry is paused for the gap. Otherwise:
+form-first → fraction entries land among old 0–100 rows = a **mixed-scale cohort** that #8's Pop-A
+uniformity gate will (correctly) refuse to blanket-÷100; cleanup-first → every `%` entry in the gap
+re-introduces the defect. #8's uniformity check runs **at apply time** as the tripwire, not before.
+
+---
+
 ## Sequence
 
-1. **#4** builds the unit-driven display formatter at the gold/read layer (+ `ratio` unit).
-2. **#2 / #8** clean Populations A + B (and fix C's unit) so every `%` value is a fraction — on
-   Eugene's direct in-session go per the DB-apply rule.
-3. The **Step-4 full recompute** ([kpi-target-actual-contract §5](kpi-target-actual-contract.md))
-   regenerates KPI values from the cleaned base; `%` values then read correctly via the formatter.
-4. Once live on a consistent scale, ping #16 to re-enable the AI's `%` display (dropped as a stopgap).
+1. **#4** — shared TS formatter (`lib/units/format.ts`, PR #612, inert) + gold SQL mirror for Power
+   BI (follow-up, gated on cleanup + `gold.fact_kpi.actual_value` varchar→numeric).
+2. **#2 / #11** — entry-form switch (store fraction), **same window as step 3** (or pause entry).
+3. **#2 / #8** — clean Populations A + B (fix C's unit) so every `%` value is a fraction — on
+   Eugene's direct in-session go; the uniformity gate runs **at apply time**.
+4. The **Step-4 full recompute** ([kpi-target-actual-contract §5](kpi-target-actual-contract.md))
+   regenerates KPI values from the cleaned base; `%` reads correctly via the formatter. #3's
+   generator-ratio denominator fix (B3) lands with this.
+5. Once live on a consistent scale, ping #16 to re-enable the AI's `%` display (dropped as a stopgap).
 
 _Author: #3 (calculator). Data grounded against p2 read-only, 2026-09-25._
