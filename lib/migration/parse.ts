@@ -15,6 +15,7 @@
 import ExcelJS from "exceljs";
 
 import { NO_DATA_REASONS, type NoDataReason } from "@/db/schema/dataEntry";
+import { MULTIPLIER_FACTORS } from "@/lib/pbi/multiplier";
 import type { ControlTotals } from "./loads";
 import type { ExtractRow, ValueType } from "./types";
 
@@ -56,6 +57,21 @@ const VALUE_TYPE_ALIASES: Record<string, ValueType> = {
 };
 
 const NO_DATA_REASON_SET: ReadonlySet<string> = new Set(NO_DATA_REASONS);
+
+// Unit-scale label ("Ones" | "Thousands" | "Millions" | "Billions" — the only valid domain,
+// keys of MULTIPLIER_FACTORS). The extract may arrive in any casing ("millions") or padded, so
+// normalise to the canonical capitalised label — the display-layer factor lookup is exact-match.
+// An unrecognised label is returned trimmed as-is; the loader soft-logs it (metadata-only) rather
+// than dropping the row, so a bad label is visible in the issues Excel without losing the value.
+const MULTIPLIER_CANONICAL: ReadonlyMap<string, string> = new Map(
+  Object.keys(MULTIPLIER_FACTORS).map((k) => [k.toLowerCase(), k]),
+);
+function normalizeMultiplier(raw: string | null): string | null {
+  if (raw == null) return null;
+  const s = raw.trim();
+  if (s === "") return null;
+  return MULTIPLIER_CANONICAL.get(s.toLowerCase()) ?? s;
+}
 
 /** Extract the primitive value from an ExcelJS cell (formulas, rich text, hyperlinks). */
 function cellValue(v: ExcelJS.CellValue): string | number | boolean | null {
@@ -172,6 +188,8 @@ const EXTRACT_COLUMNS = {
   // answer availability (optional; mutually exclusive with value)
   noDataReason: ["no_data_reason", "no_data", "nodata_reason", "availability"],
   statusId: ["status_id", "status"],
+  // unit-scale label for the figure (optional; defaults to "Ones" in the loader when absent)
+  multiplier: ["multiplier", "multipler", "unit_scale", "scale", "value_scale"],
   // p1 provenance (optional)
   updatedById: ["updated_by_id", "entered_by_id", "entered_by", "data_entry_user_id", "user_id"],
   updatedAt: ["updated_at", "update_date", "entered_at", "entry_date", "date_entered"],
@@ -326,6 +344,7 @@ export async function parseExtractWorkbook(
       valueType,
       value,
       statusId: toInt(get(r, "statusId")),
+      multiplier: normalizeMultiplier(getStr(r, "multiplier")),
       updatedById: getStr(r, "updatedById"),
       updatedAt: getTs(r, "updatedAt"),
       comment: getStr(r, "comment"),

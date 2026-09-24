@@ -1,5 +1,6 @@
 import { sql } from "drizzle-orm";
 import { db } from "@/db/connection";
+import { MULTIPLIER_FACTORS } from "@/lib/pbi/multiplier";
 import { recordRejection, classifyPgError } from "./rejections";
 import type { ExtractRow, ValueType } from "./types";
 
@@ -178,6 +179,19 @@ export async function loadExtract(loadId: number, rows: ExtractRow[]): Promise<L
       ? JSON.stringify([{ comment: row.comment, commenterId: authorId, commenterRole: "migrated", date: row.updatedAt ?? null }])
       : null;
 
+    // unit-scale label → data_entries.multiplier (p2 stores the as-entered number; true value =
+    // value × factor, lib/pbi/multiplier). Domain is Ones|Thousands|Millions|Billions; absent →
+    // Ones. An out-of-domain label is stored as Ones (safe ×1) and soft-logged (metadata only —
+    // the row still loads; the raw label is preserved in the rejection payload for remediation).
+    let multiplier = "Ones";
+    if (row.multiplier != null && row.multiplier !== "") {
+      if (row.multiplier in MULTIPLIER_FACTORS) {
+        multiplier = row.multiplier;
+      } else {
+        await recordRejection({ ...ctx, category: "other", columns: ["multiplier"], reason: `multiplier "${row.multiplier}" not in (${Object.keys(MULTIPLIER_FACTORS).join(" | ")}) — stored as Ones`, remediation: "use one of Ones|Thousands|Millions|Billions in the extract" });
+      }
+    }
+
     // PASS 1 — shell (address only + p1 provenance)
     let shellId: string;
     try {
@@ -187,14 +201,14 @@ export async function loadExtract(loadId: number, rows: ExtractRow[]): Promise<L
           provider_id, category_id, technology_id, asset_class_id,
           customer_type_id, payment_mode_id, consumption_band_id, division_id, gender_id, utility_function_id,
           utility_id, service_area_id, power_station_id, unit_id, country_id,
-          status_id, is_relevant, is_deleted,
+          status_id, is_relevant, is_deleted, multiplier,
           updated_by_id, updated_at, comments
         ) VALUES (
           ${row.reportPeriodId}, ${row.measureId},
           ${row.dims.provider}, ${row.dims.type}, ${row.dims.source}, ${row.dims.resource_type},
           ${row.dims.customer_type}, ${row.dims.payment_mode}, ${row.dims.band}, ${row.dims.division}, ${row.dims.gender}, ${row.dims.utility_function},
           ${row.utilityId ?? null}, ${row.serviceAreaId ?? null}, ${row.powerStationId ?? null}, ${row.unitId ?? null}, ${row.countryId ?? null},
-          ${STATUS_PENDING}, true, false,
+          ${STATUS_PENDING}, true, false, ${multiplier},
           ${authorId}, COALESCE(${row.updatedAt ?? null}::timestamp, now()), ${commentsJson}::json
         ) RETURNING id`);
       shellId = (r.rows[0] as { id: string }).id;

@@ -11,6 +11,7 @@
 ## 0. Inputs (two Excel files, per run)
 
 1. **Extract** (`N_mig_data_export_YYYYMMDD_*.xlsx`) — the p1→p2 rows, already resolved to p2 ids. Column headers map via `EXTRACT_COLUMNS` / value-type aliases in `parse.ts` (the one place to adjust when a new sample uses different spellings).
+   - **Multiplier (unit scale) — the extract MUST carry it.** A `multiplier` column (values **`Ones` | `Thousands` | `Millions` | `Billions`** only — Eugene 2026-09-25) states the scale the figure was reported in; p2 stores the *as-entered* number, so `true value = value × factor` ([`lib/pbi/multiplier.ts`](../lib/pbi/multiplier.ts)). The loader reads it and writes `data_entries.multiplier` (blank/absent → `Ones`; an out-of-domain label is stored `Ones` and soft-logged). The p1 extract historically **dropped** this, so every row defaulted to `Ones` and currency figures were understated up to ×10⁹ — and each flush-and-reload wiped the post-load backfill. Carrying it in the extract makes the reload self-correct, retiring that backfill (see §8).
 2. **Control totals / recon** (`N_mig_recon_export_YYYYMMDD_*.xlsx`) — per-period expected counts/sums the loader reconciles the load against (writes `migration_scorecard`).
 
 ---
@@ -92,6 +93,7 @@ Interpretation guide for the categories seen so far:
 ## 8. Post-load steps (bring the reload up to working state)
 
 1. **Re-apply one-time raw-data cleanups** the raw p1 dump re-introduces (dated `scripts/sql/` that remove stray shells / reconcile scope), verifying each against the reloaded data.
+   - **Multiplier backfill — retired once the extract carries `multiplier`.** [`scripts/backfill-multipliers-from-training.ts`](../scripts/backfill-multipliers-from-training.ts) existed only because the extract dropped the scale label; now that the loader reads it (§0), a reload from a multiplier-bearing extract already lands the correct labels — **do not re-run the backfill**. Keep it as the fallback ONLY for a legacy extract that lacks the column; verify the post-load `multiplier` distribution instead (`SELECT multiplier, count(*) FROM data_entries GROUP BY 1`).
 2. **Regenerate computed layers** (owned by the calculator/data-entry streams — coordinate, don't run blind): calculated measures + `hours_in_period` + the KPI recompute (rebuilds `gold.fact_kpi` / `silver`), keyed off the reloaded raw data + the current `report_periods.bm_opted_in` participation flags.
 3. **Sequence realignment** — only if a table with an integer identity was reloaded (NOT needed for `data_entries`, whose id is a uuid; not needed when only `data_entries` is loaded).
 4. **Do NOT re-apply superseded steps** — e.g. the old blanket approval model was replaced by per-period participation; statuses follow the current model.
