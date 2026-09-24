@@ -13,8 +13,11 @@ import { countries, organisations } from "@/db/schema";
 
 const SUBGROUP_NAME = "Cost Breakdown";
 
-// p1's UtilityCosts columns, in emitted order. Each <label> maps onto a p2
-// (measure, utility function, provider) slice of data_entries:
+// p1's UtilityCosts columns, in emitted order (p1 iterates its cost labels and
+// re-spreads accumulated keys, so the emitted order is the REVERSE of its label
+// list — Customer first, Fuel Expenditure last; p2 already lists them in that
+// emitted order). Each <label> maps onto a p2 (measure, utility function,
+// provider) slice of data_entries:
 //   { label, measure: def name in subgroup "Cost Breakdown", fn: utility
 //     function id, prov: provider id }
 // Provider 22/23 split "Electricity Purchases" into the IPP and Customer
@@ -98,10 +101,10 @@ export async function GET(req: Request) {
     return Number(e.value_numeric);
   };
 
-  const purchaseDefId = measureIdByName.get("Electricity Purchases");
+  const fuelDefId = measureIdByName.get("Fuel & Oil Expenditure");
   const unitName =
     itemsById.get(
-      defs.find((d) => d.id === purchaseDefId)?.unit_id ?? 0,
+      defs.find((d) => d.id === fuelDefId)?.unit_id ?? 0,
     ) ?? "Currency";
 
   return Response.json(
@@ -123,19 +126,21 @@ export async function GET(req: Request) {
         UsdExchangeRate: fxRate,
         Unit: unitName,
       };
-      // p1 carries the LAST column's multiplier, i.e. the "Power Purchase
-      // Costs Customer" slice (provider 23) when present.
-      const customerEntry = valMap.get(
-        `${r.id}:${purchaseDefId}:1024:23`,
-      );
-      row.Multiplier = customerEntry?.multiplier || "Ones";
+      // p1 derives Unit/Multiplier from the FIRST label iterated — its cost
+      // label list starts with "Fuel Expenditure" (dl 4213040061), so the entry
+      // multiplier is that slice's, defaulting to "Ones".
+      const fuelEntry =
+        fuelDefId == null ? null : valMap.get(`${r.id}:${fuelDefId}:1024:21`);
+      row.Multiplier = fuelEntry?.multiplier || "Ones";
 
       for (const c of COST_COLUMNS) {
         const value = findValue(r.id, c.measure, c.fn, c.prov);
-        const base = typeof value === "number" && Number.isFinite(value) ? value : 0;
-        row[c.label] = base;
-        // p1 emits null USD when the base is falsy (missing or zero).
-        row[`${c.label} USD`] = base ? base / fxRate : null;
+        // p1 emits null when the slice has no value (convertToInt → null), never 0.
+        row[c.label] = value;
+        // p1 emits USD = base/fxRate whenever base is a number (incl. explicit 0),
+        // else null.
+        row[`${c.label} USD`] =
+          typeof value === "number" ? value / fxRate : null;
       }
       return row;
     }),
