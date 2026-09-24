@@ -17,10 +17,13 @@ the row is the obligation, not the manual.
 
 **Audit:** **#11 (UI)** reconciles this ledger against merged journey-affecting changes — a landed
 change with no row is a gap to flag back to the landing stream. **(Reassigned from #15 to #11 by
-Eugene 2026-09-22 when the #15 pending-tracker was wound down; #11 now owns BOTH the audit and
-instruction-writing.)** **Instruction-writing owner: #11 (UI) — assigned by Eugene 2026-07-28.**
-#11 turns ledger rows into role-based user guides / help text as the relevant surfaces stabilize;
-row authors remain responsible for row accuracy.
+Eugene 2026-09-22 when the #15 pending-tracker was wound down.)**
+
+**Instruction-writing owner: #17 (system documentation) — reassigned from #11 by Eugene
+2026-09-25.** #17 turns ledger rows into role-based user guides, manuals and FAQs as the relevant
+surfaces stabilize, and moves each row's status (📝/✅/📣). **In-app help UI** (help panels,
+empty-state copy, field hints) stays with **#11**, since it is rendered in the product. Row authors
+remain responsible for row accuracy.
 
 **Roles vocabulary** (from the tiered-access spec + board): `DAO` data-entry officer · `BLO`
 Utility Liaison · `org-admin` utility org admin · `BMO` benchmarking-mgmt admin (PPA) · `PPA_FIN`
