@@ -64,6 +64,11 @@ export interface ExtractRow {
   // (data_entries.chk_value_xor_nodata). One of NO_DATA_REASONS.
   noDataReason?: NoDataReason | null; // → data_entries.no_data_reason
   statusId?: number | null; // optional explicit status; else derived (filled/no-data→Entered, empty→Pending)
+  // unit-scale label the reporter used ("Ones", "Thousands", "Millions", …) → data_entries.multiplier.
+  // p2 stores the as-entered number, so true value = value × factor (lib/pbi/multiplier). The p1
+  // extract historically DROPPED this (every row defaulted to "Ones", understating currency figures
+  // up to ×10⁹); the extract now carries it so flush-and-reload preserves it. Blank/absent → "Ones".
+  multiplier?: string | null; // → data_entries.multiplier
   // p1 provenance (all optional) — the original data-entry person, time, and note.
   updatedById?: string | null; // → data_entries.updated_by_id (a p2-valid user.id; unresolved → nulled + logged)
   updatedAt?: string | null; // → data_entries.updated_at (the ORIGINAL entry time; preserved, not overwritten)
