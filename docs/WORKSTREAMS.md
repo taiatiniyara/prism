@@ -41,6 +41,7 @@ This file is read and written by multiple concurrent Claude Code sessions (the "
 | 13 | Multi-sector (water/sanitation) | PRISM 2 #13 multi-sector | 🟢 | Phase 5a label layer MERGED (#58); **UN M49 now the countries/sub_regions PK + dups cleaned (#60 merged, DB changed)**; #59 superseded |
 | 15 | Pending-work tracker | PRISM 2 #15 pending-tracker | ⏹️ | **WOUND DOWN 2026-09-22** — `PENDING.md` retired; lean on this board (see §15) |
 | 16 | AI optimisation (cost / latency / quality of the PRISM AI assistant) | PRISM 2 #16 ai optimisation | 🟢 | independent; touches `lib/ai/**` + `app/api/ai/**` — coordinate if you edit those |
+| 17 | System documentation (user manuals, FAQs, online help, architecture) | PRISM 2 #17 system documentation | 🟢 | independent; consumes USER-IMPACT.md + all specs |
 
 > ⚠️ Rows 4, 7 are seeded from the session names only — the **owning session must confirm status, real scope, and dependencies** and correct anything wrong here.
 
@@ -237,6 +238,13 @@ This file is read and written by multiple concurrent Claude Code sessions (the "
 - **Scope:** cost, latency and answer quality of the PRISM AI assistant (`lib/ai/**`, `app/api/ai/**`): prompt caching, token hygiene, tool-result size, model/effort choice, and the eval set that gates any quality-trading change.
 - **Baseline (30d to 2026-09-22, 116 turns, `claude-sonnet-4-6`):** fixed prefix ≈ 25k tokens (70 tools 17.6k + system 7.6k) re-sent every tool step; avg 72k in / 1.2k out per turn; p50 22s / p90 46s; report/PDF turns 200–385k tokens and 97–123s (at the route's 120s `maxDuration`). Prompt caching verified working; cached tokens were being priced at full rate.
 - **Last update 2026-09-24 (v4/v5):** **Per-generator breakdown works** (Eugene's prod question, case c232): `drill_measure breakdown_by:"unit"` (#4 #587) answers from `data_entries.unit_id` → `units` (539 units / 25 utilities; 6 unit-level measures). **Tenancy 20/20** again after #593 (calculate_kpi + get_data_quality_report scoped own-utility). **Data-integrity finding (for #3/#2):** `gold.fact_kpi` mixes scales under one '%' unit — Access to Electricity 0–100, but Renewable Energy to Grid / Generator Capacity Factor / Network Delivery Losses / OCR stored as fractions; `actual_value` is varchar. It made pass-2 display strings read "0.88%" for 88% and it is why the PPA report printed "Renewable 0.06". Interim: no display for '%' units (#593); real fix = one scale per unit in formula outputs + gold backfill. **Grader fix:** judge clipped tool results at 12k chars; the ~28k composite bundle hid its later tables → false "unsupported" verdicts on fleet reports; clip → 60k, affected cases re-judged. **Corrected scores (same 49 cases; baseline → v2 → v4 → v5):** faithful 59 → 71 → 61 → 55%, scoped 78 → 92 → 84 → 88%, honest 86 → 100 → 88 → 92%, answers 88 → 100 → 100 → 100%, tenancy 80 → 100 → 90 → 100%, truncation 2 → 0. Single rep = ±14 pt noise, so v2/v4/v5 faithful are not distinguishable yet; the residual failures are model-side prose over-claims (wrong ratios "7×" for 4×, counts "13 of 19" not in data, collapsing periods under "FY2025" despite Rule 11). **Next options:** (a) 2nd rep of v5 to measure variance before any further prompt change; (b) prompt lever "show the two numbers behind every ratio/count; never state a count you didn't take from listed rows". Ops findings raised to #1: in-place build = 1–2 min of 500s per deploy (blue/green proposed); /api/organisations + /api/countries 500 instead of 401 on a missing key.
+
+### 17. System documentation — 🟢 active
+
+- **Owner:** PRISM 2 #17 system documentation
+- **Depends on:** nothing · **Blocks:** nothing · **Consumes:** [USER-IMPACT.md](USER-IMPACT.md) (release-time user guides), every stream's specs/ADRs
+- **Scope:** end-user manuals (DAO/BLO/CEO/subscribers), BMO admin manual, FAQs, online/in-app help, system architecture + functional docs. Works from a dedicated worktree (`C:/Users/eugen/prism-docs`); docs-only unless a help surface needs UI (coordinate with #11).
+- **Last update 2026-09-25:** stream started — onboarding done. Baseline: only end-user doc is the 11-page KPI glossary PDF at `/docs`; no manual/FAQ/in-app help; `ARCHITECTURE.md` badly stale (pre blue/green, pre `kpi_actual`/`period`); USER-IMPACT 22 rows all unwritten. Awaiting Eugene's first assignments.
 
 ---
 
