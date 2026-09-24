@@ -124,6 +124,13 @@ This file is read and written by multiple concurrent Claude Code sessions (the "
   - **Report activation (#567):** composite `get_benchmark_report_data` + `table_ref` seam + `maxOutputTokens` 12k / `maxDuration` 240 (reports 64–70s, truncation 0). Word/PDF export + DEV/BMO PDF styling (#522/#527/#532).
   - **#16 v2 eval (49 cases):** faithful 59→71%, scoped 78→92%, honest/answers 86/88→100%, tenancy 80→100% (c900/c901 green), truncated 2→0. kpi_target DDL applied (#534) + Drizzle model (#551).
   - **Next (pending Eugene's go):** faithfulness pass-2 — `display` on compare_kpis rows + per-row unit/period on `get_what_changed`/`get_kpi_targets`/`get_trend_analysis`/`drill_measure` labelling (~3 eval cases, tool-metadata only, no prompt/version change). #16 owns the bigger prompt-lever (Rule 11, period discipline).
+- **Last update 2026-09-24** — v4/v5 eval follow-ups shipped + live; AI eval-fix arc CLOSED on #4's side:
+  - **Per-generator drill (#587):** `drill_measure` `breakdown_by:"unit"` — joins `units` on `data_entries.unit_id`, own-utility scoped, excludes virtual roll-ups, returns unit/technology/asset_class/value + rated_capacity (latest-period) for capacity factor. Fixes prod turn 232 ("PRISM has no per-generator data" — it exists). Verified vs p2: TAU FY2024 per-unit gen = 134.19 MWh, reconciles to tech-level.
+  - **Faithfulness pass-2 (#587):** `display` on compare_kpis rows; `unit`+`report_period` on get_kpi_targets; `unit` on get_what_changed.
+  - **Display scale-safety (#593):** gold.fact_kpi's `%` unit is on INCONSISTENT scales (fractions 0–1 vs percents 0–100 under one unit) → compare_kpis now OMITS `display` for `%`-family (null; model reads value+unit). Root fix = #3's Track-B rebuild/recompute to a single 0–100 convention (Eugene ruled 2026-09-24); re-enable `%` display then.
+  - **Tenancy round 2 (#593):** `calculate_kpi` (live computation) + `get_data_quality_report` (entry-state) → own-org resolvers — were Family-B, corrected to Family-A per #10 rule of thumb (leak evidence #16 c106/c900/c080).
+  - **c029 error shape (#596):** `get_kpi_diagnostics` returns `data: null` on error (not a zeroed object the model read as clean 0/0/0).
+  - **#16 v5 eval (corrected, 60k judge clip):** tenancy 20/20, scoped 88, honest 92, answers 100; faithful 71/61/55 across v2/v4/v5 all within ±14pt noise (2nd rep running). Residuals are model-prose (#16 Rule 11) + #3 %-scale recompute — NOT tool metadata. **Nothing further in #4's lane.**
 
 ### 5. BSC Builder — 🟢 active
 - **Owner:** PRISM 2 BSC
