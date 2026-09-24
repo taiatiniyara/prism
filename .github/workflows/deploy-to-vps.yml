@@ -81,13 +81,34 @@ jobs:
             fi
 
             # Standby = the app+port that is NOT currently active.
+            # Tolerate both the current (prism-blue/prism-green) and legacy
+            # (blue/green) spellings so an old state line still maps correctly;
+            # state is always written back in the full prism-* form.
             read -r ACT_APP ACT_PORT < "$APP/shared/blue-green" || true
             case "$ACT_APP" in
-              blue)  STD_APP=green;  STD_PORT=3556 ;;
-              green) STD_APP=blue;   STD_PORT=3555 ;;
+              prism-blue|blue)  STD_APP=prism-green; STD_PORT=3556 ;;
+              prism-green|green) STD_APP=prism-blue; STD_PORT=3555 ;;
               *) echo "ERROR: unknown active app '$ACT_APP' in state file." >&2; exit 1 ;;
             esac
             echo "active=$ACT_APP:$ACT_PORT  standby=$STD_APP:$STD_PORT"
+
+            # <id>:<status> for a pm2 app by name (id is the reliable handle for
+            # `pm2 env`, which does not accept names on all pm2 versions).
+            pm2_probe() {
+              STD_NAME="$1" node -e '
+                const j = JSON.parse(
+                  require("child_process").execSync("pm2 jlist", { encoding: "utf8" }));
+                const x = j.find(v => v.name === process.env.STD_NAME);
+                process.stdout.write(x ? (x.pm_id + ":" + (x.pm2_env && x.pm2_env.status)) : ":missing");
+              '
+            }
+
+            # Read the release dir an app is ACTUALLY running from (ground truth,
+            # not assumption). Empty if the app is gone.
+            pm2_release_dir() {
+              local id_="$1"
+              pm2 env "$id_" 2>/dev/null | sed -n 's/^PRISM_RELEASE_DIR: //p' | head -1
+            }
 
             REL="$APP/releases/$(date +%Y%m%d%H%M%S)-$$-${GITHUB_SHA:0:7}"
 
@@ -111,19 +132,41 @@ jobs:
             npm run build
 
             # 3. Point the STANDBY app at the new release (active app untouched).
+            #    Deterministic recreate: the app must be DELETED first — `pm2 start`
+            #    against an app name that still exists recycles the old process and
+            #    keeps its stale PRISM_RELEASE_DIR (silent no-op — the 2026-09-24
+            #    drift bug). Losing the standby is fine (it serves no traffic).
             pm2 delete "$STD_APP" >/dev/null 2>&1 || true
             PRISM_RELEASE_DIR="$REL" PRISM_PORT="$STD_PORT" NODE_ENV=production \
               pm2 start "$APP/shared/pm2-start.cjs" --name "$STD_APP"
 
-            # 4. Health-check the standby BEFORE flipping traffic to it.
+            # 3a. Assert the new standby is online AND actually running this release.
+            read -r STD_ID STD_STATUS < <(pm2_probe "$STD_APP" | tr ":" " ")
+            if [ -z "$STD_ID" ] || [ "$STD_STATUS" != "online" ]; then
+              echo "ERROR: standby $STD_APP failed to come online (state '$STD_ID:$STD_STATUS'). Removing, production untouched." >&2
+              pm2 delete "$STD_APP" >/dev/null 2>&1 || true
+              exit 1
+            fi
+            ACTUAL_DIR=$(pm2_release_dir "$STD_ID")
+            if [ "$ACTUAL_DIR" != "$REL" ]; then
+              echo "ERROR: standby $STD_APP is running from '$ACTUAL_DIR', not deployment '$REL'. Removing, production untouched." >&2
+              pm2 delete "$STD_APP" >/dev/null 2>&1 || true
+              exit 1
+            fi
+
+            # 4. Health-check the standby BEFORE flipping traffic to it. Check both
+            #    the root route (SSR) and a middleware-covered route (catches the
+            #    MODULE_NOT_FOUND lazy-require class of 500s). Refuse 000/5xx.
             ok=""
             for i in $(seq 1 120); do
               c=$(curl -s -o /dev/null -w "%{http_code}" -m 5 "http://localhost:$STD_PORT/" 2>/dev/null || true)
               [ "$c" = "200" ] && ok=1 && break
               sleep 1
             done
+            d=$(curl -s -o /dev/null -w "%{http_code}" -m 10 "http://localhost:$STD_PORT/dashboard" 2>/dev/null || true)
+            case "$d" in 2*|3*) ;; *) echo "ERROR: standby middleware route returned '$d' (want 2xx/3xx)." >&2; ok="" ;; esac
             if [ -z "$ok" ]; then
-              echo "ERROR: standby $STD_APP not healthy on $STD_PORT (last: $c). Removing standby, production untouched." >&2
+              echo "ERROR: standby $STD_APP unhealthy on $STD_PORT (root=$c dashboard=$d). Removing, production untouched." >&2
               pm2 delete "$STD_APP" >/dev/null 2>&1 || true
               exit 1
             fi
@@ -147,9 +190,28 @@ jobs:
               exit 1
             fi
 
+            # 5a. Post-flip: the new active app must still be the one we deployed.
+            read -r ACT_ID ACT_STATUS < <(pm2_probe "$STD_APP" | tr ":" " ")
+            ACTUAL_DIR=$(pm2_release_dir "$ACT_ID")
+            if [ "$ACT_STATUS" != "online" ] || [ "$ACTUAL_DIR" != "$REL" ]; then
+              echo "ERROR: active $STD_APP drifted from deployment after flip (status=$ACT_STATUS dir=$ACTUAL_DIR). Investigate - NOT exiting clean." >&2
+            fi
+
             # 6. Record the new active app+port, then prune old releases.
             echo "$STD_APP $STD_PORT" > "$APP/shared/blue-green"
             pm2 save > /dev/null
 
-            # Keep the last 5 releases (active + standby + 3 older) for instant rollback; prune older.
-            ls -1dt "$APP"/releases/*/ | grep -vE '/legacy/$' | tail -n +6 | xargs -r rm -rf
+            # Keep the last 5 releases for instant rollback, but NEVER delete a
+            # release a running app still uses (a deployed-then-pruned dir kills
+            # lazy requires -> intermittent 500s; the 2026-09-24 outage). legacy/
+            # is also off-limits.
+            USED=""
+            for a in prism-blue prism-green; do
+              i=$(pm2_probe "$a" | cut -d: -f1)
+              [ -n "$i" ] && USED="$USED $(pm2_release_dir "$i")"
+            done
+            ls -1dt "$APP"/releases/*/ | grep -vE '/legacy/$' | tail -n +6 | while read -r dir; do
+              skip=""
+              for u in $USED; do [ "$dir" = "$u" ] && skip=1; done
+              if [ -z "$skip" ]; then rm -rf "$dir"; echo "pruned $dir"; else echo "kept in-use $dir"; fi
+            done
