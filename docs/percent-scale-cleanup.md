@@ -91,10 +91,17 @@ that row.
 
 **(B3) NOT DATA — Forced Outage Indicator is a formula/grain issue → #3 (calculator), not cleanup.**
 `unplanned_downtime_hours` is summed across units (e.g. PUC 41,138 h over 10 units) but divided by a
-single `hours_in_period` (8760); the capacity-weighting cancels instead of giving
-Σ(unplanned)/Σ(unit-hours). 41,138/8760 = 4.70 but the intended value is 41,138/(10×8760) = 0.47.
-This is the known capacity-hours denominator issue (calculator-engine-spec §4.6.1). **Removed from
-the data-cleanup scope; #3 owns it.**
+single `hours_in_period` (8760); the capacity-weighting cancels instead of dividing by the units'
+actual operating hours. 41,138/8760 = 4.70 — far too high.
+
+**Correct denominator (ruled — #8, unit-lifecycle spec / §4.6.1): the capacity-hours silver measure
+= Σ over units of (stint-hours ∩ period)** — a unit commissioned mid-year or deactivated contributes
+only its actual operating hours, capacity-weighted. `n_units × flat hours_in_period` (e.g. 10×8760)
+is only the naive special case where every unit ran the whole period; for exactly the churn
+utilities (worst outage data quality) it **understates** the indicator, so the fix must use the
+capacity-hours measure, not a unit count. Same guard applies to every per-unit-hours denominator in
+the §4.6.1 fix (Capacity Factor, Planned/Forced Outage). **Removed from the data-cleanup scope; #3
+owns the fix; #8 to review the denominator expression.**
 
 **(B4) PENDING — Transformer Utilization Factor:** the flat input aggregate (load 73.74 / cap 49.73 =
 1.48) diverges from the engine's value (148.29) by ×100, so the engine resolves these inputs
