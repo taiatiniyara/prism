@@ -97,7 +97,11 @@ export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
             // sync payload doesn't know which binding(s) it corresponds to.
             inputs: prev.inputs.map((candidate) =>
               candidate.dataEntryId === input.dataEntryId
-                ? { ...input, variableName: candidate.variableName }
+                ? {
+                    ...input,
+                    variableName: candidate.variableName,
+                    sliceLabel: candidate.sliceLabel,
+                  }
                 : candidate,
             ),
             result: result ?? prev.result,
@@ -184,7 +188,11 @@ export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
             ...prev,
             inputs: prev.inputs.map((candidate) =>
               candidate.dataEntryId === latest.dataEntryId
-                ? { ...latest, variableName: candidate.variableName }
+                ? {
+                    ...latest,
+                    variableName: candidate.variableName,
+                    sliceLabel: candidate.sliceLabel,
+                  }
                 : candidate,
             ),
           }));
@@ -206,7 +214,11 @@ export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
           ...prev,
           inputs: prev.inputs.map((candidate) =>
             candidate.dataEntryId === body.input!.dataEntryId
-              ? { ...body.input!, variableName: candidate.variableName }
+              ? {
+                  ...body.input!,
+                  variableName: candidate.variableName,
+                  sliceLabel: candidate.sliceLabel,
+                }
               : candidate,
           ),
           result: body.result ?? prev.result,

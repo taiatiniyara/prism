@@ -36,6 +36,11 @@ export function ReviewKpiInputValueCard({
             ({input.unitName})
           </span>
         ) : null}
+        {input.sliceLabel ? (
+          <div className="text-xs font-normal text-muted-foreground">
+            {input.sliceLabel}
+          </div>
+        ) : null}
       </div>
       <div className="grid grid-cols-[1fr_auto] items-center gap-1.5">
         <Input
