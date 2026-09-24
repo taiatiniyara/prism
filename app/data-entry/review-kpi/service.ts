@@ -28,6 +28,8 @@ import {
   type RollupCandidate,
 } from "@/app/data-entry/kpi-worker/dimension-rollup";
 import { publishSyncEvent } from "@/app/data-entry/review-kpi/sync-store";
+import { computeSliceLabel } from "@/app/data-entry/review-kpi/slice-label";
+import { DIMENSIONS } from "@/lib/dimensions/dimension-map";
 import { formatReportPeriodDisplay } from "@/lib/formatters";
 import {
   CurrentUser,
@@ -679,6 +681,32 @@ export const listReviewKpiRows = async (
           ).map((row) => [row.id, row.name]),
         );
 
+  const pinnedMemberIds = [
+    ...new Set(
+      kpiDefinitionRows.flatMap((row) =>
+        (row.formulaInputs ?? []).flatMap((formulaInput) =>
+          DIMENSIONS.flatMap((dimension) => {
+            const memberId = formulaInput[dimension.field];
+            return memberId != null && memberId !== dimension.allMember
+              ? [memberId]
+              : [];
+          }),
+        ),
+      ),
+    ),
+  ];
+
+  const sliceMemberNameById = pinnedMemberIds.length
+    ? new Map(
+        (
+          await db
+            .select({ id: managedListItems.id, name: managedListItems.name })
+            .from(managedListItems)
+            .where(inArray(managedListItems.id, pinnedMemberIds))
+        ).map((row) => [row.id, row.name]),
+      )
+    : new Map<number, string>();
+
   return kpiDefinitionRows.map((kpiDefinition) => {
     const inputs: ReviewKpiInputValue[] = (
       kpiDefinition.formulaInputs ?? []
@@ -711,6 +739,7 @@ export const listReviewKpiRows = async (
             updatedAt: new Date(0).toISOString(),
             updatedById: null,
             variableName: formulaInput.variable_name,
+            sliceLabel: computeSliceLabel(formulaInput, sliceMemberNameById),
           },
         ];
       }
@@ -736,6 +765,7 @@ export const listReviewKpiRows = async (
         updatedAt: row.updatedAt.toISOString(),
         updatedById: row.updatedById,
         variableName: formulaInput.variable_name,
+        sliceLabel: computeSliceLabel(formulaInput, sliceMemberNameById),
       }));
     });
 

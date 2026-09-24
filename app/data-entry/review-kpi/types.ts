@@ -40,6 +40,14 @@ export interface ReviewKpiInputValue {
    * resolved against a specific binding, e.g. the single-input PATCH result.
    */
   variableName?: string;
+  /**
+   * Human-readable dimension-slice label (e.g. "Finance • Female"), when
+   * this binding pins at least one dimension away from its All-member.
+   * `null` when the binding reads the whole measure (no slice to label).
+   * `undefined` on responses not resolved against a specific binding, same
+   * caveat as `variableName`.
+   */
+  sliceLabel?: string | null;
 }
 
 export type ReviewKpiResultStatus =
