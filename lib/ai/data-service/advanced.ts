@@ -8,11 +8,19 @@ import { createToolMetadata, resolveComparisonPeriodIds, intArrayParam } from ".
 import type { AiToolResult } from "../types";
 
 /** Human-readable value with its unit: 57.6 → "57.6 min", 6 → "6%", 0.94 → "0.94×". */
-const formatValueWithUnit = (value: number, unit: string | null): string => {
-  const n = Number.isInteger(value) ? String(value) : String(Math.round(value * 100) / 100);
+/**
+ * Human-readable value with its unit: 57.6 → "57.6 min", 0.94 → "0.94×".
+ * Returns null for "%"-family units: gold.fact_kpi stores "%" KPIs on
+ * INCONSISTENT scales (some 0–1 fractions, some 0–100) under the same unit, so a
+ * per-row display can't know whether 0.88 means 0.88% or 88%. A wrong display is
+ * worse than none — omit it and let the model read value+unit. (Source fix =
+ * gold-layer scale normalisation, #3/#2.)
+ */
+const formatValueWithUnit = (value: number, unit: string | null): string | null => {
   const u = (unit ?? "").trim();
+  if (u.includes("%") || u.toLowerCase().includes("percent")) return null;
+  const n = Number.isInteger(value) ? String(value) : String(Math.round(value * 100) / 100);
   if (!u) return n;
-  if (u === "%" || u.startsWith("%")) return `${n}%`;
   const ul = u.toLowerCase();
   if (u === "×" || ul === "x" || ul === "ratio") return `${n}×`;
   return `${n} ${u}`;
@@ -249,9 +257,10 @@ export interface MultiUtilityKpiValue {
    *  Present so the model reports the number with its real unit instead of
    *  guessing one — report it verbatim, never convert. */
   unit: string | null;
-  /** `value` rendered with its unit ("57.6 min", "6%", "0.94×") — report this
-   *  verbatim so the number never loses its scale. */
-  display: string;
+  /** `value` rendered with its unit ("57.6 min", "0.94×") — report verbatim so
+   *  the number never loses its scale. NULL for "%"-family KPIs (their stored
+   *  scale is inconsistent, so no reliable render exists — read value+unit). */
+  display: string | null;
   /** The report_date (ISO `YYYY-MM-DD`) this specific value belongs to. Each
    *  utility is shown at its LATEST period, so periods can differ across rows —
    *  never assign a fiscal year a row doesn't carry. */

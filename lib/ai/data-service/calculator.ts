@@ -7,7 +7,7 @@ import { loadFormulaInputsFromBindings } from "@/app/data-entry/kpi-worker/formu
 import { resolveFormulaInputValues } from "@/app/data-entry/kpi-worker/resolveInputs";
 import type { FormulaInput } from "@/db/schema/dataEntry";
 import type { KpiWorkerScope } from "@/app/data-entry/kpi-worker/types";
-import { createToolMetadata, resolvePeriod } from "./common";
+import { createToolMetadata, resolveOwnUtilityPeriod } from "./common";
 import type { AiToolResult } from "../types";
 
 export interface CalculatedKpi {
@@ -67,7 +67,13 @@ export const calculateKpis = async (
     sensitivity_variable?: string;
   } = {},
 ): Promise<AiToolResult<CalculatorData>> => {
-  const period = await resolvePeriod(user, options);
+  // Family A (#10 rule of thumb): calculate_kpi is a live COMPUTATION over a
+  // utility's inputs, not a published cross-utility result — so it is own-org for
+  // non-global callers. resolveOwnUtilityPeriod denies a foreign report_period_id
+  // and, for {year} with no utility, resolves the caller's own period (global
+  // BMO/DEV keep all-utility reach). Was resolvePeriod, which let a benchmark
+  // role reach another utility's FY period and compute its KPIs (leak, #16 c106/c900).
+  const period = await resolveOwnUtilityPeriod(user, options);
 
   if (!period) {
     return {

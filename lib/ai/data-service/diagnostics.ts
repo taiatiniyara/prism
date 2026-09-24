@@ -65,8 +65,8 @@ export const getKpiDiagnostics = async (
         source: "review_kpi",
       }),
       error: options.year
-        ? `No report period found for year ${options.year}`
-        : "No report period found",
+        ? `No report period found for year ${options.year} — no diagnostics were computed. This is an error, NOT a clean/zero result; do not report the zeros as findings.`
+        : "No report period found — no diagnostics were computed. This is an error, NOT a clean/zero result; do not report the zeros as findings.",
     };
   }
 
@@ -92,7 +92,7 @@ export const getKpiDiagnostics = async (
           completeness_pct: 0,
           source: "review_kpi",
         }),
-        error: "Report period not found",
+        error: "Report period not found — it isn't available to your utility, so no diagnostics were computed. This is an error, NOT a clean/zero result; do not report the zeros as findings.",
       };
     }
   }
