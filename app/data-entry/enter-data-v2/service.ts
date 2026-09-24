@@ -78,6 +78,10 @@ export async function updateFilterContextAction(
 ) {
   "use server";
   await setFilterCookie(key, value?.toString() ?? null);
+  // Lets Next.js fold the refreshed table into this action's own response
+  // (same mechanism updateMeasureEntryValueAction relies on) so callers on
+  // the enter-data screen don't need a separate client router.refresh().
+  revalidatePath("/data-entry/enter-data");
 }
 
 async function getManagedListItems(
