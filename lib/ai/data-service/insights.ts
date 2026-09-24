@@ -1,4 +1,4 @@
-import { getAccessibleReportPeriods, resolveComparisonPeriodIds, intArrayParam } from "./common";
+import { getAccessibleReportPeriods, resolveOwnUtilityComparisonPeriodIds, intArrayParam } from "./common";
 import { db } from "@/db/connection";
 import { sql } from "drizzle-orm";
 import type { CurrentUser } from "@/lib/user.service";
@@ -121,7 +121,11 @@ export const getDataQualityReport = async (
     year?: number | null;
   } = {},
 ): Promise<AiToolResult<DataQualityData>> => {
-  const periodIds = await resolveComparisonPeriodIds(user, {
+  // Family A (#10 rule of thumb): a data-quality report is entry-state, not a
+  // published cross-utility result — own-org for non-global callers. Was
+  // resolveComparisonPeriodIds, whose FY allowance let a benchmark role see
+  // other utilities' flagged values (leak, #16 c080 TPL/TEC).
+  const periodIds = await resolveOwnUtilityComparisonPeriodIds(user, {
     report_period_id: options.report_period_id,
     year: options.year,
   });
