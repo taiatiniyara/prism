@@ -71,6 +71,39 @@ to the exact offending *input* measure (not just the KPI) is the next drill if w
 
 ---
 
+### Population B — root-cause drill (#3, 2026-09-25, read-only)
+
+Tracing each anomalous row to its input `value_numeric` splits Population B into **three** root
+causes — one of which is a **calculator/formula** issue, not a data defect:
+
+**(B1) DATA — `electricity_generated` (measure 321) entered in kWh not MWh (÷1000).** The flat
+input aggregate reproduces the gold value exactly, so this is solid.
+- Capacity Factor: CPUC `rp241` 2025-09-30 **9,092,968 → 9,093** (CF 157→0.157); NUC 2020-06-30
+  3,041,434 → 3,041; PUC 2024-09-30 775,628 → 776; TEC 2024-12-31 152,030 → 152; YSPSC 2025-09-30
+  116,289 → 116.
+
+**(B2) DATA — `station_auxilliary_usage` (measure 430) grossly inflated** (it *exceeds* generation,
+impossible; aux is ~1–5% of gen). One fix clears **both** Station Usage and Transmission Losses for
+that row.
+- NUC 2023-06-30 aux=**36,531,044** vs gen 4,319; MEC 2023=321,166 / 2022=212,000 / 2024=93,996 vs
+  gen ~65,889; KUA 2022=54,083 vs gen 6,530. **MEC recurs → systematic MEC aux error.** Looks
+  ×100–1000 too big; exact factor needs the source doc.
+
+**(B3) NOT DATA — Forced Outage Indicator is a formula/grain issue → #3 (calculator), not cleanup.**
+`unplanned_downtime_hours` is summed across units (e.g. PUC 41,138 h over 10 units) but divided by a
+single `hours_in_period` (8760); the capacity-weighting cancels instead of giving
+Σ(unplanned)/Σ(unit-hours). 41,138/8760 = 4.70 but the intended value is 41,138/(10×8760) = 0.47.
+This is the known capacity-hours denominator issue (calculator-engine-spec §4.6.1). **Removed from
+the data-cleanup scope; #3 owns it.**
+
+**(B4) PENDING — Transformer Utilization Factor:** the flat input aggregate (load 73.74 / cap 49.73 =
+1.48) diverges from the engine's value (148.29) by ×100, so the engine resolves these inputs
+differently than a naive sum. Needs the engine's actual resolved values to pin the culprit — #3 to
+drill engine-side.
+
+**So Population B data-cleanup (#2/#8) = (B1) `electricity_generated` ÷1000 [5 rows] + (B2)
+`station_auxilliary_usage` source-fix [MEC/NUC/KUA].** (B3) is calculator, (B4) pending.
+
 ## Population C — unit mislabel (not a scale issue)
 
 **Duty on Fuel and Lube Oil** carries unit `%` but holds a money amount (max ≈ 234,000,000). Fix
