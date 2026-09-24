@@ -244,6 +244,7 @@ This file is read and written by multiple concurrent Claude Code sessions (the "
 - **Owner:** PRISM 2 #17 system documentation
 - **Depends on:** nothing · **Blocks:** nothing · **Consumes:** [USER-IMPACT.md](USER-IMPACT.md) (release-time user guides), every stream's specs/ADRs
 - **Scope:** end-user manuals (DAO/BLO/CEO/subscribers), BMO admin manual, FAQs, online/in-app help, system architecture + functional docs. Works from a dedicated worktree (`C:/Users/eugen/prism-docs`); docs-only unless a help surface needs UI (coordinate with #11).
+- **2026-09-25 (ownership):** Eugene reassigned USER-IMPACT **instruction-writing** from #11 → #17 (ledger preamble updated). Split agreed with #11: #17 = long-form (manuals, FAQs, ARCHITECTURE.md, ledger instruction write-ups); #11 = ledger audit + all in-app help UI (ping #11 before any on-screen help surface; follow PRODUCT.md/DESIGN.md).
 - **Last update 2026-09-25:** stream started — onboarding done. Baseline: only end-user doc is the 11-page KPI glossary PDF at `/docs`; no manual/FAQ/in-app help; `ARCHITECTURE.md` badly stale (pre blue/green, pre `kpi_actual`/`period`); USER-IMPACT 22 rows all unwritten. Awaiting Eugene's first assignments.
 
 ---
