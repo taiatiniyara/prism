@@ -7,12 +7,38 @@ A running log of every p1 → p2 `data_entries` migration run — status, counts
 | load_id | Date | Label | Parsed | Loaded | Periods | Rejected (real / benign) | Recon | Issues file |
 |--------:|------|-------|-------:|-------:|--------:|--------------------------|-------|-------------|
 | 16 | 2026-09-08 | Recovery reload (incl tariff) | 23,747 | 23,339 | 77 | 155 real / 648 benign | sums match; `na` shells variance (expected) | `5_mig_issues_20260908.xlsx` |
+| 17 | 2026-09-24 | Full sync (tariff + 340/342 + gaps) | 24,568 | 24,568¹ | 80 | 0 real / 150 remediated | sums match (FP); `na` shells variance (expected) | `5_mig_issues_20260924.xlsx` |
+
+¹ 24,439 loaded in the main run; the remaining 129 (period 268 + units 698/699) recovered via follow-up loads → **all 24,568 extract rows loaded, zero loss**.
 
 *"Real" rejections = rows that did NOT load (type_cast + fk). "Benign" = rows that loaded fine but logged (dedup value-kept + author-nulled).*
 
 ---
 
 ## Detailed runs
+
+### load_id 17 — 2026-09-24 — Full sync from p1 (tariff + 340/342 + gap recovery)
+
+**Context.** Routine full re-extract to sync p2 `data_entries` with p1 updates. `data_entries`-only (no `--new-orgs`). Inputs: `3_mig_data_export_20260924_055705.xlsx` + `4_mig_recon_export_20260924_055707.xlsx` (77 recon periods).
+
+**Dry-run.** 24,568 rows, 0 parse errors (both files). Tariff 500–503 present; **340/342 present (252 each)** — the Load #16 omission is filled.
+
+**Load.** Flush-and-reload. Backup `backup.data_entries_run17_20260924` (23,779 rows) taken first. `migration_loads` id 17. ⚠ A transient **Supabase connection drop hit the reconciliation phase** (period 257) — the data had already committed, but the recon loop and `finishLoad` were interrupted. Recovered by re-running the reconciliation for load 17 only (no data reload); load finalized `completed`.
+
+**Result.** 24,439 rows loaded in the main run; **all 24,568 after gap recovery** (below). Value sums reconcile (FP rounding only); value counts match bar 1 (recovered).
+
+**Rejections — 150, ALL remediated (0 real loss):**
+| category | n | disposition |
+|---|---:|---|
+| fk — period 268 | 119 | Extract carried period 268 (empty shells), which the 2026-08-30 FYE cleanup had dropped as an empty duplicate. It's actually **NPC's FY2024 gap** → **recreated period 268 (NPC FY2024)** + loaded its rows (Load #18). |
+| fk — units 698/699 | 10 | Units absent in p2 → **dev created 698/699**; rows loaded (Load #19), incl. 1 real value (mig-id 7005). |
+| other — author 161 | 21 | Loaded with null author (161 not a p2 user at load) → **user 161 added**, author backfilled to 161 on all 21. |
+
+**Data-quality fix — NPC (org 17) FY structure.** 224's `report_date` was wrong (local 2024-01-01), masquerading as FY2024 and colliding with 268 → 268 dropped. Corrected: **224 → FY2023** (2023-06-30), **268 → FY2024** (2024-06-30), **254 = FY2025** (2025-06-30, unchanged). Three distinct consecutive FYs; all opted-in.
+
+**Post-load.** `units_id_seq` realigned to 699 (dev's explicit 698/699 inserts left it behind → next app insert would have collided). `data_entries.id` is uuid → no realignment there. Compute-layer regen (calculated measures / hours / KPI recompute) + Step-4 `kpi_actual` recompute coordinated with #3/#8/#1.
+
+**Recon note.** Scorecard `is_balanced=false` lines dominated by the expected **p1-shells-for-everyone vs p2-no-shells** `fill/na` variance. Issues workbook: `5_mig_issues_20260924.xlsx` (Summary + Missing FK reference + Author not in p2 + Recon Variances; `load_id` + `source_ref` trace keys; remediation column marks all resolved).
 
 ### load_id 16 — 2026-09-08 — Recovery reload (incl tariff + 340/342)
 
