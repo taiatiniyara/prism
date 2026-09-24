@@ -23,6 +23,7 @@ Run these `SELECT`s against p2 and confirm:
 - **Model↔DB drift is clean** — `npm run drift-check` exits 0 (a drifted schema + a later push is what wiped data on 2026-09-04). Reconcile any drift first.
 - **`data_entries` state** — expected starting count (0 after a wipe; otherwise note it — the default load flushes it).
 - **Target report periods exist** — the load only lands on periods present in p2; rows for absent periods reject. Confirm the surviving period set (e.g. post-participation-purge).
+  - **Extract hygiene — exclude the FYE-dropped periods.** The 2026-08-30 FYE cleanup dropped 7 empty duplicate FY periods: **209, 239, 265, 266, 267, 269** (and 268 originally — but **268 was restored 2026-09-24 as NPC's real FY2024 gap, so KEEP 268**). p1 still has these, so an unfiltered extract re-includes them and they FK-reject (all empty shells → no data lost, just noise). Have the export **exclude 209/239/265/266/267/269**. If a rejected "absent period" turns out to hold real data or be a genuine FY for an opted-in utility (as 268 did for NPC), recreate the period rather than exclude it.
 - **Target measures exist** — every `measure_def_id` the extract references must be in `measure_definitions`, especially any NEW measures this run adds (verify by id + name), else those rows FK-reject.
 - **The migration ledger tables exist** — `migration_loads`, `migration_rejections`, `migration_scorecard`.
 - **Back up** the current entered-data tables if `data_entries` is non-empty (`backup.data_entries_*`), and take a Supabase snapshot before a large load.
