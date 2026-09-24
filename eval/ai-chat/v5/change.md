@@ -1,0 +1,1 @@
+v5 = v4 + #593: compare_kpis omits display for %-family units (gold %-scale is inconsistent); calculate_kpi + get_data_quality_report scoped to own utility; get_kpi_diagnostics not-found returns an unmistakable error.

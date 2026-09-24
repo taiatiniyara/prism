@@ -153,7 +153,9 @@ const clip = (s: string, n: number) => (s.length > n ? s.slice(0, n) + `\n…[cl
 async function judge(c: EvalCase, transcript: Turn[], answer: string, vizJson: string[], systemPrompt: string) {
   const toolBlock = transcript
     .filter((t) => t.role === "tool_call" || t.role === "tool_result")
-    .map((t) => (t.role === "tool_call" ? `## TOOL CALL ${t.name}\n${clip(t.content, 2000)}` : `## TOOL RESULT\n${clip(t.content, 12000)}`))
+    // 60k: get_benchmark_report_data alone is ~28k chars; a 12k clip hid its later tables and the
+    // judge called correctly-quoted electrification figures "unsupported" (v4/v5 report cases).
+    .map((t) => (t.role === "tool_call" ? `## TOOL CALL ${t.name}\n${clip(t.content, 2000)}` : `## TOOL RESULT\n${clip(t.content, 60000)}`))
     .join("\n\n");
   const convo = [...c.prefix.map((p) => `${p.role}: ${p.content}`), `user: ${c.prompt}`].join("\n\n");
   // The system prompt is included so facts it states (utility directory, PPA targets used as
