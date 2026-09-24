@@ -91,8 +91,14 @@ export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
         if (input) {
           setLocalRow((prev) => ({
             ...prev,
+            // Two distinct bindings can share one `dataEntryId` (see
+            // `variableName`'s doc comment) — `.map` then updates every
+            // matching entry, each keeping its OWN `variableName` since the
+            // sync payload doesn't know which binding(s) it corresponds to.
             inputs: prev.inputs.map((candidate) =>
-              candidate.dataEntryId === input.dataEntryId ? input : candidate,
+              candidate.dataEntryId === input.dataEntryId
+                ? { ...input, variableName: candidate.variableName }
+                : candidate,
             ),
             result: result ?? prev.result,
           }));
@@ -177,7 +183,9 @@ export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
           setLocalRow((prev) => ({
             ...prev,
             inputs: prev.inputs.map((candidate) =>
-              candidate.dataEntryId === latest.dataEntryId ? latest : candidate,
+              candidate.dataEntryId === latest.dataEntryId
+                ? { ...latest, variableName: candidate.variableName }
+                : candidate,
             ),
           }));
           setDraftValues((prev) => ({
@@ -198,7 +206,7 @@ export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
           ...prev,
           inputs: prev.inputs.map((candidate) =>
             candidate.dataEntryId === body.input!.dataEntryId
-              ? body.input!
+              ? { ...body.input!, variableName: candidate.variableName }
               : candidate,
           ),
           result: body.result ?? prev.result,
@@ -229,7 +237,15 @@ export function ReviewKpiRowCard({ row, context }: ReviewKpiRowProps) {
           <ul className="space-y-3">
             {sortedInputs.map((input) => (
               <ReviewKpiInputValueCard
-                key={`${localRow.kpiDefId}-${input.dataEntryId}`}
+                // `dataEntryId` alone is not a safe key: a KPI's formula can
+                // bind two distinct variables to the exact same underlying
+                // row (see `ReviewKpiInputValue.variableName`'s doc comment;
+                // kpi_def_id 62/63/80 all do this today), which produced the
+                // "two children with the same key" warning. `variableName`
+                // is unique per binding within one formula; combined with
+                // `dataEntryId` (unique per row within one binding, when a
+                // grain rollup spans several rows) the pair is always unique.
+                key={`${localRow.kpiDefId}-${input.variableName ?? "novar"}-${input.dataEntryId}`}
                 input={input}
                 value={draftValues[input.dataEntryId] ?? ""}
                 disabled={isSaving || input.dataEntryId.startsWith("missing-")}

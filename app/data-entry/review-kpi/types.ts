@@ -28,6 +28,18 @@ export interface ReviewKpiInputValue {
   comments: InputComment[];
   updatedAt: string;
   updatedById: string | null;
+  /**
+   * The KPI formula's `formula_inputs[].variable_name` this row was matched
+   * against, when known. A KPI's formula can (correctly, or by a data
+   * authoring mistake — see kpi_def_id 62/63/80) pin two distinct variables
+   * to the exact same dimension slice, so the same `dataEntryId` can appear
+   * more than once in one row's `inputs`. `dataEntryId` alone is therefore
+   * NOT safe as a React list key for this array — `variableName` is,
+   * because a formula can never reference two bindings with the same name.
+   * Omitted (not just `dataEntryId`-derived) on responses that aren't
+   * resolved against a specific binding, e.g. the single-input PATCH result.
+   */
+  variableName?: string;
 }
 
 export type ReviewKpiResultStatus =

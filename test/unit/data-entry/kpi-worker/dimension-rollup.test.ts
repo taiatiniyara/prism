@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import type { FormulaInput } from "@/db/schema/dataEntry";
 import { ALL_MEMBER } from "@/lib/data-entry/dimensions";
 import {
+  candidateInBindingScope,
   matchDimension,
   pickInputValue,
   rankGrainLevel,
@@ -255,5 +256,68 @@ describe("pickInputValue — rule 1 / 2 / 3", () => {
         isAdditive: false,
       }),
     ).toBe(500);
+  });
+});
+
+describe("candidateInBindingScope — multiple bindings sharing one measure", () => {
+  // Regression for the review-kpi "Inputs" section (app/data-entry/review-kpi
+  // /service.ts): kpi_def_id 62 "Total Employees Female" binds ONE measure
+  // (employees, measure_def_id 260) with NINE formula_inputs — one per
+  // division — every other dimension pinned to its All-member (not
+  // applicable to headcount) except gender_id, pinned to the Female member.
+  // Before the fix, `listReviewKpiRows` bucketed data_entries by
+  // measure_def_id alone and attached the WHOLE bucket to every binding,
+  // so all divisions' rows were duplicated across all nine bindings —
+  // producing repeated `dataEntryId`s and the React "duplicate key" warning.
+  // `candidateInBindingScope` is what the fix now uses to narrow each
+  // binding down to its own slice; this locks that contract in place.
+
+  const divisionBinding = (divisionId: number): FormulaInput => ({
+    ...allMemberBinding(),
+    measure_def_id: 260,
+    variable_name: `division_${divisionId}_employees_female`,
+    gender_id: 931, // pinned to Female, not the All-member
+    division_id: divisionId, // pinned to one specific division, not All
+  });
+
+  const divisionRow = (divisionId: number, genderId: number) =>
+    candidate({ value: "10", divisionId, genderId });
+
+  it("matches each binding to exactly its own division/gender slice — never another binding's rows", () => {
+    const bindings = [1012, 1013, 1014].map(divisionBinding);
+    // Two genders per division, mirroring real data_entries for measure 260.
+    const rows = [1012, 1013, 1014].flatMap((divisionId) => [
+      divisionRow(divisionId, 930), // male — must never match a Female binding
+      divisionRow(divisionId, 931), // female — the one true match
+    ]);
+
+    const matchesByBinding = bindings.map((binding) =>
+      rows.filter((row) => candidateInBindingScope(row, binding)),
+    );
+
+    // Exactly one matching row per binding...
+    for (const matches of matchesByBinding) {
+      expect(matches).toHaveLength(1);
+    }
+
+    // ...and no two bindings ever resolve to the same underlying row
+    // (this is precisely the invariant whose absence produced duplicate
+    // `dataEntryId`s / duplicate React keys on the review-kpi page).
+    const matchedRowRefs = matchesByBinding.map(([row]) => row);
+    expect(new Set(matchedRowRefs).size).toBe(matchedRowRefs.length);
+
+    // And each match is the correct (division, Female) slice.
+    expect(matchesByBinding[0][0]).toEqual(divisionRow(1012, 931));
+    expect(matchesByBinding[1][0]).toEqual(divisionRow(1013, 931));
+    expect(matchesByBinding[2][0]).toEqual(divisionRow(1014, 931));
+  });
+
+  it("a binding with no row in its slice matches nothing (missing input, not someone else's row)", () => {
+    const binding = divisionBinding(1099); // no data entered for this division
+    const rows = [divisionRow(1012, 931), divisionRow(1013, 931)];
+
+    expect(rows.filter((row) => candidateInBindingScope(row, binding))).toHaveLength(
+      0,
+    );
   });
 });

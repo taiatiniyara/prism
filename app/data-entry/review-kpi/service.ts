@@ -23,6 +23,10 @@ import { reportPeriods } from "@/db/schema/reportPeriods";
 import { serviceAreas } from "@/db/schema/utility";
 import { user as authUsers } from "@/db/schema/auth-schema";
 import { triggerKpiWorkerAsync } from "@/app/data-entry/kpi-worker";
+import {
+  candidateInBindingScope,
+  type RollupCandidate,
+} from "@/app/data-entry/kpi-worker/dimension-rollup";
 import { publishSyncEvent } from "@/app/data-entry/review-kpi/sync-store";
 import { formatReportPeriodDisplay } from "@/lib/formatters";
 import {
@@ -549,16 +553,93 @@ export const listReviewKpiRows = async (
           comments: dataEntries.comments,
           updatedAt: dataEntries.updatedAt,
           updatedById: dataEntries.updatedById,
+          energyProviderId: dataEntries.provider_id,
+          energySourceId: dataEntries.technology_id,
+          unitTypeId: dataEntries.asset_class_id,
+          customerTypeId: dataEntries.customer_type_id,
+          paymentModeId: dataEntries.payment_mode_id,
+          consumptionBandId: dataEntries.consumption_band_id,
+          divisionId: dataEntries.division_id,
+          genderId: dataEntries.gender_id,
+          utilityFunctionId: dataEntries.utility_function_id,
         })
         .from(dataEntries)
         .where(and(...dataEntryWhereConditions))
     : [];
 
-  const dataEntryByInputDefId = new Map<
-    number,
-    (typeof dataEntryRows)[number][]
-  >();
-  for (const row of dataEntryRows) {
+  // A `formula_inputs` entry pins a specific dimension slice (e.g. one
+  // division) alongside the measure — several entries commonly share the
+  // same `measure_def_id` and are distinguished only by that slice (see
+  // kpi_def_id 62 "Total Employees Female": 9 inputs, one per division, all
+  // on measure 260). Deriving `energyTypeId` from the technology's parent
+  // mirrors `DbFactSource.dimensionedRows` (kpi-worker/fact-source.ts) so the
+  // slice match here is identical to what the worker used to compute the
+  // KPI result — keep the two in step.
+  const technologyIds = [
+    ...new Set(
+      dataEntryRows
+        .map((row) => row.energySourceId)
+        .filter((id): id is number => id != null),
+    ),
+  ];
+
+  const technologyParentRows = technologyIds.length
+    ? await db
+        .select({
+          id: managedListItems.id,
+          parentId: managedListItems.parent_id,
+        })
+        .from(managedListItems)
+        .where(inArray(managedListItems.id, technologyIds))
+    : [];
+
+  const categoryByTechnologyId = new Map<number, number | null>(
+    technologyParentRows.map((row) => [row.id, row.parentId ?? null]),
+  );
+
+  type ReviewDataEntryCandidate = RollupCandidate & {
+    id: string;
+    inputDefId: number;
+    value: string | null;
+    comments: DataEntryComment[] | null;
+    updatedAt: Date;
+    updatedById: string | null;
+  };
+
+  const dataEntryCandidates: ReviewDataEntryCandidate[] = dataEntryRows.map(
+    (row) => ({
+      id: row.id,
+      inputDefId: row.inputDefId,
+      value: row.value,
+      comments: row.comments,
+      updatedAt: row.updatedAt,
+      updatedById: row.updatedById,
+      // Matching-only fields below; is_deleted/is_relevant are already
+      // filtered by the query and are not consulted by
+      // `candidateInBindingScope`.
+      isDeleted: false,
+      isRelevant: true,
+      energyProviderId: row.energyProviderId,
+      energyTypeId:
+        row.energySourceId != null
+          ? (categoryByTechnologyId.get(row.energySourceId) ?? null)
+          : null,
+      energySourceId: row.energySourceId,
+      unitTypeId: row.unitTypeId,
+      customerTypeId: row.customerTypeId,
+      paymentModeId: row.paymentModeId,
+      consumptionBandId: row.consumptionBandId,
+      divisionId: row.divisionId,
+      genderId: row.genderId,
+      utilityFunctionId: row.utilityFunctionId,
+      grainAreaId: null,
+      grainStationId: null,
+      grainUnitId: null,
+    }),
+  );
+
+  const dataEntryByInputDefId = new Map<number, ReviewDataEntryCandidate[]>();
+  for (const row of dataEntryCandidates) {
     const bucket = dataEntryByInputDefId.get(row.inputDefId) ?? [];
     bucket.push(row);
     dataEntryByInputDefId.set(row.inputDefId, bucket);
@@ -603,13 +684,24 @@ export const listReviewKpiRows = async (
       kpiDefinition.formulaInputs ?? []
     ).flatMap((formulaInput) => {
       const def = inputDefinitionById.get(formulaInput.measure_def_id);
-      const sourceRows =
+      const measureBucket =
         dataEntryByInputDefId.get(formulaInput.measure_def_id) ?? [];
+
+      // Several `formula_inputs` entries commonly share one `measure_def_id`,
+      // pinned to distinct dimension slices (e.g. one entry per division).
+      // Narrow the shared-measure bucket down to the rows that actually fall
+      // in THIS binding's slice — the same matcher the kpi-worker uses to
+      // resolve the value — instead of attaching every row for the measure
+      // to every binding (which duplicated rows across bindings and produced
+      // repeated `dataEntryId`s / React key collisions).
+      const sourceRows = measureBucket.filter((candidate) =>
+        candidateInBindingScope(candidate, formulaInput),
+      );
 
       if (sourceRows.length === 0) {
         return [
           {
-            dataEntryId: `missing-${formulaInput.measure_def_id}`,
+            dataEntryId: `missing-${formulaInput.measure_def_id}-${formulaInput.variable_name}`,
             inputDefId: formulaInput.measure_def_id,
             inputName: def?.name ?? `Input ${formulaInput.measure_def_id}`,
             unitName: def?.unitName ?? null,
@@ -618,10 +710,19 @@ export const listReviewKpiRows = async (
             comments: [],
             updatedAt: new Date(0).toISOString(),
             updatedById: null,
+            variableName: formulaInput.variable_name,
           },
         ];
       }
 
+      // NB two DISTINCT bindings can resolve to the exact same slice — either
+      // legitimately, or via a data-authoring mistake in this KPI's own
+      // `formula_inputs` (kpi_def_id 62/63/80 all do this today: e.g. 63
+      // "Total Employees" binds both `employees_male` and `employees_female`
+      // to the identical All/All slice). When that happens the SAME
+      // `dataEntryId` is correctly attached to more than one binding here —
+      // `variableName` (unique per binding within one formula) is what keeps
+      // those renders distinguishable, since `dataEntryId` alone no longer is.
       return sourceRows.map((row) => ({
         dataEntryId: row.id,
         inputDefId: row.inputDefId,
@@ -634,6 +735,7 @@ export const listReviewKpiRows = async (
         ),
         updatedAt: row.updatedAt.toISOString(),
         updatedById: row.updatedById,
+        variableName: formulaInput.variable_name,
       }));
     });
 
