@@ -51,6 +51,7 @@ export async function GET(request: Request) {
         service_area_id: d.service_area_id,
         measure_def_id: d.measure_def_id,
         value: d.value,
+        multiplier: d.multiplier,
         comments: d.comments,
         update_medium_id: d.update_medium_id,
         status_id: d.status_id,
