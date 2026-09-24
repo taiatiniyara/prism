@@ -46,27 +46,19 @@ export const getKpiDiagnostics = async (
     report_period_id?: number | null;
     year?: number | null;
   } = {},
-): Promise<AiToolResult<KpiDiagnosticsData>> => {
+): Promise<AiToolResult<KpiDiagnosticsData | null>> => {
   const resolvedPeriodId = await resolvePeriodId(user, options);
 
+  // On any failure return data: null (never a zeroed KpiDiagnosticsData) — a
+  // populated-but-empty object reads to the model as a clean 0/0/0 scorecard
+  // however the error is worded (c029). Null + error is unmistakable.
   if (!resolvedPeriodId) {
     return {
-      data: {
-        status_counts: {},
-        missing_input_kpis: [],
-        missing_input_breakdown: { awaiting_input: 0, declared_unavailable: 0, compute_pending: 0 },
-        error_kpis: [],
-        stale_kpis: [],
-        unresolved_comments_count: 0,
-        total_kpis_in_scope: 0,
-      },
-      metadata: createToolMetadata({
-        completeness_pct: 0,
-        source: "review_kpi",
-      }),
+      data: null,
+      metadata: createToolMetadata({ completeness_pct: 0, source: "review_kpi" }),
       error: options.year
-        ? `No report period found for year ${options.year} — no diagnostics were computed. This is an error, NOT a clean/zero result; do not report the zeros as findings.`
-        : "No report period found — no diagnostics were computed. This is an error, NOT a clean/zero result; do not report the zeros as findings.",
+        ? `No report period found for year ${options.year} — no diagnostics were computed.`
+        : "No report period found — no diagnostics were computed.",
     };
   }
 
@@ -79,20 +71,9 @@ export const getKpiDiagnostics = async (
 
     if (!period || period.utility_id !== user.org_id) {
       return {
-        data: {
-          status_counts: {},
-          missing_input_kpis: [],
-          missing_input_breakdown: { awaiting_input: 0, declared_unavailable: 0, compute_pending: 0 },
-          error_kpis: [],
-          stale_kpis: [],
-          unresolved_comments_count: 0,
-          total_kpis_in_scope: 0,
-        },
-        metadata: createToolMetadata({
-          completeness_pct: 0,
-          source: "review_kpi",
-        }),
-        error: "Report period not found — it isn't available to your utility, so no diagnostics were computed. This is an error, NOT a clean/zero result; do not report the zeros as findings.",
+        data: null,
+        metadata: createToolMetadata({ completeness_pct: 0, source: "review_kpi" }),
+        error: "Report period not found — it isn't available to your utility, so no diagnostics were computed.",
       };
     }
   }
