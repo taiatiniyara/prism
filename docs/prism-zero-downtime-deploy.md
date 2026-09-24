@@ -83,8 +83,27 @@ The standby app still runs the **previous** release, so rollback is a one-line u
 # flip nginx back to the other port (e.g. 3555)
 printf 'set $prism_upstream 127.0.0.1:3555;\n' > /etc/nginx/prism-upstream.conf
 nginx -s reload
-echo "blue 3555" > /root/prism-app/shared/blue-green
+echo "prism-blue 3555" > /root/prism-app/shared/blue-green
 ```
+
+---
+
+## Incident log — 2026-09-24 (drift → released-dir 500s)
+
+**Symptom:** intermittent `Internal Server Error` on `dev.prismdashboard.org`. Two separate bugs compounded:
+
+1. **pm2 silently recycles same-name apps.** `pm2 start <script> --name <existing>` does NOT launch a fresh process with your new env — it reuses the registered app and keeps its **stale `PRISM_RELEASE_DIR`**. Every deploy thus rebuilt, flipped nginx, and "succeeded" while the apps kept serving the *original* release dir (~6h of same pids).
+2. **Workflow vs VPS name mismatch.** The workflow called the apps `blue`/`green`; the one-time VPS setup used `prism-blue`/`prism-green`. Every deploy created ghost `blue`/`green` apps that crash-looped on `EADDRINUSE` (ports already held), invisible because the port healthcheck passed via the real apps.
+3. **Prune deleted live dirs.** Once 6 deploys accumulated, pruning `rm -rf`'d the release dirs the running apps still served out of. Lazy `require`s then failed (`MODULE_NOT_FOUND: next/dist/compiled/cookie`) → 500s on cookie-middleware routes.
+
+**Fixes (committed, workflow-owned):**
+- Standby recreate is now *deterministic*: `pm2 delete` first, then `pm2 start`, then **assert** via `pm2 env <id>` (resolved from `pm2 jlist`, id ≥ name) that the process is `online` AND its `PRISM_RELEASE_DIR` == the new release — hard-fail (remove standby, no flip) otherwise.
+- Healthcheck now also probes a middleware-covered route so the lazy-require 500 class is caught pre-flip.
+- Prune protects every release dir a running `prism-blue`/`prism-green` is currently using (plus `legacy/`).
+- App names normalized to `prism-blue`/`prism-green` everywhere; legacy `blue`/`green` spellings map safely on read.
+- After the flip, the active app's env is re-asserted and leaves a visible warning if it drifted.
+
+**Verification:** successful deploy moved `prism-green` to a fresh pid running the new release; old release retained as standby; live flips 300/300 and 800/800 requests with 0 drops.
 
 ---
 
