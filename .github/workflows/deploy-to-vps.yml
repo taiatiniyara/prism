@@ -96,11 +96,10 @@ jobs:
             # `pm2 env`, which does not accept names on all pm2 versions).
             pm2_probe() {
               STD_NAME="$1" node -e '
-                const j = JSON.parse(
-                  require("child_process").execSync("pm2 jlist", { encoding: "utf8" }));
+                const j = JSON.parse(require("child_process").execSync("pm2 jlist 2>/dev/null", { encoding: "utf8" }));
                 const x = j.find(v => v.name === process.env.STD_NAME);
                 process.stdout.write(x ? (x.pm_id + ":" + (x.pm2_env && x.pm2_env.status)) : ":missing");
-              '
+              ' 2>/dev/null || echo ":missing"
             }
 
             # Read the release dir an app is ACTUALLY running from (ground truth,
@@ -141,9 +140,13 @@ jobs:
               pm2 start "$APP/shared/pm2-start.cjs" --name "$STD_APP"
 
             # 3a. Assert the new standby is online AND actually running this release.
-            read -r STD_ID STD_STATUS < <(pm2_probe "$STD_APP" | tr ":" " ")
+            #     (No process substitution — a failing subshell under `set -e`
+            #     silently kills the run before it can report. Var-capture only.)
+            STD_PAIR=$(pm2_probe "$STD_APP")
+            STD_ID=${STD_PAIR%%:*}
+            STD_STATUS=${STD_PAIR#*:}
             if [ -z "$STD_ID" ] || [ "$STD_STATUS" != "online" ]; then
-              echo "ERROR: standby $STD_APP failed to come online (state '$STD_ID:$STD_STATUS'). Removing, production untouched." >&2
+              echo "ERROR: standby $STD_APP failed to come online (state '${STD_PAIR:-missing}'). Removing, production untouched." >&2
               pm2 delete "$STD_APP" >/dev/null 2>&1 || true
               exit 1
             fi
@@ -191,7 +194,9 @@ jobs:
             fi
 
             # 5a. Post-flip: the new active app must still be the one we deployed.
-            read -r ACT_ID ACT_STATUS < <(pm2_probe "$STD_APP" | tr ":" " ")
+            ACT_PAIR=$(pm2_probe "$STD_APP")
+            ACT_ID=${ACT_PAIR%%:*}
+            ACT_STATUS=${ACT_PAIR#*:}
             ACTUAL_DIR=$(pm2_release_dir "$ACT_ID")
             if [ "$ACT_STATUS" != "online" ] || [ "$ACTUAL_DIR" != "$REL" ]; then
               echo "ERROR: active $STD_APP drifted from deployment after flip (status=$ACT_STATUS dir=$ACTUAL_DIR). Investigate - NOT exiting clean." >&2
